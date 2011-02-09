@@ -5,83 +5,87 @@
 
     This module provides:
     $(UL
-        $(LI Types to represent points in time: $(D_PARAM SysTime), $(D_PARAM Date),
-             $(D_PARAM TimeOfDay), and $(D_PARAM DateTime).)
+        $(LI Types to represent points in time: $(D SysTime), $(D Date),
+             $(D TimeOfDay), and $(D DateTime).)
         $(LI Types to represent durations of time.)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by $(D_PARAM SysTime)).)
-        $(LI A platform-independent, high precision stop watch type: $(D_PARAM StopWatch))
+        $(LI Types to represent time zones (used by $(D SysTime)).)
+        $(LI A platform-independent, high precision stopwatch type:
+             $(D StopWatch))
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
 
-    Three of the main concepts used in this module are time points, time durations,
-    and time intervals.
+    Three of the main concepts used in this module are time points, time
+    durations, and time intervals.
 
     A time point is a specific point in time. e.g. January 5th, 2010
     or 5:00.
 
     A time duration is a length of time with units. e.g. 5 days or 231 seconds.
 
-    A time interval indicates a period of time associated with a fixed point in time.
-    So, it is either two time points associated with each other, indicating the time
-    starting at the first point up to, but not including, the second point - e.g.
-    [January 5th, 2010 - March 10th, 2010$(RPAREN) - or it is a time point and a time
-    duration associated with one another. e.g. January 5th, 2010 and 5 days,
-    indicating [January 5th, 2010 - January 10th, 2010$(RPAREN).
+    A time interval indicates a period of time associated with a fixed point in
+    time. So, it is either two time points associated with each other,
+    indicating the time starting at the first point up to, but not including,
+    the second point - e.g. [January 5th, 2010 - March 10th, 2010$(RPAREN) - or
+    it is a time point and a time duration associated with one another. e.g.
+    January 5th, 2010 and 5 days, indicating [January 5th, 2010 -
+    January 10th, 2010$(RPAREN).
 
-    Various arithmetic operations are supported between time points and durations
-    (e.g. the difference between two time points is a time duration), and ranges
-    can be gotten from time intervals, so range-based operations may be done on a
-    series of time points.
+    Various arithmetic operations are supported between time points and
+    durations (e.g. the difference between two time points is a time duration),
+    and ranges can be gotten from time intervals, so range-based operations may
+    be done on a series of time points.
 
-    The types that the typical user is most likely to be interested in are $(D_PARAM Date)
-    (if they want dates but don't care about time), $(D_PARAM DateTime) (if they want dates
-    and times but don't care about time zones), $(D_PARAM SysTime) (if they want the date
-    and time from the OS and/or do care about time zones), and StopWatch (a
-    platform-independent, high precision stop watch). $(D_PARAM Date) and $(D_PARAM DateTime)
-    are optimized for calendar-based operations, while $(D_PARAM SysTime) is designed
-    for dealing with time from the OS. Check out their specific documentation for
-    more details.
+    The types that the typical user is most likely to be interested in are
+    $(D Date) (if they want dates but don't care about time), $(D DateTime)
+    (if they want dates and times but don't care about time zones), $(D SysTime)
+    (if they want the date and time from the OS and/or do care about time
+    zones), and StopWatch (a platform-independent, high precision stop watch).
+    $(D Date) and $(D DateTime) are optimized for calendar-based operations,
+    while $(D SysTime) is designed for dealing with time from the OS. Check out
+    their specific documentation for more details.
 
-    To get the current time, use $(D_PARAM Clock.currTime(. It will return the current
-    time as a $(D_PARAM SysTime). If you want to print it, simple $(D_PARAM toString) will do,
-    but if you use one of $(D_PARAM toISOString), $(D_PARAM toISOExtendedString), or
-    $(D_PARAM toSimpleString), you can use the corresponding $(D_PARAM fromISOString),
-    $(D_PARAM fromISOExtendedString), or $(D_PARAM fromISOExtendedString) to create a
-    $(D_PARAM SysTime) from the string.
+    To get the current time, use $(D Clock.currTime). It will return the current
+    time as a $(D SysTime). If you want to print it, $(D toString) is
+    sufficient, but if you use $(D toISOString), $(D toISOExtendedString), or
+    $(D toSimpleString), you can use the corresponding $(D fromISOString),
+    $(D fromISOExtendedString), or $(D fromISOExtendedString) to create a
+    $(D SysTime) from the string.
 
-    Examples:
 --------------------
-auto currentTime = Clock.currTime();
+auto currentTime = Clock.currTime;
 auto timeString = currentTime.toISOExtendedString();
 auto restoredTime = SysTime.fromISOExtendedString(timeString);
 --------------------
 
     Various functions take a string (or strings) to represent a unit of time
     (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
-    with such functions are "years", "months", "weeks", "days", "hours",
-    "minutes", "seconds", "msecs" (milliseconds), "usecs" (microseconds),
-    "hnsecs" (hecto-nanoseconds - i.e. 100 ns) or some subset thereof. There
-    are a few functions in core.time which take "nsecs", but because nothing
-    in std.datetime has precision greater than hnsecs, and very little in
-    core.time does, no functions in std.datetime accept "nsecs".
+    with such functions are $(D "years"), $(D "months"), $(D "weeks"),
+    $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
+    $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
+    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns) or some subset thereof.
+    There are a few functions in core.time which take $(D "nsecs"), but because
+    nothing in std.datetime has precision greater than hnsecs, and very little
+    in core.time does, no functions in std.datetime accept $(D "nsecs").
 
     Note:
         core.time is publicly imported by std.datetime, so if you're using
-        std.datetime, you don't need to import core.time. Also, $(D_PARAM DateTimeException)
-        is an alias for core.time's TimeException, so you don't need to worry
-        about core.time functions and std.datetime functions throwing a different
-        type of exception (except in the rare case that they throw something other
-        than $(D_PARAM TimeException) or $(D_PARAM DateTimeException)).
+        std.datetime, you don't need to import core.time. Also,
+        $(D DateTimeException) is an alias for core.time's $(D TimeException),
+        so you don't need to worry about core.time functions and std.datetime
+        functions throwing different exception types (except in the rare case
+        that they throw something other than $(D TimeException) or
+        $(D DateTimeException)).
 
     See_Also:
         $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)
         $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
+              List of Time Zones)
 
-    Copyright: Copyright 2010
+    Copyright: Copyright 2010 - 2011
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/_datetime.d)
@@ -111,25 +115,25 @@ import std.traits;
 
 version(Windows)
 {
-import core.sys.windows.windows;
-import std.c.windows.winsock;
+    import core.sys.windows.windows;
+    import std.c.windows.winsock;
 
-//For system call to access the registry.
-pragma(lib, "advapi32.lib");
+    //For system call to access the registry.
+    pragma(lib, "advapi32.lib");
 }
 else version(Posix)
 {
-import core.sys.posix.arpa.inet;
-import core.sys.posix.stdlib;
-import core.sys.posix.time;
-import core.sys.posix.sys.time;
+    import core.sys.posix.arpa.inet;
+    import core.sys.posix.stdlib;
+    import core.sys.posix.time;
+    import core.sys.posix.sys.time;
 
-//We need to disable many tests because building all of Phobos
-//with all of std.datetime's unit tests enables currently causes
-//dmd to run out of memory.
-//Regardless of that, however, it's also useful to be able to
-//easily turn the tests on and off.
-version = testStdDateTime;
+    //We need to disable many tests because building all of Phobos
+    //with all of std.datetime's unit tests enables currently causes
+    //dmd to run out of memory.
+    //Regardless of that, however, it's also useful to be able to
+    //easily turn the tests on and off.
+    version = testStdDateTime;
 }
 
 //We should enable at least _some_ of the tests on Windows - especially
@@ -138,8 +142,8 @@ version = enableWindowsTest;
 
 version(unittest)
 {
-import std.c.string;
-import std.stdio;
+    import std.c.string;
+    import std.stdio;
 }
 
 version(unittest)
@@ -167,6 +171,15 @@ version(unittest)
 }
 
 alias std.string.indexOf indexOf;
+
+
+unittest
+{
+    //Verify module example.
+    auto currentTime = Clock.currTime;
+    auto timeString = currentTime.toISOExtendedString();
+    auto restoredTime = SysTime.fromISOExtendedString(timeString);
+}
 
 //Note: There various functions which void as their return type and ref of the
 //      struct type which they're in as a commented out return type. Ideally,
@@ -212,13 +225,14 @@ enum DayOfWeek : ubyte { sun = 0, ///
 
 
 /++
-    In some date calculations, adding months or years can cause the date to fall on
-    a day of the month which is not valid (e.g. February 29th 2001 or June 31st 2000).
-    If overflow is allowed (as is the default), then the month will be incremented
-    accordingly (so, February 29th 2001 would become March 1st 2001, and June 31st 2000
-    would become July 1st 2000). If overflow is not allowed, then the day will be
-    adjusted to the last valid day in that month (so, February 29th 2001 would become
-    February 28th 2001 and June 31st 2000 would become June 30th 2000).
+    In some date calculations, adding months or years can cause the date to fall
+    on a day of the month which is not valid (e.g. February 29th 2001 or
+    June 31st 2000). If overflow is allowed (as is the default), then the month
+    will be incremented accordingly (so, February 29th 2001 would become
+    March 1st 2001, and June 31st 2000 would become July 1st 2000). If overflow
+    is not allowed, then the day will be adjusted to the last valid day in that
+    month (so, February 29th 2001 would become February 28th 2001 and
+    June 31st 2000 would become June 30th 2000).
 
     AllowDayOverflow only applies to calculations involving months or years.
   +/
@@ -234,7 +248,7 @@ enum AllowDayOverflow
 
 /++
     Indicates a direction in time. One example of its use is $(D Interval)'s
-    $(D expand()) function which uses it to indicate whether the interval should
+    $(D expand) function which uses it to indicate whether the interval should
     be expanded backwards (into the past), forwards (into the future), or both.
   +/
 enum Direction
@@ -251,27 +265,29 @@ enum Direction
 
 
 /++
-    Used to indicate whether $(D popFront()) should be called immediately upon
+    Used to indicate whether $(D popFront) should be called immediately upon
     creating a range. The idea is that for some functions used to generate a
-    range for an interval, $(D front) is not necessarily a time point which would
-    ever be generated by the range, and if you want the first time point in the
-    range to match what the function generates, then you use $(D PopFirst.yes)
-    to indicate that the range should have $(D popFront()) called on it before the
-    range is returned so that $(D front) is a time point which the function would
-    generate.
+    range for an interval, $(D front) is not necessarily a time point which
+    would ever be generated by the range, and if you want the first time point
+    in the range to match what the function generates, then you use
+    $(D PopFirst.yes) to indicate that the range should have $(D popFront)
+    called on it before the range is returned so that $(D front) is a time point
+    which the function would generate.
 
-    For instance, if the function used to generate a range of time points generated
-    successive Easters (i.e. you're iterating over all of the Easters within the
-    interval), the initial date probably isn't an Easter. By using $(D PopFirst.yes),
-    you would be telling the function which returned the range that you wanted
-    $(D popFront()) to be called so that front would then be an Easter - the next
-    one generated by the function (which if you were iterating forward, would be
-    the Easter following the original $(D front), while if you were iterating backward,
-    it would be the Easter prior to the original $(D front)). If $(D PopFirst.no)
-    were used, then $(D front) would remain the original time point and it would
-    not necessarily be a time point which would be generated by the range-generating
-    function (which in many cases is exactly what you want - e.g. if you were
-    iterating over every day starting at the beginning of the interval).
+    For instance, if the function used to generate a range of time points
+    generated successive Easters (i.e. you're iterating over all of the Easters
+    within the interval), the initial date probably isn't an Easter. By using
+    $(D PopFirst.yes), you would be telling the function which returned the
+    range that you wanted $(D popFront) to be called so that front would then be
+    an Easter - the next one generated by the function (which if you were
+    iterating forward, would be the Easter following the original $(D front),
+    while if you were iterating backward, it would be the Easter prior to the
+    original $(D front)). If $(D PopFirst.no) were used, then $(D front) would
+    remain the original time point and it would not necessarily be a time point
+    which would be generated by the range-generating function (which in many
+    cases is exactly what you
+    want - e.g. if you were iterating over every day starting at the beginning
+    of the interval).
   +/
 enum PopFirst
 {
@@ -284,7 +300,8 @@ enum PopFirst
 
 
 /++
-   Used by StopWatch to indicate whether it should start immediately upon construction.
+   Used by StopWatch to indicate whether it should start immediately upon
+   construction.
   +/
 enum AutoStart
 {
@@ -297,11 +314,13 @@ enum AutoStart
 
 
 /++
-    Array of the strings representing time units, starting with the smallest unit
-    and going to the largest. It does not include "nsecs".
+    Array of the strings representing time units, starting with the smallest
+    unit and going to the largest. It does not include $(D "nsecs").
 
-   "hnsecs" (hecto-nanoseconds (100 ns)), "usecs" (microseconds), "msecs" (milliseconds),
-   "seconds", "minutes", "hours", "days", "weeks", "months", "years"
+   Includes $(D "hnsecs") (hecto-nanoseconds (100 ns)),
+   $(D "usecs") (microseconds), $(D "msecs") (milliseconds), $(D "seconds"),
+   $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"), and
+   $(D "years")
   +/
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
@@ -312,23 +331,29 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
 //==============================================================================
 
 /++
-    Exception type used by std.datetime.
+    Exception type used by std.datetime. It's an alias to TimeException, which
+    is what core.time uses. So, you can catch either and not worry about which
+    module it came from.
   +/
 alias TimeException DateTimeException;
 
 
 /++
-    Effectively a namespace to make it clear where its methods are getting
-    their time from. It cannot be instantiated.
+    Effectively a namespace to make it clear that the methods it contains are
+    getting the time from the system clock. It cannot be instantiated.
  +/
 final class Clock
 {
 public:
 
     /++
-        Returns the current time in the local timezone.
+        Returns the current time in the given time zone.
+
+        Throws:
+            $(D ErrnoException) (on Posix) or $(D Exception) (on Windows)
+            if it fails to get the time of day.
       +/
-    static SysTime currTime(immutable TimeZone tz = LocalTime())
+    static @property SysTime currTime(immutable TimeZone tz = LocalTime())
     {
         return SysTime(currStdTime, tz);
     }
@@ -339,7 +364,7 @@ public:
         {
             assert(currTime(UTC()).timezone is UTC());
 
-            immutable unixTimeD = currTime().toUnixTime();
+            immutable unixTimeD = currTime.toUnixTime();
             immutable unixTimeC = core.stdc.time.time(null);
             immutable diff = unixTimeC - unixTimeD;
 
@@ -354,8 +379,7 @@ public:
         current time.
 
         Throws:
-            ErrnoException (on Posix) or Exception (on Windows) if it fails to
-            get the time of day.
+            $(D DateTimeException) if it fails to get the time.
       +/
     @trusted
     static @property long currStdTime()
@@ -407,19 +431,19 @@ public:
 
     /++
         The current system tick. The number of ticks per second varies from
-        system to system. This uses a monotonic clock, so it's intended for
-        precision timing by comparing relative time values, not for getting
-        the current system time.
+        system to system. currSystemTick uses a monotonic clock, so it's
+        intended for precision timing by comparing relative time values, not
+        for getting the current system time.
 
         Warning:
             On some systems, the monotonic clock may stop counting when
             the computer goes to sleep or hibernates. So, the monotonic
             clock could be off if that occurs. This is known to happen
             on Mac OS X. It has not been tested whether it occurs on
-            either Windows or on Linux.
+            either Windows or Linux.
 
         Throws:
-            TimeException if it fails to get the time.
+            $(D DateTimeException) if it fails to get the time.
       +/
     @safe
     static @property TickDuration currSystemTick()
@@ -450,8 +474,7 @@ public:
             either Windows or on Linux.
 
         Throws:
-            ErrnoException (on Posix) or Exception (on Windows) if it fails to
-            get the time of day.
+            $(D DateTimeException) if it fails to get the time.
       +/
     @safe
     static @property TickDuration currAppTick()
@@ -483,38 +506,47 @@ private:
 
 
 /++
-    SysTime is the type used when you want to get the current time from the system
-    or if you're doing anything that involves time zones. Unlike DateTime, time
-    zone is an integral part of SysTime (though if all you care about is local
-    time, you can pretty much ignore time zones, and it will work, since it
-    defaults to using the local time zone). It holds its internal time in std time
-    (hnsecs since midnight, January 1st, 1 A.D. UTC), so it interfaces well with the
-    system time. However, that means that, unlike DateTime, it is not optimized
-    for calendar operations, and getting individual units from it such as years
-    or days is going to involve conversions and be less efficient.
+    $(D SysTime) is the type used when you want to get the current time from the
+    system or if you're doing anything that involves time zones. Unlike
+    $(D DateTime), the time zone is an integral part of $(D SysTime) (though if
+    all you care about is local time, you can pretty much ignore time zones, and
+    it will work, since it defaults to using the local time zone). It holds its
+    internal time in std time (hnsecs since midnight, January 1st, 1 A.D. UTC),
+    so it interfaces well with the system time. However, that means that, unlike
+    $(D DateTime), it is not optimized for calendar-based operations, and
+    getting individual units from it such as years or days is going to involve
+    conversions and be less efficient.
 
-    Basically, if you care about calendar operations and don't necessarily care
-    about time zones, then DateTime would be the type to use. However, if what
-    you care about is the system time, then SysTime is the type to use.
+    Basically, if you care about calendar-based operations and don't
+    necessarily care about time zones, then $(D DateTime) would be the type to
+    use. However, if what you care about is the system time, then $(D SysTime)
+    would be the type to use.
 
-    $(D Clock.currTime()) will return the current time as a SysTime. If you want
-    to convert a SysTime to a Date or DateTime, simply cast it. And if you ever
-    want to convert a Date or DateTime to a SysTime, use SysTime's constructor,
-    and you can pass in the intended time zone with it (or don't pass in a
-    TimeZone, and the local time zone will be used).
+    $(D Clock.currTime) will return the current time as a $(D SysTime). If you
+    want to convert a $(D SysTime) to a $(D Date) or $(D DateTime), simply cast
+    it. And if you ever want to convert a $(D Date) or $(D DateTime) to a
+    $(D SysTime), use $(D SysTime)'s constructor, and you can pass in the
+    intended time zone with it (or don't pass in a $(D TimeZone), and the local
+    time zone will be used). Be aware, however, that converting from a
+    $(D DateTime) to a $(D SysTime) will not necessarily be 100% accurate due to
+    DST (one hour of the year doesn't exist and another occurs twice). So, if
+    you don't want to risk any conversion errors, keep your times as
+    $(D SysTime)s. Aside from DST though, there shouldn't be any conversion
+    problems.
 
     If you care about using time zones other than local time or UTC, you can use
-    PosixTimeZone on Posix systems (or on Windows, if you provide the TZ Database
-    files), and you can use WindowsTimeZone on Windows systems. The time in SysTime
-    is kept internally in hnsecs from midnight, January 1st, 1 A.D. UTC. So, you
-    never get conversion errors when changing the time zone of a SysTime (since,
-    if the hnecs were kept in local time, DST would cause problems with conversions).
-    LocalTime is the TimeZone class which represents the local time, and UTC is the
-    TimeZone class which represents UTC. SysTime uses LocalTime if no TimeZone is
-    provided. For more details on time zones, look at the documentation for
-    TimeZone, PosixTimeZone, and WindowsTimeZone.
+    $(D PosixTimeZone) on Posix systems (or on Windows, if you provide the TZ
+    Database files), and you can use $(D WindowsTimeZone) on Windows systems.
+    The time in $(D SysTime) is kept internally in hnsecs from midnight,
+    January 1st, 1 A.D. UTC. So, you never get conversion errors when changing
+    the time zone of a $(D SysTime). $(D LocalTime) is the $(D TimeZone) class
+    which represents the local time, and $(D UTC) is the $(D TimeZone) class
+    which represents UTC. $(D SysTime) uses $(D LocalTime) if no $(D TimeZone)
+    is provided. For more details on time zones, look at the documentation for
+    $(D TimeZone), $(D PosixTimeZone), and $(D WindowsTimeZone).
 
-    SysTime's range is from approximately 29,000 B.C. to 29,000 A.D.
+    $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
+    29,000 A.D.
   +/
 struct SysTime
 {
@@ -522,12 +554,12 @@ public:
 
     /++
         Params:
-            dateTime = The DateTime to use to set this SysTime's internal std
-                       time. As DateTime has no concept of time zone, tz is used
-                       as its time zone.
-            tz       = The TimeZone to use for this SysTime. If null, LocalTime
-                       will be used. The given DateTime is assumed to be in the
-                       given time zone.
+            dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
+                       internal std time. As $(D DateTime) has no concept of
+                       time zone, tz is used as its time zone.
+            tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
+                       $(D LocalTime) will be used. The given $(D DateTime) is
+                       assumed to be in the given time zone.
       +/
     this(in DateTime dateTime, immutable TimeZone tz = null) nothrow
     {
@@ -557,13 +589,13 @@ public:
 
     /++
         Params:
-            dateTime = The DateTime to use to set this SysTime's internal std time.
-                       As DateTime has no concept of time zone, tz is used as its
-                       time zone.
+            dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
+                       internal std time. As $(D DateTime) has no concept of
+                       time zone, tz is used as its time zone.
             fsec     = The fractional seconds portion of the time.
-            tz       = The TimeZone to use for this SysTime. If null, LocalTime will
-                       be used. The given DateTime is assumed to be in the given
-                       time zone.
+            tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
+                       $(D LocalTime) will be used. The given $(D DateTime) is
+                       assumed to be in the given time zone.
       +/
     this(in DateTime dateTime, in FracSec fsec, immutable TimeZone tz = null) nothrow
     {
@@ -605,11 +637,12 @@ public:
 
     /++
         Params:
-            date = The Date to use to set this SysTime's internal std time.
-                   As Date has no concept of time zone, tz is used as its
-                   time zone.
-            tz   = The TimeZone to use for this SysTime. If null, LocalTime will
-                   be used. The given Date is assumed to be in the given time zone.
+            date = The $(D Date) to use to set this $(D SysTime)'s internal std
+                   time. As $(D Date) has no concept of time zone, tz is used as
+                   its time zone.
+            tz   = The $(D TimeZone) to use for this $(D SysTime). If null,
+                   $(D LocalTime) will be used. The given $(D Date) is assumed
+                   to be in the given time zone.
       +/
     this(in Date date, immutable TimeZone tz = null) nothrow
     {
@@ -645,16 +678,17 @@ public:
         Note:
             Whereas the other constructors take in the given date/time, assume
             that it's in the given time zone, and convert it to hnsecs in UTC
-            since midnight, January 1st, 1 A.D. UTC - i.e. std time - this constructor
-            takes a std time, which is specifically already in UTC, so no conversion
-            takes place. Of course, the various getter properties and functions
-            will use the given time zone's conversion function to convert the
-            results to that time zone, but no conversion of the arguments to
-            this constructor takes place.
+            since midnight, January 1st, 1 A.D. UTC - i.e. std time - this
+            constructor takes a std time, which is specifically already in UTC,
+            so no conversion takes place. Of course, the various getter
+            properties and functions will use the given time zone's conversion
+            function to convert the results to that time zone, but no conversion
+            of the arguments to this constructor takes place.
 
         Params:
             stdTime = The number of hnsecs since midnight, January 1st, 1 A.D. UTC.
-            tz    = The TimeZone to use for this SysTime. If null, LocalTime will be used.
+            tz      = The $(D TimeZone) to use for this $(D SysTime). If null,
+                      $(D LocalTime) will be used.
       +/
     this(long stdTime, immutable TimeZone tz = null) pure nothrow
     {
@@ -677,7 +711,7 @@ public:
 
     /++
         Params:
-            rhs = The SysTime to assign to this one.
+            rhs = The $(D SysTime) to assign to this one.
       +/
     ref SysTime opAssign(const ref SysTime rhs) pure nothrow
     {
@@ -690,7 +724,7 @@ public:
 
     /++
         Params:
-            rhs = The SysTime to assign to this one.
+            rhs = The $(D SysTime) to assign to this one.
       +/
     ref SysTime opAssign(SysTime rhs) pure nothrow
     {
@@ -702,8 +736,8 @@ public:
 
 
     /++
-        Checks for equality between this SysTime and the given
-        SysTime.
+        Checks for equality between this $(D SysTime) and the given
+        $(D SysTime).
 
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
@@ -823,9 +857,9 @@ public:
 
 
     /++
-        Compares this SysTime with the given SysTime.
+        Compares this $(D SysTime) with the given $(D SysTime).
 
-        Time zone is irrelevant to comparing SysTimes.
+        Time zone is irrelevant when comparing $(D SysTime)s.
 
         Returns:
             $(TABLE
@@ -1111,11 +1145,11 @@ public:
         are B.C.
 
         Params:
-            year = The year to set this SysTime's year to.
+            year = The year to set this $(D SysTime)'s year to.
 
         Throws:
-            DateTimeException if the new year is not a leap year and the resulting
-            date would be on February 29th.
+            $(D DateTimeException) if the new year is not a leap year and the
+            resulting date would be on February 29th.
 
         Examples:
 --------------------
@@ -1226,7 +1260,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            DateTimeException if $(D isAD) is true.
+            $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -1270,10 +1304,10 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this SysTime's year to.
+            year = The year B.C. to set this $(D SysTime)'s year to.
 
         Throws:
-            DateTimeException if a non-positive value is given.
+            $(D DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -1423,10 +1457,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this SysTime's month to.
+            month = The month to set this $(D SysTime)'s month to.
 
         Throws:
-            DateTimeException if the given month is not a valid month.
+            $(D DateTimeException) if the given month is not a valid month.
      +/
     @property void month(Month month)
     {
@@ -1586,11 +1620,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this SysTime's day to.
+            day = The day of the month to set this $(D SysTime)'s day to.
 
         Throws:
-            DateTimeException if the given day is not a valid day of the current
-            month.
+            $(D DateTimeException) if the given day is not a valid day of the
+            current month.
      +/
     @property void day(int day)
     {
@@ -1783,10 +1817,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Hours past midnight.
 
         Params:
-            hour = The hours to set this SysTime's hour to.
+            hour = The hours to set this $(D SysTime)'s hour to.
 
         Throws:
-            DateTimeException if the given hour are not a valid hour of the day.
+            $(D DateTimeException) if the given hour are not a valid hour of
+            the day.
      +/
     @property void hour(int hour)
     {
@@ -1941,11 +1976,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Minutes past the current hour.
 
         Params:
-            minutes = The minute to set this SysTime's minute to.
+            minutes = The minute to set this $(D SysTime)'s minute to.
 
         Throws:
-            DateTimeException if the given minute are not a valid minute of an
-            hour.
+            $(D DateTimeException) if the given minute are not a valid minute
+            of an hour.
      +/
     @property void minute(int minute)
     {
@@ -2103,11 +2138,12 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     /++
         Seconds past the current minute.
 
-        Params
-            second = The second to set this SysTime's second to.
+        Params:
+            second = The second to set this $(D SysTime)'s second to.
 
         Throws:
-            DateTimeException if the given second are not a valid second of a minute.
+            $(D DateTimeException) if the given second are not a valid second
+            of a minute.
      +/
     @property void second(int second)
     {
@@ -2271,9 +2307,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     /++
         Fractional seconds passed the second.
 
-        Params
-            fracSec = The fractional seconds to set this SysTimes's fractional
-                      seconds to.
+        Params:
+            fracSec = The fractional seconds to set this $(D SysTimes)'s
+                      fractional seconds to.
      +/
     @property void fracSec(FracSec fracSec) nothrow
     {
@@ -2390,8 +2426,8 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the internal
-        representation of SysTime.
+        The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
+        internal representation of $(D SysTime).
      +/
     @property long stdTime() const pure nothrow
     {
@@ -2415,10 +2451,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the internal
-        representation of SysTime.
+        The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
+        internal representation of $(D SysTime).
 
-        Params
+        Params:
             stdTime = The number of hnsecs since January 1st, 1 A.D. UTC.
      +/
     @property void stdTime(long stdTime) pure nothrow
@@ -2451,10 +2487,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The current time zone of this SysTime. Its internal time is always kept
-        in UTC, so there are no conversion issues between time zones due to DST.
-        Functions which return all or part of the time - such as hours - adjust
-        the time to this SysTime's time zone before returning.
+        The current time zone of this $(D SysTime). Its internal time is always
+        kept in UTC, so there are no conversion issues between time zones due to
+        DST. Functions which return all or part of the time - such as hours -
+        adjust the time to this $(D SysTime)'s time zone before returning.
       +/
     @property immutable(TimeZone) timezone() const pure nothrow
     {
@@ -2463,19 +2499,25 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        The current time zone of this SysTime. It's internal time is always kept
-        in UTC, so there are no conversion issues between time zones due to DST.
-        Functions which return all or part of the time - such as hours - adjust
-        the time to this SysTime's time zone before returning.
+        The current time zone of this $(D SysTime). It's internal time is always
+        kept in UTC, so there are no conversion issues between time zones due to
+        DST. Functions which return all or part of the time - such as hours -
+        adjust the time to this $(D SysTime)'s time zone before returning.
+
+        Params:
+            tz = The $(D TimeZone) to set this $(D SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) pure nothrow
     {
-        _timezone = timezone;
+        if(timezone is null)
+            _timezone = LocalTime();
+        else
+            _timezone = timezone;
     }
 
 
     /++
-        Returns whether DST is in effect for this SysTime.
+        Returns whether DST is in effect for this $(D SysTime).
       +/
     @property bool dstInEffect() const nothrow
     {
@@ -2485,8 +2527,8 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a SysTime with the same std time as this one, but with LocalTime
-        as its time zone.
+        Returns a $(D SysTime) with the same std time as this one, but with
+        $(D LocalTime) as its time zone.
       +/
     SysTime toLocalTime() const nothrow
     {
@@ -2520,8 +2562,8 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a SysTime with the same std time as this one, but with UTC as
-        its time zone.
+        Returns a $(D SysTime) with the same std time as this one, but with
+        $(D UTC) as its time zone.
       +/
     SysTime toUTC() const pure nothrow
     {
@@ -2543,12 +2585,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a SysTime with the same std time as this one, but with given
-        time zone as its time zone.
+        Returns a $(D SysTime) with the same std time as this one, but with
+        given time zone as its time zone.
       +/
     SysTime toOtherTZ(immutable TimeZone tz) const pure nothrow
     {
-        return SysTime(_stdTime, tz);
+        if(tz is null)
+            return SysTime(_stdTime, LocalTime());
+        else
+            return SysTime(_stdTime, tz);
     }
 
     unittest
@@ -2567,11 +2612,16 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a time_t which represents this SysTime.
+        Returns a $(D time_t) which represents the same time as this
+        $(D SysTime).
 
-        If time_t is 32 bits, rather than 64, and the result can't fit in a 32-bit
-        value, then the closest value that can be held in 32 bits will be used
-        (so time_t.max if it goes over or time_t.min if it goes under).
+        Note that like all conversions in std.datetime, this is a truncating
+        conversion.
+
+        If $(D time_t) is 32 bits, rather than 64, and the result can't fit in a
+        32-bit value, then the closest value that can be held in 32 bits will be
+        used (so $(D time_t.max) if it goes over and $(D time_t.min) if it goes
+        under).
       +/
     time_t toUnixTime() const pure nothrow
     {
@@ -2596,11 +2646,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a timeval which represents this SysTime.
+        Returns a $(D timeval) which represents this $(D SysTime).
 
-        If time_t is 32 bits, rather than 64, and the result can't fit in a 32-bit
-        value, then the closest value that can be held in 32 bits will be used
-        for tv_sec. (so time_t.max if it goes over or time_t.min if it goes under).
+        Note that like all conversions in std.datetime, this is a truncating
+        conversion.
+
+        If $(D time_t) is 32 bits, rather than 64, and the result can't fit in a
+        32-bit value, then the closest value that can be held in 32 bits will be
+        used for $(D tv_sec). (so $(D time_t.max) if it goes over and
+        $(D time_t.min) if it goes under).
       +/
     timeval toTimeVal() const pure nothrow
     {
@@ -2645,7 +2699,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Returns a tm which represents this SysTime.
+        Returns a $(D tm) which represents this $(D SysTime).
       +/
     tm toTM() const nothrow
     {
@@ -2741,22 +2795,23 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
 
     /++
-        Adds the given number of years or months to this SysTime. A negative
-        number will subtract.
+        Adds the given number of years or months to this $(D SysTime). A
+        negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
         year/month overflows the number of days in the new month, then the month
-        will be incremented by one, and the days set to the number of days overflowed.
-        (e.g. if the day were 31 and the new month were June, then the month would
-        be incremented to July, and the new day would be 1). If day overflow is not
-        allowed, then the day will be set to the last valid day in the month
-        (e.g. June 31st would become June 30th).
+        will be incremented by one, and the day set to the number of days
+        overflowed. (e.g. if the day were 31 and the new month were June, then
+        the month would be incremented to July, and the new day would be 1). If
+        day overflow is not allowed, then the day will be set to the last valid
+        day in the month (e.g. June 31st would become June 30th).
 
         Params:
             units         = The type of units to add ("years" or "months").
-            value         = The number of months or years to add to this SysTime.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
+            value         = The number of months or years to add to this
+                            $(D SysTime).
+            allowOverflow = Whether the days should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
@@ -2777,7 +2832,7 @@ st4.add!"years"(1, AllowDayOverflow.no);
 assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 --------------------
       +/
-    ref SysTime add(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -2791,7 +2846,7 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         }
 
         auto date = Date(cast(int)days);
-        date.add!units(years, allowOverflow);
+        date.add!units(value, allowOverflow);
         days = date.dayOfGregorianCal - 1;
 
         if(days < 0)
@@ -2805,6 +2860,29 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         adjTime = newDaysHNSecs + hnsecs;
 
         return this;
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version (testStdDateTime)
+        {
+            auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
+            st1.add!"months"(11);
+            assert(st1 == SysTime(DateTime(2010, 12, 1, 12, 30, 33)));
+
+            auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
+            st2.add!"months"(-11);
+            assert(st2 == SysTime(DateTime(2009, 2, 1, 12, 30, 33)));
+
+            auto st3 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+            st3.add!"years"(1);
+            assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
+
+            auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+            st4.add!"years"(1, AllowDayOverflow.no);
+            assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
+        }
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
@@ -3003,23 +3081,6 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(!__traits(compiles, cst.add!"years"(4)));
             //static assert(!__traits(compiles, ist.add!"years"(4)));
-
-            //Verify Examples.
-            auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-            st1.add!"months"(11);
-            assert(st1 == SysTime(DateTime(2010, 12, 1, 12, 30, 33)));
-
-            auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-            st2.add!"months"(-11);
-            assert(st2 == SysTime(DateTime(2009, 2, 1, 12, 30, 33)));
-
-            auto st3 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-            st3.add!"years"(1);
-            assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
-
-            auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-            st4.add!"years"(1, AllowDayOverflow.no);
-            assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         }
     }
 
@@ -3565,23 +3626,6 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(!__traits(compiles, cst.add!"months"(4)));
             //static assert(!__traits(compiles, ist.add!"months"(4)));
-
-            //Verify Examples.
-            auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30 ,33));
-            st1.add!"months"(1);
-            assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 30 ,33)));
-
-            auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30 ,33));
-            st2.add!"months"(-1);
-            assert(st2 == SysTime(DateTime(2009, 12, 1, 12, 30 ,33)));
-
-            auto st3 = SysTime(DateTime(1999, 1, 29, 12, 30 ,33));
-            st3.add!"months"(1);
-            assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 30 ,33)));
-
-            auto st4 = SysTime(DateTime(1999, 1, 29, 12, 30 ,33));
-            st4.add!"months"(1, AllowDayOverflow.no);
-            assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 30 ,33)));
         }
     }
 
@@ -3925,48 +3969,21 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 
 
     /++
-        Adds the given number of years to this SysTime. A negative number will
-        subtract.
+        Adds the given number of years or months to this $(D SysTime). A
+        negative number will subtract.
 
-        For years, because they are the largest unit in SysTime, there is no
-        difference between adding or rolling.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, if you roll a $(D SysTime) 12 months, you
+        get the exact same $(D SysTime). However, the days can still be affected
+        due to the differing number of days in each month.
 
-        Params:
-            years         = The number of years to add to this SysTime.
-            allowOverflow = Whether the days should be allowed to overflow,
-                            causing the month to increment.
-      +/
-    /+ref SysTime+/ void roll(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
-        if(units == "years")
-    {
-        add!"years"(years, allowOverflow);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, st.roll!"years"(4)));
-            static assert(!__traits(compiles, cst.roll!"years"(4)));
-            //static assert(!__traits(compiles, ist.roll!"years"(4)));
-        }
-    }
-
-
-    /++
-        Adds the given number of months to this SysTime. A negative number will
-        subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the SysTime 12 months, you get the exact
-        same SysTime. However, the days can still be affected due to the differing
-        number of days in each month.
+        Because there are no units larger than years, there is no difference
+        between adding and rolling years.
 
         Params:
-            months        = The number of months to add to this SysTime.
+            units         = The type of units to add ("years" or "months").
+            value         = The number of months or years to add to this
+                            $(D SysTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
 
@@ -3987,9 +4004,69 @@ assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
 auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
 st4.roll!"months"(1, AllowDayOverflow.no);
 assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
+
+auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+st5.roll!"years"(1);
+assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
+
+auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+st6.roll!"years"(1, AllowDayOverflow.no);
+assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 --------------------
       +/
-    /+ref SysTime+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+        if(units == "years")
+    {
+        add!"years"(value, allowOverflow);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Verify Examples.
+            auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
+            st1.roll!"months"(1);
+            assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
+
+            auto st2 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
+            st2.roll!"months"(-1);
+            assert(st2 == SysTime(DateTime(2010, 12, 1, 12, 33, 33)));
+
+            auto st3 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
+            st3.roll!"months"(1);
+            assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
+
+            auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
+            st4.roll!"months"(1, AllowDayOverflow.no);
+            assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
+
+            auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+            st5.roll!"years"(1);
+            assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
+
+            auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
+            st6.roll!"years"(1, AllowDayOverflow.no);
+            assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+            static assert(__traits(compiles, st.roll!"years"(4)));
+            static assert(!__traits(compiles, cst.roll!"years"(4)));
+            //static assert(!__traits(compiles, ist.roll!"years"(4)));
+        }
+    }
+
+
+    //Shares documentation with "years" version.
+    /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "months")
     {
         auto hnsecs = adjTime;
@@ -4002,7 +4079,7 @@ assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
         }
 
         auto date = Date(cast(int)days);
-        date.roll!"months"(months, allowOverflow);
+        date.roll!"months"(value, allowOverflow);
         days = date.dayOfGregorianCal - 1;
 
         if(days < 0)
@@ -4780,31 +4857,51 @@ assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
 
 
     /++
-        Adds the given number of days to this SysTime. A negative number will
-        subtract.
+        Adds the given number of units to this $(D SysTime). A negative number
+        will subtract.
 
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the SysTime one year's worth of days, then
-        you get the exact same SysTime.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, for instance, if you roll a $(D SysTime) one
+        year's worth of days, then you get the exact same $(D SysTime).
 
-        Note that TimeOfDay has no $(D add!"days"()) function because you can add
-        days to a SysTime by adding a duration to it.
+        Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
+        $(D "minutes"), $(D "seconds"), $(D "msecs"), $(D "usecs"), and
+        $(D "hnsecs").
+
+        Note that when rolling msecs, usecs or hnsecs, they all add up to a
+        second. So, for example, rolling 1000 msecs is exactly the same as
+        rolling 100,000 usecs.
 
         Params:
-            days = The number of days to add to this SysTime.
+            units = The units to add.
+            value = The number of $(D_PARAM units) to add to this $(D SysTime).
 
         Examples:
 --------------------
-auto st = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
-st.roll!"days"(1);
-assert(st == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
-st.roll!"days"(365);
-assert(st == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
-st.roll!"days"(-32);
-assert(st == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
+auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
+st1.roll!"days"(1);
+assert(st1 == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
+st1.roll!"days"(365);
+assert(st1 == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
+st1.roll!"days"(-32);
+assert(st1 == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
+
+auto st2 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
+st2.roll!"hours"(1);
+assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
+
+auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+st3.roll!"seconds"(-1);
+assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
+
+auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                   FracSec.from!"usecs"(2_400));
+st4.roll!"usecs"(-1_200_000);
+assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                      FracSec.from!"usecs"(802_400)));
 --------------------
       +/
-    /+ref SysTime+/ void roll(string units)(long days) nothrow
+    /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "days")
     {
         auto hnsecs = adjTime;
@@ -4817,7 +4914,7 @@ assert(st == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
         }
 
         auto date = Date(cast(int)gdays);
-        date.roll!"days"(days);
+        date.roll!"days"(value);
         gdays = date.dayOfGregorianCal - 1;
 
         if(gdays < 0)
@@ -4829,6 +4926,35 @@ assert(st == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
         immutable newDaysHNSecs = convert!("days", "hnsecs")(gdays);
 
         adjTime = newDaysHNSecs + hnsecs;
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
+            st1.roll!"days"(1);
+            assert(st1 == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
+            st1.roll!"days"(365);
+            assert(st1 == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
+            st1.roll!"days"(-32);
+            assert(st1 == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
+
+            auto st2 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
+            st2.roll!"hours"(1);
+            assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
+
+            auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+            st3.roll!"seconds"(-1);
+            assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
+
+            auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                               FracSec.from!"usecs"(2_400));
+            st4.roll!"usecs"(-1_200_000);
+            assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                                  FracSec.from!"usecs"(802_400)));
+        }
     }
 
     unittest
@@ -5112,48 +5238,7 @@ assert(st == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
     }
 
 
-
-    /++
-        Add hours to the time of day. Negative values will subtract.
-
-        The difference between rolling and adding is that rolling does not
-        affect larger units. So, if you roll the SysTime 24 hours, you get
-        the exact same SysTime.
-
-        Note that SysTime has no $(D add!"hours"()), $(D add!"minutes"()), or
-        $(D add!"seconds"()) function because you can add those units to
-        a SysTime by adding a duration to it.
-
-        Params:
-            hours = The number of hours to add to this SysTime.
-
-        Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
-st1.roll!"hours"(1);
-assert(st1 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
-
-auto st2 = SysTime(DateTime(2010, 2, 12, 12, 0, 0));
-st2.roll!"hours"(-1);
-assert(st2 == SysTime(DateTime(2010, 2, 12, 11, 0, 0)));
-
-auto st3 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
-st3.roll!"minutes"(1);
-assert(st3 == SysTime(DateTime(2009, 12, 31, 0, 1, 0)));
-
-auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-st4.roll!"minutes"(-1);
-assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 59, 0)));
-
-auto st5 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
-st5.roll!"seconds"(1);
-assert(st5 == SysTime(DateTime(2009, 12, 31, 0, 0, 1)));
-
-auto st6 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-st6.roll!"seconds"(-1);
-assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
---------------------
-      +/
+    //Shares documentation with "days" version.
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "hours" ||
            units == "minutes" ||
@@ -5816,22 +5901,7 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
     }
 
 
-    /++
-        Add to the fractional seconds of the time of day. Negative values will
-        subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the SysTime 1 second, you get the exact same
-        SysTime.
-
-        Note that SysTime has no $(D add!"msecs"()), $(D add!"usecs"()), or
-        $(D add!"hnsecs"()) function because you can add those units to
-        a SysTime by adding a duration to it.
-
-        Params:
-            units = The units to add to this SysTime.
-            value = The number of units to add to this SysTime.
-      +/
+    //Shares documentation with "days" version.
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "msecs" ||
            units == "usecs" ||
@@ -6201,35 +6271,15 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(!__traits(compiles, cst.roll!"hnsecs"(4)));
             //static assert(!__traits(compiles, ist.roll!"hnsecs"(4)));
-
-            //Verify Examples.
-            auto st1 = SysTime(DateTime(2010, 7, 4, 7, 32, 12));
-            st1.roll!"hnsecs"(1);
-            assert(st1 == SysTime(DateTime(2010, 7, 4, 7, 32, 12), FracSec.from!"hnsecs"(1)));
-
-            auto st2 = SysTime(DateTime(2010, 7, 4, 7, 32, 12));
-            st2.roll!"hnsecs"(-1);
-            assert(st2 == SysTime(DateTime(2010, 7, 4, 7, 32, 12), FracSec.from!"hnsecs"(9_999_999)));
-
-            auto st3 = SysTime(DateTime(2009, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-            st3.roll!"hnsecs"(1);
-            assert(st3 == SysTime(DateTime(2009, 12, 31, 23, 59, 59)));
-
-            auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-            st4.roll!"hnsecs"(-1);
-            assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(9_999_999)));
-
-            auto st5 = SysTime(DateTime(2009, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-            st5.roll!"hnsecs"(1);
-            assert(st5 == SysTime(DateTime(2009, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)));
         }
     }
 
 
     /++
-        Gives the result of adding or subtracting a duration from this SysTime.
+        Gives the result of adding or subtracting a duration from this
+        $(D SysTime).
 
-        The legal types of arithmetic for SysTime using this operator are
+        The legal types of arithmetic for $(D SysTime) using this operator are
 
         $(TABLE
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
@@ -6237,7 +6287,8 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
         )
 
         Params:
-            duration = The duration to add to or subtract from this SysTime.
+            duration = The duration to add to or subtract from this
+                       $(D SysTime).
       +/
     SysTime opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -6451,10 +6502,10 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this SysTime,
-        as well as assigning the result to this SysTime.
+        Gives the result of adding or subtracting a duration from this
+        $(D SysTime), as well as assigning the result to this $(D SysTime).
 
-        The legal types of arithmetic for SysTime using this operator are
+        The legal types of arithmetic for $(D SysTime) using this operator are
 
         $(TABLE
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
@@ -6462,7 +6513,8 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
         )
 
         Params:
-            duration = The duration to add to or subtract from this SysTime.
+            duration = The duration to add to or subtract from this
+                       $(D SysTime).
       +/
     /+ref+/ SysTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -6659,9 +6711,9 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
 
 
     /++
-        Gives the difference between two SysTimes.
+        Gives the difference between two $(D SysTime)s.
 
-        The legal types of arithmetic for SysTime using this operator are
+        The legal types of arithmetic for $(D SysTime) using this operator are
 
         $(TABLE
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
@@ -6765,25 +6817,25 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
 
 
     /++
-        Returns the difference between the two SysTimes in months.
+        Returns the difference between the two $(D SysTime)s in months.
 
         You can get the difference in years by subtracting the year property
-        of two SysTimes, and you can get the difference in days or weeks by
-        subtracting the SysTimes themselves and using the Duration that results,
-        but because you cannot convert between months and smaller units without
-        a specific date (which the Duration from the subtraction of two SysTimes
-        won't have), you cannot get the difference in months without doing some
-        math using both the year and month properties, so this is a convenience
-        function for getting the difference in months.
+        of two $(D SysTime)s, and you can get the difference in days or weeks by
+        subtracting the $(D SysTime)s themselves and using the $(D Duration)
+        that results, but because you cannot convert between months and smaller
+        units without a specific date (which $(D Duration)s don't have), you
+        cannot get the difference in months without doing some math using both
+        the year and month properties, so this is a convenience function for
+        getting the difference in months.
 
-        Note that the number of days in the months or how far into the month either
-        date is is irrelevant. It is the difference in the month property combined
-        with the difference in years * 12. So, for instance, December 31st and
-        January 1st are one month apart just as December 1st and January 31st are
-        one month apart.
+        Note that the number of days in the months or how far into the month
+        either date is is irrelevant. It is the difference in the month property
+        combined with the difference in years * 12. So, for instance,
+        December 31st and January 1st are one month apart just as December 1st
+        and January 31st are one month apart.
 
         Params:
-            rhs = The SysTime to subtract from this one.
+            rhs = The $(D SysTime) to subtract from this one.
 
         Examples:
 --------------------
@@ -6827,7 +6879,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Whether this SysTime is in a leap year.
+        Whether this $(D SysTime) is in a leap year.
      +/
     @property bool isLeapYear() const nothrow
     {
@@ -6849,7 +6901,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Day of the week this SysTime is on.
+        Day of the week this $(D SysTime) is on.
       +/
     @property DayOfWeek dayOfWeek() const nothrow
     {
@@ -6871,7 +6923,7 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
 
     /++
-        Day of the year this SysTime is on.
+        Day of the year this $(D SysTime) is on.
 
         Examples:
 --------------------
@@ -6908,7 +6960,8 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
         Day of the year.
 
         Params:
-            day = The day of the year to set which day of the year this SysTime is on.
+            day = The day of the year to set which day of the year this
+                  $(D SysTime) is on.
       +/
     @property void dayOfYear(int day)
     {
@@ -6939,7 +6992,7 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this SysTime is on.
+        The Xth day of the Gregorian Calendar that this $(D SysTime) is on.
 
         Examples:
 --------------------
@@ -6959,9 +7012,9 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
     {
         immutable adjustedTime = adjTime;
 
-        //We have to add one because 0 would be midnight, January 1st, 1 A.D., which would be
-        //the 1st day of the Gregorian Calendar, not the 0th. So, simply casting to days
-        //is one day off.
+        //We have to add one because 0 would be midnight, January 1st, 1 A.D.,
+        //which would be the 1st day of the Gregorian Calendar, not the 0th. So,
+        //simply casting to days is one day off.
         if(adjustedTime > 0)
             return cast(int)getUnitsFromHNSecs!"days"(adjustedTime) + 1;
 
@@ -7310,11 +7363,12 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
 
 
     /++
-        The Xth day of the Gregorian Calendar that this SysTime is on. Setting
-        this property does not affect the time portion of SysTime.
+        The Xth day of the Gregorian Calendar that this $(D SysTime) is on.
+        Setting this property does not affect the time portion of $(D SysTime).
 
         Params:
-            days = The day of the Gregorian Calendar to set this Date to.
+            days = The day of the Gregorian Calendar to set this $(D SysTime)
+                   to.
 
         Examples:
 --------------------
@@ -7585,10 +7639,10 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
 
 
     /++
-        The ISO 8601 week of the year that this SysTime is in.
+        The ISO 8601 week of the year that this $(D SysTime) is in.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date</a>
+            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date).
       +/
     @property ubyte isoWeek() const nothrow
     {
@@ -7610,15 +7664,29 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
 
 
     /++
-        SysTime for the last day in the month that this Date is in.
+        $(D SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
 
         Examples:
 --------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0), FracSec.from!"msecs"(24)).endOfMonth == SysTime(DateTime(1999, 2, 28, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27), FracSec.from!"usecs"(5203)).endOfMonth == SysTime(DateTime(2000, 2, 29, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9), FracSec.from!"hnsecs"(12345)).endOfMonth == SysTime(DateTime(2000, 6, 30, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
+       SysTime(DateTime(1999, 1, 31, 23, 59, 59),
+               FracSec.from!"hnsecs"(9_999_999)));
+
+assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0),
+               FracSec.from!"msecs"(24)).endOfMonth ==
+       SysTime(DateTime(1999, 2, 28, 23, 59, 59),
+               FracSec.from!"hnsecs"(9_999_999)));
+
+assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27),
+               FracSec.from!"usecs"(5203)).endOfMonth ==
+       SysTime(DateTime(2000, 2, 29, 23, 59, 59),
+               FracSec.from!"hnsecs"(9_999_999)));
+
+assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
+               FracSec.from!"hnsecs"(12345)).endOfMonth ==
+       SysTime(DateTime(2000, 6, 30, 23, 59, 59),
+               FracSec.from!"hnsecs"(9_999_999)));
 --------------------
       +/
     @property SysTime endOfMonth() const nothrow
@@ -7695,7 +7763,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9), FracSec.from!"hnsecs"(12345)).en
 
 
     /++
-        The last day in the month that this SysTime is in.
+        The last day in the month that this $(D SysTime) is in.
 
         Examples:
 --------------------
@@ -7800,10 +7868,10 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        The julian day for this SysTime at the given time. For example, prior
-        to noon, 1996-03-31 would be the julian day number 2_450_173, so this
-        function returns 2_450_173, while from noon onward, it the julian day
-        number would be 2_450_174, so this function returns 2_450_174.
+        The julian day for this $(D SysTime) at the given time. For example,
+        prior to noon, 1996-03-31 would be the julian day number 2_450_173, so
+        this function returns 2_450_173, while from noon onward, the julian
+        day number would be 2_450_174, so this function returns 2_450_174.
       +/
     @property long julianDay() const nothrow
     {
@@ -7849,7 +7917,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        The modified julian day for any time on this Date (since, the modified
+        The modified julian day for any time on this date (since, the modified
         julian day changes at midnight).
       +/
     @property long modJulianDay() const nothrow
@@ -7876,7 +7944,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a Date equivalent to this SysTime.
+        Returns a $(D Date) equivalent to this $(D SysTime).
       +/
     Date opCast(T)() const nothrow
         if(is(Unqual!T == Date))
@@ -7913,7 +7981,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a DateTime equivalent to this SysTime.
+        Returns a $(D DateTime) equivalent to this $(D SysTime).
       +/
     DateTime opCast(T)() const nothrow
         if(is(Unqual!T == DateTime))
@@ -7975,7 +8043,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Returns a TimeOfDay equivalent to this SysTime.
+        Returns a $(D TimeOfDay) equivalent to this $(D SysTime).
       +/
     TimeOfDay opCast(T)() const nothrow
         if(is(Unqual!T == TimeOfDay))
@@ -8039,18 +8107,20 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 
 
     /++
-        Converts this SysTime to a string with the format YYYYMMDDTHHMMSS.FFFFFFFTZ
-        (where F is fractional seconds and TZ is time zone).
+        Converts this $(D SysTime) to a string with the format
+        YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds and TZ is time
+        zone).
 
         Note that the number of digits in the fractional seconds varies with the
-        number of fractional seconds. It's a maximum of 7 (which would be hnsecs),
-        but only has as many as are necessary to hold the correct value (so no
-        trailing zeroes), and if there are no fractional seconds, then there is
-        no decimal point.
+        number of fractional seconds. It's a maximum of 7 (which would be
+        hnsecs), but only has as many as are necessary to hold the correct value
+        (so no trailing zeroes), and if there are no fractional seconds, then
+        there is no decimal point.
 
-        If this SysTime's time zone is LocalTime, then TZ is empty. If the time zone
-        is UTC, then it is "Z". Otherwise, it is the offset from UTC (e.g. +1:00 or -7:00).
-        Note that the offset from UTC is $(I not) enough to uniquely identify the time zone.
+        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty.
+        If its time zone is $(D UTC), then it is "Z". Otherwise, it is the
+        offset from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC
+        is $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
@@ -8058,11 +8128,16 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
 --------------------
 assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
        "20100704T070612");
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toISOString() ==
+
+assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+               FracSec.from!"msecs"(24)).toISOString() ==
        "19981225T021500.024");
+
 assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
        "00000105T230959");
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISOString() ==
+
+assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+               FracSec.from!"hnsecs"(520_920)).toISOString() ==
        "-00040105T000002.052092");
 --------------------
       +/
@@ -8147,29 +8222,39 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISO
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() == "20100704T070612");
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toISOString() == "19981225T021500.024");
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() == "00000105T230959");
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISOString() == "-00040105T000002.052092");
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
+                   "20100704T070612");
+
+            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                           FracSec.from!"msecs"(24)).toISOString() ==
+                   "19981225T021500.024");
+
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
+                   "00000105T230959");
+
+            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                           FracSec.from!"hnsecs"(520_920)).toISOString() ==
+                   "-00040105T000002.052092");
         }
     }
 
 
 
     /++
-        Converts this SysTime to a string with the format YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ
-        (where F is fractional seconds and TZ is time zone).
+        Converts this $(D SysTime) to a string with the format
+        YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
+        is the time zone).
 
         Note that the number of digits in the fractional seconds varies with the
-        number of fractional seconds. It's a maximum of 7 (which would be hnsecs),
-        but only has as many as are necessary to hold the correct value (so no
-        trailing zeroes), and if there are no fractional seconds, then there is
-        no decimal point.
+        number of fractional seconds. It's a maximum of 7 (which would be
+        hnsecs), but only has as many as are necessary to hold the correct value
+        (so no trailing zeroes), and if there are no fractional seconds, then
+        there is no decimal point.
 
-        If this SysTime's time zone is LocalTime, then TZ is empty. If the time
-        zone is UTC, then it is "Z". Otherwise, it is the offset from UTC
-        (e.g. +1:00 or -7:00). Note that the offset from UTC is $(I not) enough
-        to uniquely identify the time zone.
+        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty. If
+        its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
+        from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
+        $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
@@ -8177,11 +8262,16 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISO
 --------------------
 assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
        "2010-07-04T07:06:12");
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toISOExtendedString() ==
+
+assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+               FracSec.from!"msecs"(24)).toISOExtendedString() ==
        "1998-12-25T02:15:00.024");
+
 assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
        "0000-01-05T23:09:59");
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISOExtendedString() ==
+
+assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+               FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
        "-0004-01-05T00:00:02.052092");
 --------------------
       +/
@@ -8266,27 +8356,37 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISO
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toISOExtendedString() == "1998-12-25T02:15:00.024");
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISOExtendedString() == "-0004-01-05T00:00:02.052092");
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
+                   "2010-07-04T07:06:12");
+
+            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                           FracSec.from!"msecs"(24)).toISOExtendedString() ==
+                   "1998-12-25T02:15:00.024");
+
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
+                   "0000-01-05T23:09:59");
+
+            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                           FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
+                   "-0004-01-05T00:00:02.052092");
         }
     }
 
     /++
-        Converts this SysTime to a string with the format YYYY-Mon-DD HH:MM:SS.FFFFFFFTZ
-        (where F is fractional seconds and TZ is time zone).
+        Converts this $(D SysTime) to a string with the format
+        YYYY-Mon-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds and TZ
+        is the time zone).
 
         Note that the number of digits in the fractional seconds varies with the
-        number of fractional seconds. It's a maximum of 7 (which would be hnsecs),
-        but only has as many as are necessary to hold the correct value (so no
-        trailing zeroes), and if there are no fractional seconds, then there is
-        no decimal point.
+        number of fractional seconds. It's a maximum of 7 (which would be
+        hnsecs), but only has as many as are necessary to hold the correct value
+        (so no trailing zeroes), and if there are no fractional seconds, then
+        there is no decimal point.
 
-        If this SysTime's time zone is LocalTime, then TZ is empty. If the time
-        zone is UTC, then it is "Z". Otherwise, it is the offset from UTC
-        (e.g. +1:00 or -7:00). Note that the offset from UTC is $(I not) enough
-        to uniquely identify the time zone.
+        If this $(D SysTime)'s time zone is $(D LocalTime), then TZ is empty. If
+        its time zone is $(D UTC), then it is "Z". Otherwise, it is the offset
+        from UTC (e.g. +1:00 or -7:00). Note that the offset from UTC is
+        $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
 
@@ -8294,11 +8394,16 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toISO
 --------------------
 assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
        "2010-Jul-04 07:06:12");
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toSimpleString() ==
+
+assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+               FracSec.from!"msecs"(24)).toSimpleString() ==
        "1998-Dec-25 02:15:00.024");
+
 assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
        "0000-Jan-05 23:09:59");
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toSimpleString() ==
+
+assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+               FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
         "-0004-Jan-05 00:00:02.052092");
 --------------------
       +/
@@ -8383,16 +8488,25 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toSim
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
-            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(24)).toSimpleString() == "1998-Dec-25 02:15:00.024");
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
-            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toSimpleString() == "-0004-Jan-05 00:00:02.052092");
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
+                   "2010-Jul-04 07:06:12");
+
+            assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                           FracSec.from!"msecs"(24)).toSimpleString() ==
+                   "1998-Dec-25 02:15:00.024");
+
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
+                   "0000-Jan-05 23:09:59");
+
+            assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                           FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
+                    "-0004-Jan-05 00:00:02.052092");
         }
     }
 
 
     /+
-        Converts this SysTime to a string.
+        Converts this $(D SysTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -8403,7 +8517,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toSim
     }
 
     /++
-        Converts this SysTime to a string.
+        Converts this $(D SysTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -8428,32 +8542,34 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2), FracSec.from!"hnsecs"(520920)).toSim
 
 
     /++
-        Creates a SysTime from a string with the format YYYYMMDDTHHMMSS.FFFFFFFTZ
-        (where F is fractional seconds is time zone). Whitespace is stripped from
-        the given string.
+        Creates a $(D SysTime) from a string with the format
+        YYYYMMDDTHHMMSS.FFFFFFFTZ (where F is fractional seconds is the time
+        zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in toISOString() except that
+        The exact format is exactly as described in $(D toISOString) except that
         trailing zeroes are permitted - including having fractional seconds with
-        all zeroes. However, a decimal point with nothing following it is invalid.
+        all zeroes. However, a decimal point with nothing following it is
+        invalid.
 
-        If there is no time zone in the string, then LocalTime is used. If the
-        time zone is "Z", then UTC is used. Otherwise, a SimpleTimeZone which
-        corresponds to the given offset from UTC is used. If you wish the
-        returned SysTime to be a particular time zone, then pass in that time
-        zone and the SysTime to be returned will be converted to that time zone
-        (though it will still be read in as whatever time zone is in its string).
+        If there is no time zone in the string, then $(D LocalTime) is used. If
+        the time zone is "Z", then $(D UTC) is used. Otherwise, a
+        $(D SimpleTimeZone) which corresponds to the given offset from UTC is
+        used. If you wish the returned $(D SysTime) to be a particular time
+        zone, then pass in that time zone and the $(D SysTime) to be returned
+        will be converted to that time zone (though it will still be read in as
+        whatever time zone is in its string).
 
-        The accepted formats for time zone offsets are +H, -H, +HH, -HH, +H:MM,
-        -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets
+        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
             isoString = A string formatted in the ISO format for dates and times.
-            tz        = The time zone to convert the given time to (no conversion
-                        occurs if null).
+            tz        = The time zone to convert the given time to (no
+                        conversion occurs if null).
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting SysTime would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -8621,34 +8737,35 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
 
 
     /++
-        Creates a SysTime from a string with the format YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ
-        (where F is fractional seconds is time zone). Whitespace is stripped from the
-        given string.
+        Creates a $(D SysTime) from a string with the format
+        YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
+        time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in toISOExtendedString() except
-        that trailing zeroes are permitted - including having fractional seconds
-        with all zeroes. However, a decimal point with nothing following it is
-        invalid.
+        The exact format is exactly as described in $(D toISOExtendedString)
+        except that trailing zeroes are permitted - including having fractional
+        seconds with all zeroes. However, a decimal point with nothing following
+        it is invalid.
 
-        If there is no time zone in the string, then LocalTime is used. If the
-        time zone is "Z", then UTC is used. Otherwise, a SimpleTimeZone which
-        corresponds to the given offset from UTC is used. If you wish the
-        returned SysTime to be a particular time zone, then pass in that time
-        zone and the SysTime to be returned will be converted to that time zone
-        (though it will still be read in as whatever time zone is in its string).
+        If there is no time zone in the string, then $(D LocalTime) is used. If
+        the time zone is "Z", then $(D UTC) is used. Otherwise, a
+        $(D SimpleTimeZone) which corresponds to the given offset from UTC is
+        used. If you wish the returned $(D SysTime) to be a particular time
+        zone, then pass in that time zone and the $(D SysTime) to be returned
+        will be converted to that time zone (though it will still be read in as
+        whatever time zone is in its string).
 
-        The accepted formats for time zone offsets are +H, -H, +HH, -HH, +H:MM,
-        -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets
+        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
             isoString = A string formatted in the ISO Extended format for dates
                         and times.
-            tz        = The time zone to convert the given time to (no conversion
-                        occurs if null).
+            tz        = The time zone to convert the given time to (no
+                        conversion occurs if null).
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting SysTime would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -8819,34 +8936,36 @@ assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
 
 
     /++
-        Creates a SysTime from a string with the format YYYY-MM-DD HH:MM:SS.FFFFFFFTZ
-        (where F is fractional seconds is time zone). Whitespace is stripped from the
-        given string.
+        Creates a $(D SysTime) from a string with the format
+        YYYY-MM-DD HH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
+        time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in toSimpleString() except that
-        trailing zeroes are permitted - including having fractional seconds with
-        all zeroes. However, a decimal point with nothing following it is invalid.
+        The exact format is exactly as described in $(D toSimpleString) except
+        that trailing zeroes are permitted - including having fractional seconds
+        with all zeroes. However, a decimal point with nothing following it is
+        invalid.
 
-        If there is no time zone in the string, then LocalTime is used. If the
-        time zone is "Z", then UTC is used. Otherwise, a SimpleTimeZone which
-        corresponds to the given offset from UTC is used. If you wish the
-        returned SysTime to be a particular time zone, then pass in that time
-        zone and the SysTime to be returned will be converted to that time zone
-        (though it will still be read in as whatever time zone is in its string).
+        If there is no time zone in the string, then $(D LocalTime) is used. If
+        the time zone is "Z", then $(D UTC) is used. Otherwise, a
+        $(D SimpleTimeZone) which corresponds to the given offset from UTC is
+        used. If you wish the returned $(D SysTime) to be a particular time
+        zone, then pass in that time zone and the $(D SysTime) to be returned
+        will be converted to that time zone (though it will still be read in as
+        whatever time zone is in its string).
 
-        The accepted formats for time zone offsets are +H, -H, +HH, -HH, +H:MM,
-            -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets
+        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
 
         Params:
-            simpleString = A string formatted in the way that toSimpleString()
-                           formats dates and times.
+            simpleString = A string formatted in the way that
+                           $(D toSimpleString) formats dates and times.
             tz           = The time zone to convert the given time to (no
                            conversion occurs if null).
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting SysTime would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D SysTime) would not be valid.
 
         Examples:
 --------------------
@@ -9024,9 +9143,10 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
 
     /++
-        Returns the SysTime farthest in the past which is representable by SysTime.
+        Returns the $(D SysTime) farthest in the past which is representable
+        by $(D SysTime).
 
-        The SysTime which is returned is in UTC.
+        The $(D SysTime) which is returned is in UTC.
       +/
     @property static SysTime min() pure nothrow
     {
@@ -9044,9 +9164,10 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
 
     /++
-        Returns the SysTime farthest in the future which is representable by SysTime.
+        Returns the $(D SysTime) farthest in the future which is representable
+        by $(D SysTime).
 
-        The SysTime which is returned is in UTC.
+        The $(D SysTime) which is returned is in UTC.
       +/
     @property static SysTime max() pure nothrow
     {
@@ -9065,8 +9186,8 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
 private:
 
-    /++
-        Returns stdTime converted to SysTime's time zone.
+    /+
+        Returns $(D stdTime) converted to $(D SysTime)'s time zone.
       +/
     @property long adjTime() const nothrow
     {
@@ -9074,8 +9195,8 @@ private:
     }
 
 
-    /++
-        Converts the given hnsecs from SysTime's time zone to std time.
+    /+
+        Converts the given hnsecs from $(D SysTime)'s time zone to std time.
       +/
     @property void adjTime(long adjTime) nothrow
     {
@@ -9098,16 +9219,18 @@ private:
 
 
 /++
-    Represents a date in the Proleptic Gregorian Calendar ranging from 32,768 B.C.
-    to 32,767 A.D. Positive years are A.D. Non-positive years are B.C.
+    Represents a date in the Proleptic Gregorian Calendar ranging from
+    32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
+    B.C.
 
-    Year, month, and day are kept separately internally so that Date is optimized for
-    calendar operations.
+    Year, month, and day are kept separately internally so that $(D Date) is
+    optimized for calendar-based operations.
 
-    Date uses the Proleptic Gregorian Calendar, so it assumes the Gregorian leap year
-    calculations for its entire length. And, as per ISO 8601, it also treats 1 B.C. as
-    year 0, so 1 B.C. is 0, 2 B.C. is -1, etc. Use $(D yearBC) if want B.C. as a positive
-    integer with 1 B.C. being the year prior to 1 A.D.
+    $(D Date) uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
+    leap year calculations for its entire length. And, as per
+    $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601), it also treats 1 B.C. as
+    year 0. So, 1 B.C. is 0, 2 B.C. is -1, etc. Use $(D yearBC) if want B.C. as
+    a positive integer with 1 B.C. being the year prior to 1 A.D.
 
     Year 0 is a leap year.
  +/
@@ -9117,7 +9240,7 @@ public:
 
     /++
         Throws:
-            DateTimeException if the resulting Date would not be valid.
+            $(D DateTimeException) if the resulting $(D Date) would not be valid.
 
         Params:
             year  = Year of the Gregorian Calendar. Positive values are A.D.
@@ -9201,8 +9324,8 @@ public:
 
     /++
         Params:
-            day = The Xth day of the Gregorian Calendar that the constructed Date
-                  will be for.
+            day = The Xth day of the Gregorian Calendar that the constructed
+                  $(D Date) will be for.
      +/
     this(int day) pure nothrow
     {
@@ -9436,7 +9559,7 @@ public:
 
 
     /++
-        Compares this Date with the given Date.
+        Compares this $(D Date) with the given $(D Date).
 
         Returns:
             $(TABLE
@@ -9596,8 +9719,8 @@ assert(Date(-7, 4, 5).year == -7);
             year = The year to set this Date's year to.
 
         Throws:
-            DateTimeException if the new year is not a leap year and the resulting
-            date would be on February 29th.
+            $(D DateTimeException) if the new year is not a leap year and the
+            resulting date would be on February 29th.
      +/
     @property void year(int year) pure
     {
@@ -9643,7 +9766,7 @@ assert(Date(-7, 4, 5).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            DateTimeException if $(D isAD) is true.
+            $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -9687,10 +9810,10 @@ assert(Date(-100, 1, 1).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this Date's year to.
+            year = The year B.C. to set this $(D Date)'s year to.
 
         Throws:
-            DateTimeException if a non-positive value is given.
+            $(D DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -9777,10 +9900,10 @@ assert(Date(-7, 4, 5).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this Date's month to.
+            month = The month to set this $(D Date)'s month to.
 
         Throws:
-            DateTimeException if the given month is not a valid month or if
+            $(D DateTimeException) if the given month is not a valid month or if
             the current day would not be valid in the given month.
      +/
     @property void month(Month month) pure
@@ -9856,10 +9979,11 @@ assert(Date(-7, 4, 5).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this Date's day to.
+            day = The day of the month to set this $(D Date)'s day to.
 
         Throws:
-            DateTimeException if the given day is not a valid day of the current month.
+            $(D DateTimeException) if the given day is not a valid day of the
+            current month.
      +/
     @property void day(int day) pure
     {
@@ -9957,43 +10081,49 @@ assert(Date(-7, 4, 5).day == 5);
 
 
     /++
-        Adds the given number of years to this Date. A negative number will subtract.
+        Adds the given number of years or months to this $(D Date). A negative
+        number will subtract.
 
-        Note that if day overflow is allowed, and the date is Febuary 29th of a
-        leap year, and the new year is not a leap year, then the date is shifted
-        to March 1st. If day overflow is not allowed, then the date is shifted to
-        February 28th.
+        Note that if day overflow is allowed, and the date with the adjusted
+        year/month overflows the number of days in the new month, then the month
+        will be incremented by one, and the day set to the number of days
+        overflowed. (e.g. if the day were 31 and the new month were June, then
+        the month would be incremented to July, and the new day would be 1). If
+        day overflow is not allowed, then the day will be set to the last valid
+        day in the month (e.g. June 31st would become June 30th).
 
         Params:
-            years         = The number of years to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
+            units         = The type of units to add ("years" or "months").
+            value         = The number of months or years to add to this
+                            $(D Date).
+            allowOverflow = Whether the day should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
-auto date1 = Date(2010, 1, 1);
-date1.add!"years"(1);
-assert(date1 == Date(2011, 1, 1));
+auto d1 = Date(2010, 1, 1);
+d1.add!"months"(11);
+assert(d1 == Date(2010, 12, 1));
 
-auto date2 = Date(2010, 1, 1);
-date2.add!"years"(-1);
-assert(date2 == Date(2009, 1, 1));
+auto d2 = Date(2010, 1, 1);
+d2.add!"months"(-11);
+assert(d2 == Date(2009, 2, 1));
 
-auto date3 = Date(2000, 2, 29);
-date3.add!"years"(1);
-assert(date3 == Date(2001, 3, 1));
+auto d3 = Date(2000, 2, 29);
+d3.add!"years"(1);
+assert(d3 == Date(2001, 3, 1));
 
-auto date4 = Date(2000, 2, 29);
-date4.add!"years"(1, AllowDayOverflow.no);
-assert(date4 == Date(2001, 2, 28));
+auto d4 = Date(2000, 2, 29);
+d4.add!"years"(1, AllowDayOverflow.no);
+assert(d4 == Date(2001, 2, 28));
 --------------------
       +/
-    /+ref Date+/ void add(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
     {
-        immutable newYear = _year + years;
+        immutable newYear = _year + value;
 
-        _year += years;
+        _year += value;
 
         if(_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
         {
@@ -10004,6 +10134,29 @@ assert(date4 == Date(2001, 2, 28));
             }
             else
                 _day = 28;
+        }
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(stdStdDateTime)
+        {
+            auto d1 = Date(2010, 1, 1);
+            d1.add!"months"(11);
+            assert(d1 == Date(2010, 12, 1));
+
+            auto d2 = Date(2010, 1, 1);
+            d2.add!"months"(-11);
+            assert(d2 == Date(2009, 2, 1));
+
+            auto d3 = Date(2000, 2, 29);
+            d3.add!"years"(1);
+            assert(d3 == Date(2001, 3, 1));
+
+            auto d4 = Date(2000, 2, 29);
+            d4.add!"years"(1, AllowDayOverflow.no);
+            assert(d4 == Date(2001, 2, 28));
         }
     }
 
@@ -10103,23 +10256,6 @@ assert(date4 == Date(2001, 2, 28));
             immutable idate = Date(1999, 7, 6);
             static assert(!__traits(compiles, cdate.add!"years"(7)));
             static assert(!__traits(compiles, idate.add!"years"(7)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.add!"years"(1);
-            assert(date1 == Date(2011, 1, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.add!"years"(-1);
-            assert(date2 == Date(2009, 1, 1));
-
-            auto date3 = Date(2000, 2, 29);
-            date3.add!"years"(1);
-            assert(date3 == Date(2001, 3, 1));
-
-            auto date4 = Date(2000, 2, 29);
-            date4.add!"years"(1, AllowDayOverflow.no);
-            assert(date4 == Date(2001, 2, 28));
         }
     }
 
@@ -10218,44 +10354,7 @@ assert(date4 == Date(2001, 2, 28));
     }
 
 
-    /++
-        Adds the given number of months to this Date. A negative number will subtract.
-
-        The year will be adjusted along with the month if the number of months added
-        (or subtracted) would overflow (or underflow) the current year.
-
-        Note that if day overflow is allowed, and the date with the adjusted month
-        overflows the number of days in the new month, then the month will be
-        incremented by one, and the days set to the number of days overflowed.
-        (e.g. if the day were 31 and the new month were June, then the month would
-        be incremented to July, and the new day would be 1). If day overflow is
-        not allowed, then the day will be set to the last valid day in the month
-        (e.g. June 31st would become June 30th).
-
-        Params:
-            months        = The number of months to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto date1 = Date(2010, 1, 1);
-date1.add!"months"(1);
-assert(date1 == Date(2010, 2, 1));
-
-auto date2 = Date(2010, 1, 1);
-date2.add!"months"(-1);
-assert(date2 == Date(2009, 12, 1));
-
-auto date3 = Date(1999, 1, 29);
-date3.add!"months"(1);
-assert(date3 == Date(1999, 3, 1));
-
-auto date4 = Date(1999, 1, 29);
-date4.add!"months"(1, AllowDayOverflow.no);
-assert(date4 == Date(1999, 2, 28));
---------------------
-      +/
+    //Shares documentation with "years" version.
     /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "months")
     {
@@ -10531,23 +10630,6 @@ assert(date4 == Date(1999, 2, 28));
             immutable idate = Date(1999, 7, 6);
             static assert(!__traits(compiles, cdate.add!"months"(3)));
             static assert(!__traits(compiles, idate.add!"months"(3)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.add!"months"(1);
-            assert(date1 == Date(2010, 2, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.add!"months"(-1);
-            assert(date2 == Date(2009, 12, 1));
-
-            auto date3 = Date(1999, 1, 29);
-            date3.add!"months"(1);
-            assert(date3 == Date(1999, 3, 1));
-
-            auto date4 = Date(1999, 1, 29);
-            date4.add!"months"(1, AllowDayOverflow.no);
-            assert(date4 == Date(1999, 2, 28));
         }
     }
 
@@ -10787,20 +10869,84 @@ assert(date4 == Date(1999, 2, 28));
 
 
     /++
-        Adds the given number of years to this Date. A negative number will subtract.
+        Adds the given number of years or months to this $(D Date). A negative
+        number will subtract.
 
-        For years, because they are the largest unit in Date, there is no difference
-        between adding or rolling.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, if you roll a $(D Date) 12 months, you get
+        the exact same $(D Date). However, the days can still be affected due to
+        the differing number of days in each month.
+
+        Because there are no units larger than years, there is no difference
+        between adding and rolling years.
 
         Params:
-            years         = The number of years to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
+            units         = The type of units to add ("years" or "months").
+            value         = The number of months or years to add to this
+                            $(D Date).
+
+        Examples:
+--------------------
+auto d1 = Date(2010, 1, 1);
+d1.roll!"months"(1);
+assert(d1 == Date(2010, 2, 1));
+
+auto d2 = Date(2010, 1, 1);
+d2.roll!"months"(-1);
+assert(d2 == Date(2010, 12, 1));
+
+auto d3 = Date(1999, 1, 29);
+d3.roll!"months"(1);
+assert(d3 == Date(1999, 3, 1));
+
+auto d4 = Date(1999, 1, 29);
+d4.roll!"months"(1, AllowDayOverflow.no);
+assert(d4 == Date(1999, 2, 28));
+
+auto d5 = Date(2000, 2, 29);
+d5.roll!"years"(1);
+assert(d5 == Date(2001, 3, 1));
+
+auto d6 = Date(2000, 2, 29);
+d6.roll!"years"(1, AllowDayOverflow.no);
+assert(d6 == Date(2001, 2, 28));
+--------------------
       +/
-    /+ref Date+/ void roll(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
     {
-        add!"years"(years, allowOverflow);
+        add!"years"(value, allowOverflow);
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto d1 = Date(2010, 1, 1);
+            d1.roll!"months"(1);
+            assert(d1 == Date(2010, 2, 1));
+
+            auto d2 = Date(2010, 1, 1);
+            d2.roll!"months"(-1);
+            assert(d2 == Date(2010, 12, 1));
+
+            auto d3 = Date(1999, 1, 29);
+            d3.roll!"months"(1);
+            assert(d3 == Date(1999, 3, 1));
+
+            auto d4 = Date(1999, 1, 29);
+            d4.roll!"months"(1, AllowDayOverflow.no);
+            assert(d4 == Date(1999, 2, 28));
+
+            auto d5 = Date(2000, 2, 29);
+            d5.roll!"years"(1);
+            assert(d5 == Date(2001, 3, 1));
+
+            auto d6 = Date(2000, 2, 29);
+            d6.roll!"years"(1, AllowDayOverflow.no);
+            assert(d6 == Date(2001, 2, 28));
+        }
     }
 
     unittest
@@ -10815,38 +10961,7 @@ assert(date4 == Date(1999, 2, 28));
     }
 
 
-    /++
-        Adds the given number of months to this Date. A negative number will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date 12 months, you get the exact same
-        Date. However, the days can still be affected due to the differing number
-        of days in each month.
-
-        Params:
-            months        = The number of months to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto date1 = Date(2010, 1, 1);
-date1.roll!"months"(1);
-assert(date1 == Date(2010, 2, 1));
-
-auto date2 = Date(2010, 1, 1);
-date2.roll!"months"(-1);
-assert(date2 == Date(2010, 12, 1));
-
-auto date3 = Date(1999, 1, 29);
-date3.roll!"months"(1);
-assert(date3 == Date(1999, 3, 1));
-
-auto date4 = Date(1999, 1, 29);
-date4.roll!"months"(1, AllowDayOverflow.no);
-assert(date4 == Date(1999, 2, 28));
---------------------
-      +/
+    //Shares documentation with "years" version.
     /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "months")
     {
@@ -11437,27 +11552,28 @@ assert(date4 == Date(1999, 2, 28));
 
 
     /++
-        Adds the given number of days to this Date. A negative number will subtract.
+        Adds the given number of units to this $(D Date). A negative number will
+        subtract.
 
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date one year's worth of days, then you
-        get the exact same Date.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, for instance, if you roll a $(D Date) one
+        year's worth of days, then you get the exact same $(D Date).
 
-        Note that there is no $(D add!"days"()) because you can add days to a Date by
-        adding a duration to it.
+        The only accepted units are $(D "days").
 
         Params:
-            days = The number of days to add to this Date.
+            units = The units to add. Must be $(D "days").
+            value = The number of days to add to this $(D Date).
 
         Examples:
 --------------------
-auto date = Date(2010, 1, 1);
-date.roll!"days"(1);
-assert(date == Date(2010, 1, 2));
-date.roll!"days"(365);
-assert(date == Date(2010, 1, 26));
-date.roll!"days"(-32);
-assert(date == Date(2010, 1, 25));
+auto d = Date(2010, 1, 1);
+d.roll!"days"(1);
+assert(d == Date(2010, 1, 2));
+d.roll!"days"(365);
+assert(d == Date(2010, 1, 26));
+d.roll!"days"(-32);
+assert(d == Date(2010, 1, 25));
 --------------------
       +/
     /+ref Date+/ void roll(string units)(long days) pure nothrow
@@ -11476,6 +11592,21 @@ assert(date == Date(2010, 1, 25));
             newDay -= limit;
 
         _day = cast(ubyte)newDay;
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto d = Date(2010, 1, 1);
+            d.roll!"days"(1);
+            assert(d == Date(2010, 1, 2));
+            d.roll!"days"(365);
+            assert(d == Date(2010, 1, 26));
+            d.roll!"days"(-32);
+            assert(d == Date(2010, 1, 25));
+        }
     }
 
     unittest
@@ -11677,7 +11808,8 @@ assert(date == Date(2010, 1, 25));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this Date.
+        Gives the result of adding or subtracting a duration from this
+        $(D Date).
 
         The legal types of arithmetic for Date using this operator are
 
@@ -11687,7 +11819,7 @@ assert(date == Date(2010, 1, 25));
         )
 
         Params:
-            duration = The duration to add to or subtract from this Date.
+            duration = The duration to add to or subtract from this $(D Date).
       +/
     Date opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -11788,10 +11920,10 @@ assert(date == Date(2010, 1, 25));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this Date, as
-        well as assigning the result to this Date.
+        Gives the result of adding or subtracting a duration from this
+        $(D Date), as well as assigning the result to this $(D Date).
 
-        The legal types of arithmetic for Date using this operator are
+        The legal types of arithmetic for $(D Date) using this operator are
 
         $(TABLE
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
@@ -11799,7 +11931,7 @@ assert(date == Date(2010, 1, 25));
         )
 
         Params:
-            duration = The duration to add to or subtract from this Date.
+            duration = The duration to add to or subtract from this $(D Date).
       +/
     /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -11881,7 +12013,7 @@ assert(date == Date(2010, 1, 25));
 
 
     /++
-        Gives the difference between two Dates.
+        Gives the difference between two $(D Date)s.
 
         The legal types of arithmetic for Date using this operator are
 
@@ -11926,24 +12058,25 @@ assert(date == Date(2010, 1, 25));
 
 
     /++
-        Returns the difference between the two Dates in months.
+        Returns the difference between the two $(D Date)s in months.
 
         You can get the difference in years by subtracting the year property
-        of two Dates, and you can get the difference in days or weeks by
-        subtracting the Dates themselves and using the Duration that results,
-        but because you cannot convert between months and smaller units without
-        a specific date (which Durations don't have), you cannot get the difference
-        in months without doing some math using both the year and month properties,
-        so this is a convenience function for getting the difference in months.
+        of two $(D Date)s, and you can get the difference in days or weeks by
+        subtracting the $(D Date)s themselves and using the $(D Duration) that
+        results, but because you cannot convert between months and smaller units
+        without a specific date (which $(D Duration)s don't have), you cannot
+        get the difference in months without doing some math using both the year
+        and month properties, so this is a convenience function for getting the
+        difference in months.
 
-        Note that the number of days in the months or how far into the month either
-        date is is irrelevant. It is the difference in the month property combined
-        with the difference in years * 12. So, for instance, December 31st and
-        January 1st are one month apart just as December 1st and January 31st are
-        one month apart.
+        Note that the number of days in the months or how far into the month
+        either $(D Date) is is irrelevant. It is the difference in the month
+        property combined with the difference in years * 12. So, for instance,
+        December 31st and January 1st are one month apart just as December 1st
+        and January 31st are one month apart.
 
         Params:
-            rhs = The Date to subtract from this one.
+            rhs = The $(D Date) to subtract from this one.
 
         Examples:
 --------------------
@@ -12189,7 +12322,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Whether this Date is in a leap year.
+        Whether this $(D Date) is in a leap year.
      +/
     @property bool isLeapYear() const pure nothrow
     {
@@ -12211,7 +12344,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Day of the week this Date is on.
+        Day of the week this $(D Date) is on.
       +/
     @property DayOfWeek dayOfWeek() const pure nothrow
     {
@@ -12233,7 +12366,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
 
     /++
-        Day of the year this Date is on.
+        Day of the year this $(D Date) is on.
 
         Examples:
 --------------------
@@ -12357,10 +12490,12 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         Day of the year.
 
         Params:
-            day = The day of the year to set which day of the year this Date is on.
+            day = The day of the year to set which day of the year this
+                  $(D Date) is on.
 
         Throws:
-            DateTimeException if the given day is an invalid day of the year.
+            $(D DateTimeException) if the given day is an invalid day of the
+            year.
       +/
     @property void dayOfYear(int day) pure
     {
@@ -12663,7 +12798,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this Date is on.
+        The Xth day of the Gregorian Calendar that this $(D Date) is on.
 
         Examples:
 --------------------
@@ -12902,10 +13037,10 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
     /++
-        The Xth day of the Gregorian Calendar that this Date is on.
+        The Xth day of the Gregorian Calendar that this $(D Date) is on.
 
         Params:
-            day = The day of the Gregorian Calendar to set this Date to.
+            day = The day of the Gregorian Calendar to set this $(D Date) to.
 
         Examples:
 --------------------
@@ -12985,7 +13120,7 @@ assert(date == Date(2010, 12, 31));
 
 
     /++
-        The ISO 8601 week of the year that this Date is in.
+        The ISO 8601 week of the year that this $(D Date) is in.
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
@@ -13090,7 +13225,7 @@ assert(date == Date(2010, 12, 31));
 
 
     /++
-        Date for the last day in the month that this Date is in.
+        $(D Date) for the last day in the month that this $(D Date) is in.
 
         Examples:
 --------------------
@@ -13157,7 +13292,7 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 
 
     /++
-        The last day in the month that this Date is in.
+        The last day in the month that this $(D Date) is in.
 
         Examples:
 --------------------
@@ -13261,7 +13396,8 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        The julian day for this Date at noon (since the julian day changes at noon).
+        The julian day for this $(D Date) at noon (since the julian day changes
+        at noon).
       +/
     @property long julianDay() const pure nothrow
     {
@@ -13290,7 +13426,7 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        The modified julian day for any time on this Date (since, the modified
+        The modified julian day for any time on this date (since, the modified
         julian day changes at midnight).
       +/
     @property long modJulianDay() const pure nothrow
@@ -13314,7 +13450,7 @@ assert(!Date(-2010, 1, 1).isAD);
 
 
     /++
-        Converts this Date to a string with the format YYYYMMDD.
+        Converts this $(D Date) to a string with the format YYYYMMDD.
 
         Examples:
 --------------------
@@ -13377,7 +13513,7 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
     /++
-        Converts this Date to a string with the format YYYY-MM-DD.
+        Converts this $(D Date) to a string with the format YYYY-MM-DD.
 
         Examples:
 --------------------
@@ -13440,7 +13576,7 @@ assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
     }
 
     /++
-        Converts this Date to a string with the format YYYY-Mon-DD.
+        Converts this $(D Date) to a string with the format YYYY-Mon-DD.
 
         Examples:
 --------------------
@@ -13506,7 +13642,7 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
 
     /+
-        Converts this Date to a string.
+        Converts this $(D Date) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -13517,7 +13653,7 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
     /++
-        Converts this Date to a string.
+        Converts this $(D Date) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -13542,15 +13678,15 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
 
     /++
-        Creates a Date from a string with the format YYYYMMDD. Whitespace is
-        stripped from the given string.
+        Creates a $(D Date) from a string with the format YYYYMMDD. Whitespace
+        is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for dates.
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting Date would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D Date) would not be valid.
 
         Examples:
 --------------------
@@ -13664,16 +13800,16 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
 
 
     /++
-        Creates a Date from a string with the format YYYY-MM-DD. Whitespace is
-        stripped from the given string.
+        Creates a $(D Date) from a string with the format YYYY-MM-DD. Whitespace
+        is stripped from the given string.
 
         Params:
             isoExtString = A string formatted in the ISO Extended format for
                            dates.
 
         Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting Date would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(D Date) would not be valid.
 
         Examples:
 --------------------
@@ -13789,16 +13925,16 @@ assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Creates a Date from a string with the format YYYY-Mon-DD. Whitespace is
-        stripped from the given string.
+        Creates a $(D Date) from a string with the format YYYY-Mon-DD.
+        Whitespace is stripped from the given string.
 
         Params:
-            simpleString = A string formatted in the way that toSimpleString()
+            simpleString = A string formatted in the way that toSimpleString
                            formats dates.
 
         Throws:
-            DateTimeException if the given string is not in the correct format or
-            if the resulting Date would not be valid.
+            $(D DateTimeException) if the given string is not in the correct
+            format or if the resulting $(D Date) would not be valid.
 
         Examples:
 --------------------
@@ -13920,7 +14056,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Returns the Date farthest in the past which is representable by Date.
+        Returns the $(D Date) farthest in the past which is representable by
+        $(D Date).
       +/
     @property static Date min() pure nothrow
     {
@@ -13943,7 +14080,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
 
     /++
-        Returns the Date farthest in the future which is representable by Date.
+        Returns the $(D Date) farthest in the future which is representable by
+        $(D Date).
       +/
     @property static Date max() pure nothrow
     {
@@ -13967,7 +14105,7 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
 private:
 
-    /++
+    /+
         Whether the given values form a valid date.
 
         Params:
@@ -13983,15 +14121,18 @@ private:
         return valid!"days"(year, month, day);
     }
 
-    /++
-        Adds the given number of days to this Date. A negative number will subtract.
+    /+
+        Adds the given number of days to this $(D Date). A negative number will
+        subtract.
 
-        The month will be adjusted along with the day if the number of days added
-        (or subtracted) would overflow (or underflow) the current month. The year
-        will be adjusted along with the month if the increase (or decrease) to the
-        month would cause it to overflow (or underflow) the current year.
+        The month will be adjusted along with the day if the number of days
+        added (or subtracted) would overflow (or underflow) the current month.
+        The year will be adjusted along with the month if the increase (or
+        decrease) to the month would cause it to overflow (or underflow) the
+        current year.
 
-        addDays(numDays) is effectively equivalent to date.dayOfGregorianCal = date.dayOfGregorianCal + days.
+        $(D addDays(numDays)) is effectively equivalent to
+        $(D date.dayOfGregorianCal = date.dayOfGregorianCal + days).
 
         Params:
             days = The number of days to add to this Date.
@@ -14192,7 +14333,8 @@ private:
 
 
 /++
-    Represents a time of day with hours, minutes, and seconds. It uses 24 hour time.
+    Represents a time of day with hours, minutes, and seconds. It uses 24 hour
+    time.
 +/
 struct TimeOfDay
 {
@@ -14205,7 +14347,8 @@ public:
             second = Second of the minute [0 - 60$(RPAREN).
 
         Throws:
-            DateTimeException if the resulting TimeOfDay would be not be valid.
+            $(D DateTimeException) if the resulting $(D TimeOfDay) would be not
+            be valid.
      +/
     this(int hour, int minute, int second = 0) pure
     {
@@ -14253,7 +14396,7 @@ public:
 
 
     /++
-        Compares this TimeOfDay with the given TimeOfDay.
+        Compares this $(D TimeOfDay) with the given $(D TimeOfDay).
 
         Returns:
             $(TABLE
@@ -14349,10 +14492,11 @@ public:
         Hours passed midnight.
 
         Params:
-            hour = The hour of the day to set this TimeOfDay's hour to.
+            hour = The hour of the day to set this $(D TimeOfDay)'s hour to.
 
         Throws:
-            DateTimeException if the given hour would result in an invalid TimeOfDay.
+            $(D DateTimeException) if the given hour would result in an invalid
+            $(D TimeOfDay).
      +/
     @property void hour(int hour) pure
     {
@@ -14405,10 +14549,11 @@ public:
         Minutes passed the hour.
 
         Params:
-            minute = The minute to set this TimeOfDay's minute to.
+            minute = The minute to set this $(D TimeOfDay)'s minute to.
 
         Throws:
-            DateTimeException if the given minute would result in an invalid TimeOfDay.
+            $(D DateTimeException) if the given minute would result in an
+            invalid $(D TimeOfDay).
      +/
     @property void minute(int minute) pure
     {
@@ -14461,10 +14606,11 @@ public:
         Seconds passed the minute.
 
         Params:
-            second = The second to set this TimeOfDay's second to.
+            second = The second to set this $(D TimeOfDay)'s second to.
 
         Throws:
-            DateTimeException if the given second would result in an invalid TimeOfDay.
+            $(D DateTimeException) if the given second would result in an
+            invalid $(D TimeOfDay).
      +/
     @property void second(int second) pure
     {
@@ -14491,17 +14637,20 @@ public:
 
 
     /++
-        Adds the given number of hours to this TimeOfDay. A negative number will
-        subtract.
+        Adds the given number of units to this $(D TimeOfDay). A negative number
+        will subtract.
 
-        For hours, because they are the largest unit in TimeOfDay, there is no
-        difference between adding or rolling.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, for instance, if you roll a $(D TimeOfDay)
+        one hours's worth of minutes, then you get the exact same
+        $(D TimeOfDay).
 
-        Note that TimeOfDay has no $(D add!()) function because you can add to a
-        TimeOfDay by adding a duration to it.
+        Accepted units are $(D "hours"), $(D "minutes"), and $(D "seconds").
 
         Params:
-            hours = The number of hours to add to this TimeOfDay.
+            units = The units to add.
+            value = The number of $(D_PARAM units) to add to this
+                    $(D TimeOfDay).
 
         Examples:
 --------------------
@@ -14513,19 +14662,58 @@ auto tod2 = TimeOfDay(7, 12, 0);
 tod2.roll!"hours"(-1);
 assert(tod2 == TimeOfDay(6, 12, 0));
 
-auto tod3 = TimeOfDay(23, 0, 0);
-tod3.roll!"hours"(1);
-assert(tod3 == TimeOfDay(0, 0, 0));
+auto tod3 = TimeOfDay(23, 59, 0);
+tod3.roll!"minutes"(1);
+assert(tod3 == TimeOfDay(23, 0, 0));
 
 auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"hours"(-1);
-assert(tod4 == TimeOfDay(23, 0, 0));
+tod4.roll!"minutes"(-1);
+assert(tod4 == TimeOfDay(0, 59, 0));
+
+auto tod5 = TimeOfDay(23, 59, 59);
+tod5.roll!"seconds"(1);
+assert(tod5 == TimeOfDay(23, 59, 0));
+
+auto tod6 = TimeOfDay(0, 0, 0);
+tod6.roll!"seconds"(-1);
+assert(tod6 == TimeOfDay(0, 0, 59));
 --------------------
       +/
-    /+ref TimeOfDay+/ void roll(string units)(long hours) pure nothrow
+    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "hours")
     {
-        this += dur!"hours"(hours);
+        this += dur!"hours"(value);
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod1 = TimeOfDay(7, 12, 0);
+            tod1.roll!"hours"(1);
+            assert(tod1 == TimeOfDay(8, 12, 0));
+
+            auto tod2 = TimeOfDay(7, 12, 0);
+            tod2.roll!"hours"(-1);
+            assert(tod2 == TimeOfDay(6, 12, 0));
+
+            auto tod3 = TimeOfDay(23, 59, 0);
+            tod3.roll!"minutes"(1);
+            assert(tod3 == TimeOfDay(23, 0, 0));
+
+            auto tod4 = TimeOfDay(0, 0, 0);
+            tod4.roll!"minutes"(-1);
+            assert(tod4 == TimeOfDay(0, 59, 0));
+
+            auto tod5 = TimeOfDay(23, 59, 59);
+            tod5.roll!"seconds"(1);
+            assert(tod5 == TimeOfDay(23, 59, 0));
+
+            auto tod6 = TimeOfDay(0, 0, 0);
+            tod6.roll!"seconds"(-1);
+            assert(tod6 == TimeOfDay(0, 0, 59));
+        }
     }
 
     unittest
@@ -14536,75 +14724,11 @@ assert(tod4 == TimeOfDay(23, 0, 0));
             immutable itod = TimeOfDay(0, 0, 0);
             static assert(!__traits(compiles, ctod.roll!"hours"(53)));
             static assert(!__traits(compiles, itod.roll!"hours"(53)));
-
-            //Verify Examples.
-            auto tod1 = TimeOfDay(7, 12, 0);
-            tod1.roll!"hours"(1);
-            assert(tod1 == TimeOfDay(8, 12, 0));
-
-            auto tod2 = TimeOfDay(7, 12, 0);
-            tod2.roll!"hours"(-1);
-            assert(tod2 == TimeOfDay(6, 12, 0));
-
-            auto tod3 = TimeOfDay(23, 0, 0);
-            tod3.roll!"hours"(1);
-            assert(tod3 == TimeOfDay(0, 0, 0));
-
-            auto tod4 = TimeOfDay(0, 0, 0);
-            tod4.roll!"hours"(-1);
-            assert(tod4 == TimeOfDay(23, 0, 0));
         }
     }
 
 
-    /++
-        Add minutes to the time of day. Negative values will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the TimeOfDay 60 minutes, you get the exact
-        same TimeOfDay.
-
-        Note that TimeOfDay has no $(D add!()) function because you can add to a
-        TimeOfDay by adding a duration to it.
-
-        Params:
-            minutes = The number of Minutes to add to this TimeOfDay.
-
-        Examples:
---------------------
-auto tod1 = TimeOfDay(7, 12, 0);
-tod1.roll!"minutes"(1);
-assert(tod1 == TimeOfDay(7, 13, 0));
-
-auto tod2 = TimeOfDay(7, 12, 0);
-tod2.roll!"minutes"(-1);
-assert(tod2 == TimeOfDay(7, 11, 0));
-
-auto tod3 = TimeOfDay(23, 59, 0);
-tod3.roll!"minutes"(1);
-assert(tod3 == TimeOfDay(23, 0, 0));
-
-auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"minutes"(-1);
-assert(tod4 == TimeOfDay(0, 59, 0));
-
-auto tod5 = TimeOfDay(7, 32, 12);
-tod5.roll!"seconds"(1);
-assert(tod5 == TimeOfDay(7, 32, 13));
-
-auto tod6 = TimeOfDay(7, 32, 12);
-tod6.roll!"seconds"(-1);
-assert(tod6 == TimeOfDay(7, 32, 11));
-
-auto tod7 = TimeOfDay(23, 59, 59);
-tod7.roll!"seconds"(1);
-assert(tod7 == TimeOfDay(23, 59, 0));
-
-auto tod8 = TimeOfDay(0, 0, 0);
-tod8.roll!"seconds"(-1);
-assert(tod8 == TimeOfDay(0, 0, 59));
---------------------
-      +/
+    //Shares documentation with "hours" version.
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "minutes" ||
            units == "seconds")
@@ -14820,9 +14944,10 @@ assert(tod8 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this TimeOfDay.
+        Gives the result of adding or subtracting a duration from this
+        $(D TimeOfDay).
 
-        The legal types of arithmetic for TimeOfDay using this operator are
+        The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
         $(TABLE
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
@@ -14830,7 +14955,8 @@ assert(tod8 == TimeOfDay(0, 0, 59));
         )
 
         Params:
-            duration = The duration to add to or subtract from this Date.
+            duration = The duration to add to or subtract from this
+                       $(D TimeOfDay).
       +/
     TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -14923,10 +15049,11 @@ assert(tod8 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this TimeOfDay,
-        as well as assigning the result to this TimeOfDay.
+        Gives the result of adding or subtracting a duration from this
+        $(D TimeOfDay), as well as assigning the result to this
+        $(D TimeOfDay).
 
-        The legal types of arithmetic for TimeOfDay using this operator are
+        The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
         $(TABLE
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
@@ -14934,7 +15061,8 @@ assert(tod8 == TimeOfDay(0, 0, 59));
         )
 
         Params:
-            duration = The duration to add to or subtract from this TimeOfDay.
+            duration = The duration to add to or subtract from this
+                       $(D TimeOfDay).
       +/
     /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -15005,16 +15133,16 @@ assert(tod8 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Gives the difference between two TimeOfDays.
+        Gives the difference between two $(D TimeOfDay)s.
 
-        The legal types of arithmetic for TimeOfDay using this operator are
+        The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
         $(TABLE
         $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
         )
 
         Params:
-            rhs = The TimeOfDay to subtract from this one.
+            rhs = The $(D TimeOfDay) to subtract from this one.
       +/
     Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
         if(op == "-")
@@ -15058,7 +15186,7 @@ assert(tod8 == TimeOfDay(0, 0, 59));
 
 
     /++
-        Converts this TimeOfDay to a string with the format HHMMSS.
+        Converts this $(D TimeOfDay) to a string with the format HHMMSS.
 
         Examples:
 --------------------
@@ -15093,7 +15221,7 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
 
     /++
-        Converts this TimeOfDay to a string with the format HH:MM:SS.
+        Converts this $(D TimeOfDay) to a string with the format HH:MM:SS.
 
         Examples:
 --------------------
@@ -15129,7 +15257,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
 
 
     /+
-        Converts this TimeOfDay to a string.
+        Converts this $(D TimeOfDay) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -15169,15 +15297,15 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
 
 
     /++
-        Creates a TimeOfDay from a string with the format HHMMSS. Whitespace is
-        stripped from the given string.
+        Creates a $(D TimeOfDay) from a string with the format HHMMSS.
+        Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for times.
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting TimeOfDay would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D TimeOfDay) would not be valid.
 
         Examples:
 --------------------
@@ -15277,15 +15405,16 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
 
 
     /++
-        Creates a TimeOfDay from a string with the format HH:MM:SS. Whitespace is
-        stripped from the given string.
+        Creates a $(D TimeOfDay) from a string with the format HH:MM:SS.
+        Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO Extended format for times.
 
         Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting TimeOfDay would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(D TimeOfDay) would not be
+            valid.
 
         Examples:
 --------------------
@@ -15440,7 +15569,7 @@ assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
 private:
 
-    /++
+    /+
         Add seconds to the time of day. Negative values will subtract. If the
         number of seconds overflows (or underflows), then the seconds will wrap,
         increasing (or decreasing) the number of minutes accordingly. If the
@@ -15553,8 +15682,8 @@ private:
     }
 
 
-    /++
-        Whether the given values form a valid TimeOfDay
+    /+
+        Whether the given values form a valid $(D TimeOfDay).
      +/
     static bool _valid(int hour, int minute, int second) pure nothrow
     {
@@ -15585,12 +15714,13 @@ private:
 
 
 /++
-   Combines Date and TimeOfDay structs to give you an object which holds both
-   the date and the time. It is optimized for calendar operations and has no
-   concept of time zone. If you want an object which is optimized for time
-   operations based on the system time, then use SysTime. SysTime has a concept
-   of time zone and has much higher precision (hnsecs). DateTime is intended
-   primarily for calendar-based uses rather than precise time operations.
+   Combines the $(D Date) and $(D TimeOfDay) structs to give you an object
+   which holds both the date and the time. It is optimized for calendar-based
+   operations and has no concept of time zone. If you want an object which is
+   optimized for time operations based on the system time, then use
+   $(D SysTime). $(D SysTime) has a concept of time zone and has much higher
+   precision (hnsecs). $(D DateTime) is intended primarily for calendar-based
+   uses rather than precise time operations.
   +/
 struct DateTime
 {
@@ -15598,8 +15728,8 @@ public:
 
     /++
         Params:
-            date = The date portion of DateTime.
-            tod  = The time portion of DateTime.
+            date = The date portion of $(D DateTime).
+            tod  = The time portion of $(D DateTime).
       +/
     this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
     {
@@ -15668,7 +15798,7 @@ public:
 
 
     /++
-        Compares this DateTime with the given DateTime.
+        Compares this $(D DateTime) with the given $(D DateTime.).
 
         Returns:
             $(TABLE
@@ -15888,7 +16018,7 @@ public:
 
 
     /++
-        The date portion of DateTime.
+        The date portion of $(D DateTime).
       +/
     @property Date date() const pure nothrow
     {
@@ -15918,10 +16048,10 @@ public:
 
 
     /++
-        The date portion of DateTime.
+        The date portion of $(D DateTime).
 
         Params:
-            date = The Date to set this DateTime's date portion to.
+            date = The Date to set this $(D DateTime)'s date portion to.
       +/
     @property void date(in Date date) pure nothrow
     {
@@ -15946,7 +16076,7 @@ public:
 
 
     /++
-        The time portion of DateTime.
+        The time portion of $(D DateTime).
       +/
     @property TimeOfDay timeOfDay() const pure nothrow
     {
@@ -15976,10 +16106,11 @@ public:
 
 
     /++
-        The time portion of DateTime.
+        The time portion of $(D DateTime).
 
         Params:
-            tod = The TimeOfDay to set this DateTime's time portion to.
+            tod = The $(D TimeOfDay) to set this $(D DateTime)'s time portion
+                  to.
       +/
     @property void timeOfDay(in TimeOfDay tod) pure nothrow
     {
@@ -16033,10 +16164,10 @@ public:
         are B.C.
 
         Params:
-            year = The year to set this DateTime's year to.
+            year = The year to set this $(D DateTime)'s year to.
 
         Throws:
-            DateTimeException if the new year is not a leap year and if the
+            $(D DateTimeException) if the new year is not a leap year and if the
             resulting date would be on February 29th.
 
         Examples:
@@ -16082,7 +16213,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            DateTimeException if $(D isAD) is true.
+            $(D DateTimeException) if $(D isAD) is true.
 
         Examples:
 --------------------
@@ -16121,10 +16252,10 @@ assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Params:
-            year = The year B.C. to set this DateTime's year to.
+            year = The year B.C. to set this $(D DateTime)'s year to.
 
         Throws:
-            DateTimeException if a non-positive value is given.
+            $(D DateTimeException) if a non-positive value is given.
 
         Examples:
 --------------------
@@ -16209,10 +16340,10 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
         Month of a Gregorian Year.
 
         Params:
-            month = The month to set this DateTime's month to.
+            month = The month to set this $(D DateTime)'s month to.
 
         Throws:
-            DateTimeException if the given month is not a valid month.
+            $(D DateTimeException) if the given month is not a valid month.
      +/
     @property void month(Month month) pure
     {
@@ -16284,10 +16415,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Day of a Gregorian Month.
 
         Params:
-            day = The day of the month to set this DateTime's day to.
+            day = The day of the month to set this $(D DateTime)'s day to.
 
         Throws:
-            DateTimeException if the given day is not a valid day of the current month.
+            $(D DateTimeException) if the given day is not a valid day of the
+            current month.
      +/
     @property void day(int day) pure
     {
@@ -16408,11 +16540,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Hours passed midnight.
 
         Params:
-            hour = The hour of the day to set this DateTime's hour to.
+            hour = The hour of the day to set this $(D DateTime)'s hour to.
 
         Throws:
-            DateTimeException if the given hour would result in an invalid
-            DateTime.
+            $(D DateTimeException) if the given hour would result in an invalid
+            $(D DateTime).
      +/
     @property void hour(int hour) pure
     {
@@ -16464,11 +16596,11 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         Minutes passed the hour.
 
         Params:
-            minute = The minute to set this DateTime's minute to.
+            minute = The minute to set this $(D DateTime)'s minute to.
 
         Throws:
-            DateTimeException if the given minute would result in an invalid
-            DateTime.
+            $(D DateTimeException) if the given minute would result in an
+            invalid $(D DateTime).
      +/
     @property void minute(int minute) pure
     {
@@ -16519,12 +16651,12 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     /++
         Seconds passed the minute.
 
-        Params
-            second = The second to set this DateTime's second to.
+        Params:
+            second = The second to set this $(D DateTime)'s second to.
 
         Throws:
-            DateTimeException if the given seconds would result in an invalid
-            DateTime.
+            $(D DateTimeException) if the given seconds would result in an
+            invalid $(D DateTime).
      +/
     @property void second(int second) pure
     {
@@ -16550,40 +16682,41 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
 
 
     /++
-        Adds the given number of years or months to this DateTime. A negative
-        number will subtract.
+        Adds the given number of years or months to this $(D DateTime). A
+        negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
         year/month overflows the number of days in the new month, then the month
-        will be incremented by one, and the days set to the number of days overflowed.
-        (e.g. if the day were 31 and the new month were June, then the month would
-        be incremented to July, and the new day would be 1). If day overflow is
-        not allowed, then the day will be set to the last valid day in the month
-        (e.g. June 31st would become June 30th).
+        will be incremented by one, and the day set to the number of days
+        overflowed. (e.g. if the day were 31 and the new month were June, then
+        the month would be incremented to July, and the new day would be 1). If
+        day overflow is not allowed, then the day will be set to the last valid
+        day in the month (e.g. June 31st would become June 30th).
 
         Params:
             units         = The type of units to add ("years" or "months").
-            value         = The number of months or years to add to this DateTime.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
+            value         = The number of months or years to add to this
+                            $(D DateTime).
+            allowOverflow = Whether the days should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
-auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
 dt1.add!"months"(11);
-assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
+assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
 
-auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+auto dt2 = DateTime(2010, 1, 1, 12, 30, 33);
 dt2.add!"months"(-11);
-assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
+assert(dt2 == DateTime(2009, 2, 1, 12, 30, 33));
 
-auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+auto dt3 = DateTime(2000, 2, 29, 12, 30, 33);
 dt3.add!"years"(1);
-assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
+assert(dt3 == DateTime(2001, 3, 1, 12, 30, 33));
 
-auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+auto dt4 = DateTime(2000, 2, 29, 12, 30, 33);
 dt4.add!"years"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
+assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
 --------------------
       +/
     /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
@@ -16591,6 +16724,29 @@ assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
            units == "months")
     {
         _date.add!units(value, allowOverflow);
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
+            dt1.add!"months"(11);
+            assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
+
+            auto dt2 = DateTime(2010, 1, 1, 12, 30, 33);
+            dt2.add!"months"(-11);
+            assert(dt2 == DateTime(2009, 2, 1, 12, 30, 33));
+
+            auto dt3 = DateTime(2000, 2, 29, 12, 30, 33);
+            dt3.add!"years"(1);
+            assert(dt3 == DateTime(2001, 3, 1, 12, 30, 33));
+
+            auto dt4 = DateTime(2000, 2, 29, 12, 30, 33);
+            dt4.add!"years"(1, AllowDayOverflow.no);
+            assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
+        }
     }
 
     unittest
@@ -16603,58 +16759,54 @@ assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
             static assert(!__traits(compiles, idt.add!"years"(4)));
             static assert(!__traits(compiles, cdt.add!"months"(4)));
             static assert(!__traits(compiles, idt.add!"months"(4)));
-
-            //Verify Examples.
-            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-            dt1.add!"months"(11);
-            assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-            dt2.add!"months"(-11);
-            assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-            dt3.add!"years"(1);
-            assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-            dt4.add!"years"(1, AllowDayOverflow.no);
-            assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
         }
     }
 
 
     /++
-        Adds the given number of years or months this DateTime. A negative
-        number will subtract.
+        Adds the given number of years or months to this $(D DateTime). A
+        negative number will subtract.
 
         The difference between rolling and adding is that rolling does not
-        affect larger units. So, if you roll the DateTime 12 months, you get
-        the exact same Date. However, the days can still be affected due to
-        the differing number of days in each month.
+        affect larger units. So, if you roll a $(D DateTime) 12 months, you
+        get the exact same $(D DateTime). However, the days can still be
+        affected due to the differing number of days in each month.
+
+        Because there are no units larger than years, there is no difference
+        between adding and rolling years.
 
         Params:
-            units         = The units to roll.
-            value         = The number of units to add to this DateTime.
-            allowOverflow = Whether the days should be allowed to overflow, causing the month to increment.
+            units         = The type of units to add ("years" or "months").
+            value         = The number of months or years to add to this
+                            $(D DateTime).
+            allowOverflow = Whether the days should be allowed to overflow,
+                            causing the month to increment.
 
         Examples:
 --------------------
-auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-dt1.roll!"years"(1);
-assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
+auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
+dt1.roll!"months"(1);
+assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
 
-auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-dt2.roll!"months"(-12);
-assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
+auto dt2 = DateTime(2010, 1, 1, 12, 33, 33);
+dt2.roll!"months"(-1);
+assert(dt2 == DateTime(2010, 12, 1, 12, 33, 33));
 
-auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+auto dt3 = DateTime(1999, 1, 29, 12, 33, 33);
 dt3.roll!"months"(1);
-assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
+assert(dt3 == DateTime(1999, 3, 1, 12, 33, 33));
 
-auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+auto dt4 = DateTime(1999, 1, 29, 12, 33, 33);
 dt4.roll!"months"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
+assert(dt4 == DateTime(1999, 2, 28, 12, 33, 33));
+
+auto dt5 = DateTime(2000, 2, 29, 12, 30, 33);
+dt5.roll!"years"(1);
+assert(dt5 == DateTime(2001, 3, 1, 12, 30, 33));
+
+auto dt6 = DateTime(2000, 2, 29, 12, 30, 33);
+dt6.roll!"years"(1, AllowDayOverflow.no);
+assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
 --------------------
       +/
     /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
@@ -16662,6 +16814,37 @@ assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
            units == "months")
     {
         _date.roll!units(value, allowOverflow);
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testdStdDateTime)
+        {
+            auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
+            dt1.roll!"months"(1);
+            assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
+
+            auto dt2 = DateTime(2010, 1, 1, 12, 33, 33);
+            dt2.roll!"months"(-1);
+            assert(dt2 == DateTime(2010, 12, 1, 12, 33, 33));
+
+            auto dt3 = DateTime(1999, 1, 29, 12, 33, 33);
+            dt3.roll!"months"(1);
+            assert(dt3 == DateTime(1999, 3, 1, 12, 33, 33));
+
+            auto dt4 = DateTime(1999, 1, 29, 12, 33, 33);
+            dt4.roll!"months"(1, AllowDayOverflow.no);
+            assert(dt4 == DateTime(1999, 2, 28, 12, 33, 33));
+
+            auto dt5 = DateTime(2000, 2, 29, 12, 30, 33);
+            dt5.roll!"years"(1);
+            assert(dt5 == DateTime(2001, 3, 1, 12, 30, 33));
+
+            auto dt6 = DateTime(2000, 2, 29, 12, 30, 33);
+            dt6.roll!"years"(1, AllowDayOverflow.no);
+            assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
+        }
     }
 
     unittest
@@ -16676,55 +16859,71 @@ assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
             static assert(!__traits(compiles, idt.roll!"months"(4)));
             static assert(!__traits(compiles, cdt.roll!"days"(4)));
             static assert(!__traits(compiles, idt.roll!"days"(4)));
-
-            //Verify Examples
-            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-            dt1.roll!"years"(1);
-            assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-            dt2.roll!"months"(-12);
-            assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-            dt3.roll!"months"(1);
-            assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-            dt4.roll!"months"(1, AllowDayOverflow.no);
-            assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
         }
     }
 
 
     /++
-        Adds the given number of days this DateTime. A negative number will subtract.
+        Adds the given number of units to this $(D DateTime). A negative number
+        will subtract.
 
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date one year's worth of days, then you
-        get the exact same Date.
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, for instance, if you roll a $(D DateTime) one
+        year's worth of days, then you get the exact same $(D DateTime).
 
-        Note that there is no $(D add!"days"()) because you can add days to a DateTime
-        by adding a duration to it.
+        Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
+        $(D "minutes"), and $(D "seconds").
 
         Params:
-            days  = The number of days to add to this DateTime.
+            units = The units to add.
+            value = The number of $(D_PARAM units) to add to this $(D DateTime).
 
         Examples:
 --------------------
-auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
-dt.roll!"days"(1);
-assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
-dt.roll!"days"(365);
-assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
-dt.roll!"days"(-32);
-assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
+auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
+dt1.roll!"days"(1);
+assert(dt1 == DateTime(2010, 1, 2, 11, 23, 12));
+dt1.roll!"days"(365);
+assert(dt1 == DateTime(2010, 1, 26, 11, 23, 12));
+dt1.roll!"days"(-32);
+assert(dt1 == DateTime(2010, 1, 25, 11, 23, 12));
+
+auto dt2 = DateTime(2010, 7, 4, 12, 0, 0);
+dt2.roll!"hours"(1);
+assert(dt2 == DateTime(2010, 7, 4, 13, 0, 0));
+
+auto dt3 = DateTime(2010, 1, 1, 0, 0, 0);
+dt3.roll!"seconds"(-1);
+assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 --------------------
       +/
     /+ref DateTime+/ void roll(string units)(long days) pure nothrow
         if(units == "days")
     {
         _date.roll!"days"(days);
+    }
+
+    //Verify Examples.
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
+            dt1.roll!"days"(1);
+            assert(dt1 == DateTime(2010, 1, 2, 11, 23, 12));
+            dt1.roll!"days"(365);
+            assert(dt1 == DateTime(2010, 1, 26, 11, 23, 12));
+            dt1.roll!"days"(-32);
+            assert(dt1 == DateTime(2010, 1, 25, 11, 23, 12));
+
+            auto dt2 = DateTime(2010, 7, 4, 12, 0, 0);
+            dt2.roll!"hours"(1);
+            assert(dt2 == DateTime(2010, 7, 4, 13, 0, 0));
+
+            auto dt3 = DateTime(2010, 1, 1, 0, 0, 0);
+            dt3.roll!"seconds"(-1);
+            assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
+        }
     }
 
     unittest
@@ -16735,54 +16934,11 @@ assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
             immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
             static assert(!__traits(compiles, cdt.roll!"days"(4)));
             static assert(!__traits(compiles, idt.roll!"days"(4)));
-
-            //Verify Examples.
-            auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
-            dt.roll!"days"(1);
-            assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
-            dt.roll!"days"(365);
-            assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
-            dt.roll!"days"(-32);
-            assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
         }
     }
 
 
-    /++
-        Add the given number of the given units to the time of day. Negative
-        values will subtract.
-
-        The difference between rolling and adding is that rolling does not
-        affect larger units. So, if you roll the DateTime 24 hours, you get
-        the exact same DateTime.
-
-        Note that there is no $(D add!"hours"()), $(D add!"minutes"()), or
-        $(D add!"seconds"()) function because you can add them to a DateTime by
-        adding a duration to it.
-
-        Params:
-            units = The units to roll.
-            value = The number of units to add to this DateTime.
-
-        Examples:
---------------------
-auto dt1 = DateTime(Date(2010, 7, 4), TimeOfDay(12, 0, 0));
-dt1.roll!"hours"(1);
-assert(dt1 == DateTime(Date(2010, 7, 4), TimeOfDay(13, 0, 0)));
-
-auto dt2 = DateTime(Date(2010, 2, 12), TimeOfDay(12, 0, 0));
-dt2.roll!"hours"(-1);
-assert(dt2 == DateTime(Date(2010, 2, 12), TimeOfDay(11, 0, 0)));
-
-auto dt3 = DateTime(Date(2009, 12, 31), TimeOfDay(23, 0, 0));
-dt3.roll!"hours"(1);
-assert(dt3 == DateTime(Date(2009, 12, 31), TimeOfDay(0, 0, 0)));
-
-auto dt4 = DateTime(Date(2010, 1, 1), TimeOfDay(0, 0, 0));
-dt4.roll!"hours"(-1);
-assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
---------------------
-      +/
+    //Shares documentation with "days" version.
     /+ref DateTime+/ void roll(string units)(long value) pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
@@ -17300,9 +17456,10 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this DateTime.
+        Gives the result of adding or subtracting a duration from this
+        $(D DateTime).
 
-        The legal types of arithmetic for DateTime using this operator are
+        The legal types of arithmetic for $(D DateTime) using this operator are
 
         $(TABLE
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
@@ -17310,7 +17467,8 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
         )
 
         Params:
-            duration = The duration to add to or subtract from this DateTime.
+            duration = The duration to add to or subtract from this
+                       $(D DateTime).
       +/
     DateTime opBinary(string op, D)(in D duration) const pure nothrow
         if((op == "+" || op == "-") &&
@@ -17408,10 +17566,10 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
 
 
     /++
-        Gives the result of adding or subtracting a duration from this DateTime,
-        as well as assigning the result to this DateTime.
+        Gives the result of adding or subtracting a duration from this
+        $(D DateTime), as well as assigning the result to this $(D DateTime).
 
-        The legal types of arithmetic for DateTime using this operator are
+        The legal types of arithmetic for $(D DateTime) using this operator are
 
         $(TABLE
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
@@ -17419,7 +17577,8 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
         )
 
         Params:
-            duration = The duration to add to or subtract from this DateTime.
+            duration = The duration to add to or subtract from this
+                       $(D DateTime).
       +/
     /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
@@ -17499,9 +17658,9 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
 
 
     /++
-        Gives the difference between two DateTimes.
+        Gives the difference between two $(D DateTime)s.
 
-        The legal types of arithmetic for DateTime using this operator are
+        The legal types of arithmetic for $(D DateTime) using this operator are
 
         $(TABLE
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
@@ -17587,31 +17746,39 @@ assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
 
 
     /++
-        Returns the difference between the two DateTimes in months.
+        Returns the difference between the two $(D DateTime)s in months.
 
         You can get the difference in years by subtracting the year property
-        of two DateTimes, and you can get the difference in days or weeks by
-        subtracting the DateTimes themselves and using the Duration that results,
-        but because you cannot convert between months and smaller units without
-        a specific date (which Durations don't have), you cannot get the difference
-        in months without doing some math using both the year and month properties,
-        so this is a convenience function for getting the difference in months.
+        of two $(D DateTime)s, and you can get the difference in days or weeks
+        by subtracting the $(D DateTime)s themselves and using the Duration that
+        results, but because you cannot convert between months and smaller units
+        without a specific date (which $(D Duration)s don't have), you cannot
+        get the difference in months without doing some math using both the year
+        and month properties, so this is a convenience function for getting the
+        difference in months.
 
-        Note that the number of days in the months or how far into the month either
-        date is is irrelevant. It is the difference in the month property combined
-        with the difference in years * 12. So, for instance, December 31st and
-        January 1st are one month apart just as December 1st and January 31st are
-        one month apart.
+        Note that the number of days in the months or how far into the month
+        either date is is irrelevant. It is the difference in the month property
+        combined with the difference in years * 12. So, for instance,
+        December 31st and January 1st are one month apart just as December 1st
+        and January 31st are one month apart.
 
         Params:
-            rhs = The DateTime to subtract from this one.
+            rhs = The $(D DateTime) to subtract from this one.
 
         Examples:
 --------------------
-assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
-assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
-assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
-assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
+assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
+            DateTime(1999, 1, 31, 23, 59, 59)) == 1);
+
+assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(
+            DateTime(1999, 2, 1, 12, 3, 42)) == -1);
+
+assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(
+            DateTime(1999, 1, 1, 2, 4, 7)) == 2);
+
+assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
+            DateTime(1999, 3, 31, 0, 30, 58)) == -2);
 --------------------
       +/
     int diffMonths(in DateTime rhs) const pure nothrow
@@ -17648,7 +17815,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)
 
 
     /++
-        Whether this DateTime is in a leap year.
+        Whether this $(D DateTime) is in a leap year.
      +/
     @property bool isLeapYear() const pure nothrow
     {
@@ -17670,7 +17837,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)
 
 
     /++
-        Day of the week this DateTime is on.
+        Day of the week this $(D DateTime) is on.
       +/
     @property DayOfWeek dayOfWeek() const pure nothrow
     {
@@ -17692,7 +17859,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)
 
 
     /++
-        Day of the year this DateTime is on.
+        Day of the year this $(D DateTime) is on.
 
         Examples:
 --------------------
@@ -17729,7 +17896,8 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
         Day of the year.
 
         Params:
-            day = The day of the year to set which day of the year this DateTime is on.
+            day = The day of the year to set which day of the year this
+                  $(D DateTime) is on.
       +/
     @property void dayOfYear(int day) pure
     {
@@ -17751,20 +17919,28 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
 
 
     /++
-        The Xth day of the Gregorian Calendar that this DateTime is on.
+        The Xth day of the Gregorian Calendar that this $(D DateTime) is on.
 
         Examples:
 --------------------
-assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
-assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
-assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
+assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal ==
+       1);
+assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal ==
+       365);
+assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal ==
+       366);
 
-assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal == 0);
-assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal == -365);
-assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal == -366);
+assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal ==
+       0);
+assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal ==
+       -365);
+assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal ==
+       -366);
 
-assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal == 730_120);
-assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
+assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal ==
+       730_120);
+assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
+       734_137);
 --------------------
      +/
     @property int dayOfGregorianCal() const pure nothrow
@@ -17797,11 +17973,13 @@ assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 
 
 
     /++
-        The Xth day of the Gregorian Calendar that this DateTime is on. Setting
-        this property does not affect the time portion of DateTime.
+        The Xth day of the Gregorian Calendar that this $(D DateTime) is on.
+        Setting this property does not affect the time portion of
+        $(D DateTime).
 
         Params:
-            days = The day of the Gregorian Calendar to set this DateTime to.
+            days = The day of the Gregorian Calendar to set this $(D DateTime)
+                   to.
 
         Examples:
 --------------------
@@ -17875,7 +18053,7 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
 
 
     /++
-        The ISO 8601 week of the year that this DateTime is in.
+        The ISO 8601 week of the year that this $(D DateTime) is in.
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
@@ -17900,15 +18078,22 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
 
 
     /++
-        DateTime for the last day in the month that this DateTime is in.
-        The time portion of endOfMonth is always 23:59:59.
+        $(D DateTime) for the last day in the month that this $(D DateTime) is
+        in. The time portion of endOfMonth is always 23:59:59.
 
         Examples:
 --------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth == DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth == DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth == DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
+assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
+       DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
+
+assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth ==
+       DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
+
+assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth ==
+       DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
+
+assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
+       DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
 --------------------
       +/
     @property DateTime endOfMonth() const pure nothrow
@@ -17968,7 +18153,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(D
 
 
     /++
-        The last day in the month that this DateTime is in.
+        The last day in the month that this $(D DateTime) is in.
 
         Examples:
 --------------------
@@ -18036,10 +18221,10 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        The julian day for this DateTime at the given time. For example,
-        prior to noon, 1996-03-31 would be the julian day number 2_450_173,
-        so this function returns 2_450_173, while from noon onward, it the
-        julian day number would be 2_450_174, so this function returns 2_450_174.
+        The julian day for this $(D DateTime) at the given time. For example,
+        prior to noon, 1996-03-31 would be the julian day number 2_450_173, so
+        this function returns 2_450_173, while from noon onward, the julian
+        day number would be 2_450_174, so this function returns 2_450_174.
       +/
     @property long julianDay() const pure nothrow
     {
@@ -18086,7 +18271,7 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        The modified julian day for any time on this Date (since, the modified
+        The modified julian day for any time on this date (since, the modified
         julian day changes at midnight).
       +/
     @property long modJulianDay() const pure nothrow
@@ -18113,14 +18298,21 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 
 
     /++
-        Converts this DateTime to a string with the format YYYYMMDDTHHMMSS.
+        Converts this $(D DateTime) to a string with the format YYYYMMDDTHHMMSS.
 
         Examples:
 --------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() == "20100704T070612");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() == "19981225T021500");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() == "00000105T230959");
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T000002");
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
+       "20100704T070612");
+
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() ==
+       "19981225T021500");
+
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() ==
+       "00000105T230959");
+
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
+       "-00040105T000002");
 --------------------
       +/
     string toISOString() const nothrow
@@ -18165,14 +18357,22 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T
 
 
     /++
-        Converts this DateTime to a string with the format YYYY-MM-DDTHH:MM:SS.
+        Converts this $(D DateTime) to a string with the format
+        YYYY-MM-DDTHH:MM:SS.
 
         Examples:
 --------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() ==
+       "2010-07-04T07:06:12");
+
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() ==
+       "1998-12-25T02:15:00");
+
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() ==
+       "0000-01-05T23:09:59");
+
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() ==
+       "-0004-01-05T00:00:02");
 --------------------
       +/
     string toISOExtendedString() const nothrow
@@ -18216,14 +18416,22 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0
     }
 
     /++
-        Converts this DateTime to a string with the format YYYY-Mon-DD HH:MM:SS.
+        Converts this $(D DateTime) to a string with the format
+        YYYY-Mon-DD HH:MM:SS.
 
         Examples:
 --------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() == "1998-Dec-25 02:15:00");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
-assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Jan-05 00:00:02");
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
+       "2010-Jul-04 07:06:12");
+
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() ==
+       "1998-Dec-25 02:15:00");
+
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() ==
+       "0000-Jan-05 23:09:59");
+
+assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() ==
+       "-0004-Jan-05 00:00:02");
 --------------------
       +/
     string toSimpleString() const nothrow
@@ -18268,7 +18476,7 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Ja
 
 
     /+
-        Converts this DateTime to a string.
+        Converts this $(D DateTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -18279,7 +18487,7 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Ja
     }
 
     /++
-        Converts this DateTime to a string.
+        Converts this $(D DateTime) to a string.
       +/
     //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
     //have versions of toString() with extra modifiers, so we define one version
@@ -18305,23 +18513,32 @@ assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Ja
 
 
     /++
-        Creates a DateTime from a string with the format YYYYMMDDTHHMMSS.
+        Creates a $(D DateTime) from a string with the format YYYYMMDDTHHMMSS.
         Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO format for dates and times.
 
         Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting DateTime would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO format
+            or if the resulting $(D DateTime) would not be valid.
 
         Examples:
 --------------------
-assert(DateTime.fromISOString("20100704T070612") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-assert(DateTime.fromISOString("19981225T021500") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-assert(DateTime.fromISOString("00000105T230959") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-assert(DateTime.fromISOString("-00040105T000002") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+assert(DateTime.fromISOString("20100704T070612") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+
+assert(DateTime.fromISOString("19981225T021500") ==
+       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+
+assert(DateTime.fromISOString("00000105T230959") ==
+       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+
+assert(DateTime.fromISOString("-00040105T000002") ==
+       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+
+assert(DateTime.fromISOString(" 20100704T070612 ") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 --------------------
       +/
     static DateTime fromISOString(S)(in S isoString)
@@ -18386,27 +18603,32 @@ assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4),
 
 
     /++
-        Creates a DateTime from a string with the format YYYY-MM-DDTHH:MM:SS.
-        Whitespace is stripped from the given string.
+        Creates a $(D DateTime) from a string with the format
+        YYYY-MM-DDTHH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
             isoString = A string formatted in the ISO Extended format for dates
                         and times.
 
         Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting DateTime would not be valid.
+            $(D DateTimeException) if the given string is not in the ISO
+            Extended format or if the resulting $(D DateTime) would not be
+            valid.
 
         Examples:
 --------------------
 assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+
 assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") ==
        DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+
 assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") ==
        DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+
 assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
        DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+
 assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 --------------------
@@ -18472,16 +18694,16 @@ assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
 
 
     /++
-        Creates a DateTime from a string with the format YYYY-Mon-DD HH:MM:SS.
-        Whitespace is stripped from the given string.
+        Creates a $(D DateTime) from a string with the format
+        YYYY-Mon-DD HH:MM:SS. Whitespace is stripped from the given string.
 
         Params:
-            simpleString = A string formatted in the way that toSimpleString()
+            simpleString = A string formatted in the way that toSimpleString
                            formats dates and times.
 
         Throws:
-            DateTimeException if the given string is not in the correct format or if
-            the resulting DateTime would not be valid.
+            $(D DateTimeException) if the given string is not in the correct
+            format or if the resulting $(D DateTime) would not be valid.
 
         Examples:
 --------------------
@@ -18566,7 +18788,8 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
 
 
     /++
-        Returns the DateTime farthest in the past which is representable by DateTime.
+        Returns the $(D DateTime) farthest in the past which is representable by
+        $(D DateTime).
       +/
     @property static DateTime min() pure nothrow
     out(result)
@@ -18595,7 +18818,8 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
 
 
     /++
-        Returns the DateTime farthest in the future which is representable by DateTime.
+        Returns the $(D DateTime) farthest in the future which is representable
+        by $(D DateTime).
       +/
     @property static DateTime max() pure nothrow
     out(result)
@@ -18628,14 +18852,14 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
 
 private:
 
-    /++
+    /+
         Add seconds to the time of day. Negative values will subtract. If the
         number of seconds overflows (or underflows), then the seconds will wrap,
         increasing (or decreasing) the number of minutes accordingly. The
         same goes for any larger units.
 
         Params:
-            seconds = The number of seconds to add to this DateTime.
+            seconds = The number of seconds to add to this $(D DateTime).
       +/
     ref DateTime addSeconds(long seconds) pure nothrow
     {
@@ -18851,9 +19075,9 @@ private:
 /++
     Represents an interval of time.
 
-    An $(D Interval) has a begin point and an end point. The interval of time is
-    therefore the time starting at the begin point up to, but not including, the
-    end point. e.g.
+    An $(D Interval) has a starting point and an end point. The interval of time
+    is therefore the time starting at the starting point up to, but not
+    including, the end point. e.g.
 
     $(TABLE
     $(TR $(TD [January 5th, 2010 - March 10th, 2010$(RPAREN)))
@@ -18872,10 +19096,11 @@ public:
     /++
         Params:
             begin = The time point which begins the interval.
-            end   = The time point which ends (but is not included in) the interval.
+            end   = The time point which ends (but is not included in) the
+                    interval.
 
         Throws:
-            DateTimeException if end is before begin.
+            $(D DateTimeException) if $(D_PARAM end) is before $(D_PARAM begin).
 
         Examples:
 --------------------
@@ -18896,14 +19121,16 @@ Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
     /++
         Params:
             begin    = The time point which begins the interval.
-            duration = The duration from the begin point to the end point.
+            duration = The duration from the starting point to the end point.
 
         Throws:
-            DateTimeException if the resulting end is before begin.
+            $(D DateTimeException) if the resulting $(D end) is before
+            $(D begin).
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) == Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
+assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) ==
+       Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
 --------------------
       +/
     this(D)(in TP begin, in D duration) pure
@@ -18919,7 +19146,7 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) == Interval!Date(Date(1996,
 
     /++
         Params:
-            rhs = The Interval to assign to this one.
+            rhs = The $(D Interval) to assign to this one.
       +/
     /+ref+/ Interval opAssign(const ref Interval rhs) pure nothrow
     {
@@ -18932,7 +19159,7 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) == Interval!Date(Date(1996,
 
     /++
         Params:
-            rhs = The Interval to assign to this one.
+            rhs = The $(D Interval) to assign to this one.
       +/
     /+ref+/ Interval opAssign(Interval rhs) pure nothrow
     {
@@ -18944,11 +19171,12 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) == Interval!Date(Date(1996,
 
 
     /++
-        The begin point of the interval. It is included in the interval.
+        The starting point of the interval. It is included in the interval.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin == Date(1996, 1, 2));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
+       Date(1996, 1, 2));
 --------------------
       +/
     @property TP begin() const pure nothrow
@@ -18958,13 +19186,13 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin == Date(1996, 1, 
 
 
     /++
-        The begin point of the interval. It is included in the interval.
+        The starting point of the interval. It is included in the interval.
 
         Params:
-            timePoint = The time point to set begin to.
+            timePoint = The time point to set $(D begin) to.
 
         Throws:
-            DateTimeException if the resulting interval would be invalid.
+            $(D DateTimeException) if the resulting interval would be invalid.
       +/
     @property void begin(TP timePoint) pure
     {
@@ -18980,7 +19208,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin == Date(1996, 1, 
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end == Date(2012, 3, 1));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
+       Date(2012, 3, 1));
 --------------------
       +/
     @property TP end() const pure nothrow
@@ -18996,7 +19225,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end == Date(2012, 3, 1)
             timePoint = The time point to set end to.
 
         Throws:
-            DateTimeException if the resulting interval would be invalid.
+            $(D DateTimeException) if the resulting interval would be invalid.
       +/
     @property void end(TP timePoint) pure
     {
@@ -19008,11 +19237,12 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end == Date(2012, 3, 1)
 
 
     /++
-        Returns the duration between begin and end.
+        Returns the duration between $(D begin) and $(D end).
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == dur!"days"(5903));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
+       dur!"days"(5903));
 --------------------
       +/
     @property typeof(end - begin) length() const pure nothrow
@@ -19022,7 +19252,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == dur!"days"(59
 
 
     /++
-        Whether the interval's length is 0, that is, whether begin == end.
+        Whether the interval's length is 0, that is, whether $(D begin == end).
 
         Examples:
 --------------------
@@ -19043,13 +19273,17 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
             timePoint = The time point to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Date(1994, 12, 24)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Date(2000, 1, 5)));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Date(2012, 3, 1)));
 --------------------
       +/
     bool contains(in TP timePoint) const pure
@@ -19067,13 +19301,18 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Date(2012, 3,
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
     bool contains(in Interval interval) const pure
@@ -19090,18 +19329,20 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(Interval!Date
     /++
         Whether the given interval is completely within this interval.
 
-        Always returns false (unless this interval is empty), because an interval
-        going to positive infinity can never be contained in a finite interval.
+        Always returns false (unless this interval is empty), because an
+        interval going to positive infinity can never be contained in a finite
+        interval.
 
         Params:
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(PosInfInterval!Date(Date(1999, 5, 4))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
     bool contains(in PosInfInterval!TP interval) const pure
@@ -19115,18 +19356,20 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(PosInfInterva
     /++
         Whether the given interval is completely within this interval.
 
-        Always returns false (unless this interval is empty), because an interval
-        begging at negative infinity can never be contained in a finite interval.
+        Always returns false (unless this interval is empty), because an
+        interval beginning at negative infinity can never be contained in a
+        finite interval.
 
         Params:
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(NegInfInterval!Date(Date(1996, 5, 4))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
+            NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
     bool contains(in NegInfInterval!TP interval) const pure
@@ -19141,16 +19384,22 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(NegInfInterva
         Whether this interval is before the given time point.
 
         Params:
-            timePoint = The time point to check whether this interval is before it.
+            timePoint = The time point to check whether this interval is before
+                        it.
 
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Date(1994, 12, 24)));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Date(2000, 1, 5)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Date(2012, 3, 1)));
 --------------------
       +/
     bool isBefore(in TP timePoint) const pure
@@ -19162,20 +19411,25 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Date(2012, 3, 
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect with it.
 
         Params:
             interval = The interval to check for against this interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
 --------------------
       +/
     bool isBefore(in Interval interval) const pure
@@ -19188,19 +19442,22 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(Interval!Date(
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect with it.
 
         Params:
             interval = The interval to check for against this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2013, 3, 7))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(2013, 3, 7))));
 --------------------
       +/
     bool isBefore(in PosInfInterval!TP interval) const pure
@@ -19212,8 +19469,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect with it.
 
         Always returns false (unless this interval is empty) because a finite
         interval can never be before an interval beginning at negative infinity.
@@ -19222,11 +19479,12 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(PosInfInterval
             interval = The interval to check for against this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(1996, 5, 4))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
     bool isBefore(in NegInfInterval!TP interval) const pure
@@ -19241,16 +19499,22 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(NegInfInterva
         Whether this interval is after the given time point.
 
         Params:
-            timePoint = The time point to check whether this interval is after it.
+            timePoint = The time point to check whether this interval is after
+                        it.
 
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Date(1994, 12, 24)));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Date(2000, 1, 5)));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Date(2012, 3, 1)));
 --------------------
       +/
     bool isAfter(in TP timePoint) const pure
@@ -19263,19 +19527,24 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Date(2012, 3, 
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Params:
             interval = The interval to check against this interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
     bool isAfter(in Interval interval) const pure
@@ -19289,7 +19558,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(D
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Always returns false (unless this interval is empty) because a finite
         interval can never be after an interval going to positive infinity.
@@ -19298,11 +19567,12 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(Interval!Date(D
             interval = The interval to check against this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(1999, 5, 4))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
     bool isAfter(in PosInfInterval!TP interval) const pure
@@ -19315,17 +19585,18 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(PosInfInterval
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Params:
             interval = The interval to check against this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(1996, 1, 2))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(1996, 1, 2))));
 --------------------
       +/
     bool isAfter(in NegInfInterval!TP interval) const pure
@@ -19337,19 +19608,24 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(NegInfInterval!
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
     bool intersects(in Interval interval) const pure
@@ -19362,18 +19638,21 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(Interval!Da
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool intersects(in PosInfInterval!TP interval) const pure
@@ -19385,18 +19664,21 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(PosInfInter
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(1996, 1, 2))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(2000, 1, 2))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(1996, 1, 2))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(2000, 1, 2))));
 --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure
@@ -19414,13 +19696,18 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(NegInfInterv
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect or if
+            $(D DateTimeException) if the two intervals do not intersect or if
             either interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
 --------------------
       +/
     Interval intersection(in Interval interval) const
@@ -19441,13 +19728,18 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(Interval!D
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect or if this
-            interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect or if
+            this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 --------------------
       +/
     Interval intersection(in PosInfInterval!TP interval) const
@@ -19465,13 +19757,18 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(PosInfInte
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect or if this
-            interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect or if
+            this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2012, 3, 1)));
 --------------------
       +/
     Interval intersection(in NegInfInterval!TP interval) const
@@ -19486,17 +19783,22 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(NegInfInte
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1990, 7, 6), Date(1996, 1, 2))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2012, 3, 1), Date(2013, 9, 17))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
 --------------------
       +/
     bool isAdjacent(in Interval interval) const pure
@@ -19512,16 +19814,19 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(Interval!Da
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Throws:
-            DateTimeException if this is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool isAdjacent(in PosInfInterval!TP interval) const pure
@@ -19536,16 +19841,19 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(PosInfInterv
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Throws:
-            DateTimeException if this is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(1996, 1, 2))));
-assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(2000, 1, 2))));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(1996, 1, 2))));
+
+assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(2000, 1, 2))));
 --------------------
       +/
     bool isAdjacent(in NegInfInterval!TP interval) const pure
@@ -19563,13 +19871,18 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(NegInfInter
             interval = The interval to merge with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect and are not
-            adjacent or if either interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect and are
+            not adjacent or if either interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
 --------------------
       +/
     Interval merge(in Interval interval) const
@@ -19591,13 +19904,18 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(Interval!Date(Dat
             interval = The interval to merge with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect and are
+            $(D DateTimeException) if the two intervals do not intersect and are
             not adjacent or if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(PosInfInterval!Date(Date(2012, 3, 1))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            PosInfInterval!Date(Date(2012, 3, 1))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval!TP merge(in PosInfInterval!TP interval) const
@@ -19616,13 +19934,18 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(PosInfInterval!Da
             interval = The interval to merge with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect and are not
+            $(D DateTimeException) if the two intervals do not intersect and are not
             adjacent or if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1996, 1, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(1996, 1, 2))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
     NegInfInterval!TP merge(in NegInfInterval!TP interval) const
@@ -19636,18 +19959,24 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(NegInfInterval!Da
 
     /++
         Returns an interval that covers from the earliest time point of two
-        intervals up to (but not including) the latest time point of two intervals.
+        intervals up to (but not including) the latest time point of two
+        intervals.
 
         Params:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            DateTimeException if either interval is empty.
+            $(D DateTimeException) if either interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            Interval!Date(Date(1990, 7, 6), Date(1991, 1, 8))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            Interval!Date(Date(2012, 3, 1), Date(2013, 5, 7))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
 --------------------
       +/
     Interval span(in Interval interval) const pure
@@ -19664,18 +19993,24 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(Interval!Date(Date
 
     /++
         Returns an interval that covers from the earliest time point of two
-        intervals up to (but not including) the latest time point of two intervals.
+        intervals up to (but not including) the latest time point of two
+        intervals.
 
         Params:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Date(Date(2050, 1, 1))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            PosInfInterval!Date(Date(2050, 1, 1))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval!TP span(in PosInfInterval!TP interval) const pure
@@ -19688,18 +20023,24 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(PosInfInterval!Dat
 
     /++
         Returns an interval that covers from the earliest time point of two
-        intervals up to (but not including) the latest time point of two intervals.
+        intervals up to (but not including) the latest time point of two
+        intervals.
 
         Params:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            DateTimeException if this interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Examples:
 --------------------
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1602, 5, 21))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(1602, 5, 21))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
     NegInfInterval!TP span(in NegInfInterval!TP interval) const pure
@@ -19720,8 +20061,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(NegInfInterval!Dat
             duration = The duration to shift the interval by.
 
         Throws:
-            DateTimeException if empty is true or if the resulting interval
-            would be invalid.
+            $(D DateTimeException) this interval is empty or if the resulting
+            interval would be invalid.
 
         Examples:
 --------------------
@@ -19766,11 +20107,12 @@ assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
                 years         = The number of years to shift the interval by.
                 months        = The number of months to shift the interval by.
                 allowOverflow = Whether the days should be allowed to overflow
-                                on begin and end, causing their month to increment.
+                                on $(D begin) and $(D end), causing their month
+                                to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval
-                would be invalid.
+                $(D DateTimeException) if this interval is empty or if the
+                resulting interval would be invalid.
 
             Examples:
 --------------------
@@ -19808,16 +20150,16 @@ assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
     /++
         Expands the interval forwards and/or backwards in time. Effectively,
         it does $(D begin -= duration) and/or $(D end += duration). Whether
-        it expands forwards and/or backwards in time is determined by the
-        $(D dir) parameter.
+        it expands forwards and/or backwards in time is determined by
+        $(D_PARAM dir).
 
         Params:
             duration = The duration to expand the interval by.
             dir      = The direction in time to expand the interval.
 
         Throws:
-            DateTimeException if empty is true or if the resulting interval would
-            be invalid.
+            $(D DateTimeException) this interval is empty or if the resulting
+            interval would be invalid.
 
         Examples:
 --------------------
@@ -19881,19 +20223,20 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
     {
         /++
             Expands the interval forwards and/or backwards in time. Effectively,
-            it subtracts the given number of months/years from begin and adds
-            them to end. Whether it expands forwards and/or backwards in time
-            is determined by the dir parameter.
+            it subtracts the given number of months/years from $(D begin) and
+            adds them to $(D end). Whether it expands forwards and/or backwards
+            in time is determined by $(D_PARAM dir).
 
             Params:
                 years         = The number of years to expand the interval by.
                 months        = The number of months to expand the interval by.
                 allowOverflow = Whether the days should be allowed to overflow
-                                on begin and end, causing their month to increment.
+                                on $(D begin) and $(D end), causing their month
+                                to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval
-                would be invalid.
+                $(D DateTimeException) if this interval is empty or if the
+                resulting interval would be invalid.
 
             Examples:
 --------------------
@@ -19963,50 +20306,52 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 
     /++
         Returns a range which iterates forward over the interval, starting
-        at begin, using $(D func) to generate each successive time point.
+        at $(D begin), using $(D_PARAM func) to generate each successive time
+        point.
 
-        The range's $(D front) is the interval's $(D begin). $(D func) is used
-        to generate the next $(D front) when $(D popFront()) is called. If
-        $(D popFirst) is $(D PopFirst.yes), then $(D popFront()) is called
-        before the range is returned (so that front is a time point which
-        $(D func) would generate).
+        The range's $(D front) is the interval's $(D begin). $(D_PARAM func) is
+        used to generate the next $(D front) when $(D popFront) is called. If
+        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        before the range is returned (so that $(D front) is a time point which
+        $(D_PARAM func) would generate).
 
-        If $(D func) ever generates a time point less than or equal to the
-        current front of the range, then a DateTimeException will be thrown.
-        The range will be empty and iteration complete when $(D func) generates
-        a time point equal to or beyond the end of the interval.
+        If $(D_PARAM func) ever generates a time point less than or equal to the
+        current $(D front) of the range, then a $(D DateTimeException) will be
+        thrown. The range will be empty and iteration complete when
+        $(D_PARAM func) generates a time point equal to or beyond the $(D end)
+        of the interval.
 
-        There are helper functions in this module which generate common delegates
-        to pass to $(D fwdRange()). Their documentation starts with
-        "Generates a range-generating function for intervals," so you can easily
-        search for them.
+        There are helper functions in this module which generate common
+        delegates to pass to $(D fwdRange). Their documentation starts with
+        "Range-generating function," so you can easily search for them.
 
         Params:
             func     = The function used to generate the time points of the
                        range over the interval.
-            popFirst = Whether $(D popFront()) should be called on the range
+            popFirst = Whether $(D popFront) should be called on the range
                        before returning it.
 
         Throws:
-            DateTimeException if the interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Warning:
-            func must be logically pure. Ideally, $(D func) would be a function
-            pointer to a pure function, but forcing func to be pure is far too
-            restrictive to be useful, and in order to have the ease of use of
-            having functions which generate functions to pass to $(D fwdRange()),
-            $(D func) must be a delegate.
+            $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
+            would be a function pointer to a pure function, but forcing
+            $(D_PARAM func) to be pure is far too restrictive to be useful, and
+            in order to have the ease of use of having functions which generate
+            functions to pass to $(D fwdRange), $(D_PARAM func) must be a
+            delegate.
 
-            If $(D func) retains state which changes as it is called, then some
-            algorithms will not work correctly, because the range's $(D save)
-            will have failed to have really saved the range's state. So, if you
-            want to avoid such bugs, don't pass a delegate which is not
-            logically pure to $(D fwdRange()). If $(D func) is given the same
-            time point with two different calls, it must return the same result
-            both times.
+            If $(D_PARAM func) retains state which changes as it is called, then
+            some algorithms will not work correctly, because the range's
+            $(D save) will have failed to have really saved the range's state.
+            So, if you want to avoid such bugs, don't pass a delegate which is
+            not logically pure to $(D fwdRange). If $(D_PARAM func) is given the
+            same time point with two different calls, it must return the same
+            result both times.
 
-            Of course, none of the functions in this module have this problem, so
-            it's only relevant if you're creating your own delegate.
+            Of course, none of the functions in this module have this problem,
+            so it's only relevant if you're creating your own delegate.
 
         Examples:
 --------------------
@@ -20020,7 +20365,8 @@ auto func = (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2010, 9, 1)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+ //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+assert(range.front == Date(2010, 9, 1));
 
 range.popFront();
 assert(range.front == Date(2010, 9, 2));
@@ -20053,50 +20399,52 @@ assert(range.empty);
 
     /++
         Returns a range which iterates backwards over the interval, starting
-        at end, using $(D func) to generate each successive time point.
+        at $(D end), using $(D_PARAM func) to generate each successive time
+        point.
 
-        The range's $(D front) is the interval's $(D end). $(D func) is used
-        to generate the next $(D front) when $(D popFront()) is called. If
-        $(D popFirst) is $(D PopFirst.yes), then $(D popFront()) is called
+        The range's $(D front) is the interval's $(D end). $(D_PARAM func) is
+        used to generate the next $(D front) when $(D popFront) is called. If
+        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
         before the range is returned (so that $(D front) is a time point which
-        $(D func) would generate).
+        $(D_PARAM func) would generate).
 
-        If $(D func) ever generates a time point greater than or equal to the
-        current $(D front) of the range, then a DateTimeException will be thrown.
-        The range will be empty and iteration complete when $(D func) generates
-        a time point equal to or less than the $(D begin) of the interval.
+        If $(D_PARAM func) ever generates a time point greater than or equal to
+        the current $(D front) of the range, then a $(D DateTimeException) will
+        be thrown. The range will be empty and iteration complete when
+        $(D_PARAM func) generates a time point equal to or less than the
+        $(D begin) of the interval.
 
-        There are helper functions in this module which generate common delegates
-        to pass to $(D bwdRange()). Their documentation starts with
-        "Generates a range-generating function for intervals," so you can easily
-        search for them.
+        There are helper functions in this module which generate common
+        delegates to pass to $(D bwdRange). Their documentation starts with
+        "Range-generating function," so you can easily search for them.
 
         Params:
-            func     = The function used to generate the time points of the range
-                       over the interval.
-            popFirst = Whether $(D popFront()) should be called on the range before
-                       returning it.
+            func     = The function used to generate the time points of the
+                       range over the interval.
+            popFirst = Whether $(D popFront) should be called on the range
+                       before returning it.
 
         Throws:
-            DateTimeException if the interval is empty.
+            $(D DateTimeException) if this interval is empty.
 
         Warning:
-            func must be logically pure. Ideally, $(D func) would be a function
-            pointer to a pure function, but forcing func to be pure is far too
-            restrictive to be useful, and in order to have the ease of use of
-            having functions which generate functions to pass to $(D fwdRange()),
-            $(D func) must be a delegate.
+            $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
+            would be a function pointer to a pure function, but forcing
+            $(D_PARAM func) to be pure is far too restrictive to be useful, and
+            in order to have the ease of use of having functions which generate
+            functions to pass to $(D fwdRange), $(D_PARAM func) must be a
+            delegate.
 
-            If $(D func) retains state which changes as it is called, then some
-            algorithms will not work correctly, because the range's $(D save)
-            will have failed to have really saved the range's state. So, if you
-            want to avoid such bugs, don't pass a delegate which is not
-            logically pure to $(D fwdRange()). If $(D func) is given the same
-            time point with two different calls, it must return the same result
-            both times.
+            If $(D_PARAM func) retains state which changes as it is called, then
+            some algorithms will not work correctly, because the range's
+            $(D save) will have failed to have really saved the range's state.
+            So, if you want to avoid such bugs, don't pass a delegate which is
+            not logically pure to $(D fwdRange). If $(D_PARAM func) is given the
+            same time point with two different calls, it must return the same
+            result both times.
 
-            Of course, none of the functions in this module have this problem, so
-            it's only relevant if you're creating your own delegate.
+            Of course, none of the functions in this module have this problem,
+            so it's only relevant if you're creating your own delegate.
 
         Examples:
 --------------------
@@ -20110,7 +20458,8 @@ auto func = (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.bwdRange(func);
 
-assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+assert(range.front == Date(2010, 9, 9));
 
 range.popFront();
 assert(range.front == Date(2010, 9, 8));
@@ -20167,8 +20516,8 @@ assert(range.empty);
 
 private:
 
-    /++
-        Since we have two versions of toString(), we have _toStringImpl()
+    /+
+        Since we have two versions of toString, we have _toStringImpl
         so that they can share implementations.
       +/
     string _toStringImpl() const nothrow
@@ -20180,9 +20529,9 @@ private:
     }
 
 
-    /++
+    /+
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if this interval is empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -20191,11 +20540,11 @@ private:
     }
 
 
-    /++
+    /+
         Whether the given values form a valid time interval.
 
         Params:
-            begin = The begin point of the interval.
+            begin = The starting point of the interval.
             end   = The end point of the interval.
      +/
     static bool _valid(in TP begin, in TP end) pure nothrow
@@ -21729,7 +22078,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
     /++
         Params:
-            rhs = The PosInfInterval to assign to this one.
+            rhs = The $(D PosInfInterval) to assign to this one.
       +/
     /+ref+/ PosInfInterval opAssign(const ref PosInfInterval rhs) pure nothrow
     {
@@ -21741,7 +22090,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
     /++
         Params:
-            rhs = The PosInfInterval to assign to this one.
+            rhs = The $(D PosInfInterval) to assign to this one.
       +/
     /+ref+/ PosInfInterval opAssign(PosInfInterval rhs) pure nothrow
     {
@@ -21752,7 +22101,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
 
     /++
-        The begin point of the interval. It is included in the interval.
+        The starting point of the interval. It is included in the interval.
 
         Examples:
 --------------------
@@ -21766,10 +22115,10 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
 
 
     /++
-        The begin point of the interval. It is included in the interval.
+        The starting point of the interval. It is included in the interval.
 
         Params:
-            timePoint = The time point to set begin to.
+            timePoint = The time point to set $(D begin) to.
       +/
     @property void begin(TP timePoint) pure nothrow
     {
@@ -21816,13 +22165,18 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
     bool contains(in Interval!TP interval) const pure
@@ -21841,8 +22195,11 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Interval!Date(Date(1998, 2
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(PosInfInterval!Date(Date(1995, 7, 2))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            PosInfInterval!Date(Date(1995, 7, 2))));
 --------------------
       +/
     bool contains(in PosInfInterval interval) const pure nothrow
@@ -21862,7 +22219,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(PosInfInterval!Date(Date(
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(NegInfInterval!Date(Date(1996, 5, 4))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
+            NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
     bool contains(in NegInfInterval!TP interval) const pure nothrow
@@ -21878,7 +22236,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(NegInfInterval!Date(Date(
         can never be before any time point.
 
         Params:
-            timePoint = The time point to check whether this interval is before it.
+            timePoint = The time point to check whether this interval is before
+                        it.
 
         Examples:
 --------------------
@@ -21893,22 +22252,26 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect it.
 
         Always returns false (unless the given interval is empty) because an
-        interval going to positive infinity can never be before any other interval.
+        interval going to positive infinity can never be before any other
+        interval.
 
         Params:
             interval = The interval to check for against this interval.
 
         Throws:
-            DateTimeException if either Interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
     bool isBefore(in Interval!TP interval) const pure
@@ -21920,8 +22283,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Interval!Date(Date(1999, 
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect it.
 
         Always returns false because an interval going to positive infinity can
         never be before any other interval.
@@ -21931,8 +22294,11 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Interval!Date(Date(1999, 
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(PosInfInterval!Date(Date(1992, 5, 4))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(PosInfInterval!Date(Date(2013, 3, 7))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+            PosInfInterval!Date(Date(1992, 5, 4))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+            PosInfInterval!Date(Date(2013, 3, 7))));
 --------------------
       +/
     bool isBefore(in PosInfInterval interval) const pure nothrow
@@ -21942,8 +22308,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(PosInfInterval!Date(Date(
 
 
     /++
-        Whether this interval is before the given interval and does not intersect
-        with it.
+        Whether this interval is before the given interval and does not
+        intersect it.
 
         Always returns false because an interval going to positive infinity can
         never be before any other interval.
@@ -21953,7 +22319,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(PosInfInterval!Date(Date(
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(NegInfInterval!Date(Date(1996, 5, 4))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
+            NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
     bool isBefore(in NegInfInterval!TP interval) const pure nothrow
@@ -21966,7 +22333,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(NegInfInterval!Date(Date(
         Whether this interval is after the given time point.
 
         Params:
-            timePoint = The time point to check whether this Interval is after it.
+            timePoint = The time point to check whether this interval is after
+                        it.
 
         Examples:
 --------------------
@@ -21982,19 +22350,24 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Params:
             interval = The interval to check against this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
     bool isAfter(in Interval!TP interval) const pure
@@ -22007,7 +22380,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1989, 3,
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Always returns false because an interval going to positive infinity can
         never be after another interval going to positive infinity.
@@ -22017,8 +22390,11 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Interval!Date(Date(1989, 3,
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(PosInfInterval!Date(Date(1990, 1, 7))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(PosInfInterval!Date(Date(1999, 5, 4))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            PosInfInterval!Date(Date(1990, 1, 7))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
     bool isAfter(in PosInfInterval interval) const pure nothrow
@@ -22029,15 +22405,18 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(PosInfInterval!Date(Date(1
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Params:
             interval = The interval to check against this interval.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(NegInfInterval!Date(Date(1996, 1, 2))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(NegInfInterval!Date(Date(2000, 7, 1))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            NegInfInterval!Date(Date(1996, 1, 2))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
+            NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
     bool isAfter(in NegInfInterval!TP interval) const pure nothrow
@@ -22047,19 +22426,24 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(NegInfInterval!Date(Date(2
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
     bool intersects(in Interval!TP interval) const pure
@@ -22071,18 +22455,22 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(Interval!Date(Date(1989
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Always returns true because two intervals going to positive infinity
         always overlap.
 
         Params:
-            interval = The interval to check for intersection with this interval.
+            interval = The interval to check for intersection with this
+                       interval.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(PosInfInterval!Date(Date(1990, 1, 7))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(PosInfInterval!Date(Date(1999, 5, 4))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            PosInfInterval!Date(Date(1990, 1, 7))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
     bool intersects(in PosInfInterval interval) const pure nothrow
@@ -22092,15 +22480,19 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(PosInfInterval!Date(Date
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
-            interval = The interval to check for intersection with this interval.
+            interval = The interval to check for intersection with this
+                       interval.
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(NegInfInterval!Date(Date(1996, 1, 2))));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(NegInfInterval!Date(Date(2000, 7, 1))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            NegInfInterval!Date(Date(1996, 1, 2))));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
+            NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure nothrow
@@ -22116,13 +22508,18 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(NegInfInterval!Date(Date
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect or if the
-            given interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect or if
+            the given interval is empty.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2000, 8, 2)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2011, 9, 17)));
 --------------------
       +/
     Interval!TP intersection(in Interval!TP interval) const
@@ -22143,8 +22540,13 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(Interval!Date(Date(199
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1996, 1 , 2)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1999, 1 , 12)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       PosInfInterval!Date(Date(1999, 1 , 12)));
 --------------------
       +/
     PosInfInterval intersection(in PosInfInterval interval) const pure nothrow
@@ -22160,12 +22562,17 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(PosInfInterval!Date(Da
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect.
+            $(D DateTimeException) if the two intervals do not intersect.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(1999, 7, 6)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       Interval!Date(Date(1996, 1 , 2), Date(2013, 1, 12)));
 --------------------
       +/
     Interval!TP intersection(in NegInfInterval!TP interval) const
@@ -22180,16 +22587,19 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(NegInfInterval!Date(Da
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
-assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+            Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
+
+assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
     bool isAdjacent(in Interval!TP interval) const pure
@@ -22207,13 +22617,16 @@ assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(Interval!Date(Date(199
         can never be adjacent to one another.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Examples:
 --------------------
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(PosInfInterval!Date(Date(1990, 1, 7))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(PosInfInterval!Date(Date(1996, 1, 2))));
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+            PosInfInterval!Date(Date(1990, 1, 7))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+            PosInfInterval!Date(Date(1996, 1, 2))));
 --------------------
       +/
     bool isAdjacent(in PosInfInterval interval) const pure nothrow
@@ -22226,13 +22639,16 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(PosInfInterval!Date(Dat
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(NegInfInterval!Date(Date(1996, 1, 2))));
-assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(NegInfInterval!Date(Date(2000, 7, 1))));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+            NegInfInterval!Date(Date(1996, 1, 2))));
+
+assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
+            NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
     bool isAdjacent(in NegInfInterval!TP interval) const pure nothrow
@@ -22248,18 +22664,23 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(NegInfInterval!Date(Dat
             interval = The interval to merge with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect and are not
-            adjacent or if the given interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect and are
+            not adjacent or if the given interval is empty.
 
         Note:
-            There is no overload for $(D merge()) which takes a NegInfInterval. This
-            is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D merge) which takes a
+            $(D NegInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval merge(in Interval!TP interval) const
@@ -22278,14 +22699,19 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(Interval!Date(Date(1999, 1, 1
             interval = The interval to merge with this interval.
 
         Note:
-            There is no overload for $(D merge()) which takes a NegInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D merge) which takes a
+            $(D NegInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval merge(in PosInfInterval interval) const pure nothrow
@@ -22304,18 +22730,26 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(PosInfInterval!Date(Date(1999
                        interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Note:
-            There is no overload for $(D span()) which takes a NegInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D span) which takes a
+            $(D NegInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(500, 8, 9), Date(1602, 1, 31))) == PosInfInterval!Date(Date(500, 8, 9)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+            Interval!Date(Date(500, 8, 9), Date(1602, 1, 31))) ==
+       PosInfInterval!Date(Date(500, 8, 9)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval span(in Interval!TP interval) const pure
@@ -22332,17 +22766,23 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(Interval!Date(Date(1999, 1, 12
         intervals.
 
         Params:
-            interval = The interval to create a span together with this interval.
+            interval = The interval to create a span together with this
+                       interval.
 
         Note:
-            There is no overload for $(D span()) which takes a NegInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D span) which takes a
+            $(D NegInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1990, 7, 6))) == PosInfInterval!Date(Date(1990, 7 , 6)));
-assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1999, 1, 12))) == PosInfInterval!Date(Date(1996, 1 , 2)));
+assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       PosInfInterval!Date(Date(1990, 7 , 6)));
+
+assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
     PosInfInterval span(in PosInfInterval interval) const pure nothrow
@@ -22352,8 +22792,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(PosInfInterval!Date(Date(1999,
 
 
     /++
-        Shifts the begin of this interval forward or backwards in time by the
-        given duration (a positive duration shifts the interval forward; a
+        Shifts the $(D begin) of this interval forward or backwards in time by
+        the given duration (a positive duration shifts the interval forward; a
         negative duration shifts it backward). Effectively, it does
         $(D begin += duration).
 
@@ -22383,22 +22823,23 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
               __traits(compiles, begin.add!"years"(1)))
     {
         /++
-            Shifts the begin of this interval forward or backwards in time by
-            the given number of years and/or months (a positive number of years
+            Shifts the $(D begin) of this interval forward or backwards in time
+            by the given number of years and/or months (a positive number of years
             and months shifts the interval forward; a negative number shifts it
-            backward). It adds the years the given years and months to begin.
-            It effectively calls $(D add!"years"()) and then $(D add!"months"())
-            on begin the given number of years and months.
+            backward). It adds the years the given years and months to
+            $(D begin). It effectively calls $(D add!"years"()) and then
+            $(D add!"months"()) on $(D begin) with the given number of years and
+            months.
 
             Params:
                 years         = The number of years to shift the interval by.
                 months        = The number of months to shift the interval by.
                 allowOverflow = Whether the days should be allowed to overflow
-                                on begin, causing its month to increment.
+                                on $(D begin), causing its month to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval
-                would be invalid.
+                $(D DateTimeException) if this interval is empty or if the
+                resulting interval would be invalid.
 
             Examples:
 --------------------
@@ -22457,17 +22898,17 @@ assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
     {
         /++
             Expands the interval forwards and/or backwards in time. Effectively,
-            it subtracts the given number of months/years from begin.
+            it subtracts the given number of months/years from $(D begin).
 
             Params:
                 years         = The number of years to expand the interval by.
                 months        = The number of months to expand the interval by.
                 allowOverflow = Whether the days should be allowed to overflow
-                                on begin, causing its month to increment.
+                                on $(D begin), causing its month to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval
-                would be invalid.
+                $(D DateTimeException) if this interval is empty or if the
+                resulting interval would be invalid.
 
             Examples:
 --------------------
@@ -22498,45 +22939,50 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
 
     /++
         Returns a range which iterates forward over the interval, starting
-        at begin, using $(D func()) to generate each successive time point.
+        at $(D begin), using $(D_PARAM func) to generate each successive time
+        point.
 
-        The range's front is the interval's begin. $(D func()) is used
-        to generate the next front when $(D popFront()) is called. If
-        $(D popFirst) is true, then $(D popFront()) is called before the
-        range is returned (so that front is a time point which $(D func())
-        would generate).
+        The range's $(D front) is the interval's $(D begin). $(D_PARAM func) is
+        used to generate the next $(D front) when $(D popFront) is called. If
+        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        before the range is returned (so that $(D front) is a time point which
+        $(D_PARAM func) would generate).
 
-        If $(D func()) ever generates a time point less than or equal to the
-        current front of the range, then a DateTimeException will be thrown.
+        If $(D_PARAM func) ever generates a time point less than or equal to the
+        current $(D front) of the range, then a $(D DateTimeException) will be
+        thrown.
 
-        There are helper functions in this module which generate common delegates
-        to pass to $(D fwdRange()). Their documentation starts with
-        "Generates a range-generating function for intervals," so you can easily
-        search for them.
+        There are helper functions in this module which generate common
+        delegates to pass to $(D fwdRange). Their documentation starts with
+        "Range-generating function," so you can easily search for them.
 
         Params:
             func     = The function used to generate the time points of the
                        range over the interval.
-            popFirst = Whether popFront() should be called on the range before
-                       returning it.
+            popFirst = Whether $(D popFront) should be called on the range
+                       before returning it.
+
+        Throws:
+            $(D DateTimeException) if this interval is empty.
 
         Warning:
-            func must be logically pure. Ideally, $(D func) would be a function
-            pointer to a pure function, but forcing func to be pure is far too
-            restrictive to be useful, and in order to have the ease of use of
-            having functions which generate functions to pass to $(D fwdRange()),
-            $(D func) must be a delegate.
+            $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
+            would be a function pointer to a pure function, but forcing
+            $(D_PARAM func) to be pure is far too restrictive to be useful, and
+            in order to have the ease of use of having functions which generate
+            functions to pass to $(D fwdRange), $(D_PARAM func) must be a
+            delegate.
 
-            If $(D func) retains state which changes as it is called, then some
-            algorithms will not work correctly, because the range's $(D save)
-            will have failed to have really saved the range's state. So, if you
-            want to avoid such bugs, don't pass a delegate which is not
-            logically pure to $(D fwdRange()). If $(D func) is given the same
-            time point with two different calls, it must return the same result
-            both times.
+            If $(D_PARAM func) retains state which changes as it is called, then
+            some algorithms will not work correctly, because the range's
+            $(D save) will have failed to have really saved the range's state.
+            So, if you want to avoid such bugs, don't pass a delegate which is
+            not logically pure to $(D fwdRange). If $(D_PARAM func) is given the
+            same time point with two different calls, it must return the same
+            result both times.
 
-            Of course, none of the functions in this module have this problem, so
-            it's only relevant if you're creating your own delegate.
+            Of course, none of the functions in this module have this problem,
+            so it's only relevant if you're creating your own delegate.
 
         Examples:
 --------------------
@@ -22550,7 +22996,8 @@ auto func = (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2010, 9, 1)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+assert(range.front == Date(2010, 9, 1));
 
 range.popFront();
 assert(range.front == Date(2010, 9, 2));
@@ -22604,7 +23051,7 @@ assert(!range.empty);
 
 private:
 
-    /++
+    /+
         Since we have two versions of toString(), we have _toStringImpl()
         so that they can share implementations.
       +/
@@ -23846,7 +24293,8 @@ unittest
 
 
 /++
-    Represents an interval of time which has negative infinity as its begin point.
+    Represents an interval of time which has negative infinity as its starting
+    point.
 
     Any ranges which iterate over a $(D NegInfInterval) are infinite. So, the
     main purpose of using $(D NegInfInterval) is to create an infinite range
@@ -23874,7 +24322,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
     /++
         Params:
-            rhs = The NegInfInterval to assign to this one.
+            rhs = The $(D NegInfInterval) to assign to this one.
       +/
     /+ref+/ NegInfInterval opAssign(const ref NegInfInterval rhs) pure nothrow
     {
@@ -23886,7 +24334,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 
     /++
         Params:
-            rhs = The NegInfInterval to assign to this one.
+            rhs = The $(D NegInfInterval) to assign to this one.
       +/
     /+ref+/ NegInfInterval opAssign(NegInfInterval rhs) pure nothrow
     {
@@ -23962,13 +24410,18 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
     bool contains(in Interval!TP interval) const pure
@@ -23982,15 +24435,16 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1998, 
     /++
         Whether the given interval is completely within this interval.
 
-        Always returns false because an interval beginning at negative infinity
-        can never contain an interval going to positive infinity.
+        Always returns false because an interval beginning at negative
+        infinity can never contain an interval going to positive infinity.
 
         Params:
             interval = The interval to check for inclusion in this interval.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(PosInfInterval!Date(Date(1999, 5, 4))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
     bool contains(in PosInfInterval!TP interval) const pure nothrow
@@ -24007,8 +24461,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(PosInfInterval!Date(Date(
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(NegInfInterval!Date(Date(1996, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(NegInfInterval!Date(Date(2013, 7, 9))));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
     bool contains(in NegInfInterval interval) const pure nothrow
@@ -24039,19 +24496,24 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
 
     /++
         Whether this interval is before the given interval and does not
-        intersect with it.
+        intersect it.
 
         Params:
             interval = The interval to check for against this interval.
 
         Throws:
-            DateTimeException if the given interval is empty
+            $(D DateTimeException) if the given interval is empty
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
     bool isBefore(in Interval!TP interval) const pure
@@ -24064,15 +24526,18 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(2022, 1
 
     /++
         Whether this interval is before the given interval and does not
-        intersect with it.
+        intersect it.
 
         Params:
             interval = The interval to check for against this interval.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool isBefore(in PosInfInterval!TP interval) const pure nothrow
@@ -24083,7 +24548,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2
 
     /++
         Whether this interval is before the given interval and does not
-        intersect with it.
+        intersect it.
 
         Always returns false because an interval beginning at negative
         infinity can never be before another interval beginning at negative
@@ -24094,8 +24559,11 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(1996, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(2013, 7, 9))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
     bool isBefore(in NegInfInterval interval) const pure nothrow
@@ -24107,11 +24575,12 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(
     /++
         Whether this interval is after the given time point.
 
-        Always returns false because an interval begginning at negative infinity
+        Always returns false because an interval beginning at negative infinity
         can never be after any time point.
 
         Params:
-            timePoint = The time point to check whether this Interval is after it.
+            timePoint = The time point to check whether this interval is after
+                        it.
 
         Examples:
 --------------------
@@ -24128,7 +24597,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
 
     /++
         Whether this interval is after the given interval and does not
-        intersect with it.
+        intersect it.
 
         Always returns false (unless the given interval is empty) because an
         interval beginning at negative infinity can never be after any other
@@ -24138,13 +24607,18 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
             interval = The interval to check against this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
     bool isAfter(in Interval!TP interval) const pure
@@ -24157,7 +24631,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(2022, 1
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Always returns false because an interval beginning at negative infinity
         can never be after any other interval.
@@ -24167,8 +24641,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(2022, 1
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool isAfter(in PosInfInterval!TP interval) const pure nothrow
@@ -24179,7 +24656,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(2
 
     /++
         Whether this interval is after the given interval and does not intersect
-        with it.
+        it.
 
         Always returns false because an interval beginning at negative infinity
         can never be after any other interval.
@@ -24189,8 +24666,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(2
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(1996, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(2013, 7, 9))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
     bool isAfter(in NegInfInterval interval) const pure nothrow
@@ -24200,19 +24680,24 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(2
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
     bool intersects(in Interval!TP interval) const pure
@@ -24224,15 +24709,19 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(2022
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Params:
-            interval = The interval to check for intersection with this interval.
+            interval = The interval to check for intersection with this
+                       interval.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool intersects(in PosInfInterval!TP interval) const pure nothrow
@@ -24242,7 +24731,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Dat
 
 
     /++
-        Whether the given interval overlaps with this interval.
+        Whether the given interval overlaps this interval.
 
         Always returns true because two intervals beginning at negative infinity
         always overlap.
@@ -24252,8 +24741,11 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Dat
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(1996, 5, 4))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(2013, 7, 9))));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
     bool intersects(in NegInfInterval!TP interval) const pure nothrow
@@ -24269,13 +24761,18 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect or if the
-            given interval is empty.
+            $(D DateTimeException) if the two intervals do not intersect or if
+            the given interval is empty.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 --------------------
       +/
     Interval!TP intersection(in Interval!TP interval) const
@@ -24295,12 +24792,17 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(199
             interval = The interval to intersect with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect.
+            $(D DateTimeException) if the two intervals do not intersect.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) == Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) == Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
 --------------------
       +/
     Interval!TP intersection(in PosInfInterval!TP interval) const
@@ -24319,8 +24821,13 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Da
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(1999, 7 , 6)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2012, 3 , 1)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(1999, 7 , 6)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
 --------------------
       +/
     NegInfInterval intersection(in NegInfInterval interval) const nothrow
@@ -24333,18 +24840,25 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Da
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
     bool isAdjacent(in Interval!TP interval) const pure
@@ -24359,13 +24873,16 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2022
         Whether the given interval is adjacent to this interval.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(1999, 5, 4))));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(2012, 3, 1))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
@@ -24381,13 +24898,16 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date
         infinity can never be adjacent to one another.
 
         Params:
-            interval = The interval to check whether its adjacent with this
+            interval = The interval to check whether its adjecent to this
                        interval.
 
         Examples:
 --------------------
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(1996, 5, 4))));
-assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(2012, 3, 1))));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
     bool isAdjacent(in NegInfInterval interval) const pure nothrow
@@ -24403,18 +24923,23 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Dat
             interval = The interval to merge with this interval.
 
         Throws:
-            DateTimeException if the two intervals do not intersect and are
+            $(D DateTimeException) if the two intervals do not intersect and are
             not adjacent or if the given interval is empty.
 
         Note:
-            There is no overload for $(D merge()) which takes a PosInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D merge) which takes a
+            $(D PosInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9 , 2)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       NegInfInterval!Date(Date(2015, 9 , 2)));
 --------------------
       +/
     NegInfInterval merge(in Interval!TP interval) const
@@ -24433,14 +24958,19 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1999, 1, 1
             interval = The interval to merge with this interval.
 
         Note:
-            There is no overload for $(D merge()) which takes a PosInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D merge) which takes a
+            $(D PosInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
     NegInfInterval merge(in NegInfInterval interval) const pure nothrow
@@ -24459,18 +24989,26 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013
                        interval.
 
         Throws:
-            DateTimeException if the given interval is empty.
+            $(D DateTimeException) if the given interval is empty.
 
         Note:
-            There is no overload for $(D span()) which takes a PosInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D span) which takes a
+            $(D PosInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) == NegInfInterval!Date(Date(2015, 9 , 2)));
-assert(NegInfInterval!Date(Date(1600, 1, 7)).span(Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) == NegInfInterval!Date(Date(2017, 7 , 1)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       NegInfInterval!Date(Date(2015, 9 , 2)));
+
+assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
+            Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
+       NegInfInterval!Date(Date(2017, 7 , 1)));
 --------------------
       +/
     NegInfInterval span(in Interval!TP interval) const pure
@@ -24487,17 +25025,23 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(Interval!Date(Date(2012, 3, 11
         intervals.
 
         Params:
-            interval = The interval to create a span together with this interval.
+            interval = The interval to create a span together with this
+                       interval.
 
         Note:
-            There is no overload for $(D span()) which takes a PosInfInterval.
-            This is because you can't have an interval which goes from negative
-            infinity to positive infinity.
+            There is no overload for $(D span) which takes a
+            $(D PosInfInterval). This is because you can't have an interval
+            which goes from negative infinity to positive infinity.
 
         Examples:
 --------------------
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1999, 7, 6))) == NegInfInterval!Date(Date(2012, 3 , 1)));
-assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013, 1, 12))) == NegInfInterval!Date(Date(2013, 1 , 12)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
     NegInfInterval span(in NegInfInterval interval) const pure nothrow
@@ -24507,7 +25051,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013,
 
 
     /++
-        Shifts the end of this interval forward or backwards in time by the
+        Shifts the $(D end) of this interval forward or backwards in time by the
         given duration (a positive duration shifts the interval forward; a
         negative duration shifts it backward). Effectively, it does
         $(D end += duration).
@@ -24538,9 +25082,9 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
               __traits(compiles, end.add!"years"(1)))
     {
         /++
-            Shifts the end of this interval forward or backwards in time by the
-            given number of years and/or months (a positive number of years and
-            months shifts the interval forward; a negative number shifts it
+            Shifts the $(D end) of this interval forward or backwards in time by
+            the given number of years and/or months (a positive number of years
+            and months shifts the interval forward; a negative number shifts it
             backward). It adds the years the given years and months to end. It
             effectively calls $(D add!"years"()) and then $(D add!"months"())
             on end with the given number of years and months.
@@ -24548,10 +25092,12 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
             Params:
                 years         = The number of years to shift the interval by.
                 months        = The number of months to shift the interval by.
-                allowOverflow = Whether the days should be allowed to overflow on end, causing its month to increment.
+                allowOverflow = Whether the days should be allowed to overflow
+                                on $(D end), causing its month to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval would be invalid.
+                $(D DateTimeException) if empty is true or if the resulting
+                interval would be invalid.
 
             Examples:
 --------------------
@@ -24616,11 +25162,11 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
                 years         = The number of years to expand the interval by.
                 months        = The number of months to expand the interval by.
                 allowOverflow = Whether the days should be allowed to overflow
-                                on end, causing their month to increment.
+                                on $(D end), causing their month to increment.
 
             Throws:
-                DateTimeException if empty is true or if the resulting interval
-                would be invalid.
+                $(D DateTimeException) if empty is true or if the resulting
+                interval would be invalid.
 
             Examples:
 --------------------
@@ -24651,44 +25197,50 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
     /++
         Returns a range which iterates backwards over the interval, starting
-        at end, using $(D func()) to generate each successive time point.
+        at $(D end), using $(D_PARAM func) to generate each successive time
+        point.
 
-        The range's front is the interval's end. $(D func) is used to generate
-        the next front when $(D popFront()) is called. If $(D popFirst)
-        is true, then $(D popFront()) is called before the range is returned
-        (so that front is a time point which $(D func()) would generate).
+        The range's $(D front) is the interval's $(D end). $(D_PARAM func) is
+        used to generate the next $(D front) when $(D popFront) is called. If
+        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        before the range is returned (so that $(D front) is a time point which
+        $(D_PARAM func) would generate).
 
-        If $(D func()) ever generates a time point less than or equal to the
-        current front of the range, then a DateTimeException will be thrown.
+        If $(D_PARAM func) ever generates a time point greater than or equal to
+        the current $(D front) of the range, then a $(D DateTimeException) will
+        be thrown.
 
-        There are helper functions in this module which generate common delegates
-        to pass to $(D bwdRange()). Their documentation starts with
-        "Generates a range-generating function for intervals," so you can easily
-        search for them.
+        There are helper functions in this module which generate common
+        delegates to pass to $(D bwdRange). Their documentation starts with
+        "Range-generating function," so you can easily search for them.
 
         Params:
             func     = The function used to generate the time points of the
                        range over the interval.
-            popFirst = Whether popFront() should be called on the range before
-                       returning it.
+            popFirst = Whether $(D popFront) should be called on the range
+                       before returning it.
+
+        Throws:
+            $(D DateTimeException) if this interval is empty.
 
         Warning:
-            func must be logically pure. Ideally, $(D func) would be a function
-            pointer to a pure function, but forcing func to be pure is far too
-            restrictive to be useful, and in order to have the ease of use of
-            having functions which generate functions to pass to $(D fwdRange()),
-            $(D func) must be a delegate.
+            $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
+            would be a function pointer to a pure function, but forcing
+            $(D_PARAM func) to be pure is far too restrictive to be useful, and
+            in order to have the ease of use of having functions which generate
+            functions to pass to $(D fwdRange), $(D_PARAM func) must be a
+            delegate.
 
-            If $(D func) retains state which changes as it is called, then some
-            algorithms will not work correctly, because the range's $(D save)
-            will have failed to have really saved the range's state. So, if you
-            want to avoid such bugs, don't pass a delegate which is not
-            logically pure to $(D fwdRange()). If $(D func) is given the same
-            time point with two different calls, it must return the same result
-            both times.
+            If $(D_PARAM func) retains state which changes as it is called, then
+            some algorithms will not work correctly, because the range's
+            $(D save) will have failed to have really saved the range's state.
+            So, if you want to avoid such bugs, don't pass a delegate which is
+            not logically pure to $(D fwdRange). If $(D_PARAM func) is given the
+            same time point with two different calls, it must return the same
+            result both times.
 
-            Of course, none of the functions in this module have this problem, so
-            it's only relevant if you're creating your own delegate.
+            Of course, none of the functions in this module have this problem,
+            so it's only relevant if you're creating your own delegate.
 
         Examples:
 --------------------
@@ -24756,7 +25308,7 @@ assert(!range.empty);
 
 private:
 
-    /++
+    /+
         Since we have two versions of toString(), we have _toStringImpl()
         so that they can share implementations.
       +/
@@ -25966,7 +26518,8 @@ unittest
                     };
         auto range = interval.bwdRange(func);
 
-        assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9));
 
         range.popFront();
         assert(range.front == Date(2010, 9, 8));
@@ -26006,20 +26559,20 @@ unittest
 
 
 /++
-    Generates a range-generating function for intervals.
+    Range-generating function.
 
     Returns a delegate which returns the next time point with the given
-    DayOfWeek in a range.
+    $(D DayOfWeek) in a range.
 
-    Using this delegate allows you to iterate over successive time points
-    which are all the same day of the week. e.g. passing DayOfWeek.mon
-    to $(D everyDayOfWeek()) would result in a delegate which could be used
-    to iterate over all of the Mondays in a range.
+    Using this delegate allows you to iterate over successive time points which
+    are all the same day of the week. e.g. passing $(D DayOfWeek.mon) to
+    $(D everyDayOfWeek) would result in a delegate which could be used to
+    iterate over all of the Mondays in a range.
 
     Params:
-        dir      = The direction to iterate in. If passing the return value
-                   to $(D fwdRange()), use $(D Direction.fwd). If passing
-                   it to $(D bwdRange()), use $(D Direction.bwd).
+        dir       = The direction to iterate in. If passing the return value to
+                    $(D fwdRange), use $(D Direction.fwd). If passing it to
+                    $(D bwdRange), use $(D Direction.bwd).
         dayOfWeek = The week that each time point in the range will be.
 
     Examples:
@@ -26028,7 +26581,8 @@ auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
 auto func = everyDayOfWeek!Date(DayOfWeek.mon);
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2010, 9, 2)); //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+//A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+assert(range.front == Date(2010, 9, 2));
 
 range.popFront();
 assert(range.front == Date(2010, 9, 6));
@@ -26108,7 +26662,8 @@ unittest
         auto func = everyDayOfWeek!Date(DayOfWeek.mon);
         auto range = interval.fwdRange(func);
 
-        assert(range.front == Date(2010, 9, 2)); //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+        //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+        assert(range.front == Date(2010, 9, 2));
 
         range.popFront();
         assert(range.front == Date(2010, 9, 6));
@@ -26126,27 +26681,26 @@ unittest
 
 
 /++
-    Generates a range-generating function for intervals.
+    Range-generating function.
 
-    Returns a delegate which returns the next time point with the given
-    month which would be reached by adding months to the given time
-    point.
+    Returns a delegate which returns the next time point with the given month
+    which would be reached by adding months to the given time point.
 
-    So, using this delegate allows you to iterate over successive time
-    points which are in the same month but different years. For example,
-    you could iterate over each successive December 25th in an interval
-    by starting with a date which had the 25th as its day and passed
-    $(D Month.dec) to $(D everyMonth()) to create the delegate.
+    So, using this delegate allows you to iterate over successive time points
+    which are in the same month but different years. For example, you could
+    iterate over each successive December 25th in an interval by starting with a
+    date which had the 25th as its day and passed $(D Month.dec) to
+    $(D everyMonth) to create the delegate.
 
-    Since it wouldn't really make sense to be iterating over a specific
-    month and end up with some of the time points in the succeeding month
-    or two years after the previous time point, $(D AllowDayOverflow.no)
-    is always used when calculating the next time point.
+    Since it wouldn't really make sense to be iterating over a specific month
+    and end up with some of the time points in the succeeding month or two years
+    after the previous time point, $(D AllowDayOverflow.no) is always used when
+    calculating the next time point.
 
     Params:
-        dir      = The direction to iterate in. If passing the return value
-                   to $(D fwdRange()), use $(D Direction.fwd). If passing
-                   it to $(D bwdRange()), use $(D Direction.bwd).
+        dir   = The direction to iterate in. If passing the return value to
+                $(D fwdRange), use $(D Direction.fwd). If passing it to
+                $(D bwdRange), use $(D Direction.bwd).
         month = The month that each time point in the range will be in.
 
     Examples:
@@ -26155,7 +26709,8 @@ auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
 auto func = everyMonth!(Date)(Month.feb);
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2000, 1, 30)); //Using PopFirst.yes would have made this Date(2010, 2, 29).
+//Using PopFirst.yes would have made this Date(2010, 2, 29).
+assert(range.front == Date(2000, 1, 30));
 
 range.popFront();
 assert(range.front == Date(2000, 2, 29));
@@ -26259,7 +26814,8 @@ unittest
         auto func = everyMonth!(Date)(Month.feb);
         auto range = interval.fwdRange(func);
 
-        assert(range.front == Date(2000, 1, 30)); //Using PopFirst.yes would have made this Date(2010, 2, 29).
+        //Using PopFirst.yes would have made this Date(2010, 2, 29).
+        assert(range.front == Date(2000, 1, 30));
 
         range.popFront();
         assert(range.front == Date(2000, 2, 29));
@@ -26283,22 +26839,22 @@ unittest
 
 
 /++
-    Generates a range-generating function for intervals.
+    Range-generating function.
 
     Returns a delegate which returns the next time point which is the given
     duration later.
 
-    Using this delegate allows you to iterate over successive time points
-    which are apart by the given duration e.g. passing $(D dur!"days"(3)) to
-    $(D everyDuration()) would result in a delegate which could be
-    used to iterate over a range of days which are each 3 days apart.
+    Using this delegate allows you to iterate over successive time points which
+    are apart by the given duration e.g. passing $(D dur!"days"(3)) to
+    $(D everyDuration) would result in a delegate which could be used to iterate
+    over a range of days which are each 3 days apart.
 
     Params:
-        dir      = The direction to iterate in. If passing the return value
-                   to $(D fwdRange()), use $(D Direction.fwd). If passing it
-                   to $(D bwdRange()), use $(D Direction.bwd).
-        duration = The duration which separates each successive time point
-                   in the range.
+        dir      = The direction to iterate in. If passing the return value to
+                   $(D fwdRange), use $(D Direction.fwd). If passing it to
+                   $(D bwdRange), use $(D Direction.bwd).
+        duration = The duration which separates each successive time point in
+                   the range.
 
     Examples:
 --------------------
@@ -26306,7 +26862,8 @@ auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
 auto func = everyDuration!Date(dur!"days"(8));
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2010, 9, 2)); //Using PopFirst.yes would have made this Date(2010, 9, 10).
+//Using PopFirst.yes would have made this Date(2010, 9, 10).
+assert(range.front == Date(2010, 9, 2));
 
 range.popFront();
 assert(range.front == Date(2010, 9, 10));
@@ -26365,7 +26922,8 @@ unittest
         auto func = everyDuration!Date(dur!"days"(8));
         auto range = interval.fwdRange(func);
 
-        assert(range.front == Date(2010, 9, 2)); //Using PopFirst.yes would have made this Date(2010, 9, 10).
+        //Using PopFirst.yes would have made this Date(2010, 9, 10).
+        assert(range.front == Date(2010, 9, 2));
 
         range.popFront();
         assert(range.front == Date(2010, 9, 10));
@@ -26383,15 +26941,15 @@ unittest
 
 
 /++
-    Generates a range-generating function for intervals.
+    Range-generating function.
 
     Returns a delegate which returns the next time point which is the given
     number of years, month, and duration later.
 
-    The difference between this version of $(D everyDuration()) and the
-    version which just takes a $(D Duration) is that this one also takes the
-    number of years and months (along with an AllowDayOverflow to indicate
-    whether adding years and months should allow the days to overflow).
+    The difference between this version of $(D everyDuration) and the version
+    which just takes a $(D Duration) is that this one also takes the number of
+    years and months (along with an $(D AllowDayOverflow) to indicate whether
+    adding years and months should allow the days to overflow).
 
     Note that if iterating forward, $(D add!"years"()) is called on the given
     time point, then $(D add!"months"()), and finally the duration is added
@@ -26400,22 +26958,23 @@ unittest
     That way, going backwards generates close to the same time points that
     iterating forward does, but since adding years and months is not entirely
     reversible (due to possible day overflow, regardless of whether
-    AllowDayOverflow.yes or AllowDayOverflow.no is used), it can't be
+    $(D AllowDayOverflow.yes) or $(D AllowDayOverflow.no) is used), it can't be
     guaranteed that iterating backwards will give you the same time points as
     iterating forward would have (even assuming that the end of the range is a
     time point which would be returned by the delegate when iterating forward
-    from begin).
+    from $(D begin)).
 
     Params:
         dir           = The direction to iterate in. If passing the return
-                        value to $(D fwdRange()), use $(D Direction.fwd).
-                        If passing it to $(D bwdRange()), use $(D Direction.bwd).
-        years         = The number of years to add to the time point passed
-                        to the delegate.
+                        value to $(D fwdRange), use $(D Direction.fwd). If
+                        passing it to $(D bwdRange), use $(D Direction.bwd).
+        years         = The number of years to add to the time point passed to
+                        the delegate.
         months        = The number of months to add to the time point passed to
                         the delegate.
-        allowOverflow = Whether the days should be allowed to overflow on begin
-                        and end, causing their month to increment.
+        allowOverflow = Whether the days should be allowed to overflow on
+                        $(D begin) and $(D end), causing their month to
+                        increment.
         duration      = The duration to add to the time point passed to the
                         delegate.
 
@@ -26425,7 +26984,8 @@ auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
 auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
 auto range = interval.fwdRange(func);
 
-assert(range.front == Date(2010, 9, 2)); //Using PopFirst.yes would have made this Date(2014, 10, 12).
+//Using PopFirst.yes would have made this Date(2014, 10, 12).
+assert(range.front == Date(2010, 9, 2));
 
 range.popFront();
 assert(range.front == Date(2014, 10, 4));
@@ -26524,7 +27084,8 @@ unittest
         auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
         auto range = interval.fwdRange(func);
 
-        assert(range.front == Date(2010, 9, 2)); //Using PopFirst.yes would have made this Date(2014, 10, 12).
+        //Using PopFirst.yes would have made this Date(2014, 10, 12).
+        assert(range.front == Date(2010, 9, 2));
 
         range.popFront();
         assert(range.front == Date(2014, 10, 4));
@@ -26558,41 +27119,43 @@ unittest
     A range over an $(D Interval).
 
     $(D IntervalRange) is only ever constructed by $(D Interval). However, when
-    it is constructed, it is given a function, $(D func), which is used to generate
-    the time points which are iterated over. $(D func()) takes a time point and
-    returns a time point of the same type. So, for instance, if you had an
-    $(D Interval!Date), and you wanted to iterate over all of the days in that
-    interval, you would pass a function to $(D Interval)'s $(D fwdRange()) where
-    that function took a $(D Date) and returned a $(D Date) which was one day
-    later. That function would then be used by $(D IntervalRange)'s $(D popFront())
-    to iterate over the $(D Date)s in the interval.
+    it is constructed, it is given a function, $(D func), which is used to
+    generate the time points which are iterated over. $(D func) takes a time
+    point and returns a time point of the same type. So, for instance, if you
+    had an $(D Interval!Date), and you wanted to iterate over all of the days in
+    that interval, you would pass a function to $(D Interval)'s $(D fwdRange)
+    where that function took a $(D Date) and returned a $(D Date) which was one
+    day later. That function would then be used by $(D IntervalRange)'s
+    $(D popFront) to iterate over the $(D Date)s in the interval.
 
-    If $(D dir == Direction.fwd), then a range iterates forward in time, while if
-    $(D dir == Direction.bwd), then it iterates backwards in time. So, if
-    $(D dir == Direction.fwd) then $(D front == interval.begin), while if
-    $(D dir == Direction.bwd) then $(D front == interval.end). $(D func) must generate
-    a time point going in the proper direction of iteration, or a
-    $(D DateTimeException) will be thrown. So, if you're iterating forward in time,
-    the time point that func generates must be later in time than the one passed
-    to it. If it's either identical or earlier in time, then a $(D DateTimeException)
-    will be thrown. If you're iterating backwards, then the generated time point
-    must be before the time point which was passed in.
+    If $(D dir == Direction.fwd), then a range iterates forward in time, whereas
+    if $(D dir == Direction.bwd), then it iterates backwards in time. So, if
+    $(D dir == Direction.fwd) then $(D front == interval.begin), whereas if
+    $(D dir == Direction.bwd) then $(D front == interval.end). $(D func) must
+    generate a time point going in the proper direction of iteration, or a
+    $(D DateTimeException) will be thrown. So, if you're iterating forward in
+    time, the time point that $(D func) generates must be later in time than the
+    one passed to it. If it's either identical or earlier in time, then a
+    $(D DateTimeException) will be thrown. If you're iterating backwards, then
+    the generated time point must be before the time point which was passed in.
 
-    If the generated time point is ever passed the edge of the range in the proper
-    direction, then the edge of that range will be used instead. So, if iterating
-    forward, and the generated time point is past the interval's end, then front
-    becomes end. If iterating backwards, and the generated time point is before
-    begin, then front becomes begin. In either case, the range would then be empty.
+    If the generated time point is ever passed the edge of the range in the
+    proper direction, then the edge of that range will be used instead. So, if
+    iterating forward, and the generated time point is past the interval's
+    $(D end), then $(D front) becomes $(D end). If iterating backwards, and the
+    generated time point is before $(D begin), then $(D front) becomes
+    $(D begin). In either case, the range would then be empty.
 
-    Also note that while normally the begin of an interval is included in it and
-    its end is excluded from it, if $(D dir == Direction.bwd), then begin is
-    treated as excluded and end is treated as included. This allows for the same
-    behavior in both directions. This works because none of $(D Interval)'s functions
-    which care about whether begin or end is included or excluded are ever called
-    by $(D IntervalRange). $(D interval) returns a normal interval, regardless of
-    whether $(D dir == Direction.fwd) or if $(D dir == Direction.bwd), so any
-    $(D Interval) functions which are called on it which care about whether begin
-    or end are included or excluded will treat begin as included and end as excluded.
+    Also note that while normally the $(D begin) of an interval is included in
+    it and its $(D end) is excluded from it, if $(D dir == Direction.bwd), then
+    $(D begin) is treated as excluded and $(D end) is treated as included. This
+    allows for the same behavior in both directions. This works because none of
+    $(D Interval)'s functions which care about whether $(D begin) or $(D end) is
+    included or excluded are ever called by $(D IntervalRange). $(D interval)
+    returns a normal interval, regardless of whether $(D dir == Direction.fwd)
+    or if $(D dir == Direction.bwd), so any $(D Interval) functions which are
+    called on it which care about whether $(D begin) or $(D end) are included or
+    excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
 struct IntervalRange(TP, Direction dir)
     if(isTimePoint!TP && dir != Direction.both)
@@ -26601,7 +27164,7 @@ public:
 
     /++
         Params:
-            rhs = The IntervalRange to assign to this one.
+            rhs = The $(D IntervalRange) to assign to this one.
       +/
     /+ref+/ IntervalRange opAssign(ref IntervalRange rhs) pure nothrow
     {
@@ -26613,7 +27176,7 @@ public:
 
 
     /++
-        Whether this IntervalRange is empty.
+        Whether this $(D IntervalRange) is empty.
       +/
     @property bool empty() const pure nothrow
     {
@@ -26625,7 +27188,7 @@ public:
         The first time point in the range.
 
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if the range is empty.
       +/
     @property TP front() const pure
     {
@@ -26639,19 +27202,20 @@ public:
 
 
     /++
-        Pops front from the range, using $(D func()) to generate the next time
-        point in the range. If the generated time point is beyond the edge of
-        the range, then front is set to that edge, end the range is then empty.
-        So, if iterating forwards, and the generated time point is greater
-        than the interval's end, then front is set to end. If iterating
-        backwards, and the generated time point is less than the interval's
-        begin, then front is set to begin.
+        Pops $(D front) from the range, using $(D func) to generate the next
+        time point in the range. If the generated time point is beyond the edge
+        of the range, then $(D front) is set to that edge, and the range is then
+        empty. So, if iterating forwards, and the generated time point is
+        greater than the interval's $(D end), then $(D front) is set to
+        $(D end). If iterating backwards, and the generated time point is less
+        than the interval's $(D begin), then $(D front) is set to $(D begin).
 
         Throws:
-            DateTimeException if empty is true or if the generated time point is
-            in the wrong direction (i.e. if you're iterating forward and the
-            generated time point is before front, or if you're iterating
-            backwards, and the generated time point is after front).
+            $(D DateTimeException) if the range is empty or if the generated
+            time point is in the wrong direction (i.e. if you're iterating
+            forward and the generated time point is before $(D front), or if
+            you're iterating backwards, and the generated time point is after
+            $(D front)).
       +/
     void popFront()
     {
@@ -26692,7 +27256,7 @@ public:
 
 
     /++
-        The interval that this IntervalRange currently covers.
+        The interval that this $(D IntervalRange) currently covers.
       +/
     @property Interval!TP interval() const pure nothrow
     {
@@ -26710,7 +27274,7 @@ public:
 
 
     /++
-        The Direction that this range iterates in.
+        The $(D Direction) that this range iterates in.
       +/
     @property Direction direction() const pure nothrow
     {
@@ -26723,7 +27287,8 @@ private:
     /+
         Params:
             interval = The interval that this range covers.
-            func     = The function used to generate the time points which are iterated over.
+            func     = The function used to generate the time points which are
+                       iterated over.
       +/
     this(in Interval!TP interval, TP delegate(in TP) func) pure nothrow
     {
@@ -26732,9 +27297,9 @@ private:
     }
 
 
-    /++
+    /+
         Throws:
-            DateTimeException if empty is true.
+            $(D DateTimeException) if this interval is empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -26743,9 +27308,10 @@ private:
     }
 
 
-    /++
+    /+
         Throws:
-            DateTimeException if newTP is in the wrong direction.
+            $(D DateTimeException) if $(D_PARAM newTP) is in the wrong
+            direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
@@ -27089,24 +27655,24 @@ unittest
     A range over a $(D PosInfInterval). It is an infinite range.
 
     $(D PosInfIntervalRange) is only ever constructed by $(D PosInfInterval).
-    However, when it is constructed, it is given a function, $(D func()), which
-    is used to generate the time points which are iterated over. $(D func())
-    takes a time point and returns a time point of the same type. So, for instance,
-    if you had a $(D PosInfInterval!Date), and you wanted to iterate over all
-    of the days in that interval, you would pass a function to $(D PosInfInterval)'s
-    $(D fwdRange()) where that function took a $(D Date) and returned a $(D Date)
-    which was one day later. That function would then be used by
-    $(D PosInfIntervalRange)'s $(D popFront()) to iterate over the $(D Date)s in
-    the interval. Though obviously, since the range is infinite, you would use a
-    function such as $(D std.range.take()) with it rather than iterating over
-    *all* of the dates.
+    However, when it is constructed, it is given a function, $(D func), which
+    is used to generate the time points which are iterated over. $(D func)
+    takes a time point and returns a time point of the same type. So, for
+    instance, if you had a $(D PosInfInterval!Date), and you wanted to iterate
+    over all of the days in that interval, you would pass a function to
+    $(D PosInfInterval)'s $(D fwdRange) where that function took a $(D Date) and
+    returned a $(D Date) which was one day later. That function would then be
+    used by $(D PosInfIntervalRange)'s $(D popFront) to iterate over the
+    $(D Date)s in the interval - though obviously, since the range is infinite,
+    you would use a function such as $(D std.range.take) with it rather than
+    iterating over $(I all) of the dates.
 
     As the interval goes to positive infinity, the range is always iterated over
-    forwards, never backwards. $(D func()) must generate a time point going in
-    the proper direction of iteration, or a $(D DateTimeException) will be thrown.
-    So, the time points that $(D func()) generates must be later in time than
-    the one passed to it. If it's either identical or earlier in time, then a
-    $(D DateTimeException) will be thrown.
+    forwards, never backwards. $(D func) must generate a time point going in
+    the proper direction of iteration, or a $(D DateTimeException) will be
+    thrown. So, the time points that $(D func) generates must be later in time
+    than the one passed to it. If it's either identical or earlier in time, then
+    a $(D DateTimeException) will be thrown.
   +/
 struct PosInfIntervalRange(TP)
     if(isTimePoint!TP)
@@ -27115,7 +27681,7 @@ public:
 
     /++
         Params:
-            rhs = The PosInfIntervalRange to assign to this one.
+            rhs = The $(D PosInfIntervalRange) to assign to this one.
       +/
     /+ref+/ PosInfIntervalRange opAssign(ref PosInfIntervalRange rhs) pure nothrow
     {
@@ -27142,12 +27708,12 @@ public:
 
 
     /++
-        Pops front from the range, using func to generate the next time point
-        in the range.
+        Pops $(D front) from the range, using $(D func) to generate the next
+        time point in the range.
 
         Throws:
-            DateTimeException if the generated time point is less than than
-            front.
+            $(D DateTimeException) if the generated time point is less than
+            $(D front).
       +/
     void popFront()
     {
@@ -27188,7 +27754,7 @@ public:
 
 private:
 
-    /++
+    /+
         Params:
             interval = The interval that this range covers.
             func     = The function used to generate the time points which are
@@ -27201,9 +27767,10 @@ private:
     }
 
 
-    /++
+    /+
         Throws:
-            DateTimeException if newTP is in the wrong direction.
+            $(D DateTimeException) if $(D_PARAME newTP) is in the wrong
+            direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
@@ -27378,33 +27945,33 @@ unittest
     A range over a $(D NegInfInterval). It is an infinite range.
 
     $(D NegInfIntervalRange) is only ever constructed by $(D NegInfInterval).
-    However, when it is constructed, it is given a function, $(D func()), which
-    is used to generate the time points which are iterated over. $(D func())
-    takes a time point and returns a time point of the same type. So, for instance,
-    if you had a $(D NegInfInterval!Date), and you wanted to iterate over all
-    of the days in that interval, you would pass a function to $(D NegInfInterval)'s
-    $(D bwdRange()) where that function took a $(D Date) and returned a $(D Date)
-    which was one day earlier. That function would then be used by
-    $(D NegInfIntervalRange)'s $(D popFront()) to iterate over the $(D Date)s in
-    the interval. Though obviously, since the range is infinite, you would use a
-    function such as $(D std.range.take()) with it rather than iterating over
-    *all* of the dates.
+    However, when it is constructed, it is given a function, $(D func), which
+    is used to generate the time points which are iterated over. $(D func)
+    takes a time point and returns a time point of the same type. So, for
+    instance, if you had a $(D NegInfInterval!Date), and you wanted to iterate
+    over all of the days in that interval, you would pass a function to
+    $(D NegInfInterval)'s $(D bwdRange) where that function took a $(D Date) and
+    returned a $(D Date) which was one day earlier. That function would then be
+    used by $(D NegInfIntervalRange)'s $(D popFront) to iterate over the
+    $(D Date)s in the interval - though obviously, since the range is infinite,
+    you would use a function such as $(D std.range.take) with it rather than
+    iterating over $(I all) of the dates.
 
     As the interval goes to negative infinity, the range is always iterated over
-    backwards, never forwards. $(D func()) must generate a time point going in
-    the proper direction of iteration, or a $(D DateTimeException) will be thrown.
-    So, the time points that $(D func()) generates must be earlier in time than
-    the one passed to it. If it's either identical or later in time, then a
+    backwards, never forwards. $(D func) must generate a time point going in
+    the proper direction of iteration, or a $(D DateTimeException) will be
+    thrown. So, the time points that $(D func) generates must be earlier in time
+    than the one passed to it. If it's either identical or later in time, then a
     $(D DateTimeException) will be thrown.
 
-    Also note that while normally the end of an interval is excluded from it,
-    $(D NegInfIntervalRange) treats it as if it were included. This allows for
-    the same behavior as you get with $(D PosInfIntervalRange). This works
+    Also note that while normally the $(D end) of an interval is excluded from
+    it, $(D NegInfIntervalRange) treats it as if it were included. This allows
+    for the same behavior as you get with $(D PosInfIntervalRange). This works
     because none of $(D NegInfInterval)'s functions which care about whether
-    end is included or excluded are ever called by $(D NegInfIntervalRange).
-    $(D interval) returns a normal interval, so any $(D NegInfInterval)
-    functions which are called on it which care about whether end is included
-    or excluded will treat end as excluded.
+    $(D end) is included or excluded are ever called by
+    $(D NegInfIntervalRange). $(D interval) returns a normal interval, so any
+    $(D NegInfInterval) functions which are called on it which care about
+    whether $(D end) is included or excluded will treat $(D end) as excluded.
   +/
 struct NegInfIntervalRange(TP)
     if(isTimePoint!TP)
@@ -27413,7 +27980,7 @@ public:
 
     /++
         Params:
-            rhs = The NegInfIntervalRange to assign to this one.
+            rhs = The $(D NegInfIntervalRange) to assign to this one.
       +/
     /+ref+/ NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
     {
@@ -27440,12 +28007,12 @@ public:
 
 
     /++
-        Pops front from the range, using func to generate the next time point
-        in the range.
+        Pops $(D front) from the range, using $(D func) to generate the next
+        time point in the range.
 
         Throws:
-            DateTimeException if the generated time point is greater than than
-            front.
+            $(D DateTimeException) if the generated time point is greater than
+            $(D front).
       +/
     void popFront()
     {
@@ -27501,7 +28068,8 @@ private:
 
     /+
         Throws:
-            DateTimeException if newTP is in the wrong direction.
+            $(D DateTimeException) if $(D_PARAM newTP) is in the wrong
+            direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
@@ -27676,8 +28244,8 @@ unittest
 //==============================================================================
 
 /++
-    Represents a time zone. It is used with SysTime to indicate the time zone of
-    a SysTime.
+    Represents a time zone. It is used with $(D SysTime) to indicate the time
+    zone of a $(D SysTime).
   +/
 abstract class TimeZone
 {
@@ -27685,11 +28253,13 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a TimeZone by name with TimeZone.getTimeZone().
+        get a $(D TimeZone) by name with $(D TimeZone.getTimeZone).
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+              Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+              Time Zones)
       +/
     @property string name() const nothrow
     {
@@ -27726,26 +28296,27 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current dates
-        but will still return true for hasDST because the time zone did at some
-        point have DST.
+        but will still return true for $(D hasDST) because the time zone did at
+        some point have DST.
       +/
     @property abstract bool hasDST() const nothrow;
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January 1st,
-        1 A.D. in UTC time (i.e. std time) and returns whether DST is effect in
-        this time zone at the given point in time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and returns whether DST is effect in this
+        time zone at the given point in time.
 
         Params:
-            stdTime = The UTC time that needs to be checked for DST in this time zone.
+            stdTime = The UTC time that needs to be checked for DST in this time
+                      zone.
       +/
     abstract bool dstInEffect(long stdTime) const nothrow;
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January 1st,
-        1 A.D. in UTC time (i.e. std time) and converts it to this time zone's time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and converts it to this time zone's time.
 
         Params:
             stdTime = The UTC time that needs to be adjusted to this time zone's
@@ -27755,8 +28326,8 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January 1st,
-        1 A.D. in this time zone's time and converts it to UTC (i.e. std time).
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in this time zone's time and converts it to UTC (i.e. std time).
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -27766,28 +28337,32 @@ public:
 
 
     /++
-        Returns a TimeZone with the give name per the TZ Database.
+        Returns a $(D TimeZone) with the give name per the TZ Database.
 
-        This returns a PosixTimeZone on Posix systems and a WindowsTimeZone on
-        Windows systems. If you want a PosixTimeZone on Windows, then call
-        $(D PosixTimeZone.getTimeZone()) directly and give it the location of
-        the TZ Database time zone files on disk.
+        This returns a $(D PosixTimeZone) on Posix systems and a
+        $(D WindowsTimeZone) on Windows systems. If you want a
+        $(D PosixTimeZone) on Windows, then call $(D PosixTimeZone.getTimeZone)
+        directly and give it the location of the TZ Database time zone files on
+        disk.
 
-        On Windows, the given TZ Database name is converted to the corresponding time
-        zone name on Windows prior to calling WindowsTimeZone.getTimeZone(). So, this
-        function allows you to use the same time zone names on both Windows and
-        Posix systems.
+        On Windows, the given TZ Database name is converted to the corresponding
+        time zone name on Windows prior to calling
+        $(D WindowsTimeZone.getTimeZone). So, this function allows you to use
+        the same time zone names on both Windows and Posix systems.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
-            $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+              Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+              Time Zones)
+            $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+                  Windows <-> TZ Database Name Conversion Table)
 
         Params:
             name = The TZ Database name of the time zone that you're looking for.
 
         Throws:
-            DateTimeException if the given time zone could not be found.
+            $(D DateTimeException) if the given time zone could not be found.
 
         Examples:
 --------------------
@@ -27821,21 +28396,22 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         begin with "America" will be returned.
 
         On Windows, this function will convert the Windows time zone names to
-        the corresponding TZ Database names with windowsTZNameToTZDatabaseName().
-        If you want the actual Windows time zone names, use
-        WindowsTimeZone.getInstalledTZNames() directly.
+        the corresponding TZ Database names with
+        $(D windowsTZNameToTZDatabaseName). If you want the actual Windows time
+        zone names, use $(D WindowsTimeZone.getInstalledTZNames) directly.
 
         Params:
-            subname = The first part of the time zones that you want.
+            subName = The first part of the time zones that you want.
 
         Throws:
-            FileException on Posix systems if it fails to read from disk.
-            DateTimeException on Windows systems if it fails to read the registry.
+            $(D FileException) on Posix systems if it fails to read from disk.
+            $(D DateTimeException) on Windows systems if it fails to read the
+            registry.
       +/
-    static string[] getInstalledTZNames(string subname = "")
+    static string[] getInstalledTZNames(string subName = "")
     {
         version(Posix)
-            return PosixTimeZone.getInstalledTZNames(subname);
+            return PosixTimeZone.getInstalledTZNames(subName);
         else version(Windows)
         {
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
@@ -27845,7 +28421,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
 
-                if(tzName.startsWith(subname))
+                if(tzName.startsWith(subName))
                     retval.put(tzName);
             }
 
@@ -27876,7 +28452,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
 private:
 
-    /++
+    /+
         Params:
             name    = The TZ Database name for the time zone.
             stdName = The abbreviation for the time zone during std time.
@@ -27912,18 +28488,19 @@ extern(C)
     A TimeZone which represents the current local time zone on
     the system running your program.
 
-    This uses the underlying C calls to adjust the time rather
-    than using specific D code based off of system settings to calculate
-    the time such as PosixTimeZone and WindowsTimeZone do. That also
-    means that it will use whatever the current time zone is on the system,
-    even if the system's time zone changes while the program is running.
+    This uses the underlying C calls to adjust the time rather than using
+    specific D code based off of system settings to calculate the time such as
+    $(D PosixTimeZone) and $(D WindowsTimeZone) do. That also means that it will
+    use whatever the current time zone is on the system, even if the system's
+    time zone changes while the program is running.
   +/
 final class LocalTime : TimeZone
 {
 public:
 
     /++
-        LocalTime is a singleton class. $(D LocalTime()) returns its only instance.
+        $(D LocalTime) is a singleton class. $(D LocalTime) returns its only
+        instance.
       +/
     static immutable(LocalTime) opCall() pure nothrow
     {
@@ -27935,17 +28512,19 @@ public:
     {
         /++
             The name of the time zone per the TZ Database. This is the name used to
-            get a TimeZone by name with $(D TimeZone.getTimeZone()).
+            get a $(D TimeZone) by name with $(D TimeZone.getTimeZone).
 
             Note that this always returns the empty string. This is because time
-            zones cannot be uniquely identified by the attributes given by the OS
-            (such as the stdName and dstName), and neither Posix systems nor
-            Windows systems provide an easy way to get the TZ Database name of
-            the local time zone.
+            zones cannot be uniquely identified by the attributes given by the
+            OS (such as the $(D stdName) and $(D dstName)), and neither Posix
+            systems nor Windows systems provide an easy way to get the TZ
+            Database name of the local time zone.
 
             See_Also:
-                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                  Database)
+                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                  of Time Zones)
           +/
         @property override string name() const nothrow;
     }
@@ -27959,8 +28538,9 @@ public:
         Standard Time). Regardless, it is not the same as name.
 
         This property is overridden because the local time of the system could
-        change while the program is running and we need to determine it dynamically
-        rather than it being fixed like it would be with most time zones.
+        change while the program is running and we need to determine it
+        dynamically rather than it being fixed like it would be with most time
+        zones.
       +/
     @property override string stdName() const nothrow
     {
@@ -28099,8 +28679,8 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current
-        dates but will still return true for hasDST because the time zone did
-        at some point have DST.
+        dates but will still return true for $(D hasDST) because the time zone
+        did at some point have DST.
       +/
     @property override bool hasDST() const nothrow
     {
@@ -28141,12 +28721,13 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
-        effect in this time zone at the given point in time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and returns whether DST is in effect in this
+        time zone at the given point in time.
 
         Params:
-            stdTime = The UTC time that needs to be checked for DST in this time zone.
+            stdTime = The UTC time that needs to be checked for DST in this time
+                      zone.
       +/
     override bool dstInEffect(long stdTime) const nothrow
     {
@@ -28210,16 +28791,16 @@ public:
 
 
     /++
-        Returns hnsecs in the local time zone using the standard C function calls
-        on Posix systems and the standard Windows system calls on Windows systems
-        to adjust the time to the appropriate time zone from std time.
+        Returns hnsecs in the local time zone using the standard C function
+        calls on Posix systems and the standard Windows system calls on Windows
+        systems to adjust the time to the appropriate time zone from std time.
 
         Params:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
 
         See_Also:
-            TimeZone.utcToTZ()
+            $(D TimeZone.utcToTZ)
       +/
     override long utcToTZ(long stdTime) const nothrow
     {
@@ -28279,7 +28860,7 @@ public:
         time to UTC from the appropriate time zone.
 
         See_Also:
-            TimeZone.tzToUTC()
+            $(D TimeZone.tzToUTC)
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -28360,14 +28941,14 @@ private:
 
 
 /++
-    A TimeZone which represents UTC.
+    A $(D TimeZone) which represents UTC.
   +/
 final class UTC : TimeZone
 {
 public:
 
     /++
-        UTC is a singleton class. $(D UTC()) returns its only instance.
+        $(D UTC) is a singleton class. $(D UTC) returns its only instance.
       +/
     static immutable(UTC) opCall() pure nothrow
     {
@@ -28401,7 +28982,7 @@ public:
                       time.
 
         See_Also:
-            TimeZone.utcToTZ()
+            $(D TimeZone.utcToTZ)
       +/
     override long utcToTZ(long stdTime) const nothrow
     {
@@ -28432,7 +29013,7 @@ public:
         Returns the given hnsecs without changing them at all.
 
         See_Also:
-            TimeZone.tzToUTC()
+            $(D TimeZone.tzToUTC)
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -28486,11 +29067,11 @@ private:
     UTC but no DST.
 
     It's primarily used as the time zone in the result of $(D SysTime)'s
-    $(D fromISOString()), $(D fromISOExtendedString()), and
-    $(D fromSimpleString()).
+    $(D fromISOString), $(D fromISOExtendedString), and
+    $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
-    has no DST and while it may be meant to represent a time zone which is in
+    has no DST, and while it may be meant to represent a time zone which is in
     the TZ Database, obviously it's not likely to be following the exact rules
     of any of the time zones in the TZ Database, so it makes no sense to set it.
   +/
@@ -28517,13 +29098,12 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and converts it to this time
-        zone's time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and converts it to this time zone's time.
 
         Params:
-            stdTime = The UTC time that needs to be adjusted to this time
-                      zone's time.
+            stdTime = The UTC time that needs to be adjusted to this time zone's
+                      time.
       +/
     override long utcToTZ(long stdTime) const nothrow
     {
@@ -28546,9 +29126,8 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in this time zone's time and converts it to UTC
-        (i.e. std time).
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in this time zone's time and converts it to UTC (i.e. std time).
 
         Params:
             adjTime = The time in this time zone that needs to be adjusted to
@@ -28577,10 +29156,10 @@ public:
 
     /++
         Params:
-            utcOffset = This time zone's offset from UTC in minutes with west
-                        of UTC being negative (it is added to UTC to get the
+            utcOffset = This time zone's offset from UTC in minutes with west of
+                        UTC being negative (it is added to UTC to get the
                         adjusted time).
-            stdName   = The stdName for this time zone.
+            stdName   = The $(D stdName) for this time zone.
       +/
     this(int utcOffset, string stdName = "") immutable
     {
@@ -28614,7 +29193,7 @@ public:
 
 private:
 
-    /++
+    /+
         Returns a time zone as a string with an offset from UTC.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
@@ -28671,12 +29250,12 @@ private:
     }
 
 
-    /++
+    /+
         Takes a time zone as a string with an offset from UTC and returns a
         $(D SimpleTimeZone) which matches.
 
-        The accepted formats for time zone offsets are +H, -H, +HH, -HH, +H:MM,
-        -H:MM, +HH:MM, and -HH:MM.
+        The accepted formats for time zone offsets
+        are +H, -H, +HH, -HH, +H:MM, -H:MM, +HH:MM, and -HH:MM.
 
         Params:
             isoString = A string which represents a time zone in the ISO format.
@@ -28815,43 +29394,44 @@ private:
 
 /++
     Represents a time zone from a TZ Database time zone file. Files from the TZ
-    database are how Posix systems hold their time zone information. Unfortunately,
-    Windows does not use the TZ Database, though it does name its time zones
-    using the TZ Database names. You can, however, use PosixTimeZone (which reads
-    its information from the TZ Database files on disk) on Windows if you provide
-    the TZ Database files
+    database are how Posix systems hold their time zone information.
+    Unfortunately, Windows does not use the TZ Database. You can, however, use
+    $(D PosixTimeZone) (which reads its information from the TZ Database files
+    on disk) on Windows if you provide the TZ Database files
     ( $(WEB elsie.nci.nih.gov/pub/, Repository with the TZ Database files (tzdata)) )
-    yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory holding
+    yourself and tell $(D PosixTimeZone.getTimeZone) where the directory holding
     them is.
 
     TZ Database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ Database
-    files, it will use the correct DST rules for any date. Windows, on the other
-    hand, maintains only the current DST rules, so historical dates will use the
-    current DST rules (and therefore potentially be incorrect). So, if you want
-    the DST rules that you use to be more accurate, or if you're looking for your
-    program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ Database files with your program
-    and give $(D PosixTimeZone.getTimeZone()) the directory on disk where they
-    are located.
+    covered by $(D time_t). So, barring errors in the information in the TZ
+    Database files, it will use the correct DST rules for any date. Windows, on
+    the other hand, maintains only the current DST rules, so historical dates
+    will use the current DST rules (and therefore potentially be incorrect). So,
+    if you want the DST rules that you use to be more accurate, or if you're
+    looking for your program to act consistently on both Posix and Windows
+    systems, then, as mentioned above, you'll need to include the TZ Database
+    files with your program and give $(D PosixTimeZone.getTimeZone) the
+    directory on disk where they are located.
 
-    To get a PosixTimeZone, either call $(D PosixTimeZone.getTimeZone()) (which
-    will allow you to specify the location the time zone files) or call
-    $(D TimeZone.getTimeZone()) (which will give you a PosixTimeZone on Posix
-    systems and a WindowsTimeZone on Windows systems).
+    To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
+    (which will allow you to specify the location the time zone files) or call
+    $(D TimeZone.getTimeZone) (which will give you a $(D PosixTimeZone) on Posix
+    systems and a $(D WindowsTimeZone) on Windows systems).
 
     Note:
         Unless your system's local time zone deals with leap seconds (which is
-        highly unlikely), then only way that you will get a time zone which takes
-        leap seconds into account is if you use PosixTimeZone with a time zone
-        whose name starts with "right/". Those time zone files do include leap
-        seconds, and PosixTimeZone will take them into account (though posix
-        systems which use a "right/" time zone as their local time zone will
-        *not* take leap seconds into account even though they're in the file).
+        highly unlikely), then only way that you will get a time zone which
+        takes leap seconds into account is if you use $(D PosixTimeZone) with a
+        time zone whose name starts with "right/". Those time zone files do
+        include leap seconds, and $(D PosixTimeZone) will take them into account
+        (though posix systems which use a "right/" time zone as their local time
+         zone will $(I not) take leap seconds into account even though they're
+         in the file).
 
     See_Also:
-        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database</a>
-        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones</a>
+        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time
+          Zones)
   +/
 final class PosixTimeZone : TimeZone
 {
@@ -28860,8 +29440,8 @@ public:
     /++
         Whether this time zone has Daylight Savings Time at any point in time.
         Note that for some time zone types it may not have DST for current
-        dates but will still return true for hasDST because the time zone did
-        at some point have DST.
+        dates but will still return true for $(D hasDST) because the time zone
+        did at some point have DST.
       +/
     @property override bool hasDST() const nothrow
     {
@@ -28870,12 +29450,13 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
-        effect in this time zone at the given point in time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and returns whether DST is in effect in this
+        time zone at the given point in time.
 
         Params:
-            stdTime = The UTC time that needs to be checked for DST in this time zone.
+            stdTime = The UTC time that needs to be checked for DST in this time
+                      zone.
       +/
     override bool dstInEffect(long stdTime) const nothrow
     {
@@ -28888,9 +29469,10 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return _transitions.front.ttInfo.isDST;
 
-            //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
-            //too inefficient to have to keep duping it every time we have to calculate the time.
-            //Hopefully, indexOf will properly support immutable ranges at some point.
+            //Okay, casting is a hack, but countUntil shouldn't be changing it,
+            //and it would be too inefficient to have to keep duping it every
+            //time we have to calculate the time. Hopefully, countUntil will
+            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -28906,11 +29488,12 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January 1st,
-        1 A.D. in UTC time (i.e. std time) and converts it to this time zone's time.
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and converts it to this time zone's time.
 
         Params:
-            stdTime = The UTC time that needs to be adjusted to this time zone's time.
+            stdTime = The UTC time that needs to be adjusted to this time zone's
+                      time.
       +/
     override long utcToTZ(long stdTime) const nothrow
     {
@@ -28924,9 +29507,10 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return stdTime + convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
 
-            //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
-            //too inefficient to have to keep duping it every time we have to calculate the time.
-            //Hopefully, indexOf will properly support immutable ranges at some point.
+            //Okay, casting is a hack, but countUntil shouldn't be changing it,
+            //and it would be too inefficient to have to keep duping it every
+            //time we have to calculate the time. Hopefully, countUntil will
+            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -28942,12 +29526,12 @@ public:
 
 
     /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in this time zone's time and converts it to UTC
-        (i.e. std time).
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in this time zone's time and converts it to UTC (i.e. std time).
 
         Params:
-            adjTime = The time in this time zone that needs to be adjusted to UTC time.
+            adjTime = The time in this time zone that needs to be adjusted to
+                      UTC time.
       +/
     override long tzToUTC(long adjTime) const nothrow
     {
@@ -28961,9 +29545,10 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return adjTime - convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
 
-            //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
-            //too inefficient to have to keep duping it every time we have to calculate the time.
-            //Hopefully, indexOf will properly support immutable ranges at some point.
+            //Okay, casting is a hack, but countUntil shouldn't be changing it,
+            //and it would be too inefficient to have to keep duping it every
+            //time we have to calculate the time. Hopefully, countUntil will
+            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -28979,33 +29564,45 @@ public:
 
 
     version(Posix)
-        /// The default directory where the TZ Database files are. It's empty for Windows, since Windows doesn't have them.
+    {
+        /++
+            The default directory where the TZ Database files are. It's empty
+            for Windows, since Windows doesn't have them.
+          +/
         enum defaultTZDatabaseDir = "/usr/share/zoneinfo/";
+    }
     else version(Windows)
-        /// The default directory where the TZ Database files are. It's empty for Windows, since Windows doesn't have them.
+    {
+        /++ The default directory where the TZ Database files are. It's empty
+            for Windows, since Windows doesn't have them.
+          +/
         enum defaultTZDatabaseDir = "";
+    }
 
 
     /++
-        Returns a TimeZone with the give name per the TZ Database. The time zone
-        information is fetched from the TZ Database time zone files in the given
-        directory.
+        Returns a $(D TimeZone) with the give name per the TZ Database. The time
+        zone information is fetched from the TZ Database time zone files in the
+        given directory.
 
         See_Also:
-            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+              Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+              Time Zones)
 
         Params:
             name          = The TZ Database name of the time zone that you're
                             looking for.
-            tzDatabaseDir = The directory where the TZ Database files are located.
-                            Because these files are not located on Windows systems,
-                            you will need to provide them yourself and give their
-                            location here if you wish to use PosixTimeZones.
+            tzDatabaseDir = The directory where the TZ Database files are
+                            located. Because these files are not located on
+                            Windows systems, you will need to provide them
+                            yourself and give their location here if you wish to
+                            use $(D PosixTimeZone)s.
 
         Throws:
-            DateTimeException if the given time zone could not be found or
-            FileException if the TZ Database file could not be opened.
+            $(D DateTimeException) if the given time zone could not be found or
+            $(D FileException) if the TZ Database file could not be opened.
 
         Examples:
 --------------------
@@ -29596,17 +30193,17 @@ assert(tz.dstName == "PDT");
         begin with "America" will be returned.
 
         Params:
-            subname = The first part of the time zones that you want.
+            subName = The first part of the time zones that you want.
 
         Throws:
-            FileException if it fails to read from disk.
+            $(D FileException) if it fails to read from disk.
       +/
-    static string[] getInstalledTZNames(string subname = "", string tzDatabaseDir = defaultTZDatabaseDir)
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir)
     {
         version(Posix)
-            subname = strip(subname);
+            subName = strip(subName);
         else version(Windows)
-            subname = replace(strip(subname), "/", sep);
+            subName = replace(strip(subName), "/", sep);
 
         if(!tzDatabaseDir.endsWith(sep))
             tzDatabaseDir ~= sep;
@@ -29623,7 +30220,7 @@ assert(tz.dstName == "PDT");
                 auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
                 if(!tzName.getExt().empty() ||
-                   !tzName.startsWith(subname) ||
+                   !tzName.startsWith(subName) ||
                    tzName == "+VERSION")
                 {
                     continue;
@@ -29680,11 +30277,10 @@ assert(tz.dstName == "PDT");
 
 private:
 
-    /++
+    /+
         Holds information on when a time transition occures (usually a
-        transition to or from DST) as well as a pointer to the
-        TTInfo which holds information on the utc offset passed the
-        transition.
+        transition to or from DST) as well as a pointer to the $(D TTInfo) which
+        holds information on the utc offset passed the transition.
       +/
     struct Transition
     {
@@ -29699,7 +30295,7 @@ private:
     }
 
 
-    /++
+    /+
         Holds information on when a leap second occurs.
       +/
     struct LeapSecond
@@ -29714,7 +30310,7 @@ private:
         int total;
     }
 
-    /++
+    /+
         Holds information on the utc offset after a transition as well as
         whether DST is in effect after that transition.
       +/
@@ -29733,8 +30329,8 @@ private:
     }
 
 
-    /++
-        Struct used to hold information relating to TTInfo while organizing
+    /+
+        Struct used to hold information relating to $(D TTInfo) while organizing
         the time zone information prior to putting it in its final form.
       +/
     struct TempTTInfo
@@ -29752,9 +30348,10 @@ private:
     }
 
 
-    /++
-        Struct used to hold information relating to Transition while organizing
-        the time zone information prior to putting it in its final form.
+    /+
+        Struct used to hold information relating to $(D Transition) while
+        organizing the time zone information prior to putting it in its final
+        form.
       +/
     struct TempTransition
     {
@@ -29765,15 +30362,16 @@ private:
             this.ttype = ttype;
         }
 
-        long    timeT;
+        long                timeT;
         immutable (TTInfo)* ttInfo;
-        TransitionType* ttype;
+        TransitionType*     ttype;
     }
 
 
-    /++
-        Struct used to hold information relating to Transition and TTInfo while
-        organizing the time zone information prior to putting it in its final form.
+    /+
+        Struct used to hold information relating to $(D Transition) and
+        $(D TTInfo) while organizing the time zone information prior to putting
+        it in its final form.
       +/
     struct TransitionType
     {
@@ -29783,12 +30381,15 @@ private:
             this.inUTC = inUTC;
         }
 
-        bool   isStd; /// Whether the transition is in std time (as opposed to wall clock time).
-        bool   inUTC; /// Whether the transition is in UTC (as opposed to local time).
+        /// Whether the transition is in std time (as opposed to wall clock time).
+        bool isStd;
+
+        /// Whether the transition is in UTC (as opposed to local time).
+        bool inUTC;
     }
 
 
-    /++
+    /+
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
@@ -29803,7 +30404,7 @@ private:
     }
 
 
-    /++
+    /+
         Reads a long from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
@@ -29817,7 +30418,7 @@ private:
         return cast(long)ntoh64(buff[0]);
     }
 
-    /++
+    /+
         Reads an array of values from a TZ file.
       +/
     static T readVal(T)(ref File tzFile, size_t length)
@@ -29832,8 +30433,8 @@ private:
     }
 
 
-    /++
-        Reads a TempTTInfo from a TZ file.
+    /+
+        Reads a $(D TempTTInfo) from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
         if(is(T == TempTTInfo))
@@ -29844,7 +30445,7 @@ private:
     }
 
 
-    /++
+    /+
         Reads a value from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
@@ -29861,10 +30462,11 @@ private:
         return buff[0];
     }
 
-    /++
-        64 bit version of ntoh. Unfortunately, for some reason, most systems
-        provide only 16 and 32 bit versions of this, so we need to provide it
-        ourselves. We really should declare a version of this in core somewhere.
+    /+
+        64 bit version of $(D ntoh). Unfortunately, for some reason, most
+        systems provide only 16 and 32 bit versions of this, so we need to
+        provide it ourselves. We really should declare a version of this in core
+        somewhere.
       +/
     static ulong ntoh64(ulong val)
     {
@@ -29875,7 +30477,7 @@ private:
     }
 
 
-    /++
+    /+
         Swaps the endianness of a 64-bit value. We really should declare a
         version of this in core somewhere.
       +/
@@ -29892,9 +30494,9 @@ private:
     }
 
 
-    /++
+    /+
         Throws:
-            DateTimeException if $(D result) is false.
+            $(D DateTimeException) if $(D result) is false.
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__)
     {
@@ -29915,9 +30517,10 @@ private:
             if(_leapSeconds.front.timeT >= unixTime)
                 return 0;
 
-            //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
-            //too inefficient to have to keep duping it every time we have to calculate the time.
-            //Hopefully, indexOf will properly support immutable ranges at some point.
+            //Okay, casting is a hack, but countUntil shouldn't be changing it,
+            //and it would be too inefficient to have to keep duping it every
+            //time we have to calculate the time. Hopefully, countUntil will
+            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
 
             if(found == -1)
@@ -29960,10 +30563,14 @@ private:
         _hasDST = hasDST;
     }
 
+    /// List of times when the utc offset changes.
+    immutable Transition[] _transitions;
 
-    immutable Transition[] _transitions; /// List of times when the utc offset changes.
-    immutable LeapSecond[] _leapSeconds; /// List of leap second occurrences.
-    immutable bool _hasDST; /// Whether DST is in effect for this time zone at any point in time.
+    /// List of leap second occurrences.
+    immutable LeapSecond[] _leapSeconds;
+
+    /// Whether DST is in effect for this time zone at any point in time.
+    immutable bool _hasDST;
 }
 
 
@@ -29972,51 +30579,55 @@ version(D_Ddoc)
 {
 
     /++
+        $(BLUE This class is Windows-Only.)
+
         Represents a time zone from the Windows registry. Unfortunately, Windows
-        does not use the TZ Database, though it does name its time zones using the
-        TZ Database names. You can, however, use PosixTimeZone (which reads its
-        information from the TZ Database files on disk) on Windows if you provide
-        the TZ Database files
-        ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
-        yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
+        does not use the TZ Database. You can, however, use $(D PosixTimeZone)
+        (which reads its information from the TZ Database files on disk) on
+        Windows if you provide the TZ Database files
+        ( $(WEB ftp://elsie.nci.nih.gov/pub/,
+            Repository with the TZ Database files (tzdata)) )
+        yourself and tell $(D PosixTimeZone.getTimeZone) where the directory
         holding them is.
 
         TZ Database files hold DST transitions for a large interval of the time
-        covered by time_t. So, barring errors in the information in the TZ Database
-        files, it will use the correct DST rules for any date. Windows, on the other
-        hand, maintains only the current DST rules, so historical dates will use
-        the current DST rules (and therefore potentially be incorrect). So, if you
-        want the DST rules that you use to be more accurate, or if you're looking for
-        your program to act consistently on both Posix and Windows systems, then, as
-        mentioned above, you'll need to include the TZ Database files with your
-        program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
-        where they are located.
+        covered by $(D time_t). So, barring errors in the information in the TZ
+        Database files, it will use the correct DST rules for any date. Windows,
+        on the other hand, maintains only the current DST rules, so historical
+        dates will use the current DST rules (and therefore potentially be
+        incorrect). So, if you want the DST rules that you use to be more
+        accurate, or if you're looking for your program to act consistently on
+        both Posix and Windows systems, then, as mentioned above, you'll need to
+        include the TZ Database files with your program and give
+        $(D PosixTimeZone.getTimeZone) the directory on disk where they are
+        located.
 
-        However, if all you care about is whether current times use the correct DST
-        rules, or if you don't care whether the DST rules are historically accurate,
-        then you can just use WindowsTimeZone on Windows. WindowsTimeZone does not
-        exist on Posix systems.
+        However, if all you care about is whether current times use the correct
+        DST rules, or if you don't care whether the DST rules are historically
+        accurate, then you can just use $(D WindowsTimeZone) on Windows.
+        $(D WindowsTimeZone) does not exist on Posix systems.
 
-        To get a WindowsTimeZone, either call $(D WindowsTimeZone.getTimeZone()) or
-        call $(D TimeZone.getTimeZone()) (which will give you a PosixTimeZone on Posix
-        systems and a WindowsTimeZone on Windows systems).
+        To get a $(D WindowsTimeZone), either call
+        $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
+        (which will give you a $(D PosixTimeZone) on Posix systems and a
+         $(D WindowsTimeZone) on Windows systems).
       +/
     final class WindowsTimeZone : TimeZone
     {
     public:
 
         /++
-            Whether this time zone has Daylight Savings Time at any point in time.
-            Note that for some time zone types it may not have DST for current dates
-            but will still return true for hasDST because the time zone did at some
-            point have DST.
+            Whether this time zone has Daylight Savings Time at any point in
+            time. Note that for some time zone types it may not have DST for
+            current dates but will still return true for $(D hasDST) because the
+            time zone did at some point have DST.
           +/
         @property override bool hasDST() const nothrow;
 
 
         /++
-            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-            1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in UTC time (i.e. std time) and returns whether DST is in
             effect in this time zone at the given point in time.
 
             Params:
@@ -30027,40 +30638,47 @@ version(D_Ddoc)
 
 
         /++
-            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-            1st, 1 A.D. in UTC time (i.e. std time) and converts it to this time
-            zone's time.
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in UTC time (i.e. std time) and converts it to this time
+                zone's time.
 
             Params:
-                stdTime = The UTC time that needs to be adjusted to this time zone's time.
+                stdTime = The UTC time that needs to be adjusted to this time
+                          zone's time.
           +/
         override long utcToTZ(long stdTime) const nothrow;
 
 
         /++
-            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-            1st, 1 A.D. in this time zone's time and converts it to UTC
-            (i.e. std time).
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in this time zone's time and converts it to UTC (i.e. std
+            time).
 
             Params:
-                adjTime = The time in this time zone that needs to be adjusted to UTC time.
+                adjTime = The time in this time zone that needs to be adjusted
+                          to UTC time.
           +/
         override long tzToUTC(long adjTime) const nothrow;
 
 
         /++
-            Returns a TimeZone with the give name per the TZ Database. The time zone
-            information is fetched from the Windows registry.
+            Returns a $(D TimeZone) with the given name per the Windows time
+            zone names. The time zone information is fetched from the Windows
+            registry.
 
             See_Also:
-                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
-                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                  Database)
+                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                  of Time Zones)
 
             Params:
-                name = The TZ Database name of the time zone that you're looking for.
+                name = The TZ Database name of the time zone that you're looking
+                       for.
 
             Throws:
-                DateTimeException if the given time zone could not be found.
+                $(D DateTimeException) if the given time zone could not be
+                found.
 
             Examples:
     --------------------
@@ -30071,7 +30689,8 @@ version(D_Ddoc)
 
 
         /++
-            Returns a list of the names of the time zones installed on the system.
+            Returns a list of the names of the time zones installed on the
+            system.
           +/
         static string[] getInstalledTZNames();
 
@@ -30307,7 +30926,7 @@ else version(Windows)
 
                 auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
 
-                //The limits of what SystemTimeToTZSpecificLocalTime() will accept.
+                //The limits of what SystemTimeToTZSpecificLocalTime will accept.
                 if(utcDateTime.year < 1601)
                 {
                     if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
@@ -30323,9 +30942,10 @@ else version(Windows)
                     utcDateTime.year = 30_827;
                 }
 
-                //SystemTimeToTZSpecificLocalTime() doesn't act correctly at the beginning
-                //or end of the year (bleh). Unless some bizarre time zone changes
-                //DST on January 1st or December 31st, this should fix the problem.
+                //SystemTimeToTZSpecificLocalTime doesn't act correctly at the
+                //beginning or end of the year (bleh). Unless some bizarre time
+                //zone changes DST on January 1st or December 31st, this should
+                //fix the problem.
                 if(utcDateTime.month == Month.jan)
                 {
                     if(utcDateTime.day == 1)
@@ -30540,24 +31160,28 @@ else version(Posix)
 
 
 /++
-    Converts the given TZ Database name to the corresponding Windows time zone name.
+    Converts the given TZ Database name to the corresponding Windows time zone
+    name.
 
-    Note that in a few cases, a TZ Dabatase name corresponds to two different Windows
-    time zone names. So, while in most cases converting from one to the other and
-    back again will result in the same time zone name that you started with, in a few
-    cases, you will get a different name.
+    Note that in a few cases, a TZ Dabatase name corresponds to two different
+    Windows time zone names. So, while in most cases converting from one to the
+    other and back again will result in the same time zone name that you started
+    with, in a few cases, you will get a different name.
 
-    Also, there are far more TZ Database names than Windows time zones, so some of the
-    more exotic TZ Database names don't have corresponding Windows time zone names.
+    Also, there are far more TZ Database names than Windows time zones, so some
+    of the more exotic TZ Database names don't have corresponding Windows time
+    zone names.
 
     See_Also:
-        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
+        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+              Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
 
     Throws:
-        DateTimeException if the given tzName cannot be converted.
+        $(D DateTimeException) if the given $(D_PARAM tzName) cannot be
+        converted.
   +/
 string tzDatabaseNameToWindowsTZName(string tzName)
 {
@@ -30688,16 +31312,19 @@ unittest
 
 
 /++
-    Converts the given Windows time zone name to a corresponding TZ Database name.
+    Converts the given Windows time zone name to a corresponding TZ Database
+    name.
 
     See_Also:
-        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
+        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
+              Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
 
     Throws:
-        DateTimeException if the given tzName cannot be converted.
+        $(D DateTimeException) if the given $(D_PARAM tzName) cannot be
+        converted.
   +/
 string windowsTZNameToTZDatabaseName(string tzName)
 {
@@ -30836,23 +31463,23 @@ unittest
 //==============================================================================
 
 /++
-   StopWatch's AutoStart flag
+   $(D StopWatch)'s AutoStart flag
   +/
 enum autoStart = AutoStart.yes;
 
 
 /++
-   StopWatch measures time as precisely as possible.
+   $(D StopWatch) measures time as precisely as possible.
 
    This class uses a high-performance counter. On Windows systems, it uses
-   $(D QueryPerformanceCounter), and on Posix systems, it uses $(D clock_gettime())
-   if available, and $(D gettimeofday()) otherwise.
+   $(D QueryPerformanceCounter), and on Posix systems, it uses
+   $(D clock_gettime) if available, and $(D gettimeofday) otherwise.
 
-   But the accuracy of StopWatch differs from system to system. It is impossible
-   to for it to be the same from system to system since the precision of the
-   system clock varies from system to system, and other system-dependent and
-   situation-dependent stuff (such as the overhead of a context switching between
-   threads) can also affect StopWatch's accuracy.
+   But the precision of $(D StopWatch) differs from system to system. It is
+   impossible to for it to be the same from system to system since the precision
+   of the system clock varies from system to system, and other system-dependent
+   and situation-dependent stuff (such as the overhead of a context switching
+   between threads) can also affect $(D StopWatch)'s accuracy.
 
    Examples:
 --------------------
@@ -30902,7 +31529,7 @@ public:
 
 
     /++
-       auto start with constructor
+       Auto start with constructor.
       +/
     this(AutoStart autostart)
     {
@@ -31059,17 +31686,13 @@ size_t lengthof(aliases...)() pure nothrow
    Benchmarks code for speed assessment and comparison.
 
    Params:
-
-   fun = aliases of callable objects (e.g. function names). Each should
-   take no arguments.
-
-   times = The number of times each function is to be executed.
+       fun = aliases of callable objects (e.g. function names). Each should
+             take no arguments.
+       times = The number of times each function is to be executed.
 
    Returns:
-
-   An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
-   number of milliseconds spent in calling the $(D i)th function $(D
-   times) times.
+       An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
+       number of msecs spent in calling the $(D i)th function $(D times) times.
 
    Examples:
 --------------------
@@ -31262,7 +31885,7 @@ unittest
     $(RED Scheduled for deprecation. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
-    Returns a d_time for the given SysTime.
+    Returns a $(D d_time) for the given $(D SysTime).
  +/
 long sysTimeToDTime(in SysTime sysTime)
 {
@@ -31289,7 +31912,7 @@ unittest
     $(RED Scheduled for deprecation. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
-    Returns a SysTime for the given d_time.
+    Returns a $(D SysTime) for the given $(D d_time).
  +/
 SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
 {
@@ -31471,12 +32094,12 @@ unittest
 
 
 /++
-    Converts a time_t (which uses midnight, January 1st, 1970 UTC as its epoch
-    and seconds as its units) to std time (which uses midnight, January 1st,
-    1 A.D. UTC and hnsecs as its units).
+    Converts a $(D time_t) (which uses midnight, January 1st, 1970 UTC as its
+    epoch and seconds as its units) to std time (which uses midnight,
+    January 1st, 1 A.D. UTC and hnsecs as its units).
 
     Params:
-        unixTime = The time_t to convert.
+        unixTime = The $(D time_t) to convert.
   +/
 long unixTimeToStdTime(time_t unixTime) pure nothrow
 {
@@ -31500,19 +32123,20 @@ unittest
 
 /++
     Converts std time (which uses midnight, January 1st, 1 A.D. UTC as its epoch
-    and hnsecs as its units) to time_t (which uses midnight, January 1st, 1970 UTC
-    as its epoch and seconds as its units). If time_t is 32 bits, rather than 64,
-    and the result can't fit in a 32-bit value, then the closest value that can
-    be held in 32 bits will be used (so time_t.max if it goes over or time_t.min
-    if it goes under).
+    and hnsecs as its units) to $(D time_t) (which uses midnight, January 1st,
+    1970 UTC as its epoch and seconds as its units). If $(D time_t) is 32 bits,
+    rather than 64, and the result can't fit in a 32-bit value, then the closest
+    value that can be held in 32 bits will be used (so $(D time_t.max) if it
+    goes over and $(D time_t.min) if it goes under).
 
     Note:
-        While Windows systems require that time_t be non-negative (in spite of
-        time_t being signed), this function still returns negative numbers on
-        Windows, since it's more flexible to allow negative time_t for those
-        who need it. So, if you're on Windows and are using the standard C
-        functions or Win32 API functions which take a time_t, you may want to
-        check whether the return value of $(D stdTimeToUnixTime()) is non-negative.
+        While Windows systems require that $(D time_t) be non-negative (in spite
+        of $(D time_t) being signed), this function still returns negative
+        numbers on Windows, since it's more flexible to allow negative time_t
+        for those who need it. So, if you're on Windows and are using the
+        standard C functions or Win32 API functions which take a $(D time_t),
+        you may want to check whether the return value of
+        $(D stdTimeToUnixTime) is non-negative.
 
     Params:
         stdTime = The std time to convert.
@@ -31563,65 +32187,77 @@ version(D_Ddoc)
     }
 
     /++
-        On Windows, this converts a SYSTEMTIME struct to a SysTime.
+        $(BLUE This function is Windows-Only.)
+
+        Converts a $(D SYSTEMTIME) struct to a $(D SysTime).
 
         Params:
-            st = The SYSTEMTIME struct to convert.
-            tz = The time zone that the time in the SYSTEMTIME struct
-                 is assumed to be (if the SYSTEMTIME was supplied by a
-                 Windows system call, the SYSTEMTIME will either be in
-                 local time or UTC, depending on the call).
+            st = The $(D SYSTEMTIME) struct to convert.
+            tz = The time zone that the time in the $(D SYSTEMTIME) struct is
+                 assumed to be (if the $(D SYSTEMTIME) was supplied by a Windows
+                 system call, the $(D SYSTEMTIME) will either be in local time
+                 or UTC, depending on the call).
 
         Throws:
-            DateTimeException if the given SYSTEMTIME will not fit in a SysTime,
-            which is highly unlikely to happen given that SysTime.max is in 29,228 A.D.
-            and the maximum SYSTEMTIME is in 30,827 A.D.
+            $(D DateTimeException) if the given $(D SYSTEMTIME) will not fit in
+            a $(D SysTime), which is highly unlikely to happen given that
+            $(D SysTime.max) is in 29,228 A.D. and the maximum $(D SYSTEMTIME)
+            is in 30,827 A.D.
       +/
     SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime());
 
 
     /++
-        On Windows, this converts a SysTime to a SYSTEMTIME struct.
+        $(BLUE This function is Windows-Only.)
 
-        The SYSTEMTIME which is returned will be set using the given SysTime's
-        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
-        time zone to UTC.
+        Converts a $(D SysTime) to a $(D SYSTEMTIME) struct.
+
+        The $(D SYSTEMTIME) which is returned will be set using the given
+        $(D SysTime)'s time zone, so if you want the $(D SYSTEMTIME) to be in
+        UTC, set the $(D SysTime)'s time zone to UTC.
 
         Params:
-            sysTime = The SysTime to convert.
+            sysTime = The $(D SysTime) to convert.
 
         Throws:
-            DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
-            This will only happen if the SysTime's date is prior to 1601 A.D.
+            $(D DateTimeException) if the given $(D SysTime) will not fit in a
+            $(D SYSTEMTIME). This will only happen if the $(D SysTime)'s date is
+            prior to 1601 A.D.
       +/
     SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime);
 
 
     /++
-        On Windows, this converts a FILETIME struct to a SysTime.
+        $(BLUE This function is Windows-Only.)
+
+        Converts a $(D FILETIME) struct to a $(D SysTime).
 
         Params:
-            ft = The FILETIME struct to convert.
-            tz = The time zone that the SysTime will be in (FILETIMEs are
-                 in UTC).
+            ft = The $(D FILETIME) struct to convert.
+            tz = The time zone that the $(D SysTime) will be in ($(D FILETIME)s
+                 are in UTC).
 
         Throws:
-            DateTimeException if the given FILETIME will not fit in a SysTime or
-            if the FILETIME cannot be converted to a SYSTEMTIME.
+            $(D DateTimeException) if the given $(D FILETIME) will not fit in a
+            $(D SysTime) or if the $(D FILETIME) cannot be converted to a
+            $(D SYSTEMTIME).
       +/
     SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime());
 
 
     /++
-        On Windows, this converts a SysTime to a FILETIME struct.
+        $(BLUE This function is Windows-Only.)
 
-        FILETIMEs are always in UTC.
+        Converts a $(D SysTime) to a $(D FILETIME) struct.
+
+        $(D FILETIME)s are always in UTC.
 
         Params:
-            sysTime = The SysTime to convert.
+            sysTime = The $(D SysTime) to convert.
 
         Throws:
-            DateTimeException if the given SysTime will not fit in a FILETIME.
+            $(D DateTimeException) if the given $(D SysTime) will not fit in a
+            $(D FILETIME).
       +/
     FILETIME SysTimeToFILETIME(SysTime sysTime);
 }
@@ -31801,14 +32437,14 @@ else version(Windows)
 typedef uint DosFileTime;
 
 /++
-    Converts from DOS file date/time to SysTime.
+    Converts from DOS file date/time to $(D SysTime).
 
     Params:
         dft = The DOS file time to convert.
         tz  = The time zone which the DOS file time is assumed to be in.
 
     Throws:
-        DateTimeException if the DosFileTime is invalid.
+        $(D DateTimeException) if the $(D DosFileTime) is invalid.
   +/
 SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime())
 {
@@ -31834,14 +32470,14 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
 
 
 /++
-    Converts from SysTime to DOS file date/time.
+    Converts from $(D SysTime) to DOS file date/time.
 
     Params:
-        sysTime = The SysTime to convert.
+        sysTime = The $(D SysTime) to convert.
 
     Throws:
-        DateTimeException if the given SysTime cannot be converted to
-        a DosFileTime.
+        $(D DateTimeException) if the given $(D SysTime) cannot be converted to
+        a $(D DosFileTime).
   +/
 DosFileTime SysTimeToDosFileTime(SysTime sysTime)
 {
@@ -31869,10 +32505,9 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime)
 /++
     Whether all of the given strings are valid units of time.
 
-    "nsecs" is not considered a valid unit of time. Nothing in
-    std.datetime can handle precision greater than hnsecs, and
-    the few functions in core.time which deal with "nsecs"
-    deal with it explicitly.
+    $(D "nsecs") is not considered a valid unit of time. Nothing in std.datetime
+    can handle precision greater than hnsecs, and the few functions in core.time
+    which deal with "nsecs" deal with it explicitly.
   +/
 bool validTimeUnits(string[] units...)
 {
@@ -31887,8 +32522,8 @@ bool validTimeUnits(string[] units...)
 
 
 /++
-    Compares two TimeStrings. "years" are the largest units and "hnsecs" are
-    the smallest.
+    Compares two time unit strings. $(D "years") are the largest units and
+    $(D "hnsecs") are the smallest.
 
     Returns:
         $(TABLE
@@ -31898,8 +32533,8 @@ bool validTimeUnits(string[] units...)
         )
 
     Throws:
-        DateTimeException if either of the given strings is not a valid time
-        unit string.
+        $(D DateTimeException) if either of the given strings is not a valid
+        time unit string.
  +/
 int cmpTimeUnits(string lhs, string rhs)
 {
@@ -31941,11 +32576,11 @@ unittest
 
 
 /++
-    Compares two time unit strings at compile time. "years" are the largest
-    units and "hnsecs" are the smallest.
+    Compares two time unit strings at compile time. $(D "years") are the largest
+    units and $(D "hnsecs") are the smallest.
 
-    This template is used instead of $(D cmpTimeUnits()) because exceptions
-    can't be thrown at compile-time and $(D cmpTimeUnits()) must enforce that
+    This template is used instead of $(D cmpTimeUnits) because exceptions
+    can't be thrown at compile time and $(D cmpTimeUnits) must enforce that
     the strings it's given are valid time unit strings. This template uses a
     template constraint instead.
 
@@ -31964,7 +32599,7 @@ template CmpTimeUnits(string lhs, string rhs)
 
 
 /+
-    Helper function for CmpTimeUnits.
+    Helper function for $(D CmpTimeUnits).
  +/
 private int cmpTimeUnitsCTFE(string lhs, string rhs)
 {
@@ -32080,11 +32715,12 @@ bool valid(string units)(int year, int month, int day) pure nothrow
     Params:
         units = The units of time to validate.
         value = The number to validate.
-        file  = The file that the DateTimeException will list if thrown.
-        line  = The line number that the DateTimeException will list if thrown.
+        file  = The file that the $(D DateTimeException) will list if thrown.
+        line  = The line number that the $(D DateTimeException) will list if
+                thrown.
 
     Throws:
-        DateTimeException if valid!units(value) is false.
+        $(D DateTimeException) if $(D valid!units(value)) is false.
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) pure
     if(units == "months" ||
@@ -32121,11 +32757,12 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
         year  = The year of the day to validate.
         month = The month of the day to validate.
         day   = The day to validate.
-        file  = The file that the DateTimeException will list if thrown.
-        line  = The line number that the DateTimeException will list if thrown.
+        file  = The file that the $(D DateTimeException) will list if thrown.
+        line  = The line number that the $(D DateTimeException) will list if
+                thrown.
 
     Throws:
-        DateTimeException if valid!"days"(year, month, day) is false.
+        $(D DateTimeException) if $(D valid!"days"(year, month, day)) is false.
   +/
 void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) pure
     if(units == "days")
@@ -32304,20 +32941,15 @@ unittest
 }
 
 
-//This should be removed as soon the bug with auto return functions not
-//showing up in the documentation generated by ddoc is fixed.
 version(D_Ddoc)
 {
-    //Here purely to make it so that TemporaryValue is defined and will compile.
-    alias long TemporaryValue;
-
     /++
         Function for starting to a stop watch time when the function is called
         and stopping it when its return value goes out of scope and is destroyed.
 
         When the value that is returned by this function is destroyed,
-        $(D func()) will run. $(D func()) is a unary function that takes a
-        TickDuration.
+        $(D func) will run. $(D func) is a unary function that takes a
+        $(D TickDuration).
 
         Examples:
 --------------------
@@ -32329,7 +32961,7 @@ doSomething();
 writeln("benchmark end!");
 --------------------
       +/
-    TemporaryValue measureTime(alias func)();
+    auto measureTime(alias func)();
 }
 else
 {
@@ -32395,21 +33027,10 @@ unittest
     }
 }
 
-
 //==============================================================================
 // Private Section.
-//
-// Note that the templates in the private section are documented but do _not_
-// have both +'s to begin their documentation comment blocks. This is because
-// of bug 2775 ( http://d.puremagic.com/issues/show_bug.cgi?id=2775 ) which
-// makes it so that all templates are actually public. Ideally, most (if not all)
-// of these templates would be inside of isTimePoint, but bug 4675
-// ( http://d.puremagic.com/issues/show_bug.cgi?id=4675 ) which currently prevents
-// putting more that the enum with the template's name inside of an eponymous
-// template.
 //==============================================================================
 private:
-
 
 //==============================================================================
 // Section with private enums and constants.
@@ -32742,7 +33363,7 @@ unittest
 }
 
 
-/++
+/+
     Returns the string representation of the given month.
 
     Params:
@@ -32751,7 +33372,7 @@ unittest
         plural      = Whether the string should be plural or not.
 
     Throws:
-        DateTimeException if the given month is not a valid month.
+        $(D DateTimeException) if the given month is not a valid month.
   +/
 string monthToString(Month month, bool useLongName = true) pure
 {
@@ -32864,14 +33485,14 @@ unittest
 }
 
 
-/++
+/+
     Returns the Month corresponding to the given string. Casing is ignored.
 
     Params:
         monthStr = The string representation of the month to get the Month for.
 
     Throws:
-        DateTimeException if the given month is not a valid month string.
+        $(D DateTimeException) if the given month is not a valid month string.
   +/
 Month monthFromString(string monthStr)
 {
@@ -33000,7 +33621,7 @@ unittest
 
         static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
 
-        //Verify Examples
+        //Verify Examples.
         assert(nextSmallerTimeUnits!"years" == "months");
         assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
     }
@@ -33037,14 +33658,14 @@ unittest
 
         static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
 
-        //Verify Examples
+        //Verify Examples.
         assert(nextLargerTimeUnits!"months" == "years");
         assert(nextLargerTimeUnits!"hnsecs" == "usecs");
     }
 }
 
 
-/++
+/+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
 static string fracSecToISOString(int hnsecs) nothrow
@@ -33101,7 +33722,7 @@ unittest
 }
 
 
-/++
+/+
     Returns a FracSec corresponding to to the given ISO string of
     fractional seconds.
   +/
@@ -33370,7 +33991,7 @@ unittest
     }
 }
 
-/++
+/+
     Unfortunately, to!string() is not pure, so here's a way to convert
     a number to a string which is. Once to!string() is properly pure
     (like it hopefully will be at some point), this function should
