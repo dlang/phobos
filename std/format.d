@@ -13,6 +13,8 @@
 
    Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.com,
    Andrei Alexandrescu)
+
+   Source: $(PHOBOSSRC std/_format.d)
  */
 module std.format;
 

@@ -3,6 +3,7 @@
 /**
    This module has been scheduled for deprecation. Use $(D
    std.exception) instead.
+   Source: $(PHOBOSSRC std/_contracts.d)
  */
 module std.contracts;
 

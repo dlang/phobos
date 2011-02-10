@@ -12,7 +12,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Shin Fujishiro,
            Adam D. Ruppe
 
-Copyright: Copyright Digital Mars 2007-.
+Source:    $(PHOBOSSRC std/_conv.d)
 */
 module std.conv;
 

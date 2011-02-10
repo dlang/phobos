@@ -16,6 +16,7 @@
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Grzegorz Adam Hankiewicz, Thomas K&uuml;hne, Bill Baxter,
  *            $(WEB erdani.org, Andrei Alexandrescu)
+ * Source:    $(PHOBOSSRC std/_path.d)
  */
 module std.path;
 

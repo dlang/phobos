@@ -4,6 +4,8 @@
 This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.
 
+Source:    $(PHOBOSSRC std/_typecons.d)
+
 Macros:
 
 WIKI = Phobos/StdVariant

@@ -84,6 +84,7 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
     Copyright: Copyright 2010
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
+    Source:    $(PHOBOSSRC std/_datetime.d)
 +/
 module std.datetime;
 
