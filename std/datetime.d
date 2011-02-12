@@ -55,7 +55,7 @@
     $(D SysTime) from the string.
 
 --------------------
-auto currentTime = Clock.currTime;
+auto currentTime = Clock.currTime();
 auto timeString = currentTime.toISOExtendedString();
 auto restoredTime = SysTime.fromISOExtendedString(timeString);
 --------------------
@@ -176,7 +176,7 @@ alias std.string.indexOf indexOf;
 unittest
 {
     //Verify module example.
-    auto currentTime = Clock.currTime;
+    auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtendedString();
     auto restoredTime = SysTime.fromISOExtendedString(timeString);
 }
@@ -353,7 +353,7 @@ public:
             $(D ErrnoException) (on Posix) or $(D Exception) (on Windows)
             if it fails to get the time of day.
       +/
-    static @property SysTime currTime(immutable TimeZone tz = LocalTime())
+    static SysTime currTime(immutable TimeZone tz = LocalTime())
     {
         return SysTime(currStdTime, tz);
     }
@@ -364,7 +364,7 @@ public:
         {
             assert(currTime(UTC()).timezone is UTC());
 
-            immutable unixTimeD = currTime.toUnixTime();
+            immutable unixTimeD = currTime().toUnixTime();
             immutable unixTimeC = core.stdc.time.time(null);
             immutable diff = unixTimeC - unixTimeD;
 
