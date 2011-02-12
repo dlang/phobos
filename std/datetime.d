@@ -31818,7 +31818,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime.");
 
     int year = ((dt >> 25) & 0x7F) + 1980;
-    int month = ((dt >> 21) & 0x0F) - 1;   // 1..12
+    int month = ((dt >> 21) & 0x0F);       // 1..12
     int dayOfMonth = ((dt >> 16) & 0x1F);  // 1..31
     int hour = (dt >> 11) & 0x1F;          // 0..23
     int minute = (dt >> 5) & 0x3F;         // 0..59
@@ -31830,6 +31830,21 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         return SysTime(DateTime(year, month, dayOfMonth, hour, minute, second), tz);
     catch(DateTimeException dte)
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
+}
+
+unittest
+{
+    version(testStdDateTime)
+    {
+        assertPred!"=="(DosFileTimeToSysTime(0b00000000001000010000000000000000),
+                        SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
+
+        assertPred!"=="(DosFileTimeToSysTime(0b11111111100111111011111101111101),
+                        SysTime(DateTime(2107, 12, 31, 23, 59, 58)));
+
+        assertPred!"=="(DosFileTimeToSysTime(0x3E3F8456),
+                        SysTime(DateTime(2011, 1, 31, 16, 34, 44)));
+    }
 }
 
 
@@ -31855,13 +31870,28 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime)
 
     uint retval = 0;
     retval = (dateTime.year - 1980) << 25;
-    retval |= ((dateTime.month + 1) & 0x0F) << 21;
+    retval |= (dateTime.month & 0x0F) << 21;
     retval |= (dateTime.day & 0x1F) << 16;
     retval |= (dateTime.hour & 0x1F) << 11;
     retval |= (dateTime.minute & 0x3F) << 5;
     retval |= (dateTime.second >> 1) & 0x1F;
 
     return cast(DosFileTime)retval;
+}
+
+unittest
+{
+    version(testStdDateTime)
+    {
+        assertPred!"=="(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))),
+                        0b00000000001000010000000000000000);
+
+        assertPred!"=="(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))),
+                        0b11111111100111111011111101111101);
+
+        assertPred!"=="(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))),
+                        0x3E3F8456);
+    }
 }
 
 
