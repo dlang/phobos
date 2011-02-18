@@ -1194,7 +1194,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data){
  * Params:
  *  data    The biguint to be receive the result. Must be large enough to
  *          store the result.
- *  s       The decimal string. May contain 0..9, or _. Will be preserved.
+ *  s       The decimal string. May contain _ or 0..9
  *
  * The required length for the destination buffer is slightly less than
  *  1 + s.length/log2(10) = 1 + s.length/3.3219.
@@ -1276,7 +1276,8 @@ int biguintFromDecimal(BigDigit [] data, string s) {
           //  hi+=2;
         }
     }
-    if (hi>1 && data[hi-1]==0) --hi;
+    while (hi>1 && data[hi-1]==0)
+        --hi;
     return hi;
 }
 
