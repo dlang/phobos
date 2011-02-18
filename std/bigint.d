@@ -492,4 +492,5 @@ unittest {
     assert( b == -long.max % (ulong.max - 5));
     b = long.max / a;
     assert( b == long.max /(ulong.max - 5));
+    assert(BigInt(1) - 1 == 0);
 }
