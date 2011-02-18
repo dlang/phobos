@@ -412,6 +412,7 @@ static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref 
             }
             if (d==0) {
                 r = 0UL;
+                sign = false;
                 return r;
             }
             r.data = new BigDigit[ d > uint.max ? 2: 1];
