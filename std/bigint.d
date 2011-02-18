@@ -408,8 +408,8 @@ public:
             sink("-");
         if (formatString.length>0 && formatString[$-1]=='x' || formatString[$-1]=='X')
         {
-            char[] buff = data.toHexString(1, '_');
-            sink(data.toHexString(0, '_'));
+            char[] buff = data.toHexString(0, '_');
+            sink(buff);
         }
         else
         {
