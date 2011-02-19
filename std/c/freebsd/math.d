@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCMath
+ *      WIKI=Phobos/StdCMath
  */
 
 module std.c.freebsd.math;
@@ -13,7 +13,22 @@ import std.c.math;
 
 extern (C):
 
-/* FreeBSD doesn't do the 'l' math functions.
+version (all)
+{
+/* FreeBSD >= 8.0 doesn't do all the 'l' math functions.
+ * So we provide our own (lame) implementations.
+ */
+real   log1pl(real x) { return log1p(x); }
+real   cbrtl(real x) { return cbrt(x); }
+real   powl(real x, real y) { return pow(x, y); }
+real   erfl(real x) { return erf(x); }
+real   erfcl(real x) { return erfc(x); }
+real   lgammal(real x) { return lgamma(x); }
+real   tgammal(real x) { return tgamma(x); }
+}
+else
+{
+/* FreeBSD < 8.0 doesn't do the 'l' math functions.
  * So we provide our own (lame) implementations.
  */
 
@@ -95,3 +110,4 @@ real   nanl(char *tagp) { return real.nan; }
 //real   fminl(real x, real y) { return fmin(x, y); }
 //real   fmal(real x, real y, real z) { return fma(x, y, z); }
 
+}
