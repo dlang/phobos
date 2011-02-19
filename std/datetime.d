@@ -28622,7 +28622,7 @@ public:
             try
                 return to!string(tzname[1]);
             catch(Exception e)
-                assert(0, "to!string(tzname[0]) failed.");
+                assert(0, "to!string(tzname[1]) failed.");
         }
         else version(Windows)
         {
