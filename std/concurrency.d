@@ -501,6 +501,11 @@ bool receiveTimeout(T...)( long ms, T ops )
     return mbox.get( ms * TICKS_PER_MILLI, ops );
 }
 
+/++ ditto +/
+bool receiveTimeout(T...)( Duration duration, T ops )
+{
+    return receiveTimeout(duration.total!"msecs"(), ops);
+}
 
 unittest
 {
@@ -519,6 +524,11 @@ unittest
                        {
                            receiveTimeout( 0, (int x) {}, (int x) {} );
                        } ) );
+
+    assert( __traits( compiles,
+                      {
+                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
+                      } ) );
 }
 
 
