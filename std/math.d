@@ -436,27 +436,28 @@ Lret:
         fld     x[RBP]                  ; // load theta
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
-        sahf                            ;
-        jc      trigerr                 ; // x is NAN, infinity, or empty
+        test    AH,1                    ;
+        jnz     trigerr                 ; // x is NAN, infinity, or empty
                                           // 387's can handle denormals
 SC18:   fptan                           ;
         fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
-        sahf                            ;
-        jnp     Lret                    ; // C2 = 1 (x is out of range)
+        test    AH,4                    ;
+        jz      Lret                    ; // C2 = 1 (x is out of range)
 
         // Do argument reduction to bring x into range
         fldpi                           ;
         fxch                            ;
 SC17:   fprem1                          ;
         fstsw   AX                      ;
-        sahf                            ;
-        jp      SC17                    ;
+        test    AH,4                    ;
+        jnz     SC17                    ;
         fstp    ST(1)                   ; // remove pi from stack
         jmp     SC18                    ;
 
 trigerr:
-        jnp     Lret                    ; // if theta is NAN, return theta
+        test    AH,4                    ;
+        jz      Lret                    ; // if theta is NAN, return theta
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;

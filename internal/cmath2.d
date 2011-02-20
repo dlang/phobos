@@ -189,6 +189,7 @@ void _Cdiv()
 
 void _Ccmp()
 {
+  version (D_InlineAsm_X86)
     asm
     {   naked                   ;
         fucomp  ST(2)           ; // compare x.im and y.im
@@ -209,4 +210,23 @@ void _Ccmp()
         fstp    ST(0)           ; // pop
         ret                     ;
     }
+  else version (D_InlineAsm_X86_64)
+    asm
+    {   naked                   ;
+        fucomip  ST(2)          ; // compare x.im and y.im
+        jne     L1              ;
+        jp      L1              ; // jmp if NAN
+        fucomip  ST(2)          ; // compare x.re and y.re
+        fstp    ST(0)           ; // pop
+        fstp    ST(0)           ; // pop
+        ret                     ;
+
+      L1:
+        fstp    ST(0)           ; // pop
+        fstp    ST(0)           ; // pop
+        fstp    ST(0)           ; // pop
+        ret                     ;
+    }
+  else
+        static assert(0);
 }

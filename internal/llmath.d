@@ -475,8 +475,12 @@ ulong __DBLULLNG()
             fstsw       AX                      ;
             fstcw       8[RSP]                  ;
             fldcw       roundTo0                ;
-            sahf                                ;
-            jae         L1                      ;
+
+            test        AH,1                    ;
+            jz          L1                      ;
+            //sahf                              ;
+            //jae       L1                      ;
+
             fld         real ptr adjust         ;
             fsubp       ST(1), ST               ;
             fistp       qword ptr [RSP]         ;
@@ -637,8 +641,12 @@ ulong __LDBLULLNG()
             fstsw       AX                      ;
             fstcw       8[RSP]                  ;
             fldcw       roundTo0                ;
-            sahf                                ;
-            jae         L1                      ;
+
+            test        AH,1                    ;
+            jz          L1                      ;
+            //sahf                              ;
+            //jae         L1                    ;
+
             fld         real ptr adjust         ;
             fsubp       ST(1), ST               ;
             fistp       qword ptr [RSP]         ;
