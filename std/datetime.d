@@ -30106,9 +30106,12 @@ assert(tz.dstName == "PDT");
 
                 //Test for "UTC".
                 {
-                    auto tz = PosixTimeZone.getTimeZone("UTC");
+                    version(FreeBSD) enum zone = "Etc/UTC";
+                    version(Linux)   enum zone = "UTC";
+                    version(OSX)     enum zone = "UTC";
+                    auto tz = PosixTimeZone.getTimeZone(zone);
 
-                    assertPred!"=="(tz.name, "UTC");
+                    assertPred!"=="(tz.name, zone);
                     assertPred!"=="(tz.stdName, "UTC");
                     assertPred!"=="(tz.dstName, "UTC");
                     assertPred!"=="(tz.hasDST, false);
