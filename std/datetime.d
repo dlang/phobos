@@ -28472,18 +28472,6 @@ private:
 }
 
 
-version(Posix)
-{
-//This should be in core.stdc.time, but it isn't, so
-//we're declaring it here.
-extern(C)
-{
-    extern __gshared char* tzname[2];
-    extern __gshared int   daylight;
-}
-}
-
-
 /++
     A TimeZone which represents the current local time zone on
     the system running your program.
@@ -28685,7 +28673,25 @@ public:
     @property override bool hasDST() const nothrow
     {
         version(Posix)
-            return cast(bool)(daylight);
+        {
+            static if(is(typeof(daylight)))
+                return cast(bool)(daylight);
+            else
+            {
+                try
+                {
+                    auto currYear = (cast(Date)Clock.currTime()).year;
+                    auto janOffset = SysTime(Date(currYear, 1, 4), this).stdTime -
+                                     SysTime(Date(currYear, 1, 4), UTC()).stdTime;
+                    auto julyOffset = SysTime(Date(currYear, 7, 4), this).stdTime -
+                                      SysTime(Date(currYear, 7, 4), UTC()).stdTime;
+
+                    return janOffset != julyOffset;
+                }
+                catch(Exception e)
+                    assert(0, "Clock.currTime() threw.");
+            }
+        }
         else version(Windows)
         {
             try
@@ -28715,6 +28721,9 @@ public:
 
                 setTZEnvVar("America/New_York");
                 assert(LocalTime().hasDST);
+
+                setTZEnvVar("UTC");
+                assert(!LocalTime().hasDST);
             }
         }
     }
