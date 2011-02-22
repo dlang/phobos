@@ -278,15 +278,33 @@ struct Tid
         _send( this, vals );
     }
 
-
-private:
-    this( MessageBox m )
+    /++
+        The $(D Thread) associated with this Tid.
+      +/
+    @property Thread thread()
     {
-        mbox = m;
+        return _thread;
     }
 
+private:
+    this( MessageBox mbox, Thread thread = null )
+    {
+        _mbox = mbox;
+        _thread = thread;
+    }
 
-    MessageBox  mbox;
+    @property MessageBox mbox()
+    {
+        return _mbox;
+    }
+
+    @property void thread(Thread thread)
+    {
+        _thread = thread;
+    }
+
+    MessageBox _mbox;
+    Thread     _thread;
 }
 
 
@@ -295,10 +313,9 @@ private:
  */
 @property Tid thisTid()
 {
-    if( mbox )
-        return Tid( mbox );
-    mbox = new MessageBox;
-    return Tid( mbox );
+    if( !mbox )
+        mbox = new MessageBox;
+    return Tid( mbox, Thread.getThis() );
 }
 
 
@@ -371,6 +388,7 @@ private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
 
     // TODO: MessageList and &exec should be shared.
     auto t = new Thread( &exec ); t.start();
+    spawnTid.thread = t;
     links[spawnTid] = linked;
     return spawnTid;
 }
@@ -1198,8 +1216,18 @@ version( unittest )
 {
     import std.stdio;
 
+    void testTid(Tid tid)
+    {
+        assert(tid.thread);
+        assert(tid.thread !is Thread.getThis());
+        assert(thisTid.thread);
+        assert(thisTid.thread is Thread.getThis());
+    }
+
     void testfn( Tid tid )
     {
+        testTid(tid);
+
         receive( (float val) { assert(0); },
                  (int val, int val2)
                  {
@@ -1228,6 +1256,7 @@ version( unittest )
     unittest
     {
         auto tid = spawn( &testfn, thisTid );
+        testTid(tid);
 
         send( tid, 42, 86 );
         send( tid, tuple(42, 86) );
