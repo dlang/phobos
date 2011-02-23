@@ -8,8 +8,10 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 /* References:
+   "Modern Computer Arithmetic" (MCA) is the primary reference for all
+    algorithms used in this library.
   - R.P. Brent and P. Zimmermann, "Modern Computer Arithmetic",
-    Version 0.2, p. 26, (June 2009).
+    Version 0.5.9, (Oct 2010).
   - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
     Max-Planck Institute fuer Informatik, (Oct 1998).
   - G. Hanrot, M. Quercia, and P. Zimmermann, "The Middle Product Algorithm, I.",
@@ -1952,43 +1954,115 @@ int firstNonZeroDigit(BigDigit[] x)
     }
     return k;
 }
+import core.stdc.stdio;
+/*
+    Calculate quotient and remainder of u / v using fast recursive division.
+    v must be normalised, and must be at least half as long as u.
+    Given u and v, v normalised, calculates  quotient  = u/v, u = u%v.
+    scratch is temporary storage space, length must be >= quotient + 1.
 
-/* Calculate quotient and remainder of u / v using fast recursive division.
-  v must be normalised, and must be at least half as long as u.
-  Given u and v, v normalised, calculates  quotient  = u/v, u = u%v.
-  Algorithm is described in
-  - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
-    Max-Planck Institute fuer Informatik, (Oct 1998).
-  - R.P. Brent and P. Zimmermann, "Modern Computer Arithmetic",
-    Version 0.2, p. 26, (June 2008).
 Returns:
     u[0..v.length] is the remainder. u[v.length..$] is corrupted.
-    scratch is temporary storage space, must be at least as long as quotient.
+
+    Implements algorithm 1.8 from MCA.
+    This algorithm has an annoying special case. After the first recursion, the
+    highest bit of the quotient may be set. This means that in the second
+    recursive call, the 'in' contract would be violated. (This happens only
+    when the top quarter of u is equal to the top half of v. A base 10
+    equivalent example of this situation is 5517/56; the first step gives
+    55/5 = 11). To maintain the in contract, we pad a zero to the top of both
+    u and the quotient. 'mayOverflow' indicates that that the special case
+    has occurred.
+    (In MCA, a different strategy is used: the in contract is weakened, and
+    schoolbookDivMod is more general: it allows the high bit of u to be set).
+    See also:
+    - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
+      Max-Planck Institute fuer Informatik, (Oct 1998).
 */
 void recursiveDivMod(BigDigit[] quotient, BigDigit[] u, const(BigDigit)[] v,
-                     BigDigit[] scratch)
+                     BigDigit[] scratch, bool mayOverflow = false)
+in
 {
-    assert(quotient.length == u.length - v.length);
-    // Use base-case division to make it symmetric
-    assert(u.length <= 2 * v.length, "Asymmetric division");
+    // v must be normalized
     assert(v.length > 1);
-    assert(u.length >= v.length);
     assert((v[$ - 1] & 0x8000_0000) != 0);
-    assert(scratch.length >= quotient.length);
+    assert(!(u[$ - 1] & 0x8000_0000));
+    assert(quotient.length == u.length - v.length);
+    if (mayOverflow)
+    {
+        assert(u[$-1] == 0);
+        assert(u[$-2] & 0x8000_0000);
+    }
 
-    if(quotient.length < FASTDIVLIMIT)
+    // Must be symmetric. Use block schoolbook division if not.
+    assert((mayOverflow ? u.length-1 : u.length) <= 2 * v.length);
+    assert((mayOverflow ? u.length-1 : u.length) >= v.length);
+    assert(scratch.length >= quotient.length + 1);
+}
+body
+{
+    if (quotient.length < FASTDIVLIMIT)
     {
         return schoolbookDivMod(quotient, u, v);
     }
-    auto k = quotient.length >> 1;
-    auto h = k + v.length;
 
-    recursiveDivMod(quotient[k .. $], u[2 * k .. $], v[k .. $], scratch);
-    adjustRemainder(quotient[k .. $], u[k .. h], v, k,
-            scratch[0 .. quotient.length]);
-    recursiveDivMod(quotient[0 .. k], u[k .. h], v[k .. $], scratch);
-    adjustRemainder(quotient[0 .. k], u[0 .. v.length], v, k,
+    // Split quotient into two halves, but keep padding in the top half
+    auto k = (mayOverflow ?  quotient.length - 1 : quotient.length) >> 1;
+
+    // RECURSION 1: Calculate the high half of the quotient
+
+    // Note that if u and quotient were padded, they remain padded during
+    // this call, so in contract is satisfied.
+    recursiveDivMod(quotient[k .. $], u[2 * k .. $], v[k .. $],
+        scratch, mayOverflow);
+
+    // quotient[k..$] is our guess at the high quotient.
+    // u[2*k.. 2.*k + v.length - k = k + v.length] is the high part of the
+    // first remainder. u[0..2*k] is the low part.
+
+    // Calculate the full first remainder to be
+    //    remainder - highQuotient * lowDivisor
+    // reducing highQuotient until the remainder is positive.
+    // The low part of the remainder, u[0..k], cannot be altered by this.
+
+    adjustRemainder(quotient[k .. $], u[k .. k + v.length], v, k,
+            scratch[0 .. quotient.length], mayOverflow);
+
+    // RECURSION 2: Calculate the low half of the quotient
+    // The full first remainder is now in u[0..k + v.length].
+
+    if (u[k + v.length - 1] & 0x8000_0000)
+    {
+        // Special case. The high quotient is 0x1_00...000 or 0x1_00...001.
+        // This means we need an extra quotient word for the next recursion.
+        // We need to restore the invariant for the recursive calls.
+        // We do this by padding both u and quotient. Extending u is trivial,
+        // because the higher words will not be used again. But for the
+        // quotient, we're clobbering the low word of the high quotient,
+        // so we need save it, and add it back in after the recursive call.
+
+        auto clobberedQuotient = quotient[k];
+        u[k+v.length] = 0;
+
+        recursiveDivMod(quotient[0 .. k+1], u[k .. k + v.length+1],
+            v[k .. $], scratch, true);
+        adjustRemainder(quotient[0 .. k+1], u[0 .. v.length], v, k,
+            scratch[0 .. 2 * k+1], true);
+
+        // Now add the quotient word that got clobbered earlier.
+        multibyteIncrementAssign!('+')(quotient[k..$], clobberedQuotient);
+    }
+    else
+    {
+        // The special case has NOT happened.
+        recursiveDivMod(quotient[0 .. k], u[k .. k + v.length], v[k .. $],
+            scratch, false);
+
+        // high remainder is in u[k..k+(v.length-k)] == u[k .. v.length]
+
+        adjustRemainder(quotient[0 .. k], u[0 .. v.length], v, k,
             scratch[0 .. 2 * k]);
+    }
 }
 
 // rem -= quot * v[0..k].
@@ -1996,11 +2070,15 @@ void recursiveDivMod(BigDigit[] quotient, BigDigit[] u, const(BigDigit)[] v,
 // Needs (quot.length * k) scratch space to store the result of the multiply.
 void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         ptrdiff_t k,
-        BigDigit[] scratch)
+        BigDigit[] scratch, bool mayOverflow = false)
 {
     assert(rem.length == v.length);
     mulInternal(scratch, quot, v[0 .. k]);
-    uint carry = subAssignSimple(rem, scratch);
+    uint carry = 0;
+    if (mayOverflow)
+        carry = scratch[$-1] + subAssignSimple(rem, scratch[0..$-1]);
+    else
+        carry = subAssignSimple(rem, scratch);
     while(carry)
     {
         multibyteIncrementAssign!('-')(quot, 1); // quot--
@@ -2015,7 +2093,7 @@ void blockDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
     assert(v.length > 1);
     assert(u.length >= v.length);
     assert((v[$-1] & 0x8000_0000)!=0);
-    BigDigit [] scratch = new BigDigit[v.length];
+    BigDigit [] scratch = new BigDigit[v.length + 1];
 
     // Perform block schoolbook division, with 'v.length' blocks.
     auto m = u.length - v.length;

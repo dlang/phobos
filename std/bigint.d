@@ -494,3 +494,24 @@ unittest {
     assert( b == long.max /(ulong.max - 5));
     assert(BigInt(1) - 1 == 0);
 }
+
+unittest // Recursive division, bug 5568
+{
+    enum Z = 4843;
+    BigInt m = (BigInt(1) << (Z*8) ) - 1;
+    m -= (BigInt(1) << (Z*6)) - 1;
+    BigInt oldm = m;
+
+    BigInt a = (BigInt(1) << (Z*4) )-1;
+    BigInt b = m % a;
+    m /= a;
+    m *= a;
+    assert( m + b == oldm);
+
+    m = (BigInt(1) << (4846 + 4843) ) - 1;
+    a = (BigInt(1) << 4846 ) - 1;
+    b = (BigInt(1) << (4846*2 + 4843)) - 1;
+    BigInt c = (BigInt(1) << (4846*2 + 4843*2)) - 1;
+    BigInt w =  c - b + a;
+    assert(w % m == 0);
+}
