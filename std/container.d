@@ -4106,12 +4106,9 @@ struct RBNode(V)
  * inserted after all existing duplicate elements.
  */
 class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
-if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
+    if(is(typeof(binaryFun!less(T.init, T.init))))
 {
-    static if(is(typeof(less) == string))
-        alias binaryFun!(less) _less;
-    else
-        alias less _less;
+    alias binaryFun!less _less;
 
     // BUG: this must come first in the struct due to issue 2810
 
@@ -4217,13 +4214,6 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
             }
             return false;
         }
-
-        private static RedBlackTree create(Elem[] elems...)
-        {
-            auto rbt = new RedBlackTree();
-            rbt.stableInsert(elems);
-            return rbt;
-        }
     }
     else
     {
@@ -4328,11 +4318,17 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1, 2, 3, 4, 5);
+        auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto r = ts[];
-        assert(std.algorithm.equal(r, cast(T[])[1, 2, 3, 4, 5]));
-        assert(r.front == 1);
+
+        static if(less == "a < b")
+            auto vals = [1, 2, 3, 4, 5];
+        else
+            auto vals = [5, 4, 3, 2, 1];
+
+        assert(std.algorithm.equal(r, vals));
+        assert(r.front == vals.front);
         assert(r.back != r.front);
         auto oldfront = r.front;
         auto oldback = r.back;
@@ -4407,22 +4403,21 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
      *
      * Complexity: $(BIGOH n)
      */
-    RedBlackTree dup()
+    @property RedBlackTree dup()
     {
         return new RedBlackTree(_end.dup(), _length);
     }
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1, 2, 3, 4, 5);
+        auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
-        auto ts2 = ts.dup();
+        auto ts2 = ts.dup;
         assert(ts2.length == 5);
         assert(std.algorithm.equal(ts[], ts2[]));
         ts2.insert(cast(Elem)6);
         assert(!std.algorithm.equal(ts[], ts2[]));
-        assert(ts.length == 5);
-        assert(ts2.length == 6);
+        assert(ts.length == 5 && ts2.length == 6);
     }
 
     /**
@@ -4455,11 +4450,12 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
         return _end.prev.value;
     }
 
-    /**
-     * Check to see if an element exists in the container
-     *
-     * Complexity: $(BIGOH log(n))
-     */
+    /++
+        $(D in) operator. Check to see if the given element exists in the
+        container.
+
+       Complexity: $(BIGOH log(n))
+     +/
     bool opBinaryRight(string op)(Elem e) if (op == "in")
     {
         return _find(e) !is null;
@@ -4467,7 +4463,7 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1, 2, 3, 4, 5);
+        auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(cast(Elem)3 in ts);
         assert(cast(Elem)6 !in ts);
     }
@@ -4485,11 +4481,10 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
+        auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         ts.clear();
-        assert(ts.empty);
-        assert(ts.length == 0);
+        assert(ts.empty && ts.length == 0);
     }
 
     /**
@@ -4544,13 +4539,33 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
-        assert(ts.length == 5);
-        assert(ts.stableInsert(cast(Elem[])[6, 7, 8, 9, 10]) == 5);
-        assert(ts.length == 10);
-        assert(ts.stableInsert(cast(Elem)11) == 1);
-        assert(ts.length == 11);
-        assert(ts.arrayEqual([1,2,3,4,5,6,7,8,9,10,11]));
+        auto ts = new RedBlackTree(2,1,3,4,5,2,5);
+        static if(allowDuplicates)
+        {
+            assert(ts.length == 7);
+            assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 6);
+            assert(ts.length == 13);
+            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 14);
+            assert(ts.stableInsert(cast(Elem)7) == 1 && ts.length == 15);
+
+            static if(less == "a < b")
+                assert(ts.arrayEqual([1,2,2,3,4,5,5,6,7,7,8,8,9,10,11]));
+            else
+                assert(ts.arrayEqual([11,10,9,8,8,7,7,6,5,5,4,3,2,2,1]));
+        }
+        else
+        {
+            assert(ts.length == 5);
+            assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 5);
+            assert(ts.length == 10);
+            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 11);
+            assert(ts.stableInsert(cast(Elem)7) == 0 && ts.length == 11);
+
+            static if(less == "a < b")
+                assert(ts.arrayEqual([1,2,3,4,5,6,7,8,9,10,11]));
+            else
+                assert(ts.arrayEqual([11,10,9,8,7,6,5,4,3,2,1]));
+        }
     }
 
     /**
@@ -4572,7 +4587,7 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
+        auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         auto x = ts.removeAny();
         assert(ts.length == 4);
@@ -4612,14 +4627,18 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
+        auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         ts.removeBack();
         assert(ts.length == 4);
-        assert(ts.arrayEqual([1,2,3,4]));
+
+        static if(less == "a < b")
+            assert(ts.arrayEqual([1,2,3,4]));
+        else
+            assert(ts.arrayEqual([2,3,4,5]));
+
         ts.removeFront();
-        assert(ts.length == 3);
-        assert(ts.arrayEqual([2,3,4]));
+        assert(ts.arrayEqual([2,3,4]) && ts.length == 3);
     }
 
     /++
@@ -4647,7 +4666,7 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
+        auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         auto r = ts[];
         r.popFront();
@@ -4656,7 +4675,11 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
         auto r2 = ts.remove(r);
         assert(ts.length == 2);
         assert(ts.arrayEqual([1,5]));
-        assert(std.algorithm.equal(r2, [5]));
+
+        static if(less == "a < b")
+            assert(std.algorithm.equal(r2, [5]));
+        else
+            assert(std.algorithm.equal(r2, [1]));
     }
 
     /++
@@ -4670,45 +4693,64 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
      +/
     Range remove(Take!Range r)
     {
-        auto e = _end;
-        immutable len = walkLength(r);
-        auto o = r.original;
+        auto b = r.original._begin;
 
-        for(size_t i = 0; i < len; ++i)
+        while(!r.empty)
+            r.popFront(); // move take range to its last element
+
+        auto e = r.original._begin;
+
+        while(b != e)
         {
-            auto b = o._begin;
-            o.popFront();
-            e = b.remove(_end);
+            b = b.remove(_end);
+            --_length;
         }
-
-        _length -= len;
-
-        version(RBDoChecks)
-            check();
 
         return Range(e, _end);
     }
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1,2,3,4,5);
-        assert(ts.length == 5);
+        auto ts = new RedBlackTree(1,2,3,4,5);
         auto r = ts[];
         r.popFront();
         assert(ts.length == 5);
-        auto r2 = ts.remove(take(r, 2));
-        assert(ts.length == 3);
-        assert(ts.arrayEqual([1,4,5]));
-        assert(std.algorithm.equal(r2, [4,5]));
+        auto r2 = ts.remove(take(r, 0));
+
+        static if(less == "a < b")
+        {
+            assert(std.algorithm.equal(r2, [2,3,4,5]));
+            auto r3 = ts.remove(take(r, 2));
+            assert(ts.arrayEqual([1,4,5]) && ts.length == 3);
+            assert(std.algorithm.equal(r3, [4,5]));
+        }
+        else
+        {
+            assert(std.algorithm.equal(r2, [4,3,2,1]));
+            auto r3 = ts.remove(take(r, 2));
+            assert(ts.arrayEqual([5,2,1]) && ts.length == 3);
+            assert(std.algorithm.equal(r3, [2,1]));
+        }
     }
 
     /++
-       Removes all elements from the container that are equal to the given
-       values according to the less comparator.
+       Removes elements from the container that are equal to the given values
+       according to the less comparator. One element is removed for each value
+       given which is in the container. If $(D allowDuplicates) is true,
+       duplicates are removed only if duplicate values are given.
 
        Returns: The number of elements removed.
 
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
+
+        Examples:
+--------------------
+auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
+rbt.removeKey(1, 4, 7);
+assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+rbt.removeKey(1, 1, 0);
+assert(std.algorithm.equal(rbt[], [5]));
+--------------------
       +/
     size_t removeKey(U)(U[] elems...)
         if(isImplicitlyConvertible!(U, Elem))
@@ -4716,7 +4758,14 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
         immutable lenBefore = length;
 
         foreach(e; elems)
-            remove(equalRange(e));
+        {
+            auto beg = _firstGreaterEqual(e);
+            if(beg is _end || _less(e, beg.value))
+                // no values are equal
+                continue;
+            beg.remove(_end);
+            --_length;
+        }
 
         return lenBefore - length;
     }
@@ -4727,33 +4776,49 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
            !is(Stuff == Elem[]))
     {
-        immutable lenBefore = length;
-
         //We use array in case stuff is a Range from this RedBlackTree - either
         //directly or indirectly.
-        foreach(e; array(stuff))
-            remove(equalRange(e));
-
-        return lenBefore - length;
+        return removeKey(array(stuff));
     }
 
     static if(doUnittest) unittest
     {
-        auto rbt = create(5, 4, 3, 2, 1, 7, 6, 19, 45);
-        assert(rbt.length == 9);
+        auto rbt = new RedBlackTree(5, 4, 3, 7, 2, 1, 7, 6, 2, 19, 45);
 
-        assert(rbt.removeKey(cast(Elem)4) == 1);
-        assert(rbt.length == 8);
-        assert(std.algorithm.equal(rbt[], [1,2,3,5,6,7,19,45]));
+        static if(allowDuplicates)
+        {
+            assert(rbt.length == 11);
+            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 10);
+            assert(rbt.arrayEqual([1,2,2,3,5,6,7,7,19,45]) && rbt.length == 10);
 
-        assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
-        assert(rbt.length == 5);
-        assert(std.algorithm.equal(rbt[], [3,5,7,19,45]));
+            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.arrayEqual([2,3,5,7,7,19,45]) && rbt.length == 7);
 
-        assert(rbt.removeKey(cast(Elem)(42)) == 0);
-        assert(rbt.removeKey(take(rbt[], 3)) == 3);
-        assert(rbt.length == 2);
-        assert(std.algorithm.equal(rbt[], [19,45]));
+            assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 7);
+            assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 4);
+
+            static if(less == "a < b")
+                assert(std.algorithm.equal(rbt[], [7,7,19,45]));
+            else
+                assert(std.algorithm.equal(rbt[], [7,5,3,2]));
+        }
+        else
+        {
+            assert(rbt.length == 9);
+            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 8);
+            assert(rbt.arrayEqual([1,2,3,5,6,7,19,45]));
+
+            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.arrayEqual([3,5,7,19,45]) && rbt.length == 5);
+
+            assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 5);
+            assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 2);
+
+            static if(less == "a < b")
+                assert(std.algorithm.equal(rbt[], [19,45]));
+            else
+                assert(std.algorithm.equal(rbt[], [5,3]));
+        }
     }
 
     // find the first node where the value is > e
@@ -4843,13 +4908,23 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
 
     static if(doUnittest) unittest
     {
-        auto ts = create(1, 2, 3, 4, 5);
-        auto r1 = ts.lowerBound(3);
-        assert(std.algorithm.equal(r1, [1,2]));
-        auto r2 = ts.upperBound(3);
-        assert(std.algorithm.equal(r2, [4,5]));
-        auto r3 = ts.equalRange(3);
-        assert(std.algorithm.equal(r3, [3]));
+        auto ts = new RedBlackTree(1, 2, 3, 4, 5);
+        auto rl = ts.lowerBound(3);
+        auto ru = ts.upperBound(3);
+        auto re = ts.equalRange(3);
+
+        static if(less == "a < b")
+        {
+            assert(std.algorithm.equal(rl, [1,2]));
+            assert(std.algorithm.equal(ru, [4,5]));
+        }
+        else
+        {
+            assert(std.algorithm.equal(rl, [5,4]));
+            assert(std.algorithm.equal(ru, [2,1]));
+        }
+
+        assert(std.algorithm.equal(re, [3]));
     }
 
     version(RBDoChecks)
@@ -4966,6 +5041,16 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
         _setup();
     }
 
+    /++
+       Constructor.  Pass in an array of elements, or individual elements to
+       initialize the tree with.
+     +/
+    this(Elem[] elems...)
+    {
+        _setup();
+        stableInsert(elems);
+    }
+
     private this(Node end, size_t length)
     {
         _end = end;
@@ -4973,49 +5058,92 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
     }
 }
 
+//Verify Example for removeKey.
 unittest
 {
-    auto rt1 = new RedBlackTree!uint();
-    auto rt2 = new RedBlackTree!int();
-    auto rt3 = new RedBlackTree!ushort();
-    auto rt4 = new RedBlackTree!short();
-    auto rt5 = new RedBlackTree!ubyte();
-    auto rt6 = new RedBlackTree!byte();
+    auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
+    rbt.removeKey(1, 4, 7);
+    assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+    rbt.removeKey(1, 1, 0);
+    assert(std.algorithm.equal(rbt[], [5]));
+}
+
+unittest
+{
+    void test(T)()
+    {
+        auto rt1 = new RedBlackTree!(T, "a < b", false)();
+        auto rt2 = new RedBlackTree!(T, "a < b", true)();
+        auto rt3 = new RedBlackTree!(T, "a > b", false)();
+        auto rt4 = new RedBlackTree!(T, "a > b", true)();
+    }
+
+    test!long();
+    test!ulong();
+    test!int();
+    test!uint();
+    test!short();
+    test!ushort();
+    test!byte();
+    test!byte();
 }
 
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of
     values.
+
+        Examples:
+--------------------
+auto rbt1 = redBlackTree(0, 1, 5, 7);
+auto rbt2 = redBlackTree!string("hello", "world");
+auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
+auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
+auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
+--------------------
   +/
 auto redBlackTree(E)(E[] elems...)
 {
-    auto rbt = new RedBlackTree!E();
-    rbt.stableInsert(elems);
-    return rbt;
+    return new RedBlackTree!E(elems);
 }
 
 /++ Ditto +/
 auto redBlackTree(bool allowDuplicates, E)(E[] elems...)
 {
-    auto rbt = new RedBlackTree!(E, "a < b", allowDuplicates)();
-    rbt.stableInsert(elems);
-    return rbt;
+    return new RedBlackTree!(E, "a < b", allowDuplicates)(elems);
 }
 
 /++ Ditto +/
 auto redBlackTree(alias less, E)(E[] elems...)
 {
-    auto rbt = new RedBlackTree!(E, less)();
-    rbt.stableInsert(elems);
-    return rbt;
+    return new RedBlackTree!(E, less)(elems);
 }
 
 /++ Ditto +/
 auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
+    if(is(typeof(binaryFun!less(E.init, E.init))))
 {
-    auto rbt = new RedBlackTree!(E, less, allowDuplicates)();
-    rbt.stableInsert(elems);
-    return rbt;
+    //We shouldn't need to instantiate less here, but for some reason,
+    //dmd can't handle it if we don't (even though the template which
+    //takes less but not allowDuplicates works just fine).
+    return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
+}
+
+//Verify Examples.
+unittest
+{
+    auto rbt1 = redBlackTree(0, 1, 5, 7);
+    auto rbt2 = redBlackTree!string("hello", "world");
+    auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
+    auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
+    auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
+}
+
+//Combinations not in examples.
+unittest
+{
+    auto rbt1 = redBlackTree!(true, string)("hello", "hello");
+    auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
+    auto rbt3 = redBlackTree!("a > b", true, string)("hello", "world");
 }
 
 unittest
