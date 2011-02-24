@@ -1997,7 +1997,7 @@ in
     // Must be symmetric. Use block schoolbook division if not.
     assert((mayOverflow ? u.length-1 : u.length) <= 2 * v.length);
     assert((mayOverflow ? u.length-1 : u.length) >= v.length);
-    assert(scratch.length >= quotient.length + 1);
+    assert(scratch.length >= quotient.length + (mayOverflow ? 0 : 1));
 }
 body
 {
@@ -2093,14 +2093,27 @@ void blockDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
     assert(v.length > 1);
     assert(u.length >= v.length);
     assert((v[$-1] & 0x8000_0000)!=0);
+    assert((u[$-1] & 0x8000_0000)==0);
     BigDigit [] scratch = new BigDigit[v.length + 1];
 
     // Perform block schoolbook division, with 'v.length' blocks.
     auto m = u.length - v.length;
     while (m > v.length)
     {
-        recursiveDivMod(quotient[m-v.length..m],
-            u[m - v.length..m + v.length], v, scratch);
+        bool mayOverflow = (u[m + v.length -1 ] & 0x8000_0000)!=0;
+        BigDigit saveq;
+        if (mayOverflow)
+        {
+            u[m + v.length] = 0;
+            saveq = quotient[m];
+        }
+        recursiveDivMod(quotient[m-v.length..m + (mayOverflow? 1: 0)],
+            u[m - v.length..m + v.length + (mayOverflow? 1: 0)], v, scratch, mayOverflow);
+        if (mayOverflow)
+        {
+            assert(quotient[m] == 0);
+            quotient[m] = saveq;
+        }
         m -= v.length;
     }
     recursiveDivMod(quotient[0..m], u[0..m + v.length], v, scratch);
