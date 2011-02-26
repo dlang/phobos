@@ -28496,7 +28496,7 @@ public:
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             The name of the time zone per the TZ Database. This is the name used to
@@ -30587,7 +30587,7 @@ private:
 
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
 
     /++
@@ -31119,7 +31119,7 @@ else version(Windows)
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(BLUE This function is Posix-Only.)
@@ -32189,7 +32189,7 @@ unittest
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     version(Windows) {}
     else
@@ -32982,76 +32982,61 @@ unittest
     }
 }
 
+/++
+Function for starting to a stop watch time when the function is called
+and stopping it when its return value goes out of scope and is
+destroyed.
 
-version(D_Ddoc)
-{
-    /++
-        Function for starting to a stop watch time when the function is called
-        and stopping it when its return value goes out of scope and is destroyed.
+When the value that is returned by this function is destroyed, $(D
+func) will run. $(D func) is a unary function that takes a $(D
+TickDuration).
 
-        When the value that is returned by this function is destroyed,
-        $(D func) will run. $(D func) is a unary function that takes a
-        $(D TickDuration).
-
-        Examples:
+Examples:
 --------------------
 writeln("benchmark start!");
 {
-auto mt = measureTime!((a){assert(a.seconds);});
-doSomething();
+    auto mt = measureTime!((a){assert(a.seconds);});
+    doSomething();
 }
 writeln("benchmark end!");
 --------------------
-      +/
-    auto measureTime(alias func)();
-}
-else
++/
+@safe auto measureTime(alias func)()
+if(isSafe!func)
 {
-    @safe
+    struct Result
     {
-        auto measureTime(alias func)()
-            if(isSafe!func)
+        private StopWatch sw = void;
+        this(StopWatch.AutoStart as)
         {
-            struct TMP
-            {
-                private StopWatch sw = void;
-                this(StopWatch.AutoStart as)
-                {
-                    sw = StopWatch(as);
-                }
-                ~this()
-                {
-                    unaryFun!(func)(sw.peek());
-                }
-            }
-            return TMP(autoStart);
+            sw = StopWatch(as);
+        }
+        ~this()
+        {
+            unaryFun!(func)(sw.peek());
         }
     }
-
-    @system
-    {
-        auto measureTime(alias func)()
-            if (!isSafe!func)
-        {
-            struct TMP
-            {
-                private StopWatch sw = void;
-                this(AutoStart as)
-                {
-                    sw = StopWatch(as);
-                }
-                ~this()
-                {
-                    unaryFun!(func)(sw.peek());
-                }
-            }
-            return TMP(autoStart);
-        }
-    }
+    return Result(autoStart);
 }
 
-@system
-unittest
+@system auto measureTime(alias func)() if (!isSafe!func)
+{
+    struct TMP
+    {
+        private StopWatch sw = void;
+        this(AutoStart as)
+        {
+            sw = StopWatch(as);
+        }
+        ~this()
+        {
+            unaryFun!(func)(sw.peek());
+        }
+    }
+    return TMP(autoStart);
+}
+
+@system unittest
 {
     version(testStdDateTime)
     {

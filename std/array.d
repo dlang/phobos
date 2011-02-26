@@ -54,8 +54,7 @@ if (isIterable!Range && !isNarrowString!Range)
             static if (is(typeof(e.opAssign(e))))
             {
                 // this should be in-place construction
-                auto voidArr = (cast(void*) (result.ptr + i))[0..E.sizeof];
-                emplace!E(voidArr, e);
+                emplace!E(result.ptr + i, e);
             }
             else
             {

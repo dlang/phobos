@@ -3048,7 +3048,6 @@ version (none)
         assert(to!string(cr) == to!string(creal.nan));
         assert(feq(cr, creal.nan));
     }
-
 }
 
 /* **************************************************************
@@ -3956,7 +3955,8 @@ template octal(alias s) if (isIntegral!(typeof(s))) {
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
         // ensure that you get the right types, even with embedded underscores
         auto w = octal!"100_000_000_000";
         static assert(!is(typeof(w) == int));
@@ -4022,114 +4022,86 @@ T toImpl(T, S)(S src) if (is(T == struct) && is(typeof(T(src))))
 // Bugzilla 3961
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
     struct Int { int x; }
     Int i = to!Int(1);
 }
 
 // emplace
 /**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D Args). The $(D chunk) must be as least as large as $(D
-T) needs and should have an alignment multiple of $(D T)'s alignment.
+Given a pointer $(D chunk) to uninitialized memory (but already typed
+as $(D T)), constructs an object of non-$(D class) type $(D T) at that
+address.
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
 
-Returns: A pointer to the newly constructed object.
+Returns: A pointer to the newly constructed object (which is the same
+as $(D chunk)).
  */
-T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
+T* emplace(T)(T* chunk)
+if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof,
-            new ConvException("emplace: target size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    version (OSX)       // for some reason, breaks on other platforms
-        enforce(a % T.alignof == 0, new ConvException("misalignment"));
-    auto result = cast(typeof(return)) chunk.ptr;
+    auto result = cast(typeof(return)) chunk;
+    static T i;
+    memcpy(result, &i, T.sizeof);
+    return result;
+}
+
+/**
+Given a pointer $(D chunk) to uninitialized memory (but already typed
+as a non-class type $(D T)), constructs an object of type $(D T) at
+that address from arguments $(D args).
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object (which is the same
+as $(D chunk)).
+ */
+T* emplace(T, Args...)(T* chunk, Args args)
+if (!is(T == class) && !is(T == struct) && Args.length == 1)
+{
+    *chunk = args[0];
+    return chunk;
+}
+
+// Specialization for struct
+T* emplace(T, Args...)(T* chunk, Args args)
+if (is(T == struct))
+{
+    auto result = cast(typeof(return)) chunk;
 
     void initialize()
     {
         static T i;
-        memcpy(chunk.ptr, &i, T.sizeof);
+        memcpy(chunk, &i, T.sizeof);
     }
 
-    static if (Args.length == 0)
+    static if (is(typeof(result.__ctor(args))))
     {
-        // Just initialize the thing
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
         initialize();
+        result.__ctor(args);
     }
-    else static if (is(T == struct))
+    else static if (is(typeof(T(args))))
     {
-        static if (is(typeof(result.__ctor(args))))
-        {
-            // T defines a genuine constructor accepting args
-            // Go the classic route: write .init first, then call ctor
-            initialize();
-            result.__ctor(args);
-        }
-        else static if (is(typeof(T(args))))
-        {
-            // Struct without constructor that has one matching field for
-            // each argument
-            initialize();
-            *result = T(args);
-        }
-        else static if (Args.length == 1 && is(Args[0] : T))
-        {
-            initialize();
-            *result = args[0];
-        }
+        // Struct without constructor that has one matching field for
+        // each argument
+        *result = T(args);
     }
-    else static if (Args.length == 1 && is(Args[0] : T))
+    else //static if (Args.length == 1 && is(Args[0] : T))
     {
-        // Primitive type. Assignment is fine for initialization.
+        static assert(Args.length == 1);
+        //static assert(0, T.stringof ~ " " ~ Args.stringof);
+        // initialize();
         *result = args[0];
-    }
-    else
-    {
-        static assert(false, "Don't know how to initialize an object of type "
-                ~ T.stringof ~ " with arguments " ~ Args.stringof);
     }
     return result;
 }
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a;
-    int b = 42;
-    assert(*emplace!int((cast(void*) &a)[0 .. int.sizeof], b) == 42);
-
-    struct S
-    {
-        double x = 5, y = 6;
-        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
-    }
-
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(s1, s2) == s2);
-    assert(*emplace!S(s1, 44, 45) == S(44, 45));
-}
-
-// emplace
-/**
-Similar to $(D emplace) above, except it receives a pointer to an
-uninitialized object of type $(D T). This overload is useful for
-e.g. initializing member variables or stack variables defined with $(D
-T variable = void).
-
-Returns: A pointer to the newly constructed object.
- */
-T* emplace(T, Args...)(T* chunk, Args args) if (!is(T == class))
-{
-    // Since we're treating the memory pointed to by chunk as a raw memory
-    // block, we need to cast away any qualifiers.
-    return cast(T*) emplace!(Unqual!T)((cast(void*) chunk)[0 .. T.sizeof], args);
-}
-
-// emplace
 /**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
@@ -4170,6 +4142,60 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     return result;
 }
 
+/**
+Given a raw memory area $(D chunk), constructs an object of non-$(D
+class) type $(D T) at that address. The constructor is passed the
+arguments $(D args), if any. The $(D chunk) must be as least as large
+as $(D T) needs and should have an alignment multiple of $(D T)'s
+alignment.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(void[] chunk, Args args)
+if (!is(T == class))
+{
+    enforce(chunk.length >= T.sizeof,
+           new ConvException("emplace: chunk size too small"));
+    auto a = cast(size_t) chunk.ptr;
+    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
+    auto result = cast(typeof(return)) chunk.ptr;
+    return emplace(result, args);
+}
+
+unittest
+{
+    struct S { int a, b; }
+    auto p = new void[S.sizeof];
+    S s;
+    s.a = 42;
+    s.b = 43;
+    auto s1 = emplace!S(p, s);
+    assert(s1.a == 42 && s1.b == 43);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
+    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -4200,7 +4226,6 @@ unittest
     }
 
     Foo foo;
-    auto voidArr = (cast(void*) &foo)[0..Foo.sizeof];
-    emplace!Foo(voidArr, 2U);
+    emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
 }
