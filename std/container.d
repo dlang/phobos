@@ -6,7 +6,6 @@ Defines generic _containers.
 Macros:
 WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
-LEADINGROW = <tr style=leadingrow bgcolor=#E4E9EF><td colspan=3><b><em>$0</em></b></td></tr>
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
@@ -1233,7 +1232,7 @@ $(D r) and $(D m) is the length of $(D stuff).
      */
     size_t insertAfter(Stuff)(Take!Range r, Stuff stuff)
     {
-        auto orig = r.original;
+        auto orig = r.source;
         if (!orig._head)
         {
             // Inserting after a null range counts as insertion to the
@@ -1286,7 +1285,7 @@ Complexity: $(BIGOH n)
      */
     Range linearRemove(Take!Range r)
     {
-        auto orig = r.original;
+        auto orig = r.source;
         // We have something to remove here
         if (orig._head == _root)
         {
@@ -1570,9 +1569,7 @@ struct Array(T) if (!is(T : const(bool)))
                 reserve(1 + capacity * 3 / 2);
             }
             assert(capacity > length && _payload.ptr);
-            emplace!T((cast(void*) (_payload.ptr + _payload.length))
-                    [0 .. T.sizeof],
-                    stuff);
+            emplace(_payload.ptr + _payload.length, stuff);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
         }
@@ -1604,17 +1601,17 @@ struct Array(T) if (!is(T : const(bool)))
 
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
-        auto p = malloc(T.sizeof * values.length);
+        auto p = cast(T*) malloc(T.sizeof * values.length);
         if (hasIndirections!T && p)
         {
             GC.addRange(p, T.sizeof * values.length);
         }
         foreach (i, e; values)
         {
-            emplace!T(p[i * T.sizeof .. (i + 1) * T.sizeof], e);
-            assert((cast(T*) p)[i] == e);
+            emplace(p + i, e);
+            assert(p[i] == e);
         }
-        _data.RefCounted.initialize((cast(T*) p)[0 .. values.length]);
+        _data.RefCounted.initialize(p[0 .. values.length]);
     }
 
 /**
@@ -2088,8 +2085,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         memmove(_data._payload.ptr + r._a + 1,
                 _data._payload.ptr + r._a,
                 T.sizeof * (length - r._a));
-        emplace!T((cast(void*) (_data._payload.ptr + r._a))[0 .. T.sizeof],
-                stuff);
+        emplace(_data._payload.ptr + r._a, stuff);
         _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
         return 1;
     }
@@ -2113,7 +2109,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             foreach (p; _data._payload.ptr + r._a ..
                     _data._payload.ptr + r._a + extra)
             {
-                emplace!T((cast(void*) p)[0 .. T.sizeof], stuff.front);
+                emplace(p, stuff.front);
                 stuff.popFront();
             }
             _data._payload =

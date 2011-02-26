@@ -496,7 +496,7 @@ struct FormatSpec(Char)
        $(D ubyte.max). ($(D 0) means not used).
     */
     ubyte index;
-    version(D_Ddoc) {
+    version(StdDdoc) {
         /**
          The format specifier contained a $(D '-') ($(D printf)
          compatibility).

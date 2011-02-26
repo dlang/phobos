@@ -2284,7 +2284,7 @@ if (!is(T == class))
             {
                 GC.addRange(p.ptr, sz);
             }
-            emplace!T(p[0 .. T.sizeof], args);
+            emplace(cast(T*) p.ptr, args);
             _store = cast(typeof(_store)) p.ptr;
             _store._count = 1;
             debug(RefCounted) if (debugging) writeln(typeof(this).stringof,

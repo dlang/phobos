@@ -600,7 +600,7 @@ unittest
  * $(RED Scheduled for deprecation. Please use getTimesWin (for Windows)
  *       or getTimesPosix (for Posix) instead.)
  */
-version(D_Ddoc)
+version(StdDdoc)
 {
     void getTimes(in char[] name,
             out d_time ftc,
@@ -667,7 +667,7 @@ else
     static assert(0, "Unsupported/Unknown OS");
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(BLUE This function is Windows-Only.)
@@ -876,7 +876,7 @@ else
     static assert(0, "Unsupported/Unknown OS");
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
      $(RED Scheduled for deprecation. Please use
@@ -910,7 +910,7 @@ else
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(RED Scheduled for deprecation. Please use timeLastModified instead.)
@@ -1137,7 +1137,7 @@ uint getAttributes(in char[] name)
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         If the given file is a symbolic link, then this returns the attributes of the
@@ -1723,7 +1723,7 @@ unittest
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
@@ -2496,7 +2496,7 @@ version(Posix) void copy(in char[] from, in char[] to)
     cenforce(utime(toz, &utim) != -1, from);
 }
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(RED Scheduled for deprecation. Please use the version which takes
@@ -2552,7 +2552,7 @@ else
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         Set access/modified times of file $(D name).
