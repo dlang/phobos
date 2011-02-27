@@ -4032,7 +4032,11 @@ unittest
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
 as $(D T)), constructs an object of non-$(D class) type $(D T) at that
+<<<<<<< HEAD
 address.
+=======
+address. 
+>>>>>>> 78b3f24604a26606e5d599e08c98d3849b806e68
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).

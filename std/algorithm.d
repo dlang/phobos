@@ -1587,7 +1587,8 @@ assert(equal(splitter(a, 0), [ [], [1] ]));
 ----
 */
 auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == Separator.init)) && hasSlicing!Range)
+if (is(typeof(ElementType!Range.init == Separator.init))
+        && (hasSlicing!Range || isNarrowString!Range))
 {
     struct Result
     {

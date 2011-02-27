@@ -210,21 +210,12 @@ The semantics of an input range (not checkable during compilation) are
 assumed to be the following ($(D r) is an object of type $(D R)):
 
 $(UL $(LI $(D r.empty) returns $(D false) iff there is more data
-<<<<<<< HEAD
-available in the range.)  $(LI $(D r.front) returns the current element
-in the range. It may return by value or by reference. Calling $(D
-r.front) is allowed only if calling $(D r.empty) has, or would have,
-returned $(D false).) $(LI $(D r.popFront) advances to the next element in
-the range. Calling $(D r.popFront) is allowed only if calling $(D r.empty)
-has, or would have, returned $(D false).))
-=======
 available in the range.)  $(LI $(D r.front) returns the current
 element in the range. It may return by value or by reference. Calling
 $(D r.front) is allowed only if calling $(D r.empty) has, or would
-have, returned $(D false).) $(LI $(D r.popFront) advances to the
-popFront element in the range. Calling $(D r.popFront) is allowed only
-if calling $(D r.empty) has, or would have, returned $(D false).))
->>>>>>> One pass through std.range and friends
+have, returned $(D false).) $(LI $(D r.popFront) advances to the next
+element in the range. Calling $(D r.popFront) is allowed only if
+calling $(D r.empty) has, or would have, returned $(D false).))
  */
 template isInputRange(R)
 {
@@ -839,7 +830,7 @@ static assert(isInputRange!(typeof(s)));
  */
 template hasSlicing(Range)
 {
-    enum bool hasSlicing = is(typeof(
+    enum bool hasSlicing = !isNarrowString!Range && is(typeof(
     {
         Range r;
         auto s = r[1 .. 2];
@@ -854,6 +845,7 @@ unittest
     static assert(!hasSlicing!(A));
     struct B { int[] opSlice(uint, uint); }
     static assert(hasSlicing!(B));
+    static assert(!hasSlicing!string);
 }
 
 /**
@@ -1146,7 +1138,6 @@ if (isInputRange!(Unqual!Range))
                         slack = 0;
                     }
                     if (!slack) return;
-
                     static if (isRandomAccessRange!R && hasSlicing!R)
                     {
                         source = source[0 .. source.length - slack];
@@ -1477,7 +1468,6 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             {
                 alias RvalueElementType ElementType;
             }
-
             static if (allSameType && allSatisfy!(hasLvalueElements, R))
             {
                 static ref RvalueElementType fixRef(ref RvalueElementType val)
@@ -2034,13 +2024,6 @@ unittest
     // static assert(is(typeof(radial(immi))));
 }
 
-// Detect whether T can be sliced safely, i.e. whether it
-// a) can be sliced, and b) is not a narrow string.
-private template isSafelySlicable(T)
-{
-    enum isSafelySlicable = hasSlicing!T && !isNarrowString!T;
-}
-
 /**
 Lazily takes only up to $(D n) elements of a range. This is
 particularly useful when using with infinite ranges. If the range
@@ -2056,13 +2039,8 @@ assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
 struct Take(Range)
-<<<<<<< HEAD
-if(isInputRange!(Unqual!Range) && !isSafelySlicable!(Unqual!Range)
-    && !is(Unqual!Range T == Take!T))
-=======
-if (isInputRange!(Unqual!Range) &&
-        (!hasSlicing!(Unqual!Range) || isNarrowString!(Unqual!Range)))
->>>>>>> One pass through std.range and friends
+if (isInputRange!(Unqual!Range)
+        && !(hasSlicing!(Unqual!Range) || is(Range T == Take!T)))
 {
     private alias Unqual!Range R;
 
@@ -2200,40 +2178,17 @@ if (isInputRange!(Unqual!Range) &&
     }
 }
 
-<<<<<<< HEAD
-/// Ditto
-Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
-    && !is(Unqual!R T == Take!T))
-{
-    return Take!(R)(input, n);
-}
-
-// For the case when R can be safely sliced.
-template Take(R)
-if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
-{
-    alias typeof(R[0 .. 1]) Take;
-=======
 // This template simply aliases itself to R and is useful for consistency in
 // generic code.
 template Take(R)
-if (isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
+if (isInputRange!(Unqual!R) && (hasSlicing!(Unqual!R) || is(R T == Take!T)))
 {
     alias R Take;
 }
 
-/// Ditto
-Take!(R) take(R)(R input, size_t n)
-if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-    && !is (R T == Take!T))
-{
-    return Take!R(input, n);
->>>>>>> One pass through std.range and friends
-}
-
-Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
+// take for ranges with slicing (finite or infinite)
+Take!R take(R)(R input, size_t n)
+if (isInputRange!(Unqual!R) && hasSlicing!(Unqual!R))
 {
     static if (hasLength!R)
     {
@@ -2249,29 +2204,18 @@ if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
     }
 }
 
-<<<<<<< HEAD
-// For the case when R is a Take struct
-template Take(R)
-if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
-    && is(Unqual!R T == Take!T))
+// take(take(r, n1), n2)
+Take!(R) take(R)(R input, size_t n)
+if (is(R T == Take!T))
 {
-    alias R Take;
+    return R(input.source, min(n, input._maxAvailable));
 }
 
+// Regular take for input ranges
 Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
-    && is(Unqual!R T == Take!T))
+if (isInputRange!(Unqual!R) && !hasSlicing!(Unqual!R) && !is(R T == Take!T))
 {
-    return R(input.original, min(n, input.maxLength));
-=======
-/// Ditto
-R take(R)(R input, size_t n)
-if ((isInputRange!(Unqual!R)
-                && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-        && is (R T == Take!T))
-{
-    return R(input.source, min(n, input.maxLength));
->>>>>>> One pass through std.range and friends
+    return Take!R(input, n);
 }
 
 unittest
@@ -3362,7 +3306,6 @@ unittest
          foreach(DummyType2; AllDummyRanges) {
              DummyType2 d2;
              auto r = zip(d1, d2);
-
              assert(equal(map!"a[0]"(r), [1,2,3,4,5,6,7,8,9,10]));
              assert(equal(map!"a[1]"(r), [1,2,3,4,5,6,7,8,9,10]));
 
@@ -3374,7 +3317,6 @@ unittest
                      isBidirectionalRange!DummyType2) {
                  static assert(isBidirectionalRange!(typeof(r)));
              }
-
              static if (isRandomAccessRange!DummyType1 &&
                      isRandomAccessRange!DummyType2) {
                  static assert(isRandomAccessRange!(typeof(r)));
@@ -3676,7 +3618,6 @@ unittest {
 }
 
 /**
-<<<<<<< HEAD
 Creates a mathematical sequence given the initial values and a
 recurrence function that computes the next value from the existing
 values. The sequence comes in the form of an infinite forward
@@ -3709,40 +3650,6 @@ foreach (e; take(fib, 10)) { writeln(e); }
 foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
 ----
  */
-=======
-   Creates a mathematical sequence given the initial values and a
-   recurrence function that computes the popFront value from the existing
-   values. The sequence comes in the form of an infinite forward
-   range. The type $(D Recurrence) itself is seldom used directly; most
-   often, recurrences are obtained by calling the function $(D
-   recurrence).
-
-   When calling $(D recurrence), the function that computes the next
-   value is specified as a template argument, and the initial values in
-   the recurrence are passed as regular arguments. For example, in a
-   Fibonacci sequence, there are two initial values (and therefore a
-   state size of 2) because computing the popFront Fibonacci value needs the
-   past two values.
-
-   If the function is passed in string form, the state has name $(D "a")
-   and the zero-based index in the recurrence has name $(D "n"). The
-   given string must return the desired value for $(D a[n]) given $(D a[n
-   - 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
-   state size is dictated by the number of arguments passed to the call
-   to $(D recurrence). The $(D Recurrence) class itself takes care of
-   managing the recurrence's state and shifting it appropriately.
-
-   Example:
-   ----
-   // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
-   auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
-   // print the first 10 Fibonacci numbers
-   foreach (e; take(fib, 10)) { writeln(e); }
-   // print the first 10 factorials
-   foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
-   ----
-*/
->>>>>>> One pass through std.range and friends
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
     StateType[stateSize] _state;
@@ -3801,7 +3708,6 @@ unittest
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
     foreach (e; take(piapprox, 20)) {}
     //writeln(e);
-
     // Thanks to yebblies for this test and the associated fix
     auto r = recurrence!"a[n-2]"(1, 2);
     witness = [1, 2, 1, 2, 1];
@@ -4080,7 +3986,6 @@ auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
     alias CommonType!(B, E, S) Value;
-
     static struct Result
     {
         private Value start, step;
@@ -6080,3 +5985,4 @@ unittest
     }
     assert(ok);
 }
+
