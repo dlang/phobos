@@ -338,7 +338,7 @@ unittest
 --------------------
 auto f = enforce(fopen("data.txt"));
 auto line = readln(f);
-enforce(line.length); // expect a non-empty line
+enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
@@ -475,7 +475,7 @@ unittest
     do.
 
     Params:
-        T          = The exception to catch.
+        T          = The type of exception to catch.
         expression = The expression which may throw an exception.
         result     = The result of the expression if no exception is thrown.
 
@@ -520,7 +520,7 @@ unittest
     do.
 
     Params:
-        T          = The exception to catch.
+        T          = The type of exception to catch.
         expression = The expression which may throw an exception.
 +/
 T collectException(T : Throwable = Exception, E)(lazy E expression)
@@ -547,6 +547,9 @@ unittest
     msg property of that exception. If no exception is thrown, then null is
     returned. $(D_PARAM E) can be $(D void).
 
+    If an exception is thrown but it has an empty message, then
+    $(D emptyExceptionMsg) is returned.
+
     Note that while $(D collectExceptionMsg) $(I can) be used to collect any
     $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
     catch anything that is neither an $(D Exception) nor a type derived from
@@ -555,7 +558,7 @@ unittest
     do.
 
     Params:
-        T          = The exception to catch.
+        T          = The type of exception to catch.
         expression = The expression which may throw an exception.
 
     Examples:
@@ -565,6 +568,9 @@ assert(collectExceptionMsg(throwFunc()) == "My Message.");
 
 void nothrowFunc() {}
 assert(collectExceptionMsg(nothrowFunc()) is null);
+
+void throwEmptyFunc() {throw new Exception("");}
+assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
 --------------------
 +/
 string collectExceptionMsg(T = Exception, E)(lazy E expression)
@@ -576,7 +582,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
         return cast(string)null;
     }
     catch(T e)
-        return e.msg;
+        return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 
 //Verify Examples.
@@ -587,7 +593,16 @@ unittest
 
     void nothrowFunc() {}
     assert(collectExceptionMsg(nothrowFunc()) is null);
+
+    void throwEmptyFunc() {throw new Exception("");}
+    assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
 }
+
+/++
+    Value that collectExceptionMsg returns when it catches an exception
+    with an empty exception message.
+ +/
+enum emptyExceptionMsg = "<Empty Exception Message>";
 
 /**
  * Casts a mutable array to an immutable array in an idiomatic
