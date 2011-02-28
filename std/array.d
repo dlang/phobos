@@ -6,7 +6,7 @@ Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(WEB erdani.org, Andrei Alexandrescu, Jonathan M Davis)
+Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
 
 Source: $(PHOBOSSRC std/_array.d)
 */
@@ -21,7 +21,7 @@ version(unittest) import core.exception, std.stdio, std.typetuple;
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
-$(D opApply) function $(D_PARAM r).  Note that narrow strings are handled as
+$(D opApply) function $(D r).  Note that narrow strings are handled as
 a special case in an overload.
 
 Example:
@@ -446,7 +446,7 @@ if (isDynamicArray!A && isNarrowString!A)
 /*
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
 equal), $(D overlap) only compares the pointers in the ranges, not the
-values referred by them. If $(D_PARAM r1) and $(D_PARAM r2) have an overlapping
+values referred by them. If $(D r1) and $(D r2) have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
 
 Example:
@@ -491,9 +491,8 @@ be used once insert has not only been deprecated but removed, but until then,
 it's commented out.
 
 /++
-    Creates a new array which is a copy of $(D_PARAM array) with $(D_PARAM stuff)
-    (which must be an input range or a single item) inserted at position
-    $(D_PARAM pos).
+    Creates a new array which is a copy of $(D array) with $(D stuff) (which
+    must be an input range or a single item) inserted at position $(D pos).
 
     Examples:
 --------------------
@@ -594,8 +593,8 @@ unittest
 +/
 
 /++
-    Inserts $(D_PARAM stuff) (which must be an input range or a single item) in
-    $(D_PARAM array) at position $(D pos).
+    Inserts $(D stuff) (which must be an input range or a single item) in
+    $(D array) at position $(D pos).
 
 Example:
 ---
@@ -741,9 +740,9 @@ void insert(T)(ref T[] array, size_t pos, T stuff)
 }
 
 /++
-    Returns whether the $(D front)s of $(D_PARAM lhs) and $(D_PARAM rhs) both
-    refer to the same place in memory, making one of the arrays a slice of the
-    other which starts at index $(D 0).
+    Returns whether the $(D front)s of $(D lhs) and $(D rhs) both refer to the
+    same place in memory, making one of the arrays a slice of the other which
+    starts at index $(D 0).
   +/
 pure bool sameHead(T)(in T[] lhs, in T[] rhs)
 {
@@ -751,8 +750,8 @@ pure bool sameHead(T)(in T[] lhs, in T[] rhs)
 }
 
 /********************************************
-Returns an array that consists of $(D_PARAM s) (which must be an input
-range) repeated $(D_PARAM n) times. This function allocates, fills, and
+Returns an array that consists of $(D s) (which must be an input
+range) repeated $(D n) times. This function allocates, fills, and
 returns a new array. For a lazy version, refer to $(XREF range, repeat).
  */
 S replicate(S)(S s, size_t n) if (isDynamicArray!S)
@@ -807,7 +806,7 @@ unittest
 }
 
 /**************************************
-Split the string $(D_PARAM s) into an array of words, using whitespace as
+Split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
 S[] split(S)(S s) if (isSomeString!S)
@@ -875,7 +874,7 @@ unittest
 }
 
 /**************************************
- * Splits $(D_PARAM s) into an array, using $(D_PARAM delim) as the delimiter.
+ * Splits $(D s) into an array, using $(D delim) as the delimiter.
  */
 Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
 if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
@@ -956,8 +955,8 @@ unittest
 }
 
 /********************************************
- * Concatenate all the ranges in $(D_PARAM ror) together into one array;
- * use $(D_PARAM sep) as the separator if present, otherwise none.
+ * Concatenate all the ranges in $(D ror) together into one array;
+ * use $(D sep) as the separator if present, otherwise none.
  */
 ElementEncodingType!(ElementType!RoR)[]
 join(RoR, R)(RoR ror, R sep)
@@ -1022,9 +1021,8 @@ unittest
 }
 
 /++
-    Replace occurrences of $(D_PARAM from) with $(D_PARAM to) in
-    $(D_PARAM subject). Returns a new array without changing the contents of
-    $(D_PARAM subject).
+    Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
+    array without changing the contents of $(D subject).
  +/
 R1 replace(R1, R2, R3)(R1 subject, R2 from, R3 to)
 if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
@@ -1085,10 +1083,9 @@ can be used once replace has not only been deprecated but removed, but
 until then, it's commented out.
 
 /++
-    Replaces elements from $(D_PARAM array) with indices ranging from
-    $(D_PARAM from) (inclusive) to $(D_PARAM to) (exclusive) with the range
-    $(D_PARAM stuff). Returns a new array without changing the contents of
-    $(D_PARAM subject).
+    Replaces elements from $(D array) with indices ranging from $(D from)
+    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
+    array without changing the contents of $(D subject).
 
 Examples:
 --------------------
@@ -1182,9 +1179,9 @@ unittest
 +/
 
 /++
-    Replaces elements from $(D_PARAM array) with indices ranging from
-    $(D_PARAM from) (inclusive) to $(D_PARAM to) (exclusive) with the range
-    $(D_PARAM stuff). Expands or shrinks the array as needed.
+    Replaces elements from $(D array) with indices ranging from $(D from)
+    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
+    shrinks the array as needed.
 
 Example:
 ---
@@ -1332,9 +1329,8 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
 }
 
 /++
-    Replaces the first occurrence of $(D_PARAM from) with $(D_PARAM to) in
-    $(D_PARAM a). Returns a new array without changing the contents of
-    $(D_PARAM subject).
+    Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
+    new array without changing the contents of $(D subject).
  +/
 R1 replaceFirst(R1, R2, R3)(R1 subject, R2 from, R3 to)
 if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
@@ -1378,8 +1374,8 @@ unittest
 }
 
 /++
-    Returns an array that is $(D_PARAM s) with $(D_PARAM slice) replaced by
-    $(D_PARAM replacement[]).
+    Returns an array that is $(D s) with $(D slice) replaced by
+    $(D replacement[]).
  +/
 T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
 in
@@ -1728,7 +1724,7 @@ Returns the managed array.
 
 /++
     Convenience function that returns an $(D Appender!(A)) object initialized
-    with $(D_PARAM array).
+    with $(D array).
  +/
 Appender!(E[]) appender(A : E[], E)(A array = null)
 {
@@ -1752,8 +1748,8 @@ unittest
 
 /++
     Convenience function that returns a $(D RefAppender!(A)) object initialized
-    with $(D_PARAM array).  Don't use null for the $(D_PARAM array) pointer, use
-    the other version of $(D appender) instead.
+    with $(D array).  Don't use null for the $(D array) pointer, use the other
+    version of $(D appender) instead.
  +/
 RefAppender!(E[]) appender(A : E[]*, E)(A array)
 {
