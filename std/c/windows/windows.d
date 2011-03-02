@@ -2732,8 +2732,11 @@ export UINT IsDlgButtonChecked(HWND hDlg, int nIDButton);
 
 export HWND SetFocus(HWND hWnd);
 
-export int wsprintfA(LPSTR, LPCSTR, ...);
-export int wsprintfW(LPWSTR, LPCWSTR, ...);
+extern (C)
+{
+    export int wsprintfA(LPSTR, LPCSTR, ...);
+    export int wsprintfW(LPWSTR, LPCWSTR, ...);
+}
 
 enum : uint
 {
