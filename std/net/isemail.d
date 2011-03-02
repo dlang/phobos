@@ -1057,7 +1057,7 @@ unittest
 	assert(`(comment)test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstu`.isEmail == EmailStatus.Comment);
 	assert(`test@iana.org&#x240A;`.isEmail == EmailStatus.ErrorExpectingText);
 	assert(`test@xn--hxajbheg2az3al.xn--jxalpdlp`.isEmail == EmailStatus.Valid, `A valid IDN from ICANN's <a href="http://idn.icann.org/#The_example.test_names">IDN TLD evaluation gateway</a>`);
-	assert(`xn--test@iana.org` == EmailStatus.Valid, `RFC 3490: "unless the email standards are revised to invite the use of IDNA for local parts, a domain label that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does, it is to be interpreted literally as a local part that happens to begin with the ACE prefix"`);
+	assert(`xn--test@iana.org`.isEmail == EmailStatus.Valid, `RFC 3490: "unless the email standards are revised to invite the use of IDNA for local parts, a domain label that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does, it is to be interpreted literally as a local part that happens to begin with the ACE prefix"`);
 	assert(`test@iana.org-`.isEmail == EmailStatus.ErrorDomainHyphenEnd);
 	assert(`"test@iana.org`.isEmail == EmailStatus.ErrorUnclosedQuotedString);
 	assert(`(test@iana.org`.isEmail == EmailStatus.ErrorUnclosedComment);
@@ -1120,5 +1120,7 @@ unittest
 	assert(`test.(comment)test@iana.org`.isEmail == EmailStatus.DeprecatedComment);
 	assert(`test@org`.isEmail == EmailStatus.Rfc5321TopLevelDomain);
 	assert(`test@test.com`.isEmail == EmailStatus.DnsWarningNoMXRecord, `test.com has an A-record but not an MX-record`);
-	assert(`test@nic.no`.isEmail == EmailStatus.DnsWarningNoRecord, `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then try setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record (OpenDNS does this, for instance).`);
+	assert(`test@nic.no`.isEmail == EmailStatus.DnsWarningNoRecord, `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then try setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record (OpenDNS does this, for instance).`);	
 }
+
+version (unittest) void main () {}
