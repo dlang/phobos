@@ -368,7 +368,6 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
     }
     
     auto returnStatus = [EmailStatusCode.Valid];
-    auto rawLength = email.length;
     auto context = EmailPart.ComponentLocalPart;
     auto contextStack = [context];
     auto contextPrior = context;
@@ -447,7 +446,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
-                        if ((token == Token.Cr) && ((++i == rawLength) || (email.get(i, e) != Token.Lf)))
+                        if ((token == Token.Cr) && ((++i == email.length) || (email.get(i, e) != Token.Lf)))
                         {
                             returnStatus ~= EmailStatusCode.ErrorCrNoLf;
                             break;
@@ -579,7 +578,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
-                        if (token == Token.Cr && (++i == rawLength || email.get(i, e) != Token.Lf))
+                        if (token == Token.Cr && (++i == email.length || email.get(i, e) != Token.Lf))
                         {
                             returnStatus ~= EmailStatusCode.ErrorCrNoLf;
                             break;
@@ -731,7 +730,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
-                        if (token == Token.Cr && (++i == rawLength || email.get(i, e) != Token.Lf))
+                        if (token == Token.Cr && (++i == email.length || email.get(i, e) != Token.Lf))
                         {
                             returnStatus ~= EmailStatusCode.ErrorCrNoLf;
                             break;
@@ -772,7 +771,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
                     
                     case Token.Cr:
                     case Token.Tab:
-                        if (token == Token.Cr && (++i == rawLength || email.get(i, e) != Token.Lf))
+                        if (token == Token.Cr && (++i == email.length || email.get(i, e) != Token.Lf))
                         {
                             returnStatus ~= EmailStatusCode.ErrorCrNoLf;
                             break;
@@ -866,7 +865,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
 					case Token.Cr:
 					case Token.Space:
 					case Token.Tab:
-						if (token == Token.Cr && (i++ == rawLength || email.get(i, e) != Token.Lf))
+						if (token == Token.Cr && (i++ == email.length || email.get(i, e) != Token.Lf))
 						{
 							returnStatus ~= EmailStatusCode.ErrorCrNoLf;
 							break;
@@ -915,7 +914,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, ErrorLevel errorLevel 
 				switch (token)
 				{
 					case Token.Cr:
-						if (++i == rawLength || email.get(i, e) != Token.Lf)
+						if (++i == email.length || email.get(i, e) != Token.Lf)
 							returnStatus ~= EmailStatusCode.ErrorCrNoLf;
 					break;
 					
