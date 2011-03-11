@@ -49,11 +49,41 @@ import std.utf;
 
 alias std.algorithm.canFind contains;
 
+// This $(D_KEYWORD template) will use the buildSelector $(D_KEYWORD template) to build
+
+/**
+ * Returns the integer value of the first character in the given string.
+ * 
+ * Examples:
+ * ---
+ * assert("abcde".firstChar == 71);
+ * ---
+ * 
+ * Params:
+ *     str = the string to get the first character from
+ *
+ * Returns: the first character as an integer
+ */
 int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
 {
     return cast(int) str.first;
 }
 
+/**
+ * Returns the maximum of the values in the given array.
+ *
+ * Examples:
+ * ---
+ * assert([1, 2, 3, 4] == 4);
+ * assert([3, 5, 9, 2, 5] == 9);
+ * assert([7, 13, 9, 12, 0] == 13);
+ * ---
+ *
+ * Params:
+ *     arr = the array containing the values to return the maximum of
+ *     
+ * Returns: the maximum value
+ */
 T max (T) (T[] arr)
 {
     auto max = arr.first;
@@ -64,6 +94,47 @@ T max (T) (T[] arr)
     return max;
 }
 
+/**
+ * Returns the portion of string specified by the $(D_PARAM start) and
+ * $(D_PARAM length) parameters.
+ * 
+ * Examples:
+ * ---
+ * assert("abcdef".substr(-1) == "f");
+ * assert("abcdef".substr(-2) == "ef");
+ * assert("abcdef".substr(-3, 1) == "d");
+ * ---
+ *
+ * Params:
+ *     str = the input string. Must be one character or longer.  
+ *     start = if $(D_PARAM start) is non-negative, the returned string will start at the
+ *			   $(D_PARAM start)'th position in $(D_PARAM str), counting from zero.
+ *			   For instance, in the string "abcdef", the character at position 0 is 'a',
+ * 			   the character at position 2 is 'c', and so forth.
+ * 
+ * 			   If $(D_PARAM start) is negative, the returned string will start at the
+ * 			   $(D_PARAM start)'th character from the end of $(D_PARAM str).
+ * 
+ * 			   If $(D_PARAM str) is less than or equal to $(D_PARAM start) characters long,
+ * 			   $(D_KEYWORD true) will be returned.
+ * 
+ *     length = if $(D_PARAM length) is given and is positive, the string returned will
+ *				contain at most $(D_PARAM length) characters beginning from $(D_PARAM start)
+ *				(depending on the length of string).
+ *
+ *				If $(D_PARAM length) is given and is negative, then that many characters
+ *				will be omitted from the end of string (after the start position has been
+ *				calculated when a $(D_PARAM start) is negative). If $(D_PARAM start)
+ *				denotes the position of this truncation or beyond, $(D_KEYWORD false)
+ *				will be returned.
+ *
+ *				If $(D_PARAM length) is given and is 0, an empty string will be returned.
+ *
+ *				If $(D_PARAM length) is omitted, the substring starting from $(D_PARAM start)
+ *				until the end of the string will be returned.
+ *      
+ * Returns: the extracted part of string, or an empty string. 
+ */
 T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.min)
 {
 	sizediff_t end = length;
@@ -97,7 +168,35 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 	return str[start .. end];
 }
 
-int compareFirstN (alias pred = "a < b", S1, S2)(S1 s1, S2 s2, size_t length, bool caseInsensitive = false) if (is(Unqual!(std.algorithm.ElementType!S1) == dchar) && is(Unqual!(std.algorithm.ElementType!S2) == dchar))
+/**
+ * Compare the two given strings lexicographically. An upper limit of the number of
+ * characters, that will be used in the comparison, can be specified. Supports both
+ * case-sensitive and case-insensitive comparison.
+ * 
+ * Examples:
+ * ---
+ * assert("abc".compareFirstN("abcdef", 3) == 0);
+ * assert("abc".compareFirstN("Abc", 3, true) == 0);
+ * assert("abc".compareFirstN("abcdef", 6) < 0);
+ * assert("abcdef".compareFirstN("abc", 6) > 0);
+ * ---
+ * 
+ * Params:
+ *     s1 = the first string to be compared
+ *     s2 = the second string to be compared
+ *     length = the length of strings to be used in the comparison. 
+ *     caseInsensitive = if true, a case-insensitive comparison will be made,
+ * 						 otherwise a case-sensitive comparison will be made
+ *      
+ * Returns: (for $(D pred = "a < b")):
+ * 
+ * $(BOOKTABLE,
+ * $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
+ * $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
+ * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
+ * )
+ */
+int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false) if (is(Unqual!(std.algorithm.ElementType!S1) == dchar) && is(Unqual!(std.algorithm.ElementType!S2) == dchar))
 {
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
@@ -108,14 +207,49 @@ int compareFirstN (alias pred = "a < b", S1, S2)(S1 s1, S2 s2, size_t length, bo
     return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
 }
 
-auto grep (Range, Regex) (Range range, Regex regex, bool invert = false)
+/**
+ * Returns a range consisting of the elements of the $(D_PARAM input) range that
+ * matches the given $(D_PARAM pattern). 
+ * 
+ * Examples:
+ * ---
+ * assert(equal(["ab", "0a", "cd", "1b"].grep(regexp("\d\w")), ["0a", "1b"]));
+ * assert(equal(["abc", "0123", "defg", "4567"].grep(regexp("(\w+)"), true), ["0123", "4567"]));
+ * ---
+ * 
+ * Params:
+ *     input = the input range
+ *     pattern = the regular expression pattern to search for
+ *     invert = if $(D_KEYWORD true), this function returns the elements of the
+ * 				input range that do $(B not) match the given $(D_PARAM pattern). 
+ *     
+ * Returns: a range containing the matched elements
+ */
+auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 {
-	auto dg = invert ? (std.algorithm.ElementType!(Range) e) { return e.match(regex).empty; } :
-	                   (std.algorithm.ElementType!(Range) e) { return !e.match(regex).empty; };
+	auto dg = invert ? (std.algorithm.ElementType!(Range) e) { return e.match(pattern).empty; } :
+	                   (std.algorithm.ElementType!(Range) e) { return !e.match(pattern).empty; };
 	
-	return std.algorithm.filter!(dg)(range);
+	return std.algorithm.filter!(dg)(input);
 }
 
+/**
+ * Pops the last element of the given range and returns the element.
+ * 
+ * Examples:
+ * ---
+ * auto array = [0, 1, 2, 3];
+ * auto	result = array.pop;
+ * 
+ * assert(array == [0, 1, 2]);
+ * assert(result == 3);
+ * ---
+ * 
+ * Params:
+ *     range = the range to pop the element from
+ *      
+ * Returns: the popped element
+ */
 std.algorithm.ElementType!(A) pop (A) (ref A a) if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
 {
 	auto e = a.last;
@@ -123,6 +257,23 @@ std.algorithm.ElementType!(A) pop (A) (ref A a) if (isDynamicArray!A && !isNarro
 	return e;
 }
 
+/**
+ * Returns the character at the given index as a string. The returned string will be a
+ * slice of the original string.
+ * 
+ * Examples:
+ * ---
+ * assert("abc".get(1, 'b') == "b");
+ * assert("löv".get(1, 'ö') == "ö");
+ * ---
+ * 
+ * Params:
+ *     str = the string to get the character from
+ *     index = the index of the character to get
+ *     c = the character to return, or any other of the same length
+ *      
+ * Returns: the character at the given index as a string
+ */
 T[] get (T) (T[] str, size_t index, dchar c)
 {
 	return str[index .. index + codeLength!(T)(c)];
@@ -155,6 +306,10 @@ alias front first;
 alias back last;
 alias popFront shift;
 
+/**
+ * An email status code, indicating if an email address is valid or not.
+ * If it is invalid it also indicates why.
+ */
 enum EmailStatusCode
 {
     // Categories
@@ -236,6 +391,7 @@ enum EmailStatusCode
 	Threshold = 16
 }
 
+/// Error levels for the isEmail function
 enum ErrorLevel
 {
     Off,
@@ -244,6 +400,7 @@ enum ErrorLevel
     Error
 }
 
+/// Email parts for the isEmail function
 enum EmailPart
 {
     ComponentLocalPart,
@@ -288,15 +445,30 @@ private
 	}
 }
 
+// This struct represents the status of an email address
 struct EmailStatus
 {
+	/// Indicates if the email address is valid or not.
 	const bool valid;
+	
+	/// The local part of the email address, that is, the part before the at sign.
 	const string localPart;
+	
+	/// The domain part of the email address, that is, the part after the at sign.
 	const string domainPart;
+	
+	/// The email status code
 	const EmailStatusCode statusCode;
 	
 	alias valid this;
 	
+	/**
+	 * Params:
+	 *     valid = indicates if the email address is valid or not
+	 *     localPart = the local part of the email address
+	 *     domainPart = the domain part of the email address
+	 * 	   statusCode = the status code
+	 */  
 	this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
 	{
 		this.valid = valid;
@@ -305,11 +477,13 @@ struct EmailStatus
 		this.statusCode = statusCode;
 	}
 	
+	/// Returns the email status as a string
 	string status ()
 	{
 		return "";
 	}
 	
+	/// Returns a textual representation of the email status
 	string toString ()
 	{
 		return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid, localPart, domainPart, statusCode);
@@ -319,18 +493,15 @@ struct EmailStatus
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others
  *
- * As of Version 3.0, we are now distinguishing clearly between a Mailbox
- * as defined by RFC 5321 and an addr-spec as defined by RFC 5322. Depending
- * on the context, either can be regarded as a valid email address. The
- * RFC 5321 Mailbox specification is more restrictive (comments, white space
- * and obsolete forms are not allowed)
+ * As of Version 3.0, we are now distinguishing clearly between a Mailbox as defined
+ * by RFC 5321 and an addr-spec as defined by RFC 5322. Depending on the context,
+ * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
+ * is more restrictive (comments, white space and obsolete forms are not allowed)
  *
- * Params:
- *     method = the method alias to build the selector of
- * 
+ * Params: 
  *     email = The email address to check
  *     checkDNS = If true then a DNS check for MX records will be made
- *     errorlevel = Determines the boundary between valid and invalid addresses.
+ *     errorLevel = Determines the boundary between valid and invalid addresses.
  * 					Status codes above this number will be returned as-is,
  * 					status codes below will be returned as ISEMAIL_VALID. Thus the
  * 					calling program can simply look for ISEMAIL_VALID if it is
