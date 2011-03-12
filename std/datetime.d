@@ -8169,7 +8169,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8196,6 +8196,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOString(), "09991204T134459.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOString(), "99990704T235959.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOString(), "+100001020T010101.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toISOString(),
+                            "20121221T121212-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toISOString(),
+                            "20121221T121212+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOString(), "00001231T235959.9999999Z");
@@ -8303,7 +8311,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8330,6 +8338,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "0999-12-04T13:44:59.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "9999-07-04T23:59:59.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "+10000-10-20T01:01:01.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toISOExtendedString(),
+                            "2012-12-21T12:12:12-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toISOExtendedString(),
+                            "2012-12-21T12:12:12+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.9999999Z");
@@ -8435,7 +8451,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8462,6 +8478,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toSimpleString(), "0999-Dec-04 13:44:59.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toSimpleString(), "9999-Jul-04 23:59:59.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toSimpleString(), "+10000-Oct-20 01:01:01.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toSimpleString(),
+                            "2012-Dec-21 12:12:12-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toSimpleString(),
+                            "2012-Dec-21 12:12:12+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toSimpleString(), "0000-Dec-31 23:59:59.9999999Z");
