@@ -156,17 +156,16 @@ const CURL_WRITEFUNC_PAUSE = 0x10000001;
 alias size_t  function(char *buffer, size_t size, size_t nitems, void *outstream)curl_write_callback;
 
 /* enumeration of file types */
-enum
-{
-    CURLFILETYPE_FILE,
-    CURLFILETYPE_DIRECTORY,
-    CURLFILETYPE_SYMLINK,
-    CURLFILETYPE_DEVICE_BLOCK,
-    CURLFILETYPE_DEVICE_CHAR,
-    CURLFILETYPE_NAMEDPIPE,
-    CURLFILETYPE_SOCKET,
-    CURLFILETYPE_DOOR,
-    CURLFILETYPE_UNKNOWN
+enum CurlFileType {
+    file,
+    directory,
+    symlink,
+    device_block,
+    device_char,
+    namedpipe,
+    socket,
+    door,
+    unknown
 }
 alias int curlfiletype;
 
@@ -244,12 +243,20 @@ const CURL_FNMATCHFUNC_FAIL = 2;
    string matches the pattern, return CURL_FNMATCHFUNC_MATCH value, etc. */
 alias int  function(void *ptr, char *pattern, char *string)curl_fnmatch_callback;
 
-/* These are the return codes for the seek callbacks */
-const CURL_SEEKFUNC_OK = 0;
-const CURL_SEEKFUNC_FAIL = 1; /* fail the entire transfer */
-const CURL_SEEKFUNC_CANTSEEK = 2; /* tell libcurl seeking can't be done, so
-                                    libcurl might try other means instead */
+// seek whence...
+enum CurlSeekPos {
+  set,
+  current,
+  end
+}
 
+/* These are the return codes for the seek callbacks */
+enum CurlSeek {
+  ok,
+  fail,     /* fail the entire transfer */
+  cantseek  /* tell libcurl seeking can't be done, so
+	       libcurl might try other means instead */
+}
 alias int  function(void *instream, curl_off_t offset, int origin)curl_seek_callback;
 
 /* This is a return code for the read callback that, when returned, will
@@ -262,10 +269,9 @@ const CURL_READFUNC_ABORT = 0x10000000;
 const CURL_READFUNC_PAUSE = 0x10000001;
 alias size_t  function(char *buffer, size_t size, size_t nitems, void *instream)curl_read_callback;
 
-enum
-{
-    CURLSOCKTYPE_IPCXN,
-    CURLSOCKTYPE_LAST
+enum CurlSockType {
+    ipcxn,
+    last
 }
 alias int curlsocktype;
 
@@ -284,20 +290,19 @@ struct curl_sockaddr
 
 alias curl_socket_t  function(void *clientp, curlsocktype purpose, curl_sockaddr *address)curl_opensocket_callback;
 
-enum
+enum CurlIoError
 {
-    CURLIOE_OK,            /* I/O operation successful */
-    CURLIOE_UNKNOWNCMD,    /* command was unknown to callback */	
-    CURLIOE_FAILRESTART,   /* failed to restart the read */	
-    CURLIOE_LAST	   /* never use */                        
+    ok,            /* I/O operation successful */
+    unknowncmd,    /* command was unknown to callback */	
+    failrestart,   /* failed to restart the read */	
+    last	   /* never use */                        
 }
 alias int curlioerr;
 
-enum
-{
-    CURLIOCMD_NOP,         /* command was unknown to callback */	
-    CURLIOCMD_RESTARTREAD, /* failed to restart the read */	
-    CURLIOCMD_LAST,	   /* never use */                        
+enum CurlIoCmd {
+    nop,         /* command was unknown to callback */	
+    restartread, /* failed to restart the read */	
+    last,	 /* never use */                        
 }
 alias int curliocmd;
 
@@ -316,16 +321,15 @@ alias char * function(char *str)curl_strdup_callback;
 alias void * function(size_t nmemb, size_t size)curl_calloc_callback;
 
 /* the kind of data that is passed to information_callback*/
-enum
-{
-    CURLINFO_TEXT,
-    CURLINFO_HEADER_IN,
-    CURLINFO_HEADER_OUT,
-    CURLINFO_DATA_IN,
-    CURLINFO_DATA_OUT,
-    CURLINFO_SSL_DATA_IN,
-    CURLINFO_SSL_DATA_OUT,
-    CURLINFO_END
+enum CurlCallbackInfo {
+    text,
+    header_in,
+    header_out,
+    data_in,
+    data_out,
+    ssl_data_in,
+    ssl_data_out,
+    end
 }
 alias int curl_infotype;
 
@@ -337,150 +341,113 @@ alias int  function(CURL *handle, curl_infotype type, char *data, size_t size, v
    Always add new return codes last. Never *EVER* remove any. The return
    codes must remain the same!
  */
-
-/* 9 a service was denied by the server
-                                    due to lack of access - when login fails
-                                    this is not returned. */
-  /* Note: CURLE_OUT_OF_MEMORY may sometimes indicate a conversion error
-           instead of a memory allocation error if CURL_DOES_CONVERSIONS
-           is defined
-  */
-/* 51 - peer's certificate or fingerprint
-                                     wasn't verified fine */
-/* 54 - can not set SSL crypto engine as
-                                    default */
-/* 65 - Sending the data requires a rewind
-                                    that failed */
-/* 67 - user, password or similar was not
-                                    accepted and we failed to login */
-/* 76 - caller must register conversion
-                                    callbacks using curl_easy_setopt options
-                                    CURLOPT_CONV_FROM_NETWORK_FUNCTION,
-                                    CURLOPT_CONV_TO_NETWORK_FUNCTION, and
-                                    CURLOPT_CONV_FROM_UTF8_FUNCTION */
-/* 77 - could not load CACERT file, missing
-                                    or wrong format */
-/* 79 - error from the SSH layer, somewhat
-                                    generic so the error message will be of
-                                    interest when this has happened */
-
-/* 80 - Failed to shut down the SSL
-                                    connection */
-/* 81 - socket is not ready for send/recv,
-                                    wait till it's ready and try again (Added
-                                    in 7.18.2) */
-/* 82 - could not load CRL file, missing or
-                                    wrong format (Added in 7.19.0) */
-/* 83 - Issuer check failed.  (Added in
-                                    7.19.0) */
-
-enum
+enum CurlError
 {
-    CURLE_OK,                           
-    CURLE_UNSUPPORTED_PROTOCOL,          /* 1 */				
-    CURLE_FAILED_INIT,			 /* 2 */				
-    CURLE_URL_MALFORMAT,		 /* 3 */				
-    CURLE_OBSOLETE4,			 /* 4 - NOT USED */			
-    CURLE_COULDNT_RESOLVE_PROXY,	 /* 5 */				
-    CURLE_COULDNT_RESOLVE_HOST,		 /* 6 */				
-    CURLE_COULDNT_CONNECT,		 /* 7 */				
-    CURLE_FTP_WEIRD_SERVER_REPLY,	 /* 8 */				
-    CURLE_REMOTE_ACCESS_DENIED,		 /* 9 a service was denied by the server
-					    due to lack of access - when login fails
-					    this is not returned. */
-    CURLE_OBSOLETE10,                    /* 10 - NOT USED */			
-    CURLE_FTP_WEIRD_PASS_REPLY,		 /* 11 */				
-    CURLE_OBSOLETE12,			 /* 12 - NOT USED */			
-    CURLE_FTP_WEIRD_PASV_REPLY,		 /* 13 */				
-    CURLE_FTP_WEIRD_227_FORMAT,		 /* 14 */				
-    CURLE_FTP_CANT_GET_HOST,		 /* 15 */				
-    CURLE_OBSOLETE16,			 /* 16 - NOT USED */			
-    CURLE_FTP_COULDNT_SET_TYPE,		 /* 17 */				
-    CURLE_PARTIAL_FILE,			 /* 18 */				
-    CURLE_FTP_COULDNT_RETR_FILE,	 /* 19 */				
-    CURLE_OBSOLETE20,			 /* 20 - NOT USED */			
-    CURLE_QUOTE_ERROR,			 /* 21 - quote command failure */	
-    CURLE_HTTP_RETURNED_ERROR,		 /* 22 */				
-    CURLE_WRITE_ERROR,			 /* 23 */				
-    CURLE_OBSOLETE24,			 /* 24 - NOT USED */			
-    CURLE_UPLOAD_FAILED,		 /* 25 - failed upload "command" */	
-    CURLE_READ_ERROR,			 /* 26 - couldn't open/read from file */
-    CURLE_OUT_OF_MEMORY,		 /* 27 */                               
+    ok,                           
+    unsupported_protocol,        /* 1 */				
+    failed_init,		 /* 2 */				
+    url_malformat,		 /* 3 */				
+    obsolete4,			 /* 4 - NOT USED */			
+    couldnt_resolve_proxy,	 /* 5 */				
+    couldnt_resolve_host,	 /* 6 */				
+    couldnt_connect,		 /* 7 */				
+    ftp_weird_server_reply,	 /* 8 */				
+    remote_access_denied,	 /* 9 a service was denied by the server
+    				    due to lack of access - when login fails
+    				    this is not returned. */
+    obsolete10,                  /* 10 - NOT USED */			
+    ftp_weird_pass_reply,	 /* 11 */				
+    obsolete12,			 /* 12 - NOT USED */			
+    ftp_weird_pasv_reply,	 /* 13 */				
+    ftp_weird_227_format,	 /* 14 */				
+    ftp_cant_get_host,		 /* 15 */				
+    obsolete16,			 /* 16 - NOT USED */			
+    ftp_couldnt_set_type,	 /* 17 */				
+    partial_file,		 /* 18 */				
+    ftp_couldnt_retr_file,	 /* 19 */				
+    obsolete20,			 /* 20 - NOT USED */			
+    quote_error,		 /* 21 - quote command failure */	
+    http_returned_error,	 /* 22 */				
+    write_error,		 /* 23 */				
+    obsolete24,			 /* 24 - NOT USED */			
+    upload_failed,		 /* 25 - failed upload "command" */	
+    read_error,			 /* 26 - couldn't open/read from file */
+    out_of_memory,		 /* 27 */                               
     /* Note: CURLE_OUT_OF_MEMORY may sometimes indicate a conversion error
              instead of a memory allocation error if CURL_DOES_CONVERSIONS
              is defined
     */
-    CURLE_OPERATION_TIMEDOUT,            /* 28 - the timeout time was reached */     
-    CURLE_OBSOLETE29,			 /* 29 - NOT USED */			     
-    CURLE_FTP_PORT_FAILED,		 /* 30 - FTP PORT operation failed */	     
-    CURLE_FTP_COULDNT_USE_REST,		 /* 31 - the REST command failed */	     
-    CURLE_OBSOLETE32,			 /* 32 - NOT USED */			     
-    CURLE_RANGE_ERROR,			 /* 33 - RANGE "command" didn't work */	     
-    CURLE_HTTP_POST_ERROR,		 /* 34 */				     
-    CURLE_SSL_CONNECT_ERROR,		 /* 35 - wrong when connecting with SSL */   
-    CURLE_BAD_DOWNLOAD_RESUME,		 /* 36 - couldn't resume download */	     
-    CURLE_FILE_COULDNT_READ_FILE,	 /* 37 */				     
-    CURLE_LDAP_CANNOT_BIND,		 /* 38 */				     
-    CURLE_LDAP_SEARCH_FAILED,		 /* 39 */				     
-    CURLE_OBSOLETE40,			 /* 40 - NOT USED */			     
-    CURLE_FUNCTION_NOT_FOUND,		 /* 41 */				     
-    CURLE_ABORTED_BY_CALLBACK,		 /* 42 */				     
-    CURLE_BAD_FUNCTION_ARGUMENT,	 /* 43 */				     
-    CURLE_OBSOLETE44,			 /* 44 - NOT USED */			     
-    CURLE_INTERFACE_FAILED,		 /* 45 - CURLOPT_INTERFACE failed */	     
-    CURLE_OBSOLETE46,			 /* 46 - NOT USED */			     
-    CURLE_TOO_MANY_REDIRECTS,		 /* 47 - catch endless re-direct loops */    
-    CURLE_UNKNOWN_TELNET_OPTION,	 /* 48 - User specified an unknown option */ 
-    CURLE_TELNET_OPTION_SYNTAX,		 /* 49 - Malformed telnet option */	     
-    CURLE_OBSOLETE50,			 /* 50 - NOT USED */			     
-    CURLE_PEER_FAILED_VERIFICATION,	 /* 51 - peer's certificate or fingerprint  
-					     wasn't verified fine */
-    CURLE_GOT_NOTHING,                   /* 52 - when this is a specific error */					
-    CURLE_SSL_ENGINE_NOTFOUND,		 /* 53 - SSL crypto engine not found */						
-    CURLE_SSL_ENGINE_SETFAILED,		 /* 54 - can not set SSL crypto engine as default */				
-    CURLE_SEND_ERROR,			 /* 55 - failed sending network data */						
-    CURLE_RECV_ERROR,			 /* 56 - failure in receiving network data */					
-    CURLE_OBSOLETE57,			 /* 57 - NOT IN USE */								
-    CURLE_SSL_CERTPROBLEM,		 /* 58 - problem with the local certificate */					
-    CURLE_SSL_CIPHER,			 /* 59 - couldn't use specified cipher */					
-    CURLE_SSL_CACERT,			 /* 60 - problem with the CA cert (path?) */					
-    CURLE_BAD_CONTENT_ENCODING,		 /* 61 - Unrecognized transfer encoding */					
-    CURLE_LDAP_INVALID_URL,		 /* 62 - Invalid LDAP URL */							
-    CURLE_FILESIZE_EXCEEDED,		 /* 63 - Maximum file size exceeded */						
-    CURLE_USE_SSL_FAILED,		 /* 64 - Requested FTP SSL level failed */					
-    CURLE_SEND_FAIL_REWIND,		 /* 65 - Sending the data requires a rewind that failed */			
-    CURLE_SSL_ENGINE_INITFAILED,	 /* 66 - failed to initialise ENGINE */						
-    CURLE_LOGIN_DENIED,			 /* 67 - user, password or similar was not accepted and we failed to login */	
-    CURLE_TFTP_NOTFOUND,		 /* 68 - file not found on server */						
-    CURLE_TFTP_PERM,			 /* 69 - permission problem on server */					
-    CURLE_REMOTE_DISK_FULL,		 /* 70 - out of disk space on server */						
-    CURLE_TFTP_ILLEGAL,			 /* 71 - Illegal TFTP operation */						
-    CURLE_TFTP_UNKNOWNID,		 /* 72 - Unknown transfer ID */							
-    CURLE_REMOTE_FILE_EXISTS,		 /* 73 - File already exists */							
-    CURLE_TFTP_NOSUCHUSER,		 /* 74 - No such user */							
-    CURLE_CONV_FAILED,			 /* 75 - conversion failed */							
-    CURLE_CONV_REQD,			 /* 76 - caller must register conversion                                        
-					    callbacks using curl_easy_setopt options
-					    CURLOPT_CONV_FROM_NETWORK_FUNCTION,
-					    CURLOPT_CONV_TO_NETWORK_FUNCTION, and
-					    CURLOPT_CONV_FROM_UTF8_FUNCTION */
-    CURLE_SSL_CACERT_BADFILE,            /* 77 - could not load CACERT file, missing  or wrong format */ 
-    CURLE_REMOTE_FILE_NOT_FOUND,	 /* 78 - remote file not found */				 
-    CURLE_SSH,				 /* 79 - error from the SSH layer, somewhat                      
-					    generic so the error message will be of
-					    interest when this has happened */
-    CURLE_SSL_SHUTDOWN_FAILED,           /* 80 - Failed to shut down the SSL connection */ 
-    CURLE_AGAIN,			 /* 81 - socket is not ready for send/recv,        
-					    wait till it's ready and try again (Added
-					    in 7.18.2) */
-    CURLE_SSL_CRL_BADFILE,               /* 82 - could not load CRL file, missing or wrong format (Added in 7.19.0) */	
-    CURLE_SSL_ISSUER_ERROR,		 /* 83 - Issuer check failed.  (Added in 7.19.0) */				
-    CURLE_FTP_PRET_FAILED,		 /* 84 - a PRET command failed */						
-    CURLE_RTSP_CSEQ_ERROR,		 /* 85 - mismatch of RTSP CSeq numbers */					
-    CURLE_RTSP_SESSION_ERROR,		 /* 86 - mismatch of RTSP Session Identifiers */				
-    CURLE_FTP_BAD_FILE_LIST,		 /* 87 - unable to parse FTP file list */					
-    CURLE_CHUNK_FAILED,			 /* 88 - chunk callback reported error */                                       
-    CURL_LAST /* never use! */
+    operation_timedout,          /* 28 - the timeout time was reached */     
+    obsolete29,			 /* 29 - NOT USED */			     
+    ftp_port_failed,		 /* 30 - FTP PORT operation failed */	     
+    ftp_couldnt_use_rest,	 /* 31 - the REST command failed */	     
+    obsolete32,			 /* 32 - NOT USED */			     
+    range_error,		 /* 33 - RANGE "command" didn't work */	     
+    http_post_error,		 /* 34 */				     
+    ssl_connect_error,		 /* 35 - wrong when connecting with SSL */   
+    bad_download_resume,	 /* 36 - couldn't resume download */	     
+    file_couldnt_read_file,	 /* 37 */				     
+    ldap_cannot_bind,		 /* 38 */				     
+    ldap_search_failed,		 /* 39 */				     
+    obsolete40,			 /* 40 - NOT USED */			     
+    function_not_found,		 /* 41 */				     
+    aborted_by_callback,	 /* 42 */				     
+    bad_function_argument,	 /* 43 */				     
+    obsolete44,			 /* 44 - NOT USED */			     
+    interface_failed,		 /* 45 - CURLOPT_INTERFACE failed */	     
+    obsolete46,			 /* 46 - NOT USED */			     
+    too_many_redirects,		 /* 47 - catch endless re-direct loops */    
+    unknown_telnet_option,	 /* 48 - User specified an unknown option */ 
+    telnet_option_syntax,	 /* 49 - Malformed telnet option */	     
+    obsolete50,			 /* 50 - NOT USED */			     
+    peer_failed_verification,	 /* 51 - peer's certificate or fingerprint  
+				         wasn't verified fine */
+    got_nothing,                 /* 52 - when this is a specific error */					
+    ssl_engine_notfound,	 /* 53 - SSL crypto engine not found */						
+    ssl_engine_setfailed,	 /* 54 - can not set SSL crypto engine as default */				
+    send_error,			 /* 55 - failed sending network data */						
+    recv_error,			 /* 56 - failure in receiving network data */					
+    obsolete57,			 /* 57 - NOT IN USE */								
+    ssl_certproblem,		 /* 58 - problem with the local certificate */					
+    ssl_cipher,			 /* 59 - couldn't use specified cipher */					
+    ssl_cacert,			 /* 60 - problem with the CA cert (path?) */					
+    bad_content_encoding,	 /* 61 - Unrecognized transfer encoding */					
+    ldap_invalid_url,		 /* 62 - Invalid LDAP URL */							
+    filesize_exceeded,		 /* 63 - Maximum file size exceeded */						
+    use_ssl_failed,		 /* 64 - Requested FTP SSL level failed */					
+    send_fail_rewind,		 /* 65 - Sending the data requires a rewind that failed */			
+    ssl_engine_initfailed,	 /* 66 - failed to initialise ENGINE */						
+    login_denied,		 /* 67 - user, password or similar was not accepted and we failed to login */	
+    tftp_notfound,		 /* 68 - file not found on server */						
+    tftp_perm,			 /* 69 - permission problem on server */					
+    remote_disk_full,		 /* 70 - out of disk space on server */						
+    tftp_illegal,		 /* 71 - Illegal TFTP operation */						
+    tftp_unknownid,		 /* 72 - Unknown transfer ID */							
+    remote_file_exists,		 /* 73 - File already exists */							
+    tftp_nosuchuser,		 /* 74 - No such user */							
+    conv_failed,		 /* 75 - conversion failed */							
+    conv_reqd,			 /* 76 - caller must register conversion                                        
+    				    callbacks using curl_easy_setopt options
+    				    CURLOPT_CONV_FROM_NETWORK_FUNCTION,
+    				    CURLOPT_CONV_TO_NETWORK_FUNCTION, and
+    				    CURLOPT_CONV_FROM_UTF8_FUNCTION */
+    ssl_cacert_badfile,          /* 77 - could not load CACERT file, missing  or wrong format */ 
+    remote_file_not_found,	 /* 78 - remote file not found */				 
+    ssh,			 /* 79 - error from the SSH layer, somewhat                      
+    				    generic so the error message will be of
+    				    interest when this has happened */
+    ssl_shutdown_failed,         /* 80 - Failed to shut down the SSL connection */ 
+    again,			 /* 81 - socket is not ready for send/recv,        
+    				    wait till it's ready and try again (Added
+    				    in 7.18.2) */
+    ssl_crl_badfile,             /* 82 - could not load CRL file, missing or wrong format (Added in 7.19.0) */	
+    ssl_issuer_error,		 /* 83 - Issuer check failed.  (Added in 7.19.0) */				
+    ftp_pret_failed,		 /* 84 - a PRET command failed */						
+    rtsp_cseq_error,		 /* 85 - mismatch of RTSP CSeq numbers */					
+    rtsp_session_error,		 /* 86 - mismatch of RTSP Session Identifiers */				
+    ftp_bad_file_list,		 /* 87 - unable to parse FTP file list */					
+    chunk_failed,		 /* 88 - chunk callback reported error */                                       
+    curl_last                    /* never use! */
 }
 alias int CURLcode;
 
@@ -490,31 +457,32 @@ alias CURLcode  function(char *buffer, size_t length)curl_conv_callback;
 /* actually an OpenSSL SSL_CTX */
 alias CURLcode  function(CURL *curl, void *ssl_ctx, void *userptr)curl_ssl_ctx_callback;
 
-enum
-{
-    CURLPROXY_HTTP,             /* added in 7.10, new in 7.19.4 default is to use CONNECT HTTP/1.1 */ 
-    CURLPROXY_HTTP_1_0,		/* added in 7.19.4, force to use CONNECT HTTP/1.0  */		      
-    CURLPROXY_SOCKS4 = 4,	/* support added in 7.15.2, enum existed already in 7.10 */           
-    CURLPROXY_SOCKS5,
-    CURLPROXY_SOCKS4A,
-    CURLPROXY_SOCKS5_HOSTNAME   /* Use the SOCKS5 protocol but pass along the
-                                   host name rather than the IP address. added
-                                   in 7.18.0 */                                   
+enum CurlProxy {
+    http,       /* added in 7.10, new in 7.19.4 default is to use CONNECT HTTP/1.1 */ 
+    http_1_0,	/* added in 7.19.4, force to use CONNECT HTTP/1.0  */		      
+    socks4 = 4,	/* support added in 7.15.2, enum existed already in 7.10 */           
+    socks5,
+    socks4a,
+    socks5_hostname   /* Use the SOCKS5 protocol but pass along the
+			 host name rather than the IP address. added
+			 in 7.18.0 */                                   
 }
 alias int curl_proxytype;
 
-const CURLAUTH_NONE =         0;
-const CURLAUTH_BASIC =        1;  /* Basic (default) */
-const CURLAUTH_DIGEST =       2;  /* Digest */
-const CURLAUTH_GSSNEGOTIATE = 4;  /* GSS-Negotiate */
-const CURLAUTH_NTLM =         8;  /* NTLM */
-const CURLAUTH_DIGEST_IE =    16;  /* Digest with IE flavour */
-const CURLAUTH_ONLY =         2147483648; /* used together with a single other
-                                          type to force no auth or just that
-                                          single type */
+enum CurlAuth : long {
+  none =         0,
+  basic =        1,  /* Basic (default) */
+  digest =       2,  /* Digest */
+  gssnegotiate = 4,  /* GSS-Negotiate */
+  ntlm =         8,  /* NTLM */
+  digest_ie =    16, /* Digest with IE flavour */
+  only =         2147483648, /* used together with a single other
+				type to force no auth or just that
+				single type */
+  any = -17,     // (~CURLAUTH_DIGEST_IE)  /* all fine types set */
+  anysafe = -18 // (~(CURLAUTH_BASIC|CURLAUTH_DIGEST_IE))
+}
 
-const CURLAUTH_ANY = -17; // (~CURLAUTH_DIGEST_IE)  /* all fine types set */
-const CURLAUTH_ANYSAFE = -18; // (~(CURLAUTH_BASIC|CURLAUTH_DIGEST_IE))
 
 const CURLSSH_AUTH_ANY       = -1;     /* all types supported by the server */
 const CURLSSH_AUTH_NONE      = 0;      /* none allowed, silly but complete */
@@ -527,18 +495,18 @@ alias CURLSSH_AUTH_ANY CURLSSH_AUTH_DEFAULT;
 const CURL_ERROR_SIZE = 256;
 /* points to a zero-terminated string encoded with base64
                       if len is zero, otherwise to the "raw" data */
-enum type
+enum CurlKHType
 {
-    CURLKHTYPE_UNKNOWN,
-    CURLKHTYPE_RSA1,
-    CURLKHTYPE_RSA,
-    CURLKHTYPE_DSS
+    unknown,
+    rsa1,
+    rsa,
+    dss
 }
 struct curl_khkey
 {
     char *key;
     size_t len;
-    type keytype;
+    CurlKHType keytype;
 }
 
 /* this is the set of return values expected from the curl_sshkeycallback
@@ -546,77 +514,70 @@ struct curl_khkey
 /* do not accept it, but we can't answer right now so
    this causes a CURLE_DEFER error but otherwise the
    connection will be left intact etc */
-enum curl_khstat
-{
-    CURLKHSTAT_FINE_ADD_TO_FILE,
-    CURLKHSTAT_FINE,
-    CURLKHSTAT_REJECT,
-    CURLKHSTAT_DEFER,
-    CURLKHSTAT_LAST
+enum CurlKHStat {
+    fine_add_to_file,
+    fine,
+    reject,
+    defer,
+    last
 }
 
 /* this is the set of status codes pass in to the callback */
-enum curl_khmatch
-{
-    CURLKHMATCH_OK,
-    CURLKHMATCH_MISMATCH,
-    CURLKHMATCH_MISSING,
-    CURLKHMATCH_LAST
+enum CurlKHMatch {
+    ok,
+    mismatch,
+    missing,
+    last
 }
 
-alias int  function(CURL *easy, curl_khkey *knownkey, curl_khkey *foundkey, curl_khmatch , void *clientp)curl_sshkeycallback;
+alias int  function(CURL *easy, curl_khkey *knownkey, curl_khkey *foundkey, CurlKHMatch m, void *clientp)curl_sshkeycallback;
 
 /* parameter for the CURLOPT_USE_SSL option */
-enum
-{
-    CURLUSESSL_NONE,
-    CURLUSESSL_TRY,
-    CURLUSESSL_CONTROL,
-    CURLUSESSL_ALL,
-    CURLUSESSL_LAST
+enum CurlUseSSL {
+    none,
+    tryssl,
+    control,
+    all,
+    last
 }
 alias int curl_usessl;
 
 /* parameter for the CURLOPT_FTP_SSL_CCC option */
-enum
-{
-    CURLFTPSSL_CCC_NONE,
-    CURLFTPSSL_CCC_PASSIVE,
-    CURLFTPSSL_CCC_ACTIVE,
-    CURLFTPSSL_CCC_LAST
+enum CurlFtpSSL {
+    ccc_none,
+    ccc_passive,
+    ccc_active,
+    ccc_last
 }
 alias int curl_ftpccc;
 
 /* parameter for the CURLOPT_FTPSSLAUTH option */
-enum
-{
-    CURLFTPAUTH_DEFAULT,
-    CURLFTPAUTH_SSL,
-    CURLFTPAUTH_TLS,
-    CURLFTPAUTH_LAST
+enum CurlFtpAuth {
+    defaultauth,
+    ssl,
+    tls,
+    last
 }
 alias int curl_ftpauth;
 
 /* parameter for the CURLOPT_FTP_CREATE_MISSING_DIRS option */
-enum
-{
-    CURLFTP_CREATE_DIR_NONE,   /* do NOT create missing dirs! */
-    CURLFTP_CREATE_DIR,        /* (FTP/SFTP) if CWD fails, try MKD and then CWD again if MKD 
-				  succeeded, for SFTP this does similar magic */             
-    CURLFTP_CREATE_DIR_RETRY,  /* (FTP only) if CWD fails, try MKD and then CWD again even if MKD    
-				  failed! */
-    CURLFTP_CREATE_DIR_LAST    /* not an option, never use */                                                         
+enum CurlFtp {
+    create_dir_none,   /* do NOT create missing dirs! */
+    create_dir,        /* (FTP/SFTP) if CWD fails, try MKD and then CWD again if MKD 
+    			  succeeded, for SFTP this does similar magic */             
+    create_dir_retry,  /* (FTP only) if CWD fails, try MKD and then CWD again even if MKD    
+    			  failed! */
+    create_dir_last    /* not an option, never use */                                                         
 }
 alias int curl_ftpcreatedir;
 
 /* parameter for the CURLOPT_FTP_FILEMETHOD option */
-enum
-{
-    CURLFTPMETHOD_DEFAULT,    /* let libcurl pick */			  
-    CURLFTPMETHOD_MULTICWD,   /* single CWD operation for each path part */  
-    CURLFTPMETHOD_NOCWD,      /* no CWD at all */				  
-    CURLFTPMETHOD_SINGLECWD,  /* one CWD to full dir, then work on file */	  
-    CURLFTPMETHOD_LAST	      /* not an option, never use */                 
+enum CurlFtpMethod {
+    defaultmethod,    /* let libcurl pick */			  
+    multicwd,   /* single CWD operation for each path part */  
+    nocwd,      /* no CWD at all */				  
+    singlecwd,  /* one CWD to full dir, then work on file */	  
+    last	      /* not an option, never use */                 
 }
 alias int curl_ftpmethod;
 
@@ -1170,200 +1131,199 @@ alias CURLOPTTYPE_OFF_T OFF_T;
 
   /* Set authentication type for authenticated TLS */
 
-enum
-{
-    CURLOPT_FILE = 10001,
-    CURLOPT_URL,
-    CURLOPT_PORT = 3,
-    CURLOPT_PROXY = 10004,
-    CURLOPT_USERPWD,
-    CURLOPT_PROXYUSERPWD,
-    CURLOPT_RANGE,
-    CURLOPT_INFILE = 10009,
-    CURLOPT_ERRORBUFFER,
-    CURLOPT_WRITEFUNCTION = 20011,
-    CURLOPT_READFUNCTION,
-    CURLOPT_TIMEOUT = 13,
-    CURLOPT_INFILESIZE,
-    CURLOPT_POSTFIELDS = 10015,
-    CURLOPT_REFERER,
-    CURLOPT_FTPPORT,
-    CURLOPT_USERAGENT,
-    CURLOPT_LOW_SPEED_LIMIT = 19,
-    CURLOPT_LOW_SPEED_TIME,
-    CURLOPT_RESUME_FROM,
-    CURLOPT_COOKIE = 10022,
-    CURLOPT_HTTPHEADER,
-    CURLOPT_HTTPPOST,
-    CURLOPT_SSLCERT,
-    CURLOPT_KEYPASSWD,
-    CURLOPT_CRLF = 27,
-    CURLOPT_QUOTE = 10028,
-    CURLOPT_WRITEHEADER,
-    CURLOPT_COOKIEFILE = 10031,
-    CURLOPT_SSLVERSION = 32,
-    CURLOPT_TIMECONDITION,
-    CURLOPT_TIMEVALUE,
-    CURLOPT_CUSTOMREQUEST = 10036,
-    CURLOPT_STDERR,
-    CURLOPT_POSTQUOTE = 10039,
-    CURLOPT_WRITEINFO,
-    CURLOPT_VERBOSE = 41,
-    CURLOPT_HEADER,
-    CURLOPT_NOPROGRESS,
-    CURLOPT_NOBODY,
-    CURLOPT_FAILONERROR,
-    CURLOPT_UPLOAD,
-    CURLOPT_POST,
-    CURLOPT_DIRLISTONLY,
-    CURLOPT_APPEND = 50,
-    CURLOPT_NETRC,
-    CURLOPT_FOLLOWLOCATION,
-    CURLOPT_TRANSFERTEXT,
-    CURLOPT_PUT,
-    CURLOPT_PROGRESSFUNCTION = 20056,
-    CURLOPT_PROGRESSDATA = 10057,
-    CURLOPT_AUTOREFERER = 58,
-    CURLOPT_PROXYPORT,
-    CURLOPT_POSTFIELDSIZE,
-    CURLOPT_HTTPPROXYTUNNEL,
-    CURLOPT_INTERFACE = 10062,
-    CURLOPT_KRBLEVEL,
-    CURLOPT_SSL_VERIFYPEER = 64,
-    CURLOPT_CAINFO = 10065,
-    CURLOPT_MAXREDIRS = 68,
-    CURLOPT_FILETIME,
-    CURLOPT_TELNETOPTIONS = 10070,
-    CURLOPT_MAXCONNECTS = 71,
-    CURLOPT_CLOSEPOLICY,
-    CURLOPT_FRESH_CONNECT = 74,
-    CURLOPT_FORBID_REUSE,
-    CURLOPT_RANDOM_FILE = 10076,
-    CURLOPT_EGDSOCKET,
-    CURLOPT_CONNECTTIMEOUT = 78,
-    CURLOPT_HEADERFUNCTION = 20079,
-    CURLOPT_HTTPGET = 80,
-    CURLOPT_SSL_VERIFYHOST,
-    CURLOPT_COOKIEJAR = 10082,
-    CURLOPT_SSL_CIPHER_LIST,
-    CURLOPT_HTTP_VERSION = 84,
-    CURLOPT_FTP_USE_EPSV,
-    CURLOPT_SSLCERTTYPE = 10086,
-    CURLOPT_SSLKEY,
-    CURLOPT_SSLKEYTYPE,
-    CURLOPT_SSLENGINE,
-    CURLOPT_SSLENGINE_DEFAULT = 90,
-    CURLOPT_DNS_USE_GLOBAL_CACHE,
-    CURLOPT_DNS_CACHE_TIMEOUT,
-    CURLOPT_PREQUOTE = 10093,
-    CURLOPT_DEBUGFUNCTION = 20094,
-    CURLOPT_DEBUGDATA = 10095,
-    CURLOPT_COOKIESESSION = 96,
-    CURLOPT_CAPATH = 10097,
-    CURLOPT_BUFFERSIZE = 98,
-    CURLOPT_NOSIGNAL,
-    CURLOPT_SHARE = 10100,
-    CURLOPT_PROXYTYPE = 101,
-    CURLOPT_ENCODING = 10102,
-    CURLOPT_PRIVATE,
-    CURLOPT_HTTP200ALIASES,
-    CURLOPT_UNRESTRICTED_AUTH = 105,
-    CURLOPT_FTP_USE_EPRT,
-    CURLOPT_HTTPAUTH,
-    CURLOPT_SSL_CTX_FUNCTION = 20108,
-    CURLOPT_SSL_CTX_DATA = 10109,
-    CURLOPT_FTP_CREATE_MISSING_DIRS = 110,
-    CURLOPT_PROXYAUTH,
-    CURLOPT_FTP_RESPONSE_TIMEOUT,
-    CURLOPT_IPRESOLVE,
-    CURLOPT_MAXFILESIZE,
-    CURLOPT_INFILESIZE_LARGE = 30115,
-    CURLOPT_RESUME_FROM_LARGE,
-    CURLOPT_MAXFILESIZE_LARGE,
-    CURLOPT_NETRC_FILE = 10118,
-    CURLOPT_USE_SSL = 119,
-    CURLOPT_POSTFIELDSIZE_LARGE = 30120,
-    CURLOPT_TCP_NODELAY = 121,
-    CURLOPT_FTPSSLAUTH = 129,
-    CURLOPT_IOCTLFUNCTION = 20130,
-    CURLOPT_IOCTLDATA = 10131,
-    CURLOPT_FTP_ACCOUNT = 10134,
-    CURLOPT_COOKIELIST,
-    CURLOPT_IGNORE_CONTENT_LENGTH = 136,
-    CURLOPT_FTP_SKIP_PASV_IP,
-    CURLOPT_FTP_FILEMETHOD,
-    CURLOPT_LOCALPORT,
-    CURLOPT_LOCALPORTRANGE,
-    CURLOPT_CONNECT_ONLY,
-    CURLOPT_CONV_FROM_NETWORK_FUNCTION = 20142,
-    CURLOPT_CONV_TO_NETWORK_FUNCTION,
-    CURLOPT_CONV_FROM_UTF8_FUNCTION,
-    CURLOPT_MAX_SEND_SPEED_LARGE = 30145,
-    CURLOPT_MAX_RECV_SPEED_LARGE,
-    CURLOPT_FTP_ALTERNATIVE_TO_USER = 10147,
-    CURLOPT_SOCKOPTFUNCTION = 20148,
-    CURLOPT_SOCKOPTDATA = 10149,
-    CURLOPT_SSL_SESSIONID_CACHE = 150,
-    CURLOPT_SSH_AUTH_TYPES,
-    CURLOPT_SSH_PUBLIC_KEYFILE = 10152,
-    CURLOPT_SSH_PRIVATE_KEYFILE,
-    CURLOPT_FTP_SSL_CCC = 154,
-    CURLOPT_TIMEOUT_MS,
-    CURLOPT_CONNECTTIMEOUT_MS,
-    CURLOPT_HTTP_TRANSFER_DECODING,
-    CURLOPT_HTTP_CONTENT_DECODING,
-    CURLOPT_NEW_FILE_PERMS,
-    CURLOPT_NEW_DIRECTORY_PERMS,
-    CURLOPT_POSTREDIR,
-    CURLOPT_SSH_HOST_PUBLIC_KEY_MD5 = 10162,
-    CURLOPT_OPENSOCKETFUNCTION = 20163,
-    CURLOPT_OPENSOCKETDATA = 10164,
-    CURLOPT_COPYPOSTFIELDS,
-    CURLOPT_PROXY_TRANSFER_MODE = 166,
-    CURLOPT_SEEKFUNCTION = 20167,
-    CURLOPT_SEEKDATA = 10168,
-    CURLOPT_CRLFILE,
-    CURLOPT_ISSUERCERT,
-    CURLOPT_ADDRESS_SCOPE = 171,
-    CURLOPT_CERTINFO,
-    CURLOPT_USERNAME = 10173,
-    CURLOPT_PASSWORD,
-    CURLOPT_PROXYUSERNAME,
-    CURLOPT_PROXYPASSWORD,
-    CURLOPT_NOPROXY,
-    CURLOPT_TFTP_BLKSIZE = 178,
-    CURLOPT_SOCKS5_GSSAPI_SERVICE = 10179,
-    CURLOPT_SOCKS5_GSSAPI_NEC = 180,
-    CURLOPT_PROTOCOLS,
-    CURLOPT_REDIR_PROTOCOLS,
-    CURLOPT_SSH_KNOWNHOSTS = 10183,
-    CURLOPT_SSH_KEYFUNCTION = 20184,
-    CURLOPT_SSH_KEYDATA = 10185,
-    CURLOPT_MAIL_FROM,
-    CURLOPT_MAIL_RCPT,
-    CURLOPT_FTP_USE_PRET = 188,
-    CURLOPT_RTSP_REQUEST,
-    CURLOPT_RTSP_SESSION_ID = 10190,
-    CURLOPT_RTSP_STREAM_URI,
-    CURLOPT_RTSP_TRANSPORT,
-    CURLOPT_RTSP_CLIENT_CSEQ = 193,
-    CURLOPT_RTSP_SERVER_CSEQ,
-    CURLOPT_INTERLEAVEDATA = 10195,
-    CURLOPT_INTERLEAVEFUNCTION = 20196,
-    CURLOPT_WILDCARDMATCH = 197,
-    CURLOPT_CHUNK_BGN_FUNCTION = 20198,
-    CURLOPT_CHUNK_END_FUNCTION,
-    CURLOPT_FNMATCH_FUNCTION,
-    CURLOPT_CHUNK_DATA = 10201,
-    CURLOPT_FNMATCH_DATA,
-    CURLOPT_RESOLVE,
-    CURLOPT_TLSAUTH_USERNAME,
-    CURLOPT_TLSAUTH_PASSWORD,
-    CURLOPT_TLSAUTH_TYPE,
-    CURLOPT_LASTENTRY
+enum CurlOption {
+    file = 10001,
+    url,
+    port = 3,
+    proxy = 10004,
+    userpwd,
+    proxyuserpwd,
+    range,
+    infile = 10009,
+    errorbuffer,
+    writefunction = 20011,
+    readfunction,
+    timeout = 13,
+    infilesize,
+    postfields = 10015,
+    referer,
+    ftpport,
+    useragent,
+    low_speed_limit = 19,
+    low_speed_time,
+    resume_from,
+    cookie = 10022,
+    httpheader,
+    httppost,
+    sslcert,
+    keypasswd,
+    crlf = 27,
+    quote = 10028,
+    writeheader,
+    cookiefile = 10031,
+    sslversion = 32,
+    timecondition,
+    timevalue,
+    customrequest = 10036,
+    stderr,
+    postquote = 10039,
+    writeinfo,
+    verbose = 41,
+    header,
+    noprogress,
+    nobody,
+    failonerror,
+    upload,
+    post,
+    dirlistonly,
+    append = 50,
+    netrc,
+    followlocation,
+    transfertext,
+    put,
+    progressfunction = 20056,
+    progressdata = 10057,
+    autoreferer = 58,
+    proxyport,
+    postfieldsize,
+    httpproxytunnel,
+    intrface = 10062,
+    krblevel,
+    ssl_verifypeer = 64,
+    cainfo = 10065,
+    maxredirs = 68,
+    filetime,
+    telnetoptions = 10070,
+    maxconnects = 71,
+    closepolicy,
+    fresh_connect = 74,
+    forbid_reuse,
+    random_file = 10076,
+    egdsocket,
+    connecttimeout = 78,
+    headerfunction = 20079,
+    httpget = 80,
+    ssl_verifyhost,
+    cookiejar = 10082,
+    ssl_cipher_list,
+    http_version = 84,
+    ftp_use_epsv,
+    sslcerttype = 10086,
+    sslkey,
+    sslkeytype,
+    sslengine,
+    sslengine_default = 90,
+    dns_use_global_cache,
+    dns_cache_timeout,
+    prequote = 10093,
+    debugfunction = 20094,
+    debugdata = 10095,
+    cookiesession = 96,
+    capath = 10097,
+    buffersize = 98,
+    nosignal,
+    share = 10100,
+    proxytype = 101,
+    encoding = 10102,
+    private_opt,
+    http200aliases,
+    unrestricted_auth = 105,
+    ftp_use_eprt,
+    httpauth,
+    ssl_ctx_function = 20108,
+    ssl_ctx_data = 10109,
+    ftp_create_missing_dirs = 110,
+    proxyauth,
+    ftp_response_timeout,
+    ipresolve,
+    maxfilesize,
+    infilesize_large = 30115,
+    resume_from_large,
+    maxfilesize_large,
+    netrc_file = 10118,
+    use_ssl = 119,
+    postfieldsize_large = 30120,
+    tcp_nodelay = 121,
+    ftpsslauth = 129,
+    ioctlfunction = 20130,
+    ioctldata = 10131,
+    ftp_account = 10134,
+    cookielist,
+    ignore_content_length = 136,
+    ftp_skip_pasv_ip,
+    ftp_filemethod,
+    localport,
+    localportrange,
+    connect_only,
+    conv_from_network_function = 20142,
+    conv_to_network_function,
+    conv_from_utf8_function,
+    max_send_speed_large = 30145,
+    max_recv_speed_large,
+    ftp_alternative_to_user = 10147,
+    sockoptfunction = 20148,
+    sockoptdata = 10149,
+    ssl_sessionid_cache = 150,
+    ssh_auth_types,
+    ssh_public_keyfile = 10152,
+    ssh_private_keyfile,
+    ftp_ssl_ccc = 154,
+    timeout_ms,
+    connecttimeout_ms,
+    http_transfer_decoding,
+    http_content_decoding,
+    new_file_perms,
+    new_directory_perms,
+    postredir,
+    ssh_host_public_key_md5 = 10162,
+    opensocketfunction = 20163,
+    opensocketdata = 10164,
+    copypostfields,
+    proxy_transfer_mode = 166,
+    seekfunction = 20167,
+    seekdata = 10168,
+    crlfile,
+    issuercert,
+    address_scope = 171,
+    certinfo,
+    username = 10173,
+    password,
+    proxyusername,
+    proxypassword,
+    noproxy,
+    tftp_blksize = 178,
+    socks5_gssapi_service = 10179,
+    socks5_gssapi_nec = 180,
+    protocols,
+    redir_protocols,
+    ssh_knownhosts = 10183,
+    ssh_keyfunction = 20184,
+    ssh_keydata = 10185,
+    mail_from,
+    mail_rcpt,
+    ftp_use_pret = 188,
+    rtsp_request,
+    rtsp_session_id = 10190,
+    rtsp_stream_uri,
+    rtsp_transport,
+    rtsp_client_cseq = 193,
+    rtsp_server_cseq,
+    interleavedata = 10195,
+    interleavefunction = 20196,
+    wildcardmatch = 197,
+    chunk_bgn_function = 20198,
+    chunk_end_function,
+    fnmatch_function,
+    chunk_data = 10201,
+    fnmatch_data,
+    resolve,
+    tlsauth_username,
+    tlsauth_password,
+    tlsauth_type,
+    lastentry
 }
 alias int CURLoption;
-alias CURLOPT_FTP_RESPONSE_TIMEOUT CURLOPT_SERVER_RESPONSE_TIMEOUT;
+const CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
 
 /* Below here follows defines for the CURLOPT_IPRESOLVE option. If a host
    name resolves addresses using more than one IP protocol version, this
@@ -1373,120 +1333,110 @@ const CURL_IPRESOLVE_V4 = 1;
 const CURL_IPRESOLVE_V6 = 2;
 
   /* three convenient "aliases" that follow the name scheme better */
-alias CURLOPT_FILE CURLOPT_WRITEDATA;
-alias CURLOPT_INFILE CURLOPT_READDATA;
-alias CURLOPT_WRITEHEADER CURLOPT_HEADERDATA;
-alias CURLOPT_HTTPHEADER CURLOPT_RTSPHEADER;
+const CURLOPT_WRITEDATA = CurlOption.file;
+const CURLOPT_READDATA = CurlOption.infile;
+const CURLOPT_HEADERDATA = CurlOption.writeheader;
+const CURLOPT_RTSPHEADER = CurlOption.httpheader;
 
 /* These enums are for use with the CURLOPT_HTTP_VERSION option. */
-enum
-{
-    CURL_HTTP_VERSION_NONE, /* setting this means we don't care, and that we'd
-			       like the library to choose the best possible
-			       for us! */
-    CURL_HTTP_VERSION_1_0,
-    CURL_HTTP_VERSION_1_1,
-    CURL_HTTP_VERSION_LAST /* *ILLEGAL* http version */
+enum CurlHttpVersion {
+    none, /* setting this means we don't care, and that we'd
+	     like the library to choose the best possible
+	     for us! */
+    v1_0,
+    v1_1,
+    last /* *ILLEGAL* http version */
 }
 
 /*
  * Public API enums for RTSP requests
  */
-enum
-{
-    CURL_RTSPREQ_NONE,
-    CURL_RTSPREQ_OPTIONS,
-    CURL_RTSPREQ_DESCRIBE,
-    CURL_RTSPREQ_ANNOUNCE,
-    CURL_RTSPREQ_SETUP,
-    CURL_RTSPREQ_PLAY,
-    CURL_RTSPREQ_PAUSE,
-    CURL_RTSPREQ_TEARDOWN,
-    CURL_RTSPREQ_GET_PARAMETER,
-    CURL_RTSPREQ_SET_PARAMETER,
-    CURL_RTSPREQ_RECORD,
-    CURL_RTSPREQ_RECEIVE,
-    CURL_RTSPREQ_LAST
+enum CurlRtspReq {
+    none,
+    options,
+    describe,
+    announce,
+    setup,
+    play,
+    pause,
+    teardown,
+    get_parameter,
+    set_parameter,
+    record,
+    receive,
+    last
 }
 
-  /* These enums are for use with the CURLOPT_NETRC option. */
-
-
-enum CURL_NETRC_OPTION
-{
-    CURL_NETRC_IGNORED,  /* The .netrc will never be read. This is the default. */		
-    CURL_NETRC_OPTIONAL  /* A user:password in the URL will be preferred to one in the .netrc. */,
-    CURL_NETRC_REQUIRED, /* A user:password in the URL will be ignored.
-			  * Unless one is set programmatically, the .netrc
-			  * will be queried. */
-    CURL_NETRC_LAST
+ /* These enums are for use with the CURLOPT_NETRC option. */
+enum CurlNetRcOption {
+    ignored,  /* The .netrc will never be read. This is the default. */		
+    optional  /* A user:password in the URL will be preferred to one in the .netrc. */,
+    required, /* A user:password in the URL will be ignored.
+	       * Unless one is set programmatically, the .netrc
+	       * will be queried. */
+    last
 }
 
-
-enum
-{
-    CURL_SSLVERSION_DEFAULT,
-    CURL_SSLVERSION_TLSv1,
-    CURL_SSLVERSION_SSLv2,
-    CURL_SSLVERSION_SSLv3,
-    CURL_SSLVERSION_LAST /* never use */
+enum CurlSslVersion {
+    default_version,
+    tlsv1,
+    sslv2,
+    sslv3,
+    last /* never use */
 }
 
-enum CURL_TLSAUTH
-{
-    CURL_TLSAUTH_NONE,
-    CURL_TLSAUTH_SRP,
-    CURL_TLSAUTH_LAST /* never use */
+enum CurlTlsAuth {
+    none,
+    srp,
+    last /* never use */
 }
 
 /* symbols to use with CURLOPT_POSTREDIR.
    CURL_REDIR_POST_301 and CURL_REDIR_POST_302 can be bitwise ORed so that
    CURL_REDIR_POST_301 | CURL_REDIR_POST_302 == CURL_REDIR_POST_ALL */
-
 const CURL_REDIR_GET_ALL = 0;
 const CURL_REDIR_POST_301 = 1;
 const CURL_REDIR_POST_302 = 2;
 const CURL_REDIR_POST_ALL = (CURL_REDIR_POST_301|CURL_REDIR_POST_302);
 
-enum
-{
-    CURL_TIMECOND_NONE,
-    CURL_TIMECOND_IFMODSINCE,
-    CURL_TIMECOND_IFUNMODSINCE,
-    CURL_TIMECOND_LASTMOD,
-    CURL_TIMECOND_LAST
+enum CurlTimeCond {
+    none,
+    ifmodsince,
+    ifunmodsince,
+    lastmod,
+    last
 }
 alias int curl_TimeCond;
 
 
 /* curl_strequal() and curl_strnequal() are subject for removal in a future
    libcurl, see lib/README.curlx for details */
+extern (C) { 
 int  curl_strequal(char *s1, char *s2);
 int  curl_strnequal(char *s1, char *s2, size_t n);
-
-enum
-{
-    CURLFORM_NOTHING,
-    CURLFORM_COPYNAME,
-    CURLFORM_PTRNAME,
-    CURLFORM_NAMELENGTH,
-    CURLFORM_COPYCONTENTS,
-    CURLFORM_PTRCONTENTS,
-    CURLFORM_CONTENTSLENGTH,
-    CURLFORM_FILECONTENT,
-    CURLFORM_ARRAY,
-    CURLFORM_OBSOLETE,
-    CURLFORM_FILE,
-    CURLFORM_BUFFER,
-    CURLFORM_BUFFERPTR,
-    CURLFORM_BUFFERLENGTH,
-    CURLFORM_CONTENTTYPE,
-    CURLFORM_CONTENTHEADER,
-    CURLFORM_FILENAME,
-    CURLFORM_END,
-    CURLFORM_OBSOLETE2,
-    CURLFORM_STREAM,
-    CURLFORM_LASTENTRY,
+}
+enum CurlForm {
+    nothing,
+    copyname,
+    ptrname,
+    namelength,
+    copycontents,
+    ptrcontents,
+    contentslength,
+    filecontent,
+    array,
+    obsolete,
+    file,
+    buffer,
+    bufferptr,
+    bufferlength,
+    contenttype,
+    contentheader,
+    filename,
+    end,
+    obsolete2,
+    stream,
+    lastentry,
 }
 alias int CURLformoption;
 
@@ -1514,19 +1464,20 @@ struct curl_forms
  * CURL_FORMADD_ILLEGAL_ARRAY  if an illegal option is used in an array
  *
  ***************************************************************************/
-enum
-{
-    CURL_FORMADD_OK,
-    CURL_FORMADD_MEMORY,
-    CURL_FORMADD_OPTION_TWICE,
-    CURL_FORMADD_NULL,
-    CURL_FORMADD_UNKNOWN_OPTION,
-    CURL_FORMADD_INCOMPLETE,
-    CURL_FORMADD_ILLEGAL_ARRAY,
-    CURL_FORMADD_DISABLED,
-    CURL_FORMADD_LAST
+enum CurlFormAdd {
+    ok,
+    memory,
+    option_twice,
+    null_ptr,
+    unknown_option,
+    incomplete,
+    illegal_array,
+    disabled,
+    last
 }
 alias int CURLFORMcode;
+
+extern (C) { 
 
 /*
  * NAME curl_formadd()
@@ -1665,6 +1616,7 @@ CURLcode  curl_global_init_mem(int flags, curl_malloc_callback m, curl_free_call
  * that uses libcurl
  */
 void  curl_global_cleanup();
+}
 
 /* linked-list structure for the CURLOPT_QUOTE option (and other) */
 struct curl_slist
@@ -1673,6 +1625,7 @@ struct curl_slist
     curl_slist *next;
 }
 
+extern (C) { 
 /*
  * NAME curl_slist_append()
  *
@@ -1702,6 +1655,7 @@ void  curl_slist_free_all(curl_slist *);
  * and should be set to NULL.
  */
 time_t  curl_getdate(char *p, time_t *unused);
+}
 
 /* info about the certificate chain, only for OpenSSL builds. Asked
    for with CURLOPT_CERTINFO / CURLINFO_CERTINFO */
@@ -1721,70 +1675,68 @@ const CURLINFO_MASK = 0x0fffff;
 
 const CURLINFO_TYPEMASK = 0xf00000;
 
-enum
-{
-    CURLINFO_NONE, 
-    CURLINFO_EFFECTIVE_URL = 1048577,
-    CURLINFO_RESPONSE_CODE = 2097154,
-    CURLINFO_TOTAL_TIME = 3145731,
-    CURLINFO_NAMELOOKUP_TIME,
-    CURLINFO_CONNECT_TIME,
-    CURLINFO_PRETRANSFER_TIME,
-    CURLINFO_SIZE_UPLOAD,
-    CURLINFO_SIZE_DOWNLOAD,
-    CURLINFO_SPEED_DOWNLOAD,
-    CURLINFO_SPEED_UPLOAD,
-    CURLINFO_HEADER_SIZE = 2097163,
-    CURLINFO_REQUEST_SIZE,
-    CURLINFO_SSL_VERIFYRESULT,
-    CURLINFO_FILETIME,
-    CURLINFO_CONTENT_LENGTH_DOWNLOAD = 3145743,
-    CURLINFO_CONTENT_LENGTH_UPLOAD,
-    CURLINFO_STARTTRANSFER_TIME,
-    CURLINFO_CONTENT_TYPE = 1048594,
-    CURLINFO_REDIRECT_TIME = 3145747,
-    CURLINFO_REDIRECT_COUNT = 2097172,
-    CURLINFO_PRIVATE = 1048597,
-    CURLINFO_HTTP_CONNECTCODE = 2097174,
-    CURLINFO_HTTPAUTH_AVAIL,
-    CURLINFO_PROXYAUTH_AVAIL,
-    CURLINFO_OS_ERRNO,
-    CURLINFO_NUM_CONNECTS,
-    CURLINFO_SSL_ENGINES = 4194331,
-    CURLINFO_COOKIELIST,
-    CURLINFO_LASTSOCKET = 2097181,
-    CURLINFO_FTP_ENTRY_PATH = 1048606,
-    CURLINFO_REDIRECT_URL,
-    CURLINFO_PRIMARY_IP,
-    CURLINFO_APPCONNECT_TIME = 3145761,
-    CURLINFO_CERTINFO = 4194338,
-    CURLINFO_CONDITION_UNMET = 2097187,
-    CURLINFO_RTSP_SESSION_ID = 1048612,
-    CURLINFO_RTSP_CLIENT_CSEQ = 2097189,
-    CURLINFO_RTSP_SERVER_CSEQ,
-    CURLINFO_RTSP_CSEQ_RECV,
-    CURLINFO_PRIMARY_PORT,
-    CURLINFO_LOCAL_IP = 1048617,
-    CURLINFO_LOCAL_PORT = 2097194,
+enum CurlInfo {
+    none, 
+    effective_url = 1048577,
+    response_code = 2097154,
+    total_time = 3145731,
+    namelookup_time,
+    connect_time,
+    pretransfer_time,
+    size_upload,
+    size_download,
+    speed_download,
+    speed_upload,
+    header_size = 2097163,
+    request_size,
+    ssl_verifyresult,
+    filetime,
+    content_length_download = 3145743,
+    content_length_upload,
+    starttransfer_time,
+    content_type = 1048594,
+    redirect_time = 3145747,
+    redirect_count = 2097172,
+    private_info = 1048597,
+    http_connectcode = 2097174,
+    httpauth_avail,
+    proxyauth_avail,
+    os_errno,
+    num_connects,
+    ssl_engines = 4194331,
+    cookielist,
+    lastsocket = 2097181,
+    ftp_entry_path = 1048606,
+    redirect_url,
+    primary_ip,
+    appconnect_time = 3145761,
+    certinfo = 4194338,
+    condition_unmet = 2097187,
+    rtsp_session_id = 1048612,
+    rtsp_client_cseq = 2097189,
+    rtsp_server_cseq,
+    rtsp_cseq_recv,
+    primary_port,
+    local_ip = 1048617,
+    local_port = 2097194,
     /* Fill in new entries below here! */
-    CURLINFO_LASTONE = 42
+    lastone = 42
 }
 alias int CURLINFO;
 
 /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as
    CURLINFO_HTTP_CODE */
-alias CURLINFO_RESPONSE_CODE CURLINFO_HTTP_CODE;
+const CURLINFO_HTTP_CODE = CurlInfo.response_code; 
 
 
-enum
-{
-    CURLCLOSEPOLICY_NONE,
-    CURLCLOSEPOLICY_OLDEST,
-    CURLCLOSEPOLICY_LEAST_RECENTLY_USED,
-    CURLCLOSEPOLICY_LEAST_TRAFFIC,
-    CURLCLOSEPOLICY_SLOWEST,
-    CURLCLOSEPOLICY_CALLBACK,
-    CURLCLOSEPOLICY_LAST
+enum CurlClosePolicy {
+    none,
+    oldest,
+    least_recently_used,
+    least_traffic,
+    slowest,
+    callback,
+    last
 }
 alias int curl_closepolicy;
 
@@ -1803,25 +1755,23 @@ alias CURL_GLOBAL_ALL CURL_GLOBAL_DEFAULT;
    *  the locking is just made to change the internal state of the share
    *  itself.
    */
-enum
-{
-    CURL_LOCK_DATA_NONE,
-    CURL_LOCK_DATA_SHARE,
-    CURL_LOCK_DATA_COOKIE,
-    CURL_LOCK_DATA_DNS,
-    CURL_LOCK_DATA_SSL_SESSION,
-    CURL_LOCK_DATA_CONNECT,
-    CURL_LOCK_DATA_LAST
+enum CurlLockData {
+    none,
+    share,
+    cookie,
+    dns,
+    ssl_session,
+    connect,
+    last
 }
 alias int curl_lock_data;
 
 /* Different lock access types */
-enum
-{
-    CURL_LOCK_ACCESS_NONE,
-    CURL_LOCK_ACCESS_SHARED,
-    CURL_LOCK_ACCESS_SINGLE,
-    CURL_LOCK_ACCESS_LAST
+enum CurlLockAccess {
+    none,
+    shared_access,
+    single,
+    last
 }
 alias int curl_lock_access;
 
@@ -1830,46 +1780,45 @@ alias void  function(CURL *handle, curl_lock_data data, void *userptr)curl_unloc
 
 alias void CURLSH;
 
-enum
-{
-    CURLSHE_OK,
-    CURLSHE_BAD_OPTION,
-    CURLSHE_IN_USE,
-    CURLSHE_INVALID,
-    CURLSHE_NOMEM,
-    CURLSHE_LAST
+enum CurlShError {
+    ok,
+    bad_option,
+    in_use,
+    invalid,
+    nomem,
+    last
 }
 alias int CURLSHcode;
 
 /* pass in a user data pointer used in the lock/unlock callback
    functions */
-enum
-{
-    CURLSHOPT_NONE,
-    CURLSHOPT_SHARE,
-    CURLSHOPT_UNSHARE,
-    CURLSHOPT_LOCKFUNC,
-    CURLSHOPT_UNLOCKFUNC,
-    CURLSHOPT_USERDATA,
-    CURLSHOPT_LAST
+enum CurlShOption {
+    none,
+    share,
+    unshare,
+    lockfunc,
+    unlockfunc,
+    userdata,
+    last
 }
 alias int CURLSHoption;
 
+extern (C) { 
 CURLSH * curl_share_init();
 CURLSHcode  curl_share_setopt(CURLSH *, CURLSHoption option,...);
 CURLSHcode  curl_share_cleanup(CURLSH *);
+}
 
 /****************************************************************************
  * Structures for querying information about the curl library at runtime.
  */
 
-enum
-{
-    CURLVERSION_FIRST,
-    CURLVERSION_SECOND,
-    CURLVERSION_THIRD,
-    CURLVERSION_FOURTH,
-    CURLVERSION_LAST
+enum CurlVersion {
+    first,
+    second,
+    third,
+    fourth,
+    last
 }
 alias int CURLversion;
 
@@ -1878,7 +1827,7 @@ alias int CURLversion;
    meant to be a built-in version number for what kind of struct the caller
    expects. If the struct ever changes, we redefine the NOW to another enum
    from above. */
-alias CURLVERSION_FOURTH CURLVERSION_NOW;
+const CURLVERSION_NOW = CurlVersion.fourth; 
 
 struct _N28
 {
@@ -1920,6 +1869,7 @@ const CURL_VERSION_CONV         = 4096; /* character conversions supported */
 const CURL_VERSION_CURLDEBUG    = 8192; /* debug memory tracking supported */
 const CURL_VERSION_TLSAUTH_SRP  = 16384; /* TLS-SRP auth is supported */
 
+extern (C) { 
 /*
  * NAME curl_version_info()
  *
@@ -1962,6 +1912,7 @@ char * curl_share_strerror(CURLSHcode );
  *
  */
 CURLcode  curl_easy_pause(CURL *handle, int bitmask);
+}
 
 const CURLPAUSE_RECV      = 1;
 const CURLPAUSE_RECV_CONT = 0;
@@ -2100,31 +2051,30 @@ extern (C) CURLcode  curl_easy_send(CURL *curl, void *buffer, size_t buflen, siz
 
 alias void CURLM;
 
-enum
-{
-    CURLM_CALL_MULTI_PERFORM = -1, /* please call curl_multi_perform() or curl_multi_socket*() soon */
-    CURLM_OK,     
-    CURLM_BAD_HANDLE,              /* the passed-in handle is not a valid CURLM handle */	 
-    CURLM_BAD_EASY_HANDLE,	   /* an easy handle was not good/valid */		 
-    CURLM_OUT_OF_MEMORY,	   /* if you ever get this, you're in deep sh*t */	 
-    CURLM_INTERNAL_ERROR,	   /* this is a libcurl bug */				 
-    CURLM_BAD_SOCKET,		   /* the passed in socket argument did not match */	 
-    CURLM_UNKNOWN_OPTION,	   /* curl_multi_setopt() with unsupported option */       
-    CURLM_LAST,
+enum CurlM {
+    call_multi_perform = -1, /* please call curl_multi_perform() or curl_multi_socket*() soon */
+    ok,     
+    bad_handle,              /* the passed-in handle is not a valid CURLM handle */	 
+    bad_easy_handle,	   /* an easy handle was not good/valid */		 
+    out_of_memory,	   /* if you ever get this, you're in deep sh*t */	 
+    internal_error,	   /* this is a libcurl bug */				 
+    bad_socket,		   /* the passed in socket argument did not match */	 
+    unknown_option,	   /* curl_multi_setopt() with unsupported option */       
+    last,
 }
 alias int CURLMcode;
 
 /* just to make code nicer when using curl_multi_socket() you can now check
    for CURLM_CALL_MULTI_SOCKET too in the same style it works for
    curl_multi_perform() and CURLM_CALL_MULTI_PERFORM */
-alias CURLM_CALL_MULTI_PERFORM CURLM_CALL_MULTI_SOCKET;
+const CURLM_CALL_MULTI_SOCKET = CurlM.call_multi_perform; 
 
-enum
+enum CurlMsg
 {
-    CURLMSG_NONE,
-    CURLMSG_DONE, /* This easy handle has completed. 'result' contains
-		     the CURLcode of the transfer */
-    CURLMSG_LAST, /* no used */
+    none,
+    done, /* This easy handle has completed. 'result' contains
+    	     the CURLcode of the transfer */
+    last, /* no used */
 }
 alias int CURLMSG;
 
@@ -2321,15 +2271,14 @@ extern (C) {
  */
 extern (C) CURLMcode  curl_multi_timeout(CURLM *multi_handle, int *milliseconds);
 
-enum
-{
-    CURLMOPT_SOCKETFUNCTION = 20001,    /* This is the socket callback function pointer */	    
-    CURLMOPT_SOCKETDATA = 10002,        /* This is the argument passed to the socket callback */  
-    CURLMOPT_PIPELINING = 3,	        /* set to 1 to enable pipelining for this multi handle */ 
-    CURLMOPT_TIMERFUNCTION = 20004,     /* This is the timer callback function pointer */	    
-    CURLMOPT_TIMERDATA = 10005,	        /* This is the argument passed to the timer callback */   
-    CURLMOPT_MAXCONNECTS = 6,	        /* maximum number of entries in the connection cache */   
-    CURLMOPT_LASTENTRY,
+enum CurlMOption {
+    socketfunction = 20001,    /* This is the socket callback function pointer */	    
+    socketdata = 10002,        /* This is the argument passed to the socket callback */  
+    pipelining = 3,	        /* set to 1 to enable pipelining for this multi handle */ 
+    timerfunction = 20004,     /* This is the timer callback function pointer */	    
+    timerdata = 10005,	        /* This is the argument passed to the timer callback */   
+    maxconnects = 6,	        /* maximum number of entries in the connection cache */   
+    lastentry,
 }
 alias int CURLMoption;
 
