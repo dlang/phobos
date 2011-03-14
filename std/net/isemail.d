@@ -56,7 +56,7 @@ alias std.algorithm.canFind contains;
  * 
  * Examples:
  * ---
- * assert("abcde".firstChar == 71);
+ * assert("abcde".firstChar == 97);
  * ---
  * 
  * Params:
@@ -69,14 +69,20 @@ int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
     return cast(int) str.first;
 }
 
+unittest
+{
+	assert("abcde".firstChar == 97);
+	assert("ö".firstChar == 246);
+}
+
 /**
  * Returns the maximum of the values in the given array.
  *
  * Examples:
  * ---
- * assert([1, 2, 3, 4] == 4);
- * assert([3, 5, 9, 2, 5] == 9);
- * assert([7, 13, 9, 12, 0] == 13);
+ * assert([1, 2, 3, 4].max == 4);
+ * assert([3, 5, 9, 2, 5].max == 9);
+ * assert([7, 13, 9, 12, 0].max == 13);
  * ---
  *
  * Params:
@@ -92,6 +98,13 @@ T max (T) (T[] arr)
         max = std.algorithm.max(max, arr[i + 1]);
         
     return max;
+}
+
+unittest
+{
+	assert([1, 2, 3, 4].max == 4);
+	assert([3, 5, 9, 2, 5].max == 9);
+	assert([7, 13, 9, 12, 0].max == 13);
 }
 
 /**
@@ -164,8 +177,22 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 		if (end < 0)
 			end = str.length + end;
 	}
+	
+	if (start > end)
+		end = start;
 
 	return str[start .. end];
+}
+
+unittest
+{
+	assert("abcdef".substr(-1) == "f");
+	assert("abcdef".substr(-2) == "ef");	
+	assert("abcdef".substr(-3, 1) == "d");
+	assert("abcdef".substr(0, -1) == "abcde");
+	assert("abcdef".substr(2, -1) == "cde");
+	assert("abcdef".substr(4, -4) == []);
+	assert("abcdef".substr(-3, -1) == "de");
 }
 
 /**
@@ -207,14 +234,22 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
     return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
 }
 
+unittest
+{
+	assert("abc".compareFirstN("abcdef", 3) == 0);
+	assert("abc".compareFirstN("Abc", 3, true) == 0);
+	assert("abc".compareFirstN("abcdef", 6) < 0);
+	assert("abcdef".compareFirstN("abc", 6) > 0);
+}
+
 /**
  * Returns a range consisting of the elements of the $(D_PARAM input) range that
  * matches the given $(D_PARAM pattern). 
  * 
  * Examples:
  * ---
- * assert(equal(["ab", "0a", "cd", "1b"].grep(regexp("\d\w")), ["0a", "1b"]));
- * assert(equal(["abc", "0123", "defg", "4567"].grep(regexp("(\w+)"), true), ["0123", "4567"]));
+ * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
+ * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
  * ---
  * 
  * Params:
@@ -231,6 +266,12 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 	                   (std.algorithm.ElementType!(Range) e) { return !e.match(pattern).empty; };
 	
 	return std.algorithm.filter!(dg)(input);
+}
+
+unittest
+{
+	assert(std.algorithm.equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
+	//assert(std.algorithm.equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"])); // "\w" matches digits which it shouldn't, probably a bug in std.regex
 }
 
 /**
@@ -257,6 +298,15 @@ std.algorithm.ElementType!(A) pop (A) (ref A a) if (isDynamicArray!A && !isNarro
 	return e;
 }
 
+unittest
+{
+	auto array = [0, 1, 2, 3];
+	auto result = array.pop;
+
+	assert(array == [0, 1, 2]);
+	assert(result == 3);
+}
+
 /**
  * Returns the character at the given index as a string. The returned string will be a
  * slice of the original string.
@@ -277,6 +327,12 @@ std.algorithm.ElementType!(A) pop (A) (ref A a) if (isDynamicArray!A && !isNarro
 T[] get (T) (T[] str, size_t index, dchar c)
 {
 	return str[index .. index + codeLength!(T)(c)];
+}
+
+unittest
+{
+	assert("abc".get(1, 'b') == "b");
+	assert("löv".get(1, 'ö') == "ö");
 }
 
 // issue 4673
@@ -1365,5 +1421,5 @@ unittest
 
 void main ()
 {
-	println(`test@iana.123`.isEmail(false, cast(EmailStatusCode) (EmailStatusCode.Rfc5321TopLevelDomainNumeric + 1)).toString);
+	assert("1".match(regex(`\w`)).empty);
 }
