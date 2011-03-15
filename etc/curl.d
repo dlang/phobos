@@ -1,5 +1,29 @@
 // Written in the D programming language.
 
+/*
+  TODO:
+  Pull request for c declarations only
+
+  const(void[]) for output
+  ubyte[] for input
+  postData testPostData etc. for all cases
+  Zero copy of data (where possible)
+
+  Progress is deprecated
+
+  Is inheritance necessary (for streaming Transport... for grand url dispatch result?)
+
+  Threads: shutdowns from other threads/callbacks, or shutdown the entire library
+
+  Grand dispatch from URL only (looking at protocol)
+
+  Suggestion (foreach):
+    The data transfer should happen concurrently with the foreach code. The type of line is char[] or const(char)[]. Similarly, there would be a byChunk interface that transfers in ubyte[] chunks.
+    Also we need a head() method for the corresponding command. 
+
+  Typed http headers - Johannes Pfau
+ */
+
 /**
 Curl client functionality as provided by libcurl.
 
