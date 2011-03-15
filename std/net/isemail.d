@@ -271,7 +271,7 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 unittest
 {
 	assert(std.algorithm.equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
-	//assert(std.algorithm.equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"])); // "\w" matches digits which it shouldn't, probably a bug in std.regex
+	assert(std.algorithm.equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
 
 /**
@@ -1421,5 +1421,5 @@ unittest
 
 void main ()
 {
-	assert("1".match(regex(`\w`)).empty);
+
 }
