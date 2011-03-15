@@ -369,82 +369,217 @@ alias popFront shift;
 enum EmailStatusCode
 {
     // Categories
+
+	/// Address is valid
     ValidCategory = 1,
+
+	/// Address is valid but a DNS check was not successful
     DnsWarning = 7,
+
+	/// Address is valid for SMTP but has unusual elements
     Rfc5321 = 15,
+
+	/// Address is valid within the message but cannot be used unmodified for the envelope
     CFoldingWhitespace = 31,
+
+	/// Address contains deprecated elements but may still be valid in restricted contexts
     Deprecated = 63,
+
+	/// The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid
     Rfc5322 = 127,
+
+	///
 	On = 252,
+	
+	///
 	Off = 253,
+	
+	///
 	Warning = 254,
+	
+	/// Address is invalid for any purpose
     Error = 255,
     
+
+
     // Diagnoses
-    // Address is valid
+
+    /// Address is valid
     Valid = 0,
     
-    // Address is valid but a DNS check was not successful
+	// Address is valid but a DNS check was not successful
+
+    /// Could not find an MX record for this domain but an A-record does exist
     DnsWarningNoMXRecord = 5,
+
+	/// Could not find an MX record or an A-record for this domain
     DnsWarningNoRecord = 6,
     
-    // Address is valid for SMTP but has unusual elements
+
+
+	// Address is valid for SMTP but has unusual elements
+
+    /// Address is valid but at a Top Level Domain
     Rfc5321TopLevelDomain = 9,
+
+	/// Address is valid but the Top Level Domain begins with a number
     Rfc5321TopLevelDomainNumeric = 10,
+
+	/// Address is valid but contains a quoted string
     Rfc5321QuotedString = 11,
+
+	/// Address is valid but at a literal address not a domain
     Rfc5321AddressLiteral = 12,
+
+	/// Address is valid but contains a :: that only elides one zero group
     Rfc5321IpV6Deprecated = 13,
     
-    // Address is valid within the message but cannot be used unmodified for the envelope
+
+
+	// Address is valid within the message but cannot be used unmodified for the envelope
+
+    /// Address contains comments
     Comment = 17,
+
+	/// Address contains Folding White Space
     FoldingWhitespace = 18,
     
-    // Address contains deprecated elements but may still be valid in restricted contexts
+
+
+	// Address contains deprecated elements but may still be valid in restricted contexts
+
+    /// The local part is in a deprecated form
     DeprecatedLocalPart = 33,
+
+	/// Address contains an obsolete form of Folding White Space
     DeprecatedFoldingWhitespace = 34,
+
+	/// A quoted string contains a deprecated character
     DeprecatedQuotedText = 35,
+
+	/// A quoted pair contains a deprecated character
 	DeprecatedQuotedPair = 36,
+	
+	/// Address contains a comment in a position that is deprecated
     DeprecatedComment = 37,
+
+	/// A comment contains a deprecated character
     DeprecatedCommentText = 38,
+
+	/// Address contains a comment or Folding White Space around the @ sign
     DeprecatedCommentFoldingWhitespaceNearAt = 49,
     
-    // The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid.
+
+
+	// The address is only valid according to the broad definition of RFC 5322
+
+    /// Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS
     Rfc5322Domain = 65,
+
+	/// Address is too long
     Rfc5322TooLong = 66,
+
+	/// The local part of the address is too long
     Rfc5322LocalTooLong = 67,
+
+	/// The domain part is too long
     Rfc5322DomainTooLong = 68,
+
+	/// The domain part contains an element that is too long
     Rfc5322LabelTooLong = 69,
+
+	/// The domain literal is not a valid RFC 5321 address literal
     Rfc5322DomainLiteral = 70,
+
+	/// The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters
     Rfc5322DomainLiteralObsoleteText = 71,
+
+	/// The IPv6 literal address contains the wrong number of groups
     Rfc5322IpV6GroupCount = 72,
+
+	/// The IPv6 literal address contains too many :: sequences
     Rfc5322IpV6TooManyDoubleColons = 73,
+
+	/// The IPv6 address contains an illegal group of characters
     Rfc5322IpV6BadChar = 74,
+
+	/// The IPv6 address has too many groups
     Rfc5322IpV6MaxGroups = 75,
+
+	/// IPv6 address starts with a single colon
     Rfc5322IpV6ColonStart = 76,
+
+	IPv6 address ends with a single colon
     Rfc5322IpV6ColonEnd = 77,
     
+
+
     // Address is invalid for any purpose
+	
+	/// A domain literal contains a character that is not allowed
     ErrorExpectingDomainText = 129,
+
+	/// Address has no local part
     ErrorNoLocalPart = 130,
+
+	/// Address has no domain part
     ErrorNoDomain = 131,
+
+	/// The address may not contain consecutive dots
     ErrorConsecutiveDots = 132,
+
+	/// Address contains text after a comment or Folding White Space
     ErrorTextAfterCommentFoldingWhitespace = 133,
+
+	/// Address contains text after a quoted string
     ErrorTextAfterQuotedString = 134,
+
+	/// Extra characters were found after the end of the domain literal
     ErrorTextAfterDomainLiteral = 135,
+
+	/// The address contains a character that is not allowed in a quoted pair
     ErrorExpectingQuotedPair = 136,
+
+	/// Address contains a character that is not allowed
     ErrorExpectingText = 137,
+
+	/// A quoted string contains a character that is not allowed
     ErrorExpectingQuotedText = 138,
+
+	/// A comment contains a character that is not allowed
     ErrorExpectingCommentText = 139,
+
+	/// The address cannot end with a backslash
     ErrorBackslashEnd = 140,
+
+	/// Neither part of the address may begin with a dot
     ErrorDotStart = 141,
+
+	/// Neither part of the address may end with a dot
     ErrorDotEnd = 142,
+
+	/// A domain or subdomain cannot begin with a hyphen
     ErrorDomainHyphenStart = 143,
+
+	/// A domain or subdomain cannot end with a hyphen
     ErrorDomainHyphenEnd = 144,
+
+	/// Unclosed quoted string
     ErrorUnclosedQuotedString = 145,
+
+	/// Unclosed comment
     ErrorUnclosedComment = 146,
+
+	/// Domain literal is missing its closing bracket
     ErrorUnclosedDomainLiteral = 147,
+
+	/// Folding White Space contains consecutive CRLF sequences
     ErrorFoldingWhitespaceCrflX2 = 148,
+
+	/// Folding White Space ends with a CRLF sequence
     ErrorFoldingWhitespaceCrLfEnd = 149,
+
+	/// Address contains a carriage return that is not followed by a line feed
     ErrorCrNoLf = 150,
 }
 
