@@ -65,8 +65,10 @@ import std.utf;
  * 					NB Note the difference between $(D_PARAM errorLevel) = false and
  * 					$(D_PARAM errorLevel) = 0
  */
-EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorLevel = EmailStatusCode.Off)
+EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCode errorLevel = EmailStatusCode.Off)
 {
+	alias const(T)[] tstring;
+
     int threshold;
     bool diagnose;
     
@@ -92,10 +94,10 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
     auto context = EmailPart.ComponentLocalPart;
     auto contextStack = [context];
     auto contextPrior = context;
-    auto token = "";
-    auto tokenPrior = "";
-    auto parseData = [EmailPart.ComponentLocalPart : "", EmailPart.ComponentDomain : ""];
-    auto atomList = [EmailPart.ComponentLocalPart : [""], EmailPart.ComponentDomain : [""]];
+    tstring token = "";
+    tstring tokenPrior = "";
+    tstring[EmailPart] parseData = [EmailPart.ComponentLocalPart : "", EmailPart.ComponentDomain : ""];
+    tstring[][EmailPart] atomList = [EmailPart.ComponentLocalPart : [""], EmailPart.ComponentDomain : [""]];
     auto elementCount = 0;
     auto elementLength = 0;
     auto hyphenFlag = false;
@@ -371,12 +373,13 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
                             auto maxGroups = 8;
                             auto index = -1;
                             auto addressLiteral = parseData[EmailPart.ComponentLiteral];
-                            auto matchesIp = array(addressLiteral.match(regex(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)).captures);
+							tstring pattern = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
+                            auto matchesIp = array(addressLiteral.match(regex(pattern)).captures);
                             
                             if (!matchesIp.empty)
                             {
                                 index = addressLiteral.lastIndexOf(matchesIp.first);
-                                
+
                                 if (index != 0)
                                     addressLiteral = addressLiteral.substr(0, index) ~ "0:0";
                             }
@@ -393,7 +396,8 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
                                 matchesIp = ipV6.split(Token.Colon);
                                 auto groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.DoubleColon);
-                                
+                                pattern = `^[0-9A-Fa-f]{0,4}$`;
+
                                 if (index == -1)
                                 {
                                     if (groupCount != maxGroups)
@@ -424,7 +428,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
                                 else if (ipV6.substr(-1) == Token.Colon && ipV6.substr(-2, -1) != Token.Colon)
                                     returnStatus ~= EmailStatusCode.Rfc5322IpV6ColonEnd;
                                     
-                                else if (!matchesIp.grep(regex(`^[0-9A-Fa-f]{0,4}$`), true).empty)
+                                else if (!matchesIp.grep(regex(pattern), true).empty)
                                     returnStatus ~= EmailStatusCode.Rfc5322IpV6BadChar;
                                     
                                 else
@@ -726,7 +730,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
 	if (returnStatus.length != 1)
 		returnStatus.shift;
 		
-	parseData[EmailPart.Status] = to!(string)(returnStatus);
+	parseData[EmailPart.Status] = to!(tstring)(returnStatus);
 	
 	if (finalStatus < threshold)
 		finalStatus = EmailStatusCode.Valid;
@@ -735,8 +739,8 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
 		finalStatus = finalStatus < Threshold ? EmailStatusCode.Valid : EmailStatusCode.Error;
 		
 	auto valid = finalStatus == EmailStatusCode.Valid;
-	auto localPart = "";
-	auto domainPart = "";
+	tstring localPart = "";
+	tstring domainPart = "";
 	
 	if (auto value = EmailPart.ComponentLocalPart in parseData)
 		localPart = *value;
@@ -744,7 +748,7 @@ EmailStatus isEmail (string email, bool checkDNS = false, EmailStatusCode errorL
 	if (auto value = EmailPart.ComponentDomain in parseData)
 		domainPart = *value;
 		
-	return EmailStatus(valid, localPart, domainPart, finalStatus);
+	return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
 unittest
@@ -1508,7 +1512,7 @@ unittest
  *      
  * Returns: the character at the given index as a string
  */
-T[] get (T) (T[] str, size_t index, dchar c)
+const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
 {
 	return str[index .. index + codeLength!(T)(c)];
 }
@@ -1541,8 +1545,60 @@ bool isNumeric (dchar c)
 	return std.string.isNumeric(c);
 }
 
+// Issue 5744
+import core.stdc.string : memcmp;
 
-void main ()
+sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
+        CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
 {
+    if (cs == CaseSensitive.yes)
+    {
+        Char2 c;
 
+        if (sub.length == 0)
+            return s.length;
+        c = sub[0];
+        if (sub.length == 1)
+            return std.string.lastIndexOf(s, c);
+        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
+        {
+            if (s[i] == c)
+            {
+                if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                    return i;
+            }
+        }
+        return -1;
+    }
+    else
+    {
+        dchar c;
+
+        if (sub.length == 0)
+            return s.length;
+        c = sub[0];
+        if (sub.length == 1)
+            return std.string.lastIndexOf(s, c, cs);
+        if (c <= 0x7F)
+        {
+            c = std.ctype.tolower(c);
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
+            {
+                if (std.ctype.tolower(s[i]) == c)
+                {
+                    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+                        return i;
+                }
+            }
+        }
+        else
+        {
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
+            {
+                if (icmp(s[i .. i + sub.length], sub) == 0)
+                    return i;
+            }
+        }
+        return -1;
+    }
 }
