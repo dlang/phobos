@@ -29,9 +29,9 @@
  * 
  * Source: $(PHOBOSSRC std/net/_isemail.d)
  */
-//module std.net.isemail;
+module std.net.isemail;
 
-static import std.algorithm;
+import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
 import std.array;
 import std.regex;
 import std.stdio;
@@ -39,636 +39,6 @@ import std.string;
 import std.traits;
 import std.conv;
 import std.utf;
-
-alias std.algorithm.canFind contains;
-
-/**
- * Returns the integer value of the first character in the given string.
- * 
- * Examples:
- * ---
- * assert("abcde".firstChar == 97);
- * ---
- * 
- * Params:
- *     str = the string to get the first character from
- *
- * Returns: the first character as an integer
- */
-int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
-{
-    return cast(int) str.first;
-}
-
-unittest
-{
-	assert("abcde".firstChar == 97);
-	assert("ö".firstChar == 246);
-}
-
-/**
- * Returns the maximum of the values in the given array.
- *
- * Examples:
- * ---
- * assert([1, 2, 3, 4].max == 4);
- * assert([3, 5, 9, 2, 5].max == 9);
- * assert([7, 13, 9, 12, 0].max == 13);
- * ---
- *
- * Params:
- *     arr = the array containing the values to return the maximum of
- *     
- * Returns: the maximum value
- */
-T max (T) (T[] arr)
-{
-    auto max = arr.first;
-    
-    foreach (i ; 0 .. arr.length - 1)
-        max = std.algorithm.max(max, arr[i + 1]);
-        
-    return max;
-}
-
-unittest
-{
-	assert([1, 2, 3, 4].max == 4);
-	assert([3, 5, 9, 2, 5].max == 9);
-	assert([7, 13, 9, 12, 0].max == 13);
-}
-
-/**
- * Returns the portion of string specified by the $(D_PARAM start) and
- * $(D_PARAM length) parameters.
- * 
- * Examples:
- * ---
- * assert("abcdef".substr(-1) == "f");
- * assert("abcdef".substr(-2) == "ef");
- * assert("abcdef".substr(-3, 1) == "d");
- * ---
- *
- * Params:
- *     str = the input string. Must be one character or longer.  
- *     start = if $(D_PARAM start) is non-negative, the returned string will start at the
- *			   $(D_PARAM start)'th position in $(D_PARAM str), counting from zero.
- *			   For instance, in the string "abcdef", the character at position 0 is 'a',
- * 			   the character at position 2 is 'c', and so forth.
- * 
- * 			   If $(D_PARAM start) is negative, the returned string will start at the
- * 			   $(D_PARAM start)'th character from the end of $(D_PARAM str).
- * 
- * 			   If $(D_PARAM str) is less than or equal to $(D_PARAM start) characters long,
- * 			   $(D_KEYWORD true) will be returned.
- * 
- *     length = if $(D_PARAM length) is given and is positive, the string returned will
- *				contain at most $(D_PARAM length) characters beginning from $(D_PARAM start)
- *				(depending on the length of string).
- *
- *				If $(D_PARAM length) is given and is negative, then that many characters
- *				will be omitted from the end of string (after the start position has been
- *				calculated when a $(D_PARAM start) is negative). If $(D_PARAM start)
- *				denotes the position of this truncation or beyond, $(D_KEYWORD false)
- *				will be returned.
- *
- *				If $(D_PARAM length) is given and is 0, an empty string will be returned.
- *
- *				If $(D_PARAM length) is omitted, the substring starting from $(D_PARAM start)
- *				until the end of the string will be returned.
- *      
- * Returns: the extracted part of string, or an empty string. 
- */
-T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.min)
-{
-	sizediff_t end = length;
-
-	if (start < 0)
-	{
-		start = str.length + start;
-		
-		if (end < 0)
-		{
-			if (end == sizediff_t.min)
-				end = 0;
-
-			end = str.length + end;
-		}
-			
-		
-		else 
-			end = start + end;	
-	}
-	
-	else
-	{
-		if (end == sizediff_t.min)
-			end = str.length;
-		
-		if (end < 0)
-			end = str.length + end;
-	}
-	
-	if (start > end)
-		end = start;
-
-	return str[start .. end];
-}
-
-unittest
-{
-	assert("abcdef".substr(-1) == "f");
-	assert("abcdef".substr(-2) == "ef");	
-	assert("abcdef".substr(-3, 1) == "d");
-	assert("abcdef".substr(0, -1) == "abcde");
-	assert("abcdef".substr(2, -1) == "cde");
-	assert("abcdef".substr(4, -4) == []);
-	assert("abcdef".substr(-3, -1) == "de");
-}
-
-/**
- * Compare the two given strings lexicographically. An upper limit of the number of
- * characters, that will be used in the comparison, can be specified. Supports both
- * case-sensitive and case-insensitive comparison.
- * 
- * Examples:
- * ---
- * assert("abc".compareFirstN("abcdef", 3) == 0);
- * assert("abc".compareFirstN("Abc", 3, true) == 0);
- * assert("abc".compareFirstN("abcdef", 6) < 0);
- * assert("abcdef".compareFirstN("abc", 6) > 0);
- * ---
- * 
- * Params:
- *     s1 = the first string to be compared
- *     s2 = the second string to be compared
- *     length = the length of strings to be used in the comparison. 
- *     caseInsensitive = if true, a case-insensitive comparison will be made,
- * 						 otherwise a case-sensitive comparison will be made
- *      
- * Returns: (for $(D pred = "a < b")):
- * 
- * $(BOOKTABLE,
- * $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
- * $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
- * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
- * )
- */
-int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false) if (is(Unqual!(std.algorithm.ElementType!S1) == dchar) && is(Unqual!(std.algorithm.ElementType!S2) == dchar))
-{
-    auto s1End = length <= s1.length ? length : s1.length;
-    auto s2End = length <= s2.length ? length : s2.length;
-    
-    auto slice1 = s1[0 .. s1End];
-    auto slice2 = s2[0 .. s2End];
-
-    return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
-}
-
-unittest
-{
-	assert("abc".compareFirstN("abcdef", 3) == 0);
-	assert("abc".compareFirstN("Abc", 3, true) == 0);
-	assert("abc".compareFirstN("abcdef", 6) < 0);
-	assert("abcdef".compareFirstN("abc", 6) > 0);
-}
-
-/**
- * Returns a range consisting of the elements of the $(D_PARAM input) range that
- * matches the given $(D_PARAM pattern). 
- * 
- * Examples:
- * ---
- * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
- * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
- * ---
- * 
- * Params:
- *     input = the input range
- *     pattern = the regular expression pattern to search for
- *     invert = if $(D_KEYWORD true), this function returns the elements of the
- * 				input range that do $(B not) match the given $(D_PARAM pattern). 
- *     
- * Returns: a range containing the matched elements
- */
-auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
-{
-	auto dg = invert ? (std.algorithm.ElementType!(Range) e) { return e.match(pattern).empty; } :
-	                   (std.algorithm.ElementType!(Range) e) { return !e.match(pattern).empty; };
-	
-	return std.algorithm.filter!(dg)(input);
-}
-
-unittest
-{
-	assert(std.algorithm.equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
-	assert(std.algorithm.equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
-}
-
-/**
- * Pops the last element of the given range and returns the element.
- * 
- * Examples:
- * ---
- * auto array = [0, 1, 2, 3];
- * auto	result = array.pop;
- * 
- * assert(array == [0, 1, 2]);
- * assert(result == 3);
- * ---
- * 
- * Params:
- *     range = the range to pop the element from
- *      
- * Returns: the popped element
- */
-std.algorithm.ElementType!(A) pop (A) (ref A a) if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
-{
-	auto e = a.last;
-	a.popBack;
-	return e;
-}
-
-unittest
-{
-	auto array = [0, 1, 2, 3];
-	auto result = array.pop;
-
-	assert(array == [0, 1, 2]);
-	assert(result == 3);
-}
-
-/**
- * Returns the character at the given index as a string. The returned string will be a
- * slice of the original string.
- * 
- * Examples:
- * ---
- * assert("abc".get(1, 'b') == "b");
- * assert("löv".get(1, 'ö') == "ö");
- * ---
- * 
- * Params:
- *     str = the string to get the character from
- *     index = the index of the character to get
- *     c = the character to return, or any other of the same length
- *      
- * Returns: the character at the given index as a string
- */
-T[] get (T) (T[] str, size_t index, dchar c)
-{
-	return str[index .. index + codeLength!(T)(c)];
-}
-
-unittest
-{
-	assert("abc".get(1, 'b') == "b");
-	assert("löv".get(1, 'ö') == "ö");
-}
-
-// issue 4673
-bool isNumeric (dchar c)
-{
-	switch (c)
-	{
-		case 'i':
-		case '.':
-		case '-':
-		case '+':
-		case 'u':
-		case 'l':
-		case 'L':
-		case 'U':
-		case 'I':
-			return false;
-
-		default:
-	}
-
-	return std.string.isNumeric(c);
-}
-
-alias writeln println;
-alias front first;
-alias back last;
-alias popFront shift;
-
-/**
- * An email status code, indicating if an email address is valid or not.
- * If it is invalid it also indicates why.
- */
-enum EmailStatusCode
-{
-    // Categories
-
-	/// Address is valid
-    ValidCategory = 1,
-
-	/// Address is valid but a DNS check was not successful
-    DnsWarning = 7,
-
-	/// Address is valid for SMTP but has unusual elements
-    Rfc5321 = 15,
-
-	/// Address is valid within the message but cannot be used unmodified for the envelope
-    CFoldingWhitespace = 31,
-
-	/// Address contains deprecated elements but may still be valid in restricted contexts
-    Deprecated = 63,
-
-	/// The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid
-    Rfc5322 = 127,
-
-	///
-	On = 252,
-	
-	///
-	Off = 253,
-	
-	///
-	Warning = 254,
-	
-	/// Address is invalid for any purpose
-    Error = 255,
-    
-
-
-    // Diagnoses
-
-    /// Address is valid
-    Valid = 0,
-    
-	// Address is valid but a DNS check was not successful
-
-    /// Could not find an MX record for this domain but an A-record does exist
-    DnsWarningNoMXRecord = 5,
-
-	/// Could not find an MX record or an A-record for this domain
-    DnsWarningNoRecord = 6,
-    
-
-
-	// Address is valid for SMTP but has unusual elements
-
-    /// Address is valid but at a Top Level Domain
-    Rfc5321TopLevelDomain = 9,
-
-	/// Address is valid but the Top Level Domain begins with a number
-    Rfc5321TopLevelDomainNumeric = 10,
-
-	/// Address is valid but contains a quoted string
-    Rfc5321QuotedString = 11,
-
-	/// Address is valid but at a literal address not a domain
-    Rfc5321AddressLiteral = 12,
-
-	/// Address is valid but contains a :: that only elides one zero group
-    Rfc5321IpV6Deprecated = 13,
-    
-
-
-	// Address is valid within the message but cannot be used unmodified for the envelope
-
-    /// Address contains comments
-    Comment = 17,
-
-	/// Address contains Folding White Space
-    FoldingWhitespace = 18,
-    
-
-
-	// Address contains deprecated elements but may still be valid in restricted contexts
-
-    /// The local part is in a deprecated form
-    DeprecatedLocalPart = 33,
-
-	/// Address contains an obsolete form of Folding White Space
-    DeprecatedFoldingWhitespace = 34,
-
-	/// A quoted string contains a deprecated character
-    DeprecatedQuotedText = 35,
-
-	/// A quoted pair contains a deprecated character
-	DeprecatedQuotedPair = 36,
-	
-	/// Address contains a comment in a position that is deprecated
-    DeprecatedComment = 37,
-
-	/// A comment contains a deprecated character
-    DeprecatedCommentText = 38,
-
-	/// Address contains a comment or Folding White Space around the @ sign
-    DeprecatedCommentFoldingWhitespaceNearAt = 49,
-    
-
-
-	// The address is only valid according to the broad definition of RFC 5322
-
-    /// Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS
-    Rfc5322Domain = 65,
-
-	/// Address is too long
-    Rfc5322TooLong = 66,
-
-	/// The local part of the address is too long
-    Rfc5322LocalTooLong = 67,
-
-	/// The domain part is too long
-    Rfc5322DomainTooLong = 68,
-
-	/// The domain part contains an element that is too long
-    Rfc5322LabelTooLong = 69,
-
-	/// The domain literal is not a valid RFC 5321 address literal
-    Rfc5322DomainLiteral = 70,
-
-	/// The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters
-    Rfc5322DomainLiteralObsoleteText = 71,
-
-	/// The IPv6 literal address contains the wrong number of groups
-    Rfc5322IpV6GroupCount = 72,
-
-	/// The IPv6 literal address contains too many :: sequences
-    Rfc5322IpV6TooManyDoubleColons = 73,
-
-	/// The IPv6 address contains an illegal group of characters
-    Rfc5322IpV6BadChar = 74,
-
-	/// The IPv6 address has too many groups
-    Rfc5322IpV6MaxGroups = 75,
-
-	/// IPv6 address starts with a single colon
-    Rfc5322IpV6ColonStart = 76,
-
-	IPv6 address ends with a single colon
-    Rfc5322IpV6ColonEnd = 77,
-    
-
-
-    // Address is invalid for any purpose
-	
-	/// A domain literal contains a character that is not allowed
-    ErrorExpectingDomainText = 129,
-
-	/// Address has no local part
-    ErrorNoLocalPart = 130,
-
-	/// Address has no domain part
-    ErrorNoDomain = 131,
-
-	/// The address may not contain consecutive dots
-    ErrorConsecutiveDots = 132,
-
-	/// Address contains text after a comment or Folding White Space
-    ErrorTextAfterCommentFoldingWhitespace = 133,
-
-	/// Address contains text after a quoted string
-    ErrorTextAfterQuotedString = 134,
-
-	/// Extra characters were found after the end of the domain literal
-    ErrorTextAfterDomainLiteral = 135,
-
-	/// The address contains a character that is not allowed in a quoted pair
-    ErrorExpectingQuotedPair = 136,
-
-	/// Address contains a character that is not allowed
-    ErrorExpectingText = 137,
-
-	/// A quoted string contains a character that is not allowed
-    ErrorExpectingQuotedText = 138,
-
-	/// A comment contains a character that is not allowed
-    ErrorExpectingCommentText = 139,
-
-	/// The address cannot end with a backslash
-    ErrorBackslashEnd = 140,
-
-	/// Neither part of the address may begin with a dot
-    ErrorDotStart = 141,
-
-	/// Neither part of the address may end with a dot
-    ErrorDotEnd = 142,
-
-	/// A domain or subdomain cannot begin with a hyphen
-    ErrorDomainHyphenStart = 143,
-
-	/// A domain or subdomain cannot end with a hyphen
-    ErrorDomainHyphenEnd = 144,
-
-	/// Unclosed quoted string
-    ErrorUnclosedQuotedString = 145,
-
-	/// Unclosed comment
-    ErrorUnclosedComment = 146,
-
-	/// Domain literal is missing its closing bracket
-    ErrorUnclosedDomainLiteral = 147,
-
-	/// Folding White Space contains consecutive CRLF sequences
-    ErrorFoldingWhitespaceCrflX2 = 148,
-
-	/// Folding White Space ends with a CRLF sequence
-    ErrorFoldingWhitespaceCrLfEnd = 149,
-
-	/// Address contains a carriage return that is not followed by a line feed
-    ErrorCrNoLf = 150,
-}
-
-private enum Threshold = 16;
-
-/// Email parts for the isEmail function
-enum EmailPart
-{
-	/// The local part of the email address, that is, the part before the @ sign
-    ComponentLocalPart,
-
-	/// The domain part of the email address, that is, the part after the @ sign.
-	ComponentDomain,
-	
-    ComponentLiteral,
-    ContextComment,
-    ContextFoldingWhitespace,
-    ContextQuotedString,
-    ContextQuotedPair,
-	Status
-}
-
-private
-{
-	// Miscellaneous string constants
-	struct Token
-	{
-		static:
-		
-		enum
-		{
-			At = "@",
-	        Backslash = `\`,
-	        Dot = ".",
-	        DoubleQuote = `"`,
-	        OpenParenthesis = "(",
-	        CloseParenthesis = ")",
-	        OpenBracket = "[",
-	        CloseBracket = "]",
-	        Hyphen = "-",
-	        Colon = ":",
-	        DoubleColon = "::",
-	        Space = " ",
-	        Tab = "\t",
-	        Cr = "\r",
-	        Lf = "\n",
-	        IpV6Tag = "IPV6:",
-
-	        // US-ASCII visible characters not valid for atext (http://tools.ietf.org/html/rfc5322#section-3.2.3)
-	        Specials = `()<>[]:;@\\,."`
-		}
-	}
-}
-
-/// This struct represents the status of an email address
-struct EmailStatus
-{
-	/// Indicates if the email address is valid or not.
-	const bool valid;
-	
-	/// The local part of the email address, that is, the part before the @ sign.
-	const string localPart;
-	
-	/// The domain part of the email address, that is, the part after the @ sign.
-	const string domainPart;
-	
-	/// The email status code
-	const EmailStatusCode statusCode;
-	
-	alias valid this;
-	
-	/**
-	 * Params:
-	 *     valid = indicates if the email address is valid or not
-	 *     localPart = the local part of the email address
-	 *     domainPart = the domain part of the email address
-	 * 	   statusCode = the status code
-	 */  
-	this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
-	{
-		this.valid = valid;
-		this.localPart = localPart;
-		this.domainPart = domainPart;
-		this.statusCode = statusCode;
-	}
-	
-	/// Returns the email status as a string
-	string status ()
-	{
-		return "";
-	}
-	
-	/// Returns a textual representation of the email status
-	string toString ()
-	{
-		return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid, localPart, domainPart, statusCode);
-	}
-}
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others
@@ -1544,6 +914,633 @@ unittest
 	// assert(`test@test.com`.isEmail(false, EmailStatusCode.On).statusCode == EmailStatusCode.DnsWarningNoMXRecord, `test.com has an A-record but not an MX-record`); // DNS check is currently not implemented
 	// assert(`test@nic.no`.isEmail(false, EmailStatusCode.On).statusCode == EmailStatusCode.DnsWarningNoRecord, `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then try setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
+
+/// This struct represents the status of an email address
+struct EmailStatus
+{
+	/// Indicates if the email address is valid or not.
+	const bool valid;
+	
+	/// The local part of the email address, that is, the part before the @ sign.
+	const string localPart;
+	
+	/// The domain part of the email address, that is, the part after the @ sign.
+	const string domainPart;
+	
+	/// The email status code
+	const EmailStatusCode statusCode;
+	
+	alias valid this;
+	
+	/**
+	 * Params:
+	 *     valid = indicates if the email address is valid or not
+	 *     localPart = the local part of the email address
+	 *     domainPart = the domain part of the email address
+	 * 	   statusCode = the status code
+	 */  
+	this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
+	{
+		this.valid = valid;
+		this.localPart = localPart;
+		this.domainPart = domainPart;
+		this.statusCode = statusCode;
+	}
+	
+	/// Returns the email status as a string
+	string status ()
+	{
+		return "";
+	}
+	
+	/// Returns a textual representation of the email status
+	string toString ()
+	{
+		return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid, localPart, domainPart, statusCode);
+	}
+}
+
+/**
+ * An email status code, indicating if an email address is valid or not.
+ * If it is invalid it also indicates why.
+ */
+enum EmailStatusCode
+{
+    // Categories
+
+	/// Address is valid
+    ValidCategory = 1,
+
+	/// Address is valid but a DNS check was not successful
+    DnsWarning = 7,
+
+	/// Address is valid for SMTP but has unusual elements
+    Rfc5321 = 15,
+
+	/// Address is valid within the message but cannot be used unmodified for the envelope
+    CFoldingWhitespace = 31,
+
+	/// Address contains deprecated elements but may still be valid in restricted contexts
+    Deprecated = 63,
+
+	/// The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid
+    Rfc5322 = 127,
+
+	///
+	On = 252,
+	
+	///
+	Off = 253,
+	
+	///
+	Warning = 254,
+	
+	/// Address is invalid for any purpose
+    Error = 255,
+    
+
+
+    // Diagnoses
+
+    /// Address is valid
+    Valid = 0,
+    
+	// Address is valid but a DNS check was not successful
+
+    /// Could not find an MX record for this domain but an A-record does exist
+    DnsWarningNoMXRecord = 5,
+
+	/// Could not find an MX record or an A-record for this domain
+    DnsWarningNoRecord = 6,
+    
+
+
+	// Address is valid for SMTP but has unusual elements
+
+    /// Address is valid but at a Top Level Domain
+    Rfc5321TopLevelDomain = 9,
+
+	/// Address is valid but the Top Level Domain begins with a number
+    Rfc5321TopLevelDomainNumeric = 10,
+
+	/// Address is valid but contains a quoted string
+    Rfc5321QuotedString = 11,
+
+	/// Address is valid but at a literal address not a domain
+    Rfc5321AddressLiteral = 12,
+
+	/// Address is valid but contains a :: that only elides one zero group
+    Rfc5321IpV6Deprecated = 13,
+    
+
+
+	// Address is valid within the message but cannot be used unmodified for the envelope
+
+    /// Address contains comments
+    Comment = 17,
+
+	/// Address contains Folding White Space
+    FoldingWhitespace = 18,
+    
+
+
+	// Address contains deprecated elements but may still be valid in restricted contexts
+
+    /// The local part is in a deprecated form
+    DeprecatedLocalPart = 33,
+
+	/// Address contains an obsolete form of Folding White Space
+    DeprecatedFoldingWhitespace = 34,
+
+	/// A quoted string contains a deprecated character
+    DeprecatedQuotedText = 35,
+
+	/// A quoted pair contains a deprecated character
+	DeprecatedQuotedPair = 36,
+	
+	/// Address contains a comment in a position that is deprecated
+    DeprecatedComment = 37,
+
+	/// A comment contains a deprecated character
+    DeprecatedCommentText = 38,
+
+	/// Address contains a comment or Folding White Space around the @ sign
+    DeprecatedCommentFoldingWhitespaceNearAt = 49,
+    
+
+
+	// The address is only valid according to the broad definition of RFC 5322
+
+    /// Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS
+    Rfc5322Domain = 65,
+
+	/// Address is too long
+    Rfc5322TooLong = 66,
+
+	/// The local part of the address is too long
+    Rfc5322LocalTooLong = 67,
+
+	/// The domain part is too long
+    Rfc5322DomainTooLong = 68,
+
+	/// The domain part contains an element that is too long
+    Rfc5322LabelTooLong = 69,
+
+	/// The domain literal is not a valid RFC 5321 address literal
+    Rfc5322DomainLiteral = 70,
+
+	/// The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters
+    Rfc5322DomainLiteralObsoleteText = 71,
+
+	/// The IPv6 literal address contains the wrong number of groups
+    Rfc5322IpV6GroupCount = 72,
+
+	/// The IPv6 literal address contains too many :: sequences
+    Rfc5322IpV6TooManyDoubleColons = 73,
+
+	/// The IPv6 address contains an illegal group of characters
+    Rfc5322IpV6BadChar = 74,
+
+	/// The IPv6 address has too many groups
+    Rfc5322IpV6MaxGroups = 75,
+
+	/// IPv6 address starts with a single colon
+    Rfc5322IpV6ColonStart = 76,
+
+	/// IPv6 address ends with a single colon
+    Rfc5322IpV6ColonEnd = 77,
+    
+
+
+    // Address is invalid for any purpose
+	
+	/// A domain literal contains a character that is not allowed
+    ErrorExpectingDomainText = 129,
+
+	/// Address has no local part
+    ErrorNoLocalPart = 130,
+
+	/// Address has no domain part
+    ErrorNoDomain = 131,
+
+	/// The address may not contain consecutive dots
+    ErrorConsecutiveDots = 132,
+
+	/// Address contains text after a comment or Folding White Space
+    ErrorTextAfterCommentFoldingWhitespace = 133,
+
+	/// Address contains text after a quoted string
+    ErrorTextAfterQuotedString = 134,
+
+	/// Extra characters were found after the end of the domain literal
+    ErrorTextAfterDomainLiteral = 135,
+
+	/// The address contains a character that is not allowed in a quoted pair
+    ErrorExpectingQuotedPair = 136,
+
+	/// Address contains a character that is not allowed
+    ErrorExpectingText = 137,
+
+	/// A quoted string contains a character that is not allowed
+    ErrorExpectingQuotedText = 138,
+
+	/// A comment contains a character that is not allowed
+    ErrorExpectingCommentText = 139,
+
+	/// The address cannot end with a backslash
+    ErrorBackslashEnd = 140,
+
+	/// Neither part of the address may begin with a dot
+    ErrorDotStart = 141,
+
+	/// Neither part of the address may end with a dot
+    ErrorDotEnd = 142,
+
+	/// A domain or subdomain cannot begin with a hyphen
+    ErrorDomainHyphenStart = 143,
+
+	/// A domain or subdomain cannot end with a hyphen
+    ErrorDomainHyphenEnd = 144,
+
+	/// Unclosed quoted string
+    ErrorUnclosedQuotedString = 145,
+
+	/// Unclosed comment
+    ErrorUnclosedComment = 146,
+
+	/// Domain literal is missing its closing bracket
+    ErrorUnclosedDomainLiteral = 147,
+
+	/// Folding White Space contains consecutive CRLF sequences
+    ErrorFoldingWhitespaceCrflX2 = 148,
+
+	/// Folding White Space ends with a CRLF sequence
+    ErrorFoldingWhitespaceCrLfEnd = 149,
+
+	/// Address contains a carriage return that is not followed by a line feed
+    ErrorCrNoLf = 150,
+}
+
+private:
+
+alias front first;
+alias back last;
+alias popFront shift;
+	
+enum Threshold = 16;
+	
+/// Email parts for the isEmail function
+enum EmailPart
+{
+	/// The local part of the email address, that is, the part before the @ sign
+    ComponentLocalPart,
+
+	/// The domain part of the email address, that is, the part after the @ sign.
+	ComponentDomain,
+
+    ComponentLiteral,
+    ContextComment,
+    ContextFoldingWhitespace,
+    ContextQuotedString,
+    ContextQuotedPair,
+	Status
+}
+
+// Miscellaneous string constants
+struct Token
+{
+	static:
+	
+	enum
+	{
+		At = "@",
+        Backslash = `\`,
+        Dot = ".",
+        DoubleQuote = `"`,
+        OpenParenthesis = "(",
+        CloseParenthesis = ")",
+        OpenBracket = "[",
+        CloseBracket = "]",
+        Hyphen = "-",
+        Colon = ":",
+        DoubleColon = "::",
+        Space = " ",
+        Tab = "\t",
+        Cr = "\r",
+        Lf = "\n",
+        IpV6Tag = "IPV6:",
+
+        // US-ASCII visible characters not valid for atext (http://tools.ietf.org/html/rfc5322#section-3.2.3)
+        Specials = `()<>[]:;@\\,."`
+	}
+}
+
+/**
+ * Returns the integer value of the first character in the given string.
+ * 
+ * Examples:
+ * ---
+ * assert("abcde".firstChar == 97);
+ * ---
+ * 
+ * Params:
+ *     str = the string to get the first character from
+ *
+ * Returns: the first character as an integer
+ */
+int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
+{
+    return cast(int) str.first;
+}
+
+unittest
+{
+	assert("abcde".firstChar == 97);
+	assert("över".firstChar == 246);
+}
+
+/**
+ * Returns the maximum of the values in the given array.
+ *
+ * Examples:
+ * ---
+ * assert([1, 2, 3, 4].max == 4);
+ * assert([3, 5, 9, 2, 5].max == 9);
+ * assert([7, 13, 9, 12, 0].max == 13);
+ * ---
+ *
+ * Params:
+ *     arr = the array containing the values to return the maximum of
+ *     
+ * Returns: the maximum value
+ */
+T max (T) (T[] arr)
+{
+    auto max = arr.first;
+    
+    foreach (i ; 0 .. arr.length - 1)
+        max = std.algorithm.max(max, arr[i + 1]);
+        
+    return max;
+}
+
+unittest
+{
+	assert([1, 2, 3, 4].max == 4);
+	assert([3, 5, 9, 2, 5].max == 9);
+	assert([7, 13, 9, 12, 0].max == 13);
+}
+
+/**
+ * Returns the portion of string specified by the $(D_PARAM start) and
+ * $(D_PARAM length) parameters.
+ * 
+ * Examples:
+ * ---
+ * assert("abcdef".substr(-1) == "f");
+ * assert("abcdef".substr(-2) == "ef");
+ * assert("abcdef".substr(-3, 1) == "d");
+ * ---
+ *
+ * Params:
+ *     str = the input string. Must be one character or longer.  
+ *     start = if $(D_PARAM start) is non-negative, the returned string will start at the
+ *			   $(D_PARAM start)'th position in $(D_PARAM str), counting from zero.
+ *			   For instance, in the string "abcdef", the character at position 0 is 'a',
+ * 			   the character at position 2 is 'c', and so forth.
+ * 
+ * 			   If $(D_PARAM start) is negative, the returned string will start at the
+ * 			   $(D_PARAM start)'th character from the end of $(D_PARAM str).
+ * 
+ * 			   If $(D_PARAM str) is less than or equal to $(D_PARAM start) characters long,
+ * 			   $(D_KEYWORD true) will be returned.
+ * 
+ *     length = if $(D_PARAM length) is given and is positive, the string returned will
+ *				contain at most $(D_PARAM length) characters beginning from $(D_PARAM start)
+ *				(depending on the length of string).
+ *
+ *				If $(D_PARAM length) is given and is negative, then that many characters
+ *				will be omitted from the end of string (after the start position has been
+ *				calculated when a $(D_PARAM start) is negative). If $(D_PARAM start)
+ *				denotes the position of this truncation or beyond, $(D_KEYWORD false)
+ *				will be returned.
+ *
+ *				If $(D_PARAM length) is given and is 0, an empty string will be returned.
+ *
+ *				If $(D_PARAM length) is omitted, the substring starting from $(D_PARAM start)
+ *				until the end of the string will be returned.
+ *      
+ * Returns: the extracted part of string, or an empty string. 
+ */
+T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.min)
+{
+	sizediff_t end = length;
+
+	if (start < 0)
+	{
+		start = str.length + start;
+		
+		if (end < 0)
+		{
+			if (end == sizediff_t.min)
+				end = 0;
+
+			end = str.length + end;
+		}
+			
+		
+		else 
+			end = start + end;	
+	}
+	
+	else
+	{
+		if (end == sizediff_t.min)
+			end = str.length;
+		
+		if (end < 0)
+			end = str.length + end;
+	}
+	
+	if (start > end)
+		end = start;
+
+	return str[start .. end];
+}
+
+unittest
+{
+	assert("abcdef".substr(-1) == "f");
+	assert("abcdef".substr(-2) == "ef");	
+	assert("abcdef".substr(-3, 1) == "d");
+	assert("abcdef".substr(0, -1) == "abcde");
+	assert("abcdef".substr(2, -1) == "cde");
+	assert("abcdef".substr(4, -4) == []);
+	assert("abcdef".substr(-3, -1) == "de");
+}
+
+/**
+ * Compare the two given strings lexicographically. An upper limit of the number of
+ * characters, that will be used in the comparison, can be specified. Supports both
+ * case-sensitive and case-insensitive comparison.
+ * 
+ * Examples:
+ * ---
+ * assert("abc".compareFirstN("abcdef", 3) == 0);
+ * assert("abc".compareFirstN("Abc", 3, true) == 0);
+ * assert("abc".compareFirstN("abcdef", 6) < 0);
+ * assert("abcdef".compareFirstN("abc", 6) > 0);
+ * ---
+ * 
+ * Params:
+ *     s1 = the first string to be compared
+ *     s2 = the second string to be compared
+ *     length = the length of strings to be used in the comparison. 
+ *     caseInsensitive = if true, a case-insensitive comparison will be made,
+ * 						 otherwise a case-sensitive comparison will be made
+ *      
+ * Returns: (for $(D pred = "a < b")):
+ * 
+ * $(BOOKTABLE,
+ * $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
+ * $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
+ * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
+ * )
+ */
+int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false) if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
+{
+    auto s1End = length <= s1.length ? length : s1.length;
+    auto s2End = length <= s2.length ? length : s2.length;
+    
+    auto slice1 = s1[0 .. s1End];
+    auto slice2 = s2[0 .. s2End];
+
+    return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
+}
+
+unittest
+{
+	assert("abc".compareFirstN("abcdef", 3) == 0);
+	assert("abc".compareFirstN("Abc", 3, true) == 0);
+	assert("abc".compareFirstN("abcdef", 6) < 0);
+	assert("abcdef".compareFirstN("abc", 6) > 0);
+}
+
+/**
+ * Returns a range consisting of the elements of the $(D_PARAM input) range that
+ * matches the given $(D_PARAM pattern). 
+ * 
+ * Examples:
+ * ---
+ * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
+ * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
+ * ---
+ * 
+ * Params:
+ *     input = the input range
+ *     pattern = the regular expression pattern to search for
+ *     invert = if $(D_KEYWORD true), this function returns the elements of the
+ * 				input range that do $(B not) match the given $(D_PARAM pattern). 
+ *     
+ * Returns: a range containing the matched elements
+ */
+auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
+{
+	auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
+	                   (ElementType!(Range) e) { return !e.match(pattern).empty; };
+	
+	return filter!(dg)(input);
+}
+
+unittest
+{
+	assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
+	assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
+}
+
+/**
+ * Pops the last element of the given range and returns the element.
+ * 
+ * Examples:
+ * ---
+ * auto array = [0, 1, 2, 3];
+ * auto	result = array.pop;
+ * 
+ * assert(array == [0, 1, 2]);
+ * assert(result == 3);
+ * ---
+ * 
+ * Params:
+ *     range = the range to pop the element from
+ *      
+ * Returns: the popped element
+ */
+ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
+{
+	auto e = a.last;
+	a.popBack;
+	return e;
+}
+
+unittest
+{
+	auto array = [0, 1, 2, 3];
+	auto result = array.pop;
+
+	assert(array == [0, 1, 2]);
+	assert(result == 3);
+}
+
+/**
+ * Returns the character at the given index as a string. The returned string will be a
+ * slice of the original string.
+ * 
+ * Examples:
+ * ---
+ * assert("abc".get(1, 'b') == "b");
+ * assert("löv".get(1, 'ö') == "ö");
+ * ---
+ * 
+ * Params:
+ *     str = the string to get the character from
+ *     index = the index of the character to get
+ *     c = the character to return, or any other of the same length
+ *      
+ * Returns: the character at the given index as a string
+ */
+T[] get (T) (T[] str, size_t index, dchar c)
+{
+	return str[index .. index + codeLength!(T)(c)];
+}
+
+unittest
+{
+	assert("abc".get(1, 'b') == "b");
+	assert("löv".get(1, 'ö') == "ö");
+}
+
+// issue 4673
+bool isNumeric (dchar c)
+{
+	switch (c)
+	{
+		case 'i':
+		case '.':
+		case '-':
+		case '+':
+		case 'u':
+		case 'l':
+		case 'L':
+		case 'U':
+		case 'I':
+			return false;
+
+		default:
+	}
+
+	return std.string.isNumeric(c);
+}
+
 
 void main ()
 {
