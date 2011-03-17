@@ -37,15 +37,19 @@ import core.sys.posix.sys.socket;
  *
  ***************************************************************************/
 
+/* This is the global package copyright */
+string LIBCURL_COPYRIGHT = "1996 - 2010 Daniel Stenberg, <daniel@haxx.se>.";
+
 /* This is the version number of the libcurl package from which this header
    file origins: */
+string LIBCURL_VERSION = "7.21.4";
 
 /* The numeric version number is also available "in parts" by using these
    defines: */
 const LIBCURL_VERSION_MAJOR = 7;
 const LIBCURL_VERSION_MINOR = 21;
-
 const LIBCURL_VERSION_PATCH = 4;
+
 /* This is the numeric version of the libcurl version number, meant for easier
    parsing and comparions by programs. The LIBCURL_VERSION_NUM define will
    always follow this syntax:
@@ -73,10 +77,23 @@ const LIBCURL_VERSION_NUM = 0x071504;
  *
  * "Mon Feb 12 11:35:33 UTC 2007"
  */
+const string LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
 
 /* Data type definition of curl_off_t. */
-
-// jdrewsen: Always 64bit and that is what long is in D
+// jdrewsen: Always 64bit signed and that is what long is in D
+// Comment below is from curlbuild.h:
+/*
+ * NOTE 2:
+ * -------
+ *
+ * For any given platform/compiler curl_off_t must be typedef'ed to a
+ * 64-bit wide signed integral data type. The width of this data type
+ * must remain constant and independent of any possible large file
+ * support settings.
+ *
+ * As an exception to the above, curl_off_t shall be typedef'ed to a
+ * 32-bit wide signed integral data type if there is no 64-bit type.
+ */
 alias long curl_off_t; 
 
 alias void CURL;
@@ -188,7 +205,6 @@ struct _N2
     char *target; /* pointer to the target filename of a symlink */
 }
 
-/* used internally */
 /* Content of this structure depends on information which is known and is
    achievable (e.g. by FTP LIST parsing). Please see the url_easy_setopt(3) man
    page for callbacks returning this structure -- some fields are mandatory,
