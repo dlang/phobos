@@ -91,33 +91,26 @@ version(Win32) {
 }
 version(Posix) const int CURL_SOCKET_BAD = -1;
 
-/* if one field name has more than one
-   file, this link should link to following
-   files */
-
-/* name is only stored pointer do not free in formfree */
-/* contents is only stored pointer do not free in formfree */
-/* upload file contents by using the regular read callback to get the
-   data and pass the given pointer as custom pointer */
-
-/* The file name to show. If not set, the actual file name will be
-   used (if this is a file part) */
-/* custom pointer used for HTTPPOST_CALLBACK posts */
 struct curl_httppost
 {
-    curl_httppost *next;
-    char *name;
-    int namelength;
-    char *contents;
-    int contentslength;
-    char *buffer;
-    int bufferlength;
-    char *contenttype;
-    curl_slist *contentheader;
-    curl_httppost *more;
-    int flags;
-    char *showfilename;
-    void *userp;
+    curl_httppost *next;        /* next entry in the list */		
+    char *name;			/* pointer to allocated name */		
+    int namelength;		/* length of name length */			
+    char *contents;		/* pointer to allocated data contents */	
+    int contentslength;		/* length of contents field */		
+    char *buffer;		/* pointer to allocated buffer contents */	
+    int bufferlength;		/* length of buffer field */		
+    char *contenttype;		/* Content-Type */				
+    curl_slist *contentheader;	/* list of extra headers for this form */	
+    curl_httppost *more;	/* if one field name has more than one      
+                                   file, this link should link to following
+                                   files */
+    int flags;                  /* as defined below */
+    char *showfilename;         /* The file name to show. If not set, the 
+				   actual file name will be used (if this 
+				   is a file part) */		      
+    void *userp;		/* custom pointer used for		      
+				   HTTPPOST_CALLBACK posts */             
 }
 
 const HTTPPOST_FILENAME    = 1;  /* specified content is a file name */
@@ -165,19 +158,20 @@ enum CurlFileType {
     namedpipe,
     socket,
     door,
-    unknown
+    unknown /* is possible only on Sun Solaris now */
 }
 alias int curlfiletype;
 
-const CURLFINFOFLAG_KNOWN_FILENAME    = 1;
-const CURLFINFOFLAG_KNOWN_FILETYPE    = 2;
-const CURLFINFOFLAG_KNOWN_TIME        = 4;
-const CURLFINFOFLAG_KNOWN_PERM        = 8;
-const CURLFINFOFLAG_KNOWN_UID         = 16;
-const CURLFINFOFLAG_KNOWN_GID         = 32;
-const CURLFINFOFLAG_KNOWN_SIZE        = 64;
-const CURLFINFOFLAG_KNOWN_HLINKCOUNT  = 128;
-
+enum CurlFInfoFlagKnown {
+  filename    = 1,
+  filetype    = 2,
+  time        = 4,
+  perm        = 8,
+  uid         = 16,
+  gid         = 32,
+  size        = 64,
+  hlinkcount  = 128
+}
 
 /* Content of this structure depends on information which is known and is
    achievable (e.g. by FTP LIST parsing). Please see the url_easy_setopt(3) man
@@ -191,10 +185,14 @@ struct _N2
     char *perm;
     char *user;
     char *group;
-    char *target;
+    char *target; /* pointer to the target filename of a symlink */
 }
 
 /* used internally */
+/* Content of this structure depends on information which is known and is
+   achievable (e.g. by FTP LIST parsing). Please see the url_easy_setopt(3) man
+   page for callbacks returning this structure -- some fields are mandatory,
+   some others are optional. The FLAG field has special meaning. */
 struct curl_fileinfo
 {
     char *filename;
@@ -213,19 +211,22 @@ struct curl_fileinfo
 }
 
 /* return codes for CURLOPT_CHUNK_BGN_FUNCTION */
-const CURL_CHUNK_BGN_FUNC_OK = 0;
-const CURL_CHUNK_BGN_FUNC_FAIL = 1;
+enum CurlChunkBgnFunc {
+  ok = 0,
+  fail = 1, /* tell the lib to end the task */ 
+  skip = 2 /* skip this chunk over */         
+}
 
-const CURL_CHUNK_BGN_FUNC_SKIP = 2;
 /* if splitting of data transfer is enabled, this callback is called before
    download of an individual chunk started. Note that parameter "remains" works
    only for FTP wildcard downloading (for now), otherwise is not used */
 alias int  function(void *transfer_info, void *ptr, int remains)curl_chunk_bgn_callback;
 
-/* return codes for CURLOPT_CHUNK_END_FUNCTION */
-const CURL_CHUNK_END_FUNC_OK = 0;
-
-const CURL_CHUNK_END_FUNC_FAIL = 1;
+enum CurlChunkEndFunc {
+  /* return codes for CURLOPT_CHUNK_END_FUNCTION */
+  ok = 0,
+  fail = 1,
+}
 /* If splitting of data transfer is enabled this callback is called after
    download of an individual chunk finished.
    Note! After this callback was set then it have to be called FOR ALL chunks.
@@ -235,9 +236,11 @@ const CURL_CHUNK_END_FUNC_FAIL = 1;
 alias int  function(void *ptr)curl_chunk_end_callback;
 
 /* return codes for FNMATCHFUNCTION */
-const CURL_FNMATCHFUNC_MATCH = 0;
-const CURL_FNMATCHFUNC_NOMATCH = 1;
-const CURL_FNMATCHFUNC_FAIL = 2;
+enum CurlFnMAtchFunc {
+  match = 0,
+  nomatch = 1,
+  fail = 2
+}
 
 /* callback type for wildcard downloading pattern matching. If the
    string matches the pattern, return CURL_FNMATCHFUNC_MATCH value, etc. */
@@ -259,19 +262,21 @@ enum CurlSeek {
 }
 alias int  function(void *instream, curl_off_t offset, int origin)curl_seek_callback;
 
-/* This is a return code for the read callback that, when returned, will
-   signal libcurl to immediately abort the current transfer. */
-const CURL_READFUNC_ABORT = 0x10000000;
-
-/* This is a return code for the read callback that, when returned,
-   will const signal libcurl to pause sending data on the current
-   transfer. */
-const CURL_READFUNC_PAUSE = 0x10000001;
+enum CurlReadFunc {
+  /* This is a return code for the read callback that, when returned, will
+     signal libcurl to immediately abort the current transfer. */
+  abort = 0x10000000,
+  
+  /* This is a return code for the read callback that, when returned,
+     will const signal libcurl to pause sending data on the current
+     transfer. */
+  pause = 0x10000001
+}
 alias size_t  function(char *buffer, size_t size, size_t nitems, void *instream)curl_read_callback;
 
 enum CurlSockType {
-    ipcxn,
-    last
+    ipcxn, /* socket created for a specific IP connection */	
+    last   /* never use */                                   
 }
 alias int curlsocktype;
 
@@ -284,7 +289,9 @@ struct curl_sockaddr
     int family;
     int socktype;
     int protocol;
-    uint addrlen;
+    uint addrlen; /* addrlen was a socklen_t type before 7.18.0 but it  
+		     turned really ugly and painful on the systems that 
+		     lack this type */                                  
     sockaddr addr;
 }
 
@@ -333,7 +340,12 @@ enum CurlCallbackInfo {
 }
 alias int curl_infotype;
 
-alias int  function(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)curl_debug_callback;
+alias int  function(CURL *handle,        /* the handle/transfer this concerns */  
+		    curl_infotype type,  /* what kind of data */		     
+		    char *data, 	 /* points to the data */		     
+		    size_t size, 	 /* size of the data pointed to */	     
+		    void *userptr	 /* whatever the user please */           
+		    )curl_debug_callback;
 
 /* All possible error codes from all sorts of curl functions. Future versions
    may return other values, stay prepared.
@@ -455,15 +467,19 @@ alias int CURLcode;
 alias CURLcode  function(char *buffer, size_t length)curl_conv_callback;
 
 /* actually an OpenSSL SSL_CTX */
-alias CURLcode  function(CURL *curl, void *ssl_ctx, void *userptr)curl_ssl_ctx_callback;
+alias CURLcode  function(CURL *curl,    /* easy handle */    
+			 void *ssl_ctx, /* actually an	      
+					   OpenSSL SSL_CTX */
+			 void *userptr
+			 )curl_ssl_ctx_callback;
 
 enum CurlProxy {
-    http,       /* added in 7.10, new in 7.19.4 default is to use CONNECT HTTP/1.1 */ 
-    http_1_0,	/* added in 7.19.4, force to use CONNECT HTTP/1.0  */		      
-    socks4 = 4,	/* support added in 7.15.2, enum existed already in 7.10 */           
-    socks5,
-    socks4a,
-    socks5_hostname   /* Use the SOCKS5 protocol but pass along the
+    http,         /* added in 7.10, new in 7.19.4 default is to use CONNECT HTTP/1.1 */ 
+    http_1_0,	  /* added in 7.19.4, force to use CONNECT HTTP/1.0  */		      
+    socks4 = 4,	  /* support added in 7.15.2, enum existed already in 7.10 */           
+    socks5 = 5,   /* added in 7.10 */  
+    socks4a = 6,  /* added in 7.18.0 */
+    socks5_hostname =7   /* Use the SOCKS5 protocol but pass along the
 			 host name rather than the IP address. added
 			 in 7.18.0 */                                   
 }
@@ -483,18 +499,18 @@ enum CurlAuth : long {
   anysafe = -18 // (~(CURLAUTH_BASIC|CURLAUTH_DIGEST_IE))
 }
 
-
-const CURLSSH_AUTH_ANY       = -1;     /* all types supported by the server */
-const CURLSSH_AUTH_NONE      = 0;      /* none allowed, silly but complete */
-const CURLSSH_AUTH_PUBLICKEY = 1; /* public/private key files */
-const CURLSSH_AUTH_PASSWORD  = 2; /* password */
-const CURLSSH_AUTH_HOST      = 4; /* host key files */
-const CURLSSH_AUTH_KEYBOARD  = 8; /* keyboard interactive */
-alias CURLSSH_AUTH_ANY CURLSSH_AUTH_DEFAULT;
-
+enum CurlSshAuth {
+  any       = -1,     /* all types supported by the server */
+  none      = 0,      /* none allowed, silly but complete */
+  publickey = 1, /* public/private key files */
+  password  = 2, /* password */
+  host      = 4, /* host key files */
+  keyboard  = 8, /* keyboard interactive */
+  default_  = -1 // CURLSSH_AUTH_ANY;
+}
 const CURL_ERROR_SIZE = 256;
 /* points to a zero-terminated string encoded with base64
-                      if len is zero, otherwise to the "raw" data */
+   if len is zero, otherwise to the "raw" data */
 enum CurlKHType
 {
     unknown,
@@ -504,59 +520,64 @@ enum CurlKHType
 }
 struct curl_khkey
 {
-    char *key;
+    char *key; /* points to a zero-terminated string encoded with base64 
+	          if len is zero, otherwise to the "raw" data */         
     size_t len;
     CurlKHType keytype;
 }
 
 /* this is the set of return values expected from the curl_sshkeycallback
    callback */
-/* do not accept it, but we can't answer right now so
-   this causes a CURLE_DEFER error but otherwise the
-   connection will be left intact etc */
 enum CurlKHStat {
     fine_add_to_file,
     fine,
-    reject,
-    defer,
-    last
+    reject,  /* reject the connection, return an error */
+    defer,   /* do not accept it, but we can't answer right now so	
+	        this causes a CURLE_DEFER error but otherwise the	
+	        connection will be left intact etc */                
+    last     /* not for use, only a marker for last-in-list */
 }
 
 /* this is the set of status codes pass in to the callback */
 enum CurlKHMatch {
-    ok,
-    mismatch,
-    missing,
-    last
+    ok,       /* match */					 
+    mismatch, /* host found, key mismatch! */			 
+    missing,  /* no matching host/key found */		 
+    last      /* not for use, only a marker for last-in-list */
 }
 
-alias int  function(CURL *easy, curl_khkey *knownkey, curl_khkey *foundkey, CurlKHMatch m, void *clientp)curl_sshkeycallback;
+alias int  function(CURL *easy,            /* easy handle */			 
+		    curl_khkey *knownkey,  /* known */			 
+		    curl_khkey *foundkey,  /* found */			 
+		    CurlKHMatch m, 	   /* libcurl's view on the keys */	 
+		    void *clientp	   /* custom pointer passed from app */
+		    )curl_sshkeycallback;
 
 /* parameter for the CURLOPT_USE_SSL option */
 enum CurlUseSSL {
-    none,
-    tryssl,
-    control,
-    all,
-    last
+    none,     /* do not attempt to use SSL */		     
+    tryssl,   /* try using SSL, proceed anyway otherwise */  
+    control,  /* SSL for the control connection or fail */   
+    all,      /* SSL for all communication or fail */	     
+    last      /* not an option, never use */                 
 }
 alias int curl_usessl;
 
 /* parameter for the CURLOPT_FTP_SSL_CCC option */
 enum CurlFtpSSL {
-    ccc_none,
-    ccc_passive,
-    ccc_active,
-    ccc_last
+    ccc_none,     /* do not send CCC */			      
+    ccc_passive,  /* Let the server initiate the shutdown */  
+    ccc_active,	  /* Initiate the shutdown */		      
+    ccc_last	  /* not an option, never use */              
 }
 alias int curl_ftpccc;
 
 /* parameter for the CURLOPT_FTPSSLAUTH option */
 enum CurlFtpAuth {
-    defaultauth,
-    ssl,
-    tls,
-    last
+    defaultauth, /* let libcurl decide */	      
+    ssl,	 /* use "AUTH SSL" */	      
+    tls,	 /* use "AUTH TLS" */	      
+    last	 /* not an option, never use */ 
 }
 alias int curl_ftpauth;
 
@@ -574,41 +595,43 @@ alias int curl_ftpcreatedir;
 /* parameter for the CURLOPT_FTP_FILEMETHOD option */
 enum CurlFtpMethod {
     defaultmethod,    /* let libcurl pick */			  
-    multicwd,   /* single CWD operation for each path part */  
-    nocwd,      /* no CWD at all */				  
-    singlecwd,  /* one CWD to full dir, then work on file */	  
+    multicwd,         /* single CWD operation for each path part */  
+    nocwd,            /* no CWD at all */				  
+    singlecwd,        /* one CWD to full dir, then work on file */	  
     last	      /* not an option, never use */                 
 }
 alias int curl_ftpmethod;
 
 /* CURLPROTO_ defines are for the CURLOPT_*PROTOCOLS options */
-const CURLPROTO_HTTP   = 1;
-const CURLPROTO_HTTPS  = 2;
-const CURLPROTO_FTP    = 4;
-const CURLPROTO_FTPS   = 8;
-const CURLPROTO_SCP    = 16;
-const CURLPROTO_SFTP   = 32;
-const CURLPROTO_TELNET = 64;
-const CURLPROTO_LDAP   = 128;
-const CURLPROTO_LDAPS  = 256;
-const CURLPROTO_DICT   = 512;
-const CURLPROTO_FILE   = 1024;
-const CURLPROTO_TFTP   = 2048;
-const CURLPROTO_IMAP   = 4096;
-const CURLPROTO_IMAPS  = 8192;
-const CURLPROTO_POP3   = 16384;
-const CURLPROTO_POP3S  = 32768;
-const CURLPROTO_SMTP   = 65536;
-const CURLPROTO_SMTPS  = 131072;
-const CURLPROTO_RTSP   = 262144;
-const CURLPROTO_RTMP   = 524288;
-const CURLPROTO_RTMPT  = 1048576;
-const CURLPROTO_RTMPE  = 2097152;
-const CURLPROTO_RTMPTE = 4194304;
-const CURLPROTO_RTMPS  = 8388608;
-const CURLPROTO_RTMPTS = 16777216;
-const CURLPROTO_GOPHER = 33554432;
-const CURLPROTO_ALL    = -1; /* enable everything */
+enum CurlProto {
+  http   = 1,
+  https  = 2,
+  ftp    = 4,
+  ftps   = 8,
+  scp    = 16,
+  sftp   = 32,
+  telnet = 64,
+  ldap   = 128,
+  ldaps  = 256,
+  dict   = 512,
+  file   = 1024,
+  tftp   = 2048,
+  imap   = 4096,
+  imaps  = 8192,
+  pop3   = 16384,
+  pop3s  = 32768,
+  smtp   = 65536,
+  smtps  = 131072,
+  rtsp   = 262144,
+  rtmp   = 524288,
+  rtmpt  = 1048576,
+  rtmpe  = 2097152,
+  rtmpte = 4194304,
+  rtmps  = 8388608,
+  rtmpts = 16777216,
+  gopher = 33554432,
+  all    = -1 /* enable everything */
+}
 
 /* long may be 32 or 64 bits, but we should never depend on anything else
    but 32 */
@@ -628,35 +651,36 @@ alias CURLOPTTYPE_FUNCTIONPOINT FUNCTIONPOINT;
 
 alias CURLOPTTYPE_OFF_T OFF_T;
 
+enum CurlOption {
   /* This is the FILE * or void * the regular output should be written to. */
-
+  file = 10001,
   /* The full URL to get/put */
-
+  url,
   /* Port number to connect to, if other than default. */
-
+  port = 3,
   /* Name of proxy to use. */
-
+  proxy = 10004,
   /* "name:password" to use when fetching. */
-
+  userpwd,
   /* "name:password" to use with proxy. */
-
+  proxyuserpwd,
   /* Range to get, specified as an ASCII string. */
-
+  range,
   /* not used */
 
   /* Specified file stream to upload from (use as input): */
-
+  infile = 10009,
   /* Buffer to receive error messages in, must be at least CURL_ERROR_SIZE
    * bytes big. If this is not used, error messages go to stderr instead: */
-
+  errorbuffer,
   /* Function that will be called to store the output (instead of fwrite). The
    * parameters will use fwrite() syntax, make sure to follow them. */
-
+  writefunction = 20011,
   /* Function that will be called to read the input (instead of fread). The
    * parameters will use fread() syntax, make sure to follow them. */
-
+  readfunction,
   /* Time-out the read operation after this amount of seconds */
-
+  timeout = 13,
   /* If the CURLOPT_INFILE is used, this can be used to inform libcurl about
    * how large the file being sent really is. That allows better error
    * checking and better verifies that the upload was successful. -1 means
@@ -666,16 +690,16 @@ alias CURLOPTTYPE_OFF_T OFF_T;
    * which takes an off_t type, allowing platforms with larger off_t
    * sizes to handle larger files.  See below for INFILESIZE_LARGE.
    */
-
+  infilesize,
   /* POST static input fields. */
-
+  postfields = 10015,
   /* Set the referrer page (needed by some CGIs) */
-
+  referer,
   /* Set the FTP PORT string (interface name, named or numerical IP address)
      Use i.e '-' to use default address. */
-
+  ftpport,
   /* Set the User-Agent string (examined by some CGIs) */
-
+  useragent,
   /* If the download receives less than "low speed limit" bytes/second
    * during "low speed time" seconds, the operations is aborted.
    * You could i.e if you have a pretty high speed connection, abort if
@@ -683,268 +707,275 @@ alias CURLOPTTYPE_OFF_T OFF_T;
    */
 
   /* Set the "low speed limit" */
-
+  low_speed_limit = 19,
   /* Set the "low speed time" */
-
+  low_speed_time,
   /* Set the continuation offset.
    *
    * Note there is also a _LARGE version of this key which uses
    * off_t types, allowing for large file offsets on platforms which
    * use larger-than-32-bit off_t's.  Look below for RESUME_FROM_LARGE.
    */
-
+  resume_from,
   /* Set cookie in request: */
-
+  cookie = 10022,
   /* This points to a linked list of headers, struct curl_slist kind */
-
+  httpheader,
   /* This points to a linked list of post entries, struct curl_httppost */
-
+  httppost,
   /* name of the file keeping your private SSL-certificate */
-
+  sslcert,
   /* password for the SSL or SSH private key */
-
+  keypasswd,
   /* send TYPE parameter? */
-
+  crlf = 27,
   /* send linked-list of QUOTE commands */
-
+  quote = 10028,
   /* send FILE * or void * to store headers to, if you use a callback it
      is simply passed to the callback unmodified */
-
+  writeheader,
   /* point to a file to read the initial cookies from, also enables
      "cookie awareness" */
-
+  cookiefile = 10031,
   /* What version to specifically try to use.
      See CURL_SSLVERSION defines below. */
-
+  sslversion = 32,
   /* What kind of HTTP time condition to use, see defines */
-
+  timecondition,
   /* Time to use with the above condition. Specified in number of seconds
      since 1 Jan 1970 */
-
+  timevalue,
   /* 35 = OBSOLETE */
 
   /* Custom request, for customizing the get command like
      HTTP: DELETE, TRACE and others
      FTP: to use a different list command
      */
-
+  customrequest = 10036,
   /* HTTP request, for odd commands like DELETE, TRACE and others */
-
+  stderr,
   /* 38 is not used */
 
   /* send linked-list of post-transfer QUOTE commands */
-
+  postquote = 10039,
   /* Pass a pointer to string of the output using full variable-replacement
      as described elsewhere. */
-
-
-
+  writeinfo,
+  verbose = 41,       /* talk a lot */				  
+  header,	      /* throw the header out too */			  
+  noprogress,	      /* shut off the progress meter */		  
+  nobody,	      /* use HEAD to get http document */		  
+  failonerror,	      /* no output on http error codes >= 300 */	  
+  upload,	      /* this is an upload */			  
+  post,		      /* HTTP POST method */				  
+  dirlistonly,	      /* return bare names when listing directories */ 
+  append = 50,	      /* Append instead of overwrite on upload! */     
   /* Specify whether to read the user+password from the .netrc or the URL.
    * This must be one of the CURL_NETRC_* enums below. */
-
-
-
+  netrc,
+  followlocation, /* use Location: Luke! */
+  transfertext,  /* transfer data in text/ASCII format */
+  put,		 /* HTTP PUT */                          
   /* 55 = OBSOLETE */
 
   /* Function that will be called instead of the internal progress display
    * function. This function should be defined as the curl_progress_callback
    * prototype defines. */
-
+  progressfunction = 20056,
   /* Data passed to the progress callback */
-
+  progressdata = 10057,
   /* We want the referrer field set automatically when following locations */
-
+  autoreferer = 58,
   /* Port of the proxy, can be set in the proxy string as well with:
      "[host]:[port]" */
-
+  proxyport,
   /* size of the POST input data, if strlen() is not good to use */
-
+  postfieldsize,
   /* tunnel non-http operations through a HTTP proxy */
-
+  httpproxytunnel,
   /* Set the interface string to use as outgoing network interface */
-
+  intrface = 10062,
   /* Set the krb4/5 security level, this also enables krb4/5 awareness.  This
    * is a string, 'clear', 'safe', 'confidential' or 'private'.  If the string
    * is set but doesn't match one of these, 'private' will be used.  */
-
+  krblevel,
   /* Set if we should verify the peer in ssl handshake, set 1 to verify. */
-
+  ssl_verifypeer = 64,
   /* The CApath or CAfile used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
-
+  cainfo = 10065,
   /* 66 = OBSOLETE */
   /* 67 = OBSOLETE */
 
   /* Maximum number of http redirects to follow */
-
+  maxredirs = 68,
   /* Pass a long set to 1 to get the date of the requested document (if
      possible)! Pass a zero to shut it off. */
-
+  filetime,
   /* This points to a linked list of telnet options */
-
+  telnetoptions = 10070,
   /* Max amount of cached alive connections */
-
+  maxconnects = 71,
   /* What policy to use when closing connections when the cache is filled
      up */
-
+  closepolicy,
   /* 73 = OBSOLETE */
 
   /* Set to explicitly use a new connection for the upcoming transfer.
      Do not use this unless you're absolutely sure of this, as it makes the
      operation slower and is less friendly for the network. */
-
+  fresh_connect = 74,
   /* Set to explicitly forbid the upcoming transfer's connection to be re-used
      when done. Do not use this unless you're absolutely sure of this, as it
      makes the operation slower and is less friendly for the network. */
-
+  forbid_reuse,
   /* Set to a file name that contains random data for libcurl to use to
      seed the random engine when doing SSL connects. */
-
+  random_file = 10076,
   /* Set to the Entropy Gathering Daemon socket pathname */
-
+  egdsocket,
   /* Time-out connect operations after this amount of seconds, if connects
      are OK within this time, then fine... This only aborts the connect
      phase. [Only works on unix-style/SIGALRM operating systems] */
-
+  connecttimeout = 78,
   /* Function that will be called to store headers (instead of fwrite). The
    * parameters will use fwrite() syntax, make sure to follow them. */
-
+  headerfunction = 20079,
   /* Set this to force the HTTP request to get back to GET. Only really usable
      if POST, PUT or a custom request have been used first.
    */
-
+  httpget = 80,
   /* Set if we should verify the Common name from the peer certificate in ssl
    * handshake, set 1 to check existence, 2 to ensure that it matches the
    * provided hostname. */
-
+  ssl_verifyhost,
   /* Specify which file name to write all known cookies in after completed
      operation. Set file name to "-" (dash) to make it go to stdout. */
-
+  cookiejar = 10082,
   /* Specify which SSL ciphers to use */
-
+  ssl_cipher_list,
   /* Specify which HTTP version to use! This must be set to one of the
      CURL_HTTP_VERSION* enums set below. */
-
+  http_version = 84,
   /* Specifically switch on or off the FTP engine's use of the EPSV command. By
      default, that one will always be attempted before the more traditional
      PASV command. */
-
+  ftp_use_epsv,
   /* type of the file keeping your SSL-certificate ("DER", "PEM", "ENG") */
-
+  sslcerttype = 10086,
   /* name of the file keeping your private SSL-key */
-
+  sslkey,
   /* type of the file keeping your private SSL-key ("DER", "PEM", "ENG") */
-
+  sslkeytype,
   /* crypto engine for the SSL-sub system */
-
+  sslengine,
   /* set the crypto engine for the SSL-sub system as default
      the param has no meaning...
    */
-
+  sslengine_default = 90,
   /* Non-zero value means to use the global dns cache */
-
+  dns_use_global_cache,
   /* DNS cache timeout */
-
+  dns_cache_timeout,
   /* send linked-list of pre-transfer QUOTE commands */
-
+  prequote = 10093,
   /* set the debug function */
-
+  debugfunction = 20094,
   /* set the data for the debug function */
-
+  debugdata = 10095,
   /* mark this as start of a cookie session */
-
+  cookiesession = 96,
   /* The CApath directory used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
-
+  capath = 10097,
   /* Instruct libcurl to use a smaller receive buffer */
-
+  buffersize = 98,
   /* Instruct libcurl to not use any signal/alarm handlers, even when using
      timeouts. This option is useful for multi-threaded applications.
      See libcurl-the-guide for more background information. */
-
+  nosignal,
   /* Provide a CURLShare for mutexing non-ts data */
-
+  share = 10100,
   /* indicates type of proxy. accepted values are CURLPROXY_HTTP (default),
      CURLPROXY_SOCKS4, CURLPROXY_SOCKS4A and CURLPROXY_SOCKS5. */
-
+  proxytype = 101,
   /* Set the Accept-Encoding string. Use this to tell a server you would like
      the response to be compressed. */
-
+  encoding = 10102,
   /* Set pointer to private data */
-
+  private_opt,
   /* Set aliases for HTTP 200 in the HTTP Response header */
-
+  http200aliases,
   /* Continue to send authentication (user+password) when following locations,
      even when hostname changed. This can potentially send off the name
      and password to whatever host the server decides. */
-
+  unrestricted_auth = 105,
   /* Specifically switch on or off the FTP engine's use of the EPRT command ( it
      also disables the LPRT attempt). By default, those ones will always be
      attempted before the good old traditional PORT command. */
-
+  ftp_use_eprt,
   /* Set this to a bitmask value to enable the particular authentications
      methods you like. Use this in combination with CURLOPT_USERPWD.
      Note that setting multiple bits may cause extra network round-trips. */
-
+  httpauth,
   /* Set the ssl context callback function, currently only for OpenSSL ssl_ctx
      in second argument. The function must be matching the
      curl_ssl_ctx_callback proto. */
-
+  ssl_ctx_function = 20108,
   /* Set the userdata for the ssl context callback function's third
      argument */
-
+  ssl_ctx_data = 10109,
   /* FTP Option that causes missing dirs to be created on the remote server.
      In 7.19.4 we introduced the convenience enums for this option using the
      CURLFTP_CREATE_DIR prefix.
   */
-
+  ftp_create_missing_dirs = 110,
   /* Set this to a bitmask value to enable the particular authentications
      methods you like. Use this in combination with CURLOPT_PROXYUSERPWD.
      Note that setting multiple bits may cause extra network round-trips. */
-
+  proxyauth,
   /* FTP option that changes the timeout, in seconds, associated with
      getting a response.  This is different from transfer timeout time and
      essentially places a demand on the FTP server to acknowledge commands
      in a timely manner. */
-
-// alias CURLOPT_FTP_RESPONSE_TIMEOUT CURLOPT_SERVER_RESPONSE_TIMEOUT;
+  ftp_response_timeout,
   /* Set this option to one of the CURL_IPRESOLVE_* defines (see below) to
      tell libcurl to resolve names to those IP versions only. This only has
      affect on systems with support for more than one, i.e IPv4 _and_ IPv6. */
-
+  ipresolve,
   /* Set this option to limit the size of a file that will be downloaded from
      an HTTP or FTP server.
 
      Note there is also _LARGE version which adds large file support for
      platforms which have larger off_t sizes.  See MAXFILESIZE_LARGE below. */
-
+  maxfilesize,
   /* See the comment for INFILESIZE above, but in short, specifies
    * the size of the file being uploaded.  -1 means unknown.
    */
-
+  infilesize_large = 30115,
   /* Sets the continuation offset.  There is also a LONG version of this;
    * look above for RESUME_FROM.
    */
-
+  resume_from_large,
   /* Sets the maximum size of data that will be downloaded from
    * an HTTP or FTP server.  See MAXFILESIZE above for the LONG version.
    */
-
+  maxfilesize_large,
   /* Set this option to the file name of your .netrc file you want libcurl
      to parse (using the CURLOPT_NETRC option). If not set, libcurl will do
      a poor attempt to find the user's home directory and check for a .netrc
      file in there. */
-
+  netrc_file = 10118,
   /* Enable SSL/TLS for FTP, pick one of:
      CURLFTPSSL_TRY     - try using SSL, proceed anyway otherwise
      CURLFTPSSL_CONTROL - SSL for the control connection or fail
      CURLFTPSSL_ALL     - SSL for all communication or fail
   */
-
+  use_ssl = 119,
   /* The _LARGE version of the standard POSTFIELDSIZE option */
-
+  postfieldsize_large = 30120,
   /* Enable/disable the TCP Nagle algorithm */
-
+  tcp_nodelay = 121,
   /* 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
   /* 123 OBSOLETE. Gone in 7.16.0 */
   /* 124 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
@@ -963,99 +994,110 @@ alias CURLOPTTYPE_OFF_T OFF_T;
      CURLFTPAUTH_SSL     - try "AUTH SSL" first, then TLS
      CURLFTPAUTH_TLS     - try "AUTH TLS" first, then SSL
   */
-
-
+  ftpsslauth = 129,
+  ioctlfunction = 20130,
+  ioctldata = 10131,
   /* 132 OBSOLETE. Gone in 7.16.0 */
   /* 133 OBSOLETE. Gone in 7.16.0 */
 
   /* zero terminated string for pass on to the FTP server when asked for
      "account" info */
-
+  ftp_account = 10134,
   /* feed cookies into cookie engine */
-
+  cookielist,
   /* ignore Content-Length */
-
+  ignore_content_length = 136,
   /* Set to non-zero to skip the IP address received in a 227 PASV FTP server
      response. Typically used for FTP-SSL purposes but is not restricted to
      that. libcurl will then instead use the same IP address it used for the
      control connection. */
-
+  ftp_skip_pasv_ip,
   /* Select "file method" to use when doing FTP, see the curl_ftpmethod
      above. */
-
+  ftp_filemethod,
   /* Local port number to bind the socket to */
-
+  localport,
   /* Number of ports to try, including the first one set with LOCALPORT.
      Thus, setting it to 1 will make no additional attempts but the first.
   */
-
+  localportrange,
   /* no transfer, set up connection and let application use the socket by
      extracting it with CURLINFO_LASTSOCKET */
-
+  connect_only,
   /* Function that will be called to convert from the
      network encoding (instead of using the iconv calls in libcurl) */
-
+  conv_from_network_function = 20142,
   /* Function that will be called to convert to the
      network encoding (instead of using the iconv calls in libcurl) */
-
+  conv_to_network_function,
   /* Function that will be called to convert from UTF8
      (instead of using the iconv calls in libcurl)
      Note that this is used only for SSL certificate processing */
-
+  conv_from_utf8_function,
   /* if the connection proceeds too quickly then need to slow it down */
   /* limit-rate: maximum number of bytes per second to send or receive */
-
+  max_send_speed_large = 30145,
+  max_recv_speed_large,
   /* Pointer to command string to send if USER/PASS fails. */
-
+  ftp_alternative_to_user = 10147,
   /* callback function for setting socket options */
-
+  sockoptfunction = 20148,
+  sockoptdata = 10149,
   /* set to 0 to disable session ID re-use for this transfer, default is
      enabled (== 1) */
-
+  ssl_sessionid_cache = 150,
   /* allowed SSH authentication methods */
-
+  ssh_auth_types,
   /* Used by scp/sftp to do public/private key authentication */
-
+  ssh_public_keyfile = 10152,
+  ssh_private_keyfile,
   /* Send CCC (Clear Command Channel) after authentication */
-
+  ftp_ssl_ccc = 154,
   /* Same as TIMEOUT and CONNECTTIMEOUT, but with ms resolution */
-
+  timeout_ms,
+  connecttimeout_ms,
   /* set to zero to disable the libcurl's decoding and thus pass the raw body
      data to the application even when it is encoded/compressed */
-
+  http_transfer_decoding,
+  http_content_decoding,
   /* Permission used when creating new files and directories on the remote
      server for protocols that support it, SFTP/SCP/FILE */
-
+  new_file_perms,
+  new_directory_perms,
   /* Set the behaviour of POST when redirecting. Values must be set to one
      of CURL_REDIR* defines below. This used to be called CURLOPT_POST301 */
-
+  postredir,
   /* used by scp/sftp to verify the host's public key */
-
+  ssh_host_public_key_md5 = 10162,
   /* Callback function for opening socket (instead of socket(2)). Optionally,
      callback is able change the address or refuse to connect returning
      CURL_SOCKET_BAD.  The callback should have type
      curl_opensocket_callback */
-
+  opensocketfunction = 20163,
+  opensocketdata = 10164,
   /* POST volatile input fields. */
-
+  copypostfields,
   /* set transfer mode (;type=<a|i>) when doing FTP via an HTTP proxy */
-
+  proxy_transfer_mode = 166,
   /* Callback function for seeking in the input stream */
-
+  seekfunction = 20167,
+  seekdata = 10168,
   /* CRL file */
-
+  crlfile,
   /* Issuer certificate */
-
+  issuercert,
   /* (IPv6) Address scope */
-
+  address_scope = 171,
   /* Collect certificate chain info and allow it to get retrievable with
      CURLINFO_CERTINFO after the transfer is complete. (Unfortunately) only
      working with OpenSSL-powered builds. */
-
+  certinfo,
   /* "name" and "pwd" to use when fetching. */
-
-    /* "name" and "pwd" to use with Proxy when fetching. */
-
+  username = 10173,
+  password,
+  /* "name" and "pwd" to use with Proxy when fetching. */
+  proxyusername,
+  proxypassword,
   /* Comma separated list of hostnames defining no-proxy zones. These should
      match both hostnames directly, and hostnames within a domain. For
      example, local.com will match local.com and www.local.com, but NOT
@@ -1063,264 +1105,76 @@ alias CURLOPTTYPE_OFF_T OFF_T;
      implementations of this, .local.com will be considered to be the same as
      local.com. A single * is the only valid wildcard, and effectively
      disables the use of proxy. */
-
+  noproxy,
   /* block size for TFTP transfers */
-
+  tftp_blksize = 178,
   /* Socks Service */
-
+  socks5_gssapi_service = 10179,
   /* Socks Service */
-
+  socks5_gssapi_nec = 180,
   /* set the bitmask for the protocols that are allowed to be used for the
      transfer, which thus helps the app which takes URLs from users or other
      external inputs and want to restrict what protocol(s) to deal
      with. Defaults to CURLPROTO_ALL. */
-
+  protocols,
   /* set the bitmask for the protocols that libcurl is allowed to follow to,
      as a subset of the CURLOPT_PROTOCOLS ones. That means the protocol needs
      to be set in both bitmasks to be allowed to get redirected to. Defaults
      to all protocols except FILE and SCP. */
-
+  redir_protocols,
   /* set the SSH knownhost file name to use */
-
+  ssh_knownhosts = 10183,
   /* set the SSH host key callback, must point to a curl_sshkeycallback
      function */
-
+  ssh_keyfunction = 20184,
   /* set the SSH host key callback custom pointer */
-
+  ssh_keydata = 10185,
   /* set the SMTP mail originator */
-
+  mail_from,
   /* set the SMTP mail receiver(s) */
-
+  mail_rcpt,
   /* FTP: send PRET before PASV */
-
+  ftp_use_pret = 188,
   /* RTSP request method (OPTIONS, SETUP, PLAY, etc...) */
-
+  rtsp_request,
   /* The RTSP session identifier */
-
+  rtsp_session_id = 10190,
   /* The RTSP stream URI */
-
+  rtsp_stream_uri,
   /* The Transport: header to use in RTSP requests */
-
+  rtsp_transport,
   /* Manually initialize the client RTSP CSeq for this handle */
-
+  rtsp_client_cseq = 193,
   /* Manually initialize the server RTSP CSeq for this handle */
-
+  rtsp_server_cseq,
   /* The stream to pass to INTERLEAVEFUNCTION. */
-
+  interleavedata = 10195,
   /* Let the application define a custom write method for RTP data */
-
+  interleavefunction = 20196,
   /* Turn on wildcard matching */
-
+  wildcardmatch = 197,
   /* Directory matching callback called before downloading of an
      individual file (chunk) started */
-
+  chunk_bgn_function = 20198,
   /* Directory matching callback called after the file (chunk)
      was downloaded, or skipped */
-
+  chunk_end_function,
   /* Change match (fnmatch-like) callback for wildcard matching */
-
+  fnmatch_function,
   /* Let the application define custom chunk data pointer */
-
+  chunk_data = 10201,
   /* FNMATCH_FUNCTION user pointer */
-
+  fnmatch_data,
   /* send linked-list of name:port:address sets */
-
+  resolve,
   /* Set a username for authenticated TLS */
-
+  tlsauth_username,
   /* Set a password for authenticated TLS */
-
+  tlsauth_password,
   /* Set authentication type for authenticated TLS */
-
-enum CurlOption {
-    file = 10001,
-    url,
-    port = 3,
-    proxy = 10004,
-    userpwd,
-    proxyuserpwd,
-    range,
-    infile = 10009,
-    errorbuffer,
-    writefunction = 20011,
-    readfunction,
-    timeout = 13,
-    infilesize,
-    postfields = 10015,
-    referer,
-    ftpport,
-    useragent,
-    low_speed_limit = 19,
-    low_speed_time,
-    resume_from,
-    cookie = 10022,
-    httpheader,
-    httppost,
-    sslcert,
-    keypasswd,
-    crlf = 27,
-    quote = 10028,
-    writeheader,
-    cookiefile = 10031,
-    sslversion = 32,
-    timecondition,
-    timevalue,
-    customrequest = 10036,
-    stderr,
-    postquote = 10039,
-    writeinfo,
-    verbose = 41,
-    header,
-    noprogress,
-    nobody,
-    failonerror,
-    upload,
-    post,
-    dirlistonly,
-    append = 50,
-    netrc,
-    followlocation,
-    transfertext,
-    put,
-    progressfunction = 20056,
-    progressdata = 10057,
-    autoreferer = 58,
-    proxyport,
-    postfieldsize,
-    httpproxytunnel,
-    intrface = 10062,
-    krblevel,
-    ssl_verifypeer = 64,
-    cainfo = 10065,
-    maxredirs = 68,
-    filetime,
-    telnetoptions = 10070,
-    maxconnects = 71,
-    closepolicy,
-    fresh_connect = 74,
-    forbid_reuse,
-    random_file = 10076,
-    egdsocket,
-    connecttimeout = 78,
-    headerfunction = 20079,
-    httpget = 80,
-    ssl_verifyhost,
-    cookiejar = 10082,
-    ssl_cipher_list,
-    http_version = 84,
-    ftp_use_epsv,
-    sslcerttype = 10086,
-    sslkey,
-    sslkeytype,
-    sslengine,
-    sslengine_default = 90,
-    dns_use_global_cache,
-    dns_cache_timeout,
-    prequote = 10093,
-    debugfunction = 20094,
-    debugdata = 10095,
-    cookiesession = 96,
-    capath = 10097,
-    buffersize = 98,
-    nosignal,
-    share = 10100,
-    proxytype = 101,
-    encoding = 10102,
-    private_opt,
-    http200aliases,
-    unrestricted_auth = 105,
-    ftp_use_eprt,
-    httpauth,
-    ssl_ctx_function = 20108,
-    ssl_ctx_data = 10109,
-    ftp_create_missing_dirs = 110,
-    proxyauth,
-    ftp_response_timeout,
-    ipresolve,
-    maxfilesize,
-    infilesize_large = 30115,
-    resume_from_large,
-    maxfilesize_large,
-    netrc_file = 10118,
-    use_ssl = 119,
-    postfieldsize_large = 30120,
-    tcp_nodelay = 121,
-    ftpsslauth = 129,
-    ioctlfunction = 20130,
-    ioctldata = 10131,
-    ftp_account = 10134,
-    cookielist,
-    ignore_content_length = 136,
-    ftp_skip_pasv_ip,
-    ftp_filemethod,
-    localport,
-    localportrange,
-    connect_only,
-    conv_from_network_function = 20142,
-    conv_to_network_function,
-    conv_from_utf8_function,
-    max_send_speed_large = 30145,
-    max_recv_speed_large,
-    ftp_alternative_to_user = 10147,
-    sockoptfunction = 20148,
-    sockoptdata = 10149,
-    ssl_sessionid_cache = 150,
-    ssh_auth_types,
-    ssh_public_keyfile = 10152,
-    ssh_private_keyfile,
-    ftp_ssl_ccc = 154,
-    timeout_ms,
-    connecttimeout_ms,
-    http_transfer_decoding,
-    http_content_decoding,
-    new_file_perms,
-    new_directory_perms,
-    postredir,
-    ssh_host_public_key_md5 = 10162,
-    opensocketfunction = 20163,
-    opensocketdata = 10164,
-    copypostfields,
-    proxy_transfer_mode = 166,
-    seekfunction = 20167,
-    seekdata = 10168,
-    crlfile,
-    issuercert,
-    address_scope = 171,
-    certinfo,
-    username = 10173,
-    password,
-    proxyusername,
-    proxypassword,
-    noproxy,
-    tftp_blksize = 178,
-    socks5_gssapi_service = 10179,
-    socks5_gssapi_nec = 180,
-    protocols,
-    redir_protocols,
-    ssh_knownhosts = 10183,
-    ssh_keyfunction = 20184,
-    ssh_keydata = 10185,
-    mail_from,
-    mail_rcpt,
-    ftp_use_pret = 188,
-    rtsp_request,
-    rtsp_session_id = 10190,
-    rtsp_stream_uri,
-    rtsp_transport,
-    rtsp_client_cseq = 193,
-    rtsp_server_cseq,
-    interleavedata = 10195,
-    interleavefunction = 20196,
-    wildcardmatch = 197,
-    chunk_bgn_function = 20198,
-    chunk_end_function,
-    fnmatch_function,
-    chunk_data = 10201,
-    fnmatch_data,
-    resolve,
-    tlsauth_username,
-    tlsauth_password,
-    tlsauth_type,
-    lastentry
+  tlsauth_type,
+  /* the last unused */
+  lastentry
 }
 alias int CURLoption;
 const CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
@@ -1328,11 +1182,13 @@ const CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
 /* Below here follows defines for the CURLOPT_IPRESOLVE option. If a host
    name resolves addresses using more than one IP protocol version, this
    option might be handy to force libcurl to use a specific IP version. */
-const CURL_IPRESOLVE_WHATEVER = 0; /* default, resolves addresses to all IP versions that your system allows */
-const CURL_IPRESOLVE_V4 = 1;
-const CURL_IPRESOLVE_V6 = 2;
+enum CurlIpResolve {
+  whatever = 0, /* default, resolves addresses to all IP versions that your system allows */
+  v4 = 1,       /* resolve to ipv4 addresses */
+  v6 = 2	/* resolve to ipv6 addresses */
+}
 
-  /* three convenient "aliases" that follow the name scheme better */
+/* three convenient "aliases" that follow the name scheme better */
 const CURLOPT_WRITEDATA = CurlOption.file;
 const CURLOPT_READDATA = CurlOption.infile;
 const CURLOPT_HEADERDATA = CurlOption.writeheader;
@@ -1343,9 +1199,9 @@ enum CurlHttpVersion {
     none, /* setting this means we don't care, and that we'd
 	     like the library to choose the best possible
 	     for us! */
-    v1_0,
-    v1_1,
-    last /* *ILLEGAL* http version */
+    v1_0, /* please use HTTP 1.0 in the request */
+    v1_1, /* please use HTTP 1.1 in the request */
+    last  /* *ILLEGAL* http version */
 }
 
 /*
@@ -1394,11 +1250,12 @@ enum CurlTlsAuth {
 /* symbols to use with CURLOPT_POSTREDIR.
    CURL_REDIR_POST_301 and CURL_REDIR_POST_302 can be bitwise ORed so that
    CURL_REDIR_POST_301 | CURL_REDIR_POST_302 == CURL_REDIR_POST_ALL */
-const CURL_REDIR_GET_ALL = 0;
-const CURL_REDIR_POST_301 = 1;
-const CURL_REDIR_POST_302 = 2;
-const CURL_REDIR_POST_ALL = (CURL_REDIR_POST_301|CURL_REDIR_POST_302);
-
+enum CurlRedir {
+  get_all = 0,
+  post_301 = 1,
+  post_302 = 2,
+  post_all = (1 | 2) // (CURL_REDIR_POST_301|CURL_REDIR_POST_302);
+}
 enum CurlTimeCond {
     none,
     ifmodsince,
@@ -1416,7 +1273,7 @@ int  curl_strequal(char *s1, char *s2);
 int  curl_strnequal(char *s1, char *s2, size_t n);
 }
 enum CurlForm {
-    nothing,
+    nothing, /********* the first one is unused ************/
     copyname,
     ptrname,
     namelength,
@@ -1436,7 +1293,7 @@ enum CurlForm {
     end,
     obsolete2,
     stream,
-    lastentry,
+    lastentry /* the last unused */
 }
 alias int CURLformoption;
 
@@ -1465,14 +1322,14 @@ struct curl_forms
  *
  ***************************************************************************/
 enum CurlFormAdd {
-    ok,
+    ok, /* first, no error */
     memory,
     option_twice,
     null_ptr,
     unknown_option,
     incomplete,
     illegal_array,
-    disabled,
+    disabled,  /* libcurl was built with this disabled */
     last
 }
 alias int CURLFORMcode;
@@ -1740,23 +1597,25 @@ enum CurlClosePolicy {
 }
 alias int curl_closepolicy;
 
-const CURL_GLOBAL_SSL = 1;
-const CURL_GLOBAL_WIN32 = 2;
-const CURL_GLOBAL_ALL = (CURL_GLOBAL_SSL|CURL_GLOBAL_WIN32);
-const CURL_GLOBAL_NOTHING = 0;
-alias CURL_GLOBAL_ALL CURL_GLOBAL_DEFAULT;
+enum CurlGlobal {
+  ssl = 1,
+  win32 = 2,
+  all = (1 | 2), // (CURL_GLOBAL_SSL|CURL_GLOBAL_WIN32);
+  nothing = 0,
+  default_ = (1 | 2) // all
+}
 
 /*****************************************************************************
  * Setup defines, protos etc for the sharing stuff.
  */
 
 /* Different data locks for a single share */
-  /*  CURL_LOCK_DATA_SHARE is used internally to say that
-   *  the locking is just made to change the internal state of the share
-   *  itself.
-   */
 enum CurlLockData {
     none,
+    /*  CURL_LOCK_DATA_SHARE is used internally to say that
+     *  the locking is just made to change the internal state of the share
+     *  itself.
+     */
     share,
     cookie,
     dns,
@@ -1768,10 +1627,10 @@ alias int curl_lock_data;
 
 /* Different lock access types */
 enum CurlLockAccess {
-    none,
-    shared_access,
-    single,
-    last
+    none,            /* unspecified action */
+    shared_access,   /* for read perhaps */  
+    single,	     /* for write perhaps */ 
+    last	     /* never use */         
 }
 alias int curl_lock_access;
 
@@ -1781,25 +1640,26 @@ alias void  function(CURL *handle, curl_lock_data data, void *userptr)curl_unloc
 alias void CURLSH;
 
 enum CurlShError {
-    ok,
-    bad_option,
-    in_use,
-    invalid,
-    nomem,
-    last
+    ok,          /* all is fine */	  
+    bad_option,	 /* 1 */		  
+    in_use,	 /* 2 */		  
+    invalid,	 /* 3 */		  
+    nomem,	 /* out of memory */ 
+    last	 /* never use */     
 }
 alias int CURLSHcode;
 
 /* pass in a user data pointer used in the lock/unlock callback
    functions */
 enum CurlShOption {
-    none,
-    share,
-    unshare,
-    lockfunc,
-    unlockfunc,
-    userdata,
-    last
+    none,         /* don't use */					       
+    share,	  /* specify a data type to share */		       
+    unshare,	  /* specify which data type to stop sharing */	       
+    lockfunc,	  /* pass in a 'curl_lock_function' pointer */	       
+    unlockfunc,	  /* pass in a 'curl_unlock_function' pointer */	       
+    userdata,	  /* pass in a user data pointer used in the lock/unlock 
+		     callback functions */			       
+    last	  /* never use */                                        
 }
 alias int CURLSHoption;
 
@@ -1813,7 +1673,8 @@ CURLSHcode  curl_share_cleanup(CURLSH *);
  * Structures for querying information about the curl library at runtime.
  */
 
-enum CurlVersion {
+// CURLVERSION_*
+enum CurlVer {
     first,
     second,
     third,
@@ -1827,18 +1688,18 @@ alias int CURLversion;
    meant to be a built-in version number for what kind of struct the caller
    expects. If the struct ever changes, we redefine the NOW to another enum
    from above. */
-const CURLVERSION_NOW = CurlVersion.fourth; 
+const CURLVERSION_NOW = CurlVer.fourth; 
 
 struct _N28
 {
-  CURLversion age;
-  char *version_;
-  uint version_num;
-  char *host;
-  int features;
-  char *ssl_version;
-  int ssl_version_num;
-  char *libz_version;
+  CURLversion age;     /* age of the returned struct */	      
+  char *version_;      /* LIBCURL_VERSION */		      
+  uint version_num;    /* LIBCURL_VERSION_NUM */		      
+  char *host;	       /* OS/host/cpu/machine when configured */ 
+  int features;	       /* bitmask, see defines below */	      
+  char *ssl_version;   /* human readable string */		      
+  int ssl_version_num; /* not used anymore, always 0 */	      
+  char *libz_version;  /* human readable string */               
   /* protocols is terminated by an entry with a NULL protoname */
   char **protocols;
   /* The fields below this were added in CURLVERSION_SECOND */
@@ -1849,25 +1710,28 @@ struct _N28
   /* These field were added in CURLVERSION_FOURTH */
   /* Same as '_libiconv_version' if built with HAVE_ICONV */
   int iconv_ver_num;
-  char *libssh_version;
+  char *libssh_version;  /* human readable string */
 }
 alias _N28 curl_version_info_data;
 
-const CURL_VERSION_IPV6         = 1;  /* IPv6-enabled */
-const CURL_VERSION_KERBEROS4    = 2;  /* kerberos auth is supported */
-const CURL_VERSION_SSL          = 4;  /* SSL options are present */
-const CURL_VERSION_LIBZ         = 8;  /* libz features are present */
-const CURL_VERSION_NTLM         = 16;  /* NTLM auth is supported */
-const CURL_VERSION_GSSNEGOTIATE = 32; /* Negotiate auth support */
-const CURL_VERSION_DEBUG        = 64;  /* built with debug capabilities */
-const CURL_VERSION_ASYNCHDNS    = 128;  /* asynchronous dns resolves */
-const CURL_VERSION_SPNEGO       = 256;  /* SPNEGO auth */
-const CURL_VERSION_LARGEFILE    = 512;  /* supports files bigger than 2GB */
-const CURL_VERSION_IDN          = 1024; /* International Domain Names support */
-const CURL_VERSION_SSPI         = 2048; /* SSPI is supported */
-const CURL_VERSION_CONV         = 4096; /* character conversions supported */
-const CURL_VERSION_CURLDEBUG    = 8192; /* debug memory tracking supported */
-const CURL_VERSION_TLSAUTH_SRP  = 16384; /* TLS-SRP auth is supported */
+// CURL_VERSION_*
+enum CurlVersion {
+  ipv6         = 1,     /* IPv6-enabled */
+  kerberos4    = 2,     /* kerberos auth is supported */
+  ssl          = 4,     /* SSL options are present */
+  libz         = 8,     /* libz features are present */
+  ntlm         = 16,    /* NTLM auth is supported */
+  gssnegotiate = 32,    /* Negotiate auth support */
+  dbg          = 64,    /* built with debug capabilities */
+  asynchdns    = 128,   /* asynchronous dns resolves */
+  spnego       = 256,   /* SPNEGO auth */
+  largefile    = 512,   /* supports files bigger than 2GB */
+  idn          = 1024,  /* International Domain Names support */
+  sspi         = 2048,  /* SSPI is supported */
+  conv         = 4096,  /* character conversions supported */
+  curldebug    = 8192,  /* debug memory tracking supported */
+  tlsauth_srp  = 16384  /* TLS-SRP auth is supported */
+}
 
 extern (C) { 
 /*
@@ -1914,14 +1778,15 @@ char * curl_share_strerror(CURLSHcode );
 CURLcode  curl_easy_pause(CURL *handle, int bitmask);
 }
 
-const CURLPAUSE_RECV      = 1;
-const CURLPAUSE_RECV_CONT = 0;
 
-const CURLPAUSE_SEND      = 4;
-const CURLPAUSE_SEND_CONT = 0;
-
-const CURLPAUSE_ALL       = (CURLPAUSE_RECV|CURLPAUSE_SEND);
-const CURLPAUSE_CONT      = (CURLPAUSE_RECV_CONT|CURLPAUSE_SEND_CONT);
+enum CurlPause {
+  recv      = 1,
+  recv_cont = 0,
+  send      = 4,
+  send_cont = 0,
+  all       = (1 | 4), // CURLPAUSE_RECV | CURLPAUSE_SEND
+  cont      = (0 | 0), // CURLPAUSE_RECV_CONT | CURLPAUSE_SEND_CONT
+}
 
 /* unfortunately, the easy.h and multi.h include files need options and info
   stuff before they can be included! */
@@ -2211,18 +2076,21 @@ char * curl_multi_strerror(CURLMcode );
  *          detected to have "action" on them and let libcurl perform.
  *          See man page for details.
  */
-const CURL_POLL_NONE = 0;
-const CURL_POLL_IN = 1;
-const CURL_POLL_OUT = 2;
-const CURL_POLL_INOUT = 3;
-
-const CURL_POLL_REMOVE = 4;
+enum CurlPoll {
+  none_ = 0,   /* jdrewsen: underscored in order not to clash with reserved D symbols */
+  in_ = 1,
+  out_ = 2,
+  inout_ = 3,
+  remove_ = 4
+}
 
 alias CURL_SOCKET_BAD CURL_SOCKET_TIMEOUT;
-const CURL_CSELECT_IN = 0x01;
-const CURL_CSELECT_OUT = 0x02;
 
-const CURL_CSELECT_ERR = 0x04;
+enum CurlCSelect {
+  in_ = 0x01,  /* jdrewsen: underscored in order not to clash with reserved D symbols */
+  out_ = 0x02,
+  err_ = 0x04
+}
 
 extern (C) {
   alias int function(CURL *easy,                            /* easy handle */	 
@@ -2278,7 +2146,7 @@ enum CurlMOption {
     timerfunction = 20004,     /* This is the timer callback function pointer */	    
     timerdata = 10005,	        /* This is the argument passed to the timer callback */   
     maxconnects = 6,	        /* maximum number of entries in the connection cache */   
-    lastentry,
+    lastentry
 }
 alias int CURLMoption;
 
