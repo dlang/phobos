@@ -106,6 +106,8 @@ import std.regex;
 import std.stream;
 import std.algorithm; 
 
+version(unittest) import std.stdio;
+
 pragma(lib, "curl");
 
 /// An exception class for curl
@@ -1038,7 +1040,7 @@ unittest {
     //
     string msg = "Hello world";
     http.onSend = delegate size_t(void[] data) { 
-	if (msg.empty) return 0; 
+	if (!msg.length) return 0; 
 	auto m = cast(void[])msg;
 	auto l = m.length;
 	data[0..l] = m[0..$];  
