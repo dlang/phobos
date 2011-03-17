@@ -113,7 +113,8 @@ SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\intrinsic.d \
 	std\process.d \
 	std\system.d \
-	std\encoding.d
+	std\encoding.d \
+	std\net\isemail.d
 
 SRCS_2 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
@@ -243,6 +244,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
+	$(DOC)\std_net_isemail.html \
 	$(DOC)\phobos.html
 
 SRC=	unittest.d crc32.d phobos.d
@@ -265,6 +267,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
 	std\__fileinit.d std\gregorian.d std\exception.d
+
+SRC_STD_NET= std\net\isemail.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -553,6 +557,11 @@ gammafunction.obj : std\internal\math\gammafunction.d
 
 errorfunction.obj : std\internal\math\errorfunction.d
 	$(DMD) -c $(DFLAGS) std\internal\math\errorfunction.d
+
+### std\net
+
+isemail.obj : std\net\isemail.d
+	$(DMD) -c $(DFLAGS) std\net\isemail.d
 
 ### std\windows
 
@@ -875,6 +884,9 @@ $(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
 $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
 
+$(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
+
 
 ######################################################
 
@@ -915,6 +927,7 @@ install:
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
+	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
 	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
@@ -931,6 +944,7 @@ svn:
 	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\
 	$(CP) $(SRC) $(SVN)\
 	$(CP) $(SRC_STD) $(SVN)\std
+	$(CP) $(SRC_STD_NET) $(SVN)\std\net
 	$(CP) $(SRC_STD_C) $(SVN)\std\c
 	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows
 	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows
