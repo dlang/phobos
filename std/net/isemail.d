@@ -34,7 +34,6 @@ module std.net.isemail;
 import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
 import std.array;
 import std.regex;
-import std.stdio;
 import std.string;
 import std.traits;
 import std.conv;
@@ -373,8 +372,7 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
                             auto maxGroups = 8;
                             auto index = -1;
                             auto addressLiteral = parseData[EmailPart.ComponentLiteral];
-							tstring pattern = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
-                            auto matchesIp = array(addressLiteral.match(regex(pattern)).captures);
+                            auto matchesIp = array(addressLiteral.match(regex!(tstring)(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)).captures);
                             
                             if (!matchesIp.empty)
                             {
@@ -396,7 +394,6 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
                                 matchesIp = ipV6.split(Token.Colon);
                                 auto groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.DoubleColon);
-                                pattern = `^[0-9A-Fa-f]{0,4}$`;
 
                                 if (index == -1)
                                 {
@@ -428,7 +425,7 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
                                 else if (ipV6.substr(-1) == Token.Colon && ipV6.substr(-2, -1) != Token.Colon)
                                     returnStatus ~= EmailStatusCode.Rfc5322IpV6ColonEnd;
                                     
-                                else if (!matchesIp.grep(regex(pattern), true).empty)
+                                else if (!matchesIp.grep(regex!(tstring)(`^[0-9A-Fa-f]{0,4}$`), true).empty)
                                     returnStatus ~= EmailStatusCode.Rfc5322IpV6BadChar;
                                     
                                 else
