@@ -331,8 +331,13 @@ unittest
 }
 
 /++
-   If $(D_PARAM value) is non-zero, it is returned. Otherwise,
-   $(D new Exception(msg)) is thrown.
+    If $(D !value) is true, $(D value) is returned. Otherwise,
+    $(D new Exception(msg)) is thrown.
+
+    Note:
+        $(D enforce) is used to throw exceptions and is therefore intended
+        to aid in error handling. It is $(I not) intended for verifying the
+        logic of your program. That is what $(D assert) is for.
 
    Example:
 --------------------
@@ -349,8 +354,8 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 }
 
 /++
-   If $(D_PARAM value) is non-zero, it is returned. Otherwise, the given
-   delegate is called.
+    If $(D !value) is true, $(D value) is returned. Otherwise, the given
+    delegate is called.
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
 (T value, scope void delegate() dg)
@@ -382,8 +387,7 @@ unittest
 }
 
 /++
-   If $(D_PARAM value) is non-zero, it is returned. Otherwise,
-   $(D_PARAM ex) is thrown.
+    If $(D !value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
    Example:
 --------------------
@@ -412,9 +416,9 @@ unittest
 }
 
 /++
-   If $(D_PARAM value) is non-zero, it is returned. Otherwise,
-   $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
-   last operation set $(D errno) to an error code.
+    If $(D !value) is true, $(D value) is returned. Otherwise,
+    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
+    last operation set $(D errno) to an error code.
 
    Example:
 --------------------
@@ -431,8 +435,8 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
 }
 
 /++
-   If $(D_PARAM value) is non-zero, it is returned. Otherwise,
-   $(D new E(msg)) is thrown.
+    If $(D !value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
+    is thrown.
 
    Example:
 --------------------
@@ -464,7 +468,7 @@ unittest
 
 /++
     Catches and returns the exception thrown from the given expression.
-    If no exception is thrown, then null is returned and $(D_PARAM result) is
+    If no exception is thrown, then null is returned and $(D result) is
     set to the result of the expression.
 
     Note that while $(D collectException) $(I can) be used to collect any
@@ -509,7 +513,7 @@ unittest
 
 /++
     Catches and returns the exception thrown from the given expression.
-    If no exception is thrown, then null is returned. $(D_PARAM E) can be
+    If no exception is thrown, then null is returned. $(D E) can be
     $(D void).
 
     Note that while $(D collectException) $(I can) be used to collect any
@@ -545,7 +549,7 @@ unittest
 /++
     Catches the exception thrown from the given expression and returns the
     msg property of that exception. If no exception is thrown, then null is
-    returned. $(D_PARAM E) can be $(D void).
+    returned. $(D E) can be $(D void).
 
     If an exception is thrown but it has an empty message, then
     $(D emptyExceptionMsg) is returned.
@@ -606,18 +610,18 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
 
 /**
  * Casts a mutable array to an immutable array in an idiomatic
- * manner. Technically, $(D_PARAM assumeUnique) just inserts a cast,
+ * manner. Technically, $(D assumeUnique) just inserts a cast,
  * but its name documents assumptions on the part of the
- * caller. $(D_PARAM assumeUnique(arr)) should only be called when
- * there are no more active mutable aliases to elements of $(D_PARAM
- * arr). To strenghten this assumption, $(D_PARAM assumeUnique(arr))
- * also clears $(D_PARAM arr) before returning. Essentially $(D_PARAM
+ * caller. $(D assumeUnique(arr)) should only be called when
+ * there are no more active mutable aliases to elements of $(D
+ * arr). To strenghten this assumption, $(D assumeUnique(arr))
+ * also clears $(D arr) before returning. Essentially $(D
  * assumeUnique(arr)) indicates commitment from the caller that there
- * is no more mutable access to any of $(D_PARAM arr)'s elements
+ * is no more mutable access to any of $(D arr)'s elements
  * (transitively), and that all future accesses will be done through
- * the immutable array returned by $(D_PARAM assumeUnique).
+ * the immutable array returned by $(D assumeUnique).
  *
- * Typically, $(D_PARAM assumeUnique) is used to return arrays from
+ * Typically, $(D assumeUnique) is used to return arrays from
  * functions that have allocated and built them.
  *
  * Example:
@@ -634,10 +638,10 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * }
  * ----
  *
- * The use in the example above is correct because $(D_PARAM result)
- * was private to $(D_PARAM letters) and is unaccessible in writing
+ * The use in the example above is correct because $(D result)
+ * was private to $(D letters) and is unaccessible in writing
  * after the function returns. The following example shows an
- * incorrect use of $(D_PARAM assumeUnique).
+ * incorrect use of $(D assumeUnique).
  *
  * Bad:
  *
@@ -658,7 +662,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
- * immutable array from the writable array $(D_PARAM buffer), replace
+ * immutable array from the writable array $(D buffer), replace
  * the last line with:
  * ----
  * return to!(string)(sneaky); // not that sneaky anymore
@@ -667,12 +671,12 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  * The call will duplicate the array appropriately.
  *
  * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in
+ * cases (see the $(D unique) and $(D lent) keywords in
  * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language), but complicates the language considerably. The downside
- * of $(D_PARAM assumeUnique)'s convention-based usage is that at this
+ * of $(D assumeUnique)'s convention-based usage is that at this
  * time there is no formal checking of the correctness of the
- * assumption; on the upside, the idiomatic use of $(D_PARAM
+ * assumption; on the upside, the idiomatic use of $(D
  * assumeUnique) is simple and rare enough to be tolerable.
  *
  */
