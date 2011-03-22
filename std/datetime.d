@@ -358,12 +358,21 @@ public:
         return SysTime(currStdTime, tz);
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(enableWindowsTest)
-        {
-            assert(currTime(UTC()).timezone is UTC());
+        assert(currTime(UTC()).timezone is UTC());
 
+        //I have no idea why, but for some reason, Windows/Wine likes to get
+        //time_t wrong when getting it with core.stdc.time.time. On one box
+        //I have (which has its local time set to UTC), it always gives time_t
+        //in the real local time (America/Los_Angeles), and after the most recent
+        //DST switch, every Windows box that I've tried it in is reporting
+        //time_t as being 1 hour off of where it's supposed to be. So, I really
+        //don't know what the deal is, but given what I'm seeing, I don't trust
+        //core.stdc.time.time on Windows, so I'm just going to disable this test
+        //on Windows.
+        version(Posix)
+        {
             immutable unixTimeD = currTime().toUnixTime();
             immutable unixTimeC = core.stdc.time.time(null);
             immutable diff = unixTimeC - unixTimeD;
@@ -8169,7 +8178,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8196,6 +8205,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOString(), "09991204T134459.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOString(), "99990704T235959.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOString(), "+100001020T010101.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toISOString(),
+                            "20121221T121212-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toISOString(),
+                            "20121221T121212+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOString(), "00001231T235959.9999999Z");
@@ -8303,7 +8320,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8330,6 +8347,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "0999-12-04T13:44:59.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "9999-07-04T23:59:59.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "+10000-10-20T01:01:01.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toISOExtendedString(),
+                            "2012-12-21T12:12:12-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toISOExtendedString(),
+                            "2012-12-21T12:12:12+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.9999999Z");
@@ -8435,7 +8460,7 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             if(_timezone.get is UTC())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
-            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(stdTime - adjustedTime);
+            immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
             return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
@@ -8462,6 +8487,14 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toSimpleString(), "0999-Dec-04 13:44:59.04502");
             assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toSimpleString(), "9999-Jul-04 23:59:59.0000012");
             assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toSimpleString(), "+10000-Oct-20 01:01:01.050789");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(-360)).toSimpleString(),
+                            "2012-Dec-21 12:12:12-06:00");
+
+            assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
+                                    new SimpleTimeZone(420)).toSimpleString(),
+                            "2012-Dec-21 12:12:12+07:00");
 
             //Test B.C.
             assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toSimpleString(), "0000-Dec-31 23:59:59.9999999Z");
@@ -29928,273 +29961,137 @@ assert(tz.dstName == "PDT");
     //Since reading in the time zone files could be expensive, most unit tests
     //are consolidated into this one unittest block which minimizes how often it
     //reads a time zone file.
-    unittest
+    version(enableWindowsTest) unittest
     {
-        version(enableWindowsTest)
+        version(Posix) scope(exit) clearTZEnvVar();
+
+        static void testTZ(string tzName,
+                           string stdName,
+                           string dstName,
+                           int utcOffset,
+                           int dstOffset,
+                           bool north = true)
         {
+            scope(failure) writefln("Failed time zone: %s", tzName);
+
+            immutable tz = TimeZone.getTimeZone(tzName);
+            immutable hasDST = dstOffset != 0;
+
+            version(Posix)
+                assertPred!"=="(tz.name, tzName);
+            else version(Windows)
+                assertPred!"=="(tz.name, stdName);
+
+            assertPred!"=="(tz.stdName, stdName);
+            assertPred!"=="(tz.dstName, dstName);
+            assertPred!"=="(tz.hasDST, hasDST);
+
+            immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 12, 0, 0);
+            immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 12, 0, 0);
+            auto std = SysTime(stdDate, tz);
+            auto dst = SysTime(dstDate, tz);
+            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
+            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
+
+            assert(!std.dstInEffect);
+            assertPred!"=="(dst.dstInEffect, hasDST);
+
+            assertPred!"=="(cast(DateTime)std, stdDate);
+            assertPred!"=="(cast(DateTime)dst, dstDate);
+            assertPred!"=="(std, stdUTC);
+
             version(Posix)
             {
-                scope(exit) clearTZEnvVar();
+                setTZEnvVar(tzName);
 
-                //Test for "America/Los_Angeles".
+                static void testTM(in SysTime st)
                 {
-                    //Verify Example for getTimeZone().
-                    auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+                    time_t unixTime = st.toUnixTime();
+                    tm* osTimeInfo = localtime(&unixTime);
+                    tm ourTimeInfo = st.toTM();
 
-                    assert(tz.name == "America/Los_Angeles");
-                    assert(tz.stdName == "PST");
-                    assert(tz.dstName == "PDT");
-                    assert(tz.hasDST);
-
-                    //Continue testing passed example.
-                    auto std = SysTime(DateTime(2010, 1, 1, 12, 0, 0), tz);
-                    auto dst = SysTime(DateTime(2010, 7, 1, 12, 0, 0), tz);
-
-                    assert(!std.dstInEffect);
-                    assert(dst.dstInEffect);
-
-                    setTZEnvVar("America/Los_Angeles");
-                    {
-                        time_t unixTime = std.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = std.toTM();
-
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    {
-                        time_t unixTime = dst.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = dst.toTM();
-
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
-                    //or not it exists on FreeBSD. It's rather pointless normally, since
-                    //the Posix standard requires that leap seconds be ignored, so it does
-                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
-                    //_does_ use leap seconds if the time zone file does, we'll test that
-                    //functionality if the appropriate files exist.
-                    if((defaultTZDatabaseDir ~ "right/America/Los_Angeles").exists())
-                    {
-                        auto leapTZ = PosixTimeZone.getTimeZone("right/America/Los_Angeles");
-
-                        assert(leapTZ.name == "right/America/Los_Angeles");
-                        assert(leapTZ.stdName == "PST");
-                        assert(leapTZ.dstName == "PDT");
-                        assert(leapTZ.hasDST);
-
-                        auto leapSTD = SysTime(std.stdTime, leapTZ);
-                        auto leapDST = SysTime(dst.stdTime, leapTZ);
-
-                        assert(!leapSTD.dstInEffect);
-                        assert(leapDST.dstInEffect);
-
-                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
-
-                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
-                    }
+                    assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
+                    assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
+                    assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
+                    assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
+                    assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
+                    assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
+                    assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
+                    assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
+                    assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
+                    assertPred!"=="(to!string(ourTimeInfo.tm_zone),
+                                    to!string(osTimeInfo.tm_zone));
                 }
 
-                //Test for "Europe/Paris".
+                testTM(std);
+                testTM(dst);
+
+                //Apparently, right/ does not exist on Mac OS X. I don't know
+                //whether or not it exists on FreeBSD. It's rather pointless
+                //normally, since the Posix standard requires that leap seconds
+                //be ignored, so it does make some sense that right/ wouldn't
+                //be there, but since PosixTimeZone _does_ use leap seconds if
+                //the time zone file does, we'll test that functionality if the
+                //appropriate files exist.
+                if((defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
                 {
-                    auto tz = PosixTimeZone.getTimeZone("Europe/Paris");
+                    auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
 
-                    assertPred!"=="(tz.name, "Europe/Paris");
-                    assertPred!"=="(tz.stdName, "CET");
-                    assertPred!"=="(tz.dstName, "CEST");
-                    assertPred!"=="(tz.hasDST, true);
+                    assert(leapTZ.name == "right/" ~ tzName);
+                    assert(leapTZ.stdName == stdName);
+                    assert(leapTZ.dstName == dstName);
+                    assert(leapTZ.hasDST == hasDST);
 
-                    auto std = SysTime(DateTime(2010, 1, 1, 12, 0, 0), tz);
-                    auto dst = SysTime(DateTime(2010, 7, 1, 12, 0, 0), tz);
+                    auto leapSTD = SysTime(std.stdTime, leapTZ);
+                    auto leapDST = SysTime(dst.stdTime, leapTZ);
 
-                    assert(!std.dstInEffect);
-                    assert(dst.dstInEffect);
+                    assert(!leapSTD.dstInEffect);
+                    assert(leapDST.dstInEffect == hasDST);
 
-                    setTZEnvVar("Europe/Paris");
-                    {
-                        time_t unixTime = std.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = std.toTM();
+                    assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                    assertPred!"=="(leapDST.stdTime, dst.stdTime);
 
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    {
-                        time_t unixTime = dst.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = dst.toTM();
-
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
-                    //or not it exists on FreeBSD. It's rather pointless normally, since
-                    //the Posix standard requires that leap seconds be ignored, so it does
-                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
-                    //_does_ use leap seconds if the time zone file does, we'll test that
-                    //functionality if the appropriate files exist.
-                    if((defaultTZDatabaseDir ~ "right/America/Europe/Paris").exists())
-                    {
-                        auto leapTZ = PosixTimeZone.getTimeZone("right/Europe/Paris");
-
-                        assert(leapTZ.name == "right/Europe/Paris");
-                        assert(leapTZ.stdName == "CET");
-                        assert(leapTZ.dstName == "CEST");
-                        assert(leapTZ.hasDST);
-
-                        auto leapSTD = SysTime(std.stdTime, leapTZ);
-                        auto leapDST = SysTime(dst.stdTime, leapTZ);
-
-                        assert(!leapSTD.dstInEffect);
-                        assert(leapDST.dstInEffect);
-
-                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
-
-                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
-                    }
-                }
-
-                //Test for "UTC".
-                {
-                    version(FreeBSD) enum zone = "Etc/UTC";
-                    version(linux)   enum zone = "UTC";
-                    version(OSX)     enum zone = "UTC";
-                    auto tz = PosixTimeZone.getTimeZone(zone);
-
-                    assertPred!"=="(tz.name, zone);
-                    assertPred!"=="(tz.stdName, "UTC");
-                    assertPred!"=="(tz.dstName, "UTC");
-                    assertPred!"=="(tz.hasDST, false);
-
-                    auto std = SysTime(DateTime(2010, 1, 1, 12, 0, 0), tz);
-                    auto dst = SysTime(DateTime(2010, 7, 1, 12, 0, 0), tz);
-
-                    assert(!std.dstInEffect);
-                    assert(!dst.dstInEffect);
-
-                    setTZEnvVar("UTC");
-                    {
-                        time_t unixTime = std.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = std.toTM();
-
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    {
-                        time_t unixTime = dst.toUnixTime();
-                        tm* osTimeInfo = localtime(&unixTime);
-                        tm ourTimeInfo = dst.toTM();
-
-                        assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                        assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                        assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                        assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                        assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                        assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                        assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                        assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                        assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                        assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
-                    }
-
-                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
-                    //or not it exists on FreeBSD. It's rather pointless normally, since
-                    //the Posix standard requires that leap seconds be ignored, so it does
-                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
-                    //_does_ use leap seconds if the time zone file does, we'll test that
-                    //functionality if the appropriate files exist.
-                    if((defaultTZDatabaseDir ~ "right/UTC").exists())
-                    {
-                        auto leapTZ = PosixTimeZone.getTimeZone("right/UTC");
-
-                        assert(leapTZ.name == "right/UTC");
-                        assert(leapTZ.stdName == "UTC");
-                        assert(leapTZ.dstName == "UTC");
-                        assert(!leapTZ.hasDST);
-
-                        auto leapSTD = SysTime(std.stdTime, leapTZ);
-                        auto leapDST = SysTime(dst.stdTime, leapTZ);
-
-                        assert(!leapSTD.dstInEffect);
-                        assert(!leapDST.dstInEffect);
-
-                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
-
-                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
-                    }
+                    //Whenever a leap second is added/removed,
+                    //this will have to be adjusted.
+                    enum leapDiff = convert!("seconds", "hnsecs")(24);
+                    assertPred!"=="(leapSTD.adjTime - leapDiff, std.adjTime);
+                    assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
                 }
             }
+        }
+
+        version(Posix)
+        {
+            version(FreeBSD) enum utcZone = "Etc/UTC";
+            version(linux)   enum utcZone = "UTC";
+            version(OSX)     enum utcZone = "UTC";
+
+            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
+            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
+            testTZ(utcZone, "UTC", "UTC", 0, 0);
+            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
+            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
 
             assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
         }
-    }
+        version(Windows)
+        {
+            testTZ("America/Los_Angeles", "Pacific Standard Time",
+                   "Pacific Daylight Time", -8 * 60, 60);
+            testTZ("America/New_York", "Eastern Standard Time",
+                   "Eastern Daylight Time", -5 * 60, 60);
+            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+                   "Greenwich Daylight Time", 0, 0);
+            testTZ("Europe/Paris", "Romance Standard Time",
+                   "Romance Daylight Time", 60, 60);
+            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
 
+            assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
+        }
+    }
 
     /++
         Returns a list of the names of the time zones installed on the system.
@@ -30867,16 +30764,6 @@ else version(Windows)
 
             throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
-
-        unittest
-        {
-            version(enableWindowsTest)
-            {
-                //Verify Example.
-                auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
-            }
-        }
-
 
         static string[] getInstalledTZNames()
         {
