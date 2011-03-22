@@ -335,9 +335,12 @@ unittest
     $(D new Exception(msg)) is thrown.
 
     Note:
-        $(D enforce) is used to throw exceptions and is therefore intended
-        to aid in error handling. It is $(I not) intended for verifying the
-        logic of your program. That is what $(D assert) is for.
+        $(D enforce) is used to throw exceptions and is therefore intended to
+        aid in error handling. It is $(I not) intended for verifying the logic
+        of your program. That is what $(D assert) is for. Also, do not use
+        $(D enforce) inside of contracts (i.e. inside of $(D in) and $(D out)
+        blocks and $(D invariant)s), because they will be compiled out when
+        compiling with $(I -release). Use $(D assert) in contracts.
 
    Example:
 --------------------
