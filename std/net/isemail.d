@@ -17,14 +17,14 @@
  * 
  * Standards: 
  * 		$(UL
- * 			$(LI RFC 5321),
+ * 			$(LI RFC 5321)
  * 			$(LI RFC 5322)
  * 		 )
  *
  * References:
  * 		$(UL
- * 			$(LI $(LINK http://tools.ietf.org/html/rfc5321)),
- * 			$(LI $(LINK http://tools.ietf.org/html/rfc5322)),
+ * 			$(LI $(LINK http://tools.ietf.org/html/rfc5321))
+ * 			$(LI $(LINK http://tools.ietf.org/html/rfc5322))
  * 		 )
  * 
  * Source: $(PHOBOSSRC std/net/_isemail.d)
@@ -931,6 +931,7 @@ struct EmailStatus
 	/// The email status code
 	const EmailStatusCode statusCode;
 	
+	///
 	alias valid this;
 	
 	/**
@@ -948,10 +949,88 @@ struct EmailStatus
 		this.statusCode = statusCode;
 	}
 	
-	/// Returns the email status as a string
+	/// Returns a describing string of the status code
 	string status ()
 	{
-		return "";
+		final switch (statusCode)
+		{
+			// Categories
+			case EmailStatusCode.ValidCategory: return "Address is valid";
+			case EmailStatusCode.DnsWarning: return "Address is valid but a DNS check was not successful";
+			case EmailStatusCode.Rfc5321: return "Address is valid for SMTP but has unusual elements";
+			case EmailStatusCode.CFoldingWhitespace: return "Address is valid within the message but cannot be used unmodified for the envelope";
+			case EmailStatusCode.Deprecated: return "Address contains deprecated elements but may still be valid in restricted contexts";
+			case EmailStatusCode.Rfc5322: return "The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid";
+			case EmailStatusCode.On: assert(false); return "";
+			case EmailStatusCode.Off: assert(false); return "";
+			case EmailStatusCode.Warning: assert(false); return "";
+			case EmailStatusCode.Error: return "Address is invalid for any purpose";
+
+			// Diagnoses
+			case EmailStatusCode.Valid: return "Address is valid";
+			// Address is valid but a DNS check was not successful
+			case EmailStatusCode.DnsWarningNoMXRecord: return "Could not find an MX record for this domain but an A-record does exist";
+			case EmailStatusCode.DnsWarningNoRecord: return "Could not find an MX record or an A-record for this domain";
+
+			// Address is valid for SMTP but has unusual elements
+			case EmailStatusCode.Rfc5321TopLevelDomain: return "Address is valid but at a Top Level Domain";
+			case EmailStatusCode.Rfc5321TopLevelDomainNumeric: return "Address is valid but the Top Level Domain begins with a number";
+			case EmailStatusCode.Rfc5321QuotedString: return "Address is valid but contains a quoted string";
+			case EmailStatusCode.Rfc5321AddressLiteral: return "Address is valid but at a literal address not a domain";
+			case EmailStatusCode.Rfc5321IpV6Deprecated: return "Address is valid but contains a :: that only elides one zero group";
+
+			// Address is valid within the message but cannot be used unmodified for the envelope
+			case EmailStatusCode.Comment: return "Address contains comments";
+			case EmailStatusCode.FoldingWhitespace: return "Address contains Folding White Space";
+
+			// Address contains deprecated elements but may still be valid in restricted contexts
+			case EmailStatusCode.DeprecatedLocalPart: return "The local part is in a deprecated form";
+			case EmailStatusCode.DeprecatedFoldingWhitespace: return "Address contains an obsolete form of Folding White Space";
+			case EmailStatusCode.DeprecatedQuotedText: return "A quoted string contains a deprecated character";
+			case EmailStatusCode.DeprecatedQuotedPair: return "A quoted pair contains a deprecated character";
+			case EmailStatusCode.DeprecatedComment: return "Address contains a comment in a position that is deprecated";
+			case EmailStatusCode.DeprecatedCommentText: return "A comment contains a deprecated character";
+			case EmailStatusCode.DeprecatedCommentFoldingWhitespaceNearAt: return "Address contains a comment or Folding White Space around the @ sign";
+
+			// The address is only valid according to the broad definition of RFC 5322
+			case EmailStatusCode.Rfc5322Domain: return "Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS";
+			case EmailStatusCode.Rfc5322TooLong: return "Address is too long";
+			case EmailStatusCode.Rfc5322LocalTooLong: return "The local part of the address is too long";
+			case EmailStatusCode.Rfc5322DomainTooLong: return "The domain part is too long";
+			case EmailStatusCode.Rfc5322LabelTooLong: return "The domain part contains an element that is too long";
+			case EmailStatusCode.Rfc5322DomainLiteral: return "The domain literal is not a valid RFC 5321 address literal";
+			case EmailStatusCode.Rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters";
+			case EmailStatusCode.Rfc5322IpV6GroupCount: return "The IPv6 literal address contains the wrong number of groups";
+			case EmailStatusCode.Rfc5322IpV6TooManyDoubleColons: return "The IPv6 literal address contains too many :: sequences";
+			case EmailStatusCode.Rfc5322IpV6BadChar: return "The IPv6 address contains an illegal group of characters";
+			case EmailStatusCode.Rfc5322IpV6MaxGroups: return "The IPv6 address has too many groups";
+			case EmailStatusCode.Rfc5322IpV6ColonStart: return "IPv6 address starts with a single colon";
+			case EmailStatusCode.Rfc5322IpV6ColonEnd: return "IPv6 address ends with a single colon";
+
+			// Address is invalid for any purpose
+			case EmailStatusCode.ErrorExpectingDomainText: return "A domain literal contains a character that is not allowed";
+			case EmailStatusCode.ErrorNoLocalPart: return "Address has no local part";
+			case EmailStatusCode.ErrorNoDomain: return "Address has no domain part";
+			case EmailStatusCode.ErrorConsecutiveDots: return "The address may not contain consecutive dots";
+			case EmailStatusCode.ErrorTextAfterCommentFoldingWhitespace: return "Address contains text after a comment or Folding White Space";
+			case EmailStatusCode.ErrorTextAfterQuotedString: return "Address contains text after a quoted string";
+			case EmailStatusCode.ErrorTextAfterDomainLiteral: return "Extra characters were found after the end of the domain literal";
+			case EmailStatusCode.ErrorExpectingQuotedPair: return "The address contains a character that is not allowed in a quoted pair";
+			case EmailStatusCode.ErrorExpectingText: return "Address contains a character that is not allowed";
+			case EmailStatusCode.ErrorExpectingQuotedText: return "A quoted string contains a character that is not allowed";
+			case EmailStatusCode.ErrorExpectingCommentText: return "A comment contains a character that is not allowed";
+			case EmailStatusCode.ErrorBackslashEnd: return "The address cannot end with a backslash";
+			case EmailStatusCode.ErrorDotStart: return "Neither part of the address may begin with a dot";
+			case EmailStatusCode.ErrorDotEnd: return "Neither part of the address may end with a dot";
+			case EmailStatusCode.ErrorDomainHyphenStart: return "A domain or subdomain cannot begin with a hyphen";
+			case EmailStatusCode.ErrorDomainHyphenEnd: return "A domain or subdomain cannot end with a hyphen";
+			case EmailStatusCode.ErrorUnclosedQuotedString: return "Unclosed quoted string";
+			case EmailStatusCode.ErrorUnclosedComment: return "Unclosed comment";
+			case EmailStatusCode.ErrorUnclosedDomainLiteral: return "Domain literal is missing its closing bracket";
+			case EmailStatusCode.ErrorFoldingWhitespaceCrflX2: return "Folding White Space contains consecutive CRLF sequences";
+			case EmailStatusCode.ErrorFoldingWhitespaceCrLfEnd: return "Folding White Space ends with a CRLF sequence";
+			case EmailStatusCode.ErrorCrNoLf: return "Address contains a carriage return that is not followed by a line feed";
+		}
 	}
 	
 	/// Returns a textual representation of the email status
