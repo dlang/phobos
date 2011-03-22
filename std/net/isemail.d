@@ -961,9 +961,9 @@ struct EmailStatus
 			case EmailStatusCode.CFoldingWhitespace: return "Address is valid within the message but cannot be used unmodified for the envelope";
 			case EmailStatusCode.Deprecated: return "Address contains deprecated elements but may still be valid in restricted contexts";
 			case EmailStatusCode.Rfc5322: return "The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid";
-			case EmailStatusCode.On: assert(false); return "";
-			case EmailStatusCode.Off: assert(false); return "";
-			case EmailStatusCode.Warning: assert(false); return "";
+			case EmailStatusCode.On: return "";
+			case EmailStatusCode.Off: return "";
+			case EmailStatusCode.Warning: return "";
 			case EmailStatusCode.Error: return "Address is invalid for any purpose";
 
 			// Diagnoses
