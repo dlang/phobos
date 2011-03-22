@@ -12,9 +12,6 @@
  * Link: $(LINK http://www.dominicsayers.com/isemail)
  * Version: 3.0.13 - Version 3.0
  * 
- * Port to the D programming language:
- *     Jacob Carlborg
- * 
  * Standards: 
  * 		$(UL
  * 			$(LI RFC 5321)
