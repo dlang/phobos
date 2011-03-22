@@ -1,0 +1,2704 @@
+Ddoc
+
+$(D_S D Change Log,
+
+$(UPCOMING
+	$(LI Shared libraries for Linux)
+)
+
+$(VERSION 053, Mar 21, 2011, =================================================,
+
+    $(WHATSNEW
+    )
+    $(DMDBUGSFIXED
+	$(LI $(BUGZILLA 937): C-style variadic functions broken)
+    )
+    $(LIBBUGSFIXED
+	$(LI $(BUGZILLA 4644): assertExceptionThrown to assert that a particular exception was thrown)
+	$(LI $(BUGZILLA 4944): Missing tzname even though we have tzset)
+	$(LI $(BUGZILLA 5451): Three ideas for RedBlackTree)
+	$(LI $(BUGZILLA 5485): TLS sections handled incorrectly in FreeBSD)
+	$(LI $(BUGZILLA 5616): std.datetime: not cross-platform)
+	$(LI $(BUGZILLA 5731): std.datetime.SysTime prints UTC offsets backwards)
+    )
+)
+
+<div id=version>
+$(UL
+	$(NEW 053)
+	$(NEW 052)
+	$(NEW 051)
+	$(NEW 050)
+	$(NEW 049)
+	$(NEW 048)
+	$(NEW 047)
+	$(NEW 046)
+	$(NEW 045)
+	$(NEW 044)
+	$(NEW 043)
+	$(NEW 042)
+	$(NEW 041)
+	$(NEW 040)
+	$(NEW 039)
+	$(NEW 038)
+	$(NEW 037)
+	$(NEW 036)
+	$(NEW 035)
+	$(NEW 034)
+	$(NEW 033)
+	$(NEW 032)
+	$(NEW 031)
+	$(NEW 030)
+	$(NEW 029)
+	$(NEW 028)
+	$(NEW 027)
+	$(NEW 026)
+	$(NEW 025)
+	$(NEW 023)
+	$(NEW 022)
+	$(NEW 021)
+	$(NEW 020)
+	$(NEW 019)
+	$(NEW 018)
+	$(NEW 017)
+	$(NEW 016)
+	$(NEW 015)
+	$(NEW 014)
+	$(NEW 013)
+	$(NEW 012)
+	$(NEW 011)
+	$(NEW 010)
+	$(NEW 009)
+	$(NEW 008)
+	$(NEW 007)
+	$(NEW 006)
+	$(NEW 005)
+	$(NEW 004)
+	$(NEW 003)
+	$(NEW 002)
+	$(NEW 001)
+	$(NEW 000)
+
+	$(LI $(LINK2 http://www.digitalmars.com/d/1.0/changelog.html, changelog for 1.0))
+
+	$(LI Download latest D 2.0 alpha
+	 <a HREF="http://ftp.digitalmars.com/dmd.2.040.zip" title="download D compiler">
+	 D compiler</a> for Win32 and x86 linux)
+
+	$(LI $(LINK2 http://www.digitalmars.com/pnews/index.php?category=2, tech support))
+)
+</div>
+
+$(VERSION 052, Feb 17, 2011, =================================================,
+
+    $(WHATSNEW
+	$(LI 64 bit support for Linux)
+	$(LI Implemented $(I exception chaining), as described in TDPL. Currently Windows-only.)
+	$(LI std.random: Added Xorshift random generator)    
+	$(LI Support HTML5 entities)
+	$(LI Added std.datetime for handling dates and times. std.date and std.gregorian 
+	     are now scheduled for deprecation. Any functions in other modules of Phobos 
+	     which used std.date.d_time have been changed to use std.datetime.SysTime or 
+	     are scheduled for deprecation with new functions with the same functionality 
+	     added which use SysTime (done in cases where switching existing functions to 
+	     use SysTime would have broken code). New code should use std.datetime instead 
+	     of std.date.) 
+	$(LI Various functions in std.file were renamed to match Phobos' naming 
+	     conventions (e.g. isFile instead of isfile). The old names are aliased 
+	     and scheduled for deprecation.) 
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 190): Cannot forward reference typedef/alias in default value for function parameter)
+	$(LI $(BUGZILLA 1513): try/catch/finally misbehavior on windows)
+	$(LI $(BUGZILLA 1899): AA of fixed-length arrays fails to initialize)
+	$(LI $(BUGZILLA 1914): Array initialisation from const array yields memory trample)
+	$(LI $(BUGZILLA 2581): DDoc doesn't work for functions with auto return type.)
+	$(LI $(BUGZILLA 2810): Bogus forward reference error with auto function)
+	$(LI $(BUGZILLA 2874): phobos docs issues)
+	$(LI $(BUGZILLA 3198): wrong initializer for structs arrays)
+	$(LI $(BUGZILLA 3334): std.demangle doesn't parse ref, pure, nothrow)
+	$(LI $(BUGZILLA 3681): ICE(go.c): when function takes too long to optimize, only with -O.)
+	$(LI $(BUGZILLA 3848): functions in std.file don't take symbolic links into account)
+	$(LI $(BUGZILLA 4013): Inconsistent codeview debug info for classes derived from IUnknown)
+	$(LI $(BUGZILLA 4069): Issue 4069 - std.xml.Document.pretty saves empty elements with spaces and line breaks)
+	$(LI $(BUGZILLA 4245): Declaring conflicting symbols in single function scope allowed)
+	$(LI $(BUGZILLA 4307): spawn()'ed thread doesn't terminate)
+	$(LI $(BUGZILLA 4328): templated unittests fail to link when instantiated from other file if compiler order isn't correct)
+	$(LI $(BUGZILLA 4379): ICE(blockopt.c): foreach over huge tuple, only with -O)
+	$(LI $(BUGZILLA 4389): ICE(constfold.c, expression.c), or wrong code: string~=dchar in CTFE)
+	$(LI $(BUGZILLA 4486): CodeView debug info should contain absolute path names)
+	$(LI $(BUGZILLA 4598): std.xml check is too restrictive)
+	$(LI $(BUGZILLA 4601): Spawned threads frequently don't terminate or let other threads ever run if you spawn more than one thread)
+	$(LI $(BUGZILLA 4732): __traits(identifier) performs constant folding on symbols)
+	$(LI $(BUGZILLA 4753): fail_compilation/fail116.d sends dmd into a loop, exhausting memory)
+	$(LI $(BUGZILLA 4807): Examples for std.array insert and replace)
+	$(LI $(BUGZILLA 4852): core.demangle cannot demangle functions with class/struct return types)
+	$(LI $(BUGZILLA 4878): Ddoc: Default arguments can break Ddoc output)
+	$(LI $(BUGZILLA 4913): Implicit opCast!bool in if statement doesn't work with declarator)
+	$(LI $(BUGZILLA 4973): map file with spaces in file name passed without quotes to linker)
+	$(LI $(BUGZILLA 5025): ICE(cast.c) shared struct literal)
+	$(LI $(BUGZILLA 5090): ICE(todt.c) struct literal initializing zero length array)
+	$(LI $(BUGZILLA 5105): Member function template cannot be synchronized)
+	$(LI $(BUGZILLA 5197): Ddoc: access-attributed auto template function crashes dmd)
+	$(LI $(BUGZILLA 5198): Appender much slower when appending ranges of elements than individual elements)
+	$(LI $(BUGZILLA 5209): posix/sys/select.d: FD_ISSET function should return bool)
+	$(LI $(BUGZILLA 5221): entity.c: Merge Walter's list with Thomas')
+	$(LI $(BUGZILLA 5242): self referencing template constraint crashes compiler)
+	$(LI $(BUGZILLA 5244): PATCH: fix use of uninitialised variable in toObj.c)
+	$(LI $(BUGZILLA 5246): PATCH(s): fix a couple more uninitialised variables)
+	$(LI $(BUGZILLA 5248): CTFE Segfault when calling a function on an enum struct)
+	$(LI $(BUGZILLA 5271): Not constant RAND_MAX)
+	$(LI $(BUGZILLA 5319): add Solaris as a pthread based monitor user)
+	$(LI $(BUGZILLA 5320): gcstub/gc.d: SEGV because of missing returns)
+	$(LI $(BUGZILLA 5349): ICE(toir.c): nested class in static member function)
+	$(LI $(BUGZILLA 5365): Regression (2.051) implicit conversions via alias this are broken)
+	$(LI $(BUGZILLA 5381): Regression (2.051) switch fails for wstring and dstring)
+	$(LI $(BUGZILLA 5382): [regression 2.051] DLL multi-threading broken)
+	$(LI $(BUGZILLA 5391): Crash with recursive alias declaration)
+	$(LI $(BUGZILLA 5400): Add const to FD_ISSET)
+	$(LI $(BUGZILLA 5439): 64bit struct alignment inconsistent with C ABI)
+	$(LI $(BUGZILLA 5447): Should be illegal to throw a non-Throwable)
+	$(LI $(BUGZILLA 5455): ICE(cgcod.c): Optimization (register allocation?) regression in DMD 1.065)
+	$(LI $(BUGZILLA 5483): Add x86-64 version of mcontext_t for FreeBSD)
+	$(LI $(BUGZILLA 5486): Missing define for running dmd as 64 bit)
+	$(LI $(BUGZILLA 5488): Spawned threads hang in a way that suggests allocation or gc issue)
+	$(LI $(BUGZILLA 5495): Add CLOCK_MONOTONIC for FreeBSD)
+	$(LI $(BUGZILLA 5504): Regression(2.051): Template member functions of a shared class don't compile)
+	$(LI $(BUGZILLA 5534): [64-bit] Inexplicable segfault in small code snippet, -O -release -m64 only)
+	$(LI $(BUGZILLA 5536): Array append with dollar op on 64-bit)
+	$(LI $(BUGZILLA 5545): [64-bit] DMD fails to postincrement ubytes.)
+	$(LI $(BUGZILLA 5549): [64-bit] Internal error: backend/cgcod.c 1845)
+	$(LI $(BUGZILLA 5552): std.datetime.d DosFileTimeToSysTime has a bug)
+	$(LI $(BUGZILLA 5556): [64-bit] Wrong Implicit Conversion to Double)
+	$(LI $(BUGZILLA 5557): [64-Bit] FP (alignment?) issues with Rvalues)
+	$(LI $(BUGZILLA 5564): [64-bit] loading of wrong constant byte value)
+	$(LI $(BUGZILLA 5565): [64-bit] Wrong Floating Point Results, Related to Mixing With size_t)
+	$(LI $(BUGZILLA 5566): [64-bit] More erratic FP results with size_t)
+	$(LI $(BUGZILLA 5579): Segfault on first call to GC after starting new thread)
+	$(LI $(BUGZILLA 5580): [64-bit] String switch statements broken in 64-bit mode)
+	$(LI $(BUGZILLA 5581): [64-bit] Wrong code with bitwise operations on bools)
+	$(LI $(BUGZILLA 5592): Previous definition different: __arrayExpSliceMulSliceAddass_d)
+	$(LI $(BUGZILLA 5595): Compiler crash on heavy std.algorithm use)
+    )
+)
+
+$(VERSION 051, Dec 21, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI Added std.mathspecial, containing mathematical Special Functions)
+	$(LI std.base64: Replaced. Boost License, Performance improvement, Range support. Function signature changed from 'encode' to 'Base64.encode')
+	$(LI std.math: D implementation of pow. Almost all std.math functions are now @safe pure nothrow.
+	     tgamma, lgamma, erf, erfc have been moved to std.mathspecial)
+	$(LI std.exception: Added pure and nothrow to assumeUnique)
+	$(LI std.utf: Removed UtfError class and toUTF* shortcut functions for validation. Added pure, nothrow, @safe and @trusted attributes. count function supports dchar)
+	$(LI Both druntime and phobos now build successfully with dmd -m64. Still somewhat behind dmd1, very little executes correctly still.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 603): Undocumented behaviour: case and default create a scope)
+	$(LI $(BUGZILLA 632): Typedef/enum promotions spec ambiguous - ultimate base type or lowest common denominator?)
+	$(LI $(BUGZILLA 679): Spec needs allowances for copying garbage collection)
+	$(LI $(BUGZILLA 690): ABI not fully documented)
+	$(LI $(BUGZILLA 1351): Discrepancies in the language specification)
+	$(LI $(BUGZILLA 1466): Spec claims maximal munch technique always works: not for "1..3")
+	$(LI $(BUGZILLA 2080): ICE(mangle.c) alias corrupts type inference of static variables)
+	$(LI $(BUGZILLA 2206): unnamed template mixin of class inside function or class has incorrect classinfo and mangleof)
+	$(LI $(BUGZILLA 2385): spec says all structs are returned via hidden pointer on linux, but it uses registers)
+	$(LI $(BUGZILLA 2392): Parsing ambiguity between function pointer declaration and function call)
+	$(LI $(BUGZILLA 2406): Declarator2 definition error)
+	$(LI $(BUGZILLA 2556): Property classinfo needs better documentation (RTTI, typeof, typeid, runtime type information))
+	$(LI $(BUGZILLA 2616): Undocumented behaviour: part-explicit, part-implicit instantiations of function templates are accepted)
+	$(LI $(BUGZILLA 2651): class body declaration grammar incorrect)
+	$(LI $(BUGZILLA 2652): DeclDef grammar is wrong)
+	$(LI $(BUGZILLA 2734): Ambiguity in tokenizing: _._ as a float literal)
+	$(LI $(BUGZILLA 2751): const/invariant/immutable static arrays: const(T)[N] and const(T[N]) are the same, but DMD treats them as different)
+	$(LI $(BUGZILLA 2954): [tdpl] Appalling bug in associative arrays (D2 only))
+	$(LI $(BUGZILLA 2994): Incomplete "Predefined Versions" documentation)
+	$(LI $(BUGZILLA 3020): No description is given why function may not be nothrow)
+	$(LI $(BUGZILLA 3112): Specification on what operations call the GC is missing)
+	$(LI $(BUGZILLA 3276): Recursion broken by alias template parameter)
+	$(LI $(BUGZILLA 3554): Ddoc generates invalid output for documentation comments with non paired parantheses)
+	$(LI $(BUGZILLA 3864): Dyn array allocations can be allowed in nothrow functions)
+	$(LI $(BUGZILLA 4059): Incorrect C++ name mangling)
+	$(LI $(BUGZILLA 4217): Function overloads are not distinguished when instantiating templates)
+	$(LI $(BUGZILLA 4254): ICE(mtype.c): function with const inout parameter)
+	$(LI $(BUGZILLA 4297): Nothrow functions cannot use constant dynamic array)
+	$(LI $(BUGZILLA 4384): Cyclic dependency check for modules is broken)
+	$(LI $(BUGZILLA 4434): ICE(mtype.c, 887) alias with const, shared, or immutable)
+	$(LI $(BUGZILLA 4445): roundTo!ubyte(255.0) throws)
+	$(LI $(BUGZILLA 4529): Segfault(typinf.c) involving typeid(typeof(functionName)))
+	$(LI $(BUGZILLA 4638): Regression: new writeln does not recognize "wstring toString")
+	$(LI $(BUGZILLA 4728): Segfault(toctype.c) by protected/private constructor in an other module)
+	$(LI $(BUGZILLA 4781): Segfault(mtype.c) with forward referenced typeof and .init)
+	$(LI $(BUGZILLA 4864): ICE(statement.c) Crash on invalid 'if statement' body inside mixin)
+	$(LI $(BUGZILLA 4901): std.algorithm.sort does not compile for interfaces.)
+	$(LI $(BUGZILLA 4915): auto return type escapes function purity)
+	$(LI $(BUGZILLA 5020): Forward implicit bool conversions to alias this)
+	$(LI $(BUGZILLA 5053): Better error message for cyclic dependencies.)
+	$(LI $(BUGZILLA 5054): Splitter example doesn't work)
+	$(LI $(BUGZILLA 5094): No implicit conversion with "alias property this")
+	$(LI $(BUGZILLA 5107): Const-shared classes/structs not typed as shared)
+	$(LI $(BUGZILLA 5110): Excess attribute propagation of structs and classes)
+	$(LI $(BUGZILLA 5117): [CTFE] Member function call with rather complex this: side effects ignored)
+	$(LI $(BUGZILLA 5120): ICE(mtype.c) void associative arrays)
+	$(LI $(BUGZILLA 5131): Segfault(expression.c) opAssign and associative arrays (AA) are broken for types != this)
+	$(LI $(BUGZILLA 5133): dmd fails to build rdmd (problem with startsWith))
+	$(LI $(BUGZILLA 5145): Regression(2.050, 1.065) override error with forward ref of superclass)
+	$(LI $(BUGZILLA 5148): Incorrect C++ mangling of multiple const char* parameters)
+	$(LI $(BUGZILLA 5154): Class Range does not work in writeln)
+	$(LI $(BUGZILLA 5159): Segfault(interpret.c): calling a static function pointer variable in CTFE)
+	$(LI $(BUGZILLA 5163): meaningless error message with front() applied to void[].)
+	$(LI $(BUGZILLA 5164): Error without line number using "is (T...)")
+	$(LI $(BUGZILLA 5180): ICE(arrayop.c) in-place array operation on incompatible types)
+	$(LI $(BUGZILLA 5182): ICE(expression.c): calling unittest from a function)
+	$(LI $(BUGZILLA 5191): Combination of pure and nothrow result in a function that does nothing)
+	$(LI $(BUGZILLA 5194): ddoc does not show modifiers on constructors such as pure or nothrow)
+	$(LI $(BUGZILLA 5195): Forward references ignore const)
+	$(LI $(BUGZILLA 5214): Compiler crash with array of empty {})
+	$(LI $(BUGZILLA 5218): Can't implicitly convert from "abc"w to wchar[3])
+	$(LI $(BUGZILLA 5220): Make std.conv.ConvError an Exception instead of an Error; $(RED deprecated ConvError and ConvOverflowError) with ConvException and ConvOverflowException. Note that any code depending on the fact that these exceptions were Error gets broken.)
+	$(LI $(BUGZILLA 5230): Regression(2.041, 1.057) ICE(tocsym.c) overriding a method that has an out contract)
+	$(LI $(BUGZILLA 5238): PATCH: fix return of uninitialised var in interpret.c)
+	$(LI $(BUGZILLA 5247): std.utf.stride() should not return 0xFF)
+	$(LI $(BUGZILLA 5275): x86_64 related hidden function parameter mishandled)
+	$(LI $(BUGZILLA 5293): std.math: Error: shift by -48 is outside the range 0..32)
+	$(LI $(BUGZILLA 5294): -O optimization breaks for loop)
+	$(LI $(BUGZILLA 5321): std.math: assumes X86 or X86_64 on FPU control word code)
+	$(LI $(BUGZILLA 5322): std.math: version(Sparc) should be SPARC)
+	$(LI $(BUGZILLA 5330): Druntime/Phobos: remove special treatment for GDC)
+	$(LI $(BUGZILLA 5331): mach format problem)
+	$(LI $(BUGZILLA 5340): isOutputRange!(Appender!string, int) must be false)
+	$(LI $(BUGZILLA 5353): clear function is calling the destructor twice)
+    )
+)
+
+$(VERSION 050, Oct 29, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI added talign() and argTypes() to TypeInfo)
+	$(LI Upgrade zlib support to zlib 1.2.5)
+	$(LI std.stdio:  Added ByChunk. This struct is a InputRange like ByLine. File.byChunk returns ByChunk)
+	$(LI std.traits:  Most higher-order ranges now work with const/immutable arrays and other ranges 
+	with a natural tail const, and ranges w/ const/immutable elements.)
+	$(LI $(BUGZILLA 4888):  Heavy reliance on Bug 3534 in Phobos range usage)
+	$(LI $(BUGZILLA 4987): C function pointer syntax needs to be deprecated)
+	$(LI std.typecons:  Several improvements to the Tuple struct template:
+	    $(UL $(LI  Tuple members are now accessible with the syntax a[0], a[1] etc.)
+	         $(LI  Eliminated an internal union. See $(BUGZILLA 4421) and $(BUGZILLA 4846).)
+	         $(LI  Worked around $(BUGZILLA 4424). Got opAssign back.)
+	         $(LI  Made Tuple.slice!(from, to) to preserve field names if any.)
+	         $(LI  Added isTuple!(T) template.)
+	    ))
+	$(LI std.algorithm: changed filter() such that filter is curryable)
+	$(LI std.algorithm: Added function balancedParens)
+    $(LI std.typecons: Deprecated defineEnum)
+	$(LI Added relaxed purity checking rules.)
+    )
+    $(BUGSFIXED
+	$(LI Unlisted bug:  std.exception.pointsTo() calls postblit on subobjects.)
+	$(LI Unlisted bug:  std.typetuple.staticMap!() doesn't work with empty/single tuples.)
+	$(LI Unlisted bug:  std.traits:  Interfaces should have indirections, aliasing, etc.)
+	$(LI Unlisted bug:  std.socket:  Race condition - gethostbyname and gethostbyaddr on Linux return static data.  The call was synchronized, but using the data wasn't)
+	$(LI Unlisted bug:  signed long comparisons under OS X)
+	$(LI $(BUGZILLA 941): std.regexp fails to match when grouping certain sub-expressions)
+	$(LI $(BUGZILLA 1482): std.file docs are insufficient)
+	$(LI $(BUGZILLA 1635): DirEntry.isfile() and DirEntry.isdir() broken)
+	$(LI $(BUGZILLA 1733): parse() function does not handle all build-in types)
+	$(LI $(BUGZILLA 2073): Variant.coerce!() fails)
+	$(LI $(BUGZILLA 2142): getopt() incorrectly processes bundled command-line options)
+	$(LI $(BUGZILLA 2310): Inconsistent formatting of arrays in std.stdio.write() and std.conv.to!(string)())
+	$(LI $(BUGZILLA 2424): std.functional binaryRevertArgs : "revert" should be "reverse")
+	$(LI $(BUGZILLA 2451): Adding structs that use opAssign or postblit to an AA is broken)
+	$(LI $(BUGZILLA 2655): Allow alternation patterns in std.path.fnmatch)
+	$(LI $(BUGZILLA 2669): Variant does not have opApply or another iteration mechanism)
+	$(LI $(BUGZILLA 2718): Inconsistent string parameters in Phobos functions)
+	$(LI $(BUGZILLA 2838): std.file.rmdirRecurse fails)
+	$(LI $(BUGZILLA 2930): Problems in std.range documentation)
+	$(LI $(BUGZILLA 2943): Struct copying in presence of alias member this only copies alias this member)
+        $(LI $(BUGZILLA 2965): std.date: timezone not initialized)
+        $(LI $(BUGZILLA 3157): [patch] Pipes should be closed with pclose)
+        $(LI $(BUGZILLA 3318): [PATCH]Rebindable.get is not accessible)
+	$(LI $(BUGZILLA 3570): mkdirRecurse throws exception on trailing empty directory.)
+	$(LI $(BUGZILLA 3602): ICE(tocsym.c) compiling a class, if its super class has preconditions)
+	$(LI $(BUGZILLA 3665): Regression(1.051, 2.036) Assignment with array slicing does not work)
+	$(LI $(BUGZILLA 4344): Sockets with multiple threads report missing/failed WSAStartup)
+	$(LI $(BUGZILLA 4398): dmd always uses Windows name mangling for _d_throw)
+	$(LI $(BUGZILLA 4439): The declaration of the in6addr_* in druntime is wrong.)
+	$(LI $(BUGZILLA 4465): ICE(symbol.c): immutable type inference with ^^2)
+	$(LI $(BUGZILLA 4524): Regression(2.026) Bus error with nested struct)
+	$(LI $(BUGZILLA 4623): Non-integer type allowed as static array size)
+	$(LI $(BUGZILLA 4634): typo in levenshteinDistanceAndPath documentation)
+	$(LI $(BUGZILLA 4641): Associative arrays of structs with alias this broken.)
+	$(LI $(BUGZILLA 4742): int % BigInt should work.)
+	$(LI $(BUGZILLA 4775): No substitution on writef("%%%s", "hi").)
+	$(LI $(BUGZILLA 4825): Regression(1.057, 2.040) "Error: non-constant expression" with -inline)
+	$(LI $(BUGZILLA 4866): Static-to-dynamic converted manifest constant array gets non-converted type in static/constraint if)
+	$(LI $(BUGZILLA 4869): auto return + inheritance + modules = compiler crashes(toctype.c))
+	$(LI $(BUGZILLA 4873): Assertion failure: '0' on line 1483 in file 'expression.c')
+	$(LI $(BUGZILLA 4882): std.traits hasUnsharedAliasing does not work for function type.)
+	$(LI $(BUGZILLA 4897): CodeView: No locals or parameters are shown when debugging, because of missing function info)
+	$(LI $(BUGZILLA 4890): GC.collect() deadlocks multithreaded program.)
+	$(LI $(BUGZILLA 4925): [ICE] segfault with module-scope assert(0))
+	$(LI $(BUGZILLA 4926): ICE: PREC_zero assertion failure due to unset precedence)
+	$(LI $(BUGZILLA 4938): Regression(2.047) dmd segfault when compiling)
+	$(LI $(BUGZILLA 4941): Built-in tuple slice boundaries are not CTFE'd)
+	$(LI $(BUGZILLA 4949): ICE on invalid static if using value of 'this')
+	$(LI $(BUGZILLA 4951):  InternetAddress fails to resolve host when multithreading.)
+	$(LI $(BUGZILLA 4959): std.conv.parse error "no digits seen" on string starting with zero.)
+	$(LI $(BUGZILLA 4992): ICE(glue.c) or segfault: using int[new])
+	$(LI $(BUGZILLA 5003): regex(replace with delegate) sample doesn't work.)
+	$(LI $(BUGZILLA 5026): ICE(expression.c) Incomplete mixin expression + char[] to char assignment)
+	$(LI $(BUGZILLA 5049): std.algortihm.bringToFront() returns wrong value.)
+	$(LI $(BUGZILLA 5052): take!(Take!R) should return Take!R, not Take!(Take!R).)
+	$(LI $(BUGZILLA 5071): passing value by ref to a function with an inner dynamic closure results in a wrong code)
+    )
+)
+
+$(VERSION 049, Sep 13, 2010, =================================================,
+
+
+    $(WHATSNEW
+	$(LI std.algorithm:  reduce now works with non-range-based iteration, such as opApply.)
+	$(LI std.numeric:  Added FFT.)
+	$(LI std.path:  Changed sep, altsep etc. to manifest constants (enum).)
+	$(LI std.process: Added environment, an AA-like interface for environment variables.)
+	$(LI std.range:  Iota, Stride, Transversal, FrontTransveral now support slicing where possible.)
+	$(LI std.range:  Added support for moveFront() and assignable elements in several higher-order ranges.)
+	$(LI std.range:  Added Lockstep, hasLvalueElements.)
+	$(LI std.range:  Added virtual function-based wrappers (InputRangeObject, OutputRangeObject) for when a binary interface to a range is required.)
+	$(LI std.typecons:  Added convenience functions for Rebindable.)
+	$(LI std.traits:  Added isAssignable, isIterable, ForeachType, isSafe, isUnsafe, EnumMembers.)
+	$(LI std.traits:  hasLocalAliasing, hasLocalObjects and hasLocalRawAliasing are now hasUnsharedAliasing, hasUnsharedObjects and hasUnsharedRawAliasing.  Aliases to the old names are included for now for backwards compatibility.)
+	$(LI std.typetuple:  Added anySatisfy.)
+	$(LI std.array:  Modified Appender's interface to fix memory issues.
+	Note that appending via $(TT ~=) and using appender on the same array
+	will not interleave anymore.)
+	$(LI $(BUGZILLA 2477): Trailing comma in array literal sometimes accepted, sometimes not)
+    )
+    $(BUGSFIXED
+	$(LI Andrej Mitrovic updated the samples/d code)
+	$(LI Unlisted Bug:  std.math.pow doesn't work on immutable numbers.)
+	$(LI Unlisted Bug:  std.math.pow floating point overload expects both arguments to be exact same type.)
+	$(LI Unlisted Bug:  std.path.join("", "foo") returns "/foo" instead of "foo" on Posix.)
+	$(LI Unlisted Bug:  std.range.iota() random access primitives inconsistent after popFront on floating point version)
+	$(LI Unlisted Bug:  std.algorithm.findAdjacent() [...])
+	$(LIX $(BUGZILLA 190): Cannot forward reference typedef/alias in default value for function parameter)
+	$(LI $(BUGZILLA 1715): Template specialization checks for equality rather than convertibility)
+	$(LI $(BUGZILLA 1970): Templated interfaces not matched)
+	$(LI $(BUGZILLA 2511): Covariant return type doesn't work with circular import)
+	$(LI $(BUGZILLA 2716): Confusion of auto and scope as the class attribute)
+	$(LI $(BUGZILLA 2903): Splitter should be bi-dir if the input range is bi-dir.)
+	$(LI $(BUGZILLA 2951): std.random.dice() should be templated on proportions.)
+	$(LI $(BUGZILLA 2958): std.getopt RangeError on missing arg)
+	$(LI $(BUGZILLA 3046): Segfault with C++ static variable (Linux only))
+	$(LI $(BUGZILLA 3123): std.algorithm.zip fails on 'lazy' ranges)
+	$(LI $(BUGZILLA 3294): forward reference to inferred return type of function call)
+	$(LI $(BUGZILLA 3312): std.string.count should use const(char)[], not immutable.)
+	$(LI $(BUGZILLA 3348): Documentation for many std.process functions has disappeared)
+	$(LI $(BUGZILLA 3361): code in std.zlib concatenates void[] arrays )
+	$(LI $(BUGZILLA 3418): link error with cast(ulong)(ulong*real))
+	$(LI $(BUGZILLA 3544): optlink termination 0041338f with recursive nested functions)
+	$(LI $(BUGZILLA 3554): Ddoc generats invalid output for documentation comments with non paired paranthasis)
+	$(LI $(BUGZILLA 3627): -of with a filename with a double extension confuses linker)
+	$(LI $(BUGZILLA 3877): std.range.chain do not manage infinite ranges correctly)
+	$(LI $(BUGZILLA 3894): std.range.Stride!R requires R.front() and R.back() to return by reference)
+	$(LI $(BUGZILLA 3935): opBinary is instantiated with "=")
+	$(LI $(BUGZILLA 3946): schwartzSort - SwapStrategy always unstable)
+	$(LIX $(BUGZILLA 3979): Order-of-compilation and forward reference errors)
+	$(LI $(BUGZILLA 3996): Regression(2.041) ICE(glue.c) Passing struct as AA template parameter (Algebraic with struct))
+	$(LI $(BUGZILLA 4009): OPTLINK ruins the day yet again)
+	$(LI $(BUGZILLA 4173): Regression(2.037) Explicitly instantiated templates still try to do IFTI in some cases)
+	$(LI $(BUGZILLA 4177): __ctfe can't be used in pure functions)
+	$(LI $(BUGZILLA 4278): allow inlining of super calls (undo limitations of bug3500's fix))
+	$(LI $(BUGZILLA 4291): Pure functions cannot access mixed in variables)
+	$(LI $(BUGZILLA 4292): CommonType fails for singular alias value.)
+	$(LI $(BUGZILLA 4302): Regression(2.046, 1.061): compiler errors using startsWith in CTFE)
+	$(LI $(BUGZILLA 4345): std.range.take!string: "Nonsensical finite range with slicing but no length".)
+	$(LI $(BUGZILLA 4346): More flexible std.array.array.)
+	$(LI $(BUGZILLA 4363): Some phobos ranges are not forward ranges (but should be).)
+	$(LI $(BUGZILLA 4381): Length attribute for std.typecons.Tuple.)
+	$(LI $(BUGZILLA 4387): std.range.Cycle assumes lvalue elements.)
+	$(LI $(BUGZILLA 4388): std.range.Radial assumes lvalue elements.)
+	$(LI $(BUGZILLA 4402): std.range.Zip doesn't work w/ non-lvalue ranges.)
+	$(LI $(BUGZILLA 4403): std.range.FrontTransversal assumes lvalue elements.)
+	$(LI $(BUGZILLA 4404): std.range.Transversal assumes lvalue elements.)
+	$(LI $(BUGZILLA 4408): Ambiguity when using std.algorithm.splitter with generic ranges.)
+	$(LI $(BUGZILLA 4430): Regression(2.037) erroneous matching on specialized template function)
+	$(LI $(BUGZILLA 4455): Taking the sqrt of an integer shouldn't require an explicit cast.)
+	$(LI $(BUGZILLA 4464): std.range.take does not always return Take!R.)
+	$(LI $(BUGZILLA 4518): to!string(enum w/invalid value) produces a somewhat unhelpful error)
+	$(LI $(BUGZILLA 4564): ICE on undefined variable in foreach over 0 .. undef)
+	$(LI $(BUGZILLA 4603): array(iota(1, 0)) error.)
+	$(LI $(BUGZILLA 4643): Shared values are unwritable.)
+	$(LI $(BUGZILLA 4645): to!string(const char*) in library causes Optlink to issue warning)
+	$(LI $(BUGZILLA 4652): Compiler hangs on template with zero-length tuple and another argument)
+	$(LI $(BUGZILLA 4655): Regression(1.063, 2.048) goto to a try block ICEs)
+	$(LI $(BUGZILLA 4676): Overload resolution rejects valid code when mixing variadics, non-variadics)
+	$(LI $(BUGZILLA 4681): Appender access violation)
+	$(LI $(BUGZILLA 4691): Incorrect comparison of double and long)
+	$(LI $(BUGZILLA 4700): to!float("0") fails)
+	$(LI $(BUGZILLA 4721): compilation slow when compiling unittests on dcollections)
+	$(LI $(BUGZILLA 4748): Shadowing declaration error in std.string.tolower)
+	$(LI $(BUGZILLA 4751): Regression(1.062, 2.047) ICE(constfold.c) >> after error)
+	$(LI $(BUGZILLA 4752): fail_compilation/fail345.d asserts in expression.c)
+	$(LI $(BUGZILLA 4771): fail_compilation/fail274.d hits a halt in iasm.c)
+	$(LI $(BUGZILLA 4789): std.algorithm.sort bug)
+	$(LI $(BUGZILLA 4810): dotProduct problem with ints)
+	$(LI $(BUGZILLA 4826): Regression(2.041) "cannot create associative array" and compiler crash)
+	$(LI $(BUGZILLA 4828): ICE w/ non-boolean dot expression sth.template_instance in static if)
+	$(LI $(BUGZILLA 4834): Implicit sharing via delegates in std.concurrency)
+    )
+)
+
+
+$(VERSION 048, Aug 8, 2010, =================================================,
+
+
+    $(WHATSNEW
+	$(LI std.complex: New Complex.toString() syntax.)
+	$(LI std.string: icmp() now works with all built-in string types.)
+	$(LI $(BUGZILLA 4077): Bugs caused by bitwise operator precedence)
+	$(LI $(BUGZILLA 4080): Patch for building dynamic libraries on Mac OS X)
+    )
+    $(BUGSFIXED
+	$(LI Unlisted Bug: std.algorithm.filter not a forward range)
+	$(LI Unlisted Bug: std.algorithm.Uniq requires a bidirectional range)
+	$(LI Unlisted Bug: std.algorithm.Uniq missing a save() function)
+	$(LI Unlisted Bug: std.algorithm.Group missing a save() function)
+	$(LI Unlisted Bug: std.traits.isAssociativeArray reports true for structs w/ keys, values properties)
+	$(LI Unlisted Bug: gc_query returns 0 for attr when called on interior pointers) 
+	$(LI $(NG_digitalmars_D 112964): capacity can return a value < length)
+	$(LI $(BUGZILLA 978): std.utf's toUTF* functions accept some invalid and reject some valid UTF)
+	$(LI $(BUGZILLA 996): Error in doc on implicit conversion between pointer and array)
+	$(LI $(BUGZILLA 1418): tupleof bug on nested classes)
+	$(LI $(BUGZILLA 1678): ref with varargs generates invalid code)
+	$(LI $(BUGZILLA 2275): std.utf.toUTF16z() should return const(wchar)*)
+	$(LI $(BUGZILLA 2627): std.traits.hasAliasing reports true for static arrays)
+	$(LI $(BUGZILLA 2872): Length, opIndex for Map)
+	$(LI $(BUGZILLA 2931): Initialization struct with array from another struct)
+	$(LI $(BUGZILLA 3202): std.math.pow cause dead loop)
+	$(LI $(BUGZILLA 3326): $ in delegate literal causes Access Violation)
+	$(LI $(BUGZILLA 3355): std.string.cmp works incorrectly for mixed-type and different-length strings)
+	$(LI $(BUGZILLA 3386): to!bool(string) is not implemented)
+	$(LI $(BUGZILLA 3436): std.functional.compose with only one function)
+	$(LI $(BUGZILLA 3439): std.range.Sequence.opIndex not consistent after calling popFront().)
+	$(LI $(BUGZILLA 3447): std.file uses unconventional file permissions)
+	$(LI $(BUGZILLA 3528): FreeBSD patches for druntime.)
+	$(LI $(BUGZILLA 3560): foreach over nested function generates wrong code)
+	$(LI $(BUGZILLA 3569): DMD Stack Overflow with a struct member function inside a C-style struct initializer)
+	$(LI $(BUGZILLA 3604): extern(C) callable function with array parameters broken)
+	$(LI $(BUGZILLA 3679): Regression(2.031) template forward reference regression)
+	$(LI $(BUGZILLA 3706): delegates of interfaces with multiple inheritance fail)
+	$(LI $(BUGZILLA 3716): Regression (2.037) with multi dimensional array literals)
+	$(LI $(BUGZILLA 3782): The POSIX sys/un.h header)
+	$(LI $(BUGZILLA 3853): core.sys.posix.stdio.pclose is missing)
+	$(LI $(BUGZILLA 3872): std.algorithm.filter could become bidirectional if its input range is bidir)
+	$(LI $(BUGZILLA 3874): std.range.stride assumes a bidirectional input range)
+	$(LI $(BUGZILLA 3917): opEquals for Ojbect could be more efficient)
+	$(LI $(BUGZILLA 3937): os.path.dirname fails on absolute path)
+	$(LI $(BUGZILLA 3961): Error with to!(somestruct))
+	$(LI $(BUGZILLA 3983): Regression(2.037): struct with == can't be member of struct with template opEquals)
+	$(LI $(BUGZILLA 4109): (reopened) writeln doesn't work with empty static array)
+	$(LI $(BUGZILLA 4171): std.random.uniform does not work for a range of characters)
+	$(LI $(BUGZILLA 4191): [FreeBSD] real constants are rounded to double precision)
+	$(LI $(BUGZILLA 4198): [FreeBSD] imprecision in decimal floating-point literals)
+	$(LI $(BUGZILLA 4238): Segfault(statement.c): with(typeof(int)))
+	$(LI $(BUGZILLA 4260): windows & basename)
+	$(LI $(BUGZILLA 4267): forward reference error when 2-fold aliasing a template instance)
+	$(LI $(BUGZILLA 4303): __traits(compiles) returns wrong result when used recursively)
+	$(LI $(BUGZILLA 4305): Take, Chain on top of ranges w/o moveFront() )
+	$(LI $(BUGZILLA 4307): spawn()'ed thread doesn't terminate)
+	$(LI $(BUGZILLA 4314): Regression(1.062): Expression array1 && array2 doesn't compile)
+	$(LI $(BUGZILLA 4327): std.container.Array.Range.~this() tries to call free(T[]))
+	$(LI $(BUGZILLA 4339): Struct destructor + invariant + struct parameter = horrific error message)
+	$(LI $(BUGZILLA 4356): Copy constructor not called under extremely mysterious circumstances)
+	$(LI $(BUGZILLA 4362): std.range.repeat and cycle do not have a .save() method)
+	$(LI $(BUGZILLA 4363): std.algorithm.Until is not a forward range)
+	$(LI $(BUGZILLA 4369): Multiple bugs in GC minimize())
+	$(LI $(BUGZILLA 4370): POSIX monitor attribute not being used)
+	$(LI $(BUGZILLA 4396): mkdir race prevents concurrent compiling with DMD using make -j)
+	$(LI $(BUGZILLA 4400): D2 GC doesn't allocate with 16 bytes alignment)
+	$(LI $(BUGZILLA 4406): Typo (bug) in std.concurrency)
+	$(LI $(BUGZILLA 4412): Array capacity growth spikey and the ratio approaches 1.0)
+	$(LI $(BUGZILLA 4443): Optimizer produces wrong code for || or && with struct arrays)
+	$(LI $(BUGZILLA 4452): Incorrect result of BigInt ^^ long)
+	$(LI $(BUGZILLA 4470): Problems with std.bigint mod and divide)
+	$(LI $(BUGZILLA 4503): forward reference to aliased template instance)
+	$(LI $(BUGZILLA 4506): Regression(2.034): -O flag breaks some recursive functions)
+	$(LI $(BUGZILLA 4514): Regression: Cannot cast from X* to X)
+	$(LI $(BUGZILLA 4516): Regression(2.040): forward declaration of enum not supported)
+	$(LI $(BUGZILLA 4551): D2 Language Docs: http://www.digitalmars.com/d/2.0/arrays.html)
+	$(LI $(BUGZILLA 4569): extern(c++) doesn't understand const types, produces bad mangled symbol)
+	$(LI $(BUGZILLA 4570): ElementType!(void[]) shows error message)
+	$(LI $(BUGZILLA 4578): Regression(2.047,1.062): ICE(cgcod.c): var+arr[])
+	$(LI $(BUGZILLA 4590): Spec incorrectly describes array appending and memory stomping)
+    )
+)
+
+$(VERSION 047, Jun 11, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI Changed "op=" to just "op" for template argument to opOpAssign)
+	$(LI std.algorithm: Added save() to forward ranges; added split() using only one element as separator; added indexOf; fixed unlisted bug in startsWith and endsWith; added skipOver(); added canFind().)
+	$(LI std.array: Added implementation of save() for T[]s.)
+	$(LI std.concurrency: Eliminated spurious unittest stdout messages.)
+	$(LI std.container: Added.)
+	$(LI std.conv: Added file and line information to conversion errors; added brackets '[' and ']' around arrays and associative arrays as defaults; added emplace() for non-class types.)
+	$(LI std.file: Replaced exception upon out-of-memory error with assert(0).)
+	$(LI std.functional: toDelegate now accepts callable(function pointers, delegates and objects implement opCall) )
+	$(LI std.path: Made basename() generic in string type.)
+	$(LI std.range: Added the existence of the property save as a condition for isForwardRange; added save to the range defined within; replaced a couple of awkward front() implementations; defined module-level moveFront() and range member moveFront() where appropriate; added @property maxLength to Take; arranged things such that take() for slice-able ranges returns the same type as the slice; eliminated SListRange; defined iota() with one argument; moved BinaryHeap within.)
+	$(LI std.regex: Qualified indexOf with std.algorithm.)
+	$(LI std.regexp: Qualified indexOf with std.algorithm.)
+	$(LI std.stdio: Added an error message to enforce() in rawRead().)
+	$(LI std.string: Improved indexOf(), tolower(), splitter(), chomp().)
+	$(LI std.traits: Added templates to get compile-time information about functions.)
+	$(LI std.typecons: Added AutoImplement.)
+	$(LI std.utf: Eliminated decodeFront() and decodeBack() - they aren't needed since strings are bidirectional ranges.)
+	$(LI $(BUGZILLA 2008): Poor optimization of functions with ref parameters)
+	$(LI $(BUGZILLA 3793): Functions with static arrays as arguments are not inlined)
+	$(LI $(BUGZILLA 4296): Reduce parasitic error messages)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1193): regression: "matches more than one template declaration" doesn't list the location of the conflicting templates)
+	$(LI $(BUGZILLA 1894): scope(exit) is ignored except in compound statements)
+	$(LI $(BUGZILLA 1941): missing line on inaccesable external private module member)
+	$(LI $(BUGZILLA 2127): inliner turns struct "return *this" from by-value into by-ref)
+	$(LI $(BUGZILLA 2276): Error message missing line number on array operation)
+	$(LI $(BUGZILLA 2546): Array Ops silently fail when no slice symbol is used.)
+	$(LI $(BUGZILLA 2738): Rebindable should work for interfaces.)
+	$(LI $(BUGZILLA 2835): std.socket.TcpSocket doesn't actually connect)
+	$(LI $(BUGZILLA 2881): x.stringof returns typeof(x).stringof when x is an enum)
+	$(LI $(BUGZILLA 3064): Invalid array operation accepted, generates bad code)
+	$(LI $(BUGZILLA 3088): std.xml.check() fails on xml comments)
+	$(LI $(BUGZILLA 3139): compiler dies "Error: out of memory" with case range)
+	$(LI $(BUGZILLA 3200): std.xml doesn't follow spec for Tag.text)
+	$(LI $(BUGZILLA 3323): Segfault or ICE(e2ir.c) using struct with destructor almost anywhere)
+	$(LI $(BUGZILLA 3398): Attributes inside a union screws data alignment)
+	$(LI $(BUGZILLA 3465): isIdeographic can be wrong in std.xml)
+	$(LI Major improvements to CustomFloat, fixing $(BUGZILLA 3520):  std.numeric.CustomFloat horribly broken)
+	$(LI $(BUGZILLA 3538): Default value of alias template parameter is instantiated only once.)
+	$(LI $(BUGZILLA 3547): for option -od for relative path the path is added twice)
+	$(LI $(BUGZILLA 3548): ICE occurs when an array is returned from a function is incorrectly used in an array op expression.)
+	$(LI $(BUGZILLA 3604): extern(C) callable function with array parameters broken)
+	$(LI $(BUGZILLA 3651): mangleof broken for enums)
+	$(LI $(BUGZILLA 3653): Problem sorting array of Rebindable)
+	$(LI $(BUGZILLA 3658): Crashing on vector operations (Mac only))
+	$(LI $(BUGZILLA 3662): Wrong compile error within struct constructor and C-style initializer)
+	$(LI $(BUGZILLA 3667): Regression(D2 only): broken out(result) in contracts)
+	$(LI $(BUGZILLA 3786): bug in std.string.removechars)
+	$(LI $(BUGZILLA 3854): Error on static initialization of arrays with trailing comma.)
+	$(LI $(BUGZILLA 3873): std.range.repeat should have popBack defined)
+	$(LI $(BUGZILLA 3876): std.range.Take back/popBack methods don't work correctly)
+	$(LI $(BUGZILLA 3880): std.regex functions with const/immutable Regex object)
+	$(LI $(BUGZILLA 4003): The result changes only with the order of source files.)
+	$(LI $(BUGZILLA 4045): [CTFE] increasing array length)
+	$(LI $(BUGZILLA 4052): [CTFE] increment from array item)
+	$(LI $(BUGZILLA 4056): Template instantiation with bare parameter not documented)
+	$(LI $(BUGZILLA 4073): core.cpuid crashes)
+	$(LI $(BUGZILLA 4078): [CTFE] Failed return of dynamic array item)
+	$(LI $(BUGZILLA 4084): Ignored missing main() closing bracket)
+	$(LI $(BUGZILLA 4109): writeln doesn't work with empty static array)
+	$(LI $(BUGZILLA 4143): fix warnings in dmd build)
+	$(LI $(BUGZILLA 4156): Segfault with array+=array)
+	$(LI $(BUGZILLA 4169): building dmd with a modern gcc produces a buggy compiler)
+	$(LI $(BUGZILLA 4175): linux.mak doesn't declare sufficient dependencies to support parallel builds)
+	$(LI $(BUGZILLA 4188): std.file.remove throws Exception on success)
+	$(LI $(BUGZILLA 4193): Regression 2.046, ICE(expression.c): initialising class member with const forward reference)
+	$(LI $(BUGZILLA 4202): Changset 1517 doesn't compile)
+	$(LI $(BUGZILLA 4207): std.cover.setDestDir does not work.)
+	$(LI $(BUGZILLA 4208): druntime should not depend on Phobos)
+	$(LI $(BUGZILLA 4212): DWARF: void arrays cause gdb errors)
+	$(LI $(BUGZILLA 4213): Strange behaviour with static void[] arrays)
+	$(LI $(BUGZILLA 4219): hasAliasing does not care about immutable)
+	$(LI $(BUGZILLA 4220): I cannot apply @safe to intrinsic operation(eg: std.math.sqrt))
+	$(LI $(BUGZILLA 4228): std.array.replace contains 2 bugs)
+	$(LI $(BUGZILLA 4230): version(unittest))
+	$(LI $(BUGZILLA 4231): Solitary opUnary Postincrement and Postdecrement user defined operators are broken.)
+	$(LI $(BUGZILLA 4242): ICE(module.c): importing a module with same name as package)
+	$(LI $(BUGZILLA 4249): std.regex fails to compile with debug=regex)
+	$(LI $(BUGZILLA 4252): [CTFE] No array bounds checking in assignment to char[] array)
+	$(LI $(BUGZILLA 4257): ICE(interpret.c): passing parameter into CTFE as ref parameter)
+	$(LI $(BUGZILLA 4259): Header generation omits leading '@' for properties)
+	$(LI $(BUGZILLA 4262): Header generation omits 'enum' for enum declarations)
+	$(LI $(BUGZILLA 4263): Header generation omits '@system' attribute)
+	$(LI $(BUGZILLA 4270): Missing line number in 'can only catch class objects' error message)
+	$(LI $(BUGZILLA 4300): BigInt * int doesn't work well)
+    )
+)
+
+$(VERSION 046, May 10, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI Add hints for missing import declarations.)
+	$(LI Speed up compilation.)
+	$(LI All length methods in Phobos are now a @property.)
+	$(LI $(BUGZILLA 1001): print stack trace (in debug mode) when program die)
+    )
+    $(BUGSFIXED
+	$(LI Fix hanging problem on undefined identifiers.)
+	$(LI $(BUGZILLA 461): Constant not understood to be constant when circular module dependency exists.)
+	$(LI $(BUGZILLA 945): template forward reference with named nested struct only)
+	$(LI $(BUGZILLA 1055): union forward reference "overlapping initialization" error)
+	$(LI $(BUGZILLA 2085): CTFE fails if the function is forward referenced)
+	$(LI $(BUGZILLA 2386): Array of forward referenced struct doesn't compile)
+	$(LI $(BUGZILLA 3945): AssertExpression message should implicitly convert to const char[])
+	$(LI $(BUGZILLA 4015): forward reference in alias causes error)
+	$(LI $(BUGZILLA 4016): const initializer cannot forward reference other const initializer)
+	$(LI $(BUGZILLA 4042): Unable to instantiate a struct template.)
+	$(LI $(BUGZILLA 4100): Break and continue to label should mention foreach)
+	$(LI $(BUGZILLA 4116): object.di does not match object_.d)
+	$(LI $(BUGZILLA 4146): Unavailable: core.sys.posix.sys.wait.waitid())
+	$(LI $(BUGZILLA 4184): associative array with certain key types results in corrupt values during iteration)
+    )
+)
+
+$(VERSION 045, May 4, 2010, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI Another try at fixing the Dwarf issues.)
+    )
+)
+
+$(VERSION 044, Apr 30, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI Improve spelling checking distance to 2.)
+	$(LI Now all unittests are run, even if some fail)
+	$(LI Many small improvements to error diagnostics and recovery)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1079): gdb: Dwarf Error: Cannot find DIE at 0xb705 referenced from DIE at 0x250)
+	$(LI $(BUGZILLA 2437): ICE(tocsym.c, !needThis()) - default struct argument)
+	$(LI $(BUGZILLA 2935): ICE(out.c) using struct with constructor as function default argument)
+	$(LI $(BUGZILLA 2549): Segfault on array multiplication.)
+	$(LI $(BUGZILLA 3066): Array operation without a slice as the lvalue accepted, bad codegen)
+	$(LI $(BUGZILLA 3207): gdb: Push D patches upstream)
+	$(LI $(BUGZILLA 3415): broken JSON output)
+	$(LI $(BUGZILLA 3522): ICE(cg87.c): variable*array[].)
+	$(LI $(BUGZILLA 3987): [gdb] Invalid DWARF output for function pointers)
+	$(LI $(BUGZILLA 3974): ICE(init.c): Static array initializer with more elements than destination array)
+	$(LI $(BUGZILLA 4036): Segfault with -inline and literal of struct containing union)
+	$(LI $(BUGZILLA 4037): [gdb] Invalid DWARF output for wchar)
+	$(LI $(BUGZILLA 4038): [gdb] Invalid DWARF output for function pointers with ref args)
+	$(LI $(BUGZILLA 4067): [CTFE] Code inside try-catch blocks is silently ignored)
+	$(LI $(BUGZILLA 4072): Stack overflow on recursive template expansion inside contract)
+	$(LI $(BUGZILLA 4081): cannot compile the dmd on FreeBSD 8)
+	$(LI $(BUGZILLA 4089): crash when creating JSON output for incomplete struct)
+	$(LI $(BUGZILLA 4093): Segfault(interpret.c): with recursive struct templates)
+	$(LI $(BUGZILLA 4105): Stack overflow involving alias template parameters and undefined identifier)
+	$(LI $(BUGZILLA 4108): ICE(cod2.c): zero-length static array in function call)
+	$(LI $(BUGZILLA 4118): std.conv.to!SomeStruct("hello") crashes compiler)
+	$(LI $(BUGZILLA 4131): break does not work correctly with foreach and associative arrays)
+    )
+)
+
+$(VERSION 043, Apr 6, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI $(B .init) property for static arrays is now an array literal)
+	$(LI Improved speed of associative arrays)
+	$(LI std.bigint has been completely replaced with a faster implementation.
+	   Multiplication is now 5 times faster, division is
+	   300 times faster, and squaring is 10 times faster. For large numbers
+	   (~5000 words), the speedup is 5 times larger than this.)
+    )
+    $(BUGSFIXED
+	$(LI Fixed memory corruption problem with array appends)
+	$(LI $(BUGZILLA 122): DDoc newline behaviour produces suboptimal results)
+	$(LI $(BUGZILLA 1628): Ddoc produces invalid documentation for --- blocks)
+	$(LI $(BUGZILLA 2609): No documentation generated for destructor)
+	$(LI $(BUGZILLA 3808): Assertion Failure : Assertion failure: 'classinfo->structsize == CLASSINFO_SIZE' on line 870 in file 'toobj.c')
+	$(LI $(BUGZILLA 3884): Segfault: defining a typedef with an invalid object.d)
+	$(LI $(BUGZILLA 3911): Associative array in CTFE crashes compiler)
+	$(LI $(BUGZILLA 3958): mixin(non-static method) crashes compiler)
+	$(LI $(BUGZILLA 3972): Regarding module with name different from its file name)
+	$(LI $(BUGZILLA 3984): Segfault(interpret.c): CTFE using struct constructor on a local static variable)
+	$(LI $(BUGZILLA 3986): Struct constructors bypass default initialization of member variables)
+	$(LI $(BUGZILLA 4002): dmd.conf and binary path in dmd -v output)
+	$(LI $(BUGZILLA 4004): DMD 2.042 CTFE regression with functions taking ref parameters)
+	$(LI $(BUGZILLA 4005): std.c.stdlib.exit in CTFE and more)
+	$(LI $(BUGZILLA 4011): Incorrect function overloading using mixins)
+	$(LI $(BUGZILLA 4019): [CTFE] Adding an item to an empty AA)
+	$(LI $(BUGZILLA 4020): [ICE][CTFE] struct postblit in CTFE)
+	$(LI $(BUGZILLA 4023): std.math.hypot() returns infinity when either argument is zero)
+	$(LI $(BUGZILLA 4027): Closures in CTFE generate wrong code)
+	$(LI $(BUGZILLA 4029): CTFE: cannot invoke delegate returned from function)
+    )
+)
+
+$(VERSION 042, Mar 19, 2010, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI Add base class destruction to clear() in object.d)
+	$(LI $(BUGZILLA 3842): ICE(expression.c) using pointer in CTFE)
+	$(LI $(BUGZILLA 3885): No multithread support for Windows DLL)
+	$(LI $(BUGZILLA 3899): CTFE: poor error message for use of uninitialized variable)
+	$(LI $(BUGZILLA 3900): CTFE: Wrong return value for array.var assignment)
+	$(LI $(BUGZILLA 3901): PATCH: Nested struct assignment for CTFE)
+	$(LI $(BUGZILLA 3902): Definition of opCmp)
+	$(LI $(BUGZILLA 3912): pure static nested functions are not recognized as pure)
+	$(LI $(BUGZILLA 3914): Struct as argument that fits in register has member accessed wrong)
+	$(LI $(BUGZILLA 3919): ICE(expression.c, 9944): * or / with typedef ireal)
+	$(LI $(BUGZILLA 3920): Assertion failure: '0' on line 10018 in file 'expression.c')
+	$(LI $(BUGZILLA 3930): AAs horribly broken)
+    )
+)
+
+$(VERSION 041, Mar 7, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI __traits allMembers and and derivedMembers now return a tuple of strings
+	 rather than an array of strings. Enclose __traits in [ ] to make array literal.
+	 This makes it possible for foreach statements to iterate at compile time over it.
+	)
+	$(LI Interface member functions can now have $(LINK2 interface.html#InterfaceContracts, contracts).)
+	$(LI Added new $(LINK2 operatoroverloading.html, operator overloading) regime.)
+	$(LI Warnings no longer halt the parsing/semantic passes, though they still return
+	 an error status and still do not generate output files. They also no longer count
+	 as errors when testing with "compiles" traits.)
+	$(LI Added $(B -wi) switch for $(BUGZILLA 2567))
+	$(LI Mixin template definitions should be preceded with $(CODE mixin))
+	$(LI Add $(LINK2 expression.html#InExpression, $(B !in)) operator.)
+	$(LI Associative array contents can now be compared for equality)
+	$(LI Use of $(B length) inside of [ ] is now deprecated, use $(DOLLAR) instead)
+	$(LI Added $(B toDelegate()) to std.functional to convert function pointers to delegates.)
+	$(LI Implemented attributes for constructors.)
+	$(LI Implemented qualifiers for struct literals, like $(CODE immutable(S)(1,2,3)))
+	$(LI Array equality can now be done with differing array element types.)
+	$(LI Add simple spell checking.)
+	$(LI $(BUGZILLA 3378): [tdpl] ++x should be an lvalue)
+	$(LI string, wstring are now bidirectional (not random) ranges)
+	$(LI std.algorithm: defined move with one argument; levenshtein distance generalized to with all forward ranges; take now has swapped arguments)
+	$(LI std.array: empty for arrays is now a @property; front and back for a string and wstring automatically decodes the first/last character; popFront, popBack for string and wstring obey the UTF stride)
+	$(LI std.conv: changed the default array formatting from "[a, b, c]" to "a b c")
+	$(LI std.range: swapped order of arguments in take)
+	$(LI std.stdio: added readln template)
+	$(LI std.variant: now works with statically-sized arrays and const data)
+	$(LI std.traits: added isNarrowString)
+	$(LI The default type for [1,2,3] is now int[] rather than int[3].)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 2321): spec on inline asm can be misunderstood)
+	$(LI $(BUGZILLA 2463): No line number in "statement is not reachable" warning)
+	$(LI $(BUGZILLA 3029): Bug in array value mangling rule)
+	$(LI $(BUGZILLA 3306): bad function/delegate literal generated into header files)
+	$(LI $(BUGZILLA 3373): bad codeview debug info for long and ulong)
+	$(LI Posix only, $(BUGZILLA 3420): [PATCH] Allow string import of files using subdirectories)
+	$(LI $(BUGZILLA 3450): incorrect result for is (typeof({ ... }())) inside a struct)
+	$(LI $(BUGZILLA 3453): Linking order affects proper execution (Mac OSX only))
+	$(LI $(BUGZILLA 3491): typeof((string[string]).init) == AssociativeArray!(string, string), doesn't implicitly convert to string[string].)
+	$(LI $(BUGZILLA 3500): super behaves differently with -inline)
+	$(LI $(BUGZILLA 3558): Optimizer bug results in false if condition being taken)
+	$(LI $(BUGZILLA 3582): core.stdc.ctype functions are not pure)
+	$(LI $(BUGZILLA 3619): Thread crash on exit)
+	$(LI $(BUGZILLA 3637): Array append patch to prevent stomping and to enhance thread-local append performance)
+	$(LI $(BUGZILLA 3644): Wrong UCHAR_MAX value in module core.stdc.limits)
+	$(LI $(BUGZILLA 3670): Declarator grammar rule is broken)
+	$(LI $(BUGZILLA 3689): Grammar does not allow const(int))
+	$(LI $(BUGZILLA 3692): ICE(mtype.c) with associative arrays when std.variant is imported)
+	$(LI $(BUGZILLA 3695): __EOF__ token not documented)
+	$(LI $(BUGZILLA 3697): StructTemplateDeclaration and others missing constraint in rule)
+	$(LI $(BUGZILLA 3710): Typo in allMembers description?)
+	$(LI $(BUGZILLA 3736): corrupted struct returned by function with optimizations (-O))
+	$(LI $(BUGZILLA 3737): SEG-V at expression.c:6255 from bad opDispatch)
+	$(LI $(BUGZILLA 3763): std.stdio.readlnImpl absurdly inefficient and overflows stack)
+	$(LI $(BUGZILLA 3768): reapeted quotes in ddoc.html)
+	$(LI $(BUGZILLA 3769): Regression: Segfault(constfold.c) array literals and case statements)
+	$(LI $(BUGZILLA 3775): Segfault(cast.c): casting no-parameter template function using property syntax)
+	$(LI $(BUGZILLA 3776): Wrong CHAR_MIN value in module core.stdc.limits)
+	$(LI $(BUGZILLA 3781): ICE(interpret.c): using no-argument C-style variadic function in CTFE)
+	$(LI $(BUGZILLA 3803): compiler segfaults)
+	$(LI $(BUGZILLA 3840): Jump to: section in the docs should be sorted)
+    )
+)
+
+$(VERSION 040, Jan 29, 2010, =================================================,
+
+    $(WHATSNEW
+	$(LI Clarification: function returns are not lvalues)
+	$(LI Added shared static constructors/destructors, regular static
+	constructors/destructors now deal with TLS)
+	$(LI Add $(B -map) command line switch)
+	$(LI Add $(LINK2 attribute.html#disable, $(B @disable)) attribute)
+	$(LI Delegates and function pointers may be used in CTFE)
+	$(LI Delegate literals and function literals may be used in CTFE)
+	$(LI Lazy function parameters may now be used in CTFE)
+	$(LI Slicing of char[] arrays may now be used in CTFE)
+	$(LI added static/final function implementations to interfaces)
+	$(LI added $(B getOverloads), $(B identifier), and $(B isStaticFunction) traits.)
+	$(LI ModuleInfo changed from class to struct)
+	$(LI $(BUGZILLA 3556): version(CTFE))
+	$(LI $(BUGZILLA 3728): getOverloads and identifier traits)
+    )
+    $(BUGSFIXED
+	$(LI Added TLS support for OSX)
+	$(LI $(CPPBUGZILLA 47): Internal error: cg87 3316)
+	$(LI $(BUGZILLA 1298): CTFE: tuple foreach bugs)
+	$(LI $(BUGZILLA 1790): CTFE: foreach(Tuple) won't compile if Tuple contains string)
+	$(LI $(BUGZILLA 2101): CTFE: Please may I use mutable arrays at compile time?)
+	$(LI $(BUGZILLA 2066): to!(string)(int) into CTFE-compatible)
+	$(LI $(BUGZILLA 3488): Segfault(expression.c): enum declared with struct static initializer)
+	$(LI $(BUGZILLA 3535): struct constructors don't work in CTFE)
+	$(LI $(BUGZILLA 3552): ICE(mtype.c): declaring a variable called 'AssociativeArray' then using an AA.)
+	$(LI Partial fix for $(BUGZILLA 3569), stops the stack overflow)
+	$(LI $(BUGZILLA 3600): template instantiation with empty tuple)
+	$(LI $(BUGZILLA 3660): Templates and shared functions don't mix)
+	$(LI $(BUGZILLA 3668): foreach over typedef'd array crashes dmd)
+	$(LI $(BUGZILLA 3671): x^^3 gives wrong result when x is a floating-point literal)
+	$(LI $(BUGZILLA 3674): forward reference error with multiple overloads with same name)
+	$(LI $(BUGZILLA 3675): Regression: Struct literals cannot be initialized with another struct literal)
+	$(LI $(BUGZILLA 3687): Array operation "slice times scalar" tramples over memory)
+	$(LI $(BUGZILLA 3719): forward references can cause out-of-memory error)
+	$(LI $(BUGZILLA 3723): Regression: forward referenced enum)
+	$(LI $(BUGZILLA 3724): bug in Expression::arraySyntaxCopy (null pointer dereference on struct->union->struct))
+	$(LI $(BUGZILLA 3726): Regression: ICE(mangle.c 81): struct forward reference with static this)
+	$(LI $(BUGZILLA 3727): lots of "deffering SomeStructName" messages when compiling)
+	$(LI $(BUGZILLA 3734): [patch] src/traits.c does not compile with gcc (Ubuntu 4.4.1-4ubuntu8) 4.4.1)
+	$(LI $(BUGZILLA 3740): Regression: class with fwd reference of a nested struct breaks abstract)
+    )
+)
+
+$(VERSION 039, Jan 1, 2010, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 3663): struct forward reference regresssion)
+	$(LI $(BUGZILLA 3664): struct forward declaration causes enum to conflict with itself)
+    )
+)
+
+$(VERSION 038, Dec 30, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Added core.cpuid in Druntime)
+	$(LI $(BUGZILLA 3514): opApply should be the first-choice foreach iteration method.)
+	$(LI $(BUGZILLA 3577): Wrong precedence for opPow)
+	$(LI Added $(LINK2 function.html#auto-ref-functions, auto ref functions))
+	$(LI Added $(LINK2 template.html#auto-ref-parameters, function template auto ref parameters))
+	$(LI Added $(B isRef), $(B isOut) and $(B isLazy) to $(LINK2 traits.html, $(D_KEYWORD __traits)))
+	$(LI Transporting return type from args to return type, see $(LINK2 http://www.prowiki.org/wiki4d/wiki.cgi?LanguageDevel/DIPs/DIP2, DIP2))
+    )
+    $(BUGSFIXED
+	$(LI $(CPPBUGZILLA 45): Internal error: cgcod 1594)
+	$(LI $(CPPBUGZILLA 46): Constant folding with long doubles)
+	$(LI $(BUGZILLA 282): Bizarre circular import nested name invisibility issue)
+	$(LI $(BUGZILLA 390): Cannot forward reference enum nested in struct)
+	$(LI $(BUGZILLA 400): forward reference error; no propety X for type Y (struct within struct))
+	$(LI $(BUGZILLA 1160): enums can not be forward referenced)
+	$(LI $(BUGZILLA 1564): Forward reference error for enum in circular import)
+	$(LI $(BUGZILLA 2029): Typesafe variadic functions don't work in CTFE)
+	$(LI $(BUGZILLA 2816): Sudden-death static assert is not very useful)
+	$(LI $(BUGZILLA 3270): pure functions returning struct)
+	$(LI $(BUGZILLA 3443): Thread.thread_needLock() should be nothrow)
+	$(LI $(BUGZILLA 3455): Some Unicode characters not allowed in identifiers)
+	$(LI $(BUGZILLA 3458): int fsync(int) commented out in core.sys.posix.unistd)
+	$(LI $(BUGZILLA 3476): C-style initializer for structs must be disallowed for structs with a constructor)
+	$(LI $(BUGZILLA 3575): CTFE: member structs not initialized correctly)
+	$(LI $(BUGZILLA 3583): Unsigned right shift works the same as signed right shift.)
+	$(LI $(BUGZILLA 3584): DeclDef rule is missing entries)
+	$(LI $(BUGZILLA 3585): Duplicate clauses in EqualExpression and RelExpression rules)
+	$(LI $(BUGZILLA 3587): Aggregate rule references undefined Tuple)
+	$(LI $(BUGZILLA 3588): WithStatement rule references unspecified Symbol)
+	$(LI $(BUGZILLA 3589): BaseClassList and InterfaceClasses rules are incorrect, missing ',')
+	$(LI $(BUGZILLA 3590): FunctionParameterList rule is missing)
+	$(LI $(BUGZILLA 3591): TemplateIdentifier rule is misspelled)
+	$(LI $(BUGZILLA 3592): ClassTemplateDeclaration and FunctionTemplateDeclaration rules are unreferenced)
+	$(LI $(BUGZILLA 3593): IntegerExpression rule unspecified)
+	$(LI $(BUGZILLA 3594): AsmPrimaryExp rule references unspecified rules)
+	$(LI $(BUGZILLA 3595): Several rules are missing ':' after rule name)
+	$(LI $(BUGZILLA 3596): Need alias for using std.algorithm.remove)
+	$(LI $(BUGZILLA 3601): Debug and Release builds of DMD produce different object files)
+	$(LI $(BUGZILLA 3611): Enum forward referencing regression)
+	$(LI $(BUGZILLA 3612): ExpressionList is undefined)
+	$(LI $(BUGZILLA 3617): CTFE: wrong code for if(x) where x is int or smaller)
+	$(LI $(BUGZILLA 3621): implicit conversion to const rules need tightening)
+	$(LI $(BUGZILLA 3633): Optimizer causes access violation)
+	$(LI $(BUGZILLA 3641): alias shared T U does not work)
+	$(LI $(BUGZILLA 3645): manifest constant (enum) crashes dmd)
+	$(LI $(BUGZILLA 3647): non-function opDispatch crashes dmd)
+    )
+)
+
+$(VERSION 037, Dec 3, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Conditional expressions ?: can now be modifiable lvalues.)
+	$(LI The type inferred from an
+	 $(LINK2 expression.html#ArrayLiteral, $(I ArrayLiteral))
+	 is now a dynamic array, not a static one.)
+	$(LI Added support for $(I op)= for array.length)
+	$(LI Array and associative array types are now determined by using ?: across
+	 all the elements, not just using the first one.)
+	$(LI Array concatenation with elements now allows implicit conversion of
+	 the elements to the array element type.)
+	$(LI No more comma operators allowed between [ ].)
+	$(LI ClassInfo now merged into TypeInfo_Class.)
+	$(LI $(BUGZILLA 3379): [tdpl] Parameter names not visible in the if clause of a template)
+	$(LI $(BUGZILLA 3380): [tdpl] typeid(obj) should return the dynamic type of the object)
+	$(LI Removed $(B -safe) command line switch, added $(B -noboundscheck) command
+	 line switch.)
+	$(LI $(BUGZILLA 3481): PATCH: opPow(), x ^^ y as a power operator)
+	$(LI Added opDispatch)
+	$(LI properties can only have 0 or 1 arguments)
+	$(LI properties cannot be overloaded with non-properties)
+	$(LI std.math: Added FloatControl, IeeeFlags for enabling floating-point exceptions.)
+	$(LI std.math: Inverse trig functions are now pure nothrow.)
+    )
+    $(BUGSFIXED
+	$(LI std.array: Fixed unlisted bug in array().)
+	$(LI $(BUGZILLA 111): appending a dchar to a char[])
+	$(LI $(BUGZILLA 2664): OSX standard math functions are less accurate)
+	$(LI $(BUGZILLA 2802): VariantN.opCmp!(T) fails when T != VariantN)
+	$(LI $(BUGZILLA 2967): spec does not mention that inline asm is a valid "return" statement)
+	$(LI $(BUGZILLA 2977): std.random.unpredictableSeed() should use thread ID somewhere)
+	$(LI $(BUGZILLA 3115): &gt;&gt;&gt; and &gt;&gt;&gt;= generate wrong code)
+	$(LI $(BUGZILLA 3171): % not implemented correctly for floats)
+	$(LI $(BUGZILLA 3311): std.range.chain shouldn't have opIndexAssign if arguments aren't mutable)
+	$(LI $(BUGZILLA 3375): [tdpl] Ternary operator doesn't yield an lvalue)
+	$(LI $(BUGZILLA 3381): [tdpl] Incorrect assessment of overriding in triangular-shaped hierarchy)
+	$(LI $(BUGZILLA 3388): [tdpl] contracts should allow throw expressions)
+	$(LI $(BUGZILLA 3390): [tdpl] out(result) contract should not be able to rebind result)
+	$(LI $(BUGZILLA 3407): [tdpl] Compiling with -safe -release must keep all bound checks)
+	$(LI $(BUGZILLA 3433): [tdpl] Comparing structs for equality is not member-by-member)
+	$(LI $(BUGZILLA 3469): ICE(func.c): Regression. Calling non-template function as a template, from another module)
+	$(LI $(BUGZILLA 3478): "no effect in expression" error on return to void)
+	$(LI $(BUGZILLA 3494): Segfault(mtype.c) using typeof(return) inside an auto function)
+	$(LI $(BUGZILLA 3495): Segfault(typinf.c) instantiating D variadic function with too few arguments)
+	$(LI $(BUGZILLA 3496): ICE(cgelem.c, optimizer bug) cast(void *)(x&1)== null.)
+	$(LI $(BUGZILLA 3502): Fix for dropped Mac OS X 10.5)
+	$(LI $(BUGZILLA 3521): Optimized code access popped register)
+	$(LI $(BUGZILLA 3540): Another DWARF line number fix)
+	$(LI $(BUGZILLA 3551): nested struct => dmd adds a hidden pointer)
+	$(LI $(BUGZILLA 3553): ICE when a function argument defaults to __LINE__)
+    )
+)
+
+$(VERSION 036, Nov 5, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Static arrays are now passed by value to functions rather than by reference)
+	$(LI   std.algorithm:  Add   hasLength   requirement  to   topN;
+	implemented  topN for  two non-adjacent  ranges;  added replaceTop
+	function to BinaryHeap; changed BinaryHeap.top to return ref.)
+	$(LI std.ctype:  Add pure  to isalnum, isalpha,  iscntrl, isdigit,
+	islower,  ispunct, isspace,  isxdigit, isgraph,  isprint, isascii,
+	toupper.)
+	$(LI std.date: Implementation change and unittest for isLeapYear and
+	daysInYear. Made both pure as well.)
+	$(LI std.encoding: Added function count().)
+	$(LI std.md5: Added explicit pass-by-ref for fixed-size buffers.)
+	$(LI std.numeric: Added gcd.)
+	$(LI std.random: Added static checks for the parameters of the linear
+	congruential generator.)
+	$(LI std.range: Reinstated some unittests; fixed Cycle to work with
+	the new fixed-size arrays.)
+	$(LI std.typecons: Added alias 'expand' for Tuple.field.)
+	$(LI std:utf: Added count function and changed the encode function
+	to take fixed-size array by reference.)
+	$(LI $(BUGZILLA 3446): Rename float.min to float.min_normal)
+    )
+    $(BUGSFIXED
+	$(LI std.range: Fixed unlisted bug in Transposed.)
+	$(LI Problem with complicated array op expressions)
+	$(LI $(BUGZILLA 195): DDoc generates bad output when example contains "protected" attribute)
+	$(LI $(BUGZILLA 424): Unexpected OPTLINK Termination at EIP=0044C37B (too many fixups))
+	$(LI $(BUGZILLA 1117): ddoc generates corrupted docs if code examples contain attributes with colons)
+	$(LI $(BUGZILLA 1812): DDOC - Unicode identifiers are not correctly marked.)
+	$(LI $(BUGZILLA 2694): alias pure nothrow XXX; is not pure nothrow!)
+	$(LI $(BUGZILLA 2862): ICE(template.c) using type tuple as function argument)
+	$(LI $(BUGZILLA 3035): cannot have const/invariant out parameter of type shared)
+	$(LI $(BUGZILLA 3102): Incorrectly matching type as shared (two cases with is expressions))
+	$(LI $(BUGZILLA 3269): pure functions silently become nothrow)
+	$(LI $(BUGZILLA 3292): ICE(todt.c) when using a named mixin with an initializer as template alias parameter)
+	$(LI $(BUGZILLA 3349): typeid(shared(T)) generates wrong value)
+	$(LI $(BUGZILLA 3367): Regression: struct initialization no longer supports ctor overloads)
+	$(LI $(BUGZILLA 3397): Unintended function call to static opCall)
+	$(LI $(BUGZILLA 3401): Compiler crash on invariant + method overload)
+	$(LI $(BUGZILLA 3422): ICE(cgcod.c) Structs with default initializers bigger than register size cannot be default parameters)
+	$(LI $(BUGZILLA 3423): Destructor and postblit don't get copied to the header file when using -H)
+	$(LI $(BUGZILLA 3426): ICE(optimize.c): struct literal with cast, as function default parameter.)
+	$(LI $(BUGZILLA 3429): Core dump on passing template literal to member function.)
+	$(LI $(BUGZILLA 3432): ICE(e2ir.c): casting template expression)
+    )
+)
+
+$(VERSION 035, Oct 14, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Use $(B -X) to generate JSON files.)
+    )
+    $(BUGSFIXED
+	$(LI Fold in patch from $(BUGZILLA 1170))
+	$(LI $(BUGZILLA 1534): Can't mix in a case statement.)
+	$(LI $(BUGZILLA 2423): Erroneous unreachable statement warning)
+	$(LI $(BUGZILLA 2826): failed assignment gives wrong line number)
+	$(LI $(BUGZILLA 3190): enum doesn't work as the increment in a for loop)
+	$(LI $(BUGZILLA 3316): Functions nested in a pure templated function cannot reference its local variables)
+	$(LI $(BUGZILLA 3352): RangeError in std.conv)
+	$(LI $(BUGZILLA 3385): `std.string.split` requires a mutable array)
+	$(LI $(BUGZILLA 3392): a cast of this to void in tango.core.Thread is not allowed)
+    )
+)
+
+$(VERSION 034, Oct 11, 2009, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 258): Undefined identifier error for circular import)
+	$(LI $(BUGZILLA 1140): ICE(cod1.c) casting last function parameter to 8 byte value)
+	$(LI $(BUGZILLA 1592): dmd fail to resolve class symbol when i put files in a package)
+	$(LI $(BUGZILLA 2687): ICE(statement.c): tuple foreach in an erroneous template.)
+	$(LI $(BUGZILLA 2773): ICE(go.c) array assignment through a pointer, only with -O.)
+	$(LI $(BUGZILLA 2829): ICE(expression.c) static array block-initialized in struct literal)
+	$(LI $(BUGZILLA 3006): ICE(e2ir.c, tocsym.c) template module using array operation)
+	$(LI $(BUGZILLA 3041): Array slices can be compared to their element type: bad codegen or ICE)
+	$(LI $(BUGZILLA 3042): Segfault on incorrect override)
+	$(LI $(BUGZILLA 3101): Stack overflow: declaring aggregate member twice with static if)
+	$(LI $(BUGZILLA 3119): Segfault(expression.c) template function overloads with function with same name in other module)
+	$(LI $(BUGZILLA 3174): ICE(mtype.c): Compiler crash or compiler error with auto returns and const / immutable / invarient / pure)
+	$(LI $(BUGZILLA 3176): Compiler hangs on poorly formed mixin in variadic template)
+	$(LI $(BUGZILLA 3261): compiler crash with mixin and forward reference)
+	$(LI $(BUGZILLA 3286): Default parameter prevents to resolve inter-module circular dependency)
+	$(LI $(BUGZILLA 3301): Undefined identifier error dependent on order of imports when a circular import is involved)
+	$(LI $(BUGZILLA 3325): ICE(func.c) function literal with post-contract)
+	$(LI $(BUGZILLA 3343): Crash by "auto main(){}")
+	$(LI $(BUGZILLA 3344): ICE(e2ir.c) returning an invalid function from main())
+	$(LI $(BUGZILLA 3357): ICE(cod1.c) using 'in' with a static char array as AA key)
+	$(LI $(BUGZILLA 3366): Segfault(declaration.c) variadic template with unmatched constraint)
+	$(LI $(BUGZILLA 3374): [tdpl] ICE(init.c): Associative array type not inferred)
+    )
+)
+
+$(VERSION 033, Oct 5, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Phobos is now using the Boost 1.0 license)
+	$(LI Compiler now detects some cases of illegal null dereferencing when compiled with -O)
+	$(LI The result type of the $(CODE typeid($(I type))) is now the most derived TypeInfo class, rather than the TypeInfo base class)
+	$(LI $(BUGZILLA 2905): Faster +-*/ involving a floating-pointing literal)
+	$(LI Improved performance of int-to-string conversion)
+    )
+    $(BUGSFIXED
+	$(LI gdb stack trace should work now)
+	$(LI $(BUGZILLA 302): in/out contract inheritance yet to be implemented)
+	$(LI $(BUGZILLA 718): ICE(cgcod.c) with int /= cast(creal))
+	$(LI $(BUGZILLA 814): lazy argument + variadic arguments = segfault)
+	$(LI $(BUGZILLA 1168): Passing a .stringof of an expression as a template value parameter results in the string of the type)
+	$(LI $(BUGZILLA 1253): array initializers as expressions are not allowed in const arrays)
+	$(LI $(BUGZILLA 1571): Segfault(class.c) const on function parameters not carried through to .di file)
+	$(LI $(BUGZILLA 1731): forward reference of function type alias resets calling convention)
+	$(LI $(BUGZILLA 2202): Error getting type of non-static member of a class)
+	$(LI $(BUGZILLA 2469): ICE(cod1.c) arbitrary struct accepted as struct initializer)
+	$(LI $(BUGZILLA 2697): Cast of float function return to ulong or uint gives bogus value)
+	$(LI $(BUGZILLA 2702): Struct initialisation silently inserts deadly casts)
+	$(LI $(BUGZILLA 2839): ICE(cgcs.c) with int /= imaginary)
+	$(LI $(BUGZILLA 2970): std.path.join with version(Windows))
+	$(LI $(BUGZILLA 2998): ICE(expression.c) with floating point enum)
+	$(LI $(BUGZILLA 3049): ICE(cod4.c) or segfault: Array operation on void[] array)
+	$(LI $(BUGZILLA 3059): Nonsensical complex op= should be illegal)
+	$(LI $(BUGZILLA 3132): std.string.split should be templated on mutable/const/immutable - closing again after the reopening on 2009-09-03 07:56:25 PDT)
+	$(LI $(BUGZILLA 3160): ICE(cgcod.c 1511-D1) or bad code-D2 returning string from void main)
+	$(LI $(BUGZILLA 3173): ICE(mtype.c) on wrong code (double to long to int conversion))
+	$(LI $(BUGZILLA 3288): conv.d: using to with const int or long fails to compile.)
+	$(LI $(BUGZILLA 3300): std.string.toupper and tolower should be (const(char)[]), not string)
+	$(LI $(BUGZILLA 3304): Segfault using 'is' with a pointer enum.)
+	$(LI $(BUGZILLA 3305): Segfault(expression.c) with recursive struct template alias expressions)
+	$(LI $(BUGZILLA 3333): std.conv.to!(string, const int) error: cannot modify const)
+	$(LI $(BUGZILLA 3335): minor warning cleanups)
+	$(LI $(BUGZILLA 3336): ICE(glue.c) declaring AA with tuple key, only with -g)
+	$(LI $(BUGZILLA 3340): std.string.split(S1 s, S2 delim) still doesn't work for char[])
+	$(LI $(BUGZILLA 3353): storage class of a member function is propagated to default arguments)
+	$(LI (unlisted): std.algorithm: bug in reduce when passed const arguments)
+	$(LI (unlisted): std.stdio: fixed documentation example)
+	$(LI (unlisted): std.utf: fixed decodeFront and decodeBack)
+    )
+)
+
+$(VERSION 032, Sep 2, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Improved exception message for assert(0) in Windows -release builds)
+	$(LI Added support for:
+---
+a[i].var = e2
+---
+	and:
+---
+a[] = e
+---
+	in CTFE. $(I (thanks, Don!)))
+	$(LI Member functions can now be used in CTFE)
+	$(LI Operator overloading can now be used in CTFE)
+	$(LI Nested functions can now be used in CTFE)
+	$(LI CTFE error messages now explain why the function could not be
+	interpreted at compile time)
+	$(LI synchronized member functions now implicitly typed as shared.)
+	$(LI std.algorithm: added minPos)
+	$(LI std.format: added raw specifier for reading)
+	$(LI added File.byChunk)
+	$(LI std.algorithm: added more unittests and checks for user-based comparison passed to topN)
+	$(LI std.math: replaced std.c with core.stdc; improved approxEqual to work with ranges, not only numbers or arrays)
+	$(LI std.range: defined Take.popBack whenever sensible; improved iota to accept negative ranges and steps)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 601): statement.html - Formatting/markup errors in BNF)
+	$(LI $(BUGZILLA 1461): Local variable as template alias parameter breaks CTFE)
+	$(LI $(BUGZILLA 1600): Functions taking only one array cannot be called with property syntax)
+	$(LI $(BUGZILLA 1604): Non-final method on final struct is too restrictive (closed with "invalid" advise))
+	$(LI $(BUGZILLA 1605): break in switch with goto breaks in ctfe)
+	$(LI $(BUGZILLA 1616): std/metastrings.d)
+	$(LI $(BUGZILLA 1940): Phobos buildscripts do not work on x86_64)
+	$(LI $(BUGZILLA 1948): CTFE fails when mutating a struct in an array)
+	$(LI $(BUGZILLA 1950): CTFE doesn't work correctly for structs passed by ref)
+	$(LI $(BUGZILLA 1969): ICE(cod1.c) using undefined operator with one const operand)
+	$(LI $(BUGZILLA 1972): Foreach range statement breaks CTFE)
+	$(LI $(BUGZILLA 2150): cannot get values from const variant)
+	$(LI $(BUGZILLA 2277): array ops and const arrays incompatible)
+	$(LI $(BUGZILLA 2398): writef("%x") for a pointer is always uppercase)
+	$(LI $(BUGZILLA 2560): ICE(cod4.c) on invoking method that takes ref const struct parameter)
+	$(LI $(BUGZILLA 2564): CTFE: the index in a tuple foreach is uninitialized (bogus error))
+	$(LI $(BUGZILLA 2569): static arrays in CTFE functions don't compile)
+	$(LI $(BUGZILLA 2575): gdb can not show code)
+	$(LI $(BUGZILLA 2587): std.process.shell doesn't work for win32)
+	$(LI $(BUGZILLA 2604): DW_TAG_module and GDB)
+	$(LI $(BUGZILLA 2665): ICE(cod4.c) on certain const struct function return types)
+	$(LI $(BUGZILLA 2784): Interfaces should be able to require type definitions (closed with "invalid" advise))
+	$(LI $(BUGZILLA 2785): Interfaces should be able to require non-member functions (closed with "invalid" advise))
+	$(LI $(BUGZILLA 2786): Interfaces should be able to require constructors (closed with "invalid" advise))
+	$(LI $(BUGZILLA 2882): std.random.MersenneTwisterEngine without no seed)
+	$(LI $(BUGZILLA 2925): Destructor not called)
+	$(LI $(BUGZILLA 2937): postblit not called for foreach arg over array of structs)
+	$(LI $(BUGZILLA 2940): null is null cannot be evaluated at compile time)
+	$(LI $(BUGZILLA 2976): rename retreatN to retreat)
+	$(LI $(BUGZILLA 2979): Xml tags with only attributes return as without attributes ElementParser.parse)
+	$(LI $(BUGZILLA 2980): compiler error when writefln( uint ))
+	$(LI $(BUGZILLA 2987): D2 phobos BigInt opMul doesn't work correctly)
+	$(LI $(BUGZILLA 2988): Chain needs opIndexAssign.)
+	$(LI $(BUGZILLA 2989): std.typetuple: add support for any static tuples)
+	$(LI $(BUGZILLA 2992): (closed with "later" advise))
+	$(LI $(BUGZILLA 2996): std.typetuple: add support for any static tuples)
+	$(LI $(BUGZILLA 3000): iota should work with floats)
+	$(LI $(BUGZILLA 3017): doc errors in std.range (on behalf of Steven Schveighoffer))
+	$(LI $(BUGZILLA 3025): uniform(float,float) pops first, uniform(int,int) pops last)
+	$(LI $(BUGZILLA 3037): Off-by-one error in Stride.length)
+	$(LI $(BUGZILLA 3039): -vtls compiler flag not listed in man file)
+	$(LI $(BUGZILLA 3058): [CTFE] Cannot return out of foreach range statement)
+	$(LI $(BUGZILLA 3074): std.conv.to!(string)(int.min))
+	$(LI $(BUGZILLA 3077): 3077 crash exiting main() without result code)
+	$(LI $(BUGZILLA 3087): std.range.retro.opIndex out of range)
+	$(LI $(BUGZILLA 3098): std.algorithm.reduce example can not compile)
+	$(LI $(BUGZILLA 3100): ICE(cast.c) struct with members is shared)
+	$(LI $(BUGZILLA 3132): std.string.split should be templated on mutable/const/immutable)
+	$(LI $(BUGZILLA 3148): syntax error using invariant)
+	$(LI $(BUGZILLA 3153): win32.mak tries to copy phobos.lib, gcstub.obj to nonexistent folder lib)
+	$(LI $(BUGZILLA 3162): can't fully use compile-time floats as template parameters)
+	$(LI $(BUGZILLA 3165): What kind of integer division does D use?)
+	$(LI $(BUGZILLA 3166): "positive" -> "non-negative" in modulo operator description)
+	$(LI $(BUGZILLA 3169): Segfault(cast.c) dividing ulong by int)
+	$(LI $(BUGZILLA 3170): Forward reference of nested class fails if outer class is not plain)
+	$(LI $(BUGZILLA 3183): Spec of align attribute needs work)
+	$(LI $(BUGZILLA 3184): std.algorithm.until should work like "find")
+	$(LI $(BUGZILLA 3185): osx is not a directory (complains cannot read std/c/osx/socket.d))
+	$(LI $(BUGZILLA 3186): corrections for http://www.digitalmars.com/d/2.0/dmd-osx.html)
+	$(LI $(BUGZILLA 3189): `std.conv.to` : check for a custom `to` method in classes/structs)
+	$(LI $(BUGZILLA 3192): asm in a anonymous delegate crash the compiler)
+	$(LI $(BUGZILLA 3195): `std.conv` pureness (closed with "later" advise))
+	$(LI $(BUGZILLA 3196): Segfault(mtype.c) after almost any error involving a delegate literal)
+	$(LI $(BUGZILLA 3197): Minor fixes and additions to std.traits)
+	$(LI $(BUGZILLA 3199): sort(chain(...)) doesn't work in some cases)
+	$(LI $(BUGZILLA 3205): CTFE: $ cannot be used in lvalues)
+	$(LI $(BUGZILLA 3212): Error message says "mutable"; should say "immutable")
+	$(LI $(BUGZILLA 3217): std.functional.binaryFunImpl doesn't support UDT with string functions , therefore neither does many std.algorithm functions)
+	$(LI $(BUGZILLA 3218): Performance of std.xml.encode must be improved)
+	$(LI $(BUGZILLA 3219): Inaccurate std.conv.to!(numeric)(numeric) error messages)
+	$(LI $(BUGZILLA 3224): std.random documentation bugs)
+	$(LI $(BUGZILLA 3229): No return or assert(0) at end of function)
+	$(LI $(BUGZILLA 3236): Postblit called but no matching destructor)
+	$(LI $(BUGZILLA 3239): std.conv.roundTo does not accept const/immutable/shared)
+	$(LI $(BUGZILLA 3240): std.numeric.findRoot only works with real)
+	$(LI $(BUGZILLA 3242): splitter does not handle input range made of a unique separator correctly)
+	$(LI $(BUGZILLA 3245): Easy bug fix available for disabled unit test code in std.encoding)
+	$(LI $(BUGZILLA 3246): ICE(init.c) using indexed array initializer on local array)
+	$(LI $(BUGZILLA 3249): sort and setIntersection on array of struct or class)
+	$(LI $(BUGZILLA 3253): DMD crashes on function pointer struct member initialization with function literal)
+	$(LI $(BUGZILLA 3255): final switch broken with -w switch)
+	$(LI $(BUGZILLA 3257): Spec is unclear describing string switch case labels)
+	$(LI $(BUGZILLA 3260): "Error: undefined identifier backend" when compiling 'write' with 'wchar')
+	$(LI $(BUGZILLA 3264): -O causes wrong "used before set" error when using enum.)
+	$(LI $(BUGZILLA 3281): ICE(cod1.c) append returned struct to array)
+	$(LI Fixed bug processing spaces in dmd's directory)
+	$(LI Fixed assert failure on line 4823 in expression.c)
+	$(LI Fixed OSX compile error on samples/d/dhry.d)
+	$(LI std.format: fixed unlisted bug in documentation)
+	$(LI std.random: uniform does not work when passed immutable data)
+	$(LI std.range: fixed unlisted bug in Take.back)
+	$(LI unlisted: made entropy work on const/immutable arrays)
+    )
+)
+
+$(VERSION 031, July 6, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Renamed root directory \dmd to \dmd2)
+	$(LI Use of with symbols that shadow local symbols is no longer allowed)
+	$(LI Added $(LINK2 statement.html#FinalSwitchStatement, final switch statements))
+	$(LI Added $(LINK2 statement.html#CaseRangeStatement, case range statements))
+	$(LI Implicit integral conversions that could result in loss of significant
+	bits are no longer allowed.)
+	$(LI Warning on no return expr; is now an error.)
+	$(LI $(BUGZILLA 3080): dmd should output compilation errors to stderr, not stdout)
+	$(LI $(BUGZILLA 3122): [patch] Adding support for fast and reliable build tools to the frontend)
+	$(LI std.algorithm: Made std.algorithm.swap faster by having it use memcpy; added std.algorithm.group, std.algorithm.until, std.algorithm.nWayUnion, std.algorithm.largestPartialIntersectionWeighted; added additional constraints to std.algorithm.equal; changed signature of std.algorithm.topNIndex and std.algorithm.topNCopy to use an enum parameter instead of a confusing bool.)
+	$(LI std.array: added array function.)
+	$(LI std.conv: added Shin Fujishiro's code for printing and parsing enumerated values.)
+	$(LI std.ctype: made isupper and tolower pure.)
+	$(LI std.date: changed signature of benchmark to return ulong[] instead of uint[].)
+	$(LI std.demangle: changed it to use the snazzy switch statement with ranged labels.)
+	$(LI std.random: added randomSample)
+	$(LI std.string: deprecated std.string.find and std.string.find, replaced with std.string.indexOf; deprecated std.string.rfind and std.string.irfind, replaced with std.string.lastIndexOf; added flag CaseSensitive for indexOf and lastIndexOf; removed startsWith and endsWith because std.algorithm defines them; defined std.string.byDchar.)
+	$(LI std.traits: added isSomeChar, isPointer.)
+	$(LI std.typetuple: replaced indexOf with indexOfType, kept the old name as an alias that will be deprecated.)
+	$(LI std.utf: improved error messages.)
+    )
+    $(BUGSFIXED
+	$(LI Fix dmd crash on multicore Windows.)
+	$(LI Fixed unlisted bug in std.algorithm.startsWith)
+	$(LI Fixed unlisted bug in std.algorithm.topN)
+	$(LI Fixed unlisted bug in std.algorithm.topNIndex (empty index made it crash))
+	$(LI Fixed unlisted bug in std.algorithm.setIntersection)
+	$(LI Fixed unlisted bug in std.range.retro: retro'izing a range twice must return the original range)
+	$(LI $(BUGZILLA 106): template - mixin sequence)
+	$(LI $(BUGZILLA 810): Cannot forward reference template)
+	$(LI $(BUGZILLA 852): ICE(toir.c) using local class in non-static nested function in nested static function)
+	$(LI $(BUGZILLA 1343): Various errors with static initialization of structs and arrays)
+	$(LI $(BUGZILLA 1358): ICE(root.c) on Unicode codepoints greater than 0x7FFFFFFF)
+	$(LI $(BUGZILLA 1524): ICE(constfold.c) on using "is" with strings in CTFE)
+	$(LI $(BUGZILLA 1984): Assertion failure: 'e1->type' on line 1198 in file 'constfold.c')
+	$(LI $(BUGZILLA 2323): ICE(cgcs.c): taking address of a method of a temporary struct)
+	$(LI $(BUGZILLA 2399): ICE(cgcod.c) on casting function to delegate)
+	$(LI $(BUGZILLA 2429): std.stream.File incorrect flag parsing and sharing mode)
+	$(LI $(BUGZILLA 2432): complex alias -> mtype.c:125: virtual Type* Type::syntaxCopy(): Assertion `0' failed.)
+	$(LI $(BUGZILLA 2603): ICE(cgcs.c) on subtracting string literals)
+	$(LI $(BUGZILLA 2843): ICE(constfold.c) with is-expression with invalid dot-expression in is-expression involving typeid)
+	$(LI $(BUGZILLA 2865): RandomCover not random)
+	$(LI $(BUGZILLA 2875): ICE(cgcod.c) setting delegate = &Struct.func)
+	$(LI $(BUGZILLA 2884): ICE: Assert: 'template.c', line 3773, 'global.errors')
+	$(LI $(BUGZILLA 2888): [PATCH] speedup for float * 2.0)
+	$(LI $(BUGZILLA 2900): Array appending slowed drastically since integration of druntime)
+	$(LI $(BUGZILLA 2915): [Patch]: Optimize -a*-b into a*b)
+	$(LI $(BUGZILLA 2923): -O generates bad code for ?:)
+	$(LI $(BUGZILLA 2932): bad e_ehsize (36 != 52))
+	$(LI $(BUGZILLA 2952): Segfault on exit when using array ops with arrays of doubles larger than 8 elements)
+	$(LI $(BUGZILLA 2974): Segfault(mtype.c) on auto function)
+	$(LI $(BUGZILLA 2981): Bad code generation for structs containing invariants)
+	$(LI $(BUGZILLA 2982): Assertion failure in function if() clause)
+	$(LI $(BUGZILLA 3003): Need to implicitly add () on member template function calls)
+	$(LI $(BUGZILLA 3014): ICE(template.c) instantiating template with tuple)
+	$(LI $(BUGZILLA 3016): Errors in the documentation of std.math.acos)
+	$(LI $(BUGZILLA 3026): Segfault with incomplete static array initializer)
+	$(LI $(BUGZILLA 3044): Segfault(template.c) instantiating struct tuple constructor with zero arguments.)
+	$(LI $(BUGZILLA 3071): nested func declaration parse problem)
+	$(LI $(BUGZILLA 3078): NaN reported as equal to zero)
+	$(LI $(BUGZILLA 3081): unaryFun can't be used to get element out of struct.)
+	$(LI $(BUGZILLA 3095): wc example for D2 doesn't compile)
+	$(LI $(BUGZILLA 3114): optlink failing on multicore machines)
+	$(LI $(BUGZILLA 3117): dmd crash by *1)
+	$(LI $(BUGZILLA 3121): recurrence does not generate the correct numbers)
+	$(LI $(BUGZILLA 3128): Internal error: ..\ztc\cod4.c 2737)
+	$(LI $(BUGZILLA 3130): Crashed with triple stars)
+    )
+)
+
+$(VERSION 030, May 11, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI added $(B -vtls) compiler switch)
+	$(LI $(RED classic global storage now defaults to TLS (Thread Local Storage)).
+	This is a big change, see $(LINK2 migrate-to-shared.html, Migrating To Shared).)
+        $(LI std.algorithm: added minPos. Improvements to Splitter suggested by Brad Roberts. Splitter now is bidirectional. Also Splitter has one extra trailing element if it ends with a separator. Added variadic arguments for setUnion and setIntersection. Added functions setSymmetricDifference and largestPartialIntersection. Improved BinaryHeap's interface and implementation.)
+	$(LI std.array: Improvements to Appender. Now it works with string and other immutable-element arrays, and accepts ranges in put().)
+        $(LI std.format: added raw specifier for reading)
+	$(LI std.range: Added iota with two arguments. Added FrontTransversal and Transversal.)
+        $(LI std.stdio: added File.byChunk)
+	$(LI std.traits: Added isImplicitlyConvertible.)
+	$(LI std.tuple: Added Tuple.opComp.)
+	$(LI Folded in compiler changes by Unknown W. Brackets
+	to support Solaris.)
+	$(LI added .typeinfo to ClassInfo $(BUGZILLA 2836): Navigate from ClassInfo to TypeInfo)
+    )
+    $(BUGSFIXED
+	$(LI Fix instruction scheduler bug on Linux)
+	$(LI unlisted: made std.numeric.entropy work on const/immutable arrays)
+	$(LI Fixed several problems associated with thread local storage)
+        $(LI $(BUGZILLA 642): error: mixin "static this" into where it cannot be)
+        $(LI $(BUGZILLA 713): circular const definitions with module operator "." cause the compiler to segfault)
+        $(LI $(BUGZILLA 752): Assertion failure: 'e->type->ty != Ttuple' on line 4518 in file 'mtype.c')
+        $(LI $(BUGZILLA 858): Forward reference to struct inside class crashes the compiler)
+        $(LI $(BUGZILLA 884): Segfault in recursive template)
+        $(LI $(BUGZILLA 934): Segfault taking mangleof a forward reference in a  template.)
+        $(LI $(BUGZILLA 1011): illegal import declaration causes compile time segfault)
+        $(LI $(BUGZILLA 1054): regression: circular aliases cause segfaults)
+        $(LI $(BUGZILLA 1061): "asm inc [;" segfaults compiler.)
+        $(LI $(BUGZILLA 1305): Compiler hangs with templated opCmp returning templated class)
+        $(LI $(BUGZILLA 1385): Stack Overflow with huge array literal.)
+        $(LI $(BUGZILLA 1428): Segfault on template specialization with delegates and tuples)
+        $(LI $(BUGZILLA 1791): Segmentation fault with anon class in anon class and non-constant variable init)
+        $(LI $(BUGZILLA 1916): segfault on invalid string concat)
+        $(LI $(BUGZILLA 1946): Compiler crashes on attempt to implicit cast const typedef to non-const.)
+        $(LI $(BUGZILLA 2048): DMD crash on CTFE that involves assigning to member variables of void-initialized struct)
+        $(LI $(BUGZILLA 2061): wrong vtable call with multiple interface inheritance)
+        $(LI $(BUGZILLA 2215): Forward reference enum with base type within a struct causes Segmentation Fault in the compiler)
+        $(LI $(BUGZILLA 2309): Crash on a template mixing in a variadic template with an undefined template identifier)
+        $(LI $(BUGZILLA 2346): ICE when comparing typedef'd class)
+	$(LI $(BUGZILLA 2580): Documented WinMain for D2 is wrong)
+	$(LI $(BUGZILLA 2633): incorrect ModuleInfo declaration in object.di)
+	$(LI $(BUGZILLA 2695): pure functions can invoke impure function pointers)
+	$(LI $(BUGZILLA 2807): Marking a nested function as 'pure' may cause bad code generations silently accepted)
+        $(LI $(BUGZILLA 2821): struct alignment inconsistent with C for { int, long })
+        $(LI $(BUGZILLA 2851): Segfault using C-style struct initializer with too few arguments)
+	$(LI $(BUGZILLA 2865): RandomCover not random)
+        $(LI $(BUGZILLA 2882): std.random.MersenneTwisterEngine without seed)
+	$(LI $(BUGZILLA 2890): deadlock in std.stdio)
+        $(LI $(BUGZILLA 2893): qualified types don't have an Unsigned counterpart)
+	$(LI $(BUGZILLA 2906): writef problem with formatting floating point)
+	$(LI $(BUGZILLA 2914): to!string(struct) is broken)
+	$(LI $(BUGZILLA 2920): recursive templates blow compiler stack)
+	$(LI $(BUGZILLA 2922): Egregiously bad hashing performance with strings)
+    )
+)
+
+$(VERSION 029, Apr 19, 2009, =================================================,
+
+    $(NEWPHOBOS
+	$(LII std.algorithm,
+	  $(LI Everything converted to ranges. Big disruption. Algorithms added.)
+	)
+	$(LII std.array,
+	  $(LI Range primitives for arrays)
+	  $(LI Appender template)
+	  $(LI insert, replace functions)
+	)
+	$(LII std.bitmanip,
+	  $(LI Bitfields of length 0 are defined to be always 0.)
+	  $(LI The read functions for bitfields are const.)
+	)
+	$(LII std.contracts,
+	  $(LI enforce accepts const(char)[] instead of string)
+	  $(LI Added enforce overload that invokes a delegate on failure)
+	  $(LI Added assumeSorted template)
+	  $(LI Added structuralCast that implements, well, structural casting
+	  (incomplete).)
+	)
+	$(LII std.conv,
+	  $(LI Rewrote conversions with constrained templates.)
+	  $(LI Added text() function that transforms everything into text.)
+	)
+	$(LII std.date,
+	  $(LI Added a benchmark function that allows for simple timing measurements.)
+	)
+	$(LII std.file,
+
+	  $(LI read, write, append, rename, remove, getSize, getTimes,
+	  getAttributes, isfile, isdir, chdir, mkdir, mkdirRecurse, rmdir,
+	  listdir, copy, take filename(s) by "in char[]")
+	  $(LI Added function readText that reads and validates a text file)
+	  $(LI Added function slurp that reads a file into an array of tuples.
+	  Example:
+---
+auto a = slurp!(int, double)("filename", "%s, %s");
+---
+	  Each line in the file looks like e.g. "1, 2.3". slurp returns an array
+	  of Tuple!(int, double) with the parsed content.
+	  )
+	)
+	$(LII std.format,
+
+	  $(LI Added vector parsing and printing with the specifier "%()". For
+	  example, writefln("[%(s; )]", [1, 2, 3][]) writes "[1; 2; 3]". This
+	  support is experimental and may be changed in the future.)
+	  $(LI Added a formattedRead function (i.e., scanf that doesn't suck). The
+	  implementation is incomplete but common cases are supported.)
+	)
+	$(LII std.functional,
+	  $(LI Improved error messages)
+	  $(LI Added configurable parameter names for functions as strings)
+	  $(LI Added Adjoin template)
+	)
+	$(LII std.getopt,
+	  $(LI Added support for parameterless delegates)
+	)
+	$(LII std.math,
+	  $(LI Intrinsics std.math.yl2x and yl2xp1 added. Improves performance of
+	   std.math.log() and similar functions (and they are now pure nothrow). )
+	  )
+	$(LII std.mmfile,
+	  $(LI Minor cosmetic changes)
+	)
+	$(LII std.numeric,
+
+	  $(LI Added type CustomFloat that allows defining specialized floating-point
+	  numbers (e.g. 16-bit floats, positive floats etc.))
+	  $(LI Added FPTemporary as the best type to store temporary values.)
+	  $(LI Templatized oppositeSigns)
+	  $(LI Added Euclidean distance)
+	  $(LI Added dotProduct)
+	  $(LI Added cosineSimilarity)
+	  $(LI Added normalize)
+	  $(LI Added string kernel functions gapWeightedSimilarity,
+	  gapWeightedSimilarityNormalized, gapWeightedSimilarityIncremental.)
+	)
+	$(LII std.outbuffer,
+	  $(LI Added a few missing overloads of write())
+	)
+	$(LII std.path,
+	  $(LI getDrive now works with all string types)
+	  $(LI isabs accepts in char[])
+	  $(LI join accepts variadic in char[])
+	  $(LI fnmatch works with in char[])
+	)
+	$(LII std.random,
+
+	  $(LI Added RandomCover that covers a given range in a random manner)
+	  $(LI Eliminated the old-fashioned random functions)
+	  $(LI Defined a default random object that simplifies calls to the random
+	  functions)
+	  $(LI Changed generators to obey the range interface. So now you can write:
+---
+Random r;
+foreach (n; take(100, uniform(0, 100))) { ... }
+---
+	  )
+	)
+	$(LII std.range (new file),
+	  $(LI Range manipulation stuff.)
+	)
+	$(LII std.regex (new file),
+	  $(LI Regular expression library with wide char support, simplified
+	  interface, better speed etc.)
+	)
+	$(LII std.regexp,
+	  $(LI Scheduled for deprecation. Use std.regex instead.)
+	)
+	$(LII std.stdio,
+	  $(LI Major breaking changes: introduced the File struct.  Now stdin,
+	  stdout, stderr are instances of the File struct.)
+	  $(LI Due to bugs in the compiler, the copy constructor and destructor of
+	  File are commented out. Walter will look into fixing the issues soon.
+	  File should work fine, but you need to close it manually.)
+	  $(LI A byRecord iteration mode makes it pretty easy to iterate structured
+	  text files.)
+	  $(LI writef and writefln now require a string as their first argument.)
+	)
+	$(LII std.string,
+	  $(LI strip, stripl, stripr, startsWith, endsWith now work with any string type)
+	)
+	$(LII std.typecons,
+	  $(LI Added constructors, assignment operator, length, toString, and slice
+	  to Tuple.)
+	)
+	$(LII std.utf,
+	  $(LI toUTF16z accepts in char[])
+	)
+	$(LII std.variant,
+	  $(LI Added support for Variants that contain vectors and hashes of themselves)
+	)
+	$(LII std.c.stdio,
+	  $(LI Added fopen64 and friends)
+	)
+    )
+    $(WHATSNEW
+	$(LI Added template function literals)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 675): %a format has an out-by-1 bug for denormals)
+	$(LI $(BUGZILLA 2199): Segfault using array operation in function call)
+	$(LI $(BUGZILLA 2203): typeof(class.template.foo) crashes compiler)
+	$(LI $(BUGZILLA 2577): DMD crashes on foreach of undefined identifier)
+	$(LI $(BUGZILLA 2808): 'nothrow' nested functions cannot be parsed)
+	$(LI $(BUGZILLA 2812): sqrt(2.0) is about -2.7341e-53)
+    )
+)
+
+$(VERSION 028, Apr 7, 2009, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1586): DMD and GDC segfaults on incomplete code segment)
+	$(LI $(BUGZILLA 2064): Segfault with mixin(for/foreach) with empty loop body)
+	$(LI $(BUGZILLA 2812): sqrt(2.0) is about -2.7341e-53)
+	$(LI $(BUGZILLA 2804): Impure nested functions should be legal inside pure functions)
+    )
+)
+
+$(VERSION 027, Mar 31, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Most functions in std.math are now pure nothrow. Improved speed of std.math.hypot.)
+	$(LI Added response files for Linux and OSX)
+	$(LI Added $(LINK2 class.html#AliasThis, $(B alias this)))
+	$(LI $(BUGZILLA 2746): Make float.init signalling NaN by default)
+	$(LI On Windows, if there are multiple source files on the command
+	 line they are now read with a background thread. This may speed up
+	 compilation.)
+	$(LI Folded in patches for LDC compatibility from Tomas Lindquist Olsen)
+	$(LI Removed $(B etc.gamma) from the library.)
+    )
+    $(BUGSFIXED
+	$(LI std.math.hypot is wrong for subnormal arguments)
+	$(LI Fix bug where / wasn't recognized as a path separator on Windows.)
+	$(LI $(BUGZILLA 920): Fix one more out of date reference to 'auto' rather than 'scope')
+	$(LI $(BUGZILLA 1645): can override base class' const method with non-const method)
+	$(LI $(BUGZILLA 2319): "Win32 Exception" not very useful)
+	$(LI $(BUGZILLA 2336): link to nonexistent std_array.html)
+	$(LI $(BUGZILLA 2570): Patch for some mistakes in Ddoc comments)
+	$(LI $(BUGZILLA 2574): std.c.stdio doesn't compile: va_list not defined!)
+	$(LI $(BUGZILLA 2591): custom allocator new argument should be size_t instead of uint)
+	$(LI $(BUGZILLA 2595): template ctors crash compiler)
+	$(LI $(BUGZILLA 2596): Variadic constructors don't compile)
+	$(LI $(BUGZILLA 2626): template function not working against template struct instantiated with default arguments)
+	$(LI $(BUGZILLA 2674): Copy postblit constructor this(this) not called for members)
+	$(LI $(BUGZILLA 2689): seek behaves incorrectly on MAC OSX)
+	$(LI $(BUGZILLA 2692): alignment of double on x86 linux is incorrect)
+	$(LI $(BUGZILLA 2700): typeof tests stops compilation abruptly)
+	$(LI $(BUGZILLA 2705): Response file size cannot exceed 64kb)
+	$(LI $(BUGZILLA 2711): -H produces bad headers files if function defintion is templated and have auto return value)
+	$(LI $(BUGZILLA 2722): ICE with variadic template parameters)
+	$(LI $(BUGZILLA 2723): ICE with variadic template parameters, different case)
+	$(LI $(BUGZILLA 2724): Persistent segfaults in templated code)
+	$(LI $(BUGZILLA 2725): Pattern matching in static if not working with variadic arguments)
+	$(LI $(BUGZILLA 2727): std.date Cyclic dependency)
+	$(LI $(BUGZILLA 2728): Bogus Error message on const ref return)
+	$(LI $(BUGZILLA 2729): hash_t undocumented and unnecessary)
+	$(LI $(BUGZILLA 2730): Restriction on op= can be lifted)
+	$(LI $(BUGZILLA 2731): Errors in associative array example)
+	$(LI $(BUGZILLA 2739): _argptr is invalid for functions nested in class methods)
+	$(LI $(BUGZILLA 2743): dumpobj gives "buss error" on Tiger)
+	$(LI $(BUGZILLA 2744): wrong init tocbuffer of forstatement)
+	$(LI $(BUGZILLA 2745): missing token tochars in lexer.c)
+	$(LI $(BUGZILLA 2747): improper toCBuffer of funcexp)
+	$(LI $(BUGZILLA 2750): Optimize slice copy with size known at compile time)
+	$(LI $(BUGZILLA 2751): incorrect scope storage class vardeclaration tocbuffer)
+	$(LI $(BUGZILLA 2752): std.xml does not encode CData correctly)
+	$(LI $(BUGZILLA 2754): The error message regarding implicit conversion to shared doesn't mention shared in the message.)
+	$(LI $(BUGZILLA 2755): ICE on invalid ref returns in linked objects: Assertion failure: 'type' on line 6566 in file 'expression.c'. No ICE or error if invalid code is local to the file.)
+	$(LI $(BUGZILLA 2756): Bad code generation for pure nothrow math functions)
+	$(LI $(BUGZILLA 2761): Unreachable statement warning in std.string)
+	$(LI $(BUGZILLA 2763): std.mangle.demangle not translating 'ya')
+	$(LI $(BUGZILLA 2766): DMD hangs with 0%cpu)
+	$(LI $(BUGZILLA 2767): DMD incorrectly mangles NTFS stream names)
+	$(LI $(BUGZILLA 2772): lib can't open response file)
+    )
+)
+
+$(VERSION 026, Mar 3, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Escape string literals deprecated, see $(BUGZILLA 2658))
+	$(LI Tripled speed of exp, expm1, and exp2. std.math is now less dependent on the C standard library.)
+	$(LI Added $(LINK2 struct.html#nested, nested structs).)
+	$(LI Added buildable dmd source.)
+	$(LI Many changes to std.math for speed, accuracy, and Tango compatibility:
+	   $(UL
+           $(LI Improved accuracy of exp, expm1, exp2, sinh, cosh, tanh on Mac OSX,
+           and tripled speed on all platforms.)
+	   $(LI Now using IEEE754-2008 camelCase names for isNaN, isFinite,
+           isNormal, isSubnormal, isInfinity. Aliases for the old names have been retained.)
+	   $(LI The non-functional nan(char[]) is replaced with NaN, getNaNpayload.)
+	   )
+          )
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1603): String literals bind to pointer types)
+	$(LI $(BUGZILLA 1629): Link error: Previous Definition Different:  blablah__initZ)
+	$(LI $(BUGZILLA 1662): Falls back to libphobos if -debuglib isn't used when -g is)
+	$(LI $(BUGZILLA 1681): cast(real) ulong.max == 0)
+	$(LI $(BUGZILLA 2416): Slice of typedef'ed array should preserve the typedef'ed type)
+	$(LI $(BUGZILLA 2597): auto return doesn't work for a variety of cases)
+	$(LI $(BUGZILLA 2612): immutable not accepted wherever invariant is)
+	$(LI $(BUGZILLA 2619): Locally-instantiated structs are not instantiated locally)
+	$(LI $(BUGZILLA 2621): ref binds to rvalues of user-defined types)
+	$(LI $(BUGZILLA 2622): ref returns not allowed in complex template)
+	$(LI $(BUGZILLA 2623): Function type drops ref spec)
+	$(LI $(BUGZILLA 2670): std.file.read() should read files of 0 length)
+	$(LI $(BUGZILLA 2673): Static constructors sometimes do not run when compiling with -lib)
+	$(LI $(BUGZILLA 2675): cannot foreach structs with copy constructor)
+	$(LI $(BUGZILLA 2676): alias parameters not matched in concept if clause)
+	$(LI $(BUGZILLA 2677): Alias type parameters not visible in concept-if clauses)
+	$(LI $(BUGZILLA 2678): for loops are already assumed to terminate)
+	$(LI $(BUGZILLA 2679): Spurious "warning - " messages and erratic behaviour with is(typeof({void function}())))
+	$(LI $(BUGZILLA 2684): Associative arrays have wrong opIndex signatures)
+	$(LI $(BUGZILLA 2690): DMD aborts with MALLOC_CHECK_ set)
+    )
+)
+
+$(VERSION 025, Feb 14, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Added Mac OSX support.)
+	$(LI Separated bin and lib directories into windows, linux,
+	and osx.)
+	$(LI No longer need to download dmc to use the windows version.)
+	$(LI Use version(OSX) for Mac OSX. Although version(darwin) is
+	also supported for the time being, it is deprecated.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 2448): template return by reference causes seg fault)
+    )
+)
+
+$(VERSION 023, Jan 2, 2009, =================================================,
+
+    $(WHATSNEW
+	$(LI Improved speed of long division.)
+	$(LI Optimizer now takes advantage of immutable and pure.)
+	$(LI Added predefined $(LINK2 version.html#PredefinedVersions, version)
+	 $(B D_Ddoc) which is predefined when $(B -D) switch is thrown.)
+	$(LI the type of a string literal is now $(CODE invariant(char)[])
+	 rather than $(CODE invariant(char)[length_of_string]). It is still
+	 implicitly convertible to the latter. This is intended to reduce
+	 template instantiation bloat.)
+	$(LI Undid fix for $(BUGZILLA 2500), as the fix was arguably worse
+	 than the bug.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1078): Frontend uses of 'auto' where 'scope' should be used)
+	$(LI $(BUGZILLA 2517): DDoc omits abstract on classes)
+	$(LI $(BUGZILLA 2518): scope(success) not execuate and RAII variable destructor is not called)
+	$(LI $(BUGZILLA 2519): Segfault when >> used in an invalid slice)
+	$(LI $(BUGZILLA 2527): Alias Template Params Are Always Same Type As First Instantiation (according to typeof(x).stringof))
+	$(LI $(BUGZILLA 2531): DDoc not generated correctly for struct methods inside static if)
+	$(LI $(BUGZILLA 2533): compiler falls with "assertion failed" message on wrong code)
+	$(LI $(BUGZILLA 2534): dmd.conf is wrong)
+	$(LI $(BUGZILLA 2537): compiler crashes on this code:)
+	$(LI $(BUGZILLA 2541): cannot use aliased type for decl of foreach variable)
+	$(LI $(BUGZILLA 2542): array casts behave differently at compile and runtime)
+    )
+)
+
+$(VERSION 022, Dec 11, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Changed IUnknown to use the extern(System) interface rather
+	that extern(Windows).)
+	$(LI Pure functions now get semantically checked.)
+	$(LI Nothrow functions now get semantically checked.)
+	$(LI $(TT shared) is now a type constructor.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1518): Crash using 'scope', 'with' and undefined 'RegExp')
+	$(LI $(BUGZILLA 1649): Variant coercion fails with delegates)
+	$(LI $(BUGZILLA 1685): Array index is evaluated twice)
+	$(LI $(BUGZILLA 1933): Delimited string constants can cause segfault)
+	$(LI $(BUGZILLA 1963): -H creates broken headers)
+	$(LI $(BUGZILLA 2041): Spec implies relationship between interfaces and COM objects)
+	$(LI $(BUGZILLA 2105): added patch)
+	$(LI $(BUGZILLA 2441): header file generation translates enum to manifest)
+	$(LI $(BUGZILLA 2468): result type of AndAndExp and OrOrExp deduced incorrectly)
+	$(LI $(BUGZILLA 2489): import in struct causes assertion failure)
+	$(LI $(BUGZILLA 2490): extern(C++) can not handle structs as return types)
+	$(LI $(BUGZILLA 2491): druntime GC wrongly frees data pointed to by TLS.)
+	$(LI $(BUGZILLA 2492): ICE building on Linux with -lib option)
+	$(LI $(BUGZILLA 2499): Template alias default value cannot be template instantiation)
+	$(LI $(BUGZILLA 2500): template struct methods are left unresolved if imported from multiple modules)
+	$(LI $(BUGZILLA 2501): member function marked as final override ignores override requirements)
+	$(LI $(BUGZILLA 2503): Error 42: Symbol Undefined _D3std7process6systemFAyaZi)
+	$(LI $(BUGZILLA 2506): Can't initialize const member in ctor if it is accessed via this.member syntax)
+	$(LI Incorporated some of the patches from $(BUGZILLA 1752))
+	$(LI $(TT extern __thread) now works on Linux.)
+    )
+)
+
+$(VERSION 021, Nov 25, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Added $(B -safe) switch and $(CODE module(system) Identifier;) syntax.)
+	$(LI Added range support to foreach statement.)
+	$(LI $(B scope) parameter storage class means the parameter will
+	 not 'escape' the scope of the function invocation.
+	 Using this for delegate parameters will prevent some closure allocations
+	 by the calling function.)
+	$(LI The $(B lazy) storage class now implies $(B scope) so that lazy
+	 arguments won't trigger a heap allocated closure.)
+	$(LI The 'this' parameter to struct member functions is now a
+	 reference type, rather than a pointer.
+	 $(RED This breaks existing code.)
+	 )
+
+	$(LI More changes to druntime:
+	$(TABLE1
+	$(TR $(TH from) $(TH to))
+	$(TRENAME OutOfMemoryException, OutOfMemoryError)
+	$(TRENAME SwitchException, SwitchError)
+	$(TRENAME HiddenFuncException, HiddenFuncError)
+	$(TRENAME ArrayBoundsException, RangeError)
+	$(TRENAME AssertException, AssertError)
+	$(TRENAME FinalizeException, FinalizeError)
+	$(TRENAME onArrayBoundsError, onRangeError)
+	$(TRENAME stdc.*, core.stdc.*)
+	$(TRENAME sys.*, core.sys.*)
+
+
+	)
+	)
+
+	$(LI Added core.runtime.loadLibrary() as an experimental feature for
+	loading dynamic libraries (Win32 only at the moment).)
+	$(LI Added core.runtime.unloadLibrary() as an experimental feature for
+	unloading dynamic libraries previously loaded by loadLibrary().)
+	$(LI core.thread.sleep() accepts a long integer specifying the sleep interval
+	in 100 nanosecond intervals (the previous release notes said this was a
+	float, IIRC).)
+	$(LI It is no longer necessary to link in druntime separately, it is
+	inserted into libphobos2.a.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 313): Fully qualified names bypass private imports)
+	$(LI $(BUGZILLA 920): SPEC: Auto classes referenced where scope should be used)
+	$(LI $(BUGZILLA 929): Resizing array of associative arrays (uint[char[]][]) causes infinite loop / hang)
+	$(LI $(BUGZILLA 1372): Compiler accepts pragma(msg,))
+	$(LI $(BUGZILLA 1610): Enum.stringof is int, not the name of the enum)
+	$(LI $(BUGZILLA 1663): pragma(lib, "") don't work on linux)
+	$(LI $(BUGZILLA 1797): Documentation comments - ///)
+	$(LI $(BUGZILLA 2428): Accessing item in enum'd array produced compiler error)
+	$(LI $(BUGZILLA 2429): std.stream.File incorrect flag parsing and sharing mode)
+	$(LI $(BUGZILLA 2431): Internal error: ../ztc/cgcod.c 1031 when using -O)
+	$(LI $(BUGZILLA 2470): Cannot build libraries from other libraries)
+	$(LI unittest functions now always use D linkage)
+    )
+)
+
+$(VERSION 020, Oct 20, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Improved performance of AAs by rebalancing trees when rehashing.)
+	$(LI $(D_KEYWORD immutable) now is implemented.)
+	$(LI $(BUGZILLA 2344): Two wrong lookups for array functions)
+	$(LI $(BUGZILLA 2345): Return by $(LINK2 function.html#ref-functions, reference) should be allowed)
+	$(LI $(CODE Posix) is now a predefined identifier when compiling under Linux)
+	$(LI Based on Sean Kelly's hard work, Phobos has been split into
+	two libraries, druntime.lib and phobos.lib. This will enable
+	better integration with Tango.
+	The user source code changes are:
+	$(TABLE1
+	$(TR $(TH from) $(TH to))
+	$(TRENAME bit, bool)
+	$(TRENAME _d_OutOfMemory(), onOutOfMemoryError())
+	$(TRENAME import std.asserterror;, import core.exception;)
+	$(TRENAME import std.hiddenfunc;, import core.exception;)
+	$(TRENAME import std.switcherr;, import core.exception;)
+	$(TRENAME import std.array;, import core.exception;)
+	$(TRENAME import std.outofmemory;, import core.exception;)
+	$(TRENAME import std.gc;, import core.memory;)
+	$(TRENAME import std.thread;, import core.thread;)
+	$(TRENAME SwitchError, SwitchException)
+	$(TRENAME AssertError, AssertException)
+	$(TRENAME HiddenFuncError, HiddenFuncException)
+	$(TRENAME ArrayBoundsError, ArrayBoundsException)
+	$(TRENAME std.gc.fullCollect(), GC.collect())
+	$(TRENAME std.gc.*(), memory.gc_*())
+	$(TRENAME _moduleUnitTests(), import runtime; runModuleUnitTests())
+	$(TR $(TD $(CODE printf)) $(TD add $(CODE import std.c.stdio;)))
+	)
+	Changes to thread:
+	$(UL
+	$(LI The thread handle isn't exposed to the user.  This can always be obtained using the appropriate OS calls from within the thread.)
+	$(LI There is no druntime equivalent for Thread.pause() and Thread.resume().  The closest is thread_suspendAll() and thread_resumeAll()--extern (C) calls meant for use by the GC.)
+	$(LI Thread.wait() is renamed to Thread.join().)
+	$(LI Sleep functionality is available as Thread.sleep(double), where the parameter represents the number of seconds to sleep (fractional values accepted, obviously).)
+	)
+	This is a big change, and expect some problems for a release or two
+	with this.
+	)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1229): Linker fills disk)
+	$(LI $(BUGZILLA 2332): Initializing const or invariant hashes croaks)
+	$(LI $(BUGZILLA 2333): Hash initializer does not work)
+	$(LI $(BUGZILLA 2336): link to nonexistent std_array.html)
+	$(LI $(BUGZILLA 2340): Template properties don't work)
+	$(LI $(BUGZILLA 2341): Double destruction without intervening copy)
+	$(LI $(BUGZILLA 2362): Confusing description of 'aliasing of invariant with mutable'?)
+	$(LI $(BUGZILLA 2363): Spurious () required after function name when used with array in prefix form)
+	$(LI $(BUGZILLA 2366): Const member function syntax is missing)
+	$(LI $(BUGZILLA 2368): Calling a function with an address of another function, then calling a returned object is rejected)
+	$(LI $(BUGZILLA 2373): freebsd select does not accept values  &gt; 999,999)
+	$(LI $(BUGZILLA 2376): CTFE fails on array literal of array literals of chars)
+	$(LI $(BUGZILLA 2380): static struct initializer accepted as non static initializer is not documented)
+	$(LI $(BUGZILLA 2383): default arguments can implicitly access private global variables that are not visible at call site)
+	$(LI $(BUGZILLA 2385): spec says all structs are returned via hidden pointer on linux, but it uses registers)
+	$(LI $(BUGZILLA 2390): Missing warning on conversion from int to char)
+    )
+)
+
+$(VERSION 019, Sep 2, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Added $(LINK2 struct.html#Struct-Constructor, struct constructors).)
+	$(LI Special member functions _ctor, _dtor, etc., now have two
+	 leading _ in order to not conflict with the user identifier space.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1322): foreach bypasses invariant)
+	$(LI $(BUGZILLA 1615): inout is allowed in foreach of string literal)
+	$(LI $(BUGZILLA 1627): ICE with a method called _ctor)
+	$(LI $(BUGZILLA 1633): Nonsensical "C style cast illegal" message with !is)
+	$(LI $(BUGZILLA 1771): dmd fails to execute on linux)
+	$(LI $(BUGZILLA 1773): excessively long integer literal)
+	$(LI $(BUGZILLA 1785): Mixing in an incorrect array literal causes infinite loop.)
+	$(LI $(BUGZILLA 2176): Assertion failure: 'sz == es2->sz' on line 1339 in file 'constfold.c' (concatenating strings of different types))
+	$(LI $(BUGZILLA 2183): Bad formatting in std.c.stdlib)
+	$(LI $(BUGZILLA 2190): toHash documentation is deprecated [D2.0])
+	$(LI $(BUGZILLA 2232): DMD generates invalid code when an object file is compiled -inline)
+	$(LI $(BUGZILLA 2241): DMD abort)
+	$(LI $(BUGZILLA 2243): const bool = is(function literal), badly miscast)
+	$(LI $(BUGZILLA 2262): -inline breaks -lib library)
+	$(LI $(BUGZILLA 2286): movmskpd compiled incorrectly)
+	$(LI $(BUGZILLA 2287): std.conv should accept structs defining toString)
+	$(LI $(BUGZILLA 2289): Stack overflow on very large BigInt to string.)
+	$(LI $(BUGZILLA 2308): CTFE crash on foreach over nonexistent variable)
+	$(LI $(BUGZILLA 2311): Static destructors in templates are never run)
+	$(LI $(BUGZILLA 2314): Crash on anonymous class variable instantiation)
+	$(LI $(BUGZILLA 2316): std.file docs are out of date)
+	$(LI $(BUGZILLA 2317): asm offsetof generates: Internal error: ../ztc/cod3.c 2651)
+    )
+)
+
+$(VERSION 018, Aug 7, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Now supports $(LINK2 arrays.html#array-operations, array operations).)
+    )
+    $(BUGSFIXED
+	$(LI Added hash to generated module names when building libs to reduce collisions)
+	$(LI $(BUGZILLA 1622): parameters to TypeInfo_Struct.compare seem to be switched around.)
+	$(LI $(BUGZILLA 1644): Template instantiation should automatically cast to const to make const-ness irrelevant when argument is const anyways)
+	$(LI $(BUGZILLA 2216): bad code generation for static arrays of zero length static arrays)
+	$(LI $(BUGZILLA 2223): Typo in error message)
+	$(LI $(BUGZILLA 2231): missing bigint document)
+	$(LI $(BUGZILLA 2242): linux system calls are canceled by GC)
+	$(LI $(BUGZILLA 2247): bad header file generated for if (auto o = ...) {})
+	$(LI $(BUGZILLA 2248): .di should be a supported file extension)
+	$(LI $(BUGZILLA 2250): Update of user32.lib and kernel32.lib)
+	$(LI $(BUGZILLA 2254): Size of executable almost triples)
+	$(LI $(BUGZILLA 2258): Docs -> Inline Assembler -> Operand Types -> qword missing)
+	$(LI $(BUGZILLA 2259): Assertion failure: '0' on line 122 in file 'statement.c')
+	$(LI $(BUGZILLA 2266): opEquals documentation still says it returns int)
+	$(LI $(BUGZILLA 2269): D BUG: cosine of complex)
+	$(LI $(BUGZILLA 2272): synchronized attribute documentation)
+	$(LI $(BUGZILLA 2273): Whitespace is not inserted after commas)
+    )
+)
+
+$(VERSION 017, Jul 11, 2008, =================================================,
+
+    $(WHATSNEW
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 2207): overload resolution fails with deprecation)
+	$(LI $(BUGZILLA 2208): Deprecated function declarations cannot use deprecated types)
+	$(LI $(BUGZILLA 2209): Typo in doc for offsetof)
+	$(LI $(BUGZILLA 2212): phobos itself should be able to be compiled with '-w' switch)
+	$(LI $(BUGZILLA 2264): typo in documentation regarding atof.)
+    )
+)
+
+$(VERSION 016, Jul 8, 2008, =================================================,
+
+    $(WHATSNEW
+        $(LI re-implemented $(B internal.monitor) in D. Rationalized $(B internal.object))
+	$(LI $(BUGZILLA 288): changed return type of $(B opEquals) from int
+	 to bool. This necessitates doing a grep for opEquals and
+	 $(RED changing all the return values).
+	)
+	$(LI Added $(B .__vptr) and $(B .__monitor) properties for class objects
+	 for use in the internal runtime library.
+	)
+	$(LI Made $(LINK2 rdmd.html, rdmd)'s source available through svn, see $(LINK http://dsource.org/projects/phobos/browser/trunk/tools/rdmd.d))
+	$(LI Simplified $(B std.algorithm) by fusing together higher-order functions taking an alias and their counterparts taking a string)
+	$(LI Added module $(B std.array) containing array operations: $(B insert), $(B erase), and $(B replace))
+	$(LI Changed the $(B enforce)'s implementation to generate smaller code per call)
+	$(LI Changed $(B std.functional.binaryFun) to work with strings and function aliases alike)
+	$(LI In $(B std.getopt), added $(B optChar), $(B assignChar), and $(B endOfOptions), per popular demand :o|)
+	$(LI In $(B std.math), replaced a bunch of $(B const)s with $(B enum)s)
+	$(LI In $(B std.numeric), added Don Clugston as author and operated minor documentation fixes)
+	$(LI Improved $(B std.stdio.chunks) to take an iteration tally in addition to the chunk)
+    )
+    $(BUGSFIXED
+	$(LI $(NG_digitalmars_D_announce 12322): mixin regression)
+	$(LI $(BUGZILLA 203): std.format.doFormat() pads width incorrectly on Unicode strings)
+	$(LI $(BUGZILLA 211): Linking error with alias mixin params and anonymous methods)
+	$(LI $(BUGZILLA 224): Incorrect warning "no return at end of function")
+	$(LI $(BUGZILLA 252): -w and switch returns = bogus "no return at end of function" warning)
+	$(LI $(BUGZILLA 253): Invalid &lt;dl&gt; tag generated by Ddoc)
+	$(LI $(BUGZILLA 294): DDoc: Function templates get double and incomplete documentation)
+	$(LI $(BUGZILLA 398): No way to abort compilation in a doubly recursive mixin)
+	$(LI $(BUGZILLA 423): dmd ignores empty commandline arguments)
+	$(LI $(BUGZILLA 515): Spec incorrect in where .offsetof can be applied)
+	$(LI $(BUGZILLA 520): Invariants allowed to call public functions)
+	$(LI $(BUGZILLA 542): Function parameter of a deprecated type (other than a class) is not caught)
+	$(LI $(BUGZILLA 543): Function return of a deprecated type is not caught)
+	$(LI $(BUGZILLA 544): Variable declared of a deprecated type (other than a class) is not caught)
+	$(LI $(BUGZILLA 545): Attempt to access a static built-in property of a deprecated struct, union, enum or typedef is not caught)
+	$(LI $(BUGZILLA 547): Accessing a deprecated member variable through an explicit object reference is not caught)
+	$(LI $(BUGZILLA 548): Accessing a value of a deprecated enum is not caught)
+	$(LI $(BUGZILLA 566): Adding non-static members and functions to classes using a template doesn't error)
+	$(LI $(BUGZILLA 570): Bogus recursive mixin error)
+	$(LI $(BUGZILLA 571): class instance member template returns strange value)
+	$(LI $(BUGZILLA 572): parse error when using template instantiation with typeof)
+	$(LI $(BUGZILLA 581): Error message w/o line number in dot-instantiated template)
+	$(LI $(BUGZILLA 617): IFTI doesn't use normal promotion rules for non-template parameters)
+	$(LI $(BUGZILLA 870): contradictory error messages for templates)
+	$(LI $(BUGZILLA 951): Missing line number: no constructor provided for a class derived from a class with no default constructor)
+	$(LI $(BUGZILLA 1097): Missing line number: casting array to array of different element size)
+	$(LI $(BUGZILLA 1158): Missing line number: invalid mixin outside function scope)
+	$(LI $(BUGZILLA 1176): Error missing file and line number)
+	$(LI $(BUGZILLA 1187): Segfault with syntax error in two-level mixin.)
+	$(LI $(BUGZILLA 1194): fcmov* emmits incorrect code)
+	$(LI $(BUGZILLA 1207): Documentation on destructors is confusing)
+	$(LI $(BUGZILLA 1341): typeof(int) should probably be legal)
+	$(LI $(BUGZILLA 1601): shr and shl error message is missing line numbers)
+	$(LI $(BUGZILLA 1612): No file/line number for using an undefined label in inline assembly)
+	$(LI $(BUGZILLA 1912): Error without line number (Tuple, invalid value argument))
+	$(LI $(BUGZILLA 1936): Error with no line number (array dimension overflow))
+	$(LI $(BUGZILLA 2076): asm: offset has wrong docs and error without line number)
+	$(LI $(BUGZILLA 2161): Modify compiler to pass array TypeInfo to _adEq and _adCmp instead of element TypeInfo)
+	$(LI $(BUGZILLA 2178): 3 errors without line number: typeof)
+	$(LI $(BUGZILLA 2188): man-or-boy test fails with access violation)
+	$(LI Fixed bugs in $(B std.file.rename) and $(B std.file.remove) on Linux)
+	$(LI Fixed documentation in $(B std.typecons))
+    )
+)
+
+$(VERSION 015, Jun 17, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI $(LINK2 template.html#aliasparameters, Template alias arguments)
+	 can now be literals.)
+	$(LI $(LINK2 template.html#function-templates, Function templates)
+	 can now deduce the return type if they
+	 are declared with $(CODE auto).)
+	$(LI Non-lvalues are no longer matched to $(CODE ref) and $(CODE out)
+	 parameters when
+	 $(LINK2 function.html#function-overloading, overloading).)
+	$(LI Relaxed hidden hijacking detection when hidden function is disjoint
+	 from overloading with any other virtual function in the
+	 $(LINK2 function.html#function-inheritance, hierarchy).)
+	$(LI Added $(LINK2 version.html#PredefinedVersions, version identifier
+	 $(B D_PIC)) when $(B -fPIC) switch is used.)
+	$(LI Added $(LINK2 template.html#Constraint, $(I Constraint)s) to
+	 templates.)
+    )
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1383): Implicit Function Instantiation with typesafe-variadic of delegates doesn't work)
+	$(LI $(BUGZILLA 1559): version statement makes code outside of it disappear)
+	$(LI $(BUGZILLA 1675): "Identifier too long" error with OMF object files)
+	$(LI $(BUGZILLA 1947): ICE (Assertion failure: '0' on statement.c:123) with null mixin)
+	$(LI $(BUGZILLA 1963): -H creates broken headers)
+	$(LI $(BUGZILLA 2098): Outdated docs)
+	$(LI $(BUGZILLA 2099): Text and Sample Code Disagree (non-static local invariant declaration))
+	$(LI $(BUGZILLA 2112): the type of undefined variable incorrectly assumed to be int)
+	$(LI $(BUGZILLA 2118): Inconsistent use of string vs invariant(char[]) in doc)
+	$(LI $(BUGZILLA 2123): Anonymous class crashes)
+	$(LI $(BUGZILLA 2129): foreach won't work with invariant limits)
+	$(LI $(BUGZILLA 2132): CTFE: can't evaluate ~= at compile time, D2 only.)
+	$(LI $(BUGZILLA 2133): anonymous enum without {} doesn't work as asm value)
+	$(LI $(BUGZILLA 2136): typeof(super(...)) counted as a constructor call)
+	$(LI $(BUGZILLA 2140): static if as final statement with no code causes containing code to be skipped)
+	$(LI $(BUGZILLA 2143): Mixed-in identifier is not recognized by static if)
+	$(LI $(BUGZILLA 2144): 'is' is defined to be the same as '==' for non-class and non-array types, but does not call opEquals)
+	$(LI $(BUGZILLA 2145): Phobos buildsystem unable to build html)
+	$(LI $(BUGZILLA 2146): Multiple execution of 'static this' defined in template)
+	$(LI $(BUGZILLA 2149): Auto variables loose the keyword "auto" in di files generated with -H option.)
+    )
+)
+
+$(VERSION 014, May 16, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Added $(B -man) switch to browse manual.)
+	$(LI Added $(B -lib) switch to generate library files.
+	 Also causes multiple object files to be generated from one
+	 source module.)
+	$(LI When generating an executable file, only one object file
+	 is now generated containing all the modules that were compiled, rather
+	 than one object file per module.)
+	$(LI Rewrote the $(LINK2 rdmd.html,$(B rdmd)) utility to properly track
+	 dependencies and command-line compiler options (currently only working
+	 under Linux).)
+	$(LI Changed the Phobos makefile $(TT linux.mak) to take advantage of
+	 the new $(B -lib) feature. Improved full build speed by 3x.)
+	$(LI std.algorithm: Changed the map() function so that it deduces the return type. Also map can be now curried.)
+	$(LI std.contracts: Added file and line information to enforce. Added errnoEnforce that formats the error message according to errno. Added corresponding ErrnoException class.)
+	$(LI std.conv: Made std.to curryable. Changed std.to to throw exception when object-to-object cast fails. Eliminated some superfluous printfs.)
+	$(LI std.encoding: Added new functions encodedLength(dchar) and encode(dchar, ref E[]))
+	$(LI std.encoding: Got rid of types Utf8, Utf16, Utf32, Ascii, Latin1, Windows1252. Introduced types AsciiChar, AsciiString, Latin1Char, Latin1String, Windows1252Char, Windows1252String.)
+	$(LI std.encoding: For now commented out std.encoding.to.)
+	$(LI std.file: Changed Boolean function signatures (e.g. exists) to return bool instead of int. Got rid of some gotos. Added the readText, lastModified, mkdirRecurse, and rmdirRecurse functions.)
+	$(LI std.functional: Improved compose so it accepts an unbounded number of functions. Added the pipe function.)
+	$(LI std.getopt: Added new option stopOnFirstNonOption. Also automatically expand dubious option groups with embedded spaces in them (useful for shebang scripts))
+	$(LI std.math: improved integral powers)
+	$(LI std.md5: Improved signature of sum so it takes multiple arrays. Added getDigestString.)
+	$(LI std.path: changed signatures of test functions from bool to int. Implemented rel2abs for Windows. Improved join so that it accepts multiple paths. Got rid of some gotos with the help of scope statements.)
+	$(LI std.process: added getenv and setenv. Improved system() so it returns the exit code correctly on Linux.)
+	$(LI std.random: added the dice function - a handy (possibly biased) dice.)
+	$(LI std.typecons: Finalized and documented the stupendous Rebindable template.)
+	$(LI std.utf: added the codeLength function. Got rid of some gotos.)
+    )
+    $(BUGSFIXED
+	$(LI std.format: Fixed unlisted bug in raw write for arrays)
+	$(LI std.getopt: Fixed unlisted bug in dealing with one-letter options with bundling disabled)
+	$(LI $(BUGZILLA 2014): fopen fails on large files.)
+	$(LI $(BUGZILLA 2031): Documentation: template value parameters)
+	$(LI $(BUGZILLA 2032): Documentation for creating a class on the stack is unintuitive)
+	$(LI $(BUGZILLA 2037): Article on hijacking is outdated)
+	$(LI $(BUGZILLA 2038): Remove hello2.html from samples directory)
+	$(LI $(BUGZILLA 2039): -ignore switch is missing from compiler docs)
+	$(LI $(BUGZILLA 2054): Const system broken on struct assignment.)
+	$(LI $(BUGZILLA 2055): (ICE) Compiler crash on struct initializer with too many elements)
+	$(LI $(BUGZILLA 2056): Const system does not allow certain safe casts/conversions involving deep composite types)
+	$(LI $(BUGZILLA 2058): Describe hidden value passed to class member functions)
+	$(LI $(BUGZILLA 2063): std.xml access violation for nested, closed tags)
+	$(LI $(BUGZILLA 2065): Return value of std.file.exists() is inverted.)
+	$(LI $(BUGZILLA 2067): call from anonymous class makes access violation.)
+	$(LI $(BUGZILLA 2071): spec doesn't mention pointer arithmetic with two pointer operands)
+	$(LI $(BUGZILLA 2072): std.typecons documentation anomaly.)
+	$(LI $(BUGZILLA 2074): Variant arithmetic operations fail. For now the fix is to comment out all right-hand side operators. Suggestions for a better fix are welcome.)
+	$(LI $(BUGZILLA 2075): Spec does not specify how array literals are stored.)
+	$(LI $(BUGZILLA 2084): operator ?: does not compute the tightest type)
+	$(LI $(BUGZILLA 2086): Describe relationship between string and char[] more explicitly)
+	$(LI $(BUGZILLA 2089): Issues with CTFE and tuple indexes)
+	$(LI $(BUGZILLA 2090): Cannot alias a tuple member which is a template instance)
+	$(LI $(BUGZILLA 2100): Assertion failure: '0' on line 4842 in file 'expression.c')
+	$(LI $(BUGZILLA 2109): asm {lea EAX, [0*0+EAX]; }  rejected.)
+    )
+)
+
+$(VERSION 013, Apr 22, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Added $(B -ignore) switch to ignore unsupported pragmas.)
+	$(LI Unsupported pragmas now printed out with $(B -v) switch.)
+	$(LI Added $(LINK2 operatoroverloading.html#Dot, opDot), which is
+	 $(RED experimental only).)
+	$(LI $(LINK2 statement.html#SwitchStatement, $(I SwitchStatement))s
+	 can now accept
+	 runtime initialized const and invariant case statements.)
+	$(LI Changed $(CODE __FILE__) and $(CODE __LINE__) so they work as
+	 parameter default initializers.)
+	$(LI Incorporated Benjamin Shropshire's doc changes)
+	$(LI Hidden methods now get a compile time warning rather than a runtime
+	 one.)
+	$(LI $(LINK2 html.html, Html source files) are now deprecated.)
+	$(LI Added $(LINK2 function.html#pure-functions, pure) and
+	 $(LINK2 function.html#nothrow-functions, nothrow) function attributes,
+	 although their semantics are not implemented.)
+	$(LI Deprecated $(I VolatileStatement); use
+	 $(LINK2 statement.html#SynchronizedStatement, $(I SynchronizedStatement)) instead.)
+	$(LI Added $(B __thread) storage class for thread local storage.
+	 This is $(RED for testing purposes only) to check out the machinery
+	 in the back end. The front end design of this will change.)
+	$(LI $(LINK2 http://www.digitalmars.com/ctg/obj2asm.html, $(B obj2asm))
+	 and $(LINK2 http://www.digitalmars.com/ctg/dumpobj.html, $(B dumpobj))
+	 now better handle special ELF fixup records.)
+	$(LI Added $(LINK2 function.html#partial-ordering, partial ordering)
+	 rules to disambiguate function overloading.)
+	$(LI std.perf: Bill Baxter cleaned it up.)
+	$(LI std.xml.Document constructor now creates whole DOM tree.)
+	$(LI Added std.encoding.)
+    )
+    $(BUGSFIXED
+	$(LI $(NG_digitalmars_D 69085): const/invariant bug?)
+	$(LI $(BUGZILLA 1712): vtbl[0] for interface not set to corresponding Interface*)
+	$(LI $(BUGZILLA 1723): __traits(getVirtualFunctions) on a non-function fails badly)
+	$(LI $(BUGZILLA 1741): crash on associative array with static array as index type)
+	$(LI $(BUGZILLA 1905): foreach docs inconsistency)
+	$(LI $(BUGZILLA 1906): foreach cannot use index with large arrays)
+	$(LI $(BUGZILLA 1925))
+	$(LI $(BUGZILLA 1935): The std.recls samples in the DMD .zip are obsolete.)
+	$(LI $(BUGZILLA 1967): getDirName does not seem to use altsep on windows)
+	$(LI $(BUGZILLA 1978): Wrong vtable call)
+	$(LI $(BUGZILLA 1991): Dmd hangs)
+	$(LI $(BUGZILLA 2016): 'invariant' TypeSpecialization is missing)
+	$(LI $(BUGZILLA 2019): Appending a one-element array literal doesn't work)
+    )
+)
+
+$(VERSION 012, Mar 6, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI Added predefined version($(LINK2 version.html#PredefinedVersions, unittest)). See $(BUGZILLA 458))
+	$(LI Removed $(B std.math2))
+	$(LI Added compile time error for comparing class types against $(CODE null).)
+	$(LI Added struct destructors and postblits.)
+
+	$(LI std.algorithm: Made some imports conditional for the Unittest
+	version; fixed doc typo; made min and max always return the tightest
+	type and work with mixes of signed and unsigned; changed enum value
+	names to obey lowercase convention; changed OrderStrategy to
+	SwapStrategy as it's not just for ordering (e.g. see eliminate).)
+
+	$(LI std.bitmanip: simplified code generated for bitfields and improved
+	error message.)
+
+	$(LI std.format: ate dogfood: used bitfields internally.)
+
+	$(LI std.functional: fixed binaryfun to work with constant-size arrays;
+	added compose.)
+
+	$(LI std.random: made unpredictableSeed return different numbers every
+	call (except for rarely-encountered MT scenarios); added private
+	variable name that will take experts millenia to figure out; changed the
+	boundaries syntax from two separate characters '[', '$(LPAREN)' to one
+	string "[$(LPAREN)" throughout.)
+
+	$(LI std.traits: added mostNegative, mostly to assuage for the
+	unpardonable mistake of inheriting C++'s unpardonable mistake of
+	defining "min" to mean very different things for floating-point types
+	and integral types.)
+
+	$(LI std.typecons: added undocumented Rebindable in preparation for
+	opImplicitCast.)
+
+	$(LI std.math:
+	$(UL
+	$(LI Support for different CPU IEEE 'real' formats: 64-bit, 80-bit and
+	128-bit (quadruple) reals, both BigEndian and LittleEndian; partial
+	support for non-IEEE 'doubledouble' reals.)
+	$(LI Added implementation of nextafter $(BUGZILLA 1722) and scalb for
+	DMD-Windows.)
+	$(LI Added nextUp(), nextDown())
+	$(LI $(BUGZILLA 1881): feqrel nonsensical for non-real arguments.)
+	$(LI internal functions isPosZero(), isNegZero() removed in favour of
+	the more generally useful isIdentical().)
+	$(LI asm versions of functions which were not implemented by DMD
+	Windows:  scalb, lrint.)
+	$(LI added creal expi(real y) which is useful for simultaneous
+	calculation of sin + cos.)
+	)
+	)
+    )
+    $(BUGSFIXED
+	$(LI std.contracts: fixed unlisted bug in pointsTo.)
+	$(LI std.conv: fixed bug related to number-to-number conversion (T.min
+	hits again).)
+	$(LI Fixed dwarf bug with DT_AT_upper_bound)
+	$(LI $(BUGZILLA 756): IFTI for tuples only works if tuple parameter is last)
+	$(LI $(BUGZILLA 1454): IFTI cant  deduce parameter if alias argument used)
+	$(LI $(BUGZILLA 1661): Not possible to specialize on template with integer parameter)
+	$(LI $(BUGZILLA 1800): Compiler crash on enums nested in structs)
+	$(LI $(BUGZILLA 1801): Const structs should be assignable to non-const variables unless they contain references)
+	$(LI $(BUGZILLA 1806): "const" makes typesafe variadic arguments not work properly.)
+	$(LI $(BUGZILLA 1809): template.c:2600)
+	$(LI $(BUGZILLA 1810): MmFile anonymous mapping does not work under win32)
+	$(LI $(BUGZILLA 1819): spurious warning about missing return statement after synchronized)
+	$(LI $(BUGZILLA 1821): ICE when using __traits isSame on const/invariant variables)
+	$(LI $(BUGZILLA 1823): Implicit conversion to const on associative array)
+	$(LI $(BUGZILLA 1828): Several Thread Issues)
+	$(LI $(BUGZILLA 1833): std.c.windows.windows should use enums for constants, or be more selective about use of extern(Windows))
+	$(LI $(BUGZILLA 1836): Inline assembler can't use enum values as parameters.)
+	$(LI $(BUGZILLA 1837): Make dmd stop flooding the console: prints content of passed parameter file)
+	$(LI $(BUGZILLA 1843): Bogus unreachable statement on forward referenced struct, lacks line number)
+	$(LI $(BUGZILLA 1850): The compiler accepts lower case asm registers.)
+	$(LI $(BUGZILLA 1851): missing opCall? when cast away const struct)
+	$(LI $(BUGZILLA 1852): you get opCall missing when cast to a struct(diagnostic))
+	$(LI $(BUGZILLA 1853): opCmp documentation really needs some examples)
+	$(LI $(BUGZILLA 1854): bug in new flow analysis (warnings on valid code))
+	$(LI $(BUGZILLA 1857): Runtime segfault while profileing - jump to invalid code address)
+	$(LI $(BUGZILLA 1862): asm: [ESI+1*EAX] should be a legal addr mode)
+	$(LI $(BUGZILLA 1865): Escape sequences are flawed.)
+	$(LI $(BUGZILLA 1867): lazy adds spurious const qualifier)
+	$(LI $(BUGZILLA 1871): DMD debug messages printed)
+	$(LI $(BUGZILLA 1873): structs with at least one immutable member are completely immutable)
+	$(LI $(BUGZILLA 1874): __traits(allMembers, T) fails to list methods which only have non-mutating overloads)
+	$(LI $(BUGZILLA 1876): inside a non-static class method, should "&(     f)" be same as "&(this.f)" ?)
+	$(LI $(BUGZILLA 1877): Errors in the documentation of std.math.atan2)
+	$(LI $(BUGZILLA 1882): Internal error: ..\ztc\cod1.c 2529)
+	$(LI $(BUGZILLA 1883): templates instantiated as real gives incorrect values)
+	$(LI $(BUGZILLA 1884): manifest constants for strings)
+	$(LI $(BUGZILLA 1885): Syntax error for object identity test between invariant/mutable references)
+	$(LI $(BUGZILLA 1887): compiler freeze on array of dyn. arrays with empty first initializer)
+    )
+)
+
+$(VERSION 011, Feb 18, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI std.typecons: fixed code bloat issue; added Tuple.toString; added function tuple(); fixed unlisted bug in enumValuesImpl.)
+	$(LI std.process: added function shell().)
+	$(LI std.math: minor change in approxEqual.)
+	$(LI std.contracts: added functions pointsTo())
+	$(LI std.numeric: minor unittest fixes.)
+	$(LI std.bitmanip: fixed code bloat issue, reintroduced FloatRep and DoubleRep.)
+	$(LI std.conv: minor simplification of implementation.)
+	$(LI std.regexp: added reference to ECMA standard in the documentation.)
+	$(LI std.getopt: changed return type from bool to void, error is signaled by use of exceptions.)
+	$(LI std.functional: added unaryFun, binaryFun, adjoin.)
+	$(LI std.string: updated documentation, changed code to compile with warnings enabled.)
+	$(LI std.traits: changed FieldTypeTuple; added RepresentationTypeTuple, hasAliasing; fixed bug 1826; added call to flush() from within write; fixed unlisted bug in lines().)
+	$(LI std.algorithm: added map, reduce, filter, inPlace, move, swap, overwriteAdjacent, find, findRange, findBoyerMoore, findAdjacent, findAmong, findAmongSorted, canFind, canFindAmong, canFindAmongSorted, count, equal, overlap, min, max, mismatch, EditOp, none, substitute, insert, remove, levenshteinDistance, levenshteinDistanceAndPath, copy, copyIf, iterSwap, swapRanges, reverse, rotate, SwapStrategy, Unstable, Semistable, Stable, eliminate, partition, nthElement, sort, schwartzSort, partialSort, isSorted, makeIndex, schwartzMakeIndex, lowerBound, upperBound, equalRange, canFindSorted.)
+	$(LI std.thread: fixed so it compiles with warnings enabled.)
+	$(LI std.file: made getSize() faster under Linux.)
+	$(LI std.random: fixed so it compiles with warnings enabled; improved function uniform so it deduces type generated from its arguments.)
+	$(LI std.format: added fixes to make formatting work with const data.)
+	$(LI std.path: minor documentation changes. )
+	$(LI Added $(CODE std.xml))
+	$(LI Added $(CODE std.complex))
+	$(LI Added $(CODE std.iterator))
+	$(LI Added $(CODE std.c.linux.tipc))
+	$(LI Added $(CODE std.c.linux.termios))
+	$(LI Added $(CODE nothrow) keyword)
+	$(LI Re-enabled auto interfaces.)
+	$(LI Now allow static arrays to be lvalues.)
+	$(LI Now allows implicit casting of $(CODE null) to/from const/invariant.)
+	$(LI Now allows implicit casting of $(I StructLiteral)s if each of
+	 its arguments can be implicitly cast.)
+	$(LI Now allows implicit casting of structs to/from const/invariant if
+	 each of its fields can be.)
+	$(LI Added $(LINK2 pragma.html#Predefined-Pragmas, pragma startaddress).)
+	$(LI $(CODE .tupleof) can now access private fields of a struct/class)
+	$(LI Enhancement $(BUGZILLA 493): Partial IFTI does not work)
+    )
+
+    $(BUGSFIXED
+	$(LI Fixed $(NG_digitalmars_D 66406) Remaining const niggles #1 - Custom POD types)
+	$(LI Fixed display of ddoc template parameters that were aliased)
+	$(LI Fixed bug in std.file.readln() for Windows in translated mode)
+	$(LI $(BUGZILLA 1072): CTFE: crash on for loop with blank increment)
+	$(LI $(BUGZILLA 1435): DDoc: Don't apply DDOC_PSYMBOL everywhere)
+	$(LI $(BUGZILLA 1815): foreach with interval does not increment pointers correctly)
+	$(LI $(BUGZILLA 1825): local instantiation and function nesting)
+	$(LI $(BUGZILLA 1837): Make dmd stop flooding the console: prints content of passed parameter file)
+	$(LI $(BUGZILLA 1842): Useless linker command line output during compilation on Linux)
+    )
+)
+
+$(VERSION 010, Jan 20, 2008, =================================================,
+
+    $(WHATSNEW
+	$(LI $(CODE opAssign) can no longer be overloaded for class objects.)
+	$(LI $(CODE WinMain) and $(CODE DllMain) can now be in template mixins.)
+	$(LI Added $(CODE pure) keyword.)
+    )
+
+    $(BUGSFIXED
+	$(LI $(BUGZILLA 1319): compiler crashes with functions that take const ref arguments)
+	$(LI $(BUGZILLA 1697): Internal error: ..\ztc\cgcod.c 2322 with -O)
+	$(LI $(BUGZILLA 1700): ICE attempting to modify member of const return struct)
+	$(LI $(BUGZILLA 1707): '==' in TemplateParameterList in IsExpression causes segfault)
+	$(LI $(BUGZILLA 1711): typeof with delegate literal not allowed as template parameter)
+	$(LI $(BUGZILLA 1713): foreach index with tuples and templates fails)
+	$(LI $(BUGZILLA 1718): obscure exit with error code 5)
+	$(LI $(BUGZILLA 1719): Compiler crash or unstable code generation with scoped interface instances)
+	$(LI $(BUGZILLA 1720): std.math.NotImplemented missing a space in message)
+	$(LI $(BUGZILLA 1724): Internal error: toir.c 177)
+	$(LI $(BUGZILLA 1725): std.stream.BufferedFile.create should use FileMode.OutNew)
+	$(LI $(BUGZILLA 1757): there is an fault  in phobos windows api interface)
+	$(LI $(BUGZILLA 1762): Wrong name mangling for pointer args of free extern (C++) functions)
+	$(LI $(BUGZILLA 1767): rejects-valid, diagnostic)
+	$(LI $(BUGZILLA 1769): Typo on the page about exceptions)
+	$(LI $(BUGZILLA 1773): excessively long integer literal)
+	$(LI $(BUGZILLA 1779): Compiler crash when deducing more than 2 type args)
+	$(LI $(BUGZILLA 1783): DMD 1.025 asserts on code with struct, template, and alias)
+	$(LI $(BUGZILLA 1788): dmd segfaults without info)
+	$(LI $(NG_digitalmars_D_announce 11066): Re: DMD 1.025 and 2.009 releases)
+    )
+)
+
+$(VERSION 009, Jan 1, 2008, =================================================,
+
+$(WHATSNEW
+	$(LI Redid const/invariant semantics again.)
+	$(LI Extended enums to allow declaration of manifest constants.)
+)
+
+$(BUGSFIXED
+	$(LI $(BUGZILLA 1111): enum value referred to by another value of same enum is considered as enum's base type, not enum type)
+	$(LI $(BUGZILLA 1694): Zip::ArchiveMember::name format bug)
+	$(LI $(BUGZILLA 1702): ICE when identifier is undefined)
+	$(LI $(BUGZILLA 1738): Error on struct without line number)
+	$(LI $(BUGZILLA 1742): CTFE fails on some template functions)
+	$(LI $(BUGZILLA 1743): interpret.c:1421 assertion failure on CTFE code)
+	$(LI $(BUGZILLA 1744): CTFE: crash on assigning void-returning function to variable)
+	$(LI $(BUGZILLA 1745): Internal error: ..\ztc\out.c 115)
+	$(LI $(BUGZILLA 1749): std.socket not thread-safe due to strerror)
+	$(LI $(BUGZILLA 1753): String corruption in recursive CTFE functions)
+	$(LI $(NG_digitalmars_D 63456): Cannot overload on constancy of this)
+)
+)
+
+$(VERSION 008, Nov 27, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI std.string: Made munch more general and added function chompPrefix.)
+	$(LI std.variant: Added documentation for variantArray)
+	$(LI std.traits: Added CommonType template, fixed isStaticArray.)
+	$(LI std.bitarray: scheduled for deprecation)
+	$(LI std.bitmanip: new module with the content of std.bitarray plus the bitfields, FloatRep, and DoubleRep templates)
+	$(LI std.process: Made getpid visible in Linux builds)
+	$(LI std.math: Made nextafter visible for all floating types. Added approxEqual template.)
+	$(LI std.contracts: Added enforce signature taking an exception)
+	$(LI std.conv: Made conv_error a template parameterized on the types being converted.)
+	$(LI std.stdio: Cosmetic changes.)
+	$(LI std.system: Cosmetic changes.)
+	$(LI std.file: Fixed bug in function dirEntries.)
+	$(LI std.random: Major addition of engines and distributions.)
+	$(LI std.format: Added raw ('r') format specifier for writef*.)
+	$(LI std.path: Added rel2abs (Linux version only).)
+	$(LI std.algorithm: new module)
+	$(LI std.typecons: new module)
+	$(LI std.functional: new module)
+	$(LI std.numeric: new module)
+	$(LI Added $(LINK2 struct.html#ConstStruct, const/invariant structs),
+	 $(LINK2 class.html#ConstClass, classes) and
+	 $(LINK2 interface.html#ConstInterface, interfaces).)
+	$(LI Added $(CODE const) and $(CODE invariant) to $(LINK2 expression.html#IsExpression, IsExpression)s.)
+	$(LI Added $(CODE typeof(return)) type specifier.)
+	$(LI Changed the way coverage analysis is done so it is independent
+	 of order dependencies among modules.)
+	$(LI Revamped const/invariant.)
+)
+
+$(BUGSFIXED
+	$(LI $(BUGZILLA 70): valgrind: Conditional jump or move depends on uninitialised value(s) in elf_findstr)
+	$(LI $(BUGZILLA 71): valgrind: Invalid read of size 4 in elf_renumbersyms)
+	$(LI $(BUGZILLA 204): Error message on attempting to instantiate an abstract class needs to be improved)
+	$(LI $(BUGZILLA 1508): dmd/linux template symbol issues)
+	$(LI $(BUGZILLA 1651): .di file generated with -H switch does not translate function() arguments correctly)
+	$(LI $(BUGZILLA 1655): Internal error: ..\ztc\cgcod.c 1817)
+	$(LI $(BUGZILLA 1656): illegal declaration accepted)
+	$(LI $(BUGZILLA 1664): (1.23).stringof  generates bad code)
+	$(LI $(BUGZILLA 1665): Internal error: ..\ztc\cod2.c 411)
+)
+)
+
+$(VERSION 007, Oct 31, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Functors now supported by std.traits.ReturnType().)
+	$(LI Transitive const now leaves invariants intact in the tail.)
+	$(LI Added overloadable unary * operation as opStar().)
+	$(LI Full closure support added.)
+	$(LI Data items in static data segment &gt;= 16 bytes in size
+	are now paragraph aligned.)
+)
+
+$(BUGSFIXED
+	$(LI Variables of type void[0] can now be declared.)
+	$(LI Static multidimensional arrays can now be initialized with
+	other matching static multidimensional arrays.)
+	$(LI $(BUGZILLA 318): wait does not release thread resources on Linux)
+	$(LI $(BUGZILLA 322): Spawning threads which allocate and free memory leads to pause error on collect)
+	$(LI $(BUGZILLA 645): Race condition in std.thread.Thread.pauseAll)
+	$(LI $(BUGZILLA 689): Clean up the spec printfs!)
+	$(LI $(BUGZILLA 697): No const folding on asm db,dw, etc)
+	$(LI $(BUGZILLA 706): incorrect type deduction for array literals in functions)
+	$(LI $(BUGZILLA 708): inline assembler: "CVTPS2PI mm, xmm/m128" fails to compile)
+	$(LI $(BUGZILLA 709): inline assembler: "CVTPD2PI mm, xmm/m128" fails to compile)
+	$(LI $(BUGZILLA 718): Internal error: ../ztc/cgcod.c 562)
+	$(LI $(BUGZILLA 723): bad mixin of class definitions at function level: func.c:535: virtual void FuncDeclaration::semantic3(Scope*): Assertion `0' failed)
+	$(LI $(BUGZILLA 725): expression.c:6516: virtual Expression* MinAssignExp::semantic(Scope*): Assertion `e2->type->isfloating()' failed.)
+	$(LI $(BUGZILLA 726): incorrect error line for "override" mixin)
+	$(LI $(BUGZILLA 729): scope(...) statement in SwitchBody causes compiler to segfault)
+	$(LI $(BUGZILLA 1258): Garbage collector loses memory upon array concatenation)
+	$(LI $(BUGZILLA 1480): std.stream throws the new override warning all over the place)
+	$(LI $(BUGZILLA 1483): Errors in threads not directed to stderr)
+	$(LI $(BUGZILLA 1557): std.zlib allocates void[]s instead of ubyte[]s, causing leaks.)
+	$(LI $(BUGZILLA 1580): concatenating invariant based strings should work)
+	$(LI $(BUGZILLA 1593): ICE compiler crash empty return statement in function)
+	$(LI $(BUGZILLA 1613): DMD hangs on syntax error)
+	$(LI $(BUGZILLA 1618): Typo in std\system.d)
+)
+)
+
+$(VERSION 006, Oct 16, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI $(RED Transformed all of $(CODE string), $(CODE wstring),
+	and $(CODE dstring) into invariant definitions).
+	Tons of changes in function signatures and
+	implementations rippled through the standard library.
+	Initial experience
+	with invariant strings seems to be highly encouraging.)
+	$(LI Implemented $(LINK2 function.html#overload-sets, Overload Sets) for functions and templates.)
+	$(LI Added the $(LINK2 phobos/std_getopt.html,std.getopt) module that makes standards-conforming command-line processing easy.)
+	$(LI Added the parse and assumeUnique to the $(LINK2 phobos/std_conv.html, std.conv) module.)
+	$(LI Added the dirEntries function to the $(LINK2 phobos/std_file.html, std.file) module.)
+	$(LI Added the basename and dirname functions (which alias the less gainful names getBaseName and getDirectoryName to the $(LINK2 phobos/std_path.html,std.path) module.))
+	$(LI Added optional terminator to readln; added the convenience functions fopen and popen; added functions lines and chunks; all to the $(LINK2 phobos/std_stdio.html, std.stdio) module.)
+	$(LI Added the munch function to the $(LINK2 phobos/std_string.html, std.string) module.)
+	$(LI Fixed isStaticArray; added BaseClassesTuple, TransitiveBaseTypeTuple, ImplicitConversionTargets, isIntegral, isFloatingPoint, isNumeric, isSomeString, isAssociativeArray, isDynamicArray, isArray; all to the $(LINK2 phobos/std_traits.html, std.traits) module.)
+	$(LI Added the $(LINK2 phobos/std_variant.html, std.variant) module.)
+	$(LI Incorporated many of the Tango GC structural differences (much more to go still).)
+	$(LI Added the $(LINK2 phobos/std_contracts.html, std.contracts) module.)
+	$(LI Breaking change: $(CODE std.stdio.writef) can now only accept a format as
+	its first argument.)
+)
+
+$(BUGSFIXED
+   $(LI $(BUGZILLA 1478): Avoid libc network api threadsafety issues)
+   $(LI $(BUGZILLA 1491): Suppress SIGPIPE when sending to a dead socket)
+   $(LI $(BUGZILLA 1562): Deduction of template alias parameter fails)
+   $(LI $(BUGZILLA 1571): Const on function parameters not carried through to .di file)
+   $(LI $(BUGZILLA 1575): Cannot do assignment of tuples)
+   $(LI $(BUGZILLA 1579): write[ln] fails for obj.toString())
+   $(LI $(BUGZILLA 1580): Concatenating invariant based strings should work)
+)
+)
+
+$(VERSION 005, Oct 1, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI $(TT std.math.sin), $(TT cos), $(TT tan) are now evaluated at
+	compile time if the argument is a constant.)
+	$(LI Added Cristian Vlasceanu's idea for
+	$(LINK2 cpp_interface.html, C++ interface) for 'plugins')
+	$(LI Overhaul phobos $(TT linux.mak) and add documentation build logic)
+	$(LI Massive additions to $(LINK2 phobos/std_conv.html, std.conv))
+	$(LI Add $(CODE writeln()) and $(CODE write()) to $(LINK2 phobos/std_stdio.html, std.stdio))
+)
+
+$(BUGSFIXED
+	$(LI Fix std.boxer boxing of Object's (unit test failure))
+	$(LI Fix std.demangle to not show hidden parameters (this and delegate context pointers))
+	$(LI $(BUGZILLA 217): typeof not working properly in internal/object.d)
+	$(LI $(BUGZILLA 218): Clean up old code for packed bit array support)
+	$(LI $(BUGZILLA 223): Error message for unset constants doesn't specify error location)
+	$(LI $(BUGZILLA 278): dmd.conf search path doesn't work)
+	$(LI $(BUGZILLA 479): can't compare arrayliteral statically with string)
+	$(LI $(BUGZILLA 549): A class derived from a deprecated class is not caught)
+	$(LI $(BUGZILLA 550): Shifting by more bits than size of quantity is allowed)
+	$(LI $(BUGZILLA 551): Modulo operator works with imaginary and complex operands)
+	$(LI $(BUGZILLA 556): is (Type Identifier : TypeSpecialization) doesn't work as it should)
+	$(LI $(BUGZILLA 668): Use of *.di files breaks the order of static module construction)
+	$(LI $(BUGZILLA 1125): Segfault using tuple in asm code, when size not specified)
+	$(LI $(BUGZILLA 1437): dmd crash: "Internal error: ..\ztc\cod4.c 357")
+	$(LI $(BUGZILLA 1456): Cannot use a constant with alias template parameters)
+	$(LI $(BUGZILLA 1474): regression: const struct with an initializer not recognized as a valid alias template param)
+	$(LI $(BUGZILLA 1488): Bad code generation when using tuple from asm)
+	$(LI $(BUGZILLA 1510): ICE: Assertion failure: 'ad' on line 925 in file 'func.c')
+	$(LI $(BUGZILLA 1523): struct literals not work with typedef)
+	$(LI $(BUGZILLA 1530): Aliasing problem in DMD front end code)
+	$(LI $(BUGZILLA 1531): cannot access typedef'd class field)
+	$(LI $(BUGZILLA 1537): Internal error: ..\ztc\cgcod.c 1521)
+)
+)
+
+$(VERSION 004, Sep 5, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Added command line switches $(B -defaultlib) and $(B -debuglib))
+	$(LI $(BUGZILLA 1445): Add default library options to sc.ini / dmd.conf)
+	$(LI Changed result type of IsExpression from int to bool.)
+	$(LI Added $(B isSame) and $(B compiles) to $(B __traits).)
+	$(LI Added optional $(I TemplateParameterList) to $(I IsExpression).)
+	$(LI Added warning when $(B override) is omitted.)
+	$(LI Added $(B std.hiddenfunc).)
+	$(LI Added trace_term() to object.d to fix $(BUGZILLA 971): No profiling output is generated if the application terminates with exit)
+	$(LI Multiple module static constructors/destructors allowed.)
+	$(LI Added new syntax for string literals (delimited, heredoc, D tokens))
+	$(LI Added __EOF__ token)
+)
+
+$(BUGSFIXED
+	$(LI Fixed $(NG_digitalmars_D 56414))
+	$(LI $(BUGZILLA 961): std.windows.registry stack corruption)
+	$(LI $(BUGZILLA 1315): CTFE doesn't default initialise arrays of structs)
+	$(LI $(BUGZILLA 1342): struct const not accepted as initializer for another struct)
+	$(LI $(BUGZILLA 1363): Compile-time issue with structs in 'for')
+	$(LI $(BUGZILLA 1375): CTFE fails for null arrays)
+	$(LI $(BUGZILLA 1378): A function call in an array literal causes compiler to crash)
+	$(LI $(BUGZILLA 1384): Compiler segfaults when using struct variable like a function with no opCall member.)
+	$(LI $(BUGZILLA 1388): multiple static constructors allowed in module)
+	$(LI $(BUGZILLA 1414): compiler crashes with CTFE and structs)
+	$(LI $(BUGZILLA 1421): Stack Overflow when using __traits(allMembers...))
+	$(LI $(BUGZILLA 1423): Registry: corrupted value)
+	$(LI $(BUGZILLA 1436): std.date.getLocalTZA() returns wrong values when in DST under Windows)
+	$(LI $(BUGZILLA 1446): Missing comma in Final Const and Invariant page title)
+	$(LI $(BUGZILLA 1447): CTFE does not work for static member functions of a class)
+	$(LI $(BUGZILLA 1448): UTF-8 output to console is seriously broken)
+	$(LI $(BUGZILLA 1450): Registry: invalid UTF-8 sequence)
+	$(LI $(BUGZILLA 1460): Compiler crash on valid code)
+	$(LI $(BUGZILLA 1464): "static" foreach breaks CTFE)
+	$(LI $(BUGZILLA 1468): A bug about stack overflow.)
+)
+)
+
+$(VERSION 003, Jul 21, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Added 0x78 Codeview extension for type $(B dchar).)
+	$(LI Moved $(B next) member from $(B Object.Error) to $(B Object.Exception))
+	$(LI Added $(LINK2 statement.html#ForeachRangeStatement, ForeachRangeStatement)).
+	$(LI Added $(B extern (System)))
+	$(LI Added $(LINK2 traits.html, std.traits))
+	$(LI $(BUGZILLA 345): updated std.uni.isUniAlpha to Unicode 5.0.0)
+)
+
+$(BUGSFIXED
+	$(LI $(BUGZILLA 46): Included man files should be updated)
+	$(LI $(BUGZILLA 268): Bug with SocketSet and classes)
+	$(LI $(BUGZILLA 406): std.loader is broken on linux)
+	$(LI $(BUGZILLA 561): Incorrect duplicate error message when trying to create instance of interface)
+	$(LI $(BUGZILLA 588): lazy argument and nested symbol support to std.demangle)
+	$(LI $(BUGZILLA 668): Use of *.di files breaks the order of static module construction)
+	$(LI $(BUGZILLA 1110): std.format.doFormat + struct without toString() == crash)
+	$(LI $(BUGZILLA 1300): Issues with struct in compile-time function)
+	$(LI $(BUGZILLA 1306): extern (Windows) should work like extern (C) for variables)
+	$(LI $(BUGZILLA 1318): scope + ref/out parameters are allowed, contrary to spec)
+	$(LI $(BUGZILLA 1320): Attributes spec uses 1.0 const semantics in 2.0 section)
+	$(LI $(BUGZILLA 1331): header file genaration generates a ":" instead of ";" at pragma)
+	$(LI $(BUGZILLA 1332): Internal error: ../ztc/cod4.c 357)
+	$(LI $(BUGZILLA 1333): -inline ICE: passing an array element to an inner class's constructor in a nested function, all in a class or struct)
+	$(LI $(BUGZILLA 1336): Internal error when trying to construct a class declared within a unittest from a templated class.)
+)
+)
+
+$(VERSION 002, Jul 1, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Renamed linux library from $(B libphobos.a) to $(B libphobos2.a))
+)
+
+$(BUGSFIXED
+	$(LI $(BUGZILLA 540): Nested template member function error - "function expected before ()")
+	$(LI $(BUGZILLA 559): Final has no effect on methods)
+	$(LI $(BUGZILLA 627): Concatenation of strings to string arrays with ~ corrupts data)
+	$(LI $(BUGZILLA 629): Misleading error message "Can only append to dynamic arrays")
+	$(LI $(BUGZILLA 639): Escaped tuple parameter ICEs dmd)
+	$(LI $(BUGZILLA 641): Complex string operations in template argument ICEs dmd)
+	$(LI $(BUGZILLA 657): version(): ignored)
+	$(LI $(BUGZILLA 689): Clean up the spec printfs!)
+	$(LI $(BUGZILLA 1103): metastrings.ToString fails for long &gt; 0xFFFF_FFFF)
+	$(LI $(BUGZILLA 1107): CodeView: wrong CV type for bool)
+
+	$(LI $(BUGZILLA 1118): weird switch statement behaviour)
+	$(LI $(BUGZILLA 1186): Bind needs a small fix)
+	$(LI $(BUGZILLA 1199): Strange error messages when indexing empty arrays or strings at compile time)
+	$(LI $(BUGZILLA 1200): DMD crash: some statements containing only a ConditionalStatement with a false condition)
+	$(LI $(BUGZILLA 1203): Cannot create Anonclass in loop)
+	$(LI $(BUGZILLA 1204): segfault using struct in CTFE)
+	$(LI $(BUGZILLA 1206): Compiler hangs on this() after method in class that forward references struct)
+	$(LI $(BUGZILLA 1207): Documentation on destructors is confusing)
+	$(LI $(BUGZILLA 1211): mixin("__LINE__") gives incorrect value)
+	$(LI $(BUGZILLA 1212): dmd generates bad line info)
+
+	$(LI $(BUGZILLA 1216): Concatenation gives 'non-constant expression' outside CTFE)
+	$(LI $(BUGZILLA 1217): Dollar ($) seen as non-constant expression in non-char[] array)
+	$(LI $(BUGZILLA 1219): long.max.stringof gets corrupted)
+	$(LI $(BUGZILLA 1224): Compilation does not stop on asserts during CTFE)
+	$(LI $(BUGZILLA 1228): Class invariants should not be called before the object is fully constructed)
+	$(LI $(BUGZILLA 1233): std.string.ifind(char[] s, char[] sub) fails on certain non ascii strings)
+	$(LI $(BUGZILLA 1234): Occurrence is misspelled almost everywhere)
+	$(LI $(BUGZILLA 1235): std.string.tolower() fails on certain utf8 characters)
+	$(LI $(BUGZILLA 1236): Grammar for Floating Literals is incomplete)
+	$(LI $(BUGZILLA 1239): ICE when empty tuple is passed to variadic template function)
+
+	$(LI $(BUGZILLA 1242): DMD AV)
+	$(LI $(BUGZILLA 1244): Type of array length is unspecified)
+	$(LI $(BUGZILLA 1247): No time zone info for India)
+	$(LI $(BUGZILLA 1285): Exception typedefs not distinguished by catch)
+	$(LI $(BUGZILLA 1287): Iterating over an array of tuples causes "glue.c:710: virtual unsigned int Type::totym(): Assertion `0' failed.")
+	$(LI $(BUGZILLA 1290): Two ICEs, both involving real, imaginary, ? : and +=.)
+	$(LI $(BUGZILLA 1291): .stringof for a class type returned from a template doesn't work)
+	$(LI $(BUGZILLA 1292): Template argument deduction doesn't work)
+	$(LI $(BUGZILLA 1294): referencing fields in static arrays of structs passed as arguments generates invalid code)
+	$(LI $(BUGZILLA 1295): Some minor errors in the lexer grammar)
+)
+)
+
+$(VERSION 001, Jun 27, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Added $(B D_Version2) predefined identifier to indicate
+	this is a D version 2.0 compiler)
+	$(LI Added $(B __VENDOR__) and $(B __VERSION__).)
+	$(LI Now an error to use both $(B const) and $(B invariant) as storage
+	classes for the same declaration)
+	$(LI The $(B .init) property for a variable is now based on its
+	type, not its initializer.)
+)
+
+$(BUGSFIXED
+	$(LI $(B std.compiler) now is automatically updated.)
+	$(LI Fixed problem catting mutable to invariant arrays.)
+	$(LI Fixed CFTE bug with e++ and e--.)
+	$(LI $(BUGZILLA 1254): Using a parameter initialized to void in a compile-time evaluated function doesn't work)
+	$(LI $(BUGZILLA 1256): "with" statement with symbol)
+	$(LI $(BUGZILLA 1259): Inline build triggers an illegal error msg "Error: S() is not an lvalue")
+	$(LI $(BUGZILLA 1260): Another tuple bug)
+	$(LI $(BUGZILLA 1261): Regression from overzealous error message)
+	$(LI $(BUGZILLA 1262): Local variable of struct type initialized by literal resets when compared to .init)
+	$(LI $(BUGZILLA 1263): Template function overload fails when overloading on both template and non-template class)
+	$(LI $(BUGZILLA 1268): Struct literals try to initialize static arrays of non-static structs incorrectly)
+	$(LI $(BUGZILLA 1269): Compiler crash on assigning to an element of a void-initialized array in CTFE)
+	$(LI $(BUGZILLA 1270): -inline produces an ICE)
+	$(LI $(BUGZILLA 1272): problems with the new 1.0 section)
+	$(LI $(BUGZILLA 1274): 2.0 beta link points to dmd.zip which is the 1.x chain)
+	$(LI $(BUGZILLA 1275): ambiguity with 'in' meaning)
+	$(LI $(BUGZILLA 1276): static assert message displayed with escaped characters)
+	$(LI $(BUGZILLA 1277): "in final const scope" not considered redundant storage classes)
+	$(LI $(BUGZILLA 1279): const/invariant functions don't accept const/invariant return types)
+	$(LI $(BUGZILLA 1280): std.socket.Socket.send (void[],SocketFlags) should take a const(void)[] instead)
+	$(LI $(BUGZILLA 1283): writefln: formatter applies to following variable)
+	$(LI $(BUGZILLA 1286): crash on invariant struct member function referencing globals)
+)
+)
+
+$(VERSION 000, Jun 17, 2007, =================================================,
+
+$(WHATSNEW
+	$(LI Added aliases $(B string), $(B wstring), and $(B dstring)
+	for strings.)
+	$(LI Added $(B .idup) property for arrays to create invariant
+	copies.)
+	$(LI Added const, invariant, and final.)
+	$(LI $(B in) parameter storage class now means final scope const.)
+	$(LI foreach value variables now default to final if not declared
+	as inout.)
+	$(LI class and struct invariant declarations now must have a ().)
+)
+
+$(BUGSFIXED
+	$(LI Added missing \n to exception message going to stderr.)
+	$(LI Fixed default struct initialization for CTFE.)
+	$(LI $(BUGZILLA 1226): ICE on a struct literal)
+)
+)
+
+)
+
+Macros:
+	TITLE=Change Log
+	WIKI=ChangeLog
+
+	NEW = $(LI Version <a href="#new2_$0">D 2.$0</a>)
+
+	VERSION=
+	<div id=version>
+	$(B $(LARGE <a name="new2_$1">
+	  Version
+	  <a HREF="http://ftp.digitalmars.com/dmd.2.$1.zip" title="D 2.$1">D 2.$1</a>
+	))
+	$(SMALL $(I $2, $3))
+	$5
+	</div>
+
+	BUGZILLA = <a href="http://d.puremagic.com/issues/show_bug.cgi?id=$0">Bugzilla $0</a>
+	CPPBUGZILLA = <a href="http://bugzilla.digitalmars.com/issues/show_bug.cgi?id=$0">Bugzilla $0</a>
+	DSTRESS = dstress $0
+	BUGSFIXED = <div id="bugsfixed"><h4>Bugs Fixed</h4> $(UL $0 )</div>
+	DMDBUGSFIXED = <div id="bugsfixed"><h4>DMD Bugs Fixed</h4> $(UL $0 )</div>
+	LIBBUGSFIXED = <div id="bugsfixed"><h4>Library Bugs Fixed</h4> $(UL $0 )</div>
+	UPCOMING = <div id="upcoming"><h4>Under Construction</h4> $(OL $0 )</div>
+	WHATSNEW = <div id="whatsnew"><h4>New/Changed Features</h4> $(UL $0 )</div>
+	NEWPHOBOS = <div id="whatsnew"><h4>New/Changed Phobos</h4> $(UL $0 )</div>
+	LARGE=<font size=4>$0</font>
+	TRENAME=$(TR $(TD $(CODE $1)) $(TD $(CODE $2)))
+	LII= $(LI $(TT $1) $(UL $+ ))
