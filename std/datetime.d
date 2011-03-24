@@ -9143,14 +9143,38 @@ public:
             int years = (day / daysIn400Years) * 400 + 1;
             day %= daysIn400Years;
 
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
+            {
+                immutable tempYears = day / daysIn100Years;
+
+                if(tempYears == 4)
+                {
+                    years += 300;
+                    day -= daysIn100Years * 3;
+                }
+                else
+                {
+                    years += tempYears * 100;
+                    day %= daysIn100Years;
+                }
+            }
 
             years += (day / daysIn4Years) * 4;
             day %= daysIn4Years;
 
-            years += day / daysInYear;
-            day %= daysInYear;
+            {
+                immutable tempYears = day / daysInYear;
+
+                if(tempYears == 4)
+                {
+                    years += 3;
+                    day -= daysInYear * 3;
+                }
+                else
+                {
+                    years += tempYears;
+                    day %= daysInYear;
+                }
+            }
 
             if(day == 0)
             {
@@ -9183,14 +9207,38 @@ public:
             int years = (day / daysIn400Years) * 400 - 1;
             day %= daysIn400Years;
 
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
+            {
+                immutable tempYears = day / daysIn100Years;
+
+                if(tempYears == -4)
+                {
+                    years -= 300;
+                    day += daysIn100Years * 3;
+                }
+                else
+                {
+                    years += tempYears * 100;
+                    day %= daysIn100Years;
+                }
+            }
 
             years += (day / daysIn4Years) * 4;
             day %= daysIn4Years;
 
-            years += day / daysInYear;
-            day %= daysInYear;
+            {
+                immutable tempYears = day / daysInYear;
+
+                if(tempYears == -4)
+                {
+                    years -= 3;
+                    day += daysInYear * 3;
+                }
+                else
+                {
+                    years += tempYears;
+                    day %= daysInYear;
+                }
+            }
 
             if(day == 0)
             {
@@ -33449,6 +33497,8 @@ version(unittest)
                            GregDay(-2191, Date(-5, 1, 1)),
                            GregDay(-1827, Date(-5, 12, 31)),
                            GregDay(-1826, Date(-4, 1, 1)),
+                           GregDay(-1825, Date(-4, 1, 2)),
+                           GregDay(-1462, Date(-4, 12, 30)),
                            GregDay(-1461, Date(-4, 12, 31)),
                            GregDay(-1460, Date(-3, 1, 1)),
                            GregDay(-1096, Date(-3, 12, 31)),
@@ -33470,6 +33520,9 @@ version(unittest)
                            GregDay(366, Date(2, 1, 1)),
                            GregDay(731, Date(3, 1, 1)),
                            GregDay(1096, Date(4, 1, 1)),
+                           GregDay(1097, Date(4, 1, 2)),
+                           GregDay(1460, Date(4, 12, 30)),
+                           GregDay(1461, Date(4, 12, 31)),
                            GregDay(1462, Date(5, 1, 1)),
                            GregDay(17_898, Date(50, 1, 1)),
                            GregDay(35_065, Date(97, 1, 1)),
