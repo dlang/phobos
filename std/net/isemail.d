@@ -1266,13 +1266,13 @@ alias popFront shift;
 	
 enum Threshold = 16;
 	
-/// Email parts for the isEmail function
+// Email parts for the isEmail function
 enum EmailPart
 {
-	/// The local part of the email address, that is, the part before the @ sign
+	// The local part of the email address, that is, the part before the @ sign
     ComponentLocalPart,
 
-	/// The domain part of the email address, that is, the part after the @ sign.
+	// The domain part of the email address, that is, the part after the @ sign.
 	ComponentDomain,
 
     ComponentLiteral,
@@ -1312,7 +1312,7 @@ struct Token
 	}
 }
 
-/**
+/*
  * Returns the integer value of the first character in the given string.
  * 
  * Examples:
@@ -1336,7 +1336,7 @@ unittest
 	assert("över".firstChar == 246);
 }
 
-/**
+/*
  * Returns the maximum of the values in the given array.
  *
  * Examples:
@@ -1368,7 +1368,7 @@ unittest
 	assert([7, 13, 9, 12, 0].max == 13);
 }
 
-/**
+/*
  * Returns the portion of string specified by the $(D_PARAM start) and
  * $(D_PARAM length) parameters.
  * 
@@ -1456,7 +1456,7 @@ unittest
 	assert("abcdef".substr(-3, -1) == "de");
 }
 
-/**
+/*
  * Compare the two given strings lexicographically. An upper limit of the number of
  * characters, that will be used in the comparison, can be specified. Supports both
  * case-sensitive and case-insensitive comparison.
@@ -1503,7 +1503,7 @@ unittest
 	assert("abcdef".compareFirstN("abc", 6) > 0);
 }
 
-/**
+/*
  * Returns a range consisting of the elements of the $(D_PARAM input) range that
  * matches the given $(D_PARAM pattern). 
  * 
@@ -1535,7 +1535,7 @@ unittest
 	assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
 
-/**
+/*
  * Pops the last element of the given range and returns the element.
  * 
  * Examples:
@@ -1568,7 +1568,7 @@ unittest
 	assert(result == 3);
 }
 
-/**
+/*
  * Returns the character at the given index as a string. The returned string will be a
  * slice of the original string.
  * 
