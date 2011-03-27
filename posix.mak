@@ -246,7 +246,6 @@ DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
 
 DISABLED_TESTS += std/random
-DISABLED_TESTS += std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
 	@echo Testing $@ - disabled
