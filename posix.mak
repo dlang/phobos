@@ -245,8 +245,6 @@ DISABLED_TESTS += std/format
 DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
 
-DISABLED_TESTS += std/random
-
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
 	@echo Testing $@ - disabled
 endif
