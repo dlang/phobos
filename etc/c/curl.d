@@ -38,11 +38,11 @@ import core.sys.posix.sys.socket;
  ***************************************************************************/
 
 /* This is the global package copyright */
-string LIBCURL_COPYRIGHT = "1996 - 2010 Daniel Stenberg, <daniel@haxx.se>.";
+enum LIBCURL_COPYRIGHT = "1996 - 2010 Daniel Stenberg, <daniel@haxx.se>.";
 
 /* This is the version number of the libcurl package from which this header
    file origins: */
-string LIBCURL_VERSION = "7.21.4";
+enum LIBCURL_VERSION = "7.21.4";
 
 /* The numeric version number is also available "in parts" by using these
    defines: */
@@ -77,7 +77,7 @@ const LIBCURL_VERSION_NUM = 0x071504;
  *
  * "Mon Feb 12 11:35:33 UTC 2007"
  */
-const string LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
+enum LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
 
 /* Data type definition of curl_off_t. */
 // jdrewsen: Always 64bit signed and that is what long is in D
