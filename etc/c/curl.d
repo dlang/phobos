@@ -38,17 +38,17 @@ import core.sys.posix.sys.socket;
  ***************************************************************************/
 
 /* This is the global package copyright */
-string LIBCURL_COPYRIGHT = "1996 - 2010 Daniel Stenberg, <daniel@haxx.se>.";
+enum LIBCURL_COPYRIGHT = "1996 - 2010 Daniel Stenberg, <daniel@haxx.se>.";
 
 /* This is the version number of the libcurl package from which this header
    file origins: */
-string LIBCURL_VERSION = "7.21.4";
+enum LIBCURL_VERSION = "7.21.4";
 
 /* The numeric version number is also available "in parts" by using these
    defines: */
-const LIBCURL_VERSION_MAJOR = 7;
-const LIBCURL_VERSION_MINOR = 21;
-const LIBCURL_VERSION_PATCH = 4;
+enum LIBCURL_VERSION_MAJOR = 7;
+enum LIBCURL_VERSION_MINOR = 21;
+enum LIBCURL_VERSION_PATCH = 4;
 
 /* This is the numeric version of the libcurl version number, meant for easier
    parsing and comparions by programs. The LIBCURL_VERSION_NUM define will
@@ -66,7 +66,7 @@ const LIBCURL_VERSION_PATCH = 4;
    comparisons with greater than and less than work.
 */
 
-const LIBCURL_VERSION_NUM = 0x071504;
+enum LIBCURL_VERSION_NUM = 0x071504;
 
 /*
  * This is the date and time when the full source package was created. The
@@ -77,7 +77,7 @@ const LIBCURL_VERSION_NUM = 0x071504;
  *
  * "Mon Feb 12 11:35:33 UTC 2007"
  */
-const string LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
+enum LIBCURL_TIMESTAMP = "Thu Feb 17 12:19:40 UTC 2011";
 
 /* Data type definition of curl_off_t. */
 // jdrewsen: Always 64bit signed and that is what long is in D
@@ -104,11 +104,11 @@ alias socket_t curl_socket_t;
 // jdrewsen: Would like to get socket error constant from std.socket by it is private atm.
 version(Win32) {
   private import std.c.windows.windows, std.c.windows.winsock;
-  const int CURL_SOCKET_BAD = SOCKET_ERROR;
+  enum CURL_SOCKET_BAD = SOCKET_ERROR;
 }
-version(Posix) const int CURL_SOCKET_BAD = -1;
+version(Posix) enum CURL_SOCKET_BAD = -1;
 
-struct curl_httppost
+extern (C) struct curl_httppost
 {
     curl_httppost *next;        /* next entry in the list */		
     char *name;			/* pointer to allocated name */		
@@ -130,15 +130,15 @@ struct curl_httppost
 				   HTTPPOST_CALLBACK posts */             
 }
 
-const HTTPPOST_FILENAME    = 1;  /* specified content is a file name */
-const HTTPPOST_READFILE    = 2;  /* specified content is a file name */
-const HTTPPOST_PTRNAME     = 4;  /* name is only stored pointer
+enum HTTPPOST_FILENAME    = 1;  /* specified content is a file name */
+enum HTTPPOST_READFILE    = 2;  /* specified content is a file name */
+enum HTTPPOST_PTRNAME     = 4;  /* name is only stored pointer
 				    do not free in formfree */
-const HTTPPOST_PTRCONTENTS = 8;  /* contents is only stored pointer
+enum HTTPPOST_PTRCONTENTS = 8;  /* contents is only stored pointer
 				    do not free in formfree */
-const HTTPPOST_BUFFER      = 16; /* upload file from buffer */
-const HTTPPOST_PTRBUFFER   = 32; /* upload file from pointer contents */
-const HTTPPOST_CALLBACK    = 64; /* upload file contents by using the
+enum HTTPPOST_BUFFER      = 16; /* upload file from buffer */
+enum HTTPPOST_PTRBUFFER   = 32; /* upload file from pointer contents */
+enum HTTPPOST_CALLBACK    = 64; /* upload file contents by using the
 				    regular read callback to get the data
 				    and pass the given pointer as custom
 				    pointer */
@@ -152,17 +152,17 @@ alias int function(void *clientp, double dltotal, double dlnow, double ultotal, 
    time for those who feel adventurous. The practical minimum is about
    400 bytes since libcurl uses a buffer of this size as a scratch area
    (unrelated to network send operations). */
-const CURL_MAX_WRITE_SIZE = 16384;
+enum CURL_MAX_WRITE_SIZE = 16384;
 
 /* The only reason to have a max limit for this is to avoid the risk of a bad
    server feeding libcurl with a never-ending header that will cause reallocs
    infinitely */
-const CURL_MAX_HTTP_HEADER = (100*1024);
+enum CURL_MAX_HTTP_HEADER = (100*1024);
 
 
 /* This is a magic return code for the write callback that, when returned,
    will signal libcurl to pause receiving on the current transfer. */
-const CURL_WRITEFUNC_PAUSE = 0x10000001;
+enum CURL_WRITEFUNC_PAUSE = 0x10000001;
 alias size_t  function(char *buffer, size_t size, size_t nitems, void *outstream)curl_write_callback;
 
 /* enumeration of file types */
@@ -195,8 +195,9 @@ enum CurlFInfoFlagKnown {
    page for callbacks returning this structure -- some fields are mandatory,
    some others are optional. The FLAG field has special meaning. */
 
+ 
 /* If some of these fields is not NULL, it is a pointer to b_data. */
-struct _N2
+extern (C) struct _N2
 {
     char *time;
     char *perm;
@@ -209,7 +210,7 @@ struct _N2
    achievable (e.g. by FTP LIST parsing). Please see the url_easy_setopt(3) man
    page for callbacks returning this structure -- some fields are mandatory,
    some others are optional. The FLAG field has special meaning. */
-struct curl_fileinfo
+extern (C) struct curl_fileinfo
 {
     char *filename;
     curlfiletype filetype;
@@ -300,7 +301,7 @@ alias int  function(void *clientp, curl_socket_t curlfd, curlsocktype purpose)cu
 
 /* addrlen was a socklen_t type before 7.18.0 but it turned really
    ugly and painful on the systems that lack this type */
-struct curl_sockaddr
+extern (C) struct curl_sockaddr
 {
     int family;
     int socktype;
@@ -524,7 +525,7 @@ enum CurlSshAuth {
   keyboard  = 8, /* keyboard interactive */
   default_  = -1 // CURLSSH_AUTH_ANY;
 }
-const CURL_ERROR_SIZE = 256;
+enum CURL_ERROR_SIZE = 256;
 /* points to a zero-terminated string encoded with base64
    if len is zero, otherwise to the "raw" data */
 enum CurlKHType
@@ -534,7 +535,7 @@ enum CurlKHType
     rsa,
     dss
 }
-struct curl_khkey
+extern (C) struct curl_khkey
 {
     char *key; /* points to a zero-terminated string encoded with base64 
 	          if len is zero, otherwise to the "raw" data */         
@@ -651,11 +652,11 @@ enum CurlProto {
 
 /* long may be 32 or 64 bits, but we should never depend on anything else
    but 32 */
-const CURLOPTTYPE_LONG = 0;
-const CURLOPTTYPE_OBJECTPOINT = 10000;
-const CURLOPTTYPE_FUNCTIONPOINT = 20000;
+enum CURLOPTTYPE_LONG = 0;
+enum CURLOPTTYPE_OBJECTPOINT = 10000;
+enum CURLOPTTYPE_FUNCTIONPOINT = 20000;
 
-const CURLOPTTYPE_OFF_T = 30000;
+enum CURLOPTTYPE_OFF_T = 30000;
 /* name is uppercase CURLOPT_<name>,
    type is one of the defined CURLOPTTYPE_<type>
    number is unique identifier */
@@ -1193,7 +1194,7 @@ enum CurlOption {
   lastentry
 }
 alias int CURLoption;
-const CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
+enum CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
 
 /* Below here follows defines for the CURLOPT_IPRESOLVE option. If a host
    name resolves addresses using more than one IP protocol version, this
@@ -1205,10 +1206,10 @@ enum CurlIpResolve {
 }
 
 /* three convenient "aliases" that follow the name scheme better */
-const CURLOPT_WRITEDATA = CurlOption.file;
-const CURLOPT_READDATA = CurlOption.infile;
-const CURLOPT_HEADERDATA = CurlOption.writeheader;
-const CURLOPT_RTSPHEADER = CurlOption.httpheader;
+enum CURLOPT_WRITEDATA = CurlOption.file;
+enum CURLOPT_READDATA = CurlOption.infile;
+enum CURLOPT_HEADERDATA = CurlOption.writeheader;
+enum CURLOPT_RTSPHEADER = CurlOption.httpheader;
 
 /* These enums are for use with the CURLOPT_HTTP_VERSION option. */
 enum CurlHttpVersion {
@@ -1315,7 +1316,7 @@ alias int CURLformoption;
 
 
 /* structure to be used as parameter for CURLFORM_ARRAY */
-struct curl_forms
+extern (C) struct curl_forms
 {
     CURLformoption option;
     char *value;
@@ -1492,13 +1493,14 @@ void  curl_global_cleanup();
 }
 
 /* linked-list structure for the CURLOPT_QUOTE option (and other) */
+extern (C) { 
+
 struct curl_slist
 {
     char *data;
     curl_slist *next;
 }
 
-extern (C) { 
 /*
  * NAME curl_slist_append()
  *
@@ -1528,7 +1530,6 @@ void  curl_slist_free_all(curl_slist *);
  * and should be set to NULL.
  */
 time_t  curl_getdate(char *p, time_t *unused);
-}
 
 /* info about the certificate chain, only for OpenSSL builds. Asked
    for with CURLOPT_CERTINFO / CURLINFO_CERTINFO */
@@ -1540,13 +1541,15 @@ struct curl_certinfo
 			      format "name: value" */
 }
 
-const CURLINFO_STRING = 0x100000;
-const CURLINFO_LONG = 0x200000;
-const CURLINFO_DOUBLE = 0x300000;
-const CURLINFO_SLIST = 0x400000;
-const CURLINFO_MASK = 0x0fffff;
+} // extern (C) end
 
-const CURLINFO_TYPEMASK = 0xf00000;
+enum CURLINFO_STRING = 0x100000;
+enum CURLINFO_LONG = 0x200000;
+enum CURLINFO_DOUBLE = 0x300000;
+enum CURLINFO_SLIST = 0x400000;
+enum CURLINFO_MASK = 0x0fffff;
+
+enum CURLINFO_TYPEMASK = 0xf00000;
 
 enum CurlInfo {
     none, 
@@ -1599,7 +1602,7 @@ alias int CURLINFO;
 
 /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as
    CURLINFO_HTTP_CODE */
-const CURLINFO_HTTP_CODE = CurlInfo.response_code; 
+enum CURLINFO_HTTP_CODE = CurlInfo.response_code; 
 
 
 enum CurlClosePolicy {
@@ -1704,9 +1707,9 @@ alias int CURLversion;
    meant to be a built-in version number for what kind of struct the caller
    expects. If the struct ever changes, we redefine the NOW to another enum
    from above. */
-const CURLVERSION_NOW = CurlVer.fourth; 
+enum CURLVERSION_NOW = CurlVer.fourth; 
 
-struct _N28
+extern (C) struct _N28
 {
   CURLversion age;     /* age of the returned struct */	      
   char *version_;      /* LIBCURL_VERSION */		      
@@ -1948,7 +1951,7 @@ alias int CURLMcode;
 /* just to make code nicer when using curl_multi_socket() you can now check
    for CURLM_CALL_MULTI_SOCKET too in the same style it works for
    curl_multi_perform() and CURLM_CALL_MULTI_PERFORM */
-const CURLM_CALL_MULTI_SOCKET = CurlM.call_multi_perform; 
+enum CURLM_CALL_MULTI_SOCKET = CurlM.call_multi_perform; 
 
 enum CurlMsg
 {
@@ -1959,12 +1962,13 @@ enum CurlMsg
 }
 alias int CURLMSG;
 
-union _N31
+extern (C) union _N31
 {
     void *whatever;  /* message-specific data */    
     CURLcode result; /* return code for transfer */ 
 }
-struct CURLMsg
+
+extern (C) struct CURLMsg
 {
     CURLMSG msg;        /* what this message means */ 
     CURL *easy_handle;	/* the handle it concerns */  
@@ -2081,7 +2085,7 @@ extern (C) CURLMsg * curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queu
  *
  * Returns: A pointer to a zero-terminated error message.
  */
-char * curl_multi_strerror(CURLMcode );
+extern (C) char * curl_multi_strerror(CURLMcode );
 
 /*
  * Name:    curl_multi_socket() and
