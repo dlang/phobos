@@ -108,7 +108,7 @@ version(Win32) {
 }
 version(Posix) const int CURL_SOCKET_BAD = -1;
 
-struct curl_httppost
+extern (C) struct curl_httppost
 {
     curl_httppost *next;        /* next entry in the list */		
     char *name;			/* pointer to allocated name */		
@@ -195,8 +195,9 @@ enum CurlFInfoFlagKnown {
    page for callbacks returning this structure -- some fields are mandatory,
    some others are optional. The FLAG field has special meaning. */
 
+ 
 /* If some of these fields is not NULL, it is a pointer to b_data. */
-struct _N2
+extern (C) struct _N2
 {
     char *time;
     char *perm;
@@ -209,7 +210,7 @@ struct _N2
    achievable (e.g. by FTP LIST parsing). Please see the url_easy_setopt(3) man
    page for callbacks returning this structure -- some fields are mandatory,
    some others are optional. The FLAG field has special meaning. */
-struct curl_fileinfo
+extern (C) struct curl_fileinfo
 {
     char *filename;
     curlfiletype filetype;
@@ -300,7 +301,7 @@ alias int  function(void *clientp, curl_socket_t curlfd, curlsocktype purpose)cu
 
 /* addrlen was a socklen_t type before 7.18.0 but it turned really
    ugly and painful on the systems that lack this type */
-struct curl_sockaddr
+extern (C) struct curl_sockaddr
 {
     int family;
     int socktype;
@@ -534,7 +535,7 @@ enum CurlKHType
     rsa,
     dss
 }
-struct curl_khkey
+extern (C) struct curl_khkey
 {
     char *key; /* points to a zero-terminated string encoded with base64 
 	          if len is zero, otherwise to the "raw" data */         
@@ -1315,7 +1316,7 @@ alias int CURLformoption;
 
 
 /* structure to be used as parameter for CURLFORM_ARRAY */
-struct curl_forms
+extern (C) struct curl_forms
 {
     CURLformoption option;
     char *value;
@@ -1492,13 +1493,14 @@ void  curl_global_cleanup();
 }
 
 /* linked-list structure for the CURLOPT_QUOTE option (and other) */
+extern (C) { 
+
 struct curl_slist
 {
     char *data;
     curl_slist *next;
 }
 
-extern (C) { 
 /*
  * NAME curl_slist_append()
  *
@@ -1528,7 +1530,6 @@ void  curl_slist_free_all(curl_slist *);
  * and should be set to NULL.
  */
 time_t  curl_getdate(char *p, time_t *unused);
-}
 
 /* info about the certificate chain, only for OpenSSL builds. Asked
    for with CURLOPT_CERTINFO / CURLINFO_CERTINFO */
@@ -1539,6 +1540,8 @@ struct curl_certinfo
 			      linked list with textual information in the
 			      format "name: value" */
 }
+
+} // extern (C) end
 
 const CURLINFO_STRING = 0x100000;
 const CURLINFO_LONG = 0x200000;
@@ -1706,7 +1709,7 @@ alias int CURLversion;
    from above. */
 const CURLVERSION_NOW = CurlVer.fourth; 
 
-struct _N28
+extern (C) struct _N28
 {
   CURLversion age;     /* age of the returned struct */	      
   char *version_;      /* LIBCURL_VERSION */		      
@@ -1959,12 +1962,13 @@ enum CurlMsg
 }
 alias int CURLMSG;
 
-union _N31
+extern (C) union _N31
 {
     void *whatever;  /* message-specific data */    
     CURLcode result; /* return code for transfer */ 
 }
-struct CURLMsg
+
+extern (C) struct CURLMsg
 {
     CURLMSG msg;        /* what this message means */ 
     CURL *easy_handle;	/* the handle it concerns */  
@@ -2081,7 +2085,7 @@ extern (C) CURLMsg * curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queu
  *
  * Returns: A pointer to a zero-terminated error message.
  */
-char * curl_multi_strerror(CURLMcode );
+extern (C) char * curl_multi_strerror(CURLMcode );
 
 /*
  * Name:    curl_multi_socket() and
