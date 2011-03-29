@@ -1,15 +1,14 @@
 /**
  * To validate an email address according to RFCs 5321, 5322 and others
  *
- * Copyright © 2008-2011, Dominic Sayers$(BR)
- * Test schema documentation Copyright © 2011, Daniel Marschall$(BR)
+ * Copyright © 2008-2011, Dominic Sayers, Jacob Carlborg$(BR)
+ * Test schema documentation Copyright © 2011, Daniel Marschall, Jacob Carlborg$(BR)
  * All rights reserved.
  *
  * Authors: Dominic Sayers <dominic@sayers.cc>, Jacob Carlborg
  * Copyright: Copyright © 2008-2011 Dominic Sayers. All rights reserved.
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
- * Link: $(LINK http://www.dominicsayers.com/isemail)
  * Version: 3.0.13 - Version 3.0
  * 
  * Standards: 
@@ -20,6 +19,7 @@
  *
  * References:
  * 		$(UL
+ * 			$(LI $(LINK http://www.dominicsayers.com/isemail))
  * 			$(LI $(LINK http://tools.ietf.org/html/rfc5321))
  * 			$(LI $(LINK http://tools.ietf.org/html/rfc5322))
  * 		 )
