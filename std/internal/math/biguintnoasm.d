@@ -260,7 +260,7 @@ unittest {
     for (int i=0; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
     uint overflow = multibyteMul(aa, aa, 0x8EFD_FCFB, 0x33FF_7461);
     uint r = multibyteDivAssign(aa, 0x8EFD_FCFB, overflow);
-    for (sizediff_t i=aa.length-1; i>=0; --i) { assert(aa[i] == 0x8765_4321 * (i+3)); }
+    for (int i=0; i<aa.length; ++i) { assert(aa[i] == 0x8765_4321 * (i+3)); }
     assert(r==0x33FF_7461);
 
 }
