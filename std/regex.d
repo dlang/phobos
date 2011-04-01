@@ -198,7 +198,6 @@ private:
     ubyte attributes;
     immutable(ubyte)[] program; // pattern[] compiled into regular
                                 // expression program
-
 // Opcodes
 
     enum : ubyte
@@ -228,6 +227,10 @@ private:
             REparen,            // parenthesized subexpression
             REgoto,             // goto offset
 
+            RElookahead,
+            REneglookahead,
+            RElookbehind,
+            REneglookbehind,
             REwordboundary,
             REnotwordboundary,
             REdigit,
@@ -386,6 +389,8 @@ Returns the number of parenthesized captures
             case REnm:
             case REnmq:
             case REparen:
+            case RElookahead:
+            case REneglookahead:
             case REgoto:
             {
                 auto bitbuf = new OutBuffer;
@@ -589,14 +594,44 @@ Returns the number of parenthesized captures
 
         case '(':
             p++;
-            buf.write(REparen);
-            offset = buf.offset;
-            buf.write(cast(uint)0);             // reserve space for length
-            buf.write(re_nsub);
-            re_nsub++;
-            parseRegex(pattern, p, buf);
-            *cast(uint *)&buf.data[offset] =
-                cast(uint) (buf.offset - (offset + uint.sizeof * 2));
+            if(pattern[p] != '?')
+            {
+                buf.write(REparen);
+                offset = buf.offset;
+                buf.write(cast(uint)0);             // reserve space for length
+                buf.write(re_nsub);
+                re_nsub++;
+                parseRegex(pattern, p, buf);
+                *cast(uint *)&buf.data[offset] =
+                     cast(uint)(buf.offset - (offset + uint.sizeof * 2));
+            }
+            else if(pattern.length > p+1)
+            {
+                p++;
+                switch(pattern[p])
+                {
+                    case ':':
+                        p++;
+                        parseRegex(pattern, p, buf);
+                        break;                      
+                    case '=': case '!':
+                        buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
+                        offset = buf.offset;
+                        buf.write(cast(uint)0); // reserve space for length
+                        p++;
+                        parseRegex(pattern, p, buf);
+                        *cast(uint *)&buf.data[offset] =
+                            cast(uint)(buf.offset - (offset + uint.sizeof));
+                        break;
+                    default:
+                        error("any of :=! expected after '(?'");
+                        return 0;
+                }
+            }
+            else{
+                error("any of :=! expected after '(?'");
+                return 0;
+            }
             if (p == pattern.length || pattern[p] != ')')
             {
                 error("')' expected");
@@ -1126,6 +1161,11 @@ Returns the number of parenthesized captures
                 pop = &prog[0] + i + 1 + uint.sizeof * 2;
                 return starrchars(r, pop[0 .. len]);
 
+            case RElookahead: case REneglookahead:
+                len = (cast(uint *)&prog[i + 1])[0];
+                pop = &prog[0] + i + 1 + uint.sizeof ;
+                return starrchars(r, pop[0 .. len]);
+
             case REend:
                 return 0;
 
@@ -1477,6 +1517,20 @@ Returns the number of parenthesized captures
                             len, n, pc + 1 + uint.sizeof * 2 + len);
                     pc += 1 + uint.sizeof * 2;
                     break;
+                case RElookahead:
+                     // len, ()
+                    len = *cast(uint *)&prog[pc + 1];
+                    printf("\tRElookahead len=%d, pc=>%d\n",
+                            len, pc + 1 + uint.sizeof + len);
+                    pc += 1 + uint.sizeof;
+                    break;
+                case REneglookahead:
+                    // len, ()
+                    len = *cast(uint *)&prog[pc + 1];
+                    printf("\tRElookahead len=%d, pc=>%d\n",
+                            len, pc + 1 + uint.sizeof + len);
+                    pc += 1 + uint.sizeof;
+                    break;
 
                 case REend:
                     printf("\tREend\n");
@@ -1578,7 +1632,7 @@ Get or set the engine of the match.
     regmatch_t[] pmatch;    // array [engine.re_nsub + 1]
 
 /*
-Build a RegexMatch from an engineine and an input.
+Build a RegexMatch from an engine.
 */
     private this(Regex engine)
     {
@@ -1728,16 +1782,13 @@ void main()
 
         @property size_t length()
         {
-            foreach (i; 0 .. matches.length)
-            {
-                if (matches[i].startIdx >= input.length) return i;
-            }
             return matches.length;
         }
 
         Range opIndex(size_t n)
         {
-            assert(n < length, text(n));
+
+            assert(n < length, text("length = ",length, ", requested match = ", n));
             return input[matches[n].startIdx .. matches[n].endIdx];
         }
     }
@@ -1762,7 +1813,7 @@ foreach (m; match("abracadabra", "(.)a(.)"))
  */
     public Captures captures()
     {
-        return Captures(input, pmatch);
+        return Captures(input, empty ? [] : pmatch);
     }
 
     unittest
@@ -1896,8 +1947,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
             return 0;                   // fail
         }
         //engine.printProgram(engine.program);
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
 
         // First character optimization
         Unqual!(typeof(Range.init[0])) firstc = 0;
@@ -1923,10 +1974,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         break;                          // no match
                 }
             }
-            foreach (i; 0 .. engine.re_nsub + 1)
+            foreach (i; 1 .. engine.re_nsub + 1)//subs considered empty matches
             {
-                pmatch[i].startIdx = -1;
-                pmatch[i].endIdx = -1;
+                pmatch[i].startIdx = 0;
+                pmatch[i].endIdx = 0;
             }
             src_start = src = startindex;
             if (trymatch(0, engine.program.length))
@@ -1948,7 +1999,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
             debug(regex)
             {
-                auto sss = input[si + 1 .. input.length];
+                auto sss = input[startindex + 1 .. input.length];
                 printf("Starting new try: '%.*s'\n", sss.length, sss.ptr);
             }
         }
@@ -2022,7 +2073,6 @@ Returns $(D hit) (converted to $(D string) if necessary).
         size_t c2;
         ushort* pu;
         uint* puint;
-
         debug(regex)
         {
             auto sss = input[src .. input.length];
@@ -2031,6 +2081,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         }
         auto srcsave = src;
         regmatch_t *psave = null;
+        bool pmatch_touched;
         for (;;)
         {
             if (pc == pcend)            // if done matching
@@ -2120,8 +2171,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 len /= E.sizeof;
                 debug(regex)
                 {
-                    auto sss = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    printf("\tREstring x%x, '%.*s'\n", len, sss.length, sss.ptr);
+                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                    printf("\tREstring x%x, '%.*s'\n", len, sssa.length, sssa.ptr);
                 }
                 if (src + len > input.length)
                     goto Lnomatch;
@@ -2138,8 +2189,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 len /= E.sizeof;
                 debug(regex)
                 {
-                    auto sss = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    printf("\tREistring x%x, '%.*s'\n", len, sss.length, sss.ptr);
+                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                    printf("\tREistring x%x, '%.*s'\n", len, sssa.length, sssa.ptr);
                 }
                 if (src + len > input.length)
                     goto Lnomatch;
@@ -2350,11 +2401,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 {
                     for (; count < m; count++)
                     {   sizediff_t s1;
-
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         s1 = src;
-
+						
                         if (trymatch(pop + len, engine.program.length))
                         {
                             src = s1;
@@ -2420,7 +2470,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REparen:
-                // len, ()
+                // len, n, ()
                 debug(regex) printf("\tREparen\n");
                 puint = cast(uint *)&engine.program[pc + 1];
                 len = puint[0];
@@ -2429,11 +2479,43 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 ss = src;
                 if (!trymatch(pop, pop + len))
                     goto Lnomatch;
+				if(!pmatch_touched){
+                    pmatch_touched = true;
+				    if(!psave)
+					    psave = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    memcpy(psave, pmatch.ptr,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                }
                 pmatch[n + 1].startIdx = ss;
                 pmatch[n + 1].endIdx = src;
+				debug(regex){
+					printf("Total matches NOW:\n");
+					for(int i=0;i<engine.re_nsub+1;i++)
+						printf("\tmatch # %d at %d .. %d\n",i, pmatch[i].startIdx,pmatch[i].endIdx);
+				}
                 pc = pop + len;
                 break;
 
+
+            case engine.RElookahead:
+            case engine.REneglookahead:
+                // len, ()
+                debug(regex)
+                    printf("\t%*s",engine.program[pc] == engine.RElookahead ?
+                        "RElookahead" : "REneglookahead");
+                len = *cast(uint*)&engine.program[pc+1];
+                pop = pc + 1 + uint.sizeof;
+                ss = src;
+                bool invert = engine.program[pc] == engine.REneglookahead ? true : false;
+                auto tmp_match = trymatch(pop,pop + len);// ! changes pc
+                src = ss;//restore position in input
+                //inverse the match if negative lookahead
+                tmp_match = tmp_match ^ invert;
+                if(!tmp_match)
+                    goto Lnomatch;
+                pc = pop + len;
+                break;
             case engine.REend:
                 debug(regex) printf("\tREend\n");
                 return 1;               // successful match
@@ -2533,8 +2615,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 auto so = pmatch[n + 1].startIdx;
                 auto eo = pmatch[n + 1].endIdx;
                 len = eo - so;
+				debug(regex) printf("len \t%d\n",len);
                 if (src + len > input.length)
                     goto Lnomatch;
+				
                 else if (engine.attributes & engine.REA.ignoreCase)
                 {
                     if (icmp(input[src .. src + len], input[so .. eo]))
@@ -2555,6 +2639,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
       Lnomatch:
         debug(regex) printf("\tnomatch pc=%d\n", pc);
         src = srcsave;
+        if(pmatch_touched)
+            memcpy(pmatch.ptr, psave, (engine.re_nsub + 1) * regmatch_t.sizeof);  
         return false;
     }
 
@@ -2576,7 +2662,7 @@ and, using the format string, generate and return a new string.
     private static Range replace3(String)(String format, Range input,
             regmatch_t[] pmatch)
     {
-        string result;
+        Range result;
         uint c2;
         sizediff_t startIdx;
         sizediff_t endIdx;
@@ -3192,8 +3278,8 @@ unittest
         {  "^abc",      "abcc", "y",    "&",    "abc" },
         {  "^abc$",     "aabc", "n",    "-",    "-" },
         {  "abc$",      "aabc", "y",    "&",    "abc" },
-        {  "^", "abc",  "y",    "&",    "" },
-        {  "$", "abc",  "y",    "&",    "" },
+        {  "^",         "abc",  "y",    "&",    "" },
+        {  "$",         "abc",  "y",    "&",    "" },
         {  "a.c",       "abc",  "y",    "&",    "abc" },
         {  "a.c",       "axc",  "y",    "&",    "axc" },
         {  "a.*c",      "axyzc","y",    "&",    "axyzc" },
@@ -3347,6 +3433,11 @@ unittest
         {  "^(a)(b)?(c*)",       "acc",  "y", "\\1 \\2 \\3", "a  cc" },
         {  "^(a)((b)?)(c*)",     "acc",  "y", "\\1 \\2 \\3", "a  " },
 
+        {"(?:ab){3}",       "_abababc",  "y","&-\\1","ababab-" },
+        {"(?:a(?:x)?)+",    "aaxaxx",     "y","&-\\1-\\2","aaxax--" },
+        {"foo.(?=bar)",     "foobar foodbar", "y","&-\\1", "food-" },
+        {"(?:(.)(?!\\1))+",  "12345678990", "y", "&-\\1", "12345678-8" },
+
         ];
 
     int i;
@@ -3359,20 +3450,47 @@ unittest
     foreach (Char; TypeTuple!(char, wchar, dchar))
     {
         alias immutable(Char)[] String;
+        String produceExpected(Range)(RegexMatch!(Range) m,String fmt)
+        {
+            String result;
+            while(!fmt.empty)
+                switch(fmt.front){
+                    case '\\':
+                        fmt.popFront();
+                        if(!isdigit(fmt.front) )
+                        {
+                            result ~= fmt.front;
+                            fmt.popFront();
+                            break;
+                        }
+                        int nmatch = parse!int(fmt);
+                        if(nmatch < m.captures.length)
+                            result ~= m.captures[nmatch];
+                    break;
+                    case '&':
+                        result ~= m.hit;
+                        fmt.popFront();
+                    break;
+                    default:
+                        result ~= fmt.front;
+                        fmt.popFront();
+                }
+            return result;
+        }
         Regex!(Char) r;
         start = 0;
         end = tv.length;
 
         for (a = start; a < end; a++)
         {
-            // printf("width: %d tv[%d]: pattern='%.*s' input='%.*s' result=%.*s"
-            //         " format='%.*s' replace='%.*s'\n",
-            //         Char.sizeof, a,
-            //         tv[a].pattern.length, tv[a].pattern.ptr,
-            //         tv[a].input.length,   tv[a].input.ptr,
-            //         tv[a].result.length,  tv[a].result.ptr,
-            //         tv[a].format.length,  tv[a].format.ptr,
-            //         tv[a].replace.length, tv[a].replace.ptr);
+//             printf("width: %d tv[%d]: pattern='%.*s' input='%.*s' result=%.*s"
+//                     " format='%.*s' replace='%.*s'\n",
+//                     Char.sizeof, a,
+//                     tv[a].pattern.length, tv[a].pattern.ptr,
+//                     tv[a].input.length,   tv[a].input.ptr,
+//                     tv[a].result.length,  tv[a].result.ptr,
+//                     tv[a].format.length,  tv[a].format.ptr,
+//                     tv[a].replace.length, tv[a].replace.ptr);
 
             tvd = tv[a];
 
@@ -3393,10 +3511,16 @@ unittest
 
             if (c != 'c')
             {
-                i = !match(to!(String)(tvd.input), r).empty;
+                auto m = match(to!(String)(tvd.input), r);
+                i = !m.empty;
                 //printf("\ttest() = %d\n", i);
                 //fflush(stdout);
-                assert((c == 'y') ? i : !i);
+                assert((c == 'y') ? i : !i,text("Match failed pattern: ",tvd.pattern));
+                if(c == 'y'){
+                    auto result = produceExpected(m,to!(String)(tvd.format));
+                    assert(result == to!String(tvd.replace), text("Mismatch pattern: ",tvd.pattern," expected:",tvd.replace," vs ",result));
+                }
+
             }
         }
 
