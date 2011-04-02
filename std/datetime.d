@@ -30258,13 +30258,13 @@ else version(Posix)
     {
         try
         {
-            char[] env = to!(char[])("TZ=:" ~ PosixTimeZone.defaultTZDatabaseDir ~ tzDatabaseName ~ "\0");
+            auto value = PosixTimeZone.defaultTZDatabaseDir ~ tzDatabaseName ~ "\0";
 
-            putenv(env.ptr);
+            setenv("TZ", value.ptr, 1);
             tzset();
         }
         catch(Exception e)
-            assert(0, "to!(char[]) threw when it shouldn't have.");
+            assert(0, "The impossible happened. setenv or tzset threw.");
     }
 
 
@@ -30272,13 +30272,11 @@ else version(Posix)
     {
         try
         {
-            char[] env = to!(char[])("TZ\0");
-
-            unsetenv(env.ptr);
+            unsetenv("TZ");
             tzset();
         }
         catch(Exception e)
-            assert(0, "to!(char[]) threw when it shouldn't have.");
+            assert(0, "The impossible happened. unsetenv or tzset threw.");
     }
 }
 
