@@ -10,8 +10,8 @@
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
  * Version: 3.0.13 - Version 3.0 of the original PHP implementation: $(LI $(LINK http://www.dominicsayers.com/isemail))
- * 
- * Standards: 
+ *
+ * Standards:
  *         $(UL
  *             $(LI RFC 5321)
  *             $(LI RFC 5322)
@@ -23,7 +23,7 @@
  *             $(LI $(LINK http://tools.ietf.org/html/rfc5321))
  *             $(LI $(LINK http://tools.ietf.org/html/rfc5322))
  *          )
- * 
+ *
  * Source: $(PHOBOSSRC std/net/_isemail.d)
  */
 module std.net.isemail;
@@ -44,7 +44,7 @@ import std.utf;
  * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
  * is more restrictive (comments, white space and obsolete forms are not allowed).
  *
- * Params: 
+ * Params:
  *     email = The email address to check
  *     checkDNS = If true then a DNS check for MX records will be made
  *     errorLevel = Determines the boundary between valid and invalid addresses.
@@ -59,7 +59,7 @@ import std.utf;
  *                  not perform any finer grained error checking and an address is
  *                  either considered valid or not. Email status code will either be
  *                  EmailStatusCode.valid or EmailStatusCode.error.
- * 
+ *
  * Returns: an EmailStatus, indicating the status of the email address.
  */
 EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailStatusCode errorLevel = EmailStatusCode.none)
@@ -70,13 +70,13 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
 
     int threshold;
     bool diagnose;
-    
+
     if (errorLevel == EmailStatusCode.any || errorLevel == EmailStatusCode.none)
     {
         threshold = EmailStatusCode.valid;
         diagnose = errorLevel == EmailStatusCode.any;
     }
-    
+
     else
     {
         diagnose = true;
@@ -88,7 +88,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
             default: threshold = errorLevel;
         }
     }
-    
+
     auto returnStatus = [EmailStatusCode.valid];
     auto context = EmailPart.ComponentLocalPart;
     auto contextStack = [context];
@@ -115,27 +115,27 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                     case Token.OpenParenthesis:
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.comment : EmailStatusCode.deprecatedComment;
-                            
+
                         else
                         {
                             returnStatus ~= EmailStatusCode.comment;
                             endOrDie = true;
                         }
-                        
+
                         contextStack ~= context;
                         context = EmailPart.ContextComment;
                     break;
-                    
+
                     case Token.Dot:
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.errorDotStart : EmailStatusCode.errorConsecutiveDots;
-                            
+
                         else
                         {
                             if (endOrDie)
                                 returnStatus ~= EmailStatusCode.deprecatedLocalPart;
                         }
-                        
+
                         endOrDie = false;
                         elementLength = 0;
                         elementCount++;
@@ -143,16 +143,16 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
 
                         if (elementCount >= atomList[EmailPart.ComponentLocalPart].length)
                             atomList[EmailPart.ComponentLocalPart] ~= "";
-                            
+
                         else
                             atomList[EmailPart.ComponentLocalPart][elementCount] = "";
                     break;
-                    
+
                     case Token.DoubleQuote:
                         if (elementLength == 0)
                         {
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.rfc5321QuotedString : EmailStatusCode.deprecatedLocalPart;
-                            
+
                             parseData[EmailPart.ComponentLocalPart] ~= token;
                             atomList[EmailPart.ComponentLocalPart][elementCount] ~= token;
                             elementLength++;
@@ -160,11 +160,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             contextStack ~= context;
                             context = EmailPart.ContextQuotedString;
                         }
-                        
+
                         else
                             returnStatus ~= EmailStatusCode.errorExpectingText;
                     break;
-                    
+
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
@@ -176,38 +176,38 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
 
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.foldingWhitespace : EmailStatusCode.deprecatedFoldingWhitespace;
-                            
+
                         else
                             endOrDie = true;
-                            
+
                         contextStack ~= context;
                         context = EmailPart.ContextFoldingWhitespace;
                         tokenPrior = token;
                     break;
-                    
+
                     case Token.At:
                         if (contextStack.length != 1)
                             throw new Exception("Unexpected item on context stack");
-                            
+
                         if (parseData[EmailPart.ComponentLocalPart] == "")
                             returnStatus ~= EmailStatusCode.errorNoLocalPart;
-                            
+
                         else if (elementLength == 0)
                             returnStatus ~= EmailStatusCode.errorDotEnd;
-                            
+
                         else if (parseData[EmailPart.ComponentLocalPart].length > 64)
                             returnStatus ~= EmailStatusCode.rfc5322LocalTooLong;
-                            
+
                         else if (contextPrior == EmailPart.ContextComment || contextPrior == EmailPart.ContextFoldingWhitespace)
                             returnStatus ~= EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt;
-                            
+
                         context = EmailPart.ComponentDomain;
                         contextStack = [context];
                         elementCount = 0;
                         elementLength = 0;
                         endOrDie = false;
                     break;
-                    
+
                     default:
                         if (endOrDie)
                         {
@@ -217,16 +217,16 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                                 case EmailPart.ContextFoldingWhitespace:
                                     returnStatus ~= EmailStatusCode.errorTextAfterCommentFoldingWhitespace;
                                 break;
-                                
+
                                 case EmailPart.ContextQuotedString:
                                     returnStatus ~= EmailStatusCode.errorTextAfterQuotedString;
                                 break;
-                                
+
                                 default:
                                     throw new Exception("More text found where none is allowed, but unrecognised prior context: " ~ to!(string)(contextPrior));
                             }
                         }
-                        
+
                         else
                         {
                             contextPrior = context;
@@ -237,41 +237,41 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
 
                             parseData[EmailPart.ComponentLocalPart] ~= token;
                             atomList[EmailPart.ComponentLocalPart][elementCount] ~= token;
-                            elementLength++;                                
+                            elementLength++;
                         }
                 }
             break;
-            
+
             case EmailPart.ComponentDomain:
                 switch (token)
                 {
                     case Token.OpenParenthesis:
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt : EmailStatusCode.deprecatedComment;
-                        
+
                         else
                         {
                             returnStatus ~= EmailStatusCode.comment;
                             endOrDie = true;
                         }
-                    
+
                         contextStack ~= context;
                         context = EmailPart.ContextComment;
                     break;
-                    
+
                     case Token.Dot:
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.errorDotStart : EmailStatusCode.errorConsecutiveDots;
-                            
+
                         else if (hyphenFlag)
                             returnStatus ~= EmailStatusCode.errorDomainHyphenEnd;
-                            
+
                         else
                         {
                             if (elementLength > 63)
                                 returnStatus ~= EmailStatusCode.rfc5322LabelTooLong;
                         }
-                        
+
                         endOrDie = false;
                         elementLength = 0,
                         elementCount++;
@@ -280,7 +280,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                         atomList[EmailPart.ComponentDomain] ~= "";
                         parseData[EmailPart.ComponentDomain] ~= token;
                     break;
-                    
+
                     case Token.OpenBracket:
                         if (parseData[EmailPart.ComponentDomain] == "")
                         {
@@ -292,11 +292,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             atomList[EmailPart.ComponentDomain][elementCount] ~= token;
                             parseData[EmailPart.ComponentLiteral] = "";
                         }
-                        
+
                         else
                             returnStatus ~= EmailStatusCode.errorExpectingText;
                     break;
-                    
+
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
@@ -305,21 +305,21 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
                         }
-                        
+
                         if (elementLength == 0)
                             returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt : EmailStatusCode.deprecatedFoldingWhitespace;
-                            
+
                         else
                         {
                             returnStatus ~= EmailStatusCode.foldingWhitespace;
                             endOrDie = true;
                         }
-                        
+
                         contextStack ~= context;
                         context = EmailPart.ContextFoldingWhitespace;
                         tokenPrior = token;
                     break;
-                    
+
                     default:
                         if (endOrDie)
                         {
@@ -329,40 +329,40 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                                 case EmailPart.ContextFoldingWhitespace:
                                     returnStatus ~= EmailStatusCode.errorTextAfterCommentFoldingWhitespace;
                                 break;
-                                
+
                                 case EmailPart.ComponentLiteral:
                                     returnStatus ~= EmailStatusCode.errorTextAfterDomainLiteral;
                                 break;
-                                
+
                                 default:
                                     throw new Exception("More text found where none is allowed, but unrecognised prior context: " ~ to!(string)(contextPrior));
-                            }                            
-                            
+                            }
+
                         }
-                        
+
                         auto ord = token.firstChar;
                         hyphenFlag = false;
-                        
+
                         if (ord < 33 || ord > 126 || Token.Specials.contains(token))
                             returnStatus ~= EmailStatusCode.errorExpectingText;
-                            
+
                         else if (token == Token.Hyphen)
                         {
                             if (elementLength == 0)
                                 returnStatus ~= EmailStatusCode.errorDomainHyphenStart;
-                                
+
                             hyphenFlag = true;
                         }
-                        
+
                         else if (!((ord > 47 && ord < 58) || (ord > 64 && ord < 91) || (ord > 96 && ord < 123)))
                             returnStatus ~= EmailStatusCode.rfc5322Domain;
-                            
+
                         parseData[EmailPart.ComponentDomain] ~= token;
                         atomList[EmailPart.ComponentDomain][elementCount] ~= token;
                         elementLength++;
                 }
             break;
-            
+
             case EmailPart.ComponentLiteral:
                 switch (token)
                 {
@@ -373,7 +373,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             auto index = -1;
                             auto addressLiteral = parseData[EmailPart.ComponentLiteral];
                             auto matchesIp = array(addressLiteral.match(regex!(tstring)(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)).captures);
-                            
+
                             if (!matchesIp.empty)
                             {
                                 index = addressLiteral.lastIndexOf(matchesIp.front);
@@ -381,13 +381,13 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                                 if (index != 0)
                                     addressLiteral = addressLiteral.substr(0, index) ~ "0:0";
                             }
-                            
+
                             if (index == 0)
                                 returnStatus ~= EmailStatusCode.rfc5321AddressLiteral;
-                                
+
                             else if (addressLiteral.compareFirstN(Token.IpV6Tag, 5, true))
                                 returnStatus ~= EmailStatusCode.rfc5322DomainLiteral;
-                                
+
                             else
                             {
                                 auto ipV6 = addressLiteral.substr(5);
@@ -400,55 +400,55 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                                     if (groupCount != maxGroups)
                                         returnStatus ~= EmailStatusCode.rfc5322IpV6GroupCount;
                                 }
-                                
+
                                 else
                                 {
                                     if (index != ipV6.lastIndexOf(Token.DoubleColon))
                                         returnStatus ~= EmailStatusCode.rfc5322IpV6TooManyDoubleColons;
-                                        
+
                                     else
                                     {
                                         if (index == 0 || index == (ipV6.length - 2))
                                             maxGroups++;
-                                            
+
                                         if (groupCount > maxGroups)
                                             returnStatus ~= EmailStatusCode.rfc5322IpV6MaxGroups;
-                                            
+
                                         else if (groupCount == maxGroups)
                                             returnStatus ~= EmailStatusCode.rfc5321IpV6Deprecated;
                                     }
                                 }
-                                
+
                                 if (ipV6.substr(0, 1) == Token.Colon && ipV6.substr(1, 1) != Token.Colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonStart;
-                                    
+
                                 else if (ipV6.substr(-1) == Token.Colon && ipV6.substr(-2, -1) != Token.Colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonEnd;
-                                    
+
                                 else if (!matchesIp.grep(regex!(tstring)(`^[0-9A-Fa-f]{0,4}$`), true).empty)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6BadChar;
-                                    
+
                                 else
                                     returnStatus ~= EmailStatusCode.rfc5321AddressLiteral;
                             }
                         }
-                        
+
                         else
                             returnStatus ~= EmailStatusCode.rfc5322DomainLiteral;
-                            
+
                         parseData[EmailPart.ComponentDomain] ~= token;
                         atomList[EmailPart.ComponentDomain][elementCount] ~= token;
                         elementLength++;
                         contextPrior = context;
                         context = contextStack.pop;
                     break;
-                    
+
                     case Token.Backslash:
                         returnStatus ~= EmailStatusCode.rfc5322DomainLiteralObsoleteText;
                         contextStack ~= context;
                         context = EmailPart.ContextQuotedPair;
                     break;
-                    
+
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
@@ -457,32 +457,32 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
                         }
-                        
+
                         returnStatus ~= EmailStatusCode.foldingWhitespace;
                         contextStack ~= context;
                         context = EmailPart.ContextFoldingWhitespace;
                         tokenPrior = token;
                     break;
-                    
+
                     default:
                         auto ord = token.firstChar;
-                        
+
                         if (ord > 127 || ord == 0 || token == Token.OpenBracket)
                         {
                             returnStatus ~= EmailStatusCode.errorExpectingDomainText;
                             break;
                         }
-                        
+
                         else if (ord < 33 || ord == 127)
                             returnStatus ~= EmailStatusCode.rfc5322DomainLiteralObsoleteText;
-                            
+
                         parseData[EmailPart.ComponentLiteral] ~= token;
                         parseData[EmailPart.ComponentDomain] ~= token;
                         atomList[EmailPart.ComponentDomain][elementCount] ~= token;
                         elementLength++;
                 }
             break;
-            
+
             case EmailPart.ContextQuotedString:
                 switch (token)
                 {
@@ -490,7 +490,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                         contextStack ~= context;
                         context = EmailPart.ContextQuotedPair;
                     break;
-                    
+
                     case Token.Cr:
                     case Token.Tab:
                         if (token == Token.Cr && (++i == email.length || email.get(i, e) != Token.Lf))
@@ -498,17 +498,17 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
                         }
-                        
+
                         parseData[EmailPart.ComponentLocalPart] ~= Token.Space;
                         atomList[EmailPart.ComponentLocalPart][elementCount] ~= Token.Space;
                         elementLength++;
-                        
+
                         returnStatus ~= EmailStatusCode.foldingWhitespace;
                         contextStack ~= context;
                         context = EmailPart.ContextFoldingWhitespace;
                         tokenPrior = token;
                     break;
-                    
+
                     case Token.DoubleQuote:
                         parseData[EmailPart.ComponentLocalPart] ~= token;
                         atomList[EmailPart.ComponentLocalPart][elementCount] ~= token;
@@ -516,31 +516,31 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                         contextPrior = context;
                         context = contextStack.pop;
                     break;
-                    
+
                     default:
                         auto ord = token.firstChar;
-                        
+
                         if (ord > 127 || ord == 0 || ord == 10)
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
-                            
+
                         else if (ord < 32 || ord == 127)
                             returnStatus ~= EmailStatusCode.deprecatedQuotedText;
-                            
+
                         parseData[EmailPart.ComponentLocalPart] ~= token;
                         atomList[EmailPart.ComponentLocalPart][elementCount] ~= token;
                         elementLength++;
-                }                
+                }
             break;
 
             case EmailPart.ContextQuotedPair:
                 auto ord = token.firstChar;
-                
+
                 if (ord > 127)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
-                    
+
                 else if (ord < 31 && ord != 9 || ord == 127)
                     returnStatus ~= EmailStatusCode.deprecatedQuotedPair;
-                    
+
                 contextPrior = context;
                 context = contextStack.pop;
                 token = Token.Backslash ~ token;
@@ -548,24 +548,24 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                 switch (context)
                 {
                     case EmailPart.ContextComment: break;
-                    
+
                     case EmailPart.ContextQuotedString:
                         parseData[EmailPart.ComponentLocalPart] ~= token;
                         atomList[EmailPart.ComponentLocalPart][elementCount] ~= token;
                         elementLength += 2;
                     break;
-                    
+
                     case EmailPart.ComponentLiteral:
                         parseData[EmailPart.ComponentDomain] ~= token;
                         atomList[EmailPart.ComponentDomain][elementCount] ~= token;
                         elementLength += 2;
                     break;
-                    
+
                     default:
                         throw new Exception("Quoted pair logic invoked in an invalid context: " ~ to!(string)(context));
                 }
             break;
-            
+
             case EmailPart.ContextComment:
                 switch (token)
                 {
@@ -573,17 +573,17 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                         contextStack ~= context;
                         context = EmailPart.ContextComment;
                     break;
-                    
+
                     case Token.CloseParenthesis:
                         contextPrior = context;
                         context = contextStack.pop;
                     break;
-                    
+
                     case Token.Backslash:
                         contextStack ~= context;
                         context = EmailPart.ContextQuotedPair;
                     break;
-                    
+
                     case Token.Cr:
                     case Token.Space:
                     case Token.Tab:
@@ -592,28 +592,28 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
                         }
-                        
+
                         returnStatus ~= EmailStatusCode.foldingWhitespace;
-                        
+
                         contextStack ~= context;
                         context = EmailPart.ContextFoldingWhitespace;
                         tokenPrior = token;
                     break;
-                    
+
                     default:
                         auto ord = token.firstChar;
-                        
+
                         if (ord > 127 || ord == 0 || ord == 10)
                         {
                             returnStatus ~= EmailStatusCode.errorExpectingCommentText;
                             break;
                         }
-                        
+
                         else if (ord < 32 || ord == 127)
                             returnStatus ~= EmailStatusCode.deprecatedCommentText;
                 }
             break;
-            
+
             case EmailPart.ContextFoldingWhitespace:
                 if (tokenPrior == Token.Cr)
                 {
@@ -628,39 +628,39 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
                         if (++crlfCount > 1)
                             returnStatus ~= EmailStatusCode.deprecatedFoldingWhitespace;
                     }
-                    
+
                     else
                         crlfCount = 1;
                 }
-                
+
                 switch (token)
                 {
                     case Token.Cr:
                         if (++i == email.length || email.get(i, e) != Token.Lf)
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                     break;
-                    
+
                     case Token.Space:
-                    case Token.Tab:                        
+                    case Token.Tab:
                     break;
-                    
+
                     default:
                         if (tokenPrior == Token.Cr)
                         {
                             returnStatus ~= EmailStatusCode.errorFoldingWhitespaceCrLfEnd;
                             break;
                         }
-                        
+
                         crlfCount = int.min; // int.min == not defined
                         contextPrior = context;
                         context = contextStack.pop;
                         i--;
                     break;
                 }
-                
-                tokenPrior = token;    
+
+                tokenPrior = token;
             break;
-            
+
             default:
                 throw new Exception("Unkown context: " ~ to!(string)(context));
         }
@@ -673,78 +673,78 @@ EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailSta
     {
         if (context == EmailPart.ContextQuotedString)
             returnStatus ~= EmailStatusCode.errorUnclosedQuotedString;
-            
+
         else if (context == EmailPart.ContextQuotedPair)
             returnStatus ~= EmailStatusCode.errorBackslashEnd;
-            
+
         else if (context == EmailPart.ContextComment)
             returnStatus ~= EmailStatusCode.errorUnclosedComment;
-            
+
         else if (context == EmailPart.ComponentLiteral)
             returnStatus ~= EmailStatusCode.errorUnclosedDomainLiteral;
-            
+
         else if (token == Token.Cr)
             returnStatus ~= EmailStatusCode.errorFoldingWhitespaceCrLfEnd;
-            
+
         else if (parseData[EmailPart.ComponentDomain] == "")
             returnStatus ~= EmailStatusCode.errorNoDomain;
-            
+
         else if (elementLength == 0)
             returnStatus ~= EmailStatusCode.errorDotEnd;
-            
+
         else if (hyphenFlag)
             returnStatus ~= EmailStatusCode.errorDomainHyphenEnd;
-            
+
         else if (parseData[EmailPart.ComponentDomain].length > 255)
             returnStatus ~= EmailStatusCode.rfc5322DomainTooLong;
-            
+
         else if ((parseData[EmailPart.ComponentLocalPart] ~ Token.At ~ parseData[EmailPart.ComponentDomain]).length > 254)
             returnStatus ~= EmailStatusCode.rfc5322TooLong;
-            
+
         else if (elementLength > 63)
             returnStatus ~= EmailStatusCode.rfc5322LabelTooLong;
     }
-    
+
     auto dnsChecked = false;
-    
+
     if (checkDNS && returnStatus.max < EmailStatusCode.dnsWarning)
     {
         assert(false, "DNS check is currently not implemented");
     }
-    
+
     if (!dnsChecked && returnStatus.max < EmailStatusCode.dnsWarning)
     {
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
 
         if (isNumeric(atomList[EmailPart.ComponentDomain][elementCount].front))
-            returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;            
+            returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;
     }
-    
+
     returnStatus = array(std.algorithm.uniq(returnStatus));
     auto finalStatus = returnStatus.max;
-    
+
     if (returnStatus.length != 1)
         returnStatus.popFront;
-        
+
     parseData[EmailPart.Status] = to!(tstring)(returnStatus);
-    
+
     if (finalStatus < threshold)
         finalStatus = EmailStatusCode.valid;
 
     if (!diagnose)
         finalStatus = finalStatus < Threshold ? EmailStatusCode.valid : EmailStatusCode.error;
-        
+
     auto valid = finalStatus == EmailStatusCode.valid;
     tstring localPart = "";
     tstring domainPart = "";
-    
+
     if (auto value = EmailPart.ComponentLocalPart in parseData)
         localPart = *value;
-        
+
     if (auto value = EmailPart.ComponentDomain in parseData)
         domainPart = *value;
-        
+
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
@@ -776,18 +776,18 @@ unittest
     assert(`test@255.255.255.255`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321TopLevelDomainNumeric);
     assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@iana.org`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklmn@iana.org`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LocalTooLong);
-    //assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented 
+    //assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
     assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LabelTooLong);
     assert(`test@mason-dixon.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`test@-iana.org`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.errorDomainHyphenStart);
     assert(`test@iana-.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.errorDomainHyphenEnd);
     assert(`test@g--a.com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    //assert(`test@iana.co-uk`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented 
+    //assert(`test@iana.co-uk`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
     assert(`test@.iana.org`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test@iana.org.`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
     assert(`test@iana..com`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.errorConsecutiveDots);
-    //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented 
-    //assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented 
+    //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+    //assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
     assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
     assert(`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hij`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
     assert(`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`.isEmail(false, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322DomainTooLong);
@@ -926,17 +926,17 @@ struct EmailStatus
         string domainPart_;
         EmailStatusCode statusCode_;
     }
-    
+
     ///
     alias valid this;
-    
+
     /*
      * Params:
      *     valid = indicates if the email address is valid or not
      *     localPart = the local part of the email address
      *     domainPart = the domain part of the email address
      *        statusCode = the status code
-     */  
+     */
     private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
     {
         this.valid_ = valid;
@@ -944,7 +944,7 @@ struct EmailStatus
         this.domainPart_ = domainPart;
         this.statusCode_ = statusCode;
     }
-    
+
     /// Indicates if the email address is valid or not.
     bool valid ()
     {
@@ -1052,7 +1052,7 @@ struct EmailStatus
             case EmailStatusCode.errorCrNoLf: return "Address contains a carriage return that is not followed by a line feed";
         }
     }
-    
+
     /// Returns a textual representation of the email status
     string toString ()
     {
@@ -1092,29 +1092,29 @@ enum EmailStatusCode
      * returned indicating the error/warning of the address.
      */
     any = 252,
-    
+
     /**
      * Address is either considered valid or not, no finer grained error checking
      * is performed. Returned email status code will be either Error or Valid.
      */
     none = 253,
-    
+
     /**
      * Address containing warnings is considered valid, that is,
      * any status code below 16 is considered valid.
      */
     warning = 254,
-    
+
     /// Address is invalid for any purpose
     error = 255,
-    
+
 
 
     // Diagnoses
 
     /// Address is valid
     valid = 0,
-    
+
     // Address is valid but a DNS check was not successful
 
     /// Could not find an MX record for this domain but an A-record does exist
@@ -1122,7 +1122,7 @@ enum EmailStatusCode
 
     /// Could not find an MX record or an A-record for this domain
     dnsWarningNoRecord = 6,
-    
+
 
 
     // Address is valid for SMTP but has unusual elements
@@ -1141,7 +1141,7 @@ enum EmailStatusCode
 
     /// Address is valid but contains a :: that only elides one zero group
     rfc5321IpV6Deprecated = 13,
-    
+
 
 
     // Address is valid within the message but cannot be used unmodified for the envelope
@@ -1151,7 +1151,7 @@ enum EmailStatusCode
 
     /// Address contains Folding White Space
     foldingWhitespace = 18,
-    
+
 
 
     // Address contains deprecated elements but may still be valid in restricted contexts
@@ -1167,7 +1167,7 @@ enum EmailStatusCode
 
     /// A quoted pair contains a deprecated character
     deprecatedQuotedPair = 36,
-    
+
     /// Address contains a comment in a position that is deprecated
     deprecatedComment = 37,
 
@@ -1176,7 +1176,7 @@ enum EmailStatusCode
 
     /// Address contains a comment or Folding White Space around the @ sign
     deprecatedCommentFoldingWhitespaceNearAt = 49,
-    
+
 
 
     // The address is only valid according to the broad definition of RFC 5322
@@ -1292,9 +1292,9 @@ enum EmailStatusCode
 }
 
 private:
-    
+
 enum Threshold = 16;
-    
+
 // Email parts for the isEmail function
 enum EmailPart
 {
@@ -1316,7 +1316,7 @@ enum EmailPart
 struct Token
 {
     static:
-    
+
     enum
     {
         At = "@",
@@ -1343,12 +1343,12 @@ struct Token
 
 /*
  * Returns the integer value of the first character in the given string.
- * 
+ *
  * Examples:
  * ---
  * assert("abcde".firstChar == 97);
  * ---
- * 
+ *
  * Params:
  *     str = the string to get the first character from
  *
@@ -1377,16 +1377,16 @@ unittest
  *
  * Params:
  *     arr = the array containing the values to return the maximum of
- *     
+ *
  * Returns: the maximum value
  */
 T max (T) (T[] arr)
 {
     auto max = arr.front;
-    
+
     foreach (i ; 0 .. arr.length - 1)
         max = std.algorithm.max(max, arr[i + 1]);
-        
+
     return max;
 }
 
@@ -1400,7 +1400,7 @@ unittest
 /*
  * Returns the portion of string specified by the $(D_PARAM start) and
  * $(D_PARAM length) parameters.
- * 
+ *
  * Examples:
  * ---
  * assert("abcdef".substr(-1) == "f");
@@ -1409,18 +1409,18 @@ unittest
  * ---
  *
  * Params:
- *     str = the input string. Must be one character or longer.  
+ *     str = the input string. Must be one character or longer.
  *     start = if $(D_PARAM start) is non-negative, the returned string will start at the
  *             $(D_PARAM start)'th position in $(D_PARAM str), counting from zero.
  *             For instance, in the string "abcdef", the character at position 0 is 'a',
  *             the character at position 2 is 'c', and so forth.
- * 
+ *
  *             If $(D_PARAM start) is negative, the returned string will start at the
  *             $(D_PARAM start)'th character from the end of $(D_PARAM str).
- * 
+ *
  *             If $(D_PARAM str) is less than or equal to $(D_PARAM start) characters long,
  *             $(D_KEYWORD true) will be returned.
- * 
+ *
  *     length = if $(D_PARAM length) is given and is positive, the string returned will
  *              contain at most $(D_PARAM length) characters beginning from $(D_PARAM start)
  *              (depending on the length of string).
@@ -1435,8 +1435,8 @@ unittest
  *
  *              If $(D_PARAM length) is omitted, the substring starting from $(D_PARAM start)
  *              until the end of the string will be returned.
- *      
- * Returns: the extracted part of string, or an empty string. 
+ *
+ * Returns: the extracted part of string, or an empty string.
  */
 T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.min)
 {
@@ -1445,7 +1445,7 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
     if (start < 0)
     {
         start = str.length + start;
-        
+
         if (end < 0)
         {
             if (end == sizediff_t.min)
@@ -1453,21 +1453,21 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 
             end = str.length + end;
         }
-            
-        
-        else 
-            end = start + end;    
+
+
+        else
+            end = start + end;
     }
-    
+
     else
     {
         if (end == sizediff_t.min)
             end = str.length;
-        
+
         if (end < 0)
             end = str.length + end;
     }
-    
+
     if (start > end)
         end = start;
 
@@ -1477,7 +1477,7 @@ T[] substr (T) (T[] str, sizediff_t start = 0, sizediff_t length = sizediff_t.mi
 unittest
 {
     assert("abcdef".substr(-1) == "f");
-    assert("abcdef".substr(-2) == "ef");    
+    assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
@@ -1489,7 +1489,7 @@ unittest
  * Compare the two given strings lexicographically. An upper limit of the number of
  * characters, that will be used in the comparison, can be specified. Supports both
  * case-sensitive and case-insensitive comparison.
- * 
+ *
  * Examples:
  * ---
  * assert("abc".compareFirstN("abcdef", 3) == 0);
@@ -1497,16 +1497,16 @@ unittest
  * assert("abc".compareFirstN("abcdef", 6) < 0);
  * assert("abcdef".compareFirstN("abc", 6) > 0);
  * ---
- * 
+ *
  * Params:
  *     s1 = the first string to be compared
  *     s2 = the second string to be compared
- *     length = the length of strings to be used in the comparison. 
+ *     length = the length of strings to be used in the comparison.
  *     caseInsensitive = if true, a case-insensitive comparison will be made,
  *                       otherwise a case-sensitive comparison will be made
- *      
+ *
  * Returns: (for $(D pred = "a < b")):
- * 
+ *
  * $(BOOKTABLE,
  * $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
  * $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
@@ -1517,7 +1517,7 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
 {
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
-    
+
     auto slice1 = s1[0 .. s1End];
     auto slice2 = s2[0 .. s2End];
 
@@ -1534,27 +1534,27 @@ unittest
 
 /*
  * Returns a range consisting of the elements of the $(D_PARAM input) range that
- * matches the given $(D_PARAM pattern). 
- * 
+ * matches the given $(D_PARAM pattern).
+ *
  * Examples:
  * ---
  * assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
  * assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`(\w+)`), true), ["0123", "4567"]));
  * ---
- * 
+ *
  * Params:
  *     input = the input range
  *     pattern = the regular expression pattern to search for
  *     invert = if $(D_KEYWORD true), this function returns the elements of the
- *              input range that do $(B not) match the given $(D_PARAM pattern). 
- *     
+ *              input range that do $(B not) match the given $(D_PARAM pattern).
+ *
  * Returns: a range containing the matched elements
  */
 auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 {
     auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
                        (ElementType!(Range) e) { return !e.match(pattern).empty; };
-    
+
     return filter!(dg)(input);
 }
 
@@ -1566,19 +1566,19 @@ unittest
 
 /*
  * Pops the last element of the given range and returns the element.
- * 
+ *
  * Examples:
  * ---
  * auto array = [0, 1, 2, 3];
  * auto    result = array.pop;
- * 
+ *
  * assert(array == [0, 1, 2]);
  * assert(result == 3);
  * ---
- * 
+ *
  * Params:
  *     range = the range to pop the element from
- *      
+ *
  * Returns: the popped element
  */
 ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
@@ -1600,18 +1600,18 @@ unittest
 /*
  * Returns the character at the given index as a string. The returned string will be a
  * slice of the original string.
- * 
+ *
  * Examples:
  * ---
  * assert("abc".get(1, 'b') == "b");
  * assert("löv".get(1, 'ö') == "ö");
  * ---
- * 
+ *
  * Params:
  *     str = the string to get the character from
  *     index = the index of the character to get
  *     c = the character to return, or any other of the same length
- *      
+ *
  * Returns: the character at the given index as a string
  */
 const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
