@@ -9,7 +9,7 @@
  * Copyright: Copyright © 2008-2011 Dominic Sayers. All rights reserved.
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
- * Version: 3.0.13 - Version 3.0
+ * Version: 3.0.13 - Version 3.0 of the original PHP implementation: $(LI $(LINK http://www.dominicsayers.com/isemail))
  * 
  * Standards: 
  * 		$(UL
@@ -62,9 +62,11 @@ import std.utf;
  * 
  * Returns: an EmailStatus, indicating the status of the email address.
  */
-EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCode errorLevel = EmailStatusCode.None)
+EmailStatus isEmail (Char) (const(Char)[] email, bool checkDNS = false, EmailStatusCode errorLevel = EmailStatusCode.None)
 {
-	alias const(T)[] tstring;
+	static assert(isSomeChar!(Char), `"` ~ Char.stringof ~ `" is not a valid type for the function "isEmail". The following are the only valid types: "char", "wchar" and "dchar"`);
+
+	alias const(Char)[] tstring;
 
     int threshold;
     bool diagnose;
@@ -374,7 +376,7 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
                             
                             if (!matchesIp.empty)
                             {
-                                index = addressLiteral.lastIndexOf(matchesIp.first);
+                                index = addressLiteral.lastIndexOf(matchesIp.front);
 
                                 if (index != 0)
                                     addressLiteral = addressLiteral.substr(0, index) ~ "0:0";
@@ -715,7 +717,7 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
 		if (elementCount == 0)
 			returnStatus ~= EmailStatusCode.Rfc5321TopLevelDomain;
 
-		if (isNumeric(atomList[EmailPart.ComponentDomain][elementCount].first))
+		if (isNumeric(atomList[EmailPart.ComponentDomain][elementCount].front))
 			returnStatus ~= EmailStatusCode.Rfc5321TopLevelDomainNumeric;			
 	}
 	
@@ -723,7 +725,7 @@ EmailStatus isEmail (T) (const(T)[] email, bool checkDNS = false, EmailStatusCod
 	auto finalStatus = returnStatus.max;
 	
 	if (returnStatus.length != 1)
-		returnStatus.shift;
+		returnStatus.popFront;
 		
 	parseData[EmailPart.Status] = to!(tstring)(returnStatus);
 	
@@ -917,36 +919,56 @@ unittest
 /// This struct represents the status of an email address
 struct EmailStatus
 {
-	/// Indicates if the email address is valid or not.
-	const bool valid;
-	
-	/// The local part of the email address, that is, the part before the @ sign.
-	const string localPart;
-	
-	/// The domain part of the email address, that is, the part after the @ sign.
-	const string domainPart;
-	
-	/// The email status code
-	const EmailStatusCode statusCode;
+ 	private
+	{
+		bool valid_;
+		string localPart_;
+		string domainPart_;
+		EmailStatusCode statusCode_;
+	}
 	
 	///
 	alias valid this;
 	
-	/**
+	/*
 	 * Params:
 	 *     valid = indicates if the email address is valid or not
 	 *     localPart = the local part of the email address
 	 *     domainPart = the domain part of the email address
 	 * 	   statusCode = the status code
 	 */  
-	this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
+	private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
 	{
-		this.valid = valid;
-		this.localPart = localPart;
-		this.domainPart = domainPart;
-		this.statusCode = statusCode;
+		this.valid_ = valid;
+		this.localPart_ = localPart;
+		this.domainPart_ = domainPart;
+		this.statusCode_ = statusCode;
 	}
 	
+	/// Indicates if the email address is valid or not.
+	bool valid ()
+	{
+		return valid_;
+	}
+
+	/// The local part of the email address, that is, the part before the @ sign.
+	string localPart ()
+	{
+		return localPart_;
+	}
+
+	/// The domain part of the email address, that is, the part after the @ sign.
+	string domainPart ()
+	{
+		return domainPart_;
+	}
+
+	/// The email status code
+	EmailStatusCode statusCode ()
+	{
+		return statusCode_;
+	}
+
 	/// Returns a describing string of the status code
 	string status ()
 	{
@@ -1270,10 +1292,6 @@ enum EmailStatusCode
 }
 
 private:
-
-alias front first;
-alias back last;
-alias popFront shift;
 	
 enum Threshold = 16;
 	
@@ -1338,7 +1356,7 @@ struct Token
  */
 int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
 {
-    return cast(int) str.first;
+    return cast(int) str.front;
 }
 
 unittest
@@ -1364,7 +1382,7 @@ unittest
  */
 T max (T) (T[] arr)
 {
-    auto max = arr.first;
+    auto max = arr.front;
     
     foreach (i ; 0 .. arr.length - 1)
         max = std.algorithm.max(max, arr[i + 1]);
@@ -1565,7 +1583,7 @@ unittest
  */
 ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
-	auto e = a.last;
+	auto e = a.back;
 	a.popBack;
 	return e;
 }
