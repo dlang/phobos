@@ -165,7 +165,7 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86 gammafunction errorfunction)
+        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -244,8 +244,6 @@ DISABLED_TESTS += std/format
 
 DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
-
-DISABLED_TESTS += std/random
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
 	@echo Testing $@ - disabled
