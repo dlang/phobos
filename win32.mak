@@ -110,7 +110,6 @@ SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\bitmanip.d std\typecons.d \
 	std\complex.d \
 	std\exception.d \
-	std\intrinsic.d \
 	std\process.d \
 	std\system.d \
 	std\encoding.d
@@ -195,7 +194,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_gregorian.html \
-	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -730,9 +728,6 @@ $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 
 $(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
-
-$(DOC)\std_intrinsic.html : $(STDDOC) std\intrinsic.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html $(STDDOC) std\intrinsic.d
 
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d

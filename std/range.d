@@ -18,7 +18,8 @@ Source:    $(PHOBOSSRC std/_range.d)
 module std.range;
 
 public import std.array;
-import std.algorithm, std.conv, std.exception,  std.functional, std.intrinsic,
+import core.bitop;
+import std.algorithm, std.conv, std.exception,  std.functional,
     std.random, std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
