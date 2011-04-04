@@ -45,7 +45,7 @@ import std.utf;
  *
  * Params:
  *     email = The email address to check
- *     checkDNS = If true then a DNS check for MX records will be made
+ *     checkDNS = If CheckDns.yes then a DNS check for MX records will be made
  *     errorLevel = Determines the boundary between valid and invalid addresses.
  *                  Status codes above this number will be returned as-is,
  *                  status codes below will be returned as EmailStatusCode.valid.
