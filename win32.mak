@@ -92,7 +92,7 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= Czlib.obj Dzlib.obj \
+OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 	oldsyserror.obj \
 	c_stdio.obj
 
@@ -291,7 +291,7 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -582,6 +582,9 @@ c_stdio.obj : std\c\stdio.d
 
 Czlib.obj : etc\c\zlib.d
 	$(DMD) -c $(DFLAGS) etc\c\zlib.d -ofCzlib.obj
+
+Ccurl.obj : etc\c\curl.d
+	$(DMD) -c $(DFLAGS) etc\c\curl.d -ofCcurl.obj
 
 ### std\c\windows
 
