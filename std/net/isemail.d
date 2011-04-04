@@ -41,6 +41,8 @@ import std.utf;
  * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
  * is more restrictive (comments, white space and obsolete forms are not allowed).
  *
+ * Note: The DNS check is currently not implemented.
+ *
  * Params:
  *     email = The email address to check
  *     checkDNS = If true then a DNS check for MX records will be made
@@ -224,9 +226,9 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         else
                         {
                             contextPrior = context;
-                            auto ord = token.firstChar;
+                            auto c = token.front;
 
-                            if (ord < 33 || ord > 126 || ord == 10 || Token.specials.contains(token))
+                            if (c < '!' || c > '~' || c == '\n' || Token.specials.contains(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
 
                             parseData[EmailPart.componentLocalPart] ~= token;
@@ -334,10 +336,10 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
                         }
 
-                        auto ord = token.firstChar;
+                        auto c = token.front;
                         hyphenFlag = false;
 
-                        if (ord < 33 || ord > 126 || Token.specials.contains(token))
+                        if (c < '!' || c > '~' || Token.specials.contains(token))
                             returnStatus ~= EmailStatusCode.errorExpectingText;
 
                         else if (token == Token.hyphen)
@@ -348,7 +350,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                             hyphenFlag = true;
                         }
 
-                        else if (!((ord > 47 && ord < 58) || (ord > 64 && ord < 91) || (ord > 96 && ord < 123)))
+                        else if (!((c > '/' && c < ':') || (c > '@' && c < '[') || (c > '`' && c < '{')))
                             returnStatus ~= EmailStatusCode.rfc5322Domain;
 
                         parseData[EmailPart.componentDomain] ~= token;
@@ -459,15 +461,15 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto ord = token.firstChar;
+                        auto c = token.front;
 
-                        if (ord > 127 || ord == 0 || token == Token.openBracket)
+                        if (c > AsciiToken.delete_ || c == '\0' || token == Token.openBracket)
                         {
                             returnStatus ~= EmailStatusCode.errorExpectingDomainText;
                             break;
                         }
 
-                        else if (ord < 33 || ord == 127)
+                        else if (c < '!' || c == AsciiToken.delete_ )
                             returnStatus ~= EmailStatusCode.rfc5322DomainLiteralObsoleteText;
 
                         parseData[EmailPart.componentLiteral] ~= token;
@@ -512,12 +514,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto ord = token.firstChar;
+                        auto c = token.front;
 
-                        if (ord > 127 || ord == 0 || ord == 10)
+                        if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
 
-                        else if (ord < 32 || ord == 127)
+                        else if (c < ' ' || c == AsciiToken.delete_)
                             returnStatus ~= EmailStatusCode.deprecatedQuotedText;
 
                         parseData[EmailPart.componentLocalPart] ~= token;
@@ -527,12 +529,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
             break;
 
             case EmailPart.contextQuotedPair:
-                auto ord = token.firstChar;
+                auto c = token.front;
 
-                if (ord > 127)
+                if (c > AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
 
-                else if (ord < 31 && ord != 9 || ord == 127)
+                else if (c < AsciiToken.unitSeparator && c != AsciiToken.horizontalTab || c == AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.deprecatedQuotedPair;
 
                 contextPrior = context;
@@ -595,15 +597,15 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto ord = token.firstChar;
+                        auto c = token.front;
 
-                        if (ord > 127 || ord == 0 || ord == 10)
+                        if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                         {
                             returnStatus ~= EmailStatusCode.errorExpectingCommentText;
                             break;
                         }
 
-                        else if (ord < 32 || ord == 127)
+                        else if (c < ' ' || c == AsciiToken.delete_)
                             returnStatus ~= EmailStatusCode.deprecatedCommentText;
                 }
             break;
@@ -1343,28 +1345,11 @@ struct Token
     }
 }
 
-/*
- * Returns the integer value of the first character in the given string.
- *
- * Examples:
- * ---
- * assert("abcde".firstChar == 97);
- * ---
- *
- * Params:
- *     str = the string to get the first character from
- *
- * Returns: the first character as an integer
- */
-int firstChar (Char) (in Char[] str) if (isSomeChar!(Char))
+enum AsciiToken
 {
-    return cast(int) str.front;
-}
-
-unittest
-{
-    assert("abcde".firstChar == 97);
-    assert("över".firstChar == 246);
+    horizontalTab = 9,
+	unitSeparator = 31,
+    delete_ = 127
 }
 
 /*
@@ -1706,5 +1691,3 @@ sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
         return -1;
     }
 }
-
-void main () {}
