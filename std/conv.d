@@ -1769,12 +1769,12 @@ unittest
 unittest
 {
     int[][][] ia = [ [[1,2],[3,4],[5]] , [[6],[],[7,8,9]] , [[]] ];
-	
+
 	char[] s = to!(char[])(ia);
 	int[][][] ia2;
-	
+
 	ia2 = to!(typeof(ia2))(s);
-    assert( ia == ia2);  
+    assert( ia == ia2);
 }
 
 // Customizable integral parse
@@ -4032,11 +4032,7 @@ unittest
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
 as $(D T)), constructs an object of non-$(D class) type $(D T) at that
-<<<<<<< HEAD
 address.
-=======
-address. 
->>>>>>> 78b3f24604a26606e5d599e08c98d3849b806e68
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).

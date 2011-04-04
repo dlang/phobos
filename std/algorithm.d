@@ -308,7 +308,9 @@ Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(WEB erdani.com, Andrei Alexandrescu)
+
+Source: $(PHOBOSSRC std/_algorithm.d)
  */
 module std.algorithm;
 //debug = std_algorithm;
@@ -369,20 +371,17 @@ template map(fun...) if (fun.length >= 1)
     {
         static if (fun.length > 1)
         {
-            alias adjoin!(staticMap!(unaryFun, fun)) pred;
+            alias adjoin!(staticMap!(unaryFun, fun)) _fun;
         }
         else
         {
-            alias unaryFun!fun pred;
+            alias unaryFun!fun _fun;
         }
 
         struct Result
         {
             alias Unqual!Range R;
-            alias pred _fun;
-            // Uncomment this to reveal a @@@BUG@@@ in the compiler
-            //alias typeof(fun(.ElementType!R.init)) ElementType;
-            alias typeof({ return pred(.ElementType!R.init); }()) ElementType;
+            alias typeof(_fun(.ElementType!R.init)) ElementType;
             R _input;
 
             static if (isBidirectionalRange!R)
@@ -434,9 +433,7 @@ template map(fun...) if (fun.length >= 1)
                 }
             }
 
-            // hasLength is busted, Bug 2873
-            static if (is(typeof(_input.length) : size_t)
-                    || is(typeof(_input.length()) : size_t))
+            static if (hasLength!R || isSomeString!R)
             {
                 @property size_t length()
                 {
@@ -1068,7 +1065,7 @@ auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
 assert(equal(r1, [ 2.5 ]));
 ----
  */
-template filter(alias pred) //if (is(typeof(unaryFunction!pred)))
+template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
@@ -1613,8 +1610,6 @@ if (is(typeof(ElementType!Range.init == Separator.init))
         {
             _input = input;
             _separator = separator;
-            // computeFront();
-            // computeBack();
         }
 
         static if (isInfinite!Range)
@@ -1699,6 +1694,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
                 assert(!empty);
                 if (_backLength == _unComputed)
                 {
+                    // evaluate back to make sure it's computed
                     back;
                 }
                 assert(_backLength <= _input.length);

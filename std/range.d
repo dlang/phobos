@@ -764,7 +764,7 @@ without actually exhausting the range (e.g. socket streams), and some
 other ranges may be infinite.
 
 Although narrow string types ($(D char[]), $(D wchar[]), and their
-qualified derivatives) do define a $(D .length) property, $(D
+qualified derivatives) do define a $(D length) property, $(D
 hasLength) yields $(D false) for them. This is because a narrow
 string's length does not reflect the number of characters, but instead
 the number of encoding units, and as such is not useful with
@@ -1092,6 +1092,8 @@ moves by successive calls to $(D popFront). Applying stride twice to
 the same range results in a stride that with a step that is the
 product of the two applications.
 
+Throws: $(D Exception) if $(D n == 0).
+
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
@@ -1102,7 +1104,7 @@ assert(stride(stride(a, 2), 3) == stride(a, 6));
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
 {
-    enforce(n > 0);
+    enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
     {
@@ -1129,7 +1131,7 @@ if (isInputRange!(Unqual!Range))
                     {
                         slack--;
                     }
-                    else if (source.length > 0)
+                    else if (!source.empty)
                     {
                         slack = min(_n, source.length) - 1;
                     }
@@ -1844,7 +1846,7 @@ unittest
 $(D roundRobin(r1, r2, r3)) yields $(D r1.front), then $(D r2.front),
 then $(D r3.front), after which it pops off one element from each and
 continues again from $(D r1). For example, if two ranges are involved,
-it alternates yields elements off the two ranges. $(D roundRobin)
+it alternately yields elements off the two ranges. $(D roundRobin)
 stops after it has consumed all ranges (skipping over the ones that
 finish early).
 
@@ -1872,7 +1874,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
             return true;
         }
 
-        auto ref front()
+        @property auto ref front()
         {
             static string makeSwitch()
             {
@@ -2004,7 +2006,6 @@ unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 3, 4, 2, 5, 1, 6 ]);
 
     int[] a = [ 1, 2, 3, 4, 5 ];
-    //writeln(radial(a, 1));
     assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ][]));
     static assert(isForwardRange!(typeof(radial(a, 1))));
 
@@ -2295,7 +2296,7 @@ unittest
 Similar to $(XREF range,take), but assumes that $(D range) has at
 least $(D n) elements. Consequently, the result of $(D
 takeExactly(range, n)) always defines the $(D length) property (and
-initializea it to $(D n)) even when $(D range) itself does not define
+initializes it to $(D n)) even when $(D range) itself does not define
 $(D length).
 
 If $(D R) is a random-access range, the result of $(D takeExactly) is
@@ -2443,7 +2444,7 @@ unittest
     assert(s.length == 1);
     assert(!s.empty);
     assert(s.front == 42);
-    s.front() = 43;
+    s.front = 43;
     assert(s.front == 43);
     assert(s.back == 43);
     assert(s[0] == 43);
@@ -3698,16 +3699,13 @@ unittest
     static assert(isForwardRange!(typeof(fib)));
 
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
-    //foreach (e; take(fib, 10)) writeln(e);
     assert(equal(take(fib, 10), witness));
-    foreach (e; take(fib, 10)) {}      //writeln(e);
-                                       //writeln(s.front);
+    foreach (e; take(fib, 10)) {}
     auto fact = recurrence!("n * a[n-1]")(1);
     assert( equal(take(fact, 10), [1, 1, 2, 2*3, 2*3*4, 2*3*4*5, 2*3*4*5*6,
                             2*3*4*5*6*7, 2*3*4*5*6*7*8, 2*3*4*5*6*7*8*9][]) );
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
     foreach (e; take(piapprox, 20)) {}
-    //writeln(e);
     // Thanks to yebblies for this test and the associated fix
     auto r = recurrence!"a[n-2]"(1, 2);
     witness = [1, 2, 1, 2, 1];
@@ -3786,12 +3784,6 @@ Sequence!(fun, Tuple!(State)) sequence(alias fun, State...)(State args)
 
 unittest
 {
-    // alias Sequence!("a[0] += a[1]",
-    //         Tuple!(int, int)) Gen;
-    // Gen x = Gen(tuple(0, 5));
-    // foreach (e; take(x, 15))
-    // {}//writeln(e);
-
     auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))
         (tuple(0, 4));
     static assert(isForwardRange!(typeof(y)));
@@ -3828,6 +3820,9 @@ unittest
    version has $(D step = 1). If $(D begin < end && step <= 0) or $(D
    begin > end && step >= 0), then an empty range is returned. If $(D
    begin != end) and $(D step == 0), an exception is thrown.
+
+   Throws:
+   $(D Exception) if $(D step == 0)
 
    Example:
    ----
@@ -3902,7 +3897,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             ret.pastLast -= (this.length - upper) * step;
             return ret;
         }
-        @property auto length()        //const
+        @property size_t length() const
         {
             return unsigned((pastLast - current) / step);
         }
@@ -4096,7 +4091,6 @@ unittest
     assert(r1.back == a.ptr + a.length - 1);
 
     auto rf = iota(0.0, 0.5, 0.1);
-    //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
     assert(rf.length == 5);
 
@@ -4120,7 +4114,6 @@ unittest
 
     // With something just above 0.5
     rf = iota(0.0, nextUp(0.5), 0.1);
-    //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
     rf.popBack();
     assert(rf[rf.length - 1] == rf.back);
@@ -4129,13 +4122,11 @@ unittest
 
     // going down
     rf = iota(0.0, -0.5, -0.1);
-    //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
     rfSlice = rf[2..5];
     assert(approxEqual(rfSlice, [-0.2, -0.3, -0.4]));
 
     rf = iota(0.0, nextDown(-0.5), -0.1);
-    //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
 
     // iota of longs
@@ -5839,9 +5830,7 @@ unittest
     {
         auto a = [ 1, 2, 3, 42, 52, 64 ];
         auto r = assumeSorted(a);
-        //writeln(r.lowerBound(42));
         assert(equal(r.lowerBound(42), [1, 2, 3]));
-        //writeln(r.gallopLowerBound(42));
 
         assert(equal(r.lowerBound!(pol)(42), [1, 2, 3]));
         assert(equal(r.lowerBound!(pol)(41), [1, 2, 3]));
@@ -5919,7 +5908,6 @@ if (isRandomAccessRange!(Unqual!R))
 unittest
 {
     static assert(isRandomAccessRange!(SortedRange!(int[])));
-    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     auto p = assumeSorted(a).lowerBound(4);
     assert(equal(p, [0, 1, 2, 3]));
@@ -5931,7 +5919,6 @@ unittest
 
 unittest
 {
-    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
     assert(equal(p, [4, 4, 5, 6 ]));
@@ -5939,7 +5926,6 @@ unittest
 
 unittest
 {
-    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).equalRange(3);
     assert(equal(p, [ 3, 3, 3 ]), text(p));
@@ -5955,8 +5941,6 @@ unittest
 
 unittest
 {
-    // scope(success) writeln("unittest @", __FILE__, ":",
-    // __LINE__, " done.");
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     if (a.length)
     {

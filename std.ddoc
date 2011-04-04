@@ -22,7 +22,7 @@ DDOC_BLANKLINE	= $(P)
 
 DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang='en'>
 
 <!--
 	Copyright (c) 1999-2010 by Digital Mars
@@ -34,10 +34,12 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 <meta http-equiv="content-type" content="text/html; charset=utf-8" >
 <title>$(TITLE) - D Programming Language - Digital Mars</title>
 <link rel="stylesheet" type="text/css" href="../style.css">
+<link rel="stylesheet" type="text/css" href="../css/style.css">
 
 <script>
 function listanchors()
 {
+    if (typeof inhibitQuickIndex !== 'undefined') return;
     var a = document.getElementById("quickindex");
     if (!a) return;
     var newText = "";
@@ -69,11 +71,10 @@ function listanchors()
 
 </head>
 
-<body onload="listanchors()">
+<body onload="listanchors()" class='hyphenate'>
 <div id="heading">
-	<a href="http://www.digitalmars.com/"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com" align="left"></a>
+	<a href="http://www.digitalmars.com/"><img src="../images/dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com" align="left"></a>
 	<p align="right">D Programming Language 2.0</p>
-
 
 	<div id="headingNav">
 	$(UL
@@ -121,7 +122,7 @@ GOOGLE_FOOTER=
 //--></script>
 <script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 </script>
- 
+
 TOP=
 <div class="navblock">
 <form method="get" action="http://www.google.com/search">
@@ -154,9 +155,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_array.html" title="Array functions">std.array</a>)
 	$(LI <a href="std_base64.html" title="Encode/decode base64 format">std.base64</a>)
 	$(LI <a href="std_bigint.html" title="Arbitrary-precision ('bignum') arithmetic">std.bigint</a>)
-	$(LI <a href="std_bind.html" title="Function argument binding">std.bind</a>)
 	$(LI <a href="std_bitmanip.html" title="Bit-level manipulation">std.bitmanip</a>)
-	$(LI <a href="std_boxer.html" title="Box/unbox types">std.boxer</a>)
 	$(LI <a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a>)
 	$(LI <a href="std_complex.html" title="Complex numbers">std.complex</a>)
 	$(LI <a href="std_concurrency.html" title="Message Passing">std.concurrency</a>)
@@ -268,16 +267,17 @@ LPAREN = (
 LESS = &lt;
 GREATER = &gt;
 WEB = $(LINK2 http://$1,$2)
-LUCKY = $(WEB 
+LUCKY = $(WEB
 google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=$0,$0)
 D = <font face=Courier><b>$0</b></font>
 D = <span class="d_inlinecode">$0</span>
-BIGOH = <i><b>&Omicron;</i>(</i></b>$(D $0)<b></i>)</i></b>
+BIGOH = <b><i>&Omicron;</i>(</b>$(D $0)<b><i>)</i></b>
 GLOSSARY = $(LINK2 ../glossary.html#$0, $0)
 
 DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
 DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
 XREF = <a href="std_$1.html#$2">$(D std.$1.$2)</a>
+LREF = <a href="#$1">$(D $1)</a>
 BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
 PRE = <pre>$0</pre>
 PHOBOSSRC=$(LINK2 https://github.com/D-Programming-Language/phobos/blob/master/$0, $0)
