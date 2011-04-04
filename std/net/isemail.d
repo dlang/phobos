@@ -978,91 +978,97 @@ struct EmailStatus
     /// Returns a describing string of the status code
     string status ()
     {
-        final switch (statusCode)
-        {
-            // Categories
-            case EmailStatusCode.validCategory: return "Address is valid";
-            case EmailStatusCode.dnsWarning: return "Address is valid but a DNS check was not successful";
-            case EmailStatusCode.rfc5321: return "Address is valid for SMTP but has unusual elements";
-            case EmailStatusCode.cFoldingWhitespace: return "Address is valid within the message but cannot be used unmodified for the envelope";
-            case EmailStatusCode.deprecated_: return "Address contains deprecated elements but may still be valid in restricted contexts";
-            case EmailStatusCode.rfc5322: return "The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid";
-            case EmailStatusCode.any: return "";
-            case EmailStatusCode.none: return "";
-            case EmailStatusCode.warning: return "";
-            case EmailStatusCode.error: return "Address is invalid for any purpose";
-
-            // Diagnoses
-            case EmailStatusCode.valid: return "Address is valid";
-            // Address is valid but a DNS check was not successful
-            case EmailStatusCode.dnsWarningNoMXRecord: return "Could not find an MX record for this domain but an A-record does exist";
-            case EmailStatusCode.dnsWarningNoRecord: return "Could not find an MX record or an A-record for this domain";
-
-            // Address is valid for SMTP but has unusual elements
-            case EmailStatusCode.rfc5321TopLevelDomain: return "Address is valid but at a Top Level Domain";
-            case EmailStatusCode.rfc5321TopLevelDomainNumeric: return "Address is valid but the Top Level Domain begins with a number";
-            case EmailStatusCode.rfc5321QuotedString: return "Address is valid but contains a quoted string";
-            case EmailStatusCode.rfc5321AddressLiteral: return "Address is valid but at a literal address not a domain";
-            case EmailStatusCode.rfc5321IpV6Deprecated: return "Address is valid but contains a :: that only elides one zero group";
-
-            // Address is valid within the message but cannot be used unmodified for the envelope
-            case EmailStatusCode.comment: return "Address contains comments";
-            case EmailStatusCode.foldingWhitespace: return "Address contains Folding White Space";
-
-            // Address contains deprecated elements but may still be valid in restricted contexts
-            case EmailStatusCode.deprecatedLocalPart: return "The local part is in a deprecated form";
-            case EmailStatusCode.deprecatedFoldingWhitespace: return "Address contains an obsolete form of Folding White Space";
-            case EmailStatusCode.deprecatedQuotedText: return "A quoted string contains a deprecated character";
-            case EmailStatusCode.deprecatedQuotedPair: return "A quoted pair contains a deprecated character";
-            case EmailStatusCode.deprecatedComment: return "Address contains a comment in a position that is deprecated";
-            case EmailStatusCode.deprecatedCommentText: return "A comment contains a deprecated character";
-            case EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt: return "Address contains a comment or Folding White Space around the @ sign";
-
-            // The address is only valid according to the broad definition of RFC 5322
-            case EmailStatusCode.rfc5322Domain: return "Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS";
-            case EmailStatusCode.rfc5322TooLong: return "Address is too long";
-            case EmailStatusCode.rfc5322LocalTooLong: return "The local part of the address is too long";
-            case EmailStatusCode.rfc5322DomainTooLong: return "The domain part is too long";
-            case EmailStatusCode.rfc5322LabelTooLong: return "The domain part contains an element that is too long";
-            case EmailStatusCode.rfc5322DomainLiteral: return "The domain literal is not a valid RFC 5321 address literal";
-            case EmailStatusCode.rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters";
-            case EmailStatusCode.rfc5322IpV6GroupCount: return "The IPv6 literal address contains the wrong number of groups";
-            case EmailStatusCode.rfc5322IpV6TooManyDoubleColons: return "The IPv6 literal address contains too many :: sequences";
-            case EmailStatusCode.rfc5322IpV6BadChar: return "The IPv6 address contains an illegal group of characters";
-            case EmailStatusCode.rfc5322IpV6MaxGroups: return "The IPv6 address has too many groups";
-            case EmailStatusCode.rfc5322IpV6ColonStart: return "IPv6 address starts with a single colon";
-            case EmailStatusCode.rfc5322IpV6ColonEnd: return "IPv6 address ends with a single colon";
-
-            // Address is invalid for any purpose
-            case EmailStatusCode.errorExpectingDomainText: return "A domain literal contains a character that is not allowed";
-            case EmailStatusCode.errorNoLocalPart: return "Address has no local part";
-            case EmailStatusCode.errorNoDomain: return "Address has no domain part";
-            case EmailStatusCode.errorConsecutiveDots: return "The address may not contain consecutive dots";
-            case EmailStatusCode.errorTextAfterCommentFoldingWhitespace: return "Address contains text after a comment or Folding White Space";
-            case EmailStatusCode.errorTextAfterQuotedString: return "Address contains text after a quoted string";
-            case EmailStatusCode.errorTextAfterDomainLiteral: return "Extra characters were found after the end of the domain literal";
-            case EmailStatusCode.errorExpectingQuotedPair: return "The address contains a character that is not allowed in a quoted pair";
-            case EmailStatusCode.errorExpectingText: return "Address contains a character that is not allowed";
-            case EmailStatusCode.errorExpectingQuotedText: return "A quoted string contains a character that is not allowed";
-            case EmailStatusCode.errorExpectingCommentText: return "A comment contains a character that is not allowed";
-            case EmailStatusCode.errorBackslashEnd: return "The address cannot end with a backslash";
-            case EmailStatusCode.errorDotStart: return "Neither part of the address may begin with a dot";
-            case EmailStatusCode.errorDotEnd: return "Neither part of the address may end with a dot";
-            case EmailStatusCode.errorDomainHyphenStart: return "A domain or subdomain cannot begin with a hyphen";
-            case EmailStatusCode.errorDomainHyphenEnd: return "A domain or subdomain cannot end with a hyphen";
-            case EmailStatusCode.errorUnclosedQuotedString: return "Unclosed quoted string";
-            case EmailStatusCode.errorUnclosedComment: return "Unclosed comment";
-            case EmailStatusCode.errorUnclosedDomainLiteral: return "Domain literal is missing its closing bracket";
-            case EmailStatusCode.errorFoldingWhitespaceCrflX2: return "Folding White Space contains consecutive CRLF sequences";
-            case EmailStatusCode.errorFoldingWhitespaceCrLfEnd: return "Folding White Space ends with a CRLF sequence";
-            case EmailStatusCode.errorCrNoLf: return "Address contains a carriage return that is not followed by a line feed";
-        }
+        return statusCodeDescription(statusCode_);
     }
 
     /// Returns a textual representation of the email status
     string toString ()
     {
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid, localPart, domainPart, statusCode);
+    }
+}
+
+/// Returns a describing string of the given status code
+string statusCodeDescription (EmailStatusCode statusCode)
+{
+    final switch (statusCode)
+    {
+        // Categories
+        case EmailStatusCode.validCategory: return "Address is valid";
+        case EmailStatusCode.dnsWarning: return "Address is valid but a DNS check was not successful";
+        case EmailStatusCode.rfc5321: return "Address is valid for SMTP but has unusual elements";
+        case EmailStatusCode.cFoldingWhitespace: return "Address is valid within the message but cannot be used unmodified for the envelope";
+        case EmailStatusCode.deprecated_: return "Address contains deprecated elements but may still be valid in restricted contexts";
+        case EmailStatusCode.rfc5322: return "The address is only valid according to the broad definition of RFC 5322. It is otherwise invalid";
+        case EmailStatusCode.any: return "";
+        case EmailStatusCode.none: return "";
+        case EmailStatusCode.warning: return "";
+        case EmailStatusCode.error: return "Address is invalid for any purpose";
+
+        // Diagnoses
+        case EmailStatusCode.valid: return "Address is valid";
+        // Address is valid but a DNS check was not successful
+        case EmailStatusCode.dnsWarningNoMXRecord: return "Could not find an MX record for this domain but an A-record does exist";
+        case EmailStatusCode.dnsWarningNoRecord: return "Could not find an MX record or an A-record for this domain";
+
+        // Address is valid for SMTP but has unusual elements
+        case EmailStatusCode.rfc5321TopLevelDomain: return "Address is valid but at a Top Level Domain";
+        case EmailStatusCode.rfc5321TopLevelDomainNumeric: return "Address is valid but the Top Level Domain begins with a number";
+        case EmailStatusCode.rfc5321QuotedString: return "Address is valid but contains a quoted string";
+        case EmailStatusCode.rfc5321AddressLiteral: return "Address is valid but at a literal address not a domain";
+        case EmailStatusCode.rfc5321IpV6Deprecated: return "Address is valid but contains a :: that only elides one zero group";
+
+        // Address is valid within the message but cannot be used unmodified for the envelope
+        case EmailStatusCode.comment: return "Address contains comments";
+        case EmailStatusCode.foldingWhitespace: return "Address contains Folding White Space";
+
+        // Address contains deprecated elements but may still be valid in restricted contexts
+        case EmailStatusCode.deprecatedLocalPart: return "The local part is in a deprecated form";
+        case EmailStatusCode.deprecatedFoldingWhitespace: return "Address contains an obsolete form of Folding White Space";
+        case EmailStatusCode.deprecatedQuotedText: return "A quoted string contains a deprecated character";
+        case EmailStatusCode.deprecatedQuotedPair: return "A quoted pair contains a deprecated character";
+        case EmailStatusCode.deprecatedComment: return "Address contains a comment in a position that is deprecated";
+        case EmailStatusCode.deprecatedCommentText: return "A comment contains a deprecated character";
+        case EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt: return "Address contains a comment or Folding White Space around the @ sign";
+
+        // The address is only valid according to the broad definition of RFC 5322
+        case EmailStatusCode.rfc5322Domain: return "Address is RFC 5322 compliant but contains domain characters that are not allowed by DNS";
+        case EmailStatusCode.rfc5322TooLong: return "Address is too long";
+        case EmailStatusCode.rfc5322LocalTooLong: return "The local part of the address is too long";
+        case EmailStatusCode.rfc5322DomainTooLong: return "The domain part is too long";
+        case EmailStatusCode.rfc5322LabelTooLong: return "The domain part contains an element that is too long";
+        case EmailStatusCode.rfc5322DomainLiteral: return "The domain literal is not a valid RFC 5321 address literal";
+        case EmailStatusCode.rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321 address literal and it contains obsolete characters";
+        case EmailStatusCode.rfc5322IpV6GroupCount: return "The IPv6 literal address contains the wrong number of groups";
+        case EmailStatusCode.rfc5322IpV6TooManyDoubleColons: return "The IPv6 literal address contains too many :: sequences";
+        case EmailStatusCode.rfc5322IpV6BadChar: return "The IPv6 address contains an illegal group of characters";
+        case EmailStatusCode.rfc5322IpV6MaxGroups: return "The IPv6 address has too many groups";
+        case EmailStatusCode.rfc5322IpV6ColonStart: return "IPv6 address starts with a single colon";
+        case EmailStatusCode.rfc5322IpV6ColonEnd: return "IPv6 address ends with a single colon";
+
+        // Address is invalid for any purpose
+        case EmailStatusCode.errorExpectingDomainText: return "A domain literal contains a character that is not allowed";
+        case EmailStatusCode.errorNoLocalPart: return "Address has no local part";
+        case EmailStatusCode.errorNoDomain: return "Address has no domain part";
+        case EmailStatusCode.errorConsecutiveDots: return "The address may not contain consecutive dots";
+        case EmailStatusCode.errorTextAfterCommentFoldingWhitespace: return "Address contains text after a comment or Folding White Space";
+        case EmailStatusCode.errorTextAfterQuotedString: return "Address contains text after a quoted string";
+        case EmailStatusCode.errorTextAfterDomainLiteral: return "Extra characters were found after the end of the domain literal";
+        case EmailStatusCode.errorExpectingQuotedPair: return "The address contains a character that is not allowed in a quoted pair";
+        case EmailStatusCode.errorExpectingText: return "Address contains a character that is not allowed";
+        case EmailStatusCode.errorExpectingQuotedText: return "A quoted string contains a character that is not allowed";
+        case EmailStatusCode.errorExpectingCommentText: return "A comment contains a character that is not allowed";
+        case EmailStatusCode.errorBackslashEnd: return "The address cannot end with a backslash";
+        case EmailStatusCode.errorDotStart: return "Neither part of the address may begin with a dot";
+        case EmailStatusCode.errorDotEnd: return "Neither part of the address may end with a dot";
+        case EmailStatusCode.errorDomainHyphenStart: return "A domain or subdomain cannot begin with a hyphen";
+        case EmailStatusCode.errorDomainHyphenEnd: return "A domain or subdomain cannot end with a hyphen";
+        case EmailStatusCode.errorUnclosedQuotedString: return "Unclosed quoted string";
+        case EmailStatusCode.errorUnclosedComment: return "Unclosed comment";
+        case EmailStatusCode.errorUnclosedDomainLiteral: return "Domain literal is missing its closing bracket";
+        case EmailStatusCode.errorFoldingWhitespaceCrflX2: return "Folding White Space contains consecutive CRLF sequences";
+        case EmailStatusCode.errorFoldingWhitespaceCrLfEnd: return "Folding White Space ends with a CRLF sequence";
+        case EmailStatusCode.errorCrNoLf: return "Address contains a carriage return that is not followed by a line feed";
     }
 }
 
