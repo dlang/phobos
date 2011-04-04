@@ -6,7 +6,7 @@
 
 $(BOOKTABLE ,
 
-$(TR $(TH Csategory) $(TH Functions))
+$(TR $(TH Category) $(TH Functions))
 
 $(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
