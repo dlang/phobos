@@ -49,6 +49,8 @@ import std.getopt;
 string data = "file.dat";
 int length = 24;
 bool verbose;
+enum Color { yes, no };
+Color color;
 
 void main(string[] args)
 {
@@ -56,7 +58,8 @@ void main(string[] args)
     args,
     "length",  &length,    // numeric
     "file",    &data,      // string
-    "verbose", &verbose);  // flag
+    "verbose", &verbose,   // flag
+    "color",   &color);    // enum
   ...
 }
 ---------
@@ -116,6 +119,19 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  --paranoid", the "42" does not set $(D paranoid) to 42;
  instead, $(D paranoid) is set to 2 and "42" is not considered
  as part of the normal program arguments.))
+
+ $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as a
+ string is expected as the next option, or right within the option separated
+ with an "=" sign:
+
+---------
+  enum Color { yes, no };
+  Color color; // default initialized to yes
+  getopt(args, "color", &color);
+---------
+
+To set $(D color) to $(D Color.no), invoke the program with either $(D
+--color=no) or $(D --color no).
 
  $(LI $(I String options.) If an option is bound to a string, a string
  is expected as the next option, or right within the option separated
@@ -459,6 +475,15 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 if (incremental) ++*receiver;
                 else *receiver = to!(typeof(*receiver))(val);
             }
+            else static if (is(typeof(*receiver) == enum))
+            {
+                // enum receiver
+                foreach (s; __traits(allMembers, typeof(*receiver)))
+                {
+                    if (s == val)
+                        *receiver = mixin(typeof(*receiver).stringof ~ "." ~ val);
+                }
+            }
             else static if (is(typeof(*receiver) == string))
             {
                 // string receiver
@@ -613,6 +638,17 @@ unittest
                       "--paranoid", "--paranoid", "--paranoid"]).dup;
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
+
+    enum Color { yes, no };
+    Color color;
+    args = (["program.name", "--color=no",]).dup;
+    getopt(args, "color", &color);
+    assert(color == Color.no, to!(string)(color));
+
+    color = Color.yes;
+    args = (["program.name", "--color", "no",]).dup;
+    getopt(args, "color", &color);
+    assert(color == Color.no, to!(string)(color));
 
     string data = "file.dat";
     int length = 24;
