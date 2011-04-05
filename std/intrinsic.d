@@ -4,8 +4,8 @@
 // Placed into the public domain
 
 /**
- * $(RED This module has been deprecated. Use $(LINK2 std_regex.html,
- * std.regex) instead.)
+ * $(RED This module has been deprecated. Use $(LINK2 core_bitop.html,
+ * core.bitop) instead.)
  *
  * These functions are built-in intrinsics to the compiler.
  *
