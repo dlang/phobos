@@ -53,7 +53,7 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
