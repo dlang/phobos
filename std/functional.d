@@ -383,8 +383,7 @@ template adjoin(F...) if (F.length)
             Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
             foreach (i, Unused; result.Types)
             {
-                auto store = (cast(void*) &result[i])[0 .. result[i].sizeof];
-                emplace!(typeof(result[i]))(store, F[i](a));
+                emplace(&result[i], F[i](a));
             }
             return result;
         }

@@ -498,7 +498,7 @@ struct FormatSpec(Char)
        $(D ubyte.max). ($(D 0) means not used).
     */
     ubyte index;
-    version(D_Ddoc) {
+    version(StdDdoc) {
         /**
          The format specifier contained a $(D '-') ($(D printf)
          compatibility).
@@ -1942,7 +1942,7 @@ here:
     stream.clear; formattedWrite(stream, "%#X", 0xABCD);
     assert(stream.data == "0XABCD");
 
-    stream.clear; formattedWrite(stream, "%#o", 012345);
+    stream.clear; formattedWrite(stream, "%#o", octal!12345);
     assert(stream.data == "012345");
     stream.clear; formattedWrite(stream, "%o", 9);
     assert(stream.data == "11");
@@ -3812,7 +3812,7 @@ unittest
     r = std.string.format("%#X", 0xABCD);
     assert(r == "0XABCD");
 
-    r = std.string.format("%#o", 012345);
+    r = std.string.format("%#o", octal!12345);
     assert(r == "012345");
     r = std.string.format("%o", 9);
     assert(r == "11");

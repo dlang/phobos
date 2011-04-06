@@ -107,14 +107,14 @@ class MmFile
             flags = MAP_SHARED;
             prot = PROT_READ | PROT_WRITE;
             oflag = O_CREAT | O_RDWR | O_TRUNC;
-            fmode = 0660;
+            fmode = octal!660;
             break;
 
         case Mode.ReadWrite:
             flags = MAP_SHARED;
             prot = PROT_READ | PROT_WRITE;
             oflag = O_CREAT | O_RDWR;
-            fmode = 0660;
+            fmode = octal!660;
             break;
 
         case Mode.ReadCopyOnWrite:
@@ -322,14 +322,14 @@ class MmFile
                 flags = MAP_SHARED;
                 prot = PROT_READ | PROT_WRITE;
                 oflag = O_CREAT | O_RDWR | O_TRUNC;
-                fmode = 0660;
+                fmode = octal!660;
                 break;
 
             case Mode.ReadWrite:
                 flags = MAP_SHARED;
                 prot = PROT_READ | PROT_WRITE;
                 oflag = O_CREAT | O_RDWR;
-                fmode = 0660;
+                fmode = octal!660;
                 break;
 
             case Mode.ReadCopyOnWrite:

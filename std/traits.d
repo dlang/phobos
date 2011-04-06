@@ -3376,6 +3376,29 @@ unittest
     assert(is(S2 == immutable(int)), S2.stringof);
 }
 
+/**
+ * Returns the corresponding unsigned value for $(D x), e.g. if $(D x)
+ * has type $(D int), returns $(D cast(uint) x). The advantage
+ * compared to the cast is that you do not need to rewrite the cast if
+ * $(D x) later changes type to e.g. $(D long).
+ */
+auto unsigned(T)(T x) if (isIntegral!T)
+{
+    static if (is(Unqual!T == byte)) return cast(ubyte) x;
+    else static if (is(Unqual!T == short)) return cast(ushort) x;
+    else static if (is(Unqual!T == int)) return cast(uint) x;
+    else static if (is(Unqual!T == long)) return cast(ulong) x;
+    else
+    {
+        static assert(T.min == 0, "Bug in either unsigned or isIntegral");
+        return x;
+    }
+}
+
+unittest
+{
+    static assert(is(typeof(unsigned(1 + 1)) == uint));
+}
 
 /**
 Returns the most negative value of the numeric type T.
