@@ -1,10 +1,9 @@
 // Written in the D programming language.
 
 /**
-<script>inhibitQuickIndex = 1</script>
+<script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
-
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
@@ -4300,7 +4299,7 @@ for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
 $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). See also
-$(WEB sgi.com/tech/stl/_equal.html, STL's equal).
+$(WEB sgi.com/tech/stl/_equal.html, STL's _equal).
 
 Example:
 ----
@@ -4703,7 +4702,7 @@ stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of $(D pred). See also $(WEB
-sgi.com/tech/stl/_mismatch.html, STL's mismatch).
+sgi.com/tech/stl/_mismatch.html, STL's _mismatch).
 
 Example:
 ----
@@ -4965,7 +4964,7 @@ unittest
 /**
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target). See also $(WEB
-sgi.com/tech/stl/_copy.html, STL's copy). If a behavior similar to
+sgi.com/tech/stl/_copy.html, STL's _copy). If a behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
 needed, use $(D copy(retro(source), retro(target))). See also $(XREF
 range, retro).
@@ -5080,7 +5079,7 @@ unittest
 // reverse
 /**
 Reverses $(D r) in-place.  Performs $(D r.length) evaluations of $(D
-swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's reverse).
+swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse).
 
 Example:
 ----
@@ -5772,7 +5771,7 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
-See also STL's $(WEB sgi.com/tech/stl/_partition.html, partition) and
+See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
 $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
 
 Returns:
@@ -6144,7 +6143,7 @@ unittest
 Sorts a random-access range according to predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
-and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, sort)
+and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
 and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
 
 Example:
