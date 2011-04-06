@@ -92,7 +92,7 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= Czlib.obj Dzlib.obj \
+OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 	oldsyserror.obj \
 	c_stdio.obj
 
@@ -113,8 +113,8 @@ SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\intrinsic.d \
 	std\process.d \
 	std\system.d \
-	std\encoding.d 
-	
+	std\encoding.d
+
 SRCS_2 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
@@ -287,11 +287,11 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d
-    
+
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -547,7 +547,7 @@ biguintnoasm.obj : std\internal\math\biguintnoasm.d
 
 biguintx86.obj : std\internal\math\biguintx86.d
 	$(DMD) -c $(DFLAGS) std\internal\math\biguintx86.d
-    
+
 gammafunction.obj : std\internal\math\gammafunction.d
 	$(DMD) -c $(DFLAGS) std\internal\math\gammafunction.d
 
@@ -582,6 +582,9 @@ c_stdio.obj : std\c\stdio.d
 
 Czlib.obj : etc\c\zlib.d
 	$(DMD) -c $(DFLAGS) etc\c\zlib.d -ofCzlib.obj
+
+Ccurl.obj : etc\c\curl.d
+	$(DMD) -c $(DFLAGS) etc\c\curl.d -ofCcurl.obj
 
 ### std\c\windows
 
@@ -928,8 +931,8 @@ install:
 	$(CP) $(DOCS) $(DIR)\html\d\phobos
 
 svn:
-	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\ 
-	$(CP) $(SRC) $(SVN)\ 
+	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\
+	$(CP) $(SRC) $(SVN)\
 	$(CP) $(SRC_STD) $(SVN)\std
 	$(CP) $(SRC_STD_C) $(SVN)\std\c
 	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows

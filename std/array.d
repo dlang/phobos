@@ -489,7 +489,7 @@ $(D array) at position $(D pos).
 Example:
 ---
 int[] a = [ 1, 2, 3, 4 ];
-a.insert(2, [ 1, 2 ]);    
+a.insert(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 1, 2, 3, 4 ]);
 ---
  */

@@ -793,7 +793,7 @@ class Stream : InputStream, OutputStream {
 
                 case 'o': {     // octal
                   while (isoctdigit(c) && width) {
-                    n = n * 010 + (c - '0');
+                    n = n * 8 + (c - '0');
                     width--;
                     c = getc();
                     count++;
@@ -1890,7 +1890,7 @@ class File: Stream {
       }
     }
     version (Posix) {
-      share = 0666;
+      share = octal!666;
       if (mode & FileMode.In) {
         access = O_RDONLY;
       }

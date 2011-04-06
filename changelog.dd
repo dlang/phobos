@@ -1,0 +1,16 @@
+$(VERSION 053, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+        $(LI Added bindings for libcurl on Posix: etc.c.curl)
+    )
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 4644): assertExceptionThrown to assert that a particular exception was thrown)
+        $(LI $(BUGZILLA 4944): Missing tzname even though we have tzset)
+        $(LI $(BUGZILLA 5451): Three ideas for RedBlackTree)
+        $(LI $(BUGZILLA 5485): TLS sections handled incorrectly in FreeBSD)
+        $(LI $(BUGZILLA 5616): std.datetime: not cross-platform)
+        $(LI $(BUGZILLA 5654): BigInt returns ZERO with strings of single digit number with leading zeros)
+        $(LI $(BUGZILLA 5731): std.datetime.SysTime prints UTC offsets backwards)
+    )
+
+)

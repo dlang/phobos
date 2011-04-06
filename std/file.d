@@ -1612,7 +1612,7 @@ version(Windows) void mkdir(in char[] pathname)
 
 version(Posix) void mkdir(in char[] pathname)
 {
-    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), 0777) == 0,
+    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
             pathname);
 }
 
