@@ -83,7 +83,7 @@ $(TR $(TDNW $(LREF boyerMooreFinder)) $(TD $(D find("hello
 world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY
 Boyer-Moore _algorithm).)
 )
-$(TR $(TDNW $(LREF canFind)) $(TD $(D find("hello world",
+$(TR $(TDNW $(LREF canFind)) $(TD $(D canFind("hello world",
 "or")) returns $(D true).)
 )
 $(TR $(TDNW $(LREF count)) $(TD Counts elements that are equal
@@ -179,8 +179,8 @@ filter), but also provides $(D back) and $(D popBack) at a small
 increase in cost.)
 )
 $(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
-returns a range containing the tuples $(D tuple(5, 1)), $(D tuple(5,
-1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+returns a range containing the tuples $(D tuple(5, 1)),
+$(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
 "world!"], ";")) returns a range that iterates over the characters $(D
