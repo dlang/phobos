@@ -75,11 +75,11 @@ $(TR $(TH Function Name) $(TH Description)
 )
 $(LEADINGROW Searching
 )
-$(TR $(TDNW $(MYREF balancedParens)) $(TD $(D
+$(TR $(TDNW $(LREF balancedParens)) $(TD $(D
 balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
 has balanced parentheses.)
 )
-$(TR $(TDNW $(MYREF boyerMooreFinder)) $(TD $(D find("hello
+$(TR $(TDNW $(LREF boyerMooreFinder)) $(TD $(D find("hello
 world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY
 Boyer-Moore _algorithm).)
 )
@@ -97,7 +97,7 @@ example, $(D countUntil("hello!", "o")) returns $(D 4).)
 $(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
 returns $(D true).)
 )
-$(TR $(TD $(MYREF find)) $(TD $(D find("hello world",
+$(TR $(TD $(LREF find)) $(TD $(D find("hello world",
 "or")) returns $(D "orld") using linear search.)
 )
 $(TR $(TDNW $(LREF findAdjacent)) $(TD $(D findAdjacent([1, 2,
