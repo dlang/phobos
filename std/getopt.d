@@ -49,7 +49,7 @@ import std.getopt;
 string data = "file.dat";
 int length = 24;
 bool verbose;
-enum Color { yes, no };
+enum Color { no, yes };
 Color color;
 
 void main(string[] args)
@@ -125,13 +125,13 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  with an "=" sign:
 
 ---------
-  enum Color { yes, no };
-  Color color; // default initialized to yes
+  enum Color { no, yes };
+  Color color; // default initialized to Color.no
   getopt(args, "color", &color);
 ---------
 
-To set $(D color) to $(D Color.no), invoke the program with either $(D
---color=no) or $(D --color no).
+To set $(D color) to $(D Color.yes), invoke the program with either $(D
+--color=yes) or $(D --color yes).
 
  $(LI $(I String options.) If an option is bound to a string, a string
  is expected as the next option, or right within the option separated
@@ -478,11 +478,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             else static if (is(typeof(*receiver) == enum))
             {
                 // enum receiver
-                foreach (s; __traits(allMembers, typeof(*receiver)))
-                {
-                    if (s == val)
-                        *receiver = mixin(typeof(*receiver).stringof ~ "." ~ val);
-                }
+                *receiver = parse!(typeof(*receiver))(val);
             }
             else static if (is(typeof(*receiver) == string))
             {
@@ -639,16 +635,16 @@ unittest
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
-    enum Color { yes, no };
+    enum Color { no, yes };
     Color color;
-    args = (["program.name", "--color=no",]).dup;
+    args = (["program.name", "--color=yes",]).dup;
     getopt(args, "color", &color);
-    assert(color == Color.no, to!(string)(color));
+    assert(color, to!(string)(color));
 
-    color = Color.yes;
-    args = (["program.name", "--color", "no",]).dup;
+    color = Color.no;
+    args = (["program.name", "--color", "yes",]).dup;
     getopt(args, "color", &color);
-    assert(color == Color.no, to!(string)(color));
+    assert(color, to!(string)(color));
 
     string data = "file.dat";
     int length = 24;
