@@ -3,22 +3,23 @@
 /**
 Processing of command line options.
 
-The getopt module implements a $(D getopt) function, which adheres to the POSIX
-syntax for command line options. GNU extensions are supported in the form of
-long options introduced by a double dash ("--"). Values can be separated by
-space/s and additionally by the $(LREF assignChar) character which defaults to
-'='. Short options with the value directly attached (i.e.  without intervening
-space) are also allowed but configurable to work only for short numeric options.
-Support for bundling of command line options, as was the case with the more
-traditional single-letter approach, is provided but not enabled by default.
+The getopt module implements a $(D getopt) function and two functions $(LREF
+getOptions). All adhere to the POSIX syntax for command line options. GNU
+extensions are supported in the form of long options introduced by a double dash
+("--"). Values can be separated by space/s and additionally by the $(LREF
+assignChar) character which defaults to '='. Short options with the value
+directly attached (i.e.  without intervening space) are also allowed but
+configurable to work only for short numeric options. Support for bundling of
+command line options, as was the case with the more traditional single-letter
+approach, is provided but not enabled by default.
 
 Macros:
 
 WIKI = Phobos/StdGetopt
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009 and Jens K. Mueller 2011-.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Jens K. Mueller 2011-, Igor Lesik 2011.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jens K. Mueller
+Authors:   $(WEB erdani.org, Andrei Alexandrescu), Jens K. Mueller, Igor Lesik
 Credits:   This module and its documentation are inspired by Perl's
            $(WEB perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The
            syntax of D's $(D getopt) is simpler than its Perl counterpart
@@ -35,7 +36,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.getopt;
 
 private import std.array, std.string, std.conv, std.traits, std.bitmanip,
-    std.algorithm, std.ascii, std.exception;
+    std.algorithm, std.ascii, std.exception, std.typetuple, std.range;
 
 version (unittest)
 {
@@ -1328,6 +1329,225 @@ unittest
     assert(cast(ConvOverflowException) ex.next);
 }
 
+/**
+
+Same as above but additionally usage information is being generated using $(LREF
+usageOptionsString). The options must include an additional second argument (a
+help string) for each option.
+
+Synopsis:
+---
+// program options with defaults
+string inputFile = "test";
+string outputFile;
+
+string usage;
+getOptions(
+   "Usage: " ~ args[0] ~ " { --switch }\n\n",
+   usage,
+   args,
+   "i|input","   input file name must\n"
+             "   be an HTML file.",           &inputFile,
+   "o|output","  output file name.",          &outputFile,
+   "author","     print name of the author",  delegate() {writeln("Somebody");return;},
+   "h|help","    print help",                 delegate() {writeln(usage);return;},
+);
+---
+
+or
+---
+// program options with defaults
+string inputFile = "test";
+string outputFile;
+uint number;
+
+string header =
+   "Usage: " ~ args[0] ~ " { --switch }\n\n";
+
+string usage;
+
+import std.typecons;
+alias tuple options;
+auto opts = options(
+   "i|input","   input file name must\n"
+             "   be an HTML file.",           &inputFile,
+   "o|output","  output file name.",          &outputFile,
+   "n|number","  a number.",                  &number,
+   "author","     print name of the author",  delegate() {writeln("Somebody");return;},
+   "h|help","    print help",                 delegate() {writeln(usage);return;},
+);
+
+try getOptions(
+       header,
+       usage,
+       args,
+       opts.expand,
+    );
+catch (GetoptException e)
+{
+    // if something goes wrong, report usage with current values
+    writeln(e.msg);
+    writeln("Usage with currently set values:");
+    optionFormatValue = " (currently '%s')";
+    writeln(usageOptionsString(opts.expand));
+}
+---
+*/
+void getOptions(T...)(string header, out string usage, ref string[] args, T opts)
+{
+    usage = header ~ usageOptionsString(opts); // extract all help strings
+    getOptions(args, RemoveUsageStrings!(opts));
+}
+
+unittest
+{
+    string[] args = ["program.name",
+                     "--input", "in", "--output", "out", "--help"];
+
+    // program options with defaults
+    string inputFile = "test";
+    string outputFile;
+
+    string usage;
+    getOptions(
+       "Some usage header\n"
+       "Usage: program name { --switch }\n\n",
+       usage,
+       args,
+       "i|input","   input file name must\n"
+                 "   be an HTML file.",           &inputFile,
+       "o|output","  output file name.",          &outputFile,
+       "author","     print name of the author",  delegate() {writeln("Somebody");return;},
+       "h|help","    print help",                 delegate() {assert(usage.length);return;},
+    );
+
+    assert(inputFile == "in");
+    assert(outputFile == "out");
+}
+
+unittest
+{
+    string[] args = ["program.name",
+                     "--input", "in", "--output", "out", "--number", "a"];
+
+    // program options with defaults
+    string inputFile = "test";
+    string outputFile;
+    uint number;
+
+    string header =
+       "Some usage header\n"
+       "Usage: program name { --switch }\n\n";
+
+    string usage;
+
+    import std.typecons;
+    alias tuple options;
+    auto opts = options(
+       "i|input","   input file name must\n"
+                 "   be an HTML file.",           &inputFile,
+       "o|output","  output file name.",          &outputFile,
+       "n|number","  a number.",                  &number,
+       "author","     print name of the author",  delegate() {writeln("Somebody");return;},
+       "h|help","    print help",                 delegate() {assert(usage.length);return;},
+    );
+
+    try getOptions(
+           header,
+           usage,
+           args,
+           opts.expand,
+        );
+    catch (GetoptException e)
+    {
+        // if something goes wrong, report usage with current values
+        //writeln(e.msg);
+        //writeln("Usage with currently set values:");
+        //optionFormatValue = " (currently '%s')";
+        //writeln(usageOptionsString(opts.expand));
+        return;
+    }
+	assert(false);
+}
+
+/**
+Returns: a usage string for given options.
+
+Each given option must have a help string as second argument.
+*/
+string usageOptionsString(T...)(T options)
+{
+    static if (options.length)
+    {
+        static if (is(typeof(options[0]) : config))
+        {
+            // it's a configuration flag, skip it
+            return usageOptionsString(options[1 .. $]);
+        }
+        else
+        {
+            // it's an option string
+            static assert(options.length >= 3);
+            static assert(isSomeString!(T[1]));
+            string helpMsg = helpOption(options[0 .. 3]);
+            return helpMsg ~ "\n" ~ usageOptionsString(options[3 .. $]);
+        }
+    }
+    else
+    {
+        return "";
+    }
+}
+
+private template RemoveUsageStrings(TList...)
+{
+    static if (TList.length)
+    {
+        static if (is(typeof(TList[0]) : config))
+        {
+            // it's a configuration flag, lets move on
+            alias TypeTuple!(TList[0],RemoveUsageStrings!(TList[1 .. $])) RemoveUsageStrings;
+        }
+        else
+        {
+            // it's an option string, eat help string
+            static assert(TList.length >= 3);
+            alias TypeTuple!(TList[0],TList[2],RemoveUsageStrings!(TList[3 .. $]))
+                RemoveUsageStrings;
+        }
+    }
+    else
+    {
+        alias TList RemoveUsageStrings;
+    }
+}
+
+private string helpOption(T...)(T option)
+{
+    string optionString = formatOption(option[0]);
+    string optionHelp = optionString ~
+               option[1].splitLines(KeepTerminator.yes)
+                        .joiner(cycle(" ").take(optionString.length))
+                        .to!string();
+
+    static if (!isCallable!(typeof(option[2])))
+    {
+        if (optionFormatValue)
+            optionHelp ~= format(optionFormatValue, *option[2]);
+    }
+    return optionHelp;
+}
+
+private string formatOption(T)(T option)
+{
+    const variants = option.split(optionSep.to!string());
+    return variants.map!(v => v.length > 1 ?
+                         optionChar.to!string() ~ optionChar.to!string() ~ v :
+                         optionChar.to!string() ~ v)()
+                   .joiner(optionSep.to!string())
+                   .to!string();
+}
+
 enum config {
     /// Turns case sensitivity on.
     caseSensitive,
@@ -1356,6 +1576,12 @@ enum config {
 dchar optionChar = '-';
 
 /**
+   The option separation character. Defaults to '|' but it can be assigned to
+   prior to calling $(D getopt).
+ */
+dchar optionSep = '|';
+
+/**
    The string that conventionally marks the end of all
    options. Defaults to "--" but can be assigned to prior to calling
    $(D getopt). Assigning an empty string to $(D endOfOptions)
@@ -1374,6 +1600,12 @@ dchar assignChar = '=';
    to "," but can be assigned to prior to calling $(D getopt).
  */
 string arraySep = ",";
+
+/**
+   The string used to format values in usage strings. Defaults to " Defaults
+   to '%s' but can be assigned to prior to calling $(LREF usageOptionsString).
+ */
+string optionFormatValue = " Defaults to '%s'.";
 
 enum autoIncrementChar = '+';
 
@@ -1450,7 +1682,7 @@ private bool isValidOption(string arg, string optPattern, ref string value,
     }
     //debug writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
-    const variants = split(optPattern, "|");
+    const variants = split(optPattern, to!string(optionSep));
     foreach (v ; variants)
     {
         //debug writeln("Trying variant: ", v, " against ", arg);
