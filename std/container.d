@@ -4689,12 +4689,12 @@ class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      +/
     Range remove(Take!Range r)
     {
-        auto b = r.original._begin;
+        auto b = r.source._begin;
 
         while(!r.empty)
             r.popFront(); // move take range to its last element
 
-        auto e = r.original._begin;
+        auto e = r.source._begin;
 
         while(b != e)
         {
