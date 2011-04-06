@@ -14,9 +14,9 @@ Macros:
 
 WIKI = Phobos/StdGetopt
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Igor Lesik 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Igor Lesik
 Credits:   This module and its documentation are inspired by Perl's $(WEB
                    perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
                    D's $(D getopt) is simpler than its Perl counterpart because $(D
@@ -33,7 +33,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.getopt;
 
 private import std.array, std.string, std.conv, std.traits, std.bitmanip,
-    std.algorithm, std.ctype, std.exception;
+    std.algorithm, std.ctype, std.exception, std.typetuple;
 
 version (unittest)
 {
@@ -760,4 +760,103 @@ unittest
         );
     assert(f_linenum);
     assert(f_filename);
+}
+
+bool getopt(T...)(string helphdr, ref string[] args, T opts) {
+    enforce(args.length,
+            "Invalid arguments string passed: program name missing");
+
+    string helpMsg = GetoptHelp(opts); // extract all help strings
+
+    bool helpPrinted = false; // state tells if called with "--help"
+
+    void printHelp()
+    {
+        writeln("\n", helphdr, "\n", helpMsg,
+                "--help", "\n\tproduce
+                help message");
+        helpPrinted = true;
+    }
+
+    getopt(args, GetoptEx!(opts), "help", &printHelp);
+
+    return helpPrinted;
+}
+
+private template GetoptEx(TList...)
+{
+    static if (TList.length)
+    {
+        static if (is(typeof(TList[0]) : config))
+        {
+            // it's a configuration flag, lets move on
+            alias TypeTuple!(TList[0],GetoptEx!(TList[1 .. $])) GetoptEx;
+        }
+        else
+        {
+            // it's an option string, eat help string
+            alias TypeTuple!(TList[0],TList[2],GetoptEx!(TList[3 .. $]))
+                GetoptEx;
+        }
+    }
+    else
+    {
+        alias TList GetoptEx;
+    }
+}
+
+private string GetoptHelp(T...)(T opts)
+{
+    static if (opts.length)
+    {
+        static if (is(typeof(opts[0]) : config))
+        {
+            // it's a configuration flag, skip it
+            return GetoptHelp(opts[1 .. $]);
+        }
+        else
+        {
+            // it's an option string
+            string option  = to!(string)(opts[0]);
+            string help    = to!(string)(opts[1]);
+
+            return( "--"~option~"\n"~help~"\n"~GetoptHelp(opts[3 .. $]) );
+        }
+    }
+    else
+    {
+        return to!(string)("\n");
+    }
+}
+
+unittest {
+    string inputFile, outputFile;
+
+    string[] args = ["program.name",
+                     "--input", "in", "--output", "out"];
+
+    bool helpPrinted = getopt(
+            "Test program to demonstrate getoptEx\n"~
+            "written by Igor Lesik on Feb 2010\n"~
+            "Usage: test1 { --switch }\n",
+            args,
+            std.getopt.config.caseInsensitive,
+            "input",
+            "\tinput file name,\n"~
+            "\tmust be html file",
+            &inputFile,
+            "output",
+            "\toutput file name",
+            &outputFile,
+            "author",
+            "\tprint name of\n"~
+            "\tthe author",
+            delegate() {writeln("Igor Lesik");}
+            );
+
+    if (helpPrinted)
+        return;
+
+    assert(inputFile == "in", to!(string)(inputFile));
+    assert(outputFile == "out", to!(string)(inputFile));
 }
