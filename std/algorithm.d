@@ -984,7 +984,7 @@ Example:
 ----
 struct S { ... }
 S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
-initialize(s);
+initializeAll(s);
 assert(s == [ 0, 0, 0, 0, 0 ]);
 ----
  */
