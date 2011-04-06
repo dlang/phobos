@@ -70,6 +70,9 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
     nothing in std.datetime has precision greater than hnsecs, and very little
     in core.time does, no functions in std.datetime accept $(D "nsecs").
 
+    If you're looking for the definitions of $(D Duration), $(D TickDuration),
+    or $(D FracSec), they're in core.time.
+
     Note:
         core.time is publicly imported by std.datetime, so if you're using
         std.datetime, you don't need to import core.time. Also,
@@ -27754,7 +27757,7 @@ public:
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             The name of the time zone per the TZ Database. This is the name used to
@@ -29709,7 +29712,7 @@ private:
 
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
 
     /++
@@ -30231,7 +30234,7 @@ else version(Windows)
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(BLUE This function is Posix-Only.)
@@ -30585,12 +30588,6 @@ unittest
 //==============================================================================
 
 /++
-   $(D StopWatch)'s AutoStart flag
-  +/
-enum autoStart = AutoStart.yes;
-
-
-/++
    $(D StopWatch) measures time as precisely as possible.
 
    This class uses a high-performance counter. On Windows systems, it uses
@@ -30600,167 +30597,176 @@ enum autoStart = AutoStart.yes;
    But the precision of $(D StopWatch) differs from system to system. It is
    impossible to for it to be the same from system to system since the precision
    of the system clock varies from system to system, and other system-dependent
-   and situation-dependent stuff (such as the overhead of a context switching
+   and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
 
    Examples:
 --------------------
-void foo() {
-   StopWatch sw;
-   static immutable N = 100;
-   TickDuration[N] times;
-   TickDuration last = TickDuration.from!"seconds"(0);
-   foreach (i; 0..N) {
-       sw.start(); // start/resume mesuring.
-       foreach (Unused; 0..1000000) bar();
-       sw.stop();  // stop/pause mesuring.
-       // Return value of peek() after having stopped are the always same.
-       writeln((i+1)*1000000, " times done, lap time: ",
-               sw.peek().msec, "[ms]");
+void foo()
+{
+    StopWatch sw;
+    enum n = 100;
+    TickDuration[n] times;
+    TickDuration last = TickDuration.from!"seconds"(0);
+    foreach(i; 0..n)
+    {
+       sw.start(); //start/resume mesuring.
+       foreach(unused; 0..1_000_000)
+           bar();
+       sw.stop();  //stop/pause measuring.
+       //Return value of peek() after having stopped are the always same.
+       writeln((i + 1) * 1_000_000, " times done, lap time: ",
+               sw.peek().msecs, "[ms]");
        times[i] = sw.peek() - last;
        last = sw.peek();
-   }
-   real sum = 0;
-   // When you want to know the number of seconds of the fact,
-   // you can use properties of TickDuration.
-   // (seconds, mseconds, useconds, hnsecs)
-   foreach (e; times) sum += e.hnsecs;
-   writeln("Average time: ", sum/N, " hnsecs");
+    }
+    real sum = 0;
+    // When you want to know the number of seconds,
+    // you can use properties of TickDuration.
+    // (seconds, mseconds, useconds, hnsecs)
+    foreach(t; times)
+       sum += t.hnsecs;
+    writeln("Average time: ", sum/n, " hnsecs");
 }
 --------------------
   +/
-struct StopWatch
+@safe struct StopWatch
 {
-@safe:// @@@BUG@@@ workaround for bug 4211
-private:
-
-
-    // true if observing.
-    bool m_FlagStarted = false;
-
-
-    // TickDuration at the time of StopWatch starting measurement.
-    TickDuration m_TimeStart;
-
-
-    // Total time that StopWatch ran.
-    TickDuration m_TimeMeasured;
-
-
 public:
+    //Verify Example
+    @safe unittest
+    {
+        void writeln(S...)(S args){}
+        static void bar() {}
 
+        StopWatch sw;
+        enum n = 100;
+        TickDuration[n] times;
+        TickDuration last = TickDuration.from!"seconds"(0);
+        foreach(i; 0..n)
+        {
+           sw.start(); //start/resume mesuring.
+           foreach(unused; 0..1_000_000)
+               bar();
+           sw.stop();  //stop/pause measuring.
+           //Return value of peek() after having stopped are the always same.
+           writeln((i + 1) * 1_000_000, " times done, lap time: ",
+                   sw.peek().msecs, "[ms]");
+           times[i] = sw.peek() - last;
+           last = sw.peek();
+        }
+        real sum = 0;
+        // When you want to know the number of seconds,
+        // you can use properties of TickDuration.
+        // (seconds, mseconds, useconds, hnsecs)
+        foreach(t; times)
+           sum += t.hnsecs;
+        writeln("Average time: ", sum/n, " hnsecs");
+    }
 
     /++
        Auto start with constructor.
       +/
     this(AutoStart autostart)
     {
-        if (autostart)
-        {
+        if(autostart)
             start();
-        }
+    }
+
+    version(testStdDateTime) @safe unittest
+    {
+        auto sw = StopWatch(AutoStart.yes);
+        sw.stop();
     }
 
 
-    unittest
+    ///
+    bool opEquals(const ref StopWatch rhs) const pure nothrow
     {
-        version(testStdDateTime)
-        {
-            auto sw = StopWatch(autoStart);
-            sw.stop();
-        }
+        return _timeStart == rhs._timeStart &&
+               _timeMeasured == rhs._timeMeasured;
     }
 
 
     /++
-       Reset the stop watch.
+       Resets the stop watch.
       +/
-    @safe
     void reset()
     {
-        if (m_FlagStarted)
+        if(_flagStarted)
         {
             // Set current system time if StopWatch is measuring.
-            m_TimeStart = Clock.currSystemTick;
+            _timeStart = Clock.currSystemTick;
         }
         else
         {
             // Set zero if StopWatch is not measuring.
-            m_TimeStart.length = 0;
+            _timeStart.length = 0;
         }
-        m_TimeMeasured.length = 0;
+
+        _timeMeasured.length = 0;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
-            sw.stop();
-            sw.reset();
-            assert(sw.peek().to!("seconds", real) == 0);
-        }
+        StopWatch sw;
+        sw.start();
+        sw.stop();
+        sw.reset();
+        assert(sw.peek().to!("seconds", real) == 0);
     }
 
 
     /++
-       Start the stop watch.
+       Starts the stop watch.
       +/
-    @safe
     void start()
     {
-        assert(!m_FlagStarted);
+        assert(!_flagStarted);
         StopWatch sw;
-        m_FlagStarted = true;
-        m_TimeStart = Clock.currSystemTick;
+        _flagStarted = true;
+        _timeStart = Clock.currSystemTick;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
+        StopWatch sw;
+        sw.start();
+        auto t1 = sw.peek();
+        bool doublestart = true;
+        try
             sw.start();
-            auto t1 = sw.peek();
-            bool doublestart = true;
-            try sw.start();
-            catch (Error e) doublestart = false;
-            assert(!doublestart);
-            sw.stop();
-            assert((t1 - sw.peek()).to!("seconds", real) <= 0);
-        }
+        catch(AssertError e)
+            doublestart = false;
+        assert(!doublestart);
+        sw.stop();
+        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
     }
 
 
     /++
-       Stop the stop watch.
+       Stops the stop watch.
       +/
-    @safe
     void stop()
     {
-        assert(m_FlagStarted);
-        m_FlagStarted = false;
-        m_TimeMeasured += Clock.currSystemTick - m_TimeStart;
+        assert(_flagStarted);
+        _flagStarted = false;
+        _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
+        StopWatch sw;
+        sw.start();
+        sw.stop();
+        auto t1 = sw.peek();
+        bool doublestop = true;
+        try
             sw.stop();
-            auto t1 = sw.peek();
-            bool doublestop = true;
-            try sw.stop();
-            catch (Error e) doublestop = false;
-            assert(!doublestop);
-            assert((t1 - sw.peek()).to!("seconds", real) == 0);
-        }
+        catch(AssertError e)
+            doublestop = false;
+        assert(!doublestop);
+        assert((t1 - sw.peek()).to!("seconds", real) == 0);
     }
 
 
@@ -30768,160 +30774,176 @@ public:
        Peek at the amount of time which has passed since the stop watch was
        started.
       +/
-    @safe
     TickDuration peek() const
     {
-        if(m_FlagStarted)
-        {
-            return Clock.currSystemTick - m_TimeStart + m_TimeMeasured;
-        }
-        return m_TimeMeasured;
+        if(_flagStarted)
+            return Clock.currSystemTick - _timeStart + _timeMeasured;
+
+        return _timeMeasured;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
-            auto t1 = sw.peek();
-            sw.stop();
-            auto t2 = sw.peek();
-            auto t3 = sw.peek();
-            assert(t1 <= t2);
-            assert(t2 == t3);
-        }
+        StopWatch sw;
+        sw.start();
+        auto t1 = sw.peek();
+        sw.stop();
+        auto t2 = sw.peek();
+        auto t3 = sw.peek();
+        assert(t1 <= t2);
+        assert(t2 == t3);
     }
+
+private:
+
+    // true if observing.
+    bool _flagStarted = false;
+
+    // TickDuration at the time of StopWatch starting measurement.
+    TickDuration _timeStart;
+
+    // Total time that StopWatch ran.
+    TickDuration _timeMeasured;
 }
 
 
 // workaround for bug4886
-@safe
-size_t lengthof(aliases...)() pure nothrow
+@safe size_t lengthof(aliases...)() pure nothrow
 {
     return aliases.length;
 }
 
 
 /++
-   Benchmarks code for speed assessment and comparison.
+    Benchmarks code for speed assessment and comparison.
 
-   Params:
-       fun = aliases of callable objects (e.g. function names). Each should
-             take no arguments.
-       times = The number of times each function is to be executed.
+    Params:
+        fun = aliases of callable objects (e.g. function names). Each should
+              take no arguments.
+        n   = The number of times each function is to be executed.
 
-   Returns:
-       An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
-       number of msecs spent in calling the $(D i)th function $(D times) times.
+    Returns:
+        The amount of time (as a $(CXREF time, TickDuration)) that it took to
+        call each function $(D n) times. The first value is the length of time
+        that it took to call $(D fun[0]) $(D n) times. The second value is the
+        length of time it took to call $(D fun[1]) $(D n) times. Etc.
 
    Examples:
 --------------------
 int a;
-void f0() { }
-void f1() { auto b = a; }
-void f2() { auto b = to!(string)(a); }
+void f0() {}
+void f1() {auto b = a;}
+void f2() {auto b = to!(string)(a);}
 auto r = benchmark!(f0, f1, f2)(10_000_000);
+writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
 --------------------
   +/
-@safe
-TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
+@safe TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
     if(areAllSafe!fun)
 {
     TickDuration[lengthof!(fun)()] result;
     StopWatch sw;
     sw.start();
-    foreach (i, Unused; fun)
+
+    foreach(i, unused; fun)
     {
         sw.reset();
-        foreach (j; 0 .. times)
-        {
+        foreach(j; 0 .. n)
             fun[i]();
-        }
         result[i] = sw.peek();
     }
+
     return result;
 }
 
-
-@system
+/++ Ditto +/
 TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
     if(!areAllSafe!fun)
 {
     TickDuration[lengthof!(fun)()] result;
     StopWatch sw;
     sw.start();
-    foreach (i, Unused; fun)
+
+    foreach(i, unused; fun)
     {
         sw.reset();
-        foreach (j; 0 .. times)
-        {
+        foreach(j; 0 .. times)
             fun[i]();
-        }
+
         result[i] = sw.peek();
     }
+
     return result;
 }
 
-
+//Verify Examples.
 unittest
 {
-    version(testStdDateTime)
-    {
-        int a;
-        void f0() { }
-        //void f1() { auto b = to!(string)(a); }
-        void f2() { auto b = (a); }
-        auto r = benchmark!(f0, f2)(100);
-    }
+    void writefln(S...)(S args){}
+
+    int a;
+    void f0() {}
+    void f1() {auto b = a;}
+    void f2() {auto b = to!(string)(a);}
+    auto r = benchmark!(f0, f1, f2)(10_000_000);
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
+}
+
+version(testStdDateTime) @safe unittest
+{
+    int a;
+    void f0() {}
+    //void f1() {auto b = to!(string)(a);}
+    void f2() {auto b = (a);}
+    auto r = benchmark!(f0, f2)(100);
 }
 
 
 /++
    Return value of benchmark with two functions comparing.
   +/
-immutable struct ComparingBenchmarkResult
+@safe struct ComparingBenchmarkResult
 {
-@safe:
-    private TickDuration m_tmBase;
-    private TickDuration m_tmTarget;
-
-
     /++
        Evaluation value
 
-       This returns the evaluation value of performance as the ratio that is
-       compared between BaseFunc's time and TargetFunc's time.
-       If performance is high, this returns a high value.
+       This returns the evaluation value of performance as the ratio of
+       baseFunc's time over targetFunc's time. If performance is high, this
+       returns a high value.
       +/
-    @property
-    real point() immutable pure
+    @property real point() const pure nothrow
     {
-        // @@@BUG@@@ workaround for bug 4689
-        long t = m_tmTarget.length;
-        return m_tmBase.length / cast(real)t;
-    }
-
-
-    /++
-       The time required of the target function
-      +/
-    @property
-    public TickDuration targetTime() immutable pure
-    {
-        return m_tmTarget;
+        return _baseTime.length / cast(const real)_targetTime.length;
     }
 
 
     /++
        The time required of the base function
       +/
-    @property
-    public TickDuration baseTime() immutable pure
+    @property public TickDuration baseTime() const pure nothrow
     {
-        return m_tmBase;
+        return _baseTime;
     }
+
+
+    /++
+       The time required of the target function
+      +/
+    @property public TickDuration targetTime() const pure nothrow
+    {
+        return _targetTime;
+    }
+
+private:
+
+    this(TickDuration baseTime, TickDuration targetTime) pure nothrow
+    {
+        _baseTime = baseTime;
+        _targetTime = targetTime;
+    }
+
+    TickDuration _baseTime;
+    TickDuration _targetTime;
 }
 
 
@@ -30948,54 +30970,46 @@ void main() {
 }
 --------------------
   +/
-@safe
-ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int times = 0xfff)()
-    if (isSafe!baseFunc && isSafe!targetFunc)
+@safe ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
+                                                  alias targetFunc,
+                                                  int times = 0xfff)()
+    if(isSafe!baseFunc && isSafe!targetFunc)
 {
     auto t = benchmark!(baseFunc, targetFunc)(times);
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
-/// ditto
-@system
-ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int times = 0xfff)()
-    if (!(isSafe!baseFunc && isSafe!targetFunc))
+/++ Ditto +/
+ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
+                                            alias targetFunc,
+                                            int times = 0xfff)()
+    if(!isSafe!baseFunc || !isSafe!targetFunc)
 {
     auto t = benchmark!(baseFunc, targetFunc)(times);
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
-@safe
-unittest
+version(testStdDateTime) @safe unittest
 {
-    version(testStdDateTime)
-    {
-        @system void f1x() { }
-        @system void f2x() { }
-        @safe void f1o() { }
-        @safe void f2o() { }
-        auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-        //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
-    }
+    void f1x() {}
+    void f2x() {}
+    @safe void f1o() {}
+    @safe void f2o() {}
+    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
 
-@system
-unittest
+version(testStdDateTime) unittest
 {
-    version(testStdDateTime)
-    {
-        @system void f1x() { }
-        @system void f2x() { }
-        @safe void f1o() { }
-        @safe void f2o() { }
-        auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-        auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
-    }
+    void f1x() {}
+    void f2x() {}
+    @safe void f1o() {}
+    @safe void f2o() {}
+    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
 }
 
 
@@ -31236,7 +31250,7 @@ unittest
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     version(Windows) {}
     else
@@ -32030,7 +32044,7 @@ unittest
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         Function for starting to a stop watch time when the function is called
@@ -32038,7 +32052,7 @@ version(D_Ddoc)
 
         When the value that is returned by this function is destroyed,
         $(D func) will run. $(D func) is a unary function that takes a
-        $(D TickDuration).
+        $(CXREF TickDuration).
 
         Examples:
 --------------------
@@ -32054,66 +32068,77 @@ writeln("benchmark end!");
 }
 else
 {
-    @safe
+    @safe auto measureTime(alias func)()
+        if(isSafe!func)
     {
-        auto measureTime(alias func)()
-            if(isSafe!func)
+        struct Result
         {
-            struct TMP
+            private StopWatch _sw = void;
+            this(AutoStart as)
             {
-                private StopWatch sw = void;
-                this(StopWatch.AutoStart as)
-                {
-                    sw = StopWatch(as);
-                }
-                ~this()
-                {
-                    unaryFun!(func)(sw.peek());
-                }
+                _sw = StopWatch(as);
             }
-            return TMP(autoStart);
+            ~this()
+            {
+                unaryFun!(func)(_sw.peek());
+            }
         }
+        return Result(AutoStart.yes);
     }
 
-    @system
+    auto measureTime(alias func)()
+        if(!isSafe!func)
     {
-        auto measureTime(alias func)()
-            if (!isSafe!func)
+        struct Result
         {
-            struct TMP
+            private StopWatch _sw = void;
+            this(AutoStart as)
             {
-                private StopWatch sw = void;
-                this(AutoStart as)
-                {
-                    sw = StopWatch(as);
-                }
-                ~this()
-                {
-                    unaryFun!(func)(sw.peek());
-                }
+                _sw = StopWatch(as);
             }
-            return TMP(autoStart);
+            ~this()
+            {
+                unaryFun!(func)(_sw.peek());
+            }
         }
+        return Result(AutoStart.yes);
     }
 }
 
-@system
-unittest
+version(testStdDateTime) @safe unittest
 {
-    version(testStdDateTime)
+    @safe static void func(TickDuration td)
     {
-        {
-            auto mt = measureTime!((a){assert(a.to!("seconds", real) <>= 0);});
-        }
-
-        /+
-        with (measureTime!((a){assert(a.seconds);}))
-        {
-            // doSomething();
-            // @@@BUG@@@ doesn't work yet.
-        }
-        +/
+        assert(td.to!("seconds", real) <>= 0);
     }
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
+}
+
+version(testStdDateTime) unittest
+{
+    static void func(TickDuration td)
+    {
+        assert(td.to!("seconds", real) <>= 0);
+    }
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
 }
 
 //==============================================================================
