@@ -53,9 +53,9 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
-DDOCFLAGS=-m$(MODEL) -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
 CC =
@@ -245,7 +245,7 @@ DISABLED_TESTS += std/format
 DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
 
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
+$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 endif
 
@@ -285,8 +285,8 @@ $(DRUNTIME) :
 ###########################################################
 # html documentation
 
-$(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+$(DOC_OUTPUT_DIR)/. :
+	mkdir -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
@@ -297,7 +297,10 @@ $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
-html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
+$(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+html : $(DOC_OUTPUT_DIR)/. $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
 #	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
 
