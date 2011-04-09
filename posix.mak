@@ -162,6 +162,8 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
         string syserror system traits typecons typetuple uni uri utf	\
         variant xml zip zlib)
 
+STD_NET_MODULES = $(addprefix std/net/, isemail)
+
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
@@ -180,7 +182,7 @@ else
 endif
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
