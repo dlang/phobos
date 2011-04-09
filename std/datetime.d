@@ -49,15 +49,15 @@
 
     To get the current time, use $(D Clock.currTime). It will return the current
     time as a $(D SysTime). If you want to print it, $(D toString) is
-    sufficient, but if you use $(D toISOString), $(D toISOExtendedString), or
+    sufficient, but if you use $(D toISOString), $(D toISOExtString), or
     $(D toSimpleString), you can use the corresponding $(D fromISOString),
-    $(D fromISOExtendedString), or $(D fromISOExtendedString) to create a
+    $(D fromISOExtString), or $(D fromISOExtString) to create a
     $(D SysTime) from the string.
 
 --------------------
 auto currentTime = Clock.currTime();
-auto timeString = currentTime.toISOExtendedString();
-auto restoredTime = SysTime.fromISOExtendedString(timeString);
+auto timeString = currentTime.toISOExtString();
+auto restoredTime = SysTime.fromISOExtString(timeString);
 --------------------
 
     Various functions take a string (or strings) to represent a unit of time
@@ -157,8 +157,8 @@ alias std.string.indexOf indexOf;
 unittest
 {
     auto currentTime = Clock.currTime();
-    auto timeString = currentTime.toISOExtendedString();
-    auto restoredTime = SysTime.fromISOExtendedString(timeString);
+    auto timeString = currentTime.toISOExtString();
+    auto restoredTime = SysTime.fromISOExtString(timeString);
 }
 
 //Note: There various functions which void as their return type and ref of the
@@ -7871,22 +7871,22 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
 
         Examples:
 --------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
+assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
        "2010-07-04T07:06:12");
 
 assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOExtendedString() ==
+               FracSec.from!"msecs"(24)).toISOExtString() ==
        "1998-12-25T02:15:00.024");
 
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
+assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
        "0000-01-05T23:09:59");
 
 assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
+               FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
        "-0004-01-05T00:00:02.052092");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
         {
@@ -7909,65 +7909,70 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
             if(_timezone.get is LocalTime())
-                return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs);
+                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs);
 
             if(_timezone.get is UTC())
-                return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
-            return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
+            return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
         catch(Exception e)
             assert(0, "format() threw.");
     }
+
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(SysTime(DateTime.init, UTC()).toISOExtendedString(), "0001-01-01T00:00:00Z");
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtendedString(), "0001-01-01T00:00:00.0000001Z");
+            _assertPred!"=="(SysTime(DateTime.init, UTC()).toISOExtString(), "0001-01-01T00:00:00Z");
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtString(), "0001-01-01T00:00:00.0000001Z");
 
-            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
-            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
-            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
-            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
-            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0)).toISOExtString(), "0009-12-04T00:00:00");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12)).toISOExtString(), "0099-12-04T05:06:12");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59)).toISOExtString(), "0999-12-04T13:44:59");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59)).toISOExtString(), "9999-07-04T23:59:59");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1)).toISOExtString(), "+10000-10-20T01:01:01");
 
-            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtendedString(), "0009-12-04T00:00:00.042");
-            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtendedString(), "0099-12-04T05:06:12.1");
-            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "0999-12-04T13:44:59.04502");
-            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "9999-07-04T23:59:59.0000012");
-            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "+10000-10-20T01:01:01.050789");
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtString(), "0009-12-04T00:00:00.042");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtString(), "0099-12-04T05:06:12.1");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtString(), "0999-12-04T13:44:59.04502");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtString(), "9999-07-04T23:59:59.0000012");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtString(), "+10000-10-20T01:01:01.050789");
 
             _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
-                                    new SimpleTimeZone(-360)).toISOExtendedString(),
+                                    new SimpleTimeZone(-360)).toISOExtString(),
                             "2012-12-21T12:12:12-06:00");
 
             _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
-                                    new SimpleTimeZone(420)).toISOExtendedString(),
+                                    new SimpleTimeZone(420)).toISOExtString(),
                             "2012-12-21T12:12:12+07:00");
 
             //Test B.C.
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.9999999Z");
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.0000001Z");
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC()).toISOExtendedString(), "0000-12-31T23:59:59Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtString(), "0000-12-31T23:59:59.9999999Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).toISOExtString(), "0000-12-31T23:59:59.0000001Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC()).toISOExtString(), "0000-12-31T23:59:59Z");
 
-            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
-            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
-            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
-            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
-            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
-            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 12, 4)).toISOExtString(), "0000-12-04T00:12:04");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0)).toISOExtString(), "-0009-12-04T00:00:00");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12)).toISOExtString(), "-0099-12-04T05:06:12");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59)).toISOExtString(), "-0999-12-04T13:44:59");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59)).toISOExtString(), "-9999-07-04T23:59:59");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1)).toISOExtString(), "-10000-10-20T01:01:01");
 
-            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 0, 0), FracSec.from!"msecs"(7)).toISOExtendedString(), "0000-12-04T00:00:00.007");
-            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtendedString(), "-0009-12-04T00:00:00.042");
-            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtendedString(), "-0099-12-04T05:06:12.1");
-            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "-0999-12-04T13:44:59.04502");
-            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "-9999-07-04T23:59:59.0000012");
-            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "-10000-10-20T01:01:01.050789");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 0, 0), FracSec.from!"msecs"(7)).toISOExtString(), "0000-12-04T00:00:00.007");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtString(), "-0009-12-04T00:00:00.042");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtString(), "-0099-12-04T05:06:12.1");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtString(), "-0999-12-04T13:44:59.04502");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtString(), "-9999-07-04T23:59:59.0000012");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtString(), "-10000-10-20T01:01:01.050789");
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7975,18 +7980,18 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
                    "2010-07-04T07:06:12");
 
             assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                           FracSec.from!"msecs"(24)).toISOExtendedString() ==
+                           FracSec.from!"msecs"(24)).toISOExtString() ==
                    "1998-12-25T02:15:00.024");
 
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
                    "0000-01-05T23:09:59");
 
             assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                           FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
+                           FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
                    "-0004-01-05T00:00:02.052092");
         }
     }
@@ -8368,7 +8373,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in $(D toISOExtendedString)
+        The exact format is exactly as described in $(D toISOExtString)
         except that trailing zeroes are permitted - including having fractional
         seconds with all zeroes. However, a decimal point with nothing following
         it is invalid.
@@ -8396,26 +8401,26 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
 
         Examples:
 --------------------
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOExtendedString("1998-12-25T02:15:00.007") ==
+assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
        SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOExtendedString("0000-01-05T23:09:59.00002") ==
+assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
        SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
+assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
        SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
+assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12Z") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12-8:00") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
 --------------------
       +/
-    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+    static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -8449,7 +8454,7 @@ assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
 
         try
         {
-            auto dateTime = DateTime.fromISOExtendedString(dateTimeStr);
+            auto dateTime = DateTime.fromISOExtString(dateTimeStr);
             auto fracSec = fracSecFromISOString(fracSecStr);
             DTRebindable!(immutable TimeZone) parsedZone;
 
@@ -8471,93 +8476,105 @@ assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString, tz);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString(""));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704 000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704t000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704T000000."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704T000000.0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString(""));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704 000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704t000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000.0"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07:0400:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.A"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.Z"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.00000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.00000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-1:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+1:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+1:0"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-24.00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+24.00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07:0400:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.A"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.Z"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-1:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-24.00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+24.00"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00.0"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20101222T172201"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20101222T172201"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Dec-22 17:22:01"));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01"), SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("-1999-07-06T12:30:33"), SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("+01999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString(" 1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01"), SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+            _assertPred!"=="(SysTime.fromISOExtString("1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("-1999-07-06T12:30:33"), SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("+01999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString(" 1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString(" 1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"hnsecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000010"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0010000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"hnsecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000010"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0010000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-480)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(480)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-11-03T06:51:06.57159Z"), SysTime(DateTime(2010, 11, 3, 6, 51, 6), FracSec.from!"hnsecs"(5715900), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-11-03T06:51:06.57159Z"), SysTime(DateTime(2010, 11, 3, 6, 51, 6), FracSec.from!"hnsecs"(5715900), UTC()));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.23412Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_341_200), UTC()));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.23112-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_311_200), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.45-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.1-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_000_000), new SimpleTimeZone(-90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.55-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(5_500_000), new SimpleTimeZone(-480)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.1234567+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_234_567), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.0+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.0000000+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.45+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.23412Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_341_200), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.23112-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_311_200), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.45-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.1-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_000_000), new SimpleTimeZone(-90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.55-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(5_500_000), new SimpleTimeZone(-480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.1234567+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_234_567), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.0+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.0000000+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.45+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(480)));
 
             //Verify Examples.
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-            assert(SysTime.fromISOExtendedString("1998-12-25T02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-            assert(SysTime.fromISOExtendedString("0000-01-05T23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-            assert(SysTime.fromISOExtendedString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-            assert(SysTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+            assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+            assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+            assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+            assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12-8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
         }
     }
 
@@ -12767,13 +12784,13 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
 
         Examples:
 --------------------
-assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
         {
@@ -12793,35 +12810,40 @@ assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
             assert(0, "format() threw.");
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
+
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(Date(9, 12, 4).toISOExtendedString(), "0009-12-04");
-            _assertPred!"=="(Date(99, 12, 4).toISOExtendedString(), "0099-12-04");
-            _assertPred!"=="(Date(999, 12, 4).toISOExtendedString(), "0999-12-04");
-            _assertPred!"=="(Date(9999, 7, 4).toISOExtendedString(), "9999-07-04");
-            _assertPred!"=="(Date(10000, 10, 20).toISOExtendedString(), "+10000-10-20");
+            _assertPred!"=="(Date(9, 12, 4).toISOExtString(), "0009-12-04");
+            _assertPred!"=="(Date(99, 12, 4).toISOExtString(), "0099-12-04");
+            _assertPred!"=="(Date(999, 12, 4).toISOExtString(), "0999-12-04");
+            _assertPred!"=="(Date(9999, 7, 4).toISOExtString(), "9999-07-04");
+            _assertPred!"=="(Date(10000, 10, 20).toISOExtString(), "+10000-10-20");
 
             //Test B.C.
-            _assertPred!"=="(Date(0, 12, 4).toISOExtendedString(), "0000-12-04");
-            _assertPred!"=="(Date(-9, 12, 4).toISOExtendedString(), "-0009-12-04");
-            _assertPred!"=="(Date(-99, 12, 4).toISOExtendedString(), "-0099-12-04");
-            _assertPred!"=="(Date(-999, 12, 4).toISOExtendedString(), "-0999-12-04");
-            _assertPred!"=="(Date(-9999, 7, 4).toISOExtendedString(), "-9999-07-04");
-            _assertPred!"=="(Date(-10000, 10, 20).toISOExtendedString(), "-10000-10-20");
+            _assertPred!"=="(Date(0, 12, 4).toISOExtString(), "0000-12-04");
+            _assertPred!"=="(Date(-9, 12, 4).toISOExtString(), "-0009-12-04");
+            _assertPred!"=="(Date(-99, 12, 4).toISOExtString(), "-0099-12-04");
+            _assertPred!"=="(Date(-999, 12, 4).toISOExtString(), "-0999-12-04");
+            _assertPred!"=="(Date(-9999, 7, 4).toISOExtString(), "-9999-07-04");
+            _assertPred!"=="(Date(-10000, 10, 20).toISOExtString(), "-10000-10-20");
 
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOExtendedString()));
-            static assert(__traits(compiles, idate.toISOExtendedString()));
+            static assert(__traits(compiles, cdate.toISOExtString()));
+            static assert(__traits(compiles, idate.toISOExtString()));
 
             //Verify Examples.
-            assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-            assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-            assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-            assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+            assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+            assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+            assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+            assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
         }
     }
 
@@ -13063,14 +13085,14 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
 
         Examples:
 --------------------
-assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 --------------------
       +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
+    static Date fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -13097,79 +13119,91 @@ assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static Date fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(Date.fromISOExtendedString(""));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("990704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010a704"));
+            assertThrown!DateTimeException(Date.fromISOExtString(""));
+            assertThrown!DateTimeException(Date.fromISOExtString("990704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("120100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("20100a04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010a704"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-0a-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-a7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-4"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010aul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jua04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010aul04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-aul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jua-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jal-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-aul-04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("20100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-04"));
 
-            _assertPred!"=="(Date.fromISOExtendedString("1999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("-1999-07-06"), Date(-1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("+01999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("1999-07-06 "), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06 "), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("1999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("-1999-07-06"), Date(-1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("+01999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("1999-07-06 "), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString(" 1999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString(" 1999-07-06 "), Date(1999, 7, 6));
 
             //Verify Examples.
-            assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-            assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-            assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-            assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-            assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+            assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+            assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+            assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+            assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+            assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
         }
     }
 
@@ -14475,11 +14509,11 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
         Examples:
 --------------------
-assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
+assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
+assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
@@ -14487,6 +14521,10 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
             assert(0, "format() threw.");
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
@@ -14495,13 +14533,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
             auto tod = TimeOfDay(12, 30, 33);
             const ctod = TimeOfDay(12, 30, 33);
             immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOExtendedString()));
-            static assert(__traits(compiles, ctod.toISOExtendedString()));
-            static assert(__traits(compiles, itod.toISOExtendedString()));
+            static assert(__traits(compiles, tod.toISOExtString()));
+            static assert(__traits(compiles, ctod.toISOExtString()));
+            static assert(__traits(compiles, itod.toISOExtString()));
 
             //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "00:00:00");
-            assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "12:30:33");
+            assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+            assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
         }
     }
 
@@ -14514,7 +14552,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
     //with modifiers and one without.
     string toString()
     {
-        return toISOExtendedString();
+        return toISOExtString();
     }
 
 
@@ -14526,7 +14564,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
     //with modifiers and one without.
     string toString() const nothrow
     {
-        return toISOExtendedString();
+        return toISOExtString();
     }
 
     unittest
@@ -14668,12 +14706,12 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
 
         Examples:
 --------------------
-assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 --------------------
       +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+    static TimeOfDay fromISOExtString(S)(in S isoExtString)
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -14693,74 +14731,86 @@ assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033pm"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1277"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12707"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12070"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12303a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1230a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("123a33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12a033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a0033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a20033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1200330"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33pm"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0::"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(":0:"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("::0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13:0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:7"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:07"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:07:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:3a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:3a:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:a0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a2:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:003:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120:03:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("012:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("01:200:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033"));
 
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17"), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("00:14:12"), TimeOfDay(0, 14, 12));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("00:00:07"), TimeOfDay(0, 0, 7));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17 "), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17"), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17 "), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("01:12:17"), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("00:14:12"), TimeOfDay(0, 14, 12));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("00:00:07"), TimeOfDay(0, 0, 7));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("01:12:17 "), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString(" 01:12:17"), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString(" 01:12:17 "), TimeOfDay(1, 12, 17));
 
             //Verify Examples.
-            assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+            assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
         }
     }
 
@@ -17623,56 +17673,61 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
 
         Examples:
 --------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() ==
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
        "2010-07-04T07:06:12");
 
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() ==
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() ==
        "1998-12-25T02:15:00");
 
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() ==
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() ==
        "0000-01-05T23:09:59");
 
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() ==
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
        "-0004-01-05T00:00:02");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
-            return format("%sT%s", _date.toISOExtendedString(), _tod.toISOExtendedString());
+            return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
         catch(Exception e)
             assert(0, "format() threw.");
     }
+
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
-            _assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
-            _assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
-            _assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
-            _assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
+            _assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString(), "0009-12-04T00:00:00");
+            _assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtString(), "0099-12-04T05:06:12");
+            _assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtString(), "0999-12-04T13:44:59");
+            _assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtString(), "9999-07-04T23:59:59");
+            _assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtString(), "+10000-10-20T01:01:01");
 
             //Test B.C.
-            _assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
-            _assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
-            _assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
-            _assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
-            _assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
-            _assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
+            _assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtString(), "0000-12-04T00:12:04");
+            _assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString(), "-0009-12-04T00:00:00");
+            _assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtString(), "-0099-12-04T05:06:12");
+            _assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtString(), "-0999-12-04T13:44:59");
+            _assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtString(), "-9999-07-04T23:59:59");
+            _assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtString(), "-10000-10-20T01:01:01");
 
             const cdt = DateTime(1999, 7, 6, 12, 30, 33);
             immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.toISOExtendedString()));
-            static assert(__traits(compiles, idt.toISOExtendedString()));
+            static assert(__traits(compiles, cdt.toISOExtString()));
+            static assert(__traits(compiles, idt.toISOExtString()));
 
             //Verify Examples.
-            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
-            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
+            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() == "2010-07-04T07:06:12");
+            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() == "1998-12-25T02:15:00");
+            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() == "0000-01-05T23:09:59");
+            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() == "-0004-01-05T00:00:02");
         }
     }
 
@@ -17878,23 +17933,23 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
 
         Examples:
 --------------------
-assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") ==
+assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
-assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") ==
+assert(DateTime.fromISOExtString("1998-12-25T02:15:00") ==
        DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
 
-assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") ==
+assert(DateTime.fromISOExtString("0000-01-05T23:09:59") ==
        DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
 
-assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
+assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") ==
        DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
 
-assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
+assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 --------------------
       +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
+    static DateTime fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(isoExtString));
@@ -17904,52 +17959,64 @@ assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        immutable date = Date.fromISOExtendedString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+        immutable date = Date.fromISOExtString(dstr[0..t]);
+        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
+    }
+
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static DateTime fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
     }
 
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString(""));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704 000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704t000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString(""));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704 000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704t000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704T000000."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704T000000.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07:0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07:0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04T00:00:00.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04 00:00:00.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20101222T172201"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20101222T172201"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Dec-22 17:22:01"));
 
-            _assertPred!"=="(DateTime.fromISOExtendedString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+            _assertPred!"=="(DateTime.fromISOExtString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
 
             //Verify Examples.
-            assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-            assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-            assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-            assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-            assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOExtString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOExtString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+            assert(DateTime.fromISOExtString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+            assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+            assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
         }
     }
 
@@ -17991,7 +18058,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         immutable date = Date.fromSimpleString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
     }
@@ -28337,8 +28404,7 @@ private:
     UTC but no DST.
 
     It's primarily used as the time zone in the result of $(D SysTime)'s
-    $(D fromISOString), $(D fromISOExtendedString), and
-    $(D fromSimpleString).
+    $(D fromISOString), $(D fromISOExtString), and $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
     has no DST, and while it may be meant to represent a time zone which is in
