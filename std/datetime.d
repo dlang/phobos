@@ -7,7 +7,6 @@
     $(UL
         $(LI Types to represent points in time: $(D SysTime), $(D Date),
              $(D TimeOfDay), and $(D DateTime).)
-        $(LI Types to represent durations of time.)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
         $(LI Types to represent time zones (used by $(D SysTime)).)
@@ -16,6 +15,12 @@
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
+
+    Closely related to std.datetime is core.time, and some of the time types
+    used in std.datetime come from there - such as $(CXREF time, Duration),
+    $(CXREF time, TickDuration), and $(CXREF time, FracSec). So, you may want
+    to look at its documentation as well. However, core.time is publically
+    imported into std.datetime, so you don't have to import it separately.
 
     Three of the main concepts used in this module are time points, time
     durations, and time intervals.
@@ -74,8 +79,6 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     or $(D FracSec), they're in core.time.
 
     Note:
-        core.time is publicly imported by std.datetime, so if you're using
-        std.datetime, you don't need to import core.time. Also,
         $(D DateTimeException) is an alias for core.time's $(D TimeException),
         so you don't need to worry about core.time functions and std.datetime
         functions throwing different exception types (except in the rare case
