@@ -165,7 +165,8 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl)
+        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl \
+		  sqlite3)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -189,7 +190,7 @@ $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MOD
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
-	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
+	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil) $(addprefix etc/c/sqlite3/, sqlite3)
 C_FILES = $(addsuffix .c,$(C_MODULES))
 # C files that are not compiled (right now only zlib-related)
 C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
