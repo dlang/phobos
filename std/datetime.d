@@ -144,10 +144,6 @@ else version(Posix)
     version = testStdDateTime;
 }
 
-//We should enable at least _some_ of the tests on Windows - especially
-//the Windows-specific tests.
-version = enableWindowsTest;
-
 version(unittest)
 {
     import std.c.string;
@@ -157,7 +153,7 @@ version(unittest)
 alias std.string.indexOf indexOf;
 
 //Verify module example.
-unittest
+version(testStdDateTime) unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -963,7 +959,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
@@ -1038,7 +1034,7 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
         assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
@@ -1106,7 +1102,7 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
     }
 
     //Verify Examples
-    unittest
+    version(testStdDateTime) unittest
     {
         auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
         st.yearBC = 1;
@@ -1191,7 +1187,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
@@ -1360,7 +1356,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
@@ -9503,7 +9499,7 @@ assert(Date(-7, 4, 5).day == 5);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(Date(1999, 7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
@@ -11964,7 +11960,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
@@ -12279,7 +12275,7 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
@@ -15694,7 +15690,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     }
 
     //Verify Examples.
-    unittest
+    version(testStdDateTime) unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
@@ -27708,12 +27704,138 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             return WindowsTimeZone.getTimeZone(tzDatabaseNameToWindowsTZName(name));
     }
 
-    unittest
+    //Since reading in the time zone files could be expensive, most unit tests
+    //are consolidated into this one unittest block which minimizes how often it
+    //reads a time zone file.
+    version(testStdDateTime) unittest
     {
-        version(enableWindowsTest)
+        version(Posix) scope(exit) clearTZEnvVar();
+
+        static void testTZ(string tzName,
+                           string stdName,
+                           string dstName,
+                           int utcOffset,
+                           int dstOffset,
+                           bool north = true)
         {
-            //Verify Example.
-            auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+            scope(failure) writefln("Failed time zone: %s", tzName);
+
+            immutable tz = TimeZone.getTimeZone(tzName);
+            immutable hasDST = dstOffset != 0;
+
+            version(Posix)
+                _assertPred!"=="(tz.name, tzName);
+            else version(Windows)
+                _assertPred!"=="(tz.name, stdName);
+
+            _assertPred!"=="(tz.stdName, stdName);
+            _assertPred!"=="(tz.dstName, dstName);
+            _assertPred!"=="(tz.hasDST, hasDST);
+
+            immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 6, 0, 0);
+            immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 6, 0, 0);
+            auto std = SysTime(stdDate, tz);
+            auto dst = SysTime(dstDate, tz);
+            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
+            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
+
+            assert(!std.dstInEffect);
+            _assertPred!"=="(dst.dstInEffect, hasDST);
+
+            _assertPred!"=="(cast(DateTime)std, stdDate);
+            _assertPred!"=="(cast(DateTime)dst, dstDate);
+            _assertPred!"=="(std, stdUTC);
+
+            version(Posix)
+            {
+                setTZEnvVar(tzName);
+
+                static void testTM(in SysTime st)
+                {
+                    time_t unixTime = st.toUnixTime();
+                    tm* osTimeInfo = localtime(&unixTime);
+                    tm ourTimeInfo = st.toTM();
+
+                    _assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
+                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    _assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
+                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    _assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
+                    _assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
+                    _assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
+                    _assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
+                    _assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
+                    _assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
+                    _assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
+                    _assertPred!"=="(to!string(ourTimeInfo.tm_zone),
+                                    to!string(osTimeInfo.tm_zone));
+                }
+
+                testTM(std);
+                testTM(dst);
+
+                //Apparently, right/ does not exist on Mac OS X. I don't know
+                //whether or not it exists on FreeBSD. It's rather pointless
+                //normally, since the Posix standard requires that leap seconds
+                //be ignored, so it does make some sense that right/ wouldn't
+                //be there, but since PosixTimeZone _does_ use leap seconds if
+                //the time zone file does, we'll test that functionality if the
+                //appropriate files exist.
+                if((PosixTimeZone.defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
+                {
+                    auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
+
+                    assert(leapTZ.name == "right/" ~ tzName);
+                    assert(leapTZ.stdName == stdName);
+                    assert(leapTZ.dstName == dstName);
+                    assert(leapTZ.hasDST == hasDST);
+
+                    auto leapSTD = SysTime(std.stdTime, leapTZ);
+                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+
+                    assert(!leapSTD.dstInEffect);
+                    assert(leapDST.dstInEffect == hasDST);
+
+                    _assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                    _assertPred!"=="(leapDST.stdTime, dst.stdTime);
+
+                    //Whenever a leap second is added/removed,
+                    //this will have to be adjusted.
+                    enum leapDiff = convert!("seconds", "hnsecs")(24);
+                    _assertPred!"=="(leapSTD.adjTime - leapDiff, std.adjTime);
+                    _assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
+                }
+            }
+        }
+
+        version(Posix)
+        {
+            version(FreeBSD) enum utcZone = "Etc/UTC";
+            version(linux)   enum utcZone = "UTC";
+            version(OSX)     enum utcZone = "UTC";
+
+            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
+            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
+            testTZ(utcZone, "UTC", "UTC", 0, 0);
+            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
+            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
+
+            assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
+        }
+        version(Windows)
+        {
+            testTZ("America/Los_Angeles", "Pacific Standard Time",
+                   "Pacific Daylight Time", -8 * 60, 60);
+            testTZ("America/New_York", "Eastern Standard Time",
+                   "Eastern Daylight Time", -5 * 60, 60);
+            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+                   "Greenwich Daylight Time", 0, 0);
+            testTZ("Europe/Paris", "Romance Standard Time",
+                   "Romance Daylight Time", 60, 60);
+            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
+
+            assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
         }
     }
 
@@ -27764,7 +27886,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static void testPZSuccess(string tzName)
             {
@@ -27904,7 +28026,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assert(LocalTime().stdName !is null);
 
@@ -27977,7 +28099,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assert(LocalTime().dstName !is null);
 
@@ -28039,7 +28161,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().hasDST;
 
@@ -28103,7 +28225,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto currTime = Clock.currStdTime;
             LocalTime().dstInEffect(currTime);
@@ -28166,7 +28288,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().utcToTZ(0);
 
@@ -28230,7 +28352,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().tzToUTC(0);
             _assertPred!"=="(LocalTime().tzToUTC(LocalTime().utcToTZ(0)), 0);
@@ -28331,7 +28453,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="(UTC().utcToTZ(0), 0);
 
@@ -28366,7 +28488,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="(UTC().tzToUTC(0), 0);
 
@@ -28451,7 +28573,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="((new SimpleTimeZone(-8 * 60)).utcToTZ(0), -288_000_000_000L);
             _assertPred!"=="((new SimpleTimeZone(8 * 60)).utcToTZ(0), 288_000_000_000L);
@@ -28479,7 +28601,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="((new SimpleTimeZone(-8 * 60)).tzToUTC(-288_000_000_000L), 0);
             _assertPred!"=="((new SimpleTimeZone(8 * 60)).tzToUTC(288_000_000_000L), 0);
@@ -28512,7 +28634,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto stz = new SimpleTimeZone(-8 * 60, "PST");
 
@@ -28557,7 +28679,7 @@ private:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static string testSTZInvalid(int offset)
             {
@@ -28636,7 +28758,7 @@ private:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assertThrown!DateTimeException(SimpleTimeZone.fromISOString(""));
             assertThrown!DateTimeException(SimpleTimeZone.fromISOString("Z"));
@@ -28695,7 +28817,7 @@ private:
     //Test that converting from an ISO string to a SimpleTimeZone to an ISO String works properly.
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
             {
@@ -28741,17 +28863,6 @@ private:
     yourself and tell $(D PosixTimeZone.getTimeZone) where the directory holding
     them is.
 
-    TZ Database files hold DST transitions for a large interval of the time
-    covered by $(D time_t). So, barring errors in the information in the TZ
-    Database files, it will use the correct DST rules for any date. Windows, on
-    the other hand, maintains only the current DST rules, so historical dates
-    will use the current DST rules (and therefore potentially be incorrect). So,
-    if you want the DST rules that you use to be more accurate, or if you're
-    looking for your program to act consistently on both Posix and Windows
-    systems, then, as mentioned above, you'll need to include the TZ Database
-    files with your program and give $(D PosixTimeZone.getTimeZone) the
-    directory on disk where they are located.
-
     To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
     (which will allow you to specify the location the time zone files) or call
     $(D TimeZone.getTimeZone) (which will give you a $(D PosixTimeZone) on Posix
@@ -28764,8 +28875,8 @@ private:
         time zone whose name starts with "right/". Those time zone files do
         include leap seconds, and $(D PosixTimeZone) will take them into account
         (though posix systems which use a "right/" time zone as their local time
-         zone will $(I not) take leap seconds into account even though they're
-         in the file).
+        zone will $(I not) take leap seconds into account even though they're
+        in the file).
 
     See_Also:
         $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
@@ -28808,10 +28919,6 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return _transitions.front.ttInfo.isDST;
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -28846,10 +28953,6 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return stdTime + convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -29254,142 +29357,6 @@ assert(tz.dstName == "PDT");
             throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
     }
 
-
-    //Since reading in the time zone files could be expensive, most unit tests
-    //are consolidated into this one unittest block which minimizes how often it
-    //reads a time zone file.
-    version(enableWindowsTest) unittest
-    {
-        version(Posix) scope(exit) clearTZEnvVar();
-
-        static void testTZ(string tzName,
-                           string stdName,
-                           string dstName,
-                           int utcOffset,
-                           int dstOffset,
-                           bool north = true)
-        {
-            scope(failure) writefln("Failed time zone: %s", tzName);
-
-            immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != 0;
-
-            version(Posix)
-                _assertPred!"=="(tz.name, tzName);
-            else version(Windows)
-                _assertPred!"=="(tz.name, stdName);
-
-            _assertPred!"=="(tz.stdName, stdName);
-            _assertPred!"=="(tz.dstName, dstName);
-            _assertPred!"=="(tz.hasDST, hasDST);
-
-            immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 12, 0, 0);
-            immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 12, 0, 0);
-            auto std = SysTime(stdDate, tz);
-            auto dst = SysTime(dstDate, tz);
-            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
-            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
-
-            assert(!std.dstInEffect);
-            _assertPred!"=="(dst.dstInEffect, hasDST);
-
-            _assertPred!"=="(cast(DateTime)std, stdDate);
-            _assertPred!"=="(cast(DateTime)dst, dstDate);
-            _assertPred!"=="(std, stdUTC);
-
-            version(Posix)
-            {
-                setTZEnvVar(tzName);
-
-                static void testTM(in SysTime st)
-                {
-                    time_t unixTime = st.toUnixTime();
-                    tm* osTimeInfo = localtime(&unixTime);
-                    tm ourTimeInfo = st.toTM();
-
-                    _assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                    _assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                    _assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                    _assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                    _assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                    _assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                    _assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                    _assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                    _assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                    _assertPred!"=="(to!string(ourTimeInfo.tm_zone),
-                                    to!string(osTimeInfo.tm_zone));
-                }
-
-                testTM(std);
-                testTM(dst);
-
-                //Apparently, right/ does not exist on Mac OS X. I don't know
-                //whether or not it exists on FreeBSD. It's rather pointless
-                //normally, since the Posix standard requires that leap seconds
-                //be ignored, so it does make some sense that right/ wouldn't
-                //be there, but since PosixTimeZone _does_ use leap seconds if
-                //the time zone file does, we'll test that functionality if the
-                //appropriate files exist.
-                if((defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
-                {
-                    auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
-
-                    assert(leapTZ.name == "right/" ~ tzName);
-                    assert(leapTZ.stdName == stdName);
-                    assert(leapTZ.dstName == dstName);
-                    assert(leapTZ.hasDST == hasDST);
-
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
-
-                    assert(!leapSTD.dstInEffect);
-                    assert(leapDST.dstInEffect == hasDST);
-
-                    _assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                    _assertPred!"=="(leapDST.stdTime, dst.stdTime);
-
-                    //Whenever a leap second is added/removed,
-                    //this will have to be adjusted.
-                    enum leapDiff = convert!("seconds", "hnsecs")(24);
-                    _assertPred!"=="(leapSTD.adjTime - leapDiff, std.adjTime);
-                    _assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
-                }
-            }
-        }
-
-        version(Posix)
-        {
-            version(FreeBSD) enum utcZone = "Etc/UTC";
-            version(linux)   enum utcZone = "UTC";
-            version(OSX)     enum utcZone = "UTC";
-
-            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
-            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
-            testTZ(utcZone, "UTC", "UTC", 0, 0);
-            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
-            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
-
-            assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
-        }
-        version(Windows)
-        {
-            testTZ("America/Los_Angeles", "Pacific Standard Time",
-                   "Pacific Daylight Time", -8 * 60, 60);
-            testTZ("America/New_York", "Eastern Standard Time",
-                   "Eastern Daylight Time", -5 * 60, 60);
-            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
-                   "Greenwich Daylight Time", 0, 0);
-            testTZ("Europe/Paris", "Romance Standard Time",
-                   "Romance Daylight Time", 60, 60);
-            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
-                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
-
-            assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
-        }
-    }
-
     /++
         Returns a list of the names of the time zones installed on the system.
 
@@ -29443,7 +29410,7 @@ assert(tz.dstName == "PDT");
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             version(Posix)
             {
@@ -29783,7 +29750,6 @@ private:
 
 version(StdDdoc)
 {
-
     /++
         $(BLUE This class is Windows-Only.)
 
@@ -29796,21 +29762,14 @@ version(StdDdoc)
         yourself and tell $(D PosixTimeZone.getTimeZone) where the directory
         holding them is.
 
-        TZ Database files hold DST transitions for a large interval of the time
-        covered by $(D time_t). So, barring errors in the information in the TZ
-        Database files, it will use the correct DST rules for any date. Windows,
-        on the other hand, maintains only the current DST rules, so historical
-        dates will use the current DST rules (and therefore potentially be
-        incorrect). So, if you want the DST rules that you use to be more
-        accurate, or if you're looking for your program to act consistently on
-        both Posix and Windows systems, then, as mentioned above, you'll need to
-        include the TZ Database files with your program and give
-        $(D PosixTimeZone.getTimeZone) the directory on disk where they are
-        located.
+        The TZ Dabatase files and Windows are not likely to always match,
+        particularly for historical dates, so if you want complete consistency
+        between Posix and Windows, then you should provide the appropriate
+        TZ Database files on Windows and use $(D PosixTimeZone). But as
+        $(D WindowsTimeZone) uses the Windows functions, $(D WindowsTimeZone)
+        is more likely to match the behavior of other Windows programs.
+        $(D WindowsTimeZone) should be fine for most programs.
 
-        However, if all you care about is whether current times use the correct
-        DST rules, or if you don't care whether the DST rules are historically
-        accurate, then you can just use $(D WindowsTimeZone) on Windows.
         $(D WindowsTimeZone) does not exist on Posix systems.
 
         To get a $(D WindowsTimeZone), either call
@@ -30094,7 +30053,7 @@ else version(Windows)
 
         unittest
         {
-            version(enableWindowsTest)
+            version(testStdDateTime)
             {
                 static void testWTZSuccess(string tzName)
                 {
@@ -30161,7 +30120,9 @@ else version(Windows)
                 utcTime.wSecond = utcDateTime.second;
                 utcTime.wMilliseconds = 0;
 
-                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
+                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                                   &utcTime,
+                                                                   &otherTime);
                 assert(result);
 
                 immutable otherDateTime = DateTime(otherTime.wYear,
@@ -30184,18 +30145,13 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        unittest
+        version(testStdDateTime) unittest
         {
-            version(enableWindowsTest)
-            {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
 
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1600, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1601, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_827, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_828, 1, 1)).stdTime);
-            }
+            foreach(year; [1600, 1601, 30_827, 30_828])
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(year, 1, 1)).stdTime);
         }
 
 
@@ -30214,52 +30170,91 @@ else version(Windows)
             {
                 try
                 {
-                    auto localTime = cast(DateTime)SysTime(adjTime, UTC());
-
-                    DateTime getTransitionTime(const ref SYSTEMTIME transition)
+                    bool dstInEffectForLocalDateTime(DateTime localDateTime)
                     {
-                        DateTime switchDate;
-
-                        if(transition.wYear == 0)
-                            switchDate.year = localTime.year;
-                        else
-                            switchDate.year = transition.wYear;
-
-                        switchDate.month = cast(Month)transition.wMonth;
-
-                        DayOfWeek dow = cast(DayOfWeek)transition.wDayOfWeek;
-                        int occurrence = transition.wDay;
-
-                        if(occurrence < 5)
+                        //The limits of what SystemTimeToTZSpecificLocalTime will accept.
+                        if(localDateTime.year < 1601)
                         {
-                            Date date = localTime.date;
+                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
 
-                            date.day = 1;
-                            date.day = cast(int)(date.day + daysToDayOfWeek(date.dayOfWeek, dow) + convert!("weeks", "days")(occurrence - 1));
-                            switchDate.day = date.day;
+                            localDateTime.year = 1601;
                         }
-                        else
+                        else if(localDateTime.year > 30_827)
                         {
-                            Date date = localTime.date.endOfMonth;
+                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
 
-                            switchDate.day = date.day - daysToDayOfWeek(dow, date.dayOfWeek);
+                            localDateTime.year = 30_827;
                         }
 
-                        switchDate.hour = transition.wHour;
-                        switchDate.minute = transition.wMinute;
+                        //SystemTimeToTZSpecificLocalTime doesn't act correctly at the
+                        //beginning or end of the year (bleh). Unless some bizarre time
+                        //zone changes DST on January 1st or December 31st, this should
+                        //fix the problem.
+                        if(localDateTime.month == Month.jan)
+                        {
+                            if(localDateTime.day == 1)
+                                localDateTime.day = 2;
+                        }
+                        else if(localDateTime.month == Month.dec && localDateTime.day == 31)
+                            localDateTime.day = 30;
 
-                        return switchDate;
+                        SYSTEMTIME utcTime = void;
+                        SYSTEMTIME localTime = void;
+
+                        localTime.wYear = localDateTime.year;
+                        localTime.wMonth = localDateTime.month;
+                        localTime.wDay = localDateTime.day;
+                        localTime.wHour = localDateTime.hour;
+                        localTime.wMinute = localDateTime.minute;
+                        localTime.wSecond = localDateTime.second;
+                        localTime.wMilliseconds = 0;
+
+                        immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                                           &localTime,
+                                                                           &utcTime);
+                        assert(result);
+
+                        immutable utcDateTime = DateTime(utcTime.wYear,
+                                                         utcTime.wMonth,
+                                                         utcTime.wDay,
+                                                         utcTime.wHour,
+                                                         utcTime.wMinute,
+                                                         utcTime.wSecond);
+
+                        immutable diff = localDateTime - utcDateTime;
+                        immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
+
+                        if(minutes == tzInfo.DaylightBias)
+                            return true;
+
+                        assert(minutes == tzInfo.StandardBias);
+
+                        return false;
                     }
 
-                    auto stdSwitch = getTransitionTime(tzInfo.StandardDate);
-                    auto dstSwitch = getTransitionTime(tzInfo.DaylightDate);
+                    auto localDateTime = cast(DateTime)SysTime(adjTime, UTC());
+                    auto localDateTimeBefore = localDateTime - dur!"hours"(1);
+                    auto localDateTimeAfter = localDateTime + dur!"hours"(1);
 
-                    bool isDST = false;
+                    auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
+                    auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
+                    auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
 
-                    if(localTime < stdSwitch)
-                        isDST = localTime < dstSwitch ? stdSwitch < dstSwitch : true;
+                    bool isDST;
+
+                    if(dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
+                        isDST = true;
+                    else if(!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
+                        isDST = false;
+                    else if((!dstInEffectBefore && dstInEffectAfter) ||
+                            (dstInEffectBefore && !dstInEffectAfter))
+                    {
+                        isDST = dstInEffectNow;
+                    }
                     else
-                        isDST = localTime < dstSwitch ? false : dstSwitch > stdSwitch;
+                        assert(0, "Bad Logic.");
 
                     if(isDST)
                         return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
@@ -30485,7 +30480,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
 
 unittest
 {
-    version(enableWindowsTest)
+    version(testStdDateTime)
     {
         version(Windows)
         {
@@ -30632,7 +30627,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
 
 unittest
 {
-    version(enableWindowsTest)
+    version(testStdDateTime)
     {
         version(Windows)
         {
@@ -30946,7 +30941,7 @@ TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
 }
 
 //Verify Examples.
-unittest
+version(testStdDateTime) unittest
 {
     void writefln(S...)(S args){}
 
@@ -31097,7 +31092,7 @@ long sysTimeToDTime(in SysTime sysTime)
     return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
 }
 
-unittest
+version(testStdDateTime) unittest
 {
     _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), UTC())),
                     0);
@@ -31126,7 +31121,7 @@ SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
     return SysTime(hnsecs, tz);
 }
 
-unittest
+version(testStdDateTime) unittest
 {
     _assertPred!"=="(dTimeToSysTime(0),
                     SysTime(DateTime(1970, 1, 1), UTC()));
@@ -31455,7 +31450,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto sysTime = Clock.currTime(UTC());
             SYSTEMTIME st = void;
@@ -31491,7 +31486,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             SYSTEMTIME st = void;
             GetSystemTime(&st);
@@ -31526,7 +31521,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto sysTime = Clock.currTime(UTC());
             SYSTEMTIME st = void;
@@ -31555,7 +31550,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             SYSTEMTIME st = void;
             GetSystemTime(&st);
