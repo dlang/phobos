@@ -613,7 +613,7 @@ Returns the number of parenthesized captures
                     case ':':
                         p++;
                         parseRegex(pattern, p, buf);
-                        break;                      
+                        break;
                     case '=': case '!':
                         buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
                         offset = buf.offset;
@@ -1787,7 +1787,6 @@ void main()
 
         Range opIndex(size_t n)
         {
-
             assert(n < length, text("length = ",length, ", requested match = ", n));
             return input[matches[n].startIdx .. matches[n].endIdx];
         }
@@ -2400,11 +2399,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (engine.program[pc] == engine.REnmq) // if minimal munch
                 {
                     for (; count < m; count++)
-                    {   sizediff_t s1;
+                    {
+                        sizediff_t s1;
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         s1 = src;
-						
                         if (trymatch(pop + len, engine.program.length))
                         {
                             src = s1;
@@ -2479,21 +2478,21 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 ss = src;
                 if (!trymatch(pop, pop + len))
                     goto Lnomatch;
-				if(!pmatch_touched){
+                if(!pmatch_touched){
                     pmatch_touched = true;
-				    if(!psave)
-					    psave = cast(regmatch_t *)alloca(
+                    if(!psave)
+                        psave = cast(regmatch_t *)alloca(
                             (engine.re_nsub + 1) * regmatch_t.sizeof);
                     memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
                 pmatch[n + 1].startIdx = ss;
                 pmatch[n + 1].endIdx = src;
-				debug(regex){
-					printf("Total matches NOW:\n");
-					for(int i=0;i<engine.re_nsub+1;i++)
-						printf("\tmatch # %d at %d .. %d\n",i, pmatch[i].startIdx,pmatch[i].endIdx);
-				}
+                debug(regex){
+                    printf("Total matches NOW:\n");
+                    for(int i=0;i<engine.re_nsub+1;i++)
+                        printf("\tmatch # %d at %d .. %d\n",i, pmatch[i].startIdx,pmatch[i].endIdx);
+                }
                 pc = pop + len;
                 break;
 
@@ -2618,7 +2617,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 				debug(regex) printf("len \t%d\n",len);
                 if (src + len > input.length)
                     goto Lnomatch;
-				
+
                 else if (engine.attributes & engine.REA.ignoreCase)
                 {
                     if (icmp(input[src .. src + len], input[so .. eo]))
@@ -2640,7 +2639,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         debug(regex) printf("\tnomatch pc=%d\n", pc);
         src = srcsave;
         if(pmatch_touched)
-            memcpy(pmatch.ptr, psave, (engine.re_nsub + 1) * regmatch_t.sizeof);  
+            memcpy(pmatch.ptr, psave, (engine.re_nsub + 1) * regmatch_t.sizeof);
         return false;
     }
 
