@@ -245,7 +245,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_wcharh.html \
 	$(DOC)\phobos.html
 
-SRC=	unittest.d crc32.d phobos.d
+SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
@@ -605,8 +605,8 @@ windows.obj : std\c\windows\windows.d
 $(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
-$(DOC)\phobos.html : $(STDDOC) phobos.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) phobos.d
+$(DOC)\phobos.html : $(STDDOC) index.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) index.d
 
 $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_atomic.html $(STDDOC) $(DRUNTIME)\src\core\atomic.d -I$(DRUNTIME)\src\
