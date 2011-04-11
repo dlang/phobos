@@ -1192,11 +1192,11 @@ unittest
 /// Enum for indicating if the isEmail function should perform a DNS check or not.
 enum CheckDns
 {
-    /// Performs DNS checking
-    yes,
-
     /// Does not perform DNS checking
-    no
+    no,
+
+    /// Performs DNS checking
+    yes
 }
 
 /// This struct represents the status of an email address
