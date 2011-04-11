@@ -6180,7 +6180,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             enum maxLen = 8;
             assert(isSorted!lessFun(r), text("Failed to sort range of type ",
                             Range.stringof, ". Actual result is: ",
-                            r[0 .. min($, maxLen)],
+                            r[0 .. r.length > maxLen ? maxLen : r.length ],
                             r.length > maxLen ? "..." : ""));
         }
         else
