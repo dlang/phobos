@@ -3483,14 +3483,14 @@ unittest
 
         for (a = start; a < end; a++)
         {
-             writef("width: %d tv[%d]: pattern='%s' input='%s' result=%s"
-                     " format='%s' replace='%s'\n",
-                     Char.sizeof, a,
-                     tv[a].pattern,
-                     tv[a].input,
-                     tv[a].result,
-                     tv[a].format,
-                     tv[a].replace);
+//             writef("width: %d tv[%d]: pattern='%s' input='%s' result=%s"
+//                     " format='%s' replace='%s'\n",
+//                     Char.sizeof, a,
+//                     tv[a].pattern,
+//                     tv[a].input,
+//                     tv[a].result,
+//                     tv[a].format,
+//                     tv[a].replace);
 
             tvd = tv[a];
 
