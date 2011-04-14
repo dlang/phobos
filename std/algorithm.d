@@ -1359,7 +1359,8 @@ unittest
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
     struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, new int };
+    S2 s21 = { 10, null };
+    s21.b = new int;
     S2 s22;
     move(s21, s22);
     assert(s21 == s22);
