@@ -22,6 +22,7 @@
  */
 module std.traits;
 import std.typetuple;
+import std.typecons : Rebindable;
 import core.vararg;
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -1278,6 +1279,12 @@ template hasAliasing(T...)
         anySatisfy!(isDelegate, T);
 }
 
+// Specialization to special-case std.typecons.Rebindable.
+template hasAliasing(R : Rebindable!R)
+{
+    enum hasAliasing = hasAliasing!R;
+}
+
 unittest
 {
     struct S1 { int a; Object b; }
@@ -1295,8 +1302,12 @@ unittest
 
     interface I;
     static assert(hasAliasing!I);
-}
 
+    static assert(hasAliasing!(Rebindable!(const Object)));
+    static assert(!hasAliasing!(Rebindable!(immutable Object)));
+    static assert(hasAliasing!(Rebindable!(shared Object)));
+    static assert(hasAliasing!(Rebindable!(Object)));
+}
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
@@ -1318,6 +1329,11 @@ template hasIndirectionsImpl(T...)
     else static if(isFunctionPointer!(T[0]))
     {
         enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]);
+    }
+    else static if(isStaticArray!(T[0]))
+    {
+        enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]) ||
+        hasIndirectionsImpl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
     }
     else
     {
@@ -1342,6 +1358,8 @@ unittest
     interface I;
     static assert(hasIndirections!I);
     static assert(!hasIndirections!(void function()));
+    static assert(hasIndirections!(void*[1]));
+    static assert(!hasIndirections!(byte[1]));
 }
 
 // These are for backwards compatibility, are intentionally lacking ddoc,
@@ -1363,6 +1381,12 @@ template hasUnsharedAliasing(T...)
 {
     enum hasUnsharedAliasing = hasRawUnsharedAliasing!(T) ||
         anySatisfy!(unsharedDelegate, T) || hasUnsharedObjects!(T);
+}
+
+// Specialization to special-case std.typecons.Rebindable.
+template hasUnsharedAliasing(R : Rebindable!R)
+{
+    enum hasUnsharedAliasing = hasUnsharedAliasing!R;
 }
 
 private template unsharedDelegate(T)
@@ -1395,6 +1419,11 @@ unittest
 
     interface I {}
     static assert(hasUnsharedAliasing!I);
+
+    static assert(hasUnsharedAliasing!(Rebindable!(const Object)));
+    static assert(!hasUnsharedAliasing!(Rebindable!(immutable Object)));
+    static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
+    static assert(hasUnsharedAliasing!(Rebindable!(Object)));
 }
 
 /**
@@ -3211,7 +3240,8 @@ unittest
         static assert(is(StringTypeOf!(C!(Char, 2)) == const(Char)[]));     // cannot get exact string type
         static assert(is(StringTypeOf!(C!(Char, 3)) == immutable(Char)[]));
         static assert(is(StringTypeOf!(C!(Char, 4)) == immutable(Char)[])); // cannot get exact string type
-        
+
+
         static assert(is(StringTypeOf!(S!(Char, 0)) == Char[]));
         static assert(is(StringTypeOf!(S!(Char, 1)) == const(Char)[]));
         static assert(is(StringTypeOf!(S!(Char, 2)) == const(Char)[]));     // cannot get exact string type
