@@ -335,7 +335,7 @@ SRC_ZLIB= \
 	etc\c\zlib\solaris.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
+	etc\c\zlib\zlib.lib etc\c\sqlite3\sqlite3.lib $(DRUNTIMELIB) win32.mak
 	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib etc\c\sqlite3\sqlite3.lib $(DRUNTIMELIB)
 
