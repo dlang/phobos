@@ -605,23 +605,14 @@ public:
         }
 
         test(DateTime.init, FracSec.init, UTC(), 0);
-        test(DateTime(1, 1, 1, 12, 30, 33), FracSec.init, UTC(),
-             450_330_000_000L);
-        test(DateTime(0, 12, 31, 12, 30, 33), FracSec.init, UTC(),
-             -413_670_000_000L);
-        test(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC(),
-             10_000L);
-        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC(),
-             -10_000L);
+        test(DateTime(1, 1, 1, 12, 30, 33), FracSec.init, UTC(), 450_330_000_000L);
+        test(DateTime(0, 12, 31, 12, 30, 33), FracSec.init, UTC(), -413_670_000_000L);
+        test(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC(), 10_000L);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC(), -10_000L);
 
-        test(DateTime(0, 12, 31, 23, 59, 59),
-             FracSec.from!"hnsecs"(9_999_999),
-             UTC(),
-             -1);
-        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC(),
-             -9_999_999);
-        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC(),
-             -10_000_000);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC(), -1);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC(), -9_999_999);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC(), -10_000_000);
     }
 
     /++
@@ -952,8 +943,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         auto date = Date(cast(int)days);
         date.year = year;
 
-        immutable newDaysHNSecs =
-            convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
+        immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
 
         adjTime = newDaysHNSecs + hnsecs;
     }
@@ -968,8 +958,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int year, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
         {
             st.year = year;
             _assertPred!"=="(st, expected, "", __FILE__, line);
@@ -981,8 +970,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
 
             foreach(year; chain(testYearsBC, testYearsAD))
             {
-                auto e = SysTime(DateTime(year, dt.month, dt.day,
-                                          dt.hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
                 test(st, year, e);
@@ -1095,8 +1083,7 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
         auto date = Date(cast(int)days);
         date.yearBC = year;
 
-        immutable newDaysHNSecs =
-            convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
+        immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
 
         adjTime = newDaysHNSecs + hnsecs;
     }
@@ -1114,8 +1101,7 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int year, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
         {
             st.yearBC = year;
             _assertPred!"=="(st, expected, format("SysTime: %s", st), __FILE__, line);
@@ -1127,8 +1113,7 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
 
             foreach(year; testYearsBC)
             {
-                auto e = SysTime(DateTime(year, dt.month, dt.day,
-                                          dt.hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1253,16 +1238,14 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         auto date = Date(cast(int)days);
         date.month = month;
 
-        immutable newDaysHNSecs =
-            convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
+        immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
 
         adjTime = newDaysHNSecs + hnsecs;
     }
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, Month month, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, Month month, in SysTime expected, size_t line = __LINE__)
         {
             st.month = cast(Month)month;
             _assertPred!"=="(st, expected, "", __FILE__, line);
@@ -1277,8 +1260,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
                 if(st.day > maxDay(dt.year, md.month))
                     continue;
 
-                auto e = SysTime(DateTime(dt.year, md.month, dt.day,
-                                          dt.hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(dt.year, md.month, dt.day, dt.hour, dt.minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1430,8 +1412,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int day, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, int day, in SysTime expected, size_t line = __LINE__)
         {
             st.day = day;
             _assertPred!"=="(st, expected, "", __FILE__, line);
@@ -1446,8 +1427,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                 if(day > maxDay(dt.year, dt.month))
                     continue;
 
-                auto e = SysTime(DateTime(dt.year, dt.month, day,
-                                          dt.hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1465,13 +1445,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                     {
                         foreach(month; EnumMembers!Month)
                         {
-                            auto st = SysTime(DateTime(Date(year, month, 1), tod),
-                                              fs, tz);
+                            auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
 
-                            test(st, max,
-                                 SysTime(DateTime(Date(year, month, max), tod),
-                                         fs, tz));
+                            test(st, max, SysTime(DateTime(Date(year, month, max), tod), fs, tz));
                         }
                     }
                 }
@@ -1490,8 +1467,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                     {
                         foreach(month; EnumMembers!Month)
                         {
-                            auto st = SysTime(DateTime(Date(year, month, 1), tod),
-                                              fs, tz);
+                            auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
 
                             assertThrown!DateTimeException(st.day = max + 1);
@@ -1613,8 +1589,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day,
-                                          hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1731,8 +1706,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int minute, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, int minute, in SysTime expected, size_t line = __LINE__)
         {
             st.minute = minute;
             _assertPred!"=="(st, expected, "", __FILE__, line);
@@ -1743,8 +1717,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day,
-                                          dt.hour, minute, dt.second),
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1876,8 +1849,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day,
-                                          dt.hour, dt.minute, second),
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
                                  st.fracSec,
                                  st.timezone);
 
@@ -1993,8 +1965,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, FracSec fracSec, in SysTime expected,
-                         size_t line = __LINE__)
+        static void test(SysTime st, FracSec fracSec, in SysTime expected, size_t line = __LINE__)
         {
             st.fracSec = fracSec;
             _assertPred!"=="(st, expected, "", __FILE__, line);
@@ -2005,8 +1976,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day,
-                                          dt.hour, dt.minute, dt.second),
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
                                  fracSec,
                                  st.timezone);
 
@@ -2035,12 +2005,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         _assertPred!"=="(SysTime(0).stdTime, 0);
         _assertPred!"=="(SysTime(1).stdTime, 1);
         _assertPred!"=="(SysTime(-1).stdTime, -1);
-        _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33),
-                                 FracSec.from!"hnsecs"(502),
-                                 UTC()).stdTime,
+        _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()).stdTime,
                          330000502L);
-        _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0),
-                                 UTC()).stdTime,
+        _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()).stdTime,
                          621355968000000000L);
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -2073,13 +2040,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
         test(0, SysTime(Date(1, 1, 1), UTC()));
         test(1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()));
-        test(-1, SysTime(DateTime(0, 12, 31, 23, 59, 59),
-                         FracSec.from!"hnsecs"(9_999_999),
-                         UTC()));
-        test(330000502L,  SysTime(DateTime(1, 1, 1, 0, 0, 33),
-                                  FracSec.from!"hnsecs"(502),
-                                  UTC()));
-        test(621355968000000000L, SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()));
+        test(-1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()));
+        test(330_000_502L, SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()));
+        test(621_355_968_000_000_000L, SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()));
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
