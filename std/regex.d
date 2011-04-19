@@ -221,8 +221,8 @@ private:
             REplus,             // 1 or more
             REstar,             // 0 or more
             REquest,            // 0 or 1
-            REnm,               // n..m
-            REnmq,              // n..m, non-greedy version
+            REm,                // 0..m
+            REmq,               // 0..m, non-greedy version
             REbol,              // beginning of line
             REeol,              // end of line
             REparen,            // parenthesized subexpression
@@ -388,8 +388,8 @@ Returns the number of parenthesized captures
                 continue;
 
             case REor:
-            case REnm:
-            case REnmq:
+            case REm:
+            case REmq:
             case REparen:
             case RElookahead:
             case REneglookahead:
@@ -537,37 +537,38 @@ Returns the number of parenthesized captures
 
         Lnm:
             p++;
-            op = REnm;
+            op = REm;
             if (p < plength && pattern[p] == '?')
-            {   op = REnmq;     // minimal munch version
+            {   op = REmq;     // minimal munch version
                 p++;
             }
-            /*// Special optimization: replace .{n,m} with REanynm/REanynmq
-            if (buf.offset - offset == 1 &&
+            // Special optimization: replace .{n,m} with REanynm/REanynmq
+            /*if (buf.offset - offset == 1 &&
                     buf.data[offset] == REanychar)
             {
-                buf.data[offset] = (op == REnmq) ? REanynmq : REanynm;
+                buf.data[offset] = (op == REmq) ? REanynmq : REanynm;
                 buf.write(n);
                 buf.write(m);
                 break;
             }*/
             len = cast(uint)(buf.offset - offset);
-            if(n){
-                //just replicate n times
-                for(uint i=0;i<n;i++)
+            if(n)
+            {
+                uint rep = (n == m) ? n-1 : n;
+                //just replicate n-1 times
+                for(uint i=0;i<rep;i++)
                     buf.write(buf.data[offset..offset+len]);
-                //offset should be realigned
-                offset = buf.offset - len;
+                 //offset should be realigned
+                 offset = buf.offset - len;
             }
-
-            buf.spread(offset, 1 + uint.sizeof * 3);
-            buf.data[offset] = op;
-
-            uint* puint = cast(uint *)&buf.data[offset + 1];
-
-            puint[0] = len;
-            puint[1] = 0;
-            puint[2] = m - n;
+            if(m != n)
+            {
+                buf.spread(offset, 1 + uint.sizeof * 2);
+                buf.data[offset] = op;
+                uint* puint = cast(uint *)&buf.data[offset + 1];
+                puint[0] = len;
+                puint[1] = m - n;
+            }
             break;
 
         default:
@@ -1150,18 +1151,17 @@ Returns the number of parenthesized captures
             case REanynm: case REanynmq:
                 return 0;
 
-            case REnm:
-            case REnmq:
-                // len, n, m, ()
+            case REm:
+            case REmq:
+                // len, m, ()
                 len = (cast(uint *)&prog[i + 1])[0];
-                n   = (cast(uint *)&prog[i + 1])[1];
-                m   = (cast(uint *)&prog[i + 1])[2];
-                pop = &prog[i + 1 + uint.sizeof * 3];
+                m   = (cast(uint *)&prog[i + 1])[1];
+                pop = &prog[i + 1 + uint.sizeof * 2];
                 if (!starrchars(r, pop[0 .. len]))
                     return 0;
                 if (n)
                     return 1;
-                i += 1 + uint.sizeof * 3 + len;
+                i += 1 + uint.sizeof * 2 + len;
                 break;
 
             case REparen:
@@ -1510,17 +1510,16 @@ Returns the number of parenthesized captures
                     pc += 1 + uint.sizeof * 2;
                     break;
 
-                case REnm:
-                case REnmq:
-                    // len, n, m, ()
+                case REm:
+                case REmq:
+                    // len, m, ()
                     puint = cast(uint *)&prog[pc + 1];
                     len = puint[0];
-                    n = puint[1];
-                    m = puint[2];
-                    writefln("\tREnm%s len=%d, n=%u, m=%u, pc=>%d",
-                            (prog[pc] == REnmq) ? "q" : " ",
-                            len, n, m, pc + 1 + uint.sizeof * 3 + len);
-                    pc += 1 + uint.sizeof * 3;
+                    m = puint[1];
+                    writefln("\tREm%s len=%d, m=%u, pc=>%d",
+                            (prog[pc] == REmq) ? "q" : " ",
+                            len, m, pc + 1 + uint.sizeof * 2 + len);
+                    pc += 1 + uint.sizeof * 2;
                     break;
 
                 case REparen:
@@ -2415,35 +2414,31 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 }
                 break;
 
-            case engine.REnm:
-            case engine.REnmq:
-                // len, n, m, ()
+            case engine.REm:
+            case engine.REmq:
+                // len, m, ()
                 puint = cast(uint *)&engine.program[pc + 1];
                 len = puint[0];
-                n = puint[1];
-                m = puint[2];
-                debug(std_regex) writefln("\tREnm%s len=%d, n=%u, m=%u",
-                        (engine.program[pc] == engine.REnmq) ? "q" : "",
-                        len, n, m);
-                pop = pc + 1 + uint.sizeof * 3;
-                for (count = 0; count < n; count++)
-                {
-                    if (!trymatch(pop, pop + len))
-                        goto Lnomatch;
-                }
-                if (!psave && count < m)
+                m = puint[1];
+                debug(std_regex) writefln("\tREm%s len=%d, m=%u",
+                        (engine.program[pc] == engine.REmq) ? "q" : "",
+                        len, m);
+                pop = pc + 1 + uint.sizeof * 2;
+                if (!psave)
                 {
                     psave = cast(regmatch_t *)alloca(
                         (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
-                if (engine.program[pc] == engine.REnmq) // if minimal munch
+                if (engine.program[pc] == engine.REmq) // if minimal munch
                 {
-                    for (; count < m; count++)
+                    for (count=0; count < m; count++)
                     {
                         sizediff_t s1;
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         s1 = src;
+                        //Match  the rest of the program, 
+                        //if matches we're done
                         if (trymatch(pop + len, engine.program.length))
                         {
                             src = s1;
@@ -2464,14 +2459,14 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         {   debug(std_regex) writefln("\tsource is not consumed");
                             break;
                         }
-                    }
+                      }
                 }
                 else    // maximal munch
                 {
                     auto start=src, last_src = src;
                     regmatch_t *psave_longest =cast(regmatch_t *)alloca(
                         (engine.re_nsub + 1) * regmatch_t.sizeof);
-                    for (; count < m; count++)
+                    for (count=0; count < m; count++)
                     {
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
@@ -2482,7 +2477,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                             break;
                         }
                         auto s2 = src;
-                        //writefln("* %s" ,input[src..$]);
+                        
                         // If source is not consumed, don't
                         // infinite loop on the match
                         if (s1 == s2)
@@ -2495,7 +2490,6 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         {
                             last_src = s2;
                             //save this match
-                            //writefln("SAVED %s",input[start..last_src]);
                             memcpy(psave_longest, pmatch.ptr,
                                     (engine.re_nsub + 1) * regmatch_t.sizeof);
                             //restore
@@ -2512,8 +2506,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     }
 
                 }
-                debug(std_regex) writef("\tREnm len=%d, n=%u, m=%u,"
-                        " DONE count=%d\n", len, n, m, count);
+                debug(std_regex) writef("\tREm len=%d,  m=%u,"
+                        " DONE count=%d\n", len,  m, count);
                 pc = pop + len;
                 break;
 
@@ -3653,13 +3647,21 @@ unittest
     }
 }
 
+//issue 5857
 unittest
 {
     auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
     assert(c[0] == "axxxzayyyyyzd");
     assert(c[1] == "ayyyyyz");
 }
+
+//issue 2108
 unittest
 {
-    assert(match("Hello there you silly person you.",regex(r"\b.+? you .+\w")).hit == "Hello there you silly person you");
+    auto nogreed = regex("<packet.*?/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",nogreed).hit
+           == "<packet>text</packet>");
+    auto greed =  regex("<packet.*/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",greed).hit
+           == "<packet>text</packet><packet>text</packet>");
 }
