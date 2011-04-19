@@ -1,18 +1,20 @@
 $(VERSION 053, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-        $(LI Added bindings for libcurl on Posix: etc.c.curl)
+        $(LI Added bindings for libcurl: etc.c.curl)
     )
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 4644): assertExceptionThrown to assert that a particular exception was thrown)
         $(LI $(BUGZILLA 4944): Missing tzname even though we have tzset)
         $(LI $(BUGZILLA 5451): Three ideas for RedBlackTree)
+        $(LI $(BUGZILLA 5474): unaryFun byRef is borked for custom parameter name)
         $(LI $(BUGZILLA 5485): TLS sections handled incorrectly in FreeBSD)
         $(LI $(BUGZILLA 5616): std.datetime: not cross-platform)
         $(LI $(BUGZILLA 5654): BigInt returns ZERO with strings of single digit number with leading zeros)
         $(LI $(BUGZILLA 5731): std.datetime.SysTime prints UTC offsets backwards)
         $(LI $(BUGZILLA 5761): std.datetime: Date.this(int day) conversion fails for Dec 30 of leap years)
+        $(LI $(BUGZILLA 5780): [patch] std.traits.hasIndirections incorrectly handles static arrays)
         $(LI $(BUGZILLA 5781): std.datetime: On Windows, times off by one hour in some years due to DST rule changes)
-    )
+     )
 
 )

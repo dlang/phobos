@@ -73,10 +73,10 @@ else static if (BigDigit.sizeof == long.sizeof)
 }
 else static assert(0, "Unsupported BigDigit size");
 
-immutable BigDigit [] ZERO = [0];
-immutable BigDigit [] ONE = [1];
-immutable BigDigit [] TWO = [2];
-immutable BigDigit [] TEN = [10];
+enum BigDigit [] ZERO = [0];
+enum BigDigit [] ONE = [1];
+enum BigDigit [] TWO = [2];
+enum BigDigit [] TEN = [10];
 
 
 public:
