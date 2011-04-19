@@ -543,14 +543,14 @@ Returns the number of parenthesized captures
                 p++;
             }
             // Special optimization: replace .{n,m} with REanynm/REanynmq
-            /*if (buf.offset - offset == 1 &&
+            if (buf.offset - offset == 1 &&
                     buf.data[offset] == REanychar)
             {
                 buf.data[offset] = (op == REmq) ? REanynmq : REanynm;
                 buf.write(n);
                 buf.write(m);
                 break;
-            }*/
+            }
             len = cast(uint)(buf.offset - offset);
             if(n)
             {
@@ -2095,6 +2095,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         }
         auto srcsave = src;
         regmatch_t *psave = null;
+        regmatch_t *psave_longest = null;
         bool pmatch_touched;
         for (;;)
         {
@@ -2377,41 +2378,83 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         goto Lnomatch;
                     src++;
                 }
+                
+                auto start = src;
+                if(!psave)
+                    psave = cast(regmatch_t *)alloca(
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                memcpy(psave, pmatch.ptr,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
                 //Advance through the whole input,
                 //memoizing the position of the last successful match
-                auto start = src,last_src = src;
-                for(;count<m;count++)
+                if(greedy)
                 {
-                    auto s1 = src;
-                    if(src == input.length)
-                        break;
-                    if(!(engine.attributes & engine.REA.dotmatchlf)
-                        && input[src] == '\n')
-                        break;
-                    src++;
-                    auto s2 = src;
-                    if(trymatch(pc, engine.program.length))
+                    auto last_src = src;
+                    if(!psave_longest)
+                        psave_longest = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    for(;count<m;count++)
                     {
-                        if (!psave)
-                            psave = cast(regmatch_t *)alloca(
-                                (engine.re_nsub + 1) * regmatch_t.sizeof);
-                        //save matches
-                        memcpy(psave, pmatch.ptr,
-                                (engine.re_nsub + 1) * regmatch_t.sizeof);
-                        last_src = s2;
-                        //if non-greedy then we have our first match
-                        if(!greedy)
+                        auto s1 = src;
+                        if(src == input.length)
                             break;
+                        if(!(engine.attributes & engine.REA.dotmatchlf)
+                            && input[src] == '\n')
+                            break;
+                        src++;
+                        auto s2 = src;
+                        if(trymatch(pc, engine.program.length))
+                        {
+                            //save matches
+                            memcpy(psave_longest, pmatch.ptr,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                            last_src = s2;
+                        }
+                        src = s2;
                     }
-                    src = s2;
-                }
-                src = last_src;
-                if(last_src != start)
-                {
-                    //restore matches
-                    memcpy(pmatch.ptr, psave,
+                    src = last_src;
+                    if(last_src != start)
+                    {
+                        //restore matches
+                        memcpy(pmatch.ptr, psave_longest,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    }
+                    else
+                        memcpy(pmatch.ptr, psave,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
+                //Nongreedy - get to the position of the first succesful match
+                else
+                {
+                    if(trymatch(pc, engine.program.length)){
+                        src = start;
+                        memcpy(pmatch.ptr, psave,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                        break;
+                    }
+                    for(;count<m;count++)
+                    {
+                        auto s1 = src;
+                        if(src == input.length)
+                            break;
+                        if(!(engine.attributes & engine.REA.dotmatchlf)
+                            && input[src] == '\n')
+                            break;
+                        src++;
+                        auto s2 = src;
+                        if(trymatch(pc, engine.program.length))
+                        {
+                            src = s2;
+                            memcpy(pmatch.ptr, psave,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                            break;
+                        }
+                        src = s2;
+                    }
+                                         
+                }
+               
+                
                 break;
 
             case engine.REm:
@@ -2464,8 +2507,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 else    // maximal munch
                 {
                     auto start=src, last_src = src;
-                    regmatch_t *psave_longest =cast(regmatch_t *)alloca(
-                        (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    if(!psave_longest)
+                        psave_longest = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
                     for (count=0; count < m; count++)
                     {
                         memcpy(psave, pmatch.ptr,
