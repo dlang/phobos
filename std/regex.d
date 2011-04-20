@@ -1789,6 +1789,13 @@ void main()
 
         void popFront() {  matches.popFront; }
 
+        @property Range back()
+        {
+            return input[matches[$-1].startIdx .. matches[$-1].endIdx];
+        }
+
+        void popBack() { matches.popBack; }
+
         @property typeof(this) save()
         {
             return this;
@@ -2972,6 +2979,7 @@ unittest
     auto re = regex(`bc\x20r[\40]s`, "i");
     auto m = match("aBC r s", re);
     static assert(isForwardRange!(typeof(m)));
+    static assert(isRandomAccessRange!(typeof(m.captures())));
 
     assert(m.pre=="a");
     assert(m.hit=="BC r s");
