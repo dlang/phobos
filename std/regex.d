@@ -1368,12 +1368,12 @@ Returns the number of parenthesized captures
                 switch (prog[pc])
                 {
                 case REchar:
-                    writefln("\tREchar '%s'", prog[pc + 1]);
+                    writefln("\tREchar '%s'", cast(char)prog[pc + 1]);
                     pc += 1 + char.sizeof;
                     break;
 
                 case REichar:
-                    writefln("\tREichar '%s'", prog[pc + 1]);
+                    writefln("\tREichar '%s'", cast(char)prog[pc + 1]);
                     pc += 1 + char.sizeof;
                     break;
 
@@ -1638,8 +1638,8 @@ Build a RegexMatch from an engine.
     {
         this.engine = engine;
         pmatch.length = engine.re_nsub + 1;
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
     }
 
 /*
@@ -1649,8 +1649,8 @@ Build a RegexMatch from an engine and an input.
     {
         this.engine = engine;
         pmatch.length = engine.re_nsub + 1;
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
         this.input = input;
         // amorsate
         test;
@@ -1833,7 +1833,7 @@ Returns the slice of the input that precedes the matched substring.
  */
     public Range pre()
     {
-        return input[0 .. pmatch[0].endIdx > pmatch[0].startIdx
+        return input[0 .. pmatch[0].startIdx != pmatch[0].startIdx.max
                 ? pmatch[0].startIdx : $];
     }
 
@@ -1935,16 +1935,27 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
     private bool test(size_t startindex = size_t.max)
     {
-        if (startindex == size_t.max) startindex = pmatch[0].endIdx;
+        if (startindex == size_t.max)
+        {
+            if(pmatch[0].endIdx != pmatch[0].endIdx.max)
+            {
+                startindex = pmatch[0].endIdx;
+                if (startindex >= input.length)
+                {
+                    pmatch[0].startIdx = pmatch[0].startIdx.max;
+                    pmatch[0].endIdx = pmatch[0].endIdx.max;
+                    return false;                   // fail
+                }
+                if(pmatch[0].endIdx == pmatch[0].startIdx)
+                    startindex += std.utf.stride(input,pmatch[0].endIdx);
+            }
+            else
+               startindex = 0;
+        }
         //writeln("matching [", input, "] starting from ", startindex);
         debug (regex) writefln("Regex.test(input[] = '%s', startindex = %d)",
                 input, startindex);
-        if (startindex > input.length)
-        {
-            pmatch[0].startIdx = pmatch[0].startIdx.max;
-            pmatch[0].endIdx = pmatch[0].endIdx.max;
-            return 0;                   // fail
-        }
+
         //engine.printProgram(engine.program);
         pmatch[0].startIdx = -1;
         pmatch[0].endIdx = -1;
@@ -2404,6 +2415,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         s1 = src;
+                        //Match  the rest of the program,
+                        //if matches we're done
                         if (trymatch(pop + len, engine.program.length))
                         {
                             src = s1;
@@ -2864,6 +2877,7 @@ RegexMatch!(Range) match(Range, E)(Range r, E[] engine, string opt = null)
 
 unittest
 {
+
     string abr = "abracadabra";
     "abracadabra".match(regex("a[b-e]", "g"));
     abr.match(regex("a[b-e]", "g"));
@@ -3602,4 +3616,58 @@ unittest
         // if (matches.empty)
         //     re.printProgram();
     }
+}
+
+//issue 5857
+//matching goes out of control if ... in (...){2} has .*/.+
+unittest
+{
+    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+    assert(c[0] == "axxxzayyyyyzd");
+    assert(c[1] == "ayyyyyz");
+}
+
+//issue 2108
+//greedy vs non-greedy
+unittest
+{
+    auto nogreed = regex("<packet.*?/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",nogreed).hit
+           == "<packet>text</packet>");
+    auto greed =  regex("<packet.*/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",greed).hit
+           == "<packet>text</packet><packet>text</packet>");
+}
+
+//issue 4574
+//empty successful match still advances the input
+unittest
+{
+    string[] pres, posts, hits;
+    foreach(m; match("abcabc", regex(""))) {
+        pres ~= m.pre;
+        posts ~= m.post;
+        assert(m.hit.empty);
+
+    }
+    auto heads = [
+        "abcabc",
+        "abcab",
+        "abca",
+        "abc",
+        "ab",
+        "a",
+        ""
+    ];
+     auto tails = [
+        "abcabc",
+         "bcabc",
+          "cabc",
+           "abc",
+            "bc",
+             "c",
+              ""
+    ];
+    assert(pres == array(retro(heads)));
+    assert(posts == tails);
 }
