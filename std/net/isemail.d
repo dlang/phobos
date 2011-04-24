@@ -250,8 +250,8 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 {
                     case Token.openParenthesis:
                         if (elementLength == 0)
-                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt :
-                                EmailStatusCode.deprecatedComment;
+                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
+                                : EmailStatusCode.deprecatedComment;
 
                         else
                         {
@@ -312,8 +312,8 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         }
 
                         if (elementLength == 0)
-                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt :
-                                EmailStatusCode.deprecatedFoldingWhitespace;
+                            returnStatus ~= elementCount == 0 ? EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt
+                                : EmailStatusCode.deprecatedFoldingWhitespace;
 
                         else
                         {
@@ -707,8 +707,9 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
         else if (parseData[EmailPart.componentDomain].length > 255)
             returnStatus ~= EmailStatusCode.rfc5322DomainTooLong;
 
-        else if ((parseData[EmailPart.componentLocalPart] ~ Token.at ~ parseData[EmailPart.componentDomain]).length > 254)
-            returnStatus ~= EmailStatusCode.rfc5322TooLong;
+        else if ((parseData[EmailPart.componentLocalPart] ~ Token.at ~ parseData[EmailPart.componentDomain]).length >
+            254)
+                returnStatus ~= EmailStatusCode.rfc5322TooLong;
 
         else if (elementLength > 63)
             returnStatus ~= EmailStatusCode.rfc5322LabelTooLong;
@@ -776,15 +777,26 @@ unittest
     assert(`test@nominet.org.uk`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`test@about.museum`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`a@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    //assert(`test@e.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
-    //assert(`test@iana.a`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+
+    //assert(`test@e.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+        // DNS check is currently not implemented
+
+    //assert(`test@iana.a`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+        // DNS check is currently not implemented
+
     assert(`test.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test.@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
-    assert(`test..iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorConsecutiveDots);
+
+    assert(`test..iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorConsecutiveDots);
+
     assert(`test_exa-mple.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
     assert("!#$%&`*+/=?^`{|}~@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`test\@test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
+
+    assert(`test\@test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorExpectingText);
+
     assert(`123@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
     assert(`test@123.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
@@ -800,29 +812,40 @@ unittest
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LocalTooLong);
 
     // assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+        // DNS check is currently not implemented
 
     assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm.com`.isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LabelTooLong);
 
     assert(`test@mason-dixon.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`test@-iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDomainHyphenStart);
-    assert(`test@iana-.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDomainHyphenEnd);
+
+    assert(`test@-iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorDomainHyphenStart);
+
+    assert(`test@iana-.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorDomainHyphenEnd);
+
     assert(`test@g--a.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    //assert(`test@iana.co-uk`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+
+    //assert(`test@iana.co-uk`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        //EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+
     assert(`test@.iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test@iana.org.`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
-    assert(`test@iana..com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorConsecutiveDots);
+    assert(`test@iana..com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorConsecutiveDots);
 
-    // assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
-    //         `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
-    //         `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-    //         EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+    //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
+    //        `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
+    //        `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    //        EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
 
     // assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`
     //         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
     //         `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi`.isEmail(CheckDns.no,
-    //         EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
+    //         EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+        // DNS check is currently not implemented
 
     assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`
         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
@@ -839,7 +862,9 @@ unittest
         `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`.isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322DomainTooLong);
 
-    assert(`"test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
+    assert(`"test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.rfc5321QuotedString);
+
     assert(`""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
     assert(`"""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
     assert(`"\a"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
@@ -907,23 +932,27 @@ unittest
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5322IpV6GroupCount); // std.regex bug: *+? not allowed in atom
     //
-    // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-    //     EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
+    // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode
+    //     == EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888:9999]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:888G]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6BadChar); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6BadChar);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321IpV6Deprecated); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321IpV6Deprecated);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555::8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::7777:8888]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6::3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5322IpV6ColonStart); // std.regex bug: *+? not allowed in atom
@@ -938,22 +967,27 @@ unittest
     //     EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:255.255.255.255]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:255.255.255.255]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:255.255.255.255]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444::255.255.255.255]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::255.255.255.255]`.isEmail(CheckDns.no,
-    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups);
+        // std.regex bug: *+? not allowed in atom
     //
-    // assert(`test@[IPv6:1111:2222:3333:4444:::255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-    //     EmailStatusCode.rfc5322IpV6TooManyDoubleColons); // std.regex bug: *+? not allowed in atom
+    // assert(`test@[IPv6:1111:2222:3333:4444:::255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode
+    //     == EmailStatusCode.rfc5322IpV6TooManyDoubleColons); // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[IPv6::255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5322IpV6ColonStart); // std.regex bug: *+? not allowed in atom
@@ -1013,13 +1047,17 @@ unittest
         ` that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does,`
         ` it is to be interpreted literally as a local part that happens to begin with the ACE prefix"`);
 
-    assert(`test@iana.org-`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDomainHyphenEnd);
+    assert(`test@iana.org-`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorDomainHyphenEnd);
 
     assert(`"test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedQuotedString);
 
-    assert(`(test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorUnclosedComment);
-    assert(`test@(iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorUnclosedComment);
+    assert(`(test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorUnclosedComment);
+
+    assert(`test@(iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+        EmailStatusCode.errorUnclosedComment);
 
     assert(`test@[1.2.3.4`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedDomainLiteral);
@@ -1046,7 +1084,8 @@ unittest
     //     EmailStatusCode.errorExpectingDomainText); // std.regex bug: *+? not allowed in atom
     //
     // assert("test@[RFC-5322-\\\u0007-domain-literal]".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-    //     EmailStatusCode.rfc5322DomainLiteralObsoleteText, `obs-dtext <strong>and</strong> obs-qp`); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.rfc5322DomainLiteralObsoleteText, `obs-dtext <strong>and</strong> obs-qp`);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert("test@[RFC-5322-\\\u0009-domain-literal]".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5322DomainLiteralObsoleteText); // std.regex bug: *+? not allowed in atom
@@ -1061,7 +1100,8 @@ unittest
     //     EmailStatusCode.errorBackslashEnd); // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[RFC 5322 domain literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-    //     EmailStatusCode.rfc5322DomainLiteral, `Spaces are FWS in a domain literal`); // std.regex bug: *+? not allowed in atom
+    //     EmailStatusCode.rfc5322DomainLiteral, `Spaces are FWS in a domain literal`);
+        // std.regex bug: *+? not allowed in atom
     //
     // assert(`test@[RFC-5322-domain-literal] (comment)`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
     //     EmailStatusCode.rfc5322DomainLiteral); // std.regex bug: *+? not allowed in atom
@@ -1069,7 +1109,9 @@ unittest
     assert(`@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
     assert(`test@.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
     assert(`""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.deprecatedQuotedText);
-    assert(`"\"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.deprecatedQuotedPair);
+
+    assert(`"\"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+            EmailStatusCode.deprecatedQuotedPair);
 
     assert(`()test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentText);
@@ -1080,8 +1122,8 @@ unittest
     assert("\u000Dtest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("\"\u000Dtest\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
-        `No LF after the CR`);
+    assert("\"\u000Dtest\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf
+        ,`No LF after the CR`);
 
     assert("(\u000D)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
@@ -1181,12 +1223,13 @@ unittest
 
     assert(`test@org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321TopLevelDomain);
 
-    // assert(`test@test.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoMXRecord,
-    //     `test.com has an A-record but not an MX-record`); // DNS check is currently not implemented
+    // assert(`test@test.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+            //EmailStatusCode.dnsWarningNoMXRecord, `test.com has an A-record but not an MX-record`);
+            // DNS check is currently not implemented
     //
     // assert(`test@nic.no`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord,
-    //     `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then try`
-    //     ` setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record`
+    //     `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then`
+    //       ` try setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record`
     //     ` (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
 
@@ -1344,32 +1387,41 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321"
             " address literal and it contains obsolete characters";
 
-        case EmailStatusCode.rfc5322IpV6GroupCount: return "The IPv6 literal address contains the wrong number of groups";
-        case EmailStatusCode.rfc5322IpV6TooManyDoubleColons: return "The IPv6 literal address contains too many :: sequences";
+        case EmailStatusCode.rfc5322IpV6GroupCount:
+            return "The IPv6 literal address contains the wrong number of groups";
+
+        case EmailStatusCode.rfc5322IpV6TooManyDoubleColons:
+            return "The IPv6 literal address contains too many :: sequences";
+
         case EmailStatusCode.rfc5322IpV6BadChar: return "The IPv6 address contains an illegal group of characters";
         case EmailStatusCode.rfc5322IpV6MaxGroups: return "The IPv6 address has too many groups";
         case EmailStatusCode.rfc5322IpV6ColonStart: return "IPv6 address starts with a single colon";
         case EmailStatusCode.rfc5322IpV6ColonEnd: return "IPv6 address ends with a single colon";
 
         // Address is invalid for any purpose
-        case EmailStatusCode.errorExpectingDomainText: return "A domain literal contains a character that is not allowed";
+        case EmailStatusCode.errorExpectingDomainText:
+            return "A domain literal contains a character that is not allowed";
+
         case EmailStatusCode.errorNoLocalPart: return "Address has no local part";
         case EmailStatusCode.errorNoDomain: return "Address has no domain part";
         case EmailStatusCode.errorConsecutiveDots: return "The address may not contain consecutive dots";
 
-        case EmailStatusCode.errorTextAfterCommentFoldingWhitespace: return "Address contains text after a comment or"
-            " Folding White Space";
+        case EmailStatusCode.errorTextAfterCommentFoldingWhitespace:
+            return "Address contains text after a comment or Folding White Space";
 
         case EmailStatusCode.errorTextAfterQuotedString: return "Address contains text after a quoted string";
 
         case EmailStatusCode.errorTextAfterDomainLiteral: return "Extra characters were found after the end of"
             " the domain literal";
 
-        case EmailStatusCode.errorExpectingQuotedPair: return "The address contains a character that is not allowed in"
-            " a quoted pair";
+        case EmailStatusCode.errorExpectingQuotedPair:
+            return "The address contains a character that is not allowed in a quoted pair";
 
         case EmailStatusCode.errorExpectingText: return "Address contains a character that is not allowed";
-        case EmailStatusCode.errorExpectingQuotedText: return "A quoted string contains a character that is not allowed";
+
+        case EmailStatusCode.errorExpectingQuotedText:
+            return "A quoted string contains a character that is not allowed";
+
         case EmailStatusCode.errorExpectingCommentText: return "A comment contains a character that is not allowed";
         case EmailStatusCode.errorBackslashEnd: return "The address cannot end with a backslash";
         case EmailStatusCode.errorDotStart: return "Neither part of the address may begin with a dot";
@@ -1379,9 +1431,14 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.errorUnclosedQuotedString: return "Unclosed quoted string";
         case EmailStatusCode.errorUnclosedComment: return "Unclosed comment";
         case EmailStatusCode.errorUnclosedDomainLiteral: return "Domain literal is missing its closing bracket";
-        case EmailStatusCode.errorFoldingWhitespaceCrflX2: return "Folding White Space contains consecutive CRLF sequences";
+
+        case EmailStatusCode.errorFoldingWhitespaceCrflX2:
+            return "Folding White Space contains consecutive CRLF sequences";
+
         case EmailStatusCode.errorFoldingWhitespaceCrLfEnd: return "Folding White Space ends with a CRLF sequence";
-        case EmailStatusCode.errorCrNoLf: return "Address contains a carriage return that is not followed by a line feed";
+
+        case EmailStatusCode.errorCrNoLf:
+            return "Address contains a carriage return that is not followed by a line feed";
     }
 }
 
@@ -1667,7 +1724,7 @@ struct Token
 enum AsciiToken
 {
     horizontalTab = 9,
-	unitSeparator = 31,
+    unitSeparator = 31,
     delete_ = 127
 }
 
