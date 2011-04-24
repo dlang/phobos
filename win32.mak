@@ -92,31 +92,33 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= Czlib.obj Dzlib.obj \
+OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 	oldsyserror.obj \
 	c_stdio.obj
 
 #	ti_bit.obj ti_Abit.obj
 
-SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
-	std\uni.d std\string.d std\base64.d std\md5.d std\xml.d std\bigint.d \
-	std\regexp.d std\compiler.d std\cpuid.d std\format.d std\demangle.d \
-	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
-	std\ctype.d std\random.d std\mmfile.d \
-	std\algorithm.d std\array.d std\numeric.d std\functional.d \
-	std\range.d std\stdiobase.d std\concurrency.d \
-	std\metastrings.d std\contracts.d std\getopt.d \
-	std\signals.d std\typetuple.d std\traits.d std\bind.d \
-	std\bitmanip.d std\typecons.d \
-	std\complex.d \
-	std\exception.d \
-	std\intrinsic.d \
-	std\process.d \
-	std\system.d \
-	std\encoding.d \
-	std\net\isemail.d
+# The separation is a workaround for bug 4904 (optlink bug 3372).
+# SRCS_1 is the heavyweight modules which are most likely to trigger the bug.
+# Do not add any more modules to SRCS_1.
+SRCS_1 = std\stdio.d std\stdiobase.d \
+	std\string.d std\format.d \
+	std\algorithm.d std\array.d std\functional.d std\range.d \
+	std\path.d std\file.d std\outbuffer.d std\utf.d
 
-SRCS_2 = std\variant.d \
+SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
+    std\dateparse.d std\date.d std\datetime.d \
+    std\metastrings.d std\bitmanip.d std\typecons.d \
+    std\uni.d std\base64.d std\md5.d std\ctype.d \
+    std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
+    std\signals.d std\typetuple.d std\traits.d std\bind.d \
+    std\encoding.d std\xml.d \
+    std\random.d std\regexp.d \
+    std\contracts.d std\exception.d \
+    std\intrinsic.d std\compiler.d std\cpuid.d \
+    std\process.d std\system.d std\concurrency.d
+
+SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
@@ -150,7 +152,7 @@ SRCS_2 = std\variant.d \
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 # See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
-SRCS = $(SRCS_1) $(SRCS_2)
+SRCS = $(SRCS_1) $(SRCS_2) $(SRCS_3)
 
 
 DOCS=	$(DOC)\object.html \
@@ -247,7 +249,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\phobos.html
 
-SRC=	unittest.d crc32.d phobos.d
+SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
@@ -295,7 +297,7 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -343,7 +345,8 @@ phobos.lib : $(OBJS) $(SRCS) \
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRCS_1)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_2) unittest1.obj \
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest1.obj unittest2.obj \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 
@@ -592,6 +595,9 @@ c_stdio.obj : std\c\stdio.d
 Czlib.obj : etc\c\zlib.d
 	$(DMD) -c $(DFLAGS) etc\c\zlib.d -ofCzlib.obj
 
+Ccurl.obj : etc\c\curl.d
+	$(DMD) -c $(DFLAGS) etc\c\curl.d -ofCcurl.obj
+
 ### std\c\windows
 
 com.obj : std\c\windows\com.d
@@ -611,8 +617,8 @@ windows.obj : std\c\windows\windows.d
 $(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
-$(DOC)\phobos.html : $(STDDOC) phobos.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) phobos.d
+$(DOC)\phobos.html : $(STDDOC) index.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) index.d
 
 $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_atomic.html $(STDDOC) $(DRUNTIME)\src\core\atomic.d -I$(DRUNTIME)\src\

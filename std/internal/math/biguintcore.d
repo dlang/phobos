@@ -73,10 +73,10 @@ else static if (BigDigit.sizeof == long.sizeof)
 }
 else static assert(0, "Unsupported BigDigit size");
 
-immutable BigDigit [] ZERO = [0];
-immutable BigDigit [] ONE = [1];
-immutable BigDigit [] TWO = [2];
-immutable BigDigit [] TEN = [10];
+enum BigDigit [] ZERO = [0];
+enum BigDigit [] ONE = [1];
+enum BigDigit [] TWO = [2];
+enum BigDigit [] TEN = [10];
 
 
 public:
@@ -373,12 +373,12 @@ bool fromDecimalString(string s)
 {
     //Strip leading zeros
     int firstNonZero = 0;
-    while ((firstNonZero < s.length - 1) &&
+    while ((firstNonZero < s.length) &&
         (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
     {
             ++firstNonZero;
     }
-    if (firstNonZero == s.length - 1 && s.length > 1)
+    if (firstNonZero == s.length && s.length >= 1)
     {
         data = ZERO;
         return true;
@@ -836,6 +836,12 @@ unittest
     r.fromHexString("1_E1178E81_00000000");
     s = BigUint.pow(r, 15); // Regression test: this used to overflow array bounds
 
+    r.fromDecimalString("000_000_00");
+    assert(r == 0);
+    r.fromDecimalString("0007");
+    assert(r == 7);
+    r.fromDecimalString("0");
+    assert(r == 0);
 }
 
 // Radix conversion tests
@@ -1377,17 +1383,28 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data)
  *    the highest index of data which was used.
  */
 int biguintFromDecimal(BigDigit [] data, string s)
+in
+{
+    assert((data.length >= 2) || (data.length == 1 && s.length == 1));
+}
+body
 {
     // Convert to base 1e19 = 10_000_000_000_000_000_000.
     // (this is the largest power of 10 that will fit into a long).
     // The length will be less than 1 + s.length/log2(10) = 1 + s.length/3.3219.
     // 485 bits will only just fit into 146 decimal digits.
-    uint lo = 0;
+    // As we convert the string, we record the number of digits we've seen in base 19:
+    // hi is the number of digits/19, lo is the extra digits (0 to 18).
+    // TODO: This is inefficient for very large strings (it is O(n^^2)).
+    // We should take advantage of fast multiplication once the numbers exceed
+    // Karatsuba size.
+    uint lo = 0; // number of powers of digits, 0..18
     uint x = 0;
     ulong y = 0;
-    uint hi = 0;
+    uint hi = 0; // number of base 1e19 digits
     data[0] = 0; // initially number is 0.
-    data[1] = 0;
+    if (data.length > 1)
+        data[1] = 0;
 
     for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i)
     {
@@ -1447,12 +1464,20 @@ int biguintFromDecimal(BigDigit [] data, string s)
         for (int k=0; k<lo; ++k) y*=10;
         y+=x;
     }
-    if (lo!=0)
+    if (lo != 0)
     {
-        if (hi==0)
+        if (hi == 0)
         {
-            *cast(ulong *)(&data[hi]) = y;
-            hi=2;
+            if (data.length == 1)
+            {
+                data[0] = cast(uint)(y & 0xFFFF_FFFF);
+                hi = 1;
+            }
+            else
+            {
+                *cast(ulong *)(&data[hi]) = y;
+                hi=2;
+            }
         }
         else
         {
@@ -1467,7 +1492,7 @@ int biguintFromDecimal(BigDigit [] data, string s)
                 --lo;
             }
             uint c = multibyteIncrementAssign!('+')(data[0..hi], cast(uint)(y&0xFFFF_FFFF));
-            if (y>0xFFFF_FFFFL)
+            if (y > 0xFFFF_FFFFL)
             {
                 c += multibyteIncrementAssign!('+')(data[1..hi], cast(uint)(y>>32));
             }
@@ -1476,7 +1501,6 @@ int biguintFromDecimal(BigDigit [] data, string s)
                 data[hi]=c;
                 ++hi;
             }
-          //  hi+=2;
         }
     }
     while (hi>1 && data[hi-1]==0)

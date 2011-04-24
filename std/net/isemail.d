@@ -377,10 +377,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         if (returnStatus.max < EmailStatusCode.deprecated_)
                         {
                             auto maxGroups = 8;
-                            auto index = -1;
+                            size_t index = -1;
                             auto addressLiteral = parseData[EmailPart.componentLiteral];
-                            auto matchesIp = array(addressLiteral.match(regex!(tstring)(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]`
-                                `?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)).captures);
+                            enum regexStr = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
+                                            `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
+                            auto matchesIp = array(addressLiteral.match(regex!tstring(regexStr)).captures);
 
                             if (!matchesIp.empty)
                             {
