@@ -16,11 +16,12 @@
         $(LI Various helper functions.)
     )
 
-    Closely related to std.datetime is core.time, and some of the time types
-    used in std.datetime come from there - such as $(CXREF time, Duration),
-    $(CXREF time, TickDuration), and $(CXREF time, FracSec). So, you may want
-    to look at its documentation as well. However, core.time is publically
-    imported into std.datetime, so you don't have to import it separately.
+    Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
+    and some of the time types used in std.datetime come from there - such as
+    $(CXREF time, Duration), $(CXREF time, TickDuration), and
+    $(CXREF time, FracSec). So, you may want to look at its documentation as
+    well. However, core.time is publically imported into std.datetime, so you
+    don't have to import it separately.
 
     Three of the main concepts used in this module are time points, time
     durations, and time intervals.
@@ -119,7 +120,7 @@ import std.string;
 import std.system;
 import std.traits;
 
-alias std.algorithm.find find;
+private alias std.algorithm.find find;
 
 version(Windows)
 {
