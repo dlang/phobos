@@ -469,8 +469,7 @@ Returns the number of parenthesized captures
         sizediff_t plength = pattern.length;
 
         debug(std_regex)
-        {
-            auto sss = pattern[p .. pattern.length];
+        {   auto sss = pattern[p .. pattern.length];
             writefln("parsePiece() '%s'", sss);
         }
         offset = buf.offset;
@@ -545,25 +544,22 @@ Returns the number of parenthesized captures
             // Special optimization: replace .{n,m} with REanynm/REanynmq
             if (buf.offset - offset == 1 &&
                     buf.data[offset] == REanychar)
-            {
-                buf.data[offset] = (op == REmq) ? REanynmq : REanynm;
+            {   buf.data[offset] = (op == REmq) ? REanynmq : REanynm;
                 buf.write(n);
                 buf.write(m);
                 break;
             }
             len = cast(uint)(buf.offset - offset);
-            if(n)
-            {
-                uint rep = (n == m) ? n-1 : n;
-                //just replicate n-1 times
-                for(uint i=0;i<rep;i++)
+            if (n)
+            {   uint rep = (n == m) ? n-1 : n;
+                //just replicate rep times
+                foreach (i; 0..rep)
                     buf.write(buf.data[offset..offset+len]);
                  //offset should be realigned
                  offset = buf.offset - len;
             }
-            if(m != n)
-            {
-                buf.spread(offset, 1 + uint.sizeof * 2);
+            if (m != n)
+            {   buf.spread(offset, 1 + uint.sizeof * 2);
                 buf.data[offset] = op;
                 uint* puint = cast(uint *)&buf.data[offset + 1];
                 puint[0] = len;
@@ -588,8 +584,7 @@ Returns the number of parenthesized captures
         E c;
 
         debug(std_regex)
-        {
-            auto sss = pattern[p .. pattern.length];
+        {   auto sss = pattern[p .. pattern.length];
             writefln("parseAtom() '%s'", sss);
         }
         if (p >= pattern.length) return 1;
@@ -605,7 +600,7 @@ Returns the number of parenthesized captures
 
         case '(':
             p++;
-            if(pattern[p] != '?')
+            if (pattern[p] != '?')
             {
                 buf.write(REparen);
                 offset = buf.offset;
@@ -616,36 +611,35 @@ Returns the number of parenthesized captures
                 *cast(uint *)&buf.data[offset] =
                      cast(uint)(buf.offset - (offset + uint.sizeof * 2));
             }
-            else if(pattern.length > p+1)
+            else if (pattern.length > p+1)
             {
                 p++;
                 switch(pattern[p])
                 {
-                    case ':':
-                        p++;
-                        parseRegex(pattern, p, buf);
-                        break;
-                    case '=': case '!':
-                        buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
-                        offset = buf.offset;
-                        buf.write(cast(uint)0); // reserve space for length
-                        p++;
-                        parseRegex(pattern, p, buf);
-                        *cast(uint *)&buf.data[offset] =
-                            cast(uint)(buf.offset - (offset + uint.sizeof));
-                        break;
-                    default:
-                        error("any of :=! expected after '(?'");
-                        return 0;
+                case ':':
+                    p++;
+                    parseRegex(pattern, p, buf);
+                    break;
+                case '=': case '!':
+                    buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
+                    offset = buf.offset;
+                    buf.write(cast(uint)0); // reserve space for length
+                    p++;
+                    parseRegex(pattern, p, buf);
+                    *cast(uint *)&buf.data[offset] =
+                        cast(uint)(buf.offset - (offset + uint.sizeof));
+                    break;
+                default:
+                    error("any of :=! expected after '(?'");
+                    return 0;
                 }
             }
-            else{
-                error("any of :=! expected after '(?'");
+            else
+            {   error("any of :=! expected after '(?'");
                 return 0;
             }
             if (p == pattern.length || pattern[p] != ')')
-            {
-                error("')' expected");
+            {   error("')' expected");
                 return 0;
             }
             p++;
@@ -834,9 +828,8 @@ Returns the number of parenthesized captures
             maxc = u;
             auto b = u / 8;
             if (b >= maxb)
-            {   size_t u2;
-
-                u2 = base ? base - &buf.data[0] : 0;
+            {
+                size_t u2 = base ? base - &buf.data[0] : 0;
                 buf.fill0(b - maxb + 1);
                 base = &buf.data[u2];
                 maxb = b + 1;
@@ -902,8 +895,9 @@ Returns the number of parenthesized captures
             {
             case ']':
                 switch (rs)
-                {   case RS.dash:
-                        r.setbit2('-');
+                {
+                case RS.dash:
+                    r.setbit2('-');
                 case RS.rliteral:
                     r.setbit2(c);
                     break;
@@ -996,7 +990,8 @@ Returns the number of parenthesized captures
                 p++;
             Lrange:
                 switch (rs)
-                {   case RS.rliteral:
+                {
+                case RS.rliteral:
                         r.setbit2(c);
                 case RS.start:
                     c = c2;
@@ -1172,7 +1167,7 @@ Returns the number of parenthesized captures
                 return starrchars(r, pop[0 .. len]);
 
             case RElookahead: case REneglookahead:
-                len = (cast(uint *)&prog[i + 1])[0];
+                len = *(cast(uint *)&prog[i + 1]);
                 pop = &prog[0] + i + 1 + uint.sizeof ;
                 return starrchars(r, pop[0 .. len]);
 
@@ -1541,7 +1536,7 @@ Returns the number of parenthesized captures
                 case REneglookahead:
                     // len, ()
                     len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tRElookahead len=%d, pc=>%d",
+                    writefln("\tREneglookahead len=%d, pc=>%d",
                             len, pc + 1 + uint.sizeof + len);
                     pc += 1 + uint.sizeof;
                     break;
@@ -1958,7 +1953,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
     {
         if (startindex == size_t.max)
         {
-            if(pmatch[0].endIdx != pmatch[0].endIdx.max)
+            if (pmatch[0].endIdx != pmatch[0].endIdx.max)
             {
                 startindex = pmatch[0].endIdx;
                 if (startindex >= input.length)
@@ -1967,7 +1962,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     pmatch[0].endIdx = pmatch[0].endIdx.max;
                     return false;                   // fail
                 }
-                if(pmatch[0].endIdx == pmatch[0].startIdx)
+                if (pmatch[0].endIdx == pmatch[0].startIdx)
                     startindex += std.utf.stride(input,pmatch[0].endIdx);
             }
             else
@@ -2030,8 +2025,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             if (startindex == input.length)
                 break;
             debug(std_regex)
-            {
-                auto sss = input[startindex + 1 .. input.length];
+            {   auto sss = input[startindex + 1 .. input.length];
                 writefln("Starting new try: '%s'", sss);
             }
         }
@@ -2192,7 +2186,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREanychar");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!(engine.attributes & engine.REA.dotmatchlf) && input[src] == '\n')
+                if (!(engine.attributes & engine.REA.dotmatchlf)
+                    && input[src] == '\n')
                     goto Lnomatch;
                 src += std.utf.stride(input, src);
                 pc++;
@@ -2203,8 +2198,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
                 debug(std_regex)
-                {
-                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                {   auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
                     writefln("\tREstring x%x, '%s'", len, sssa);
                 }
                 if (src + len > input.length)
@@ -2221,8 +2215,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
                 debug(std_regex)
-                {
-                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                {   auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
                     writefln("\tREistring x%x, '%s'", len, sssa);
                 }
                 if (src + len > input.length)
@@ -2342,9 +2335,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (trymatch(pop, pcend))
                 {
                     if (pcend != engine.program.length)
-                    {   sizediff_t s;
-
-                        s = src;
+                    {
+                        auto s = src;
                         if (trymatch(pcend, engine.program.length))
                         {   debug(std_regex) writefln("\tfirst operand matched");
                             src = s;
@@ -2389,9 +2381,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 pc += 1 + 2*uint.sizeof;
                 for(count=0;count<n;count++)
                 {
-                    if(src == input.length)
+                    if (src == input.length)
                         goto Lnomatch;
-                    if(!(engine.attributes & engine.REA.dotmatchlf)
+                    if (!(engine.attributes & engine.REA.dotmatchlf)
                         && input[src] == '\n')
                         goto Lnomatch;
                     src++;
@@ -2405,23 +2397,22 @@ Returns $(D hit) (converted to $(D string) if necessary).
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                 //Advance through the whole input,
                 //memoizing the position of the last successful match
-                if(greedy)
-                {
-                    auto last_src = src;
-                    if(!psave_longest)
+                if (greedy)
+                {   auto last_src = src;
+                    if (!psave_longest)
                         psave_longest = cast(regmatch_t *)alloca(
                             (engine.re_nsub + 1) * regmatch_t.sizeof);
-                    for(;count<m;count++)
+                    for (;count<m; count++)
                     {
                         auto s1 = src;
-                        if(src == input.length)
+                        if (src == input.length)
                             break;
-                        if(!(engine.attributes & engine.REA.dotmatchlf)
+                        if (!(engine.attributes & engine.REA.dotmatchlf)
                             && input[src] == '\n')
                             break;
                         src++;
                         auto s2 = src;
-                        if(trymatch(pc, engine.program.length))
+                        if (trymatch(pc, engine.program.length))
                         {
                             //save matches
                             memcpy(psave_longest, pmatch.ptr,
@@ -2431,7 +2422,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         src = s2;
                     }
                     src = last_src;
-                    if(last_src != start)
+                    if (last_src != start)
                     {
                         //restore matches
                         memcpy(pmatch.ptr, psave_longest,
@@ -2444,23 +2435,24 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 //Nongreedy - get to the position of the first succesful match
                 else
                 {
-                    if(trymatch(pc, engine.program.length)){
+                    if (trymatch(pc, engine.program.length))
+                    {
                         src = start;
                         memcpy(pmatch.ptr, psave,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         break;
                     }
-                    for(;count<m;count++)
+                    for (;count<m; count++)
                     {
                         auto s1 = src;
-                        if(src == input.length)
+                        if (src == input.length)
                             break;
-                        if(!(engine.attributes & engine.REA.dotmatchlf)
+                        if (!(engine.attributes & engine.REA.dotmatchlf)
                             && input[src] == '\n')
                             break;
                         src++;
                         auto s2 = src;
-                        if(trymatch(pc, engine.program.length))
+                        if (trymatch(pc, engine.program.length))
                         {
                             src = s2;
                             memcpy(pmatch.ptr, psave,
@@ -2525,7 +2517,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 else    // maximal munch
                 {
                     auto start=src, last_src = src;
-                    if(!psave_longest)
+                    if (!psave_longest)
                         psave_longest = cast(regmatch_t *)alloca(
                             (engine.re_nsub + 1) * regmatch_t.sizeof);
                     for (count=0; count < m; count++)
@@ -2561,7 +2553,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         src = s2;
                     }
                     src = last_src;
-                    if(last_src != start)
+                    if (last_src != start)
                     {
                         memcpy(pmatch.ptr, psave_longest,
                                     (engine.re_nsub + 1) * regmatch_t.sizeof);
@@ -2583,13 +2575,14 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 ss = src;
                 if (!trymatch(pop, pop + len))
                     goto Lnomatch;
-                if(!pmatch_touched){
+                if (!pmatch_touched)
+                {
                     pmatch_touched = true;
                     if(!psave)
                         psave = cast(regmatch_t *)alloca(
                             (engine.re_nsub + 1) * regmatch_t.sizeof);
                     memcpy(psave, pmatch.ptr,
-                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                        (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
                 pmatch[n + 1].startIdx = ss;
                 pmatch[n + 1].endIdx = src;
@@ -2617,7 +2610,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 src = ss;//restore position in input
                 //inverse the match if negative lookahead
                 tmp_match = tmp_match ^ invert;
-                if(!tmp_match)
+                if (!tmp_match)
                     goto Lnomatch;
                 pc = pop + len;
                 break;
@@ -2744,7 +2737,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
       Lnomatch:
         debug(std_regex) writefln("\tnomatch pc=%d", pc);
         src = srcsave;
-        if(pmatch_touched)
+        if (pmatch_touched)
             memcpy(pmatch.ptr, psave, (engine.re_nsub + 1) * regmatch_t.sizeof);
         return false;
     }
@@ -3557,20 +3550,21 @@ unittest
     foreach (Char; TypeTuple!(char, wchar, dchar))
     {
         alias immutable(Char)[] String;
-        String produceExpected(Range)(RegexMatch!(Range) m,String fmt)
+        String produceExpected(Range)(RegexMatch!(Range) m, String fmt)
         {
             String result;
             while(!fmt.empty)
-                switch(fmt.front){
+                switch(fmt.front)
+                {
                     case '\\':
                         fmt.popFront();
-                        if(!isdigit(fmt.front) )
+                        if (!isdigit(fmt.front) )
                         {
                             result ~= fmt.front;
                             fmt.popFront();
                             break;
                         }
-                        int nmatch = parse!int(fmt);
+                        auto nmatch = parse!uint(fmt);
                         if(nmatch < m.captures.length)
                             result ~= m.captures[nmatch];
                     break;
@@ -3623,9 +3617,12 @@ unittest
                 //writefln("\ttest() = %d", i);
                 //fflush(stdout);
                 assert((c == 'y') ? i : !i,text("Match failed pattern: ",tvd.pattern));
-                if(c == 'y'){
+                if(c == 'y')
+                {
                     auto result = produceExpected(m,to!(String)(tvd.format));
-                    assert(result == to!String(tvd.replace), text("Mismatch pattern: ",tvd.pattern," expected:",tvd.replace," vs ",result));
+                    assert(result == to!String(tvd.replace),
+                           text("Mismatch pattern: ",tvd.pattern," expected:",
+                                tvd.replace," vs ",result));
                 }
 
             }
@@ -3737,7 +3734,8 @@ unittest
 unittest
 {
     string[] pres, posts, hits;
-    foreach(m; match("abcabc", regex(""))) {
+    foreach (m; match("abcabc", regex("")))
+    {
         pres ~= m.pre;
         posts ~= m.post;
         assert(m.hit.empty);
