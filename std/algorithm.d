@@ -4322,11 +4322,10 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 if (isInputRange!(Range1) && isInputRange!(Range2)
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    foreach (e1; r1)
+    for (; !r1.empty; r1.popFront(), r2.popFront())
     {
         if (r2.empty) return false;
-        if (!binaryFun!(pred)(e1, r2.front)) return false;
-        r2.popFront;
+        if (!binaryFun!(pred)(r1.front, r2.front)) return false;
     }
     return r2.empty;
 }
@@ -4346,6 +4345,9 @@ unittest
     // predicated
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
+
+    // utf-8 strings
+    assert(equal("æøå", "æøå"));
 }
 
 // cmp
