@@ -139,7 +139,7 @@ version(Windows) {
     shared static this() {
         version(OSX) {
             auto nameStr = "machdep.cpu.core_count\0".ptr;
-        } else version(BSD) {
+        } else version(FreeBSD) {
             auto nameStr = "hw.ncpu\0".ptr;
         }
 
