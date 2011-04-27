@@ -3,6 +3,7 @@ $(VERSION 053, ddd mm, 2011, =================================================,
     $(WHATSNEW
         $(LI Added bindings for libcurl: etc.c.curl)
         $(LI Added std.net.isemail)
+		$(LI Added std.parallelism)
     )
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 4644): assertExceptionThrown to assert that a particular exception was thrown)
