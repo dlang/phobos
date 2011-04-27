@@ -87,6 +87,12 @@ version(Posix) {
     import core.stdc.stdlib : alloca;
 }
 
+version(OSX) {
+    version = useSysctlbyname;
+} else version(FreeBSD) {
+    version = useSysctlbyname;
+}
+
 version(Windows) {
     // BUGS:  Only works on Windows 2000 and above.
 
@@ -125,16 +131,22 @@ version(Windows) {
     shared static this() {
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN );
     }
-} else version(OSX) {
+} else version(useSysctlbyname) {
     extern(C) int sysctlbyname(
         const char *, void *, size_t *, void *, size_t
     );
 
     shared static this() {
+        version(OSX) {
+            auto nameStr = "machdep.cpu.core_count\0".ptr;
+        } else version(BSD) {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+
         uint ans;
         size_t len = uint.sizeof;
-        sysctlbyname("machdep.cpu.core_count\0".ptr, &ans, &len, null, 0);
-        osReportedNcpu = ans;
+        sysctlbyname(nameStr, &ans, &len, null, 0);
+        totalCPUs = ans;
     }
 
 } else {
