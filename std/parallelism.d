@@ -3078,7 +3078,7 @@ version(unittest) {
 // These are the tests that should be run every time Phobos is compiled.
 unittest {
     // The only way this can be verified is manually.
-    writeln("totalCPUs = ", totalCPUs);
+    stderr.writeln("totalCPUs = ", totalCPUs);
 
     poolInstance = new TaskPool(2);
     auto oldPriority = poolInstance.priority;
