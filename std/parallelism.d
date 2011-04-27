@@ -168,7 +168,7 @@ private void atomicSetUbyte(ref ubyte stuff, ubyte newVal) {
 }
 
 private ubyte atomicReadUbyte(ref ubyte val) {
-    return atomicLoad(cast(shared) val);
+    return atomicLoad(*(cast(shared) &val));
 }
 
 // This gets rid of the need for a lot of annoying casts in other parts of the
@@ -3077,8 +3077,10 @@ version(unittest) {
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
 unittest {
-    poolInstance = new TaskPool(2);
+    // The only way this can be verified is manually.
+    writeln("totalCPUs = ", totalCPUs);
 
+    poolInstance = new TaskPool(2);
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
     assert(poolInstance.priority == Thread.PRIORITY_MAX);
