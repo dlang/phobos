@@ -658,7 +658,9 @@ template reduce(fun...) if (fun.length >= 1)
                 alias args[0] r;
                 static if (fun.length == 1)
                 {
-                    return reduce(r.front, (r.popFront(), r));
+                    auto seed = r.front;
+                    r.popFront();
+                    return reduce(seed, r);
                 }
                 else
                 {
