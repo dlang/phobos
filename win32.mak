@@ -128,6 +128,7 @@ SRCS_3 = std\variant.d \
 	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
+	std\parallelism.d \
 	std\gregorian.d \
     std\mathspecial.d \
 	std\internal\math\biguintcore.d \
@@ -207,6 +208,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_outbuffer.html \
+	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
@@ -266,7 +268,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d \
+	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d std\datebase.d \
 	std\__fileinit.d std\gregorian.d std\exception.d
 
@@ -471,6 +473,9 @@ numeric.obj : std\numeric.d
 outbuffer.obj : std\outbuffer.d
 	$(DMD) -c $(DFLAGS) std\outbuffer.d
 
+parallelism.obj : std\parallelism.d
+	$(DMD) -c $(DFLAGS) std\parallelism.d
+	
 path.obj : std\path.d
 	$(DMD) -c $(DFLAGS) std\path.d
 
@@ -770,6 +775,9 @@ $(DOC)\std_numeric.html : $(STDDOC) std\numeric.d
 $(DOC)\std_outbuffer.html : $(STDDOC) std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html $(STDDOC) std\outbuffer.d
 
+$(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_parallelism.html $(STDDOC) std\parallelism.d
+	
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
 
