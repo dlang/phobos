@@ -907,7 +907,7 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -921,6 +921,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
+	zip32 -u phobos $(SRC_STD_NET)
 
 clean:
 	cd etc\c\zlib
