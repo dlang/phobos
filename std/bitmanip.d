@@ -23,7 +23,7 @@ module std.bitmanip;
 
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
-private import std.intrinsic;
+import core.bitop;
 
 string myToStringx(ulong n)
 {   enum s = "0123456789";
