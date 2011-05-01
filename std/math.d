@@ -57,15 +57,17 @@
  */
 module std.math;
 
-import core.stdc.math;
+public import core.math;
+
+// make an equal partner with the non-intrinsics for overloading purposes
+alias core.math.sqrt sqrt;
+alias core.math.sin sin;
+alias core.math.cos cos;
+
 import std.range, std.traits;
 
 version(unittest) {
     import std.typetuple;
-}
-
-version(LDC) {
-    import ldc.intrinsics;
 }
 
 version(DigitalMars){
@@ -304,36 +306,6 @@ unittest
     ireal z = -3.2Li;
     assert(conj(z) == -z);
 }
-
-/***********************************
- * Returns cosine of x. x is in radians.
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH cos(x)) $(TH invalid?))
- *      $(TR $(TD $(NAN))            $(TD $(NAN)) $(TD yes)     )
- *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN)) $(TD yes)     )
- *      )
- * Bugs:
- *      Results are undefined if |x| >= $(POWER 2,64).
- */
-
-real cos(real x) @safe pure nothrow;       /* intrinsic */
-
-/***********************************
- * Returns sine of x. x is in radians.
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)               $(TH sin(x))      $(TH invalid?))
- *      $(TR $(TD $(NAN))          $(TD $(NAN))      $(TD yes))
- *      $(TR $(TD $(PLUSMN)0.0)    $(TD $(PLUSMN)0.0) $(TD no))
- *      $(TR $(TD $(PLUSMNINF))    $(TD $(NAN))      $(TD yes))
- *      )
- * Bugs:
- *      Results are undefined if |x| >= $(POWER 2,64).
- */
-
-real sin(real x) @safe pure nothrow;       /* intrinsic */
-
 
 /***********************************
  *  sine, complex and imaginary
@@ -841,39 +813,12 @@ unittest
 }
 
 /*****************************************
- * Returns x rounded to a long value using the current rounding mode.
- * If the integer value of x is
- * greater than long.max, the result is
- * indeterminate.
- */
-long rndtol(real x) @safe pure nothrow;    /* intrinsic */
-
-
-/*****************************************
  * Returns x rounded to a long value using the FE_TONEAREST rounding mode.
  * If the integer value of x is
  * greater than long.max, the result is
  * indeterminate.
  */
 extern (C) real rndtonl(real x);
-
-/***************************************
- * Compute square root of x.
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)         $(TH sqrt(x))   $(TH invalid?))
- *      $(TR $(TD -0.0)      $(TD -0.0)      $(TD no))
- *      $(TR $(TD $(LT)0.0)  $(TD $(NAN))    $(TD yes))
- *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
- *      )
- */
-
-@safe pure nothrow
-{
-    float sqrt(float x);    /* intrinsic */
-    double sqrt(double x);  /* intrinsic */ /// ditto
-    real sqrt(real x);      /* intrinsic */ /// ditto
-}
 
 @trusted pure nothrow {  // Should be @safe.  See bugs 4628, 4630.
     // Create explicit overloads for integer sqrts.  No ddoc for these because
@@ -1604,13 +1549,6 @@ alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
 
 
-/*******************************************
- * Compute n * 2$(SUP exp)
- * References: frexp
- */
-
-real ldexp(real n, int exp) @safe pure nothrow;    /* intrinsic */
-
 unittest {
     assert(ldexp(1, -16384) == 0x1p-16384L);
     assert(ldexp(1, -16382) == 0x1p-16382L);
@@ -1793,18 +1731,6 @@ unittest {
  *      )
  */
 real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
-
-
-/*******************************
- * Returns |x|
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH fabs(x)))
- *      $(TR $(TD $(PLUSMN)0.0)      $(TD +0.0) )
- *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
- *      )
- */
-real fabs(real x) @safe pure nothrow;      /* intrinsic */
 
 
 /***********************************************************************
@@ -1994,16 +1920,6 @@ real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
  * FE_INEXACT exception.
  */
 real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
-
-/**********************************
- * Rounds x to the nearest integer value, using the current rounding
- * mode.
- * If the return value is not equal to x, the FE_INEXACT
- * exception is raised.
- * $(B nearbyint) performs
- * the same operation, but does not set the FE_INEXACT exception.
- */
-real rint(real x) @safe pure nothrow;      /* intrinsic */
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
