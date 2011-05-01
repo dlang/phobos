@@ -949,6 +949,8 @@ to this file. */
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         std.file.write("testingByLine", "asd\ndef\nasdf");
+        scope(success) std.file.remove("testingByLine");
+
         auto witness = [ "asd", "def", "asdf" ];
         uint i;
         auto f = File("testingByLine");
@@ -956,7 +958,6 @@ to this file. */
         {
             f.close;
             assert(!f.isOpen);
-            //std.file.remove("testingByLine");
         }
         foreach (line; f.byLine())
         {
@@ -1005,8 +1006,8 @@ to this file. */
       private:
         File    file_;
         ubyte[] chunk_;
- 
- 
+
+
       public:
         this(File file, size_t size)
         in
@@ -1017,10 +1018,10 @@ to this file. */
         {
             file_  = file;
             chunk_ = new ubyte[](size);
- 
+
             popFront();
         }
- 
+
 
         /// Range primitive operations.
         @property
@@ -1028,7 +1029,7 @@ to this file. */
         {
             return !file_.isOpen;
         }
- 
+
 
         /// Ditto
         @property
@@ -1036,13 +1037,13 @@ to this file. */
         {
             return chunk_;
         }
- 
+
 
         /// Ditto
         void popFront()
         {
             enforce(!empty, "Cannot call popFront on empty range");
- 
+
             chunk_ = file_.rawRead(chunk_);
             if (chunk_.length == 0)
                 file_.detach();
