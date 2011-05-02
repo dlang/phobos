@@ -12,9 +12,9 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import core.memory;
+import core.memory, core.bitop;
 import std.algorithm, std.conv, std.ctype, std.encoding, std.exception,
-    std.intrinsic, std.range, std.string, std.traits, std.typecons, std.utf;
+    std.range, std.string, std.traits, std.typecons, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio, std.typetuple;
 
