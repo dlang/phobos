@@ -2872,6 +2872,7 @@ private enum submitAndExecute = q{
 
     // See documentation for BaseMixin.shouldSetDone.
     submitNextBatch.shouldSetDone = false;
+    submitNextBatch.isScoped = false;
 
     // Submit first batch from this thread.
     submitJobs();
@@ -3118,7 +3119,7 @@ version(unittest) {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
 
-    //version = debugPipelining;
+    version = debugPipelining;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
@@ -3126,10 +3127,11 @@ version(unittest) {
 unittest {
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
+foreach(iter; 0..int.max) {
 
     // The only way this can be verified is manually.
-    stderr.writeln("totalCPUs = ", totalCPUs);
-
+    stderr.writeln(iter, "  totalCPUs = ", totalCPUs);
+/+
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
     assert(poolInstance.priority == Thread.PRIORITY_MAX);
@@ -3308,7 +3310,7 @@ unittest {
     assert(equal(
         iota(1_000_002),
         poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
-    ));
+    ));+/
 
     // Test Map/AsyncBuf chaining.
 
@@ -3319,7 +3321,8 @@ unittest {
     auto lmchain = poolInstance.map!"a * a"(temp, 100, 5);
     lmchain.popFront();
 
-    foreach(ii, elem; parallel(lmchain)) {
+    int ii;
+    foreach( elem; (lmchain)) {
         if(!approxEqual(elem, ii)) {
             stderr.writeln(ii, '\t', elem);
 //            lmchain.printBuffers();
@@ -3327,8 +3330,9 @@ unittest {
 //            abuf.printBuffers();
             assert(0);
         }
+        ii++;
     }
-
+/+
     auto myTask = task!(std.math.abs)(-1);
     taskPool.put(myTask);
     assert(myTask.spinForce == 1);
@@ -3342,8 +3346,8 @@ unittest {
 
     foreach(i; poolInstance.parallel(iota(1000), 1)) {
         assert(taskPool.workerIndex == 0);
-    }
-
+    }+/
+}
 }
 
 //version = parallelismStressTest;
@@ -3556,3 +3560,4 @@ version(parallelismStressTest) {
         }
     }
 }
+void main() {}
