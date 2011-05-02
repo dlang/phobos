@@ -3127,11 +3127,10 @@ version(unittest) {
 unittest {
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
-foreach(iter; 0..int.max) {
 
     // The only way this can be verified is manually.
-    stderr.writeln(iter, "  totalCPUs = ", totalCPUs);
-/+
+    stderr.writeln("totalCPUs = ", totalCPUs);
+
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
     assert(poolInstance.priority == Thread.PRIORITY_MAX);
@@ -3310,7 +3309,7 @@ foreach(iter; 0..int.max) {
     assert(equal(
         iota(1_000_002),
         poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
-    ));+/
+    ));
 
     // Test Map/AsyncBuf chaining.
 
@@ -3332,7 +3331,7 @@ foreach(iter; 0..int.max) {
         }
         ii++;
     }
-/+
+
     auto myTask = task!(std.math.abs)(-1);
     taskPool.put(myTask);
     assert(myTask.spinForce == 1);
@@ -3346,8 +3345,7 @@ foreach(iter; 0..int.max) {
 
     foreach(i; poolInstance.parallel(iota(1000), 1)) {
         assert(taskPool.workerIndex == 0);
-    }+/
-}
+    }
 }
 
 //version = parallelismStressTest;
@@ -3560,4 +3558,3 @@ version(parallelismStressTest) {
         }
     }
 }
-void main() {}
