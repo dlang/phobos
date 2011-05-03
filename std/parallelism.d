@@ -164,7 +164,8 @@ version(Windows) {
        basically everywhere.
 */
 private void atomicSetUbyte(ref ubyte stuff, ubyte newVal) {
-    core.atomic.cas(cast(shared) &stuff, stuff, newVal);
+    //core.atomic.cas(cast(shared) &stuff, stuff, newVal);
+    atomicStore(*(cast(shared) &stuff), newVal);
 }
 
 private ubyte atomicReadUbyte(ref ubyte val) {
@@ -270,15 +271,15 @@ private T* moveToHeap(T)(ref T object) {
  * monitors and vtbls for something that needs to be ultra-efficient.
  */
 
-private enum TaskState : ubyte {
+private enum TaskStatus : ubyte {
     notStarted,
     inProgress,
-    done
+    done = 3
 }
 
 // This is conceptually the base class for all Task types.  The only Task type
 // that is public is the one actually named Task.  There is also a slightly
-// customized ParallelForeachTask and MapTask.
+// customized ParallelForeachTask and AMapTask.
 private template BaseMixin(ubyte initTaskStatus) {
     AbstractTask* prev;
     AbstractTask* next;
@@ -294,13 +295,13 @@ private template BaseMixin(ubyte initTaskStatus) {
 
 
     /* Kludge:  Some tasks need to re-submit themselves after they finish.
-     * In this case, they will set themselves to TaskState.notStarted before
+     * In this case, they will set themselves to TaskStatus.notStarted before
      * resubmitting themselves.  Setting this flag to false prevents them
      * from being set to done in tryDeleteExecute.*/
     bool shouldSetDone = true;
 
     bool done() @property {
-        if(atomicReadUbyte(taskStatus) == TaskState.done) {
+        if(atomicReadUbyte(taskStatus) == TaskStatus.done) {
             if(exception) {
                 throw exception;
             }
@@ -314,7 +315,7 @@ private template BaseMixin(ubyte initTaskStatus) {
 
 // This is physically base "class" for all of the other tasks.
 private struct AbstractTask {
-    mixin BaseMixin!(TaskState.notStarted);
+    mixin BaseMixin!(TaskStatus.notStarted);
 
     void job() {
         runTask(&this);
@@ -423,7 +424,7 @@ struct Task(alias fun, Args...) {
             myCastedTask.returnVal = fun(myCastedTask._args);
         }
     }
-    mixin BaseMixin!(TaskState.notStarted) Base;
+    mixin BaseMixin!(TaskStatus.notStarted) Base;
 
     private TaskPool pool;
     private bool isScoped;  // True if created with scopedTask.
@@ -512,7 +513,7 @@ struct Task(alias fun, Args...) {
 
         this.pool.tryDeleteExecute( cast(AbstractTask*) &this);
 
-        while(atomicReadUbyte(this.taskStatus) != TaskState.done) {}
+        while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {}
 
         if(exception) {
             throw exception;
@@ -547,7 +548,7 @@ struct Task(alias fun, Args...) {
         pool.lock();
         scope(exit) pool.unlock();
 
-        while(atomicReadUbyte(this.taskStatus) != TaskState.done) {
+        while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {
             pool.waitUntilCompletion();
         }
 
@@ -647,7 +648,7 @@ struct Task(alias fun, Args...) {
     }
 
     @safe ~this() {
-        if(isScoped && pool !is null && taskStatus != TaskState.done) {
+        if(isScoped && pool !is null && taskStatus != TaskStatus.done) {
             yieldForce();
         }
     }
@@ -871,10 +872,8 @@ private:
     // Task.executeInNewThread().
     bool isSingleTask;
 
-    union {
-        Thread[] pool;
-        Thread singleTaskThread;
-    }
+    Thread[] pool;
+    Thread singleTaskThread;
 
     AbstractTask* head;
     AbstractTask* tail;
@@ -902,7 +901,7 @@ private:
     }
 
     void doJob(AbstractTask* job) {
-        assert(job.taskStatus == TaskState.inProgress);
+        assert(job.taskStatus == TaskStatus.inProgress);
         assert(job.next is null);
         assert(job.prev is null);
 
@@ -921,7 +920,7 @@ private:
         }
 
         if(job.shouldSetDone) {
-            atomicSetUbyte(job.taskStatus, TaskState.done);
+            atomicSetUbyte(job.taskStatus, TaskStatus.done);
         }
     }
 
@@ -957,50 +956,6 @@ private:
         }
     }
 
-    bool deleteItem(AbstractTask* item) {
-        lock();
-        auto ret = deleteItemNoSync(item);
-        unlock();
-        return ret;
-    }
-
-    bool deleteItemNoSync(AbstractTask* item)
-    out {
-        assert(item.next is null);
-        assert(item.prev is null);
-    } body {
-        if(item.taskStatus != TaskState.notStarted) {
-            return false;
-        }
-        item.taskStatus = TaskState.inProgress;
-
-        if(item is head) {
-            // Make sure head gets set properly.
-            popNoSync();
-            return true;;
-        }
-        if(item is tail) {
-            tail = tail.prev;
-            if(tail !is null) {
-                tail.next = null;
-            }
-            item.next = null;
-            item.prev = null;
-            return true;
-        }
-        if(item.next !is null) {
-            assert(item.next.prev is item);  // Check queue consistency.
-            item.next.prev = item.prev;
-        }
-        if(item.prev !is null) {
-            assert(item.prev.next is item);  // Check queue consistency.
-            item.prev.next = item.next;
-        }
-        item.next = null;
-        item.prev = null;
-        return true;
-    }
-
     // Pop a task off the queue.
     AbstractTask* pop() {
         lock();
@@ -1031,7 +986,7 @@ private:
             head = head.next;
             returned.prev = null;
             returned.next = null;
-            returned.taskStatus = TaskState.inProgress;
+            returned.taskStatus = TaskStatus.inProgress;
         }
         if(head !is null) {
             head.prev = null;
@@ -1068,25 +1023,71 @@ private:
         notify();
     }
 
-    bool tryDeleteExecute(AbstractTask* toExecute) {
-        if(isSingleTask) return false;
+    void tryDeleteExecute(AbstractTask* toExecute) {
+        if(isSingleTask) return;
 
         if( !deleteItem(toExecute) ) {
-            return false;
+            return;
         }
 
-        toExecute.job();
+        try {
+            toExecute.job();
+        } catch(Exception e) {
+            toExecute.exception = e;
+        }
 
         /* shouldSetDone should always be true except if the task re-submits
          * itself to the pool and needs to bypass this.*/
         if(toExecute.shouldSetDone) {
-            atomicSetUbyte(toExecute.taskStatus, TaskState.done);
+            atomicSetUbyte(toExecute.taskStatus, TaskStatus.done);
         }
+    }
 
+    bool deleteItem(AbstractTask* item) {
+        lock();
+        auto ret = deleteItemNoSync(item);
+        unlock();
+        return ret;
+    }
+
+    bool deleteItemNoSync(AbstractTask* item)
+    out {
+        assert(item.next is null);
+        assert(item.prev is null);
+    } body {
+        if(item.taskStatus != TaskStatus.notStarted) {
+            return false;
+        }
+        item.taskStatus = TaskStatus.inProgress;
+
+        if(item is head) {
+            // Make sure head gets set properly.
+            popNoSync();
+            return true;;
+        }
+        if(item is tail) {
+            tail = tail.prev;
+            if(tail !is null) {
+                tail.next = null;
+            }
+            item.next = null;
+            item.prev = null;
+            return true;
+        }
+        if(item.next !is null) {
+            assert(item.next.prev is item);  // Check queue consistency.
+            item.next.prev = item.prev;
+        }
+        if(item.prev !is null) {
+            assert(item.prev.next is item);  // Check queue consistency.
+            item.prev.next = item.next;
+        }
+        item.next = null;
+        item.prev = null;
         return true;
     }
 
-    size_t defaultBlockSize(size_t rangeLen) const pure nothrow @safe {
+    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
         if(this.size == 0) {
             return rangeLen;
         }
@@ -1151,7 +1152,7 @@ private:
         instanceStartIndex = 0;
 
         this.isSingleTask = true;
-        task.taskStatus = TaskState.inProgress;
+        task.taskStatus = TaskStatus.inProgress;
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
 
@@ -1278,7 +1279,7 @@ public:
         static if(hasLength!R) {
             // Default work unit size is such that we would use 4x as many
             // slots as are in this thread pool.
-            size_t blockSize = defaultBlockSize(range.length);
+            size_t blockSize = defaultWorkUnitSize(range.length);
             return parallel(range, blockSize);
         } else {
             // Just use a really, really dumb guess if the user is too lazy to
@@ -1380,7 +1381,7 @@ public:
             } else {
                 static assert(args2.length == 1, Args);
                 alias args2[0] range;
-                auto blockSize = defaultBlockSize(range.length);
+                auto blockSize = defaultWorkUnitSize(range.length);
             }
 
             alias typeof(range) R;
@@ -1412,14 +1413,21 @@ public:
                 return buf;
             }
 
+            version(debugPipelining) {
+                // Initialize buf to make the results more
+                // deterministic in the case of failure.
+                buf[] = typeof(buf[0]).init;
+            }
+
             Throwable firstException, lastException;
-            alias MapTask!(fun, R, typeof(buf)) MTask;
+            alias AMapTask!(fun, R, typeof(buf)) MTask;
             MTask[] tasks = (cast(MTask*) alloca(this.size * MTask.sizeof * 2))
                             [0..this.size * 2];
             tasks[] = MTask.init;
 
             size_t curPos;
             void useTask(ref MTask task) {
+                assert(task.taskStatus == TaskStatus.done);
                 task.lowerBound = curPos;
                 task.upperBound = min(len, curPos + blockSize);
                 task.range = range;
@@ -1428,7 +1436,7 @@ public:
                 curPos += blockSize;
 
                 lock();
-                atomicSetUbyte(task.taskStatus, TaskState.notStarted);
+                task.taskStatus = TaskStatus.notStarted;
                 abstractPutNoSync(cast(AbstractTask*) &task);
                 unlock();
             }
@@ -1453,7 +1461,7 @@ public:
                 // to prevent a deleting thread from deleting the job
                 // before it's submitted.
                 lock();
-                atomicSetUbyte(submitNextBatch.taskStatus, TaskState.notStarted);
+                submitNextBatch.taskStatus = TaskStatus.notStarted;
                 abstractPutNoSync( cast(AbstractTask*) &submitNextBatch);
                 unlock();
             }
@@ -1550,12 +1558,16 @@ public:
                  alias adjoin!(staticMap!(unaryFun, functions)) fun;
             }
 
-            static final class LazyMap {
+            static final class Map {
                 // This is a class because the task needs to be located on the heap
                 // and in the non-random access case the range needs to be on the
                 // heap, too.
 
             private:
+                enum bufferTrick = is(typeof(range.buf1)) &&
+                                   is(typeof(range.bufPos)) &&
+                                   is(typeof(range.doBufSwap()));
+
                 alias MapType!(R, functions) E;
                 E[] buf1, buf2;
                 R range;
@@ -1574,13 +1586,12 @@ public:
                         } else static if(__traits(compiles, range[0..$])) {
                             range = range[min(buf1.length, range.length)..$];
                         } else {
-                            static assert(0, "R must have slicing for LazyMap."
+                            static assert(0, "R must have slicing for Map."
                                 ~ "  " ~ R.stringof ~ " doesn't.");
                         }
                     }
 
-                } else static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
-                  is(typeof(range.doBufSwap()))) {
+                } else static if(bufferTrick) {
 
                     alias typeof(range.buf1) FromType;
                     FromType from;
@@ -1591,6 +1602,10 @@ public:
                         assert(range.buf1.length <= from.length);
                         from.length = range.buf1.length;
                         swap(range.buf1, from);
+
+                        // Just in case this range has been popped before
+                        // being sent to map:
+                        from = from[range.bufPos..$];
 
                         static if(is(typeof(range._length))) {
                             range._length -= (from.length - range.bufPos);
@@ -1630,8 +1645,7 @@ public:
                 }
 
                 this(R range, size_t bufSize, size_t workUnitSize, TaskPool pool) {
-                    static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
-                    is(typeof(range.doBufSwap()))) {
+                    static if(bufferTrick) {
                         bufSize = range.buf1.length;
                     }
 
@@ -1643,7 +1657,7 @@ public:
                     }
 
                     this.workUnitSize = (workUnitSize == size_t.max) ?
-                            pool.defaultBlockSize(bufSize) : workUnitSize;
+                            pool.defaultWorkUnitSize(bufSize) : workUnitSize;
                     this.range = range;
                     this.pool = pool;
 
@@ -1675,7 +1689,11 @@ public:
                     return buf;
                 }
 
-                void submitBuf2() {
+                void submitBuf2()
+                in {
+                    assert(nextBufTask.prev is null);
+                    assert(nextBufTask.next is null);
+                } body {
                     // Hack to reuse the task object.
 
                     nextBufTask = typeof(nextBufTask).init;
@@ -1708,6 +1726,14 @@ public:
                     }
                 }
 
+                version(debugPipelining) void printBuffers() {
+                    stderr.writeln(typeof(this).stringof, '\n',
+                        buf1, '\n', buf2);
+                    static if(is(typeof(from))) {
+                        stderr.writeln(from);
+                    }
+                }
+
             public:
                 MapType!(R, functions) front() @property {
                     return buf1[bufPos];
@@ -1733,7 +1759,7 @@ public:
                     }
                 }
             }
-            return new LazyMap(range, bufSize, workUnitSize, this);
+            return new Map(range, bufSize, workUnitSize, this);
         }
     }
 
@@ -1808,8 +1834,6 @@ public:
                 submitBuf2();
             }
 
-            // The from parameter is a dummy and ignored in the random access
-            // case.
             E[] fillBuf(E[] buf) {
                 assert(buf !is null);
 
@@ -1822,8 +1846,16 @@ public:
                 return buf;
             }
 
-            void submitBuf2() {
+            void submitBuf2()
+            in {
+                assert(nextBufTask.prev is null);
+                assert(nextBufTask.next is null);
+            } body {
                 // Hack to reuse the task object.
+
+                version(debugPipelining) {
+                    buf2[] = typeof(buf2[0]).init;
+                }
 
                 nextBufTask = typeof(nextBufTask).init;
                 nextBufTask._args[0] = &fillBuf;
@@ -1848,6 +1880,11 @@ public:
                 } else {
                     submitBuf2();
                 }
+            }
+
+            version(debugPipelining) void printBuffers() {
+                stderr.writeln(typeof(this).stringof, '\n',
+                    buf1, '\n', buf2);
             }
 
         public:
@@ -1990,14 +2027,14 @@ public:
                 enum explicitSeed = true;
 
                 static if(!is(typeof(blockSize))) {
-                    size_t blockSize = defaultBlockSize(range.length);
+                    size_t blockSize = defaultWorkUnitSize(range.length);
                 }
             } else {
                 static assert(args2.length == 1);
                 alias args2[0] range;
 
                 static if(!is(typeof(blockSize))) {
-                    size_t blockSize = defaultBlockSize(range.length);
+                    size_t blockSize = defaultWorkUnitSize(range.length);
                 }
 
 
@@ -2595,12 +2632,14 @@ number of worker threads in the instance returned by $(D taskPool).
 */
 @property uint defaultPoolThreads() @trusted {
     // Kludge around lack of atomic load.
+//    return atomicLoad(_defaultPoolThreads);
     return atomicOp!"+"(_defaultPoolThreads, 0U);
 }
 
 /// Ditto
 @property void defaultPoolThreads(uint newVal) @trusted {
-    cas(&_defaultPoolThreads, _defaultPoolThreads, newVal);
+   // atomicStore(_defaultPoolThreads, newVal);
+   cas(cast(shared) &_defaultPoolThreads, _defaultPoolThreads, newVal);
 }
 
 /**
@@ -2668,7 +2707,7 @@ if(isRandomAccessRange!R && hasLength!R) {
         myCastedTask.runMe = null;
     }
 
-    mixin BaseMixin!(TaskState.done);
+    mixin BaseMixin!(TaskStatus.done);
 
     TaskPool pool;
 
@@ -2727,7 +2766,7 @@ if(!isRandomAccessRange!R || !hasLength!R) {
         myCastedTask.runMe = null;
     }
 
-    mixin BaseMixin!(TaskState.done);
+    mixin BaseMixin!(TaskStatus.done);
 
     TaskPool pool;
 
@@ -2764,10 +2803,10 @@ if(!isRandomAccessRange!R || !hasLength!R) {
     }
 }
 
-private struct MapTask(alias fun, R, ReturnType)
+private struct AMapTask(alias fun, R, ReturnType)
 if(isRandomAccessRange!R && hasLength!R) {
     static void impl(void* myTask) {
-        auto myCastedTask = cast(MapTask!(fun, R, ReturnType)*) myTask;
+        auto myCastedTask = cast(AMapTask!(fun, R, ReturnType)*) myTask;
 
         foreach(i; myCastedTask.lowerBound..myCastedTask.upperBound) {
             myCastedTask.results[i] = uFun(myCastedTask.range[i]);
@@ -2778,7 +2817,7 @@ if(isRandomAccessRange!R && hasLength!R) {
         myCastedTask.range = R.init;
     }
 
-    mixin BaseMixin!(TaskState.done);
+    mixin BaseMixin!(TaskStatus.done);
 
     TaskPool pool;
 
@@ -2833,12 +2872,13 @@ private enum submitAndExecute = q{
 
     // See documentation for BaseMixin.shouldSetDone.
     submitNextBatch.shouldSetDone = false;
+    submitNextBatch.isScoped = false;
 
     // Submit first batch from this thread.
     submitJobs();
 
     while( !atomicReadUbyte(doneSubmitting) ) {
-        // Try to do parallel foreach tasks in this thread.
+        // Try to do parallel foreach/amap tasks in this thread.
         foreach(ref task; tasks) {
             pool.tryDeleteExecute( cast(AbstractTask*) &task);
         }
@@ -2869,7 +2909,7 @@ private template randLen(R) {
     enum randLen = isRandomAccessRange!R && hasLength!R;
 }
 
-private enum string parallelApplyMixin = q{
+private enum parallelApplyMixin = q{
     alias ParallelForeachTask!(R, typeof(dg)) PTask;
 
     // Handle empty thread pool as special case.
@@ -2923,6 +2963,7 @@ private enum string parallelApplyMixin = q{
         size_t curPos = 0;
 
         void useTask(ref PTask task) {
+            assert(task.taskStatus == TaskStatus.done);
             task.lowerBound = curPos;
             task.upperBound = min(len, curPos + blockSize);
             task.myRange = range;
@@ -2931,7 +2972,7 @@ private enum string parallelApplyMixin = q{
             curPos += blockSize;
 
             pool.lock();
-            atomicSetUbyte(task.taskStatus, TaskState.notStarted);
+            task.taskStatus = TaskStatus.notStarted;
             pool.abstractPutNoSync(cast(AbstractTask*) &task);
             pool.unlock();
         }
@@ -2946,6 +2987,7 @@ private enum string parallelApplyMixin = q{
         }
 
         void useTask(ref PTask task) {
+            assert(task.taskStatus == TaskStatus.done);
             task.runMe = dg;
             task.pool = pool;
 
@@ -2953,6 +2995,10 @@ private enum string parallelApplyMixin = q{
                 // Elide copying by just swapping buffers.
                 task.elements.length = range.buf1.length;
                 swap(range.buf1, task.elements);
+
+                // This is necessary in case popFront() has been called on
+                // range before entering the parallel foreach loop.
+                task.elements = task.elements[range.bufPos..$];
 
                 static if(is(typeof(range._length))) {
                     range._length -= (task.elements.length - range.bufPos);
@@ -2984,7 +3030,7 @@ private enum string parallelApplyMixin = q{
             pool.lock();
             task.startIndex = this.startIndex;
             this.startIndex += task.elements.length;
-            atomicSetUbyte(task.taskStatus, TaskState.notStarted);
+            task.taskStatus = TaskStatus.notStarted;
             pool.abstractPutNoSync(cast(AbstractTask*) &task);
             pool.unlock();
         }
@@ -3012,7 +3058,7 @@ private enum string parallelApplyMixin = q{
         // to prevent some other thread from deleting the job
         // before it's submitted.
         pool.lock();
-        atomicSetUbyte(submitNextBatch.taskStatus, TaskState.notStarted);
+        atomicSetUbyte(submitNextBatch.taskStatus, TaskStatus.notStarted);
         pool.abstractPutNoSync( cast(AbstractTask*) &submitNextBatch);
         pool.unlock();
     }
@@ -3072,15 +3118,19 @@ private struct ParallelForeach(R) {
 version(unittest) {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
+
+    version = debugPipelining;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
 unittest {
+    poolInstance = new TaskPool(2);
+    scope(exit) poolInstance.stop();
+
     // The only way this can be verified is manually.
     stderr.writeln("totalCPUs = ", totalCPUs);
 
-    poolInstance = new TaskPool(2);
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
     assert(poolInstance.priority == Thread.PRIORITY_MAX);
@@ -3261,17 +3311,25 @@ unittest {
         poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
     ));
 
-    // Test LazyMap/AsyncBuf chaining.
-    auto lmchain = poolInstance.map!"a * a"(
-        poolInstance.map!sqrt(
-            poolInstance.asyncBuf(
-                iota(3_000_000)
-            )
-        )
-    );
+    // Test Map/AsyncBuf chaining.
 
-    foreach(i, elem; parallel(lmchain)) {
-        assert(approxEqual(elem, i));
+    auto abuf = poolInstance.asyncBuf(iota(-1, 3_000_000), 100);
+    auto temp = poolInstance.map!sqrt(
+            abuf, 100, 5
+        );
+    auto lmchain = poolInstance.map!"a * a"(temp, 100, 5);
+    lmchain.popFront();
+
+    int ii;
+    foreach( elem; (lmchain)) {
+        if(!approxEqual(elem, ii)) {
+            stderr.writeln(ii, '\t', elem);
+//            lmchain.printBuffers();
+//            temp.printBuffers();
+//            abuf.printBuffers();
+            assert(0);
+        }
+        ii++;
     }
 
     auto myTask = task!(std.math.abs)(-1);

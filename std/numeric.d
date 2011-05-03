@@ -37,9 +37,9 @@ import std.range;
 import std.c.stdlib;
 import std.functional;
 import std.typetuple;
-import std.intrinsic;
 import std.complex;
 
+import core.bitop;
 import core.memory;
 import core.exception;
 
@@ -95,8 +95,8 @@ public enum CustomFloatFlags {
     none = 0
 }
 
-// 64-bit version of std.intrinsic.bsr
-private int bsr(ulong value) {
+// 64-bit version of core.bitop.bsr
+private int bsr64(ulong value) {
     union Ulong {
         ulong raw;
         struct {
@@ -106,7 +106,7 @@ private int bsr(ulong value) {
     }
     Ulong v;
     v.raw = value;
-    return v.high==0 ? std.intrinsic.bsr(v.low) : std.intrinsic.bsr(v.high) + 32;
+    return v.high==0 ? core.bitop.bsr(v.low) : core.bitop.bsr(v.high) + 32;
 }
 
 /**
@@ -237,7 +237,7 @@ struct CustomFloat(
                // Convert denormalized form to normalized form
                 ((flags&Flags.allowDenorm)&&(exp==0)) ){
                 if(sig > 0) {
-                    auto shift2 = precision - bsr(sig);
+                    auto shift2 = precision - bsr64(sig);
                     exp  -= shift2-1;
                     shift += shift2;
                 } else {                                // value = 0.0
@@ -2624,8 +2624,6 @@ void slowFourier4(Ret, R)(R range, Ret buf) {
 }
 
 bool isPowerOfTwo(size_t num) {
-    // BUGS:  std.intrinsic takes a uint, not a size_t.  Therefore, this
-    //        won't work on 64-bit unless std.intrinsic is fixed.
     return bsr(num) == bsf(num);
 }
 
