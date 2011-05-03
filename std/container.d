@@ -1545,9 +1545,9 @@ struct Array(T) if (!is(T : const(bool)))
                         0,
                         (elements - oldLength) * T.sizeof);
                 GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_data._payload.ptr);
-                free(_data._payload.ptr);
-                _data._payload = newPayload;
+                GC.removeRange(_payload.ptr);
+                free(_payload.ptr);
+                _payload = newPayload;
             }
             else
             {
@@ -2361,6 +2361,21 @@ unittest
         assert(dMask == 0b1111_1111);
     }
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
+}
+// Test issue 5792 (mainly just to check if this piece of code is compilable)
+unittest
+{
+    auto a = Array!(int[])([[1,2],[3,4]]);
+    a.reserve(4);
+    assert(a.capacity >= 4);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
+    a.reserve(16);
+    assert(a.capacity >= 16);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
 }
 
 // BinaryHeap
