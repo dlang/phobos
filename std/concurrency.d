@@ -162,11 +162,9 @@ private
 }
 
 
-static this()
+shared static this()
 {
-    // NOTE: thisTid will construct a new MessageBox if one doesn't exist,
-    //       which should only be true of the main thread and threads created
-    //       via core.thread instead of spawn.
+    mbox = new MessageBox;
 }
 
 
@@ -496,16 +494,21 @@ receiveOnlyRet!(T) receiveOnly(T...)()
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
+    //return receiveTimeout( dur!"msecs"( ms ), ops );
     checkops( ops );
-    static enum long TICKS_PER_MILLI = 10_000;
-    return mbox.get( ms * TICKS_PER_MILLI, ops );
+    return mbox.get( dur!"msecs"( ms ), ops );
 }
 
-/++ ditto +/
-bool receiveTimeout(T...)( Duration duration, T ops )
+
+/**
+ *
+ */
+bool receiveTimeout(T...)( Duration val, T ops )
 {
-    return receiveTimeout(duration.total!"msecs"(), ops);
+    checkops( ops );
+    return mbox.get( val, ops );
 }
+
 
 unittest
 {
@@ -527,7 +530,7 @@ unittest
 
     assert( __traits( compiles,
                       {
-                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
+                          receiveTimeout( dur!"msecs"( 10 ), (Variant x) {} );
                       } ) );
 }
 
@@ -848,13 +851,12 @@ private
         {
             static assert( T.length );
 
-            static if( isImplicitlyConvertible!(T[0], long) )
+            static if( is( T[0] : Duration ) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
-                assert( vals[0] >= 0 );
                 enum timedWait = true;
-                long period = vals[0];
+                auto period = vals[0];
             }
             else
             {
