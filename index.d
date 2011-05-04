@@ -160,9 +160,6 @@ D language compiler. Also, check out the
 	<dt><a href="std_gc.html"><b>std.gc</b></a>
 	<dd>Control the garbage collector.
 
-	<dt><a href="std_intrinsic.html"><b>std.intrinsic</b></a>
-	<dd>Compiler built in intrinsic functions
-
 	<dt><a href="std_math.html"><b>std.math</b></a>
 	<dd>Include all the usual math functions like sin, cos, atan, etc.
 

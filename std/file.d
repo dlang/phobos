@@ -835,7 +835,7 @@ else version(Posix)
 
         getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
 
-        enum leeway = dur!"seconds"(2);
+        enum leeway = dur!"seconds"(4);
 
         {
             auto diffc = statusChangedTime1 - currTime;

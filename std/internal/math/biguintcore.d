@@ -195,7 +195,7 @@ int opCmp(Tdummy = void)(BigUint y)
 {
     if (data.length != y.data.length)
         return (data.length > y.data.length) ?  1 : -1;
-    uint k = highestDifferentDigit(data, y.data);
+    size_t k = highestDifferentDigit(data, y.data);
     if (data[k] == y.data[k])
         return 0;
     return data[k] > y.data[k] ? 1 : -1;

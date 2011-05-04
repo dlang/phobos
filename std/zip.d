@@ -34,7 +34,7 @@ module std.zip;
 
 import std.zlib;
 import std.datetime;
-import std.intrinsic;
+import core.bitop;
 import std.conv;
 
 //debug=print;
