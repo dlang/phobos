@@ -1321,11 +1321,11 @@ void move(T)(ref T source, ref T target)
     {
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
-        static if (is(typeof(target.__dtor()))) target.__dtor();
+        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
         memcpy(&target, &source, T.sizeof);
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
-        static if (is(typeof(source.__dtor())) || is(typeof(source.__postblit())))
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
             memcpy(&source, &empty, T.sizeof);
