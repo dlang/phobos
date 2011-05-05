@@ -1366,6 +1366,32 @@ unittest
     S2 s22;
     move(s21, s22);
     assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    struct S3
+    {
+        struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31, s32;
+    s31.x.n = 1;
+    move(s31, s32);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    struct S4
+    {
+        struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41, s42;
+    s41.x.n = 1;
+    move(s41, s42);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
 }
 
 /// Ditto
