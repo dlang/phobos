@@ -308,6 +308,9 @@ extern (Windows)
                         ,   in LPSECURITY_ATTRIBUTES lpsa
                         ,   out HKEY hkeyResult, out DWORD disposition);
     LONG    RegDeleteKeyA(in HKEY hkey, in LPCSTR lpSubKey);
+    LONG    function(in HKEY hkey, in LPCSTR lpSubKey
+                        ,   in REGSAM samDesired, in Reserved) RegDeleteKeyExA;
+    
     LONG    RegDeleteValueA(in HKEY hkey, in LPCSTR lpValueName);
     LONG    RegOpenKeyA(in HKEY hkey, in LPCSTR lpSubKey, out HKEY hkeyResult);
     LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
@@ -470,7 +473,22 @@ body
                         ,   disposition);
 }
 
-private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey)
+HMODULE hAdvapi32 = null;
+
+void loadAdvapi32()
+{
+    hAdvapi32 = LoadLibraryA("Advapi32.dll");
+    if(hAdvapi32)
+        RegDeleteKeyExA = GetProcAddress(hAdvapi32 , "RegDeleteKeyExA");
+}
+
+void freeAdvapi32()
+{
+    FreeLibrary(hAdvapi32);
+    hAdvapi32 = null;
+}
+
+private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey, in REGSAM samDesired)
 in
 {
     assert(!(null is hkey));
@@ -478,6 +496,13 @@ in
 }
 body
 {
+    if(samDesired)
+    {
+        if(!hAdvapi32)
+            loadAdvapi32();
+        if(RegDeleteKeyExA)
+            return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
+    }
     return RegDeleteKeyA(hkey, toStringz(subKey));
 }
 
@@ -1190,7 +1215,7 @@ public:
     /// Deletes the named key
     ///
     /// \param name The name of the key to delete. May not be null
-    void deleteKey(string name)
+    void deleteKey(string name, REGSAM access = cast(REGSAM)0)
     {
         if( null is name ||
             0 == name.length)
@@ -1199,7 +1224,7 @@ public:
         }
         else
         {
-            LONG    res =   Reg_DeleteKeyA_(m_hkey, name);
+            LONG    res =   Reg_DeleteKeyA_(m_hkey, name, access);
 
             if(ERROR_SUCCESS != res)
             {
@@ -1363,7 +1388,7 @@ public:
 /// \name Members
 //@{
 private:
-    HKEY    m_hkey;
+    public HKEY    m_hkey;
     string m_name;
     boolean m_created;
 //@}
