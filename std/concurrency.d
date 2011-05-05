@@ -494,21 +494,16 @@ receiveOnlyRet!(T) receiveOnly(T...)()
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
-    //return receiveTimeout( dur!"msecs"( ms ), ops );
     checkops( ops );
-    return mbox.get( dur!"msecs"( ms ), ops );
+    static enum long TICKS_PER_MILLI = 10_000;
+    return mbox.get( ms * TICKS_PER_MILLI, ops );
 }
 
-
-/**
- *
- */
-bool receiveTimeout(T...)( Duration val, T ops )
+/++ ditto +/
+bool receiveTimeout(T...)( Duration duration, T ops )
 {
-    checkops( ops );
-    return mbox.get( val, ops );
+    return receiveTimeout(duration.total!"msecs"(), ops);
 }
-
 
 unittest
 {
@@ -530,7 +525,7 @@ unittest
 
     assert( __traits( compiles,
                       {
-                          receiveTimeout( dur!"msecs"( 10 ), (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
                       } ) );
 }
 
@@ -851,12 +846,13 @@ private
         {
             static assert( T.length );
 
-            static if( is( T[0] : Duration ) )
+            static if( isImplicitlyConvertible!(T[0], long) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
+                assert( vals[0] >= 0 );
                 enum timedWait = true;
-                auto period = vals[0];
+                long period = vals[0];
             }
             else
             {
