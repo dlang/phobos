@@ -1701,11 +1701,12 @@ version(Windows) string getcwd()
     }
     else
     {
-        auto dir =
+        auto dirA =
             new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return assumeUnique(dir);
+        GetCurrentDirectoryA(dirA.length, dirA.ptr);
+        string dir = fromMBSz(cast(immutable)dirA.ptr);
+        enforce(dir.length, "getcwd");
+        return dir;
     }
 }
 
