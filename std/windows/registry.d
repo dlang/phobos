@@ -1084,7 +1084,7 @@ public:
             HKEY    hkey;
             DWORD   disposition;
             LONG    lRes    =   Reg_CreateKeyExA_(  m_hkey, name, 0
-                                                ,   REGSAM.KEY_ALL_ACCESS
+                                                ,   access
                                                 ,   null, hkey, disposition);
 
             if(ERROR_SUCCESS != lRes)
@@ -1144,7 +1144,7 @@ public:
         else
         {
             HKEY    hkey;
-            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, REGSAM.KEY_ALL_ACCESS, hkey);
+            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, access, hkey);
 
             if(ERROR_SUCCESS != lRes)
             {
