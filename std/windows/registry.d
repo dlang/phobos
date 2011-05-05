@@ -1388,7 +1388,7 @@ public:
 /// \name Members
 //@{
 private:
-    public HKEY    m_hkey;
+    HKEY    m_hkey;
     string m_name;
     boolean m_created;
 //@}
