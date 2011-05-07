@@ -3215,17 +3215,19 @@ unittest {
     assert(arr == nums);
 
     // Test parallel foreach with non-random access range.
-    nums = null;
-    nums2 = null;
+    appNums.clear();
+    appNums2.clear();
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
 
     foreach(i, elem; poolInstance.parallel(range)) {
         synchronized {
-            nums ~= cast(uint) i;
-            nums2 ~= cast(uint) i;
+            appNums.put(cast(uint) i);
+            appNums2.put(cast(uint) i);
         }
     }
 
+    nums = appNums.data;
+    nums2 = appNums2.data;
     sort!"a.at!0 < b.at!0"(zip(nums, nums2));
     assert(nums == nums2);
     assert(nums == [0,1,2,3,4]);
@@ -3269,12 +3271,13 @@ unittest {
     // Test default pool stuff.
     assert(taskPool.size == totalCPUs - 1);
 
-    nums = null;
+    appNums.clear();
     foreach(i; parallel(iota(1000))) {
         synchronized {
-            nums ~= i;
+            appNums.put(i);
         }
     }
+    nums = appNums.data;
     sort(nums);
     assert(equal(nums, iota(1000)));
 
@@ -3553,4 +3556,3 @@ version(parallelismStressTest) {
         }
     }
 }
-
