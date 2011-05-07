@@ -1279,8 +1279,8 @@ public:
         static if(hasLength!R) {
             // Default work unit size is such that we would use 4x as many
             // slots as are in this thread pool.
-            size_t blockSize = defaultWorkUnitSize(range.length);
-            return parallel(range, blockSize);
+            size_t workUnitSize = defaultWorkUnitSize(range.length);
+            return parallel(range, workUnitSize);
         } else {
             // Just use a really, really dumb guess if the user is too lazy to
             // specify.
@@ -1377,11 +1377,11 @@ public:
             static if(isIntegral!(Args2[$ - 1])) {
                 static assert(args2.length == 2);
                 alias args2[0] range;
-                auto blockSize = cast(size_t) args2[1];
+                auto workUnitSize = cast(size_t) args2[1];
             } else {
                 static assert(args2.length == 1, Args);
                 alias args2[0] range;
-                auto blockSize = defaultWorkUnitSize(range.length);
+                auto workUnitSize = defaultWorkUnitSize(range.length);
             }
 
             alias typeof(range) R;
@@ -1400,8 +1400,8 @@ public:
             enforce(buf.length == len,
                 text("Can't use a user supplied buffer that's the wrong size.  ",
                 "(Expected  :", len, " Got:  ", buf.length));
-            if(blockSize > len) {
-                blockSize = len;
+            if(workUnitSize > len) {
+                workUnitSize = len;
             }
 
             // Handle as a special case:
@@ -1413,67 +1413,10 @@ public:
                 return buf;
             }
 
-            version(debugPipelining) {
-                // Initialize buf to make the results more
-                // deterministic in the case of failure.
-                buf[] = typeof(buf[0]).init;
-            }
+            auto impl = new AmapImpl!(fun, R, typeof(buf))
+                (this, workUnitSize, range, buf);
 
-            Throwable firstException, lastException;
-            alias AMapTask!(fun, R, typeof(buf)) MTask;
-            MTask[] tasks = (cast(MTask*) alloca(this.size * MTask.sizeof * 2))
-                            [0..this.size * 2];
-            tasks[] = MTask.init;
-
-            size_t curPos;
-            void useTask(ref MTask task) {
-                assert(task.taskStatus == TaskStatus.done);
-                task.lowerBound = curPos;
-                task.upperBound = min(len, curPos + blockSize);
-                task.range = range;
-                task.results = buf;
-                task.pool = this;
-                curPos += blockSize;
-
-                lock();
-                task.taskStatus = TaskStatus.notStarted;
-                abstractPutNoSync(cast(AbstractTask*) &task);
-                unlock();
-            }
-
-            ubyte doneSubmitting = 0;
-            Task!(run, void delegate()) submitNextBatch;
-
-            void submitJobs() {
-                // Search for slots.
-                foreach(ref task; tasks) {
-                    mixin(parallelExceptionHandling);
-
-                    useTask(task);
-                    if(curPos >= len) {
-                        atomicSetUbyte(doneSubmitting, 1);
-                        return;
-                    }
-                }
-
-                // Now that we've submitted all the worker tasks, submit
-                // the next submission task.  Synchronizing on the pool
-                // to prevent a deleting thread from deleting the job
-                // before it's submitted.
-                lock();
-                submitNextBatch.taskStatus = TaskStatus.notStarted;
-                abstractPutNoSync( cast(AbstractTask*) &submitNextBatch);
-                unlock();
-            }
-
-            submitNextBatch = .scopedTask(&submitJobs);
-
-            // The submitAndExecute mixin relies on the TaskPool instance
-            // being called pool.
-            TaskPool pool = this;
-
-            mixin(submitAndExecute);
-
+            impl.submitAndExecute();
             return buf;
         }
     }
@@ -1726,14 +1669,6 @@ public:
                     }
                 }
 
-                version(debugPipelining) void printBuffers() {
-                    stderr.writeln(typeof(this).stringof, '\n',
-                        buf1, '\n', buf2);
-                    static if(is(typeof(from))) {
-                        stderr.writeln(from);
-                    }
-                }
-
             public:
                 MapType!(R, functions) front() @property {
                     return buf1[bufPos];
@@ -1853,10 +1788,6 @@ public:
             } body {
                 // Hack to reuse the task object.
 
-                version(debugPipelining) {
-                    buf2[] = typeof(buf2[0]).init;
-                }
-
                 nextBufTask = typeof(nextBufTask).init;
                 nextBufTask._args[0] = &fillBuf;
                 nextBufTask._args[1] = buf2;
@@ -1880,11 +1811,6 @@ public:
                 } else {
                     submitBuf2();
                 }
-            }
-
-            version(debugPipelining) void printBuffers() {
-                stderr.writeln(typeof(this).stringof, '\n',
-                    buf1, '\n', buf2);
             }
 
         public:
@@ -1996,7 +1922,7 @@ public:
             alias reduceFinish!(functions) finishFun;
 
             static if(isIntegral!(Args[$ - 1])) {
-                size_t blockSize = cast(size_t) args[$ - 1];
+                size_t workUnitSize = cast(size_t) args[$ - 1];
                 alias args[0..$ - 1] args2;
                 alias Args[0..$ - 1] Args2;
             } else {
@@ -2026,15 +1952,15 @@ public:
                 alias args2[0] seed;
                 enum explicitSeed = true;
 
-                static if(!is(typeof(blockSize))) {
-                    size_t blockSize = defaultWorkUnitSize(range.length);
+                static if(!is(typeof(workUnitSize))) {
+                    size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
             } else {
                 static assert(args2.length == 1);
                 alias args2[0] range;
 
-                static if(!is(typeof(blockSize))) {
-                    size_t blockSize = defaultWorkUnitSize(range.length);
+                static if(!is(typeof(workUnitSize))) {
+                    size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
 
 
@@ -2060,13 +1986,13 @@ public:
             // it can't be evaluated out of order.
 
             immutable len = range.length;
-            if(blockSize > len) {
-                blockSize = len;
+            if(workUnitSize > len) {
+                workUnitSize = len;
             }
 
-            immutable size_t nWorkUnits = (len / blockSize) +
-                ((len % blockSize == 0) ? 0 : 1);
-            assert(nWorkUnits * blockSize >= len);
+            immutable size_t nWorkUnits = (len / workUnitSize) +
+                ((len % workUnitSize == 0) ? 0 : 1);
+            assert(nWorkUnits * workUnitSize >= len);
 
             static E reduceOnRange
             (E seed, R range, size_t lowerBound, size_t upperBound) {
@@ -2092,7 +2018,7 @@ public:
 
             size_t curPos = 0;
             void useTask(ref RTask task) {
-                task.args[3] = min(len, curPos + blockSize);  // upper bound.
+                task.args[3] = min(len, curPos + workUnitSize);  // upper bound.
                 task.args[1] = range;  // range
 
                 static if(explicitSeed) {
@@ -2103,7 +2029,7 @@ public:
                     task.args[0] = makeStartValue(range[curPos]);
                 }
 
-                curPos += blockSize;
+                curPos += workUnitSize;
                 put(task);
             }
 
@@ -2848,70 +2774,263 @@ if(isRandomAccessRange!R && hasLength!R) {
     }
 }
 
-// This mixin causes rethrown exceptions to be caught and chained.  It's used
-// in parallel amap and foreach.
-private enum parallelExceptionHandling = q{
-    try {
-        // Calling done() rethrows exceptions.
-        if(!task.done) {
-            continue;
-        }
-    } catch(Throwable e) {
-        firstException = e;
-        lastException = findLastException(e);
-        task.exception = null;
-        atomicSetUbyte(doneSubmitting, 1);
-        return;
-    }
-};
-
-// This mixin causes tasks to be submitted lazily to
-// the task pool.  Attempts are then made by the calling thread to execute
-// them.  It's used in parallel amap and foreach.
-private enum submitAndExecute = q{
-
-    // See documentation for BaseMixin.shouldSetDone.
-    submitNextBatch.shouldSetDone = false;
-    submitNextBatch.isScoped = false;
-
-    // Submit first batch from this thread.
-    submitJobs();
-
-    while( !atomicReadUbyte(doneSubmitting) ) {
-        // Try to do parallel foreach/amap tasks in this thread.
-        foreach(ref task; tasks) {
-            pool.tryDeleteExecute( cast(AbstractTask*) &task);
-        }
-
-        // All tasks in progress or done unless next/ submission task started
-        // running.  Try to execute the submission task.
-        pool.tryDeleteExecute(cast(AbstractTask*) &submitNextBatch);
-    }
-
-    // Try to execute one last time, after they're all submitted.
-    foreach(ref task; tasks) {
-        pool.tryDeleteExecute( cast(AbstractTask*) &task);
-    }
-
-    foreach(ref task; tasks) {
-        try {
-            task.force();
-        } catch(Throwable e) {
-            addToChain(e, firstException, lastException);
-        }
-    }
-
-    if(firstException) throw firstException;
-};
-
 /*------Structs that implement opApply for parallel foreach.------------------*/
 private template randLen(R) {
     enum randLen = isRandomAccessRange!R && hasLength!R;
 }
 
-private enum parallelApplyMixin = q{
-    alias ParallelForeachTask!(R, typeof(dg)) PTask;
+// This mixin encapsulates parts of the implementations of parallel foreach and
+// amap, where tasks need to resubmit themselves in some cases.  This is
+// a mixin instead of a base class mainly because I needed some structural
+// typing to make it work and secondarily because I wanted to avoid the
+// overhead of runtime polymorphism.
+//
+// Conceptually, this mixin can be thought of as the base object for a
+// template method pattern, even though it's a mixin nestead of a class.
+// Instead of subclassing it, it's used by mixing it into a struct.
+private mixin template ResubmittingTasks() {
+    Task!(run, void delegate()) submitNextBatch;
+    TaskPool pool;
+    size_t workUnitSize;
+    Throwable firstException, lastException;
+    ubyte doneSubmitting;
 
+    void submitResubmittingTask(AbstractTask* toSubmit) {
+        // Synchronizing on the pool to prevent some other thread from deleting
+        // the job before it's submitted.
+        pool.lock();
+        atomicSetUbyte(toSubmit.taskStatus, TaskStatus.notStarted);
+        pool.abstractPutNoSync(toSubmit);
+        pool.unlock();
+    }
+
+    void submitJobs() {
+        // Search for slots.
+        foreach(ref task; tasks) {
+            try {
+                // Calling done() rethrows exceptions.
+                if(!task.done) {
+                    continue;
+                }
+            } catch(Throwable e) {
+                firstException = e;
+                lastException = findLastException(e);
+                task.exception = null;
+                atomicSetUbyte(doneSubmitting, 1);
+                return;
+            }
+
+            useTask(task);
+            if(emptyCheck()) {
+                atomicSetUbyte(doneSubmitting, 1);
+                return;
+            }
+        }
+
+        submitResubmittingTask(cast(AbstractTask*) &submitNextBatch);
+    }
+
+    void submitAndExecute() {
+        // See documentation for BaseMixin.shouldSetDone.
+        submitNextBatch.shouldSetDone = false;
+        submitNextBatch.isScoped = false;
+
+        // Submit first batch from this thread.
+        submitJobs();
+
+        while(!atomicReadUbyte(doneSubmitting)) {
+            // Try to do parallel foreach/amap tasks in this thread.
+            foreach(ref task; tasks) {
+                pool.tryDeleteExecute( cast(AbstractTask*) &task);
+            }
+
+            // All tasks in progress or done unless next/ submission task
+            // started running.  Try to execute the submission task.
+            pool.tryDeleteExecute(cast(AbstractTask*) &submitNextBatch);
+        }
+
+        // Try to execute one last time, after they're all submitted.
+        foreach(ref task; tasks) {
+            pool.tryDeleteExecute( cast(AbstractTask*) &task);
+        }
+
+        foreach(ref task; tasks) {
+            try {
+                task.force();
+            } catch(Throwable e) {
+                addToChain(e, firstException, lastException);
+            }
+        }
+
+        if(firstException) throw firstException;
+    }
+}
+
+// The implementation of TaskPool.amap().  This struct should always be
+// heap allocated.
+private struct AmapImpl(alias fun, Range, Buf) {
+    mixin ResubmittingTasks;
+
+    Range range;
+    Buf buf;
+    size_t curPos;
+    size_t len;
+    alias AMapTask!(fun, Range, typeof(buf)) MTask;
+    MTask[] tasks;
+
+    this(TaskPool pool, size_t workUnitSize, Range range, Buf buf) {
+        this.pool = pool;
+        this.workUnitSize = workUnitSize;
+        this.range = range;
+        this.buf = buf;
+        submitNextBatch = scopedTask(&submitJobs);
+
+        // Two tasks for every worker thread, plus two for the submitting
+        // thread.
+        tasks.length = pool.size * 2 + 2;
+        len = range.length;  // In case evaluating length is expensive.
+    }
+
+    bool emptyCheck() {
+        return curPos >= len;
+    }
+
+    void useTask(ref MTask task) {
+        assert(task.taskStatus == TaskStatus.done);
+        task.lowerBound = curPos;
+        task.upperBound = min(len, curPos + workUnitSize);
+        task.range = range;
+        task.results = buf;
+        task.pool = pool;
+        curPos += workUnitSize;
+
+        submitResubmittingTask(cast(AbstractTask*) &task);
+    }
+}
+
+private struct ParallelForeachImpl(Range, Delegate)
+if(randLen!Range) {
+    mixin ResubmittingTasks;
+
+    Range range;
+    Delegate dg;
+    size_t curPos;
+    size_t len;
+    alias ParallelForeachTask!(Range, Delegate) PTask;
+    PTask[] tasks;
+
+    this(TaskPool pool, size_t workUnitSize, Range range, Delegate dg) {
+        this.pool = pool;
+        this.workUnitSize = workUnitSize;
+        this.range = range;
+        this.dg = dg;
+        submitNextBatch = scopedTask(&submitJobs);
+
+        // Two tasks for every worker thread, plus two for the submitting
+        // thread.
+        tasks.length = pool.size * 2 + 2;
+        len = range.length;  // In case evaluating length is expensive.
+    }
+
+    void useTask(ref PTask task) {
+        assert(task.taskStatus == TaskStatus.done);
+        task.lowerBound = curPos;
+        task.upperBound = min(len, curPos + workUnitSize);
+        task.myRange = range;
+        task.runMe = dg;
+        task.pool = pool;
+        curPos += workUnitSize;
+
+        submitResubmittingTask(cast(AbstractTask*) &task);
+    }
+
+    bool emptyCheck() {
+        return curPos >= len;
+    }
+}
+
+private struct ParallelForeachImpl(Range, Delegate)
+if(!randLen!Range) {
+    mixin ResubmittingTasks;
+
+    Range range;
+    Delegate dg;
+    size_t startIndex = 0;
+    alias ParallelForeachTask!(Range, Delegate) PTask;
+    PTask[] tasks;
+
+    static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
+    is(typeof(range.doBufSwap()))) {
+        enum bool bufferTrick = true;
+    } else {
+        enum bool bufferTrick = false;
+    }
+
+    this(TaskPool pool, size_t workUnitSize, Range range, Delegate dg) {
+        this.pool = pool;
+        this.workUnitSize = workUnitSize;
+        this.range = range;
+        this.dg = dg;
+        submitNextBatch = scopedTask(&submitJobs);
+
+        // Two tasks for every worker thread, plus two for the submitting
+        // thread.
+        tasks.length = pool.size * 2 + 2;
+    }
+
+    void useTask(ref PTask task) {
+        assert(task.taskStatus == TaskStatus.done);
+        task.runMe = dg;
+        task.pool = pool;
+
+        static if(bufferTrick) {
+            // Elide copying by just swapping buffers.
+            task.elements.length = range.buf1.length;
+            swap(range.buf1, task.elements);
+
+            // This is necessary in case popFront() has been called on
+            // range before entering the parallel foreach loop.
+            task.elements = task.elements[range.bufPos..$];
+
+            static if(is(typeof(range._length))) {
+                range._length -= (task.elements.length - range.bufPos);
+            }
+
+            range.doBufSwap();
+
+        } else {
+            size_t copyIndex = 0;
+
+            if(task.elements.length == 0) {
+                task.elements.length = workUnitSize;
+            }
+
+            for(; copyIndex < workUnitSize && !range.empty; copyIndex++) {
+                static if(hasLvalueElements!Range) {
+                    task.elements[copyIndex] = &range.front();
+                } else {
+                    task.elements[copyIndex] = range.front;
+                }
+                range.popFront;
+            }
+
+            // We only actually change the array  size on the last task,
+            // when the range is empty.
+            task.elements = task.elements[0..copyIndex];
+        }
+
+        task.startIndex = this.startIndex;
+        this.startIndex += task.elements.length;
+        submitResubmittingTask(cast(AbstractTask*) &task);
+    }
+
+    bool emptyCheck() {
+        return range.empty;
+    }
+}
+
+
+private enum parallelApplyMixin = q{
     // Handle empty thread pool as special case.
     if(pool.size == 0) {
         int res = 0;
@@ -2943,130 +3062,10 @@ private enum parallelApplyMixin = q{
         return res;
     }
 
-    Throwable firstException, lastException;
+    auto impl = new ParallelForeachImpl!(R, typeof(dg))
+        (pool, workUnitSize, range, dg);
 
-    PTask[] tasks = (cast(PTask*) alloca(pool.size * PTask.sizeof * 2))
-                    [0..pool.size * 2];
-    tasks[] = PTask.init;
-    Task!(run, void delegate()) submitNextBatch;
-
-    static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
-    is(typeof(range.doBufSwap()))) {
-        enum bool bufferTrick = true;
-    } else {
-        enum bool bufferTrick = false;
-    }
-
-    static if(randLen!R) {
-
-        immutable size_t len = range.length;
-        size_t curPos = 0;
-
-        void useTask(ref PTask task) {
-            assert(task.taskStatus == TaskStatus.done);
-            task.lowerBound = curPos;
-            task.upperBound = min(len, curPos + blockSize);
-            task.myRange = range;
-            task.runMe = dg;
-            task.pool = pool;
-            curPos += blockSize;
-
-            pool.lock();
-            task.taskStatus = TaskStatus.notStarted;
-            pool.abstractPutNoSync(cast(AbstractTask*) &task);
-            pool.unlock();
-        }
-
-        bool emptyCheck() {
-            return curPos >= len;
-        }
-    } else {
-
-        static if(bufferTrick) {
-            blockSize = range.buf1.length;
-        }
-
-        void useTask(ref PTask task) {
-            assert(task.taskStatus == TaskStatus.done);
-            task.runMe = dg;
-            task.pool = pool;
-
-            static if(bufferTrick) {
-                // Elide copying by just swapping buffers.
-                task.elements.length = range.buf1.length;
-                swap(range.buf1, task.elements);
-
-                // This is necessary in case popFront() has been called on
-                // range before entering the parallel foreach loop.
-                task.elements = task.elements[range.bufPos..$];
-
-                static if(is(typeof(range._length))) {
-                    range._length -= (task.elements.length - range.bufPos);
-                }
-
-                range.doBufSwap();
-
-            } else {
-                size_t copyIndex = 0;
-
-                if(task.elements.length == 0) {
-                    task.elements.length = blockSize;
-                }
-
-                for(; copyIndex < blockSize && !range.empty; copyIndex++) {
-                    static if(hasLvalueElements!R) {
-                        task.elements[copyIndex] = &range.front();
-                    } else {
-                        task.elements[copyIndex] = range.front;
-                    }
-                    range.popFront;
-                }
-
-                // We only actually change the array  size on the last task,
-                // when the range is empty.
-                task.elements = task.elements[0..copyIndex];
-            }
-
-            pool.lock();
-            task.startIndex = this.startIndex;
-            this.startIndex += task.elements.length;
-            task.taskStatus = TaskStatus.notStarted;
-            pool.abstractPutNoSync(cast(AbstractTask*) &task);
-            pool.unlock();
-        }
-
-        bool emptyCheck() {
-            return range.empty;
-        }
-    }
-
-    // This has to be down here to work around forward reference issues.
-    void submitJobs() {
-        // Search for slots to recycle.
-        foreach(ref task; tasks) {
-            mixin(parallelExceptionHandling);
-
-            useTask(task);
-            if(emptyCheck()) {
-                atomicSetUbyte(doneSubmitting, 1);
-                return;
-            }
-        }
-
-        // Now that we've submitted all the worker tasks, submit
-        // the next submission task.  Synchronizing on the pool
-        // to prevent some other thread from deleting the job
-        // before it's submitted.
-        pool.lock();
-        atomicSetUbyte(submitNextBatch.taskStatus, TaskStatus.notStarted);
-        pool.abstractPutNoSync( cast(AbstractTask*) &submitNextBatch);
-        pool.unlock();
-    }
-
-    submitNextBatch = scopedTask(&submitJobs);
-
-    mixin(submitAndExecute);
-
+    impl.submitAndExecute();
     return 0;
 };
 
@@ -3100,7 +3099,7 @@ private void addToChain(
 private struct ParallelForeach(R) {
     TaskPool pool;
     R range;
-    size_t blockSize;
+    size_t workUnitSize;
     size_t startIndex;
     ubyte doneSubmitting;
 
@@ -3118,8 +3117,6 @@ private struct ParallelForeach(R) {
 version(unittest) {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
-
-    version = debugPipelining;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
@@ -3140,8 +3137,6 @@ unittest {
 
     poolInstance.priority = oldPriority;
     assert(poolInstance.priority == oldPriority);
-
-    scope(exit) poolInstance.stop;
 
     static void refFun(ref uint num) {
         num++;
@@ -3204,6 +3199,7 @@ unittest {
     auto arr = [1,2,3,4,5];
     auto appNums = appender!(uint[])();
     auto appNums2 = appender!(uint[])();
+
     foreach(i, ref elem; poolInstance.parallel(arr)) {
         elem++;
         synchronized {
@@ -3222,6 +3218,7 @@ unittest {
     nums = null;
     nums2 = null;
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
+
     foreach(i, elem; poolInstance.parallel(range)) {
         synchronized {
             nums ~= cast(uint) i;
@@ -3232,7 +3229,6 @@ unittest {
     sort!"a.at!0 < b.at!0"(zip(nums, nums2));
     assert(nums == nums2);
     assert(nums == [0,1,2,3,4]);
-
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
     assert(poolInstance.amap!"a * a"([1,2,3,4,5], new long[5]) == [1,4,9,16,25]);
@@ -3250,7 +3246,6 @@ unittest {
     assert(buf == [1,4,9,16,25]);
     poolInstance.amap!"a * a"([1,2,3,4,5], 4, buf);
     assert(buf == [1,4,9,16,25]);
-
 
     assert(poolInstance.reduce!"a + b"([1,2,3,4]) == 10);
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4]) == 10);
@@ -3558,3 +3553,4 @@ version(parallelismStressTest) {
         }
     }
 }
+
