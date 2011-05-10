@@ -184,6 +184,7 @@ struct Regex(E) if (is(E == Unqual!E))
 {
 private:
     alias Tuple!(size_t, "startIdx", size_t, "endIdx") regmatch_t;
+    static assert(regmatch_t.sizeof == size_t.sizeof*2);
     enum REA
     {
         global          = 1,    // has the g attribute
@@ -224,7 +225,7 @@ private:
             REnmq,              // n..m, non-greedy version
             REbol,              // beginning of line
             REeol,              // end of line
-            REparen,            // parenthesized subexpression
+            REsave,             // save submatch i.e. ( )
             REgoto,             // goto offset
 
             RElookahead,
@@ -328,6 +329,7 @@ Returns the number of parenthesized captures
         {
             error("unmatched ')'");
         }
+        re_nsub /= 2; //start & ends -> pairs
         // @@@ SKIPPING OPTIMIZATION SOLVES BUG 941 @@@
         //optimize(buf);
         program = cast(immutable(ubyte)[]) buf.data;
@@ -379,16 +381,16 @@ Returns the number of parenthesized captures
             case REnotspace:
             case REword:
             case REnotword:
+            case REsave:
                 return;
 
             case REbol:
                 i++;
                 continue;
-
             case REor:
             case REnm:
             case REnmq:
-            case REparen:
+
             case RElookahead:
             case REneglookahead:
             case REgoto:
@@ -596,14 +598,13 @@ Returns the number of parenthesized captures
             p++;
             if(pattern[p] != '?')
             {
-                buf.write(REparen);
-                offset = buf.offset;
-                buf.write(cast(uint)0);             // reserve space for length
-                buf.write(re_nsub);
-                re_nsub++;
-                parseRegex(pattern, p, buf);
-                *cast(uint *)&buf.data[offset] =
-                     cast(uint)(buf.offset - (offset + uint.sizeof * 2));
+                buf.write(REsave);
+                buf.write(2 + re_nsub);
+                uint end = re_nsub;
+                re_nsub += 2;
+                parseRegex(pattern, p, buf);//re_nsub may change here
+                buf.write(REsave);
+                buf.write(2 + end + 1);
             }
             else if(pattern.length > p+1)
             {
@@ -1154,12 +1155,8 @@ Returns the number of parenthesized captures
                 i += 1 + uint.sizeof * 3 + len;
                 break;
 
-            case REparen:
-                // len, ()
-                len = (cast(uint *)&prog[i + 1])[0];
-                n   = (cast(uint *)&prog[i + 1])[1];
-                pop = &prog[0] + i + 1 + uint.sizeof * 2;
-                return starrchars(r, pop[0 .. len]);
+            case REsave:
+                return 0;
 
             case RElookahead: case REneglookahead:
                 len = (cast(uint *)&prog[i + 1])[0];
@@ -1508,14 +1505,12 @@ Returns the number of parenthesized captures
                     pc += 1 + uint.sizeof * 3;
                     break;
 
-                case REparen:
-                    // len, n, ()
-                    puint = cast(uint *)&prog[pc + 1];
-                    len = puint[0];
-                    n = puint[1];
-                    writefln("\tREparen len=%d n=%d, pc=>%d",
-                            len, n, pc + 1 + uint.sizeof * 2 + len);
-                    pc += 1 + uint.sizeof * 2;
+                case REsave:
+                    // n
+                    n = *cast(uint *)&prog[pc + 1];
+                    writefln("\tREsave %s n=%d ",
+                            n % 2 ? "end" :"start", n/2);
+                    pc += 1 + uint.sizeof;
                     break;
                 case RElookahead:
                      // len, ()
@@ -2481,35 +2476,28 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 pc = pop + len;
                 break;
 
-            case engine.REparen:
-                // len, n, ()
-                debug(std_regex) writefln("\tREparen");
-                puint = cast(uint *)&engine.program[pc + 1];
-                len = puint[0];
-                n = puint[1];
-                pop = pc + 1 + uint.sizeof * 2;
-                ss = src;
-                if (!trymatch(pop, pop + len))
-                    goto Lnomatch;
-                if(!pmatch_touched){
+            case engine.REsave:
+                // n
+                debug(std_regex) writefln("\tREsave");
+                n = (*cast(uint *)&engine.program[pc + 1]);
+                if(!pmatch_touched)
+                {
                     pmatch_touched = true;
                     if(!psave)
                         psave = cast(regmatch_t *)alloca(
-                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                             (engine.re_nsub + 1) * regmatch_t.sizeof);
                     memcpy(psave, pmatch.ptr,
-                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                        (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
-                pmatch[n + 1].startIdx = ss;
-                pmatch[n + 1].endIdx = src;
+                (cast(size_t*)pmatch)[n] = src;
                 debug(std_regex)
                 {
-                    writefln("Total matches NOW:");
-                    for(int i=0;i<engine.re_nsub+1;i++)
-                        writefln("\tmatch # %d at %d .. %d",i, pmatch[i].startIdx,pmatch[i].endIdx);
+                    if(n % 2 == 0)
+                        writefln("\tmatch # %d at %d .. %d",n/2, 
+                                 pmatch[n/2].startIdx,pmatch[n/2].endIdx);
                 }
-                pc = pop + len;
+                pc += uint.sizeof+1;
                 break;
-
 
             case engine.RElookahead:
             case engine.REneglookahead:
@@ -3622,21 +3610,22 @@ unittest
 //matching goes out of control if ... in (...){2} has .*/.+
 unittest
 {
-    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+/*    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
     assert(c[0] == "axxxzayyyyyzd");
-    assert(c[1] == "ayyyyyz");
+    assert(c[1] == "ayyyyyz");*/
 }
 
 //issue 2108
 //greedy vs non-greedy
 unittest
 {
-    auto nogreed = regex("<packet.*?/packet>");
+    /+auto nogreed = regex("<packet.*?/packet>");
     assert(match("<packet>text</packet><packet>text</packet>",nogreed).hit
            == "<packet>text</packet>");
     auto greed =  regex("<packet.*/packet>");
     assert(match("<packet>text</packet><packet>text</packet>",greed).hit
            == "<packet>text</packet><packet>text</packet>");
+    +/
 }
 
 //issue 4574
