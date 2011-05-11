@@ -13,7 +13,7 @@
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
- *            $(WEB octarineparrot.com, Robert Clipsham ($(D Wrapped)))
+ *            $(WEB octarineparrot.com, Robert Clipsham ($(D WrapTypes)))
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
