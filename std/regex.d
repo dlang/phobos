@@ -209,8 +209,8 @@ private:
             REdchar,            // single UCS character
             REidchar,           // single wide character, case insensitive
             REanychar,          // any character
-            REanystar,          // ".*"
-
+            REanystar,          // ".*?"
+            REanystarg,         // ".*"
 
             REstring,           // string of characters
             REistring,          // string of characters, case insensitive
@@ -491,17 +491,21 @@ Returns the number of parenthesized captures
         switch (pattern[p])
         {
         case '*':
-            // Special optimization: replace .* with REanystar
-            /* if (buf.offset - offset == 1 &&
-                    buf.data[offset] == REanychar &&
-                    p + 1 < plength &&
-                    pattern[p + 1] != '?')
+            // Special optimization: replace any _not nested_ .* with REanystar
+            if (buf.offset - offset == 1 && counter == 0
+                    && buf.data[offset] == REanychar)
             {
-                buf.data[offset] = REanystar;
+                if (p + 1 < plength &&
+                    pattern[p + 1] == '?')
+                {
+                    buf.data[offset] = REanystar;
+                    p++;
+                }
+                else
+                    buf.data[offset] = REanystarg;
                 p++;
-                break;
-            }*/
-
+                return;
+            }
             n = 0;
             m = inf;
             goto Lnm;
@@ -1495,6 +1499,12 @@ Returns the number of parenthesized captures
                             len, pc + 1 + uint.sizeof + len);
                     pc += 1 + uint.sizeof;
                     break;
+                
+                case REanystar:
+                case REanystarg:
+                    writefln("\tREanystar%s",prog[pc] == REanystarg ? "g":"");
+                    pc++;
+                    break;
 
                 case REcounter:
                     // n
@@ -1599,7 +1609,7 @@ Returns the number of parenthesized captures
 Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 (String pattern, string flags = null)
 {
-    static Tuple!(String, string) lastReq = tuple("","\u0001");//most unlikely
+    static Tuple!(String, string) lastReq = tuple(cast(String)"","\u0001");//most unlikely
     static typeof(return) lastResult;
     if (lastReq[0] == pattern && lastReq[1] == flags)
     {
@@ -2016,7 +2026,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 return true;
             }
             // If possible match must start at beginning, we are done
-            if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanystar)
+            if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanystarg)
 
 
             {
@@ -2093,8 +2103,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
     private bool trymatch(size_t pc,void[] memory)
     {
         size_t len;
-        size_t n;
-        size_t m;
+        uint n;
+        uint m;
         size_t pop;
         size_t ss;
         size_t c1;
@@ -2109,8 +2119,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
             + counters.length * uint.sizeof;
         struct StateTail
         {//preceeded by all matches, then by all counters
-            size_t pc, src, counter;
-            size_t size;
+            size_t pc, src;
+            uint counter, size;
         }
         bool backtrack()
         {
@@ -2132,7 +2142,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         void memoize(size_t newpc)
         {
             if (memory.length < lastState + StateTail.sizeof + stateSize) 
-                throw new Error("Out of memory");
+                throw new Exception("out of memory");
             memcpy(&memory[lastState],pmatch.ptr,
                         pmatch.length * regmatch_t.sizeof);
             memcpy(&memory[lastState + pmatch.length * regmatch_t.sizeof],
@@ -2143,7 +2153,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             tail.pc = newpc;
             tail.src = src;
             tail.counter = curCounter;
-            tail.size = stateSize + StateTail.sizeof;
+            tail.size = cast(uint)(stateSize + StateTail.sizeof);
             lastState = lastState + StateTail.sizeof;
         }
         debug(std_regex)
@@ -2219,7 +2229,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 src++;
                 pc += 1 + dchar.sizeof;
                 break;
-
+            
             case engine.REanychar:
                 debug(std_regex) writefln("\tREanychar");
                 if (src == input.length)
@@ -2379,106 +2389,41 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 pc += 1 + uint.sizeof + len;
                 break;
 
-            /*case engine.REanystar:
-                debug(std_regex) writefln("\tREanystar");
+            case engine.REanystar:
                 pc++;
                 for (;;)
                 {
-                    auto s1 = src;
                     if (src == input.length)
                         break;
-
                     if (!(engine.attributes & engine.REA.dotmatchlf)
                             && input[src] == '\n')
                         break;
-
-
-                    src++;
-                    auto s2 = src;
-
-
-                    // If no match after consumption, but it
-                    // did match before, then no match
-                    if (!trymatch(pc, engine.program.length))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    {
-                        src = s1;
-                        // BUG: should we save/restore pmatch[]?
-
-
-
-
-
-
-
-
-                        if (trymatch(pc, engine.program.length))
-                        {
-                            src = s1;           // no match
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            break;
-
-
-
-
-
-
-
-
-
-
-
-                        }
-
-                    }
-                    src = s2;
-
+                    ss = src;
+                    if (trymatch(pc,memory[lastState..$]))
+                        return true;
+                    src = ss;
+                    src += std.utf.stride(input,src);
                 }
-                break;*/
+                break;
+
+            case engine.REanystarg:
+                debug(std_regex) writefln("\tREanystar");
+                pc++;
+                ss = src;
+                if (engine.attributes & engine.REA.dotmatchlf)
+                    src = input.length;
+                else
+                {
+                    auto p = memchr(&input[src],'\n',input.length-src);
+                    src = p ? p - &input[src] : input.length;
+                }
+                for (;src > ss;)
+                {
+                    if (trymatch(pc,memory[lastState..$]))
+                        return true;
+                    src -= std.utf.stride(input,src-1);
+                }
+                break;
 
             case engine.REcounter:
                 // n
@@ -2523,7 +2468,6 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 counters[curCounter]++;
                 if (engine.program[pc] == engine.REloop)
                 {
-                    trackers[curCounter] = src;
                     memoize(pc-len); //memoize next step of loop
                     trackers[curCounter] = size_t.max;
                     curCounter--; 
@@ -2536,13 +2480,6 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     curCounter++; 
                     pc = pc - len; //move on with the loop
                     trackers[curCounter] = src;
-
-
-
-
-
-
-
                 }
                 break;
 
