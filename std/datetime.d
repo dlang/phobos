@@ -71,7 +71,7 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),
     $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
     $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns) or some subset thereof.
+    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
     There are a few functions in core.time which take $(D "nsecs"), but because
     nothing in std.datetime has precision greater than hnsecs, and very little
     in core.time does, no functions in std.datetime accept $(D "nsecs").
