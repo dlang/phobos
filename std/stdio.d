@@ -949,6 +949,8 @@ to this file. */
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         std.file.write("testingByLine", "asd\ndef\nasdf");
+        scope(success) std.file.remove("testingByLine");
+
         auto witness = [ "asd", "def", "asdf" ];
         uint i;
         auto f = File("testingByLine");
@@ -956,7 +958,6 @@ to this file. */
         {
             f.close;
             assert(!f.isOpen);
-            //std.file.remove("testingByLine");
         }
         foreach (line; f.byLine())
         {

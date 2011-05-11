@@ -156,11 +156,11 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint			\
         bitmanip compiler complex concurrency container contracts		\
         conv cpuid cstream ctype date datetime datebase dateparse		\
         demangle encoding exception file format functional getopt		\
-        gregorian intrinsic json loader log math mathspecial md5		\
-        metastrings mmfile numeric outbuffer parallelism path perf		\
-        process random range regex regexp signals socket socketstream	\
-        stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf variant xml zip zlib)
+        gregorian json loader log math mathspecial md5 metastrings		\
+        mmfile numeric outbuffer parallelism path perf process random	\
+        range regex regexp signals socket socketstream stdint stdio		\
+        stdiobase stream string syserror system traits typecons			\
+        typetuple uni uri utf variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 

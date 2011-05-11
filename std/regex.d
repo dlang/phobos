@@ -98,7 +98,7 @@ http://www.unicode.org/unicode/reports/tr18/
 
 module std.regex;
 
-//debug = regex;                // uncomment to turn on debugging printf's
+//debug = std_regex;                // uncomment to turn on debugging writef's
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
@@ -198,7 +198,6 @@ private:
     ubyte attributes;
     immutable(ubyte)[] program; // pattern[] compiled into regular
                                 // expression program
-
 // Opcodes
 
     enum : ubyte
@@ -209,7 +208,8 @@ private:
             REdchar,            // single UCS character
             REidchar,           // single wide character, case insensitive
             REanychar,          // any character
-            REanystar,          // ".*"
+            REanynm,            // ".*",".+",".{n,m}"
+            REanynmq,           // ".*?",".+?",".{n,m}?"
             REstring,           // string of characters
             REistring,          // string of characters, case insensitive
             REtestbit,          // any in bitmap, non-consuming
@@ -221,13 +221,17 @@ private:
             REplus,             // 1 or more
             REstar,             // 0 or more
             REquest,            // 0 or 1
-            REnm,               // n..m
-            REnmq,              // n..m, non-greedy version
+            REm,                // 0..m
+            REmq,               // 0..m, non-greedy version
             REbol,              // beginning of line
             REeol,              // end of line
             REparen,            // parenthesized subexpression
             REgoto,             // goto offset
 
+            RElookahead,
+            REneglookahead,
+            RElookbehind,
+            REneglookbehind,
             REwordboundary,
             REnotwordboundary,
             REdigit,
@@ -263,7 +267,7 @@ Throws: $(D Exception) if there are any compilation errors.
 
     unittest
     {
-        debug(regex) printf("regex.opCall.unittest()\n");
+        debug(std_regex) writefln("regex.opCall.unittest()");
         auto r1 = Regex("hello", "m");
         string msg;
         try
@@ -335,7 +339,7 @@ Returns the number of parenthesized captures
     void error(string msg)
     {
         //errors++;
-        debug(regex) printf("error: %.*s\n", msg.length, msg.ptr);
+        debug(std_regex) writefln("error: %s", msg);
         throw new Exception(msg);
     }
 
@@ -345,16 +349,17 @@ Returns the number of parenthesized captures
     {
         ubyte[] prog;
 
-        debug(regex) printf("Regex.optimize()\n");
+        debug(std_regex) writefln("Regex.optimize()");
         prog = buf.toBytes();
         for (size_t i = 0; 1;)
         {
-            //printf("\tprog[%d] = %d, %d\n", i, prog[i], REstring);
+            //writefln("\tprog[%d] = %d, %d", i, prog[i], REstring);
             switch (prog[i])
             {
             case REend:
             case REanychar:
-            case REanystar:
+            case REanynm:
+            case REanynmq:
             case REbackref:
             case REeol:
             case REchar:
@@ -383,9 +388,11 @@ Returns the number of parenthesized captures
                 continue;
 
             case REor:
-            case REnm:
-            case REnmq:
+            case REm:
+            case REmq:
             case REparen:
+            case RElookahead:
+            case REneglookahead:
             case REgoto:
             {
                 auto bitbuf = new OutBuffer;
@@ -393,7 +400,7 @@ Returns the number of parenthesized captures
                 size_t offset = i;
                 if (starrchars(r, prog[i .. prog.length]))
                 {
-                    debug(regex) printf("\tfilter built\n");
+                    debug(std_regex) writefln("\tfilter built");
                     buf.spread(offset, 1 + 4 + r.maxb);
                     buf.data[offset] = REtestbit;
                     (cast(ushort *)&buf.data[offset + 1])[0] =
@@ -461,10 +468,9 @@ Returns the number of parenthesized captures
         ubyte op;
         sizediff_t plength = pattern.length;
 
-        debug(regex)
-        {
-            auto sss = pattern[p .. pattern.length];
-            printf("parsePiece() '%.*s'\n", sss.length, sss.ptr);
+        debug(std_regex)
+        {   auto sss = pattern[p .. pattern.length];
+            writefln("parsePiece() '%s'", sss);
         }
         offset = buf.offset;
         parseAtom(pattern, p, buf);
@@ -473,17 +479,6 @@ Returns the number of parenthesized captures
         switch (pattern[p])
         {
         case '*':
-            // Special optimization: replace .* with REanystar
-            if (buf.offset - offset == 1 &&
-                    buf.data[offset] == REanychar &&
-                    p + 1 < plength &&
-                    pattern[p + 1] != '?')
-            {
-                buf.data[offset] = REanystar;
-                p++;
-                break;
-            }
-
             n = 0;
             m = inf;
             goto Lnm;
@@ -541,18 +536,35 @@ Returns the number of parenthesized captures
 
         Lnm:
             p++;
-            op = REnm;
+            op = REm;
             if (p < plength && pattern[p] == '?')
-            {   op = REnmq;     // minimal munch version
+            {   op = REmq;     // minimal munch version
                 p++;
             }
+            // Special optimization: replace .{n,m} with REanynm/REanynmq
+            if (buf.offset - offset == 1 &&
+                    buf.data[offset] == REanychar)
+            {   buf.data[offset] = (op == REmq) ? REanynmq : REanynm;
+                buf.write(n);
+                buf.write(m);
+                break;
+            }
             len = cast(uint)(buf.offset - offset);
-            buf.spread(offset, 1 + uint.sizeof * 3);
-            buf.data[offset] = op;
-            uint* puint = cast(uint *)&buf.data[offset + 1];
-            puint[0] = len;
-            puint[1] = n;
-            puint[2] = m;
+            if (n)
+            {   uint rep = (n == m) ? n-1 : n;
+                //just replicate rep times
+                foreach (i; 0..rep)
+                    buf.write(buf.data[offset..offset+len]);
+                 //offset should be realigned
+                 offset = buf.offset - len;
+            }
+            if (m != n)
+            {   buf.spread(offset, 1 + uint.sizeof * 2);
+                buf.data[offset] = op;
+                uint* puint = cast(uint *)&buf.data[offset + 1];
+                puint[0] = len;
+                puint[1] = m - n;
+            }
             break;
 
         default:
@@ -571,10 +583,9 @@ Returns the number of parenthesized captures
         size_t offset;
         E c;
 
-        debug(regex)
-        {
-            auto sss = pattern[p .. pattern.length];
-            printf("parseAtom() '%.*s'\n", sss.length, sss.ptr);
+        debug(std_regex)
+        {   auto sss = pattern[p .. pattern.length];
+            writefln("parseAtom() '%s'", sss);
         }
         if (p >= pattern.length) return 1;
         c = pattern[p];
@@ -589,17 +600,46 @@ Returns the number of parenthesized captures
 
         case '(':
             p++;
-            buf.write(REparen);
-            offset = buf.offset;
-            buf.write(cast(uint)0);             // reserve space for length
-            buf.write(re_nsub);
-            re_nsub++;
-            parseRegex(pattern, p, buf);
-            *cast(uint *)&buf.data[offset] =
-                cast(uint) (buf.offset - (offset + uint.sizeof * 2));
-            if (p == pattern.length || pattern[p] != ')')
+            if (pattern[p] != '?')
             {
-                error("')' expected");
+                buf.write(REparen);
+                offset = buf.offset;
+                buf.write(cast(uint)0);             // reserve space for length
+                buf.write(re_nsub);
+                re_nsub++;
+                parseRegex(pattern, p, buf);
+                *cast(uint *)&buf.data[offset] =
+                     cast(uint)(buf.offset - (offset + uint.sizeof * 2));
+            }
+            else if (pattern.length > p+1)
+            {
+                p++;
+                switch(pattern[p])
+                {
+                case ':':
+                    p++;
+                    parseRegex(pattern, p, buf);
+                    break;
+                case '=': case '!':
+                    buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
+                    offset = buf.offset;
+                    buf.write(cast(uint)0); // reserve space for length
+                    p++;
+                    parseRegex(pattern, p, buf);
+                    *cast(uint *)&buf.data[offset] =
+                        cast(uint)(buf.offset - (offset + uint.sizeof));
+                    break;
+                default:
+                    error("any of :=! expected after '(?'");
+                    return 0;
+                }
+            }
+            else
+            {   error("any of :=! expected after '(?'");
+                return 0;
+            }
+            if (p == pattern.length || pattern[p] != ')')
+            {   error("')' expected");
                 return 0;
             }
             p++;
@@ -730,8 +770,8 @@ Returns the number of parenthesized captures
                 len = q - p;
                 if (len > 0)
                 {
-                    debug(regex) printf("writing string len %d, c = '%c'"
-                            ", pattern[p] = '%c'\n", len+1, c, pattern[p]);
+                    debug(std_regex) writefln("writing string len %d, c = '%s'"
+                            ", pattern[p] = '%s'", len+1, c, pattern[p]);
                     buf.reserve(5 + (1 + len) * E.sizeof);
                     buf.write((attributes & REA.ignoreCase)
                             ? REistring : REstring);
@@ -747,7 +787,7 @@ Returns the number of parenthesized captures
             }
             if (c >= 0x80)
             {
-                debug(regex) printf("dchar\n");
+                debug(std_regex) writefln("dchar");
                 // Convert to dchar opcode
                 op = (op == REchar) ? REdchar : REidchar;
                 buf.write(op);
@@ -756,7 +796,7 @@ Returns the number of parenthesized captures
             else
             {
               Lchar:
-                debug(regex) printf("It's an REchar '%c'\n", c);
+                debug(std_regex) writefln("It's an REchar '%s'", c);
                 buf.write(op);
                 buf.write(cast(char)c);
             }
@@ -782,15 +822,14 @@ Returns the number of parenthesized captures
 
         void setbitmax(size_t u)
         {
-            //printf("setbitmax(x%x), maxc = x%x\n", u, maxc);
+            //writefln("setbitmax(x%x), maxc = x%x", u, maxc);
             if (u <= maxc)
                 return;
             maxc = u;
             auto b = u / 8;
             if (b >= maxb)
-            {   size_t u2;
-
-                u2 = base ? base - &buf.data[0] : 0;
+            {
+                size_t u2 = base ? base - &buf.data[0] : 0;
                 buf.fill0(b - maxb + 1);
                 base = &buf.data[u2];
                 maxb = b + 1;
@@ -803,7 +842,7 @@ Returns the number of parenthesized captures
         void setbit2(size_t u)
         {
             setbitmax(u + 1);
-            //printf("setbit2 [x%02x] |= x%02x\n", u >> 3, 1 << (u & 7));
+            //writefln("setbit2 [x%02x] |= x%02xn", u >> 3, 1 << (u & 7));
             bits[u] = 1;
         }
 
@@ -856,8 +895,9 @@ Returns the number of parenthesized captures
             {
             case ']':
                 switch (rs)
-                {   case RS.dash:
-                        r.setbit2('-');
+                {
+                case RS.dash:
+                    r.setbit2('-');
                 case RS.rliteral:
                     r.setbit2(c);
                     break;
@@ -950,7 +990,8 @@ Returns the number of parenthesized captures
                 p++;
             Lrange:
                 switch (rs)
-                {   case RS.rliteral:
+                {
+                case RS.rliteral:
                         r.setbit2(c);
                 case RS.start:
                     c = c2;
@@ -963,7 +1004,7 @@ Returns the number of parenthesized captures
                         return 0;
                     }
                     r.setbitmax(c2);
-                    //printf("c = %x, c2 = %x\n",c,c2);
+                    //writefln("c = %x, c2 = %x",c,c2);
                     for (; c <= c2; c++)
                         r.bits[c] = 1;
                     rs = RS.start;
@@ -988,7 +1029,7 @@ Returns the number of parenthesized captures
                     r.bits[c] = 1;
             }
         }
-        //printf("maxc = %d, maxb = %d\n",r.maxc,r.maxb);
+        //writefln("maxc = %d, maxb = %d",r.maxc,r.maxb);
         (cast(ushort *)&buf.data[offset])[0] = cast(ushort)r.maxc;
         (cast(ushort *)&buf.data[offset])[1] = cast(ushort)r.maxb;
         return 1;
@@ -1014,8 +1055,8 @@ Returns the number of parenthesized captures
         uint m;
         const(ubyte)* pop;
 
-        debug(regex)
-                 printf("Regex.starrchars(prog = %p, progend = %p)\n",
+        debug(std_regex)
+                 writefln("Regex.starrchars(prog = %p, progend = %p)",
                          prog.ptr, prog.ptr + prog.length);
         for (size_t i = 0; i < prog.length;)
         {
@@ -1046,7 +1087,7 @@ Returns the number of parenthesized captures
                 len = *cast(size_t *)&prog[i + 1] / E.sizeof;
                 assert(len);
                 c = *cast(E *)&prog[i + 1 + size_t.sizeof];
-                debug(regex) printf("\tREstring %d, '%c'\n", len, c);
+                debug(std_regex) writefln("\tREstring %d, '%s'", len, c);
                 if (c <= 0x7F)
                     r.setbit2(c);
                 return 1;
@@ -1056,7 +1097,7 @@ Returns the number of parenthesized captures
                 assert(len && len % E.sizeof == 0);
                 len /= E.sizeof;
                 c = *cast(E *)&prog[i + 1 + size_t.sizeof];
-                debug(regex) printf("\tREistring %d, '%c'\n", len, c);
+                debug(std_regex) writefln("\tREistring %d, '%s'", len, c);
                 if (c <= 0x7F)
                 {   r.setbit2(std.ctype.toupper(cast(E) c));
                     r.setbit2(std.ctype.tolower(cast(E) c));
@@ -1102,21 +1143,20 @@ Returns the number of parenthesized captures
                 i += 1 + uint.sizeof + len;
                 break;
 
-            case REanystar:
+            case REanynm: case REanynmq:
                 return 0;
 
-            case REnm:
-            case REnmq:
-                // len, n, m, ()
+            case REm:
+            case REmq:
+                // len, m, ()
                 len = (cast(uint *)&prog[i + 1])[0];
-                n   = (cast(uint *)&prog[i + 1])[1];
-                m   = (cast(uint *)&prog[i + 1])[2];
-                pop = &prog[i + 1 + uint.sizeof * 3];
+                m   = (cast(uint *)&prog[i + 1])[1];
+                pop = &prog[i + 1 + uint.sizeof * 2];
                 if (!starrchars(r, pop[0 .. len]))
                     return 0;
                 if (n)
                     return 1;
-                i += 1 + uint.sizeof * 3 + len;
+                i += 1 + uint.sizeof * 2 + len;
                 break;
 
             case REparen:
@@ -1124,6 +1164,11 @@ Returns the number of parenthesized captures
                 len = (cast(uint *)&prog[i + 1])[0];
                 n   = (cast(uint *)&prog[i + 1])[1];
                 pop = &prog[0] + i + 1 + uint.sizeof * 2;
+                return starrchars(r, pop[0 .. len]);
+
+            case RElookahead: case REneglookahead:
+                len = *(cast(uint *)&prog[i + 1]);
+                pop = &prog[0] + i + 1 + uint.sizeof ;
                 return starrchars(r, pop[0 .. len]);
 
             case REend:
@@ -1312,7 +1357,7 @@ Returns the number of parenthesized captures
     void printProgram(const(ubyte)[] prog = null)
     {
         if (!prog) prog = program;
-        //debug(regex)
+        //debug(std_regex)
         {
             size_t len;
             uint n;
@@ -1321,34 +1366,34 @@ Returns the number of parenthesized captures
             uint *puint;
             char[] str;
 
-            printf("printProgram()\n");
+            writefln("printProgram()");
             for (size_t pc = 0; pc < prog.length; )
             {
-                printf("%3d: ", pc);
+                writef("%3d: ", pc);
                 switch (prog[pc])
                 {
                 case REchar:
-                    printf("\tREchar '%c'\n", prog[pc + 1]);
+                    writefln("\tREchar '%s'", cast(char)prog[pc + 1]);
                     pc += 1 + char.sizeof;
                     break;
 
                 case REichar:
-                    printf("\tREichar '%c'\n", prog[pc + 1]);
+                    writefln("\tREichar '%s'", cast(char)prog[pc + 1]);
                     pc += 1 + char.sizeof;
                     break;
 
                 case REdchar:
-                    printf("\tREdchar '%c'\n", *cast(dchar *)&prog[pc + 1]);
+                    writefln("\tREdchar '%s'", *cast(dchar *)&prog[pc + 1]);
                     pc += 1 + dchar.sizeof;
                     break;
 
                 case REidchar:
-                    printf("\tREidchar '%c'\n", *cast(dchar *)&prog[pc + 1]);
+                    writefln("\tREidchar '%s'", *cast(dchar *)&prog[pc + 1]);
                     pc += 1 + dchar.sizeof;
                     break;
 
                 case REanychar:
-                    printf("\tREanychar\n");
+                    writefln("\tREanychar");
                     pc++;
                     break;
 
@@ -1356,13 +1401,13 @@ Returns the number of parenthesized captures
                     len = *cast(size_t *)&prog[pc + 1];
                     assert(len % E.sizeof == 0);
                     len /=  E.sizeof;
-                    printf("\tREstring x%x*%d, ", len, E.sizeof);
+                    writef("\tREstring x%x*%d, ", len, E.sizeof);
                     auto es = cast(E*) (&prog[pc + 1 + size_t.sizeof]);
                     foreach (e; es[0 .. len])
                     {
-                        printf("'%c' ", e);
+                        writef("'%s' ", e);
                     }
-                    printf("\n");
+                    writefln("");
                     pc += 1 + size_t.sizeof + len * E.sizeof;
                     break;
 
@@ -1370,19 +1415,19 @@ Returns the number of parenthesized captures
                     len = *cast(size_t *)&prog[pc + 1];
                     assert(len % E.sizeof == 0);
                     len /=  E.sizeof;
-                    printf("\tREistring x%x*%d, ", len, E.sizeof);
+                    writef("\tREistring x%x*%d, ", len, E.sizeof);
                     auto es = cast(E*) (&prog[pc + 1 + size_t.sizeof]);
                     foreach (e; es[0 .. len])
                     {
-                        printf("'%c' ", e);
+                        writef("'%s' ", e);
                     }
-                    printf("\n");
+                    writefln("");
                     pc += 1 + size_t.sizeof + len * E.sizeof;
                     break;
 
                 case REtestbit:
                     pu = cast(ushort *)&prog[pc + 1];
-                    printf("\tREtestbit %d, %d: ", pu[0], pu[1]);
+                    writef("\tREtestbit %d, %d: ", pu[0], pu[1]);
                     len = pu[1];
                     {
                         ubyte * b = cast(ubyte*)pu;
@@ -1398,74 +1443,78 @@ Returns the number of parenthesized captures
                 case REbit:
                     pu = cast(ushort *)&prog[pc + 1];
                     len = pu[1];
-                    printf("\tREbit cmax=%02x, len=%d:", pu[0], len);
+                    writef("\tREbit cmax=%02x, len=%d:", pu[0], len);
                     for (n = 0; n < len; n++)
-                        printf(" %02x", prog[pc + 1 + 2 * ushort.sizeof + n]);
-                    printf("\n");
+                        writef(" %02x", prog[pc + 1 + 2 * ushort.sizeof + n]);
+                    writefln("");
                     pc += 1 + 2 * ushort.sizeof + len;
                     break;
 
                 case REnotbit:
                     pu = cast(ushort *)&prog[pc + 1];
-                    printf("\tREnotbit %d, %d\n", pu[0], pu[1]);
+                    writefln("\tREnotbit %d, %d", pu[0], pu[1]);
                     len = pu[1];
                     pc += 1 + 2 * ushort.sizeof + len;
                     break;
 
                 case RErange:
                     len = *cast(uint *)&prog[pc + 1];
-                    printf("\tRErange %d\n", len);
+                    writefln("\tRErange %d", len);
                     // BUG: REAignoreCase?
                     pc += 1 + uint.sizeof + len;
                     break;
 
                 case REnotrange:
                     len = *cast(uint *)&prog[pc + 1];
-                    printf("\tREnotrange %d\n", len);
+                    writefln("\tREnotrange %d", len);
                     // BUG: REAignoreCase?
                     pc += 1 + uint.sizeof + len;
                     break;
 
                 case REbol:
-                    printf("\tREbol\n");
+                    writefln("\tREbol");
                     pc++;
                     break;
 
                 case REeol:
-                    printf("\tREeol\n");
+                    writefln("\tREeol");
                     pc++;
                     break;
 
                 case REor:
                     len = *cast(uint *)&prog[pc + 1];
-                    printf("\tREor %d, pc=>%d\n", len,
+                    writefln("\tREor %d, pc=>%d", len,
                             pc + 1 + uint.sizeof + len);
                     pc += 1 + uint.sizeof;
                     break;
 
                 case REgoto:
                     len = *cast(uint *)&prog[pc + 1];
-                    printf("\tREgoto %d, pc=>%d\n",
+                    writefln("\tREgoto %d, pc=>%d",
                             len, pc + 1 + uint.sizeof + len);
                     pc += 1 + uint.sizeof;
                     break;
 
-                case REanystar:
-                    printf("\tREanystar\n");
-                    pc++;
+                case REanynm:
+                case REanynmq:
+                    puint = cast(uint*)&prog[pc+1];
+                    n = puint[0];
+                    m = puint[1];
+                    writefln("\tREanynm%s n=%u, m=%u",
+                             (prog[pc] == REanynmq) ? "q":"", n, m);
+                    pc += 1 + uint.sizeof * 2;
                     break;
 
-                case REnm:
-                case REnmq:
-                    // len, n, m, ()
+                case REm:
+                case REmq:
+                    // len, m, ()
                     puint = cast(uint *)&prog[pc + 1];
                     len = puint[0];
-                    n = puint[1];
-                    m = puint[2];
-                    printf("\tREnm%s len=%d, n=%u, m=%u, pc=>%d\n",
-                            (prog[pc] == REnmq) ? "q".ptr : " ".ptr,
-                            len, n, m, pc + 1 + uint.sizeof * 3 + len);
-                    pc += 1 + uint.sizeof * 3;
+                    m = puint[1];
+                    writefln("\tREm%s len=%d, m=%u, pc=>%d",
+                            (prog[pc] == REmq) ? "q" : " ",
+                            len, m, pc + 1 + uint.sizeof * 2 + len);
+                    pc += 1 + uint.sizeof * 2;
                     break;
 
                 case REparen:
@@ -1473,57 +1522,71 @@ Returns the number of parenthesized captures
                     puint = cast(uint *)&prog[pc + 1];
                     len = puint[0];
                     n = puint[1];
-                    printf("\tREparen len=%d n=%d, pc=>%d\n",
+                    writefln("\tREparen len=%d n=%d, pc=>%d",
                             len, n, pc + 1 + uint.sizeof * 2 + len);
                     pc += 1 + uint.sizeof * 2;
                     break;
+                case RElookahead:
+                     // len, ()
+                    len = *cast(uint *)&prog[pc + 1];
+                    writefln("\tRElookahead len=%d, pc=>%d",
+                            len, pc + 1 + uint.sizeof + len);
+                    pc += 1 + uint.sizeof;
+                    break;
+                case REneglookahead:
+                    // len, ()
+                    len = *cast(uint *)&prog[pc + 1];
+                    writefln("\tREneglookahead len=%d, pc=>%d",
+                            len, pc + 1 + uint.sizeof + len);
+                    pc += 1 + uint.sizeof;
+                    break;
 
                 case REend:
-                    printf("\tREend\n");
+                    writefln("\tREend");
                     return;
 
                 case REwordboundary:
-                    printf("\tREwordboundary\n");
+                    writefln("\tREwordboundary");
                     pc++;
                     break;
 
                 case REnotwordboundary:
-                    printf("\tREnotwordboundary\n");
+                    writefln("\tREnotwordboundary");
                     pc++;
                     break;
 
                 case REdigit:
-                    printf("\tREdigit\n");
+                    writefln("\tREdigit");
                     pc++;
                     break;
 
                 case REnotdigit:
-                    printf("\tREnotdigit\n");
+                    writefln("\tREnotdigit");
                     pc++;
                     break;
 
                 case REspace:
-                    printf("\tREspace\n");
+                    writefln("\tREspace");
                     pc++;
                     break;
 
                 case REnotspace:
-                    printf("\tREnotspace\n");
+                    writefln("\tREnotspace");
                     pc++;
                     break;
 
                 case REword:
-                    printf("\tREword\n");
+                    writefln("\tREword");
                     pc++;
                     break;
 
                 case REnotword:
-                    printf("\tREnotword\n");
+                    writefln("\tREnotword");
                     pc++;
                     break;
 
                 case REbackref:
-                    printf("\tREbackref %d\n", prog[1]);
+                    writefln("\tREbackref %d", prog[1]);
                     pc += 2;
                     break;
 
@@ -1578,14 +1641,14 @@ Get or set the engine of the match.
     regmatch_t[] pmatch;    // array [engine.re_nsub + 1]
 
 /*
-Build a RegexMatch from an engineine and an input.
+Build a RegexMatch from an engine.
 */
     private this(Regex engine)
     {
         this.engine = engine;
         pmatch.length = engine.re_nsub + 1;
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
     }
 
 /*
@@ -1595,8 +1658,8 @@ Build a RegexMatch from an engine and an input.
     {
         this.engine = engine;
         pmatch.length = engine.re_nsub + 1;
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
         this.input = input;
         // amorsate
         test;
@@ -1682,7 +1745,7 @@ void main()
     unittest
     {
         // @@@BUG@@@ This doesn't work if a client module uses -unittest
-        // debug(regex) printf("regex.search.unittest()\n");
+        // debug(std_regex) writefln("regex.search.unittest()");
 
         // int i;
         // //foreach(m; RegexMatch("ab").search("abcabcabab"))
@@ -1721,6 +1784,13 @@ void main()
 
         void popFront() {  matches.popFront; }
 
+        @property Range back()
+        {
+            return input[matches[$-1].startIdx .. matches[$-1].endIdx];
+        }
+
+        void popBack() { matches.popBack; }
+
         @property typeof(this) save()
         {
             return this;
@@ -1728,16 +1798,12 @@ void main()
 
         @property size_t length()
         {
-            foreach (i; 0 .. matches.length)
-            {
-                if (matches[i].startIdx >= input.length) return i;
-            }
             return matches.length;
         }
 
         Range opIndex(size_t n)
         {
-            assert(n < length, text(n));
+            assert(n < length, text("length = ",length, ", requested match = ", n));
             return input[matches[n].startIdx .. matches[n].endIdx];
         }
     }
@@ -1762,7 +1828,7 @@ foreach (m; match("abracadabra", "(.)a(.)"))
  */
     public Captures captures()
     {
-        return Captures(input, pmatch);
+        return Captures(input, empty ? [] : pmatch);
     }
 
     unittest
@@ -1783,7 +1849,7 @@ Returns the slice of the input that precedes the matched substring.
  */
     public Range pre()
     {
-        return input[0 .. pmatch[0].endIdx > pmatch[0].startIdx
+        return input[0 .. pmatch[0].startIdx != pmatch[0].startIdx.max
                 ? pmatch[0].startIdx : $];
     }
 
@@ -1847,14 +1913,14 @@ Returns $(D hit) (converted to $(D string) if necessary).
                                                 // special characters)
                     format == replacement)              // simple format, not $ formats
             {
-                debug(regex)
+                debug(std_regex)
                 {
                     auto sss = result[offset + so .. offset + eo];
-                    printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",
-                            pattern.length,     pattern.ptr,
-                            sss.length,         sss.ptr,
-                            format.length,      format.ptr,
-                            replacement.length, replacement.ptr);
+                    writefln("pattern: %s, slice: %s, format: %s, replacement: %s",
+                            pattern,
+                            sss,
+                            format,
+                            replacement);
                 }
                 result = std.string.replace(result,slice,replacement);
                 break;
@@ -1885,19 +1951,30 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
     private bool test(size_t startindex = size_t.max)
     {
-        if (startindex == size_t.max) startindex = pmatch[0].endIdx;
-        //writeln("matching [", input, "] starting from ", startindex);
-        debug (regex) printf("Regex.test(input[] = '%.*s', startindex = %d)\n",
-                input.length, input.ptr, startindex);
-        if (startindex > input.length)
+        if (startindex == size_t.max)
         {
-            pmatch[0].startIdx = pmatch[0].startIdx.max;
-            pmatch[0].endIdx = pmatch[0].endIdx.max;
-            return 0;                   // fail
+            if (pmatch[0].endIdx != pmatch[0].endIdx.max)
+            {
+                startindex = pmatch[0].endIdx;
+                if (startindex >= input.length)
+                {
+                    pmatch[0].startIdx = pmatch[0].startIdx.max;
+                    pmatch[0].endIdx = pmatch[0].endIdx.max;
+                    return false;                   // fail
+                }
+                if (pmatch[0].endIdx == pmatch[0].startIdx)
+                    startindex += std.utf.stride(input,pmatch[0].endIdx);
+            }
+            else
+               startindex = 0;
         }
+        //writeln("matching [", input, "] starting from ", startindex);
+        debug (regex) writefln("Regex.test(input[] = '%s', startindex = %d)",
+                input, startindex);
+
         //engine.printProgram(engine.program);
-        pmatch[0].startIdx = 0;
-        pmatch[0].endIdx = 0;
+        pmatch[0].startIdx = -1;
+        pmatch[0].endIdx = -1;
 
         // First character optimization
         Unqual!(typeof(Range.init[0])) firstc = 0;
@@ -1923,10 +2000,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         break;                          // no match
                 }
             }
-            foreach (i; 0 .. engine.re_nsub + 1)
+            foreach (i; 1 .. engine.re_nsub + 1)//subs considered empty matches
             {
-                pmatch[i].startIdx = -1;
-                pmatch[i].endIdx = -1;
+                pmatch[i].startIdx = 0;
+                pmatch[i].endIdx = 0;
             }
             src_start = src = startindex;
             if (trymatch(0, engine.program.length))
@@ -1937,7 +2014,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 return true;
             }
             // If possible match must start at beginning, we are done
-            if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanystar)
+            if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanynm
+                || engine.program[0] == engine.REanynmq)
             {
                 if (!(engine.attributes & engine.REA.multiline)) break;
                 // Scan for the next \n
@@ -1946,10 +2024,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
             }
             if (startindex == input.length)
                 break;
-            debug(regex)
-            {
-                auto sss = input[si + 1 .. input.length];
-                printf("Starting new try: '%.*s'\n", sss.length, sss.ptr);
+            debug(std_regex)
+            {   auto sss = input[startindex + 1 .. input.length];
+                writefln("Starting new try: '%s'", sss);
             }
         }
         pmatch[0].startIdx = pmatch[0].startIdx.max;
@@ -2022,29 +2099,30 @@ Returns $(D hit) (converted to $(D string) if necessary).
         size_t c2;
         ushort* pu;
         uint* puint;
-
-        debug(regex)
+        debug(std_regex)
         {
             auto sss = input[src .. input.length];
-            printf("Regex.trymatch(pc = %d, src = '%.*s', pcend = %d)\n",
-                    pc, sss.length, sss.ptr, pcend);
+            writefln("Regex.trymatch(pc = %d, src = '%s', pcend = %d)",
+                    pc, sss, pcend);
         }
         auto srcsave = src;
         regmatch_t *psave = null;
+        regmatch_t *psave_longest = null;
+        bool pmatch_touched;
         for (;;)
         {
             if (pc == pcend)            // if done matching
-            {   debug(regex) printf("\tprogend\n");
+            {   debug(std_regex) writefln("\tprogend");
                 return true;
             }
 
-            //printf("\top = %d\n", program[pc]);
+            //writefln("\top = %d", program[pc]);
             switch (engine.program[pc])
             {
             case engine.REchar:
                 if (src == input.length)
                     goto Lnomatch;
-                debug(regex) printf("\tREchar '%c', src = '%c'\n",
+                debug(std_regex) writefln("\tREchar '%s', src = '%s'",
                                     engine.program[pc + 1], input[src]);
                 if (engine.program[pc + 1] != input[src])
                     goto Lnomatch;
@@ -2056,7 +2134,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
                 if (src == input.length)
                     goto Lnomatch;
-                debug(regex) printf("\tREichar '%c', src = '%c'\n",
+                debug(std_regex) writefln("\tREichar '%s', src = '%s'",
                                     engine.program[pc + 1], input[src]);
                 c1 = engine.program[pc + 1];
                 c2 = input[src];
@@ -2076,7 +2154,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             case engine.REdchar:
                 if (src == input.length)
                     goto Lnomatch;
-                debug(regex) printf("\tREdchar '%c', src = '%c'\n",
+                debug(std_regex) writefln("\tREdchar '%s', src = '%s'",
                                     *(cast(dchar *)&engine.program[pc + 1]), input[src]);
                 if (*(cast(dchar *)&engine.program[pc + 1]) != input[src])
                     goto Lnomatch;
@@ -2087,7 +2165,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             case engine.REidchar:
                 if (src == input.length)
                     goto Lnomatch;
-                debug(regex) printf("\tREidchar '%c', src = '%c'\n",
+                debug(std_regex) writefln("\tREidchar '%s', src = '%s'",
                                     *(cast(dchar *)&engine.program[pc + 1]), input[src]);
                 c1 = *(cast(dchar *)&engine.program[pc + 1]);
                 c2 = input[src];
@@ -2105,10 +2183,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REanychar:
-                debug(regex) printf("\tREanychar\n");
+                debug(std_regex) writefln("\tREanychar");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!(engine.attributes & engine.REA.dotmatchlf) && input[src] == '\n')
+                if (!(engine.attributes & engine.REA.dotmatchlf)
+                    && input[src] == '\n')
                     goto Lnomatch;
                 src += std.utf.stride(input, src);
                 pc++;
@@ -2118,10 +2197,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 len = *cast(size_t *)&engine.program[pc + 1];
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
-                debug(regex)
-                {
-                    auto sss = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    printf("\tREstring x%x, '%.*s'\n", len, sss.length, sss.ptr);
+                debug(std_regex)
+                {   auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                    writefln("\tREstring x%x, '%s'", len, sssa);
                 }
                 if (src + len > input.length)
                     goto Lnomatch;
@@ -2136,10 +2214,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 len = *cast(size_t *)&engine.program[pc + 1];
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
-                debug(regex)
-                {
-                    auto sss = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    printf("\tREistring x%x, '%.*s'\n", len, sss.length, sss.ptr);
+                debug(std_regex)
+                {   auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
+                    writefln("\tREistring x%x, '%s'", len, sssa);
                 }
                 if (src + len > input.length)
                     goto Lnomatch;
@@ -2155,7 +2232,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 pu = (cast(ushort *)&engine.program[pc + 1]);
                 if (src == input.length)
                     goto Lnomatch;
-                debug(regex) printf("\tREtestbit %d, %d, '%c', x%02x\n",
+                debug(std_regex) writefln("\tREtestbit %d, %d, '%s', x%02x",
                                     pu[0], pu[1], input[src], input[src]);
                 len = pu[1];
                 c1 = input[src];
@@ -2169,7 +2246,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (src == input.length)
                     goto Lnomatch;
                 pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(regex) printf("\tREbit %d, %d, '%c'\n",
+                debug(std_regex) writefln("\tREbit %d, %d, '%s'",
                                     pu[0], pu[1], input[src]);
                 len = pu[1];
                 c1 = input[src];
@@ -2185,7 +2262,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (src == input.length)
                     goto Lnomatch;
                 pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(regex) printf("\tREnotbit %d, %d, '%c'\n",
+                debug(std_regex) writefln("\tREnotbit %d, %d, '%s'",
                                     pu[0], pu[1], input[src]);
                 len = pu[1];
                 c1 = input[src];
@@ -2198,7 +2275,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.RErange:
                 len = *cast(uint *)&engine.program[pc + 1];
-                debug(regex) printf("\tRErange %d\n", len);
+                debug(std_regex) writefln("\tRErange %d", len);
                 if (src == input.length)
                     goto Lnomatch;
                 // BUG: REA.ignoreCase?
@@ -2211,7 +2288,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.REnotrange:
                 len = *cast(uint *)&engine.program[pc + 1];
-                debug(regex) printf("\tREnotrange %d\n", len);
+                debug(std_regex) writefln("\tREnotrange %d", len);
                 if (src == input.length)
                     goto Lnomatch;
                 // BUG: REA.ignoreCase?
@@ -2223,7 +2300,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REbol:
-                debug(regex) printf("\tREbol\n");
+                debug(std_regex) writefln("\tREbol");
                 if (src == 0)
                 {
                 }
@@ -2238,7 +2315,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REeol:
-                debug(regex) printf("\tREeol\n");
+                debug(std_regex) writefln("\tREeol");
                 if (src == input.length)
                 {
                 }
@@ -2252,17 +2329,16 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.REor:
                 len = (cast(uint *)&engine.program[pc + 1])[0];
-                debug(regex) printf("\tREor %d\n", len);
+                debug(std_regex) writefln("\tREor %d", len);
                 pop = pc + 1 + uint.sizeof;
                 ss = src;
                 if (trymatch(pop, pcend))
                 {
                     if (pcend != engine.program.length)
-                    {   sizediff_t s;
-
-                        s = src;
+                    {
+                        auto s = src;
                         if (trymatch(pcend, engine.program.length))
-                        {   debug(regex) printf("\tfirst operand matched\n");
+                        {   debug(std_regex) writefln("\tfirst operand matched");
                             src = s;
                             return 1;
                         }
@@ -2273,7 +2349,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                             src = ss;
                             if (!trymatch(pop + len, engine.program.length))
                             {
-                                debug(regex) printf("\tfirst operand"
+                                debug(std_regex) writef("\tfirst operand"
                                         " matched\n");
                                 src = s;
                                 return 1;
@@ -2282,7 +2358,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         src = ss;
                     }
                     else
-                    {   debug(regex) printf("\tfirst operand matched\n");
+                    {   debug(std_regex) writefln("\tfirst operand matched");
                         return 1;
                     }
                 }
@@ -2290,71 +2366,132 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REgoto:
-                debug(regex) printf("\tREgoto\n");
+                debug(std_regex) writefln("\tREgoto");
                 len = (cast(uint *)&engine.program[pc + 1])[0];
                 pc += 1 + uint.sizeof + len;
                 break;
-
-            case engine.REanystar:
-                debug(regex) printf("\tREanystar\n");
-                pc++;
-                for (;;)
+            case engine.REanynmq:
+            case engine.REanynm:
+                //n, m
+                debug(std_regex) writefln("\tREanynm");
+                puint = cast(uint *)&engine.program[pc + 1];
+                n = puint[0];
+                m = puint[1];
+                bool greedy = engine.program[pc] == engine.REanynm;
+                pc += 1 + 2*uint.sizeof;
+                for(count=0;count<n;count++)
                 {
-                    auto s1 = src;
                     if (src == input.length)
-                        break;
+                        goto Lnomatch;
                     if (!(engine.attributes & engine.REA.dotmatchlf)
-                            && input[src] == '\n')
-                        break;
+                        && input[src] == '\n')
+                        goto Lnomatch;
                     src++;
-                    auto s2 = src;
+                }
 
-                    // If no match after consumption, but it
-                    // did match before, then no match
-                    if (!trymatch(pc, engine.program.length))
+                auto start = src;
+                if(!psave)
+                    psave = cast(regmatch_t *)alloca(
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                memcpy(psave, pmatch.ptr,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                //Advance through the whole input,
+                //memoizing the position of the last successful match
+                if (greedy)
+                {   auto last_src = src;
+                    if (!psave_longest)
+                        psave_longest = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    for (;count<m; count++)
                     {
-                        src = s1;
-                        // BUG: should we save/restore pmatch[]?
+                        auto s1 = src;
+                        if (src == input.length)
+                            break;
+                        if (!(engine.attributes & engine.REA.dotmatchlf)
+                            && input[src] == '\n')
+                            break;
+                        src++;
+                        auto s2 = src;
                         if (trymatch(pc, engine.program.length))
                         {
-                            src = s1;           // no match
+                            //save matches
+                            memcpy(psave_longest, pmatch.ptr,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                            last_src = s2;
+                        }
+                        src = s2;
+                    }
+                    src = last_src;
+                    if (last_src != start)
+                    {
+                        //restore matches
+                        memcpy(pmatch.ptr, psave_longest,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    }
+                    else
+                        memcpy(pmatch.ptr, psave,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                }
+                //Nongreedy - get to the position of the first succesful match
+                else
+                {
+                    if (trymatch(pc, engine.program.length))
+                    {
+                        src = start;
+                        memcpy(pmatch.ptr, psave,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
+                        break;
+                    }
+                    for (;count<m; count++)
+                    {
+                        auto s1 = src;
+                        if (src == input.length)
+                            break;
+                        if (!(engine.attributes & engine.REA.dotmatchlf)
+                            && input[src] == '\n')
+                            break;
+                        src++;
+                        auto s2 = src;
+                        if (trymatch(pc, engine.program.length))
+                        {
+                            src = s2;
+                            memcpy(pmatch.ptr, psave,
+                                (engine.re_nsub + 1) * regmatch_t.sizeof);
                             break;
                         }
+                        src = s2;
                     }
-                    src = s2;
+
                 }
+
+
                 break;
 
-            case engine.REnm:
-            case engine.REnmq:
-                // len, n, m, ()
+            case engine.REm:
+            case engine.REmq:
+                // len, m, ()
                 puint = cast(uint *)&engine.program[pc + 1];
                 len = puint[0];
-                n = puint[1];
-                m = puint[2];
-                debug(regex) printf("\tREnm%s len=%d, n=%u, m=%u\n",
-                        (engine.program[pc] == engine.REnmq) ? "q".ptr : "".ptr,
-                        len, n, m);
-                pop = pc + 1 + uint.sizeof * 3;
-                for (count = 0; count < n; count++)
-                {
-                    if (!trymatch(pop, pop + len))
-                        goto Lnomatch;
-                }
-                if (!psave && count < m)
+                m = puint[1];
+                debug(std_regex) writefln("\tREm%s len=%d, m=%u",
+                        (engine.program[pc] == engine.REmq) ? "q" : "",
+                        len, m);
+                pop = pc + 1 + uint.sizeof * 2;
+                if (!psave)
                 {
                     psave = cast(regmatch_t *)alloca(
                         (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
-                if (engine.program[pc] == engine.REnmq) // if minimal munch
+                if (engine.program[pc] == engine.REmq) // if minimal munch
                 {
-                    for (; count < m; count++)
-                    {   sizediff_t s1;
-
+                    for (count=0; count < m; count++)
+                    {
+                        sizediff_t s1;
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         s1 = src;
-
+                        //Match  the rest of the program,
+                        //if matches we're done
                         if (trymatch(pop + len, engine.program.length))
                         {
                             src = s1;
@@ -2364,7 +2501,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         }
 
                         if (!trymatch(pop, pop + len))
-                        {   debug(regex) printf("\tdoesn't match"
+                        {   debug(std_regex) writef("\tdoesn't match"
                                     " subexpression\n");
                             break;
                         }
@@ -2372,21 +2509,25 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         // If source is not consumed, don't
                         // infinite loop on the match
                         if (s1 == src)
-                        {   debug(regex) printf("\tsource is not consumed\n");
+                        {   debug(std_regex) writefln("\tsource is not consumed");
                             break;
                         }
-                    }
+                      }
                 }
                 else    // maximal munch
                 {
-                    for (; count < m; count++)
+                    auto start=src, last_src = src;
+                    if (!psave_longest)
+                        psave_longest = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    for (count=0; count < m; count++)
                     {
                         memcpy(psave, pmatch.ptr,
                                 (engine.re_nsub + 1) * regmatch_t.sizeof);
                         auto s1 = src;
                         if (!trymatch(pop, pop + len))
                         {
-                            debug(regex) printf("\tdoesn't match subexpr\n");
+                            debug(std_regex) writefln("\tdoesn't match subexpr");
                             break;
                         }
                         auto s2 = src;
@@ -2394,34 +2535,39 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         // If source is not consumed, don't
                         // infinite loop on the match
                         if (s1 == s2)
-                        {   debug(regex) printf("\tsource is not consumed\n");
+                        {   debug(std_regex) writefln("\tsource is not consumed");
                             break;
                         }
 
-                        // If no match after consumption, but it
-                        // did match before, then no match
-                        if (!trymatch(pop + len, engine.program.length))
+                        //
+                        if (trymatch(pop + len, engine.program.length))
                         {
-                            src = s1;
-                            if (trymatch(pop + len, engine.program.length))
-                            {
-                                src = s1;               // no match
-                                memcpy(pmatch.ptr, psave,
-                                        (engine.re_nsub + 1) * regmatch_t.sizeof);
-                                break;
-                            }
+                            last_src = s2;
+                            //save this match
+                            memcpy(psave_longest, pmatch.ptr,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                            //restore
+                            memcpy(pmatch.ptr, psave,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
                         }
                         src = s2;
                     }
+                    src = last_src;
+                    if (last_src != start)
+                    {
+                        memcpy(pmatch.ptr, psave_longest,
+                                    (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    }
+
                 }
-                debug(regex) printf("\tREnm len=%d, n=%u, m=%u,"
-                        " DONE count=%d\n", len, n, m, count);
+                debug(std_regex) writef("\tREm len=%d,  m=%u,"
+                        " DONE count=%d\n", len,  m, count);
                 pc = pop + len;
                 break;
 
             case engine.REparen:
-                // len, ()
-                debug(regex) printf("\tREparen\n");
+                // len, n, ()
+                debug(std_regex) writefln("\tREparen");
                 puint = cast(uint *)&engine.program[pc + 1];
                 len = puint[0];
                 n = puint[1];
@@ -2429,17 +2575,51 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 ss = src;
                 if (!trymatch(pop, pop + len))
                     goto Lnomatch;
+                if (!pmatch_touched)
+                {
+                    pmatch_touched = true;
+                    if(!psave)
+                        psave = cast(regmatch_t *)alloca(
+                            (engine.re_nsub + 1) * regmatch_t.sizeof);
+                    memcpy(psave, pmatch.ptr,
+                        (engine.re_nsub + 1) * regmatch_t.sizeof);
+                }
                 pmatch[n + 1].startIdx = ss;
                 pmatch[n + 1].endIdx = src;
+                debug(std_regex)
+                {
+                    writefln("Total matches NOW:");
+                    for(int i=0;i<engine.re_nsub+1;i++)
+                        writefln("\tmatch # %d at %d .. %d",i, pmatch[i].startIdx,pmatch[i].endIdx);
+                }
                 pc = pop + len;
                 break;
 
+
+            case engine.RElookahead:
+            case engine.REneglookahead:
+                // len, ()
+                debug(std_regex)
+                    writef("\t%s",engine.program[pc] == engine.RElookahead ?
+                        "RElookahead" : "REneglookahead");
+                len = *cast(uint*)&engine.program[pc+1];
+                pop = pc + 1 + uint.sizeof;
+                ss = src;
+                bool invert = engine.program[pc] == engine.REneglookahead ? true : false;
+                auto tmp_match = trymatch(pop,pop + len);// ! changes src
+                src = ss;//restore position in input
+                //inverse the match if negative lookahead
+                tmp_match = tmp_match ^ invert;
+                if (!tmp_match)
+                    goto Lnomatch;
+                pc = pop + len;
+                break;
             case engine.REend:
-                debug(regex) printf("\tREend\n");
+                debug(std_regex) writefln("\tREend");
                 return 1;               // successful match
 
             case engine.REwordboundary:
-                debug(regex) printf("\tREwordboundary\n");
+                debug(std_regex) writefln("\tREwordboundary");
                 if (src > 0 && src < input.length)
                 {
                     c1 = input[src - 1];
@@ -2452,7 +2632,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REnotwordboundary:
-                debug(regex) printf("\tREnotwordboundary\n");
+                debug(std_regex) writefln("\tREnotwordboundary");
                 if (src == 0 || src == input.length)
                     goto Lnomatch;
                 c1 = input[src - 1];
@@ -2466,7 +2646,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REdigit:
-                debug(regex) printf("\tREdigit\n");
+                debug(std_regex) writefln("\tREdigit");
                 if (src == input.length)
                     goto Lnomatch;
                 if (!isdigit(input[src]))
@@ -2476,7 +2656,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REnotdigit:
-                debug(regex) printf("\tREnotdigit\n");
+                debug(std_regex) writefln("\tREnotdigit");
                 if (src == input.length)
                     goto Lnomatch;
                 if (isdigit(input[src]))
@@ -2486,7 +2666,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REspace:
-                debug(regex) printf("\tREspace\n");
+                debug(std_regex) writefln("\tREspace");
                 if (src == input.length)
                     goto Lnomatch;
                 if (!isspace(input[src]))
@@ -2496,7 +2676,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REnotspace:
-                debug(regex) printf("\tREnotspace\n");
+                debug(std_regex) writefln("\tREnotspace");
                 if (src == input.length)
                     goto Lnomatch;
                 if (isspace(input[src]))
@@ -2506,7 +2686,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REword:
-                debug(regex) printf("\tREword\n");
+                debug(std_regex) writefln("\tREword");
                 if (src == input.length)
                     goto Lnomatch;
                 if (!engine.isword(input[src]))
@@ -2516,7 +2696,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REnotword:
-                debug(regex) printf("\tREnotword\n");
+                debug(std_regex) writefln("\tREnotword");
                 if (src == input.length)
                     goto Lnomatch;
                 if (engine.isword(input[src]))
@@ -2528,13 +2708,15 @@ Returns $(D hit) (converted to $(D string) if necessary).
             case engine.REbackref:
             {
                 n = engine.program[pc + 1];
-                debug(regex) printf("\tREbackref %d\n", n);
+                debug(std_regex) writefln("\tREbackref %d", n);
 
                 auto so = pmatch[n + 1].startIdx;
                 auto eo = pmatch[n + 1].endIdx;
                 len = eo - so;
+				debug(std_regex) writefln("len \t%d",len);
                 if (src + len > input.length)
                     goto Lnomatch;
+
                 else if (engine.attributes & engine.REA.ignoreCase)
                 {
                     if (icmp(input[src .. src + len], input[so .. eo]))
@@ -2553,8 +2735,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
         }
 
       Lnomatch:
-        debug(regex) printf("\tnomatch pc=%d\n", pc);
+        debug(std_regex) writefln("\tnomatch pc=%d", pc);
         src = srcsave;
+        if (pmatch_touched)
+            memcpy(pmatch.ptr, psave, (engine.re_nsub + 1) * regmatch_t.sizeof);
         return false;
     }
 
@@ -2576,7 +2760,7 @@ and, using the format string, generate and return a new string.
     private static Range replace3(String)(String format, Range input,
             regmatch_t[] pmatch)
     {
-        string result;
+        Range result;
         uint c2;
         sizediff_t startIdx;
         sizediff_t endIdx;
@@ -2690,8 +2874,8 @@ and, using the format string, generate and return a new string.
     {
         string result;
 
-//printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].startIdx, pmatch[0].endIdx);
-//printf("3input = '%.*s'\n", input.length, input.ptr);
+//writefln("replace: this = %p so = %d, eo = %d", this, pmatch[0].startIdx, pmatch[0].endIdx);
+//writefln("3input = '%s'", input);
         result.length = format.length;
         result.length = 0;
         for (size_t i; i < format.length; i++)
@@ -2733,7 +2917,7 @@ and, using the format string, generate and return a new string.
 
 unittest
 {
-    debug(regex) printf("regex.replace.unittest()\n");
+    debug(std_regex) writefln("regex.replace.unittest()");
     auto r = match("1ab2ac3", regex("a[bc]", "g"));
     auto result = r.replaceAll("x$&y");
     auto i = std.string.cmp(result, "1xaby2xacy3");
@@ -2778,6 +2962,7 @@ RegexMatch!(Range) match(Range, E)(Range r, E[] engine, string opt = null)
 
 unittest
 {
+
     string abr = "abracadabra";
     "abracadabra".match(regex("a[b-e]", "g"));
     abr.match(regex("a[b-e]", "g"));
@@ -2787,6 +2972,7 @@ unittest
     auto re = regex(`bc\x20r[\40]s`, "i");
     auto m = match("aBC r s", re);
     static assert(isForwardRange!(typeof(m)));
+    static assert(isRandomAccessRange!(typeof(m.captures())));
 
     assert(m.pre=="a");
     assert(m.hit=="BC r s");
@@ -2856,7 +3042,7 @@ if (is(Unqual!Engine == Regex!(Unqual!(typeof(Range.init[0])))))
 
 unittest
 {
-    debug(regex) printf("regex.sub.unittest\n");
+    debug(std_regex) writefln("regex.sub.unittest");
     assert(replace("hello", regex("ll"), "ss") == "hesso");
     assert(replace("barat", regex("a"), "A") == "bArat");
     assert(replace("barat", regex("a", "g"), "A") == "bArAt");
@@ -2925,13 +3111,13 @@ Range replace(alias fun, Range, Regex)
                 pattern == slice) // simple pattern (exact match, no
                                   // special characters)
         {
-            debug(regex)
+            debug(std_regex)
             {
                 auto sss = result[offset + so .. offset + eo];
-                printf("pattern: %.*s, slice: %.*s, replacement: %.*s\n",
-                    pattern.length,     pattern.ptr,
-                    sss.length          sss.ptr,
-                    replacement.length, replacement.ptr);
+                writefln("pattern: %s, slice: %s, replacement: %s",
+                    pattern,
+                    sss,
+                    replacement);
             result = std.string.replace(result, slice, replacement);
             break;
         }
@@ -2958,7 +3144,7 @@ Range replace(alias fun, Range, Regex)
 
 unittest
 {
-    //debug(regex) printf("regex.sub.unittest\n");
+    //debug(std_regex) writefln("regex.sub.unittest");
     string foo(RegexMatch!(string) r) { return "ss"; }
     auto r = replace!(foo)("hello", regex("ll"));
     assert(r == "hesso");
@@ -3192,8 +3378,8 @@ unittest
         {  "^abc",      "abcc", "y",    "&",    "abc" },
         {  "^abc$",     "aabc", "n",    "-",    "-" },
         {  "abc$",      "aabc", "y",    "&",    "abc" },
-        {  "^", "abc",  "y",    "&",    "" },
-        {  "$", "abc",  "y",    "&",    "" },
+        {  "^",         "abc",  "y",    "&",    "" },
+        {  "$",         "abc",  "y",    "&",    "" },
         {  "a.c",       "abc",  "y",    "&",    "abc" },
         {  "a.c",       "axc",  "y",    "&",    "axc" },
         {  "a.*c",      "axyzc","y",    "&",    "axyzc" },
@@ -3347,6 +3533,11 @@ unittest
         {  "^(a)(b)?(c*)",       "acc",  "y", "\\1 \\2 \\3", "a  cc" },
         {  "^(a)((b)?)(c*)",     "acc",  "y", "\\1 \\2 \\3", "a  " },
 
+        {"(?:ab){3}",       "_abababc",  "y","&-\\1","ababab-" },
+        {"(?:a(?:x)?)+",    "aaxaxx",     "y","&-\\1-\\2","aaxax--" },
+        {"foo.(?=bar)",     "foobar foodbar", "y","&-\\1", "food-" },
+        {"(?:(.)(?!\\1))+",  "12345678990", "y", "&-\\1", "12345678-8" },
+
         ];
 
     int i;
@@ -3359,20 +3550,48 @@ unittest
     foreach (Char; TypeTuple!(char, wchar, dchar))
     {
         alias immutable(Char)[] String;
+        String produceExpected(Range)(RegexMatch!(Range) m, String fmt)
+        {
+            String result;
+            while(!fmt.empty)
+                switch(fmt.front)
+                {
+                    case '\\':
+                        fmt.popFront();
+                        if (!isdigit(fmt.front) )
+                        {
+                            result ~= fmt.front;
+                            fmt.popFront();
+                            break;
+                        }
+                        auto nmatch = parse!uint(fmt);
+                        if(nmatch < m.captures.length)
+                            result ~= m.captures[nmatch];
+                    break;
+                    case '&':
+                        result ~= m.hit;
+                        fmt.popFront();
+                    break;
+                    default:
+                        result ~= fmt.front;
+                        fmt.popFront();
+                }
+            return result;
+        }
         Regex!(Char) r;
         start = 0;
         end = tv.length;
 
         for (a = start; a < end; a++)
         {
-            // printf("width: %d tv[%d]: pattern='%.*s' input='%.*s' result=%.*s"
-            //         " format='%.*s' replace='%.*s'\n",
-            //         Char.sizeof, a,
-            //         tv[a].pattern.length, tv[a].pattern.ptr,
-            //         tv[a].input.length,   tv[a].input.ptr,
-            //         tv[a].result.length,  tv[a].result.ptr,
-            //         tv[a].format.length,  tv[a].format.ptr,
-            //         tv[a].replace.length, tv[a].replace.ptr);
+//             writef("width: %d tv[%d]: pattern='%s' input='%s' result=%s"
+//                     " format='%s' replace='%s'\n",
+//                     Char.sizeof, a,
+//                     tv[a].pattern,
+//                     tv[a].input,
+//                     tv[a].result,
+//                     tv[a].format,
+//                     tv[a].replace);
 
             tvd = tv[a];
 
@@ -3388,15 +3607,24 @@ unittest
                 i = 0;
             }
 
-            //printf("\tcompile() = %d\n", i);
+            //writefln("\tcompile() = %d", i);
             assert((c == 'c') ? !i : i);
 
             if (c != 'c')
             {
-                i = !match(to!(String)(tvd.input), r).empty;
-                //printf("\ttest() = %d\n", i);
+                auto m = match(to!(String)(tvd.input), r);
+                i = !m.empty;
+                //writefln("\ttest() = %d", i);
                 //fflush(stdout);
-                assert((c == 'y') ? i : !i);
+                assert((c == 'y') ? i : !i,text("Match failed pattern: ",tvd.pattern));
+                if(c == 'y')
+                {
+                    auto result = produceExpected(m,to!(String)(tvd.format));
+                    assert(result == to!String(tvd.replace),
+                           text("Mismatch pattern: ",tvd.pattern," expected:",
+                                tvd.replace," vs ",result));
+                }
+
             }
         }
 
@@ -3478,4 +3706,59 @@ unittest
         // if (matches.empty)
         //     re.printProgram();
     }
+}
+
+//issue 5857
+//matching goes out of control if ... in (...){2} has .*/.+
+unittest
+{
+    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+    assert(c[0] == "axxxzayyyyyzd");
+    assert(c[1] == "ayyyyyz");
+}
+
+//issue 2108
+//greedy vs non-greedy
+unittest
+{
+    auto nogreed = regex("<packet.*?/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",nogreed).hit
+           == "<packet>text</packet>");
+    auto greed =  regex("<packet.*/packet>");
+    assert(match("<packet>text</packet><packet>text</packet>",greed).hit
+           == "<packet>text</packet><packet>text</packet>");
+}
+
+//issue 4574
+//empty successful match still advances the input
+unittest
+{
+    string[] pres, posts, hits;
+    foreach (m; match("abcabc", regex("")))
+    {
+        pres ~= m.pre;
+        posts ~= m.post;
+        assert(m.hit.empty);
+
+    }
+    auto heads = [
+        "abcabc",
+        "abcab",
+        "abca",
+        "abc",
+        "ab",
+        "a",
+        ""
+    ];
+     auto tails = [
+        "abcabc",
+         "bcabc",
+          "cabc",
+           "abc",
+            "bc",
+             "c",
+              ""
+    ];
+    assert(pres == array(retro(heads)));
+    assert(posts == tails);
 }
