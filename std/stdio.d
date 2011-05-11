@@ -681,7 +681,7 @@ arguments in text format to the file, followed by a newline. */
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, according to the format in the
 first argument. */
-    void writef(S...)(S args)// if (isSomeString!(S[0]))
+    void writef(S...)(S args) // if (isSomeString!(S[0]))
     {
         assert(p);
         assert(p.handle);
@@ -1005,8 +1005,8 @@ to this file. */
       private:
         File    file_;
         ubyte[] chunk_;
- 
- 
+
+
       public:
         this(File file, size_t size)
         in
@@ -1017,10 +1017,10 @@ to this file. */
         {
             file_  = file;
             chunk_ = new ubyte[](size);
- 
+
             popFront();
         }
- 
+
 
         /// Range primitive operations.
         @property
@@ -1028,7 +1028,7 @@ to this file. */
         {
             return !file_.isOpen;
         }
- 
+
 
         /// Ditto
         @property
@@ -1036,13 +1036,13 @@ to this file. */
         {
             return chunk_;
         }
- 
+
 
         /// Ditto
         void popFront()
         {
             enforce(!empty, "Cannot call popFront on empty range");
- 
+
             chunk_ = file_.rawRead(chunk_);
             if (chunk_.length == 0)
                 file_.detach();
