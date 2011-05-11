@@ -918,7 +918,7 @@ version(StdDdoc)
     +/
     d_time lastModified(in char[] name, d_time returnIfMissing);
 }
-else version(Windows)
+else
 {
     d_time lastModified(C)(in C[] name, d_time returnIfMissing)
         if(is(Unqual!C == char))
