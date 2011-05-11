@@ -3619,21 +3619,28 @@ unittest
 }
 
 /**
-Wrap types $(D U...) with template $(D T)
+Wrap types $(D T...) with template $(D U)
 
 Example:
 ----
-static assert(is(Wrapped!(MyTempl, int, float) == TypeTuple!(MyTempl!int, MyTempl!float)));
+static assert(is(WrapTypes!(int, float).With!MyTempl == TypeTuple!(MyTempl!int, MyTempl!float)));
 ----
 */
-template Wrapped(alias T, U...) if (U.length > 1)
+template WrapTypes(T...) if (T.length > 1)
 {
-    alias TypeTuple!(T!(U[0]), Wrapped!(T, U[1..$])) Wrapped;
+    alias WrapTypes!T WrapTypes;
+    template With(alias U)
+    {
+        alias TypeTuple!(U!(T[0]), WrapTypes!(T[1..$]).With!U) With;
+    }
 }
 
-template Wrapped(alias T, U)
+template WrapTypes(T)
 {
-    alias T!U Wrapped;
+    template With(alias U)
+    {
+        alias U!T With;
+    }
 }
 
 unittest
@@ -3642,5 +3649,5 @@ unittest
     {
     }
 
-    static assert(is(Wrapped!(Wrapper, int, float, double) == TypeTuple!(Wrapper!int, Wrapper!float, Wrapper!double)));
+    static assert(is(WrapTypes!(int, float, double).With!Wrapper == TypeTuple!(Wrapper!int, Wrapper!float, Wrapper!double)));
 }
