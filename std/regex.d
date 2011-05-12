@@ -98,7 +98,7 @@ http://www.unicode.org/unicode/reports/tr18/
 
 module std.regex;
 
-debug = std_regex;                // uncomment to turn on debugging writef's
+//debug = std_regex;                // uncomment to turn on debugging writef's
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
@@ -230,6 +230,7 @@ private:
             REeol,              // end of line
             REsave,             // save submatch position i.e. "(" & ")"
             REgoto,             // goto offset
+            REret,              // end of subprogram
 
             RElookahead,
             REneglookahead,
@@ -450,7 +451,7 @@ Returns the number of parenthesized captures
                 bool anyloop = counter == 0 && prog[offs] == REanychar 
                     && (prog[offs+1] == REloop || prog[offs+1] == REloopg);
                 uint* puint = cast(uint*)&prog[offs+2];
-                if(anyloop && puint[0] == 0 && puint[1] == inf)
+                if (anyloop && puint[0] == 0 && puint[1] == inf)
                 {
                     prog[0] = prog[offs+1] == REloop ? REanystar : REanystarg;
                     std.array.replace(
@@ -472,7 +473,8 @@ Returns the number of parenthesized captures
                 counter--;
                 prog.popFrontN(1 + 3*uint.sizeof);
                 break;
-                
+
+            case REret:                
             case REanychar:
             case REbol:
             case REeol:
@@ -727,7 +729,8 @@ Returns the number of parenthesized captures
                         p++;
                         parseRegex(pattern, p, buf);
                         *cast(uint *)&buf.data[offset] =
-                            cast(uint)(buf.offset - (offset + uint.sizeof));
+                            cast(uint)(buf.offset - (offset + uint.sizeof)+1);
+                        buf.write(REret);
                         break;
                     default:
                         error("any of :=! expected after '(?'");
@@ -1645,6 +1648,11 @@ Returns the number of parenthesized captures
                     writefln("\tREend");
                     return;
 
+                case REret:
+                    writefln("\tREret");
+                    pc++;
+                    break;
+
                 case REwordboundary:
                     writefln("\tREwordboundary");
                     pc++;
@@ -2199,21 +2207,18 @@ Returns $(D hit) (converted to $(D string) if necessary).
         uint n;
         uint m;
         size_t pop;
-        size_t ss;
         size_t c1;
         size_t c2;
         ushort* pu;
         uint* puint;
         size_t lastState=0;
+        uint matchesToSave;
+        size_t* ptracker = null;
         size_t[] trackers;
-        trackers.length = counters.length;
-        trackers[] = size_t.max;
-        const size_t stateSize = pmatch.length * regmatch_t.sizeof 
-            + counters.length * uint.sizeof;
         struct StateTail
         {//preceeded by all matches, then by all counters
             size_t pc, src;
-            uint counter, size;
+            uint counter, matches, size;
         }
         bool backtrack()
         {
@@ -2222,29 +2227,35 @@ Returns $(D hit) (converted to $(D string) if necessary).
             StateTail* tail = cast(StateTail *)&memory[lastState - StateTail.sizeof];
             pc = tail.pc;
             src = tail.src;
+            matchesToSave = tail.matches;
             curCounter = tail.counter;
             lastState = lastState - tail.size;
             debug(std_regex) writefln("\tBacktracked pc=>%d src='%s'",pc,input[src..$]);
-            memcpy(pmatch.ptr,&memory[lastState],
-                        pmatch.length * regmatch_t.sizeof);
-            memcpy(counters.ptr,
-                    &memory[lastState + pmatch.length * regmatch_t.sizeof],
-                    counters.length * uint.sizeof);
+            memcpy(pmatch.ptr+1,&memory[lastState],
+                        matchesToSave * regmatch_t.sizeof);
+            if (!counters.empty)
+                memcpy(counters.ptr,
+                    &memory[lastState + matchesToSave * regmatch_t.sizeof],
+                    (curCounter+1) * uint.sizeof);
             return true;
         }
         void memoize(size_t newpc)
         {
-            if (memory.length < lastState + StateTail.sizeof + stateSize) 
-                throw new Exception("out of memory");
-            memcpy(&memory[lastState],pmatch.ptr,
-                        pmatch.length * regmatch_t.sizeof);
-            memcpy(&memory[lastState + pmatch.length * regmatch_t.sizeof],
+            auto stateSize = (counters.empty ? 0 : (curCounter+1)*uint.sizeof)
+                    + matchesToSave*regmatch_t.sizeof;
+            if (memory.length < lastState + stateSize + StateTail.sizeof) 
+                memory.length += memory.length/2; //reallocates on heap
+            memcpy(&memory[lastState],pmatch.ptr+1,
+                        matchesToSave * regmatch_t.sizeof);
+            if (!counters.empty)
+                memcpy(&memory[lastState + matchesToSave * regmatch_t.sizeof],
                         counters.ptr,
-                        counters.length * uint.sizeof);
+                        (curCounter+1) * uint.sizeof);
             lastState += stateSize;
             StateTail* tail = cast(StateTail *) &memory[lastState];
             tail.pc = newpc;
             tail.src = src;
+            tail.matches = matchesToSave;
             tail.counter = curCounter;
             tail.size = cast(uint)(stateSize + StateTail.sizeof);
             lastState = lastState + StateTail.sizeof;
@@ -2491,10 +2502,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     if (!(engine.attributes & engine.REA.dotmatchlf)
                             && input[src] == '\n')
                         break;
-                    ss = src;
                     if (trymatch(pc,memory[lastState..$]))
                         return true;
-                    src = ss;
                     src += std.utf.stride(input,src);
                 }
                 break;
@@ -2502,7 +2511,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             case engine.REanystarg:
                 debug(std_regex) writefln("\tREanystar");
                 pc++;
-                ss = src;
+                auto ss = src;
                 if (engine.attributes & engine.REA.dotmatchlf)
                     src = input.length;
                 else
@@ -2514,7 +2523,20 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 {
                     if (trymatch(pc,memory[lastState..$]))
                         return true;
-                    src -= std.utf.stride(input,src-1);
+                    if (trymatch(pc,memory[lastState..$]))
+                        return true;
+                    const sz = src - ss;
+                    const p = &input[src-1];
+                    if (sz >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
+                        src--;
+                    else if (sz >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
+                        src -= 2;
+                    else if (sz >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
+                        src -= 3;
+                    else if (sz >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
+                        src -= 4;
+                    else
+                        throw new UtfException("Invalid UTF character at end of string");
                 }
                 break;
 
@@ -2524,6 +2546,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 curCounter = puint[0];
                 len = puint[1];
                 counters[curCounter] = 0;
+                if (!ptracker)
+                {
+                    ptracker = cast(size_t *)alloca(counters.length*size_t.sizeof);
+                    trackers = ptracker[0..counters.length];//ptracker ? ptracker[0..counters.length] : new size_t[counters.length];
+                }
                 trackers[curCounter] = size_t.max;
                 pc += len + 1 + 2*uint.sizeof;
                 break;
@@ -2581,6 +2608,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         writefln("\tmatch # %d at %d .. %d",n/2, 
                                  pmatch[n/2].startIdx,pmatch[n/2].endIdx);
                 }
+                matchesToSave = n/2+1;
                 pc += uint.sizeof+1;
                 break;
 
@@ -2592,16 +2620,20 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         "RElookahead" : "REneglookahead");
                 len = *cast(uint*)&engine.program[pc+1];
                 pop = pc + 1 + uint.sizeof;
-                ss = src;
                 bool invert = engine.program[pc] == engine.REneglookahead ? true : false;
                 auto tmp_match = trymatch(pop,memory[lastState..$]);
-                src = ss;//restore position in input
                 //inverse the match if negative lookahead
                 tmp_match = tmp_match ^ invert;
                 if (!tmp_match)
                     goto Lnomatch;
                 pc = pop + len;
                 break;
+                
+            case engine.REret:
+                debug(std_regex) writefln("\tREret");
+                src = srcsave;
+                return 1;
+            
             case engine.REend:
                 debug(std_regex) writefln("\tREend");
                 return 1;               // successful match
@@ -3605,7 +3637,7 @@ unittest
                 //writefln("\ttest() = %d", i);
                 //fflush(stdout);
                 assert((c == 'y') ? i : !i,text("Match failed pattern: ",tvd.pattern));
-                if(c == 'y')
+                if (c == 'y')
                 {
                     auto result = produceExpected(m,to!(String)(tvd.format));
                     assert(result == to!String(tvd.replace),
