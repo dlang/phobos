@@ -98,7 +98,7 @@ http://www.unicode.org/unicode/reports/tr18/
 
 module std.regex;
 
-//debug = std_regex;                // uncomment to turn on debugging writef's
+debug = std_regex;                // uncomment to turn on debugging writef's
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
@@ -195,7 +195,7 @@ private:
     enum uint inf = ~0u;
 
     uint re_nsub;        // number of parenthesized subexpression matches
-    uint counter,nCounters;  //current counter (internal), number of counters
+    uint nCounters;  //current counter (internal), number of counters
     ubyte attributes;
     immutable(ubyte)[] program; // pattern[] compiled into regular
                                 // expression program
@@ -245,7 +245,6 @@ private:
             REnotword,
             REbackref,
             };
-
 public:
     // @@@BUG Should be a constructor but template constructors don't work
     // private void initialize(String)(String pattern, string attributes)
@@ -333,8 +332,11 @@ Returns the number of parenthesized captures
             error("unmatched ')'");
         }
         re_nsub /= 2; //start & ends -> pairs
+        postprocess(buf.data);
         // @@@ SKIPPING OPTIMIZATION SOLVES BUG 941 @@@
         //optimize(buf);
+        
+        
         program = cast(immutable(ubyte)[]) buf.data;
         buf.data = null;
         delete buf;
@@ -427,12 +429,120 @@ Returns the number of parenthesized captures
     }
 
 */
+
+    //Fixup counter numbers, simplify instructions
+    private void postprocess(ubyte[] prog)
+    {
+        uint counter = 0, n, m;
+        size_t len;
+        ushort* pu;
+        nCounters = 0;
+        
+        for(;;)
+        {
+            switch(prog.front)
+            {
+            case REend:
+                return;
+            
+            case REcounter:
+                size_t offs = 1 + 2*uint.sizeof;
+                bool anyloop = counter == 0 && prog[offs] == REanychar 
+                    && (prog[offs+1] == REloop || prog[offs+1] == REloopg);
+                uint* puint = cast(uint*)&prog[offs+2];
+                if(anyloop && puint[0] == 0 && puint[1] == inf)
+                {
+                    prog[0] = prog[offs+1] == REloop ? REanystar : REanystarg;
+                    std.array.replace(
+                            prog, 1,
+                            2*(1 + uint.sizeof) + 1 + 3*uint.sizeof,
+                            cast(ubyte[])[]);
+                    prog.popFront();
+                }
+                else
+                {
+                    *cast(uint*)&prog[1] = counter;
+                    counter++;
+                    nCounters = max(nCounters,counter);
+                    prog.popFrontN(1 + 2*uint.sizeof);
+                }
+                break;
+            
+            case REloop, REloopg:
+                counter--;
+                prog.popFrontN(1 + 3*uint.sizeof);
+                break;
+                
+            case REanychar:
+            case REbol:
+            case REeol:
+            case REwordboundary: 
+            case REnotwordboundary:
+            case REdigit:
+            case REnotdigit:
+            case REspace:
+            case REnotspace:
+            case REword:
+            case REnotword:
+                prog.popFront();
+                break;
+            
+            case REbackref:
+                prog.popFrontN(2);    
+                break;
+            
+            case REchar:
+            case REichar:
+                prog.popFrontN(2);
+                break;
+            
+            case REdchar:
+            case REidchar:
+                prog.popFrontN(1+dchar.sizeof);
+                break;
+
+            case REstring:
+            case REistring:
+                len = *cast(size_t *)&prog[1];
+                assert(len % E.sizeof == 0);
+                prog.popFrontN(1 + size_t.sizeof + len);
+                break;
+
+            case REtestbit:
+            case REbit:
+            case REnotbit:                
+                pu = cast(ushort *)&prog[1];
+                len = pu[1];
+                prog.popFrontN(1 + 2 * ushort.sizeof + len);
+                break;
+
+            case RErange:
+            case REnotrange:
+                len = *cast(uint *)&prog[1];
+                prog.popFrontN(1 + uint.sizeof + len);
+                break;
+
+            case REor:
+            case REgoto:
+                prog.popFrontN(1 + uint.sizeof);
+                break;
+                
+            case REsave:
+                prog.popFrontN(1 + uint.sizeof);
+                break;
+                
+            case REneglookahead:                
+            case RElookahead:
+                prog.popFrontN(1 + uint.sizeof);
+                break;
+            }
+        }
+    }
 /* =================== Compiler ================== */
 
     void parseRegex(String)(in String pattern, ref size_t p, OutBuffer buf)
     {
         auto offset = buf.offset;
-        uint maxCounters;
         for (;;)
         {
             assert(p <= pattern.length);
@@ -482,30 +592,12 @@ Returns the number of parenthesized captures
             writefln("parsePiece() '%s'", sss);
         }
         offset = buf.offset;
-        counter++;//for nesting counters
-        nCounters = max(nCounters,counter);
         parseAtom(pattern, p, buf);
-        counter--;
         if (p == plength)
             return;
         switch (pattern[p])
         {
         case '*':
-            // Special optimization: replace any _not nested_ .* with REanystar
-            if (buf.offset - offset == 1 && counter == 0
-                    && buf.data[offset] == REanychar)
-            {
-                if (p + 1 < plength &&
-                    pattern[p + 1] == '?')
-                {
-                    buf.data[offset] = REanystar;
-                    p++;
-                }
-                else
-                    buf.data[offset] = REanystarg;
-                p++;
-                return;
-            }
             n = 0;
             m = inf;
             goto Lnm;
@@ -573,11 +665,10 @@ Returns the number of parenthesized captures
             buf.write(cast(uint)n);
             buf.write(cast(uint)m);
             buf.write(cast(uint)len);//set jump back
-            buf.spread(offset, (1 + uint.sizeof)*2);
+            buf.spread(offset, (1 + 2*uint.sizeof));
             buf.data[offset] = REcounter;
-            *(cast(uint*)&buf.data[offset+1]) = counter;
-            buf.data[offset+5] = REgoto;
-            *cast(uint*)(&buf.data[offset+6]) = len; 
+            *(cast(uint*)&buf.data[offset+1]) = 0;//reserve counter num
+            *(cast(uint*)&buf.data[offset+5]) = len;
             return;
         default:
             return;
@@ -590,7 +681,6 @@ Returns the number of parenthesized captures
     void parseAtom(String)(in String pattern, ref size_t p, OutBuffer buf)
     {
         ubyte op;
-        uint maxCounters;
         size_t offset;
         E c;
 
@@ -1507,10 +1597,13 @@ Returns the number of parenthesized captures
                     break;
 
                 case REcounter:
-                    // n
-                    n = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREcounter n=%u",n);
-                    pc += 1 + uint.sizeof;
+                    // n, len
+                    puint = cast(uint *)&prog[pc + 1];
+                    n = puint[0];
+                    len = puint[1];
+                    writefln("\tREcounter n=%u pc=>%d", 
+                             n, pc + 1 + 2*uint.sizeof + len);
+                    pc += 1 + 2*uint.sizeof;
                     break;
                     
                 case REloop:
@@ -2427,12 +2520,14 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.REcounter:
                 // n
-                n = *cast(uint *)&engine.program[pc + 1];
-                counters[n] = 0;
-                pc += 1 + uint.sizeof;
-                curCounter = n;
+                puint = cast(uint *)&engine.program[pc + 1];
+                curCounter = puint[0];
+                len = puint[1];
+                counters[curCounter] = 0;
+                trackers[curCounter] = size_t.max;
+                pc += len + 1 + 2*uint.sizeof;
                 break;
-                
+
             case engine.REloop:
             case engine.REloopg:
                 // n, m, len
@@ -2440,7 +2535,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 n = puint[0];
                 m = puint[1];
                 len = puint[2];
-                
+
                 debug(std_regex) 
                     writefln("\tREloop%s min=%u, max=%u pc=>%d",
                         (engine.program[pc] == engine.REloopg) ? "g" : "",
@@ -2451,25 +2546,17 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     pc = pc - len;
                     break;
                 }
-                else if (counters[curCounter] == m)
+                else if (counters[curCounter] == m
+                        || trackers[curCounter] == src)
                 {//proceed with outer loops
                     curCounter--; 
                     pc += 1 + uint.sizeof*3;
                     break;
-                }
-                if (trackers[curCounter] == src)
-                {
-                    //trackers[curCounter] = size_t.max;
-                    curCounter--; 
-                    pc += 1 + uint.sizeof*3; // proceed with outer loop
-                    break;
-                }
-                
+                }                
                 counters[curCounter]++;
                 if (engine.program[pc] == engine.REloop)
                 {
                     memoize(pc-len); //memoize next step of loop
-                    trackers[curCounter] = size_t.max;
                     curCounter--; 
                     pc += 1 + uint.sizeof*3; // proceed with outer loop
                 }
