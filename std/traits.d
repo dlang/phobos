@@ -3639,7 +3639,7 @@ template WrapTypes(T)
 {
     template With(alias U)
     {
-        alias U!T With;
+        alias TypeTuple!(U!T) With;
     }
 }
 
