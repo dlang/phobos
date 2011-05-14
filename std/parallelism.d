@@ -3210,9 +3210,9 @@ unittest {
 
     uint[] nums = appNums.data, nums2 = appNums2.data;
     sort!"a.at!0 < b.at!0"(zip(nums, nums2));
-    assert(nums == [2,3,4,5,6]);
-    assert(nums2 == nums);
-    assert(arr == nums);
+    assert(nums == [2,3,4,5,6], text(nums));
+    assert(nums2 == nums, text(nums2));
+    assert(arr == nums, text(arr));
 
     // Test parallel foreach with non-random access range.
     appNums.clear();
