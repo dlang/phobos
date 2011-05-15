@@ -3584,4 +3584,3 @@ version(parallelismStressTest) {
         }
     }
 }
-void main() {}
