@@ -7,7 +7,6 @@
     $(UL
         $(LI Types to represent points in time: $(D SysTime), $(D Date),
              $(D TimeOfDay), and $(D DateTime).)
-        $(LI Types to represent durations of time.)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
         $(LI Types to represent time zones (used by $(D SysTime)).)
@@ -16,6 +15,13 @@
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
+
+    Closely related to std.datetime is <a href="core_time.html">$(D core.time)</a>,
+    and some of the time types used in std.datetime come from there - such as
+    $(CXREF time, Duration), $(CXREF time, TickDuration), and
+    $(CXREF time, FracSec). So, you may want to look at its documentation as
+    well. However, core.time is publically imported into std.datetime, so you
+    don't have to import it separately.
 
     Three of the main concepts used in this module are time points, time
     durations, and time intervals.
@@ -49,15 +55,15 @@
 
     To get the current time, use $(D Clock.currTime). It will return the current
     time as a $(D SysTime). If you want to print it, $(D toString) is
-    sufficient, but if you use $(D toISOString), $(D toISOExtendedString), or
+    sufficient, but if you use $(D toISOString), $(D toISOExtString), or
     $(D toSimpleString), you can use the corresponding $(D fromISOString),
-    $(D fromISOExtendedString), or $(D fromISOExtendedString) to create a
+    $(D fromISOExtString), or $(D fromISOExtString) to create a
     $(D SysTime) from the string.
 
 --------------------
 auto currentTime = Clock.currTime();
-auto timeString = currentTime.toISOExtendedString();
-auto restoredTime = SysTime.fromISOExtendedString(timeString);
+auto timeString = currentTime.toISOExtString();
+auto restoredTime = SysTime.fromISOExtString(timeString);
 --------------------
 
     Various functions take a string (or strings) to represent a unit of time
@@ -65,14 +71,15 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),
     $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
     $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns) or some subset thereof.
+    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
     There are a few functions in core.time which take $(D "nsecs"), but because
     nothing in std.datetime has precision greater than hnsecs, and very little
     in core.time does, no functions in std.datetime accept $(D "nsecs").
 
+    If you're looking for the definitions of $(D Duration), $(D TickDuration),
+    or $(D FracSec), they're in core.time.
+
     Note:
-        core.time is publicly imported by std.datetime, so if you're using
-        std.datetime, you don't need to import core.time. Also,
         $(D DateTimeException) is an alias for core.time's $(D TimeException),
         so you don't need to worry about core.time functions and std.datetime
         functions throwing different exception types (except in the rare case
@@ -136,49 +143,21 @@ else version(Posix)
     version = testStdDateTime;
 }
 
-//We should enable at least _some_ of the tests on Windows - especially
-//the Windows-specific tests.
-version = enableWindowsTest;
-
 version(unittest)
 {
     import std.c.string;
     import std.stdio;
 }
 
-version(unittest)
+private alias std.algorithm.find find;
+private alias std.string.indexOf indexOf;
+
+//Verify module example.
+version(testStdDateTime) unittest
 {
-    bool localTimeIsUTC;
-
-    unittest
-    {
-        immutable unixTime = core.stdc.time.time(null);
-
-        tm* local = core.stdc.time.localtime(&unixTime);
-        tm* utc = core.stdc.time.gmtime(&unixTime);
-
-
-        localTimeIsUTC = local.tm_sec == utc.tm_sec &&
-                         local.tm_min == utc.tm_min &&
-                         local.tm_hour == utc.tm_hour &&
-                         local.tm_mday == utc.tm_mday &&
-                         local.tm_mon == utc.tm_mon &&
-                         local.tm_year == utc.tm_year &&
-                         local.tm_wday == utc.tm_wday &&
-                         local.tm_yday == utc.tm_yday &&
-                         local.tm_isdst == utc.tm_isdst;
-    }
-}
-
-alias std.string.indexOf indexOf;
-
-
-unittest
-{
-    //Verify module example.
     auto currentTime = Clock.currTime();
-    auto timeString = currentTime.toISOExtendedString();
-    auto restoredTime = SysTime.fromISOExtendedString(timeString);
+    auto timeString = currentTime.toISOExtString();
+    auto restoredTime = SysTime.fromISOExtString(timeString);
 }
 
 //Note: There various functions which void as their return type and ref of the
@@ -187,7 +166,6 @@ unittest
 //      that, relating to both ref and invariants. So, I've left the ref return
 //      types commented out with the idea that those functions can be made to
 //      return a ref to this once those bugs have been fixed.
-
 
 //==============================================================================
 // Section with public enums and constants.
@@ -210,7 +188,6 @@ enum Month : ubyte { jan = 1, ///
                      dec      ///
                    }
 
-
 /++
     Represents the 7 days of the Gregorian week (Sunday is 0).
   +/
@@ -222,7 +199,6 @@ enum DayOfWeek : ubyte { sun = 0, ///
                          fri,     ///
                          sat      ///
                        }
-
 
 /++
     In some date calculations, adding months or years can cause the date to fall
@@ -245,7 +221,6 @@ enum AllowDayOverflow
     yes
 }
 
-
 /++
     Indicates a direction in time. One example of its use is $(D Interval)'s
     $(D expand) function which uses it to indicate whether the interval should
@@ -262,7 +237,6 @@ enum Direction
     /// Both backward and forward.
     both
 }
-
 
 /++
     Used to indicate whether $(D popFront) should be called immediately upon
@@ -298,7 +272,6 @@ enum PopFirst
     yes
 }
 
-
 /++
    Used by StopWatch to indicate whether it should start immediately upon
    construction.
@@ -312,7 +285,6 @@ enum AutoStart
     yes
 }
 
-
 /++
     Array of the strings representing time units, starting with the smallest
     unit and going to the largest. It does not include $(D "nsecs").
@@ -325,7 +297,6 @@ enum AutoStart
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
 
-
 //==============================================================================
 // Section with other types.
 //==============================================================================
@@ -336,7 +307,6 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
     module it came from.
   +/
 alias TimeException DateTimeException;
-
 
 /++
     Effectively a namespace to make it clear that the methods it contains are
@@ -381,7 +351,6 @@ public:
             _assertPred!"<="(diff, 2);
         }
     }
-
 
     /++
         Returns the number of hnsecs since midnight, January 1st, 1 A.D. for the
@@ -437,7 +406,6 @@ public:
         }
     }
 
-
     /++
         The current system tick. The number of ticks per second varies from
         system to system. currSystemTick uses a monotonic clock, so it's
@@ -460,15 +428,10 @@ public:
         return TickDuration.currSystemTick();
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            auto t = Clock.currSystemTick;
-            assert(t.length > 0);
-        }
+        assert(Clock.currSystemTick.length > 0);
     }
-
 
     /++
         The current number of system ticks since the application started.
@@ -491,28 +454,23 @@ public:
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            auto a = Clock.currSystemTick;
-            auto b = Clock.currAppTick;
-            assert(a.length);
-            assert(a != b);
-        }
+        auto a = Clock.currSystemTick;
+        auto b = Clock.currAppTick;
+        assert(a.length);
+        assert(b.length);
+        assert(a > b);
     }
-
 
 private:
 
     @disable this() {}
 }
 
-
 //==============================================================================
 // Section with time points.
 //==============================================================================
-
 
 /++
     $(D SysTime) is the type used when you want to get the current time from the
@@ -578,23 +536,29 @@ public:
             assert(0, "FracSec's constructor threw when it shouldn't have.");
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(DateTime dt, immutable TimeZone tz, long expected)
         {
-            _assertPred!"=="(SysTime(DateTime.init, UTC())._stdTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 12, 30, 33), UTC())._stdTime, 450_330_000_000L);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 12, 30, 33), UTC())._stdTime, -413_670_000_000L);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), UTC())._stdTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 1), UTC())._stdTime, 10_000_000L);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC())._stdTime, -10_000_000L);
-
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(-60)).stdTime, 36_000_000_000L);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(0)).stdTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(60)).stdTime, -36_000_000_000L);
+            auto sysTime = SysTime(dt, tz);
+            _assertPred!"=="(sysTime._stdTime, expected);
+            assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
+                   format("Given DateTime: %s", dt));
         }
-    }
 
+        test(DateTime.init, UTC(), 0);
+        test(DateTime(1, 1, 1, 12, 30, 33), UTC(), 450_330_000_000L);
+        test(DateTime(0, 12, 31, 12, 30, 33), UTC(), -413_670_000_000L);
+        test(DateTime(1, 1, 1, 0, 0, 0), UTC(), 0);
+        test(DateTime(1, 1, 1, 0, 0, 1), UTC(), 10_000_000L);
+        test(DateTime(0, 12, 31, 23, 59, 59), UTC(), -10_000_000L);
+
+        test(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(-60),
+             36_000_000_000L);
+        test(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(0), 0);
+        test(DateTime(1, 1, 1, 0, 0, 0), new SimpleTimeZone(60),
+             -36_000_000_000L);
+    }
 
     /++
         Params:
@@ -608,10 +572,7 @@ public:
       +/
     this(in DateTime dateTime, in FracSec fsec, immutable TimeZone tz = null) nothrow
     {
-        if(tz is null)
-            _timezone = LocalTime();
-        else
-            _timezone = tz;
+        _timezone = tz is null ? LocalTime() : tz;
 
         try
         {
@@ -624,25 +585,35 @@ public:
             this(standardTime, _timezone.get);
         }
         catch(Exception e)
-            assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
         {
-            _assertPred!"=="(SysTime(DateTime.init, FracSec.init, UTC())._stdTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 12, 30, 33), FracSec.init, UTC())._stdTime, 450_330_000_000L);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 12, 30, 33), FracSec.init, UTC())._stdTime, -413_670_000_000L);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC())._stdTime, 10_000L);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC())._stdTime, -10_000L);
-
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).stdTime, -1);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).stdTime, -9_999_999);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC()).stdTime, -10_000_000);
+            assert(0, "Date, TimeOfDay, or DateTime's constructor threw when " ~
+                      "it shouldn't have.");
         }
     }
 
+    version(testStdDateTime) unittest
+    {
+        static void test(DateTime dt,
+                         FracSec fracSec,
+                         immutable TimeZone tz,
+                         long expected)
+        {
+            auto sysTime = SysTime(dt, fracSec, tz);
+            _assertPred!"=="(sysTime._stdTime, expected);
+            assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
+                   format("Given DateTime: %s, Given FracSec: %s", dt, fracSec));
+        }
+
+        test(DateTime.init, FracSec.init, UTC(), 0);
+        test(DateTime(1, 1, 1, 12, 30, 33), FracSec.init, UTC(), 450_330_000_000L);
+        test(DateTime(0, 12, 31, 12, 30, 33), FracSec.init, UTC(), -413_670_000_000L);
+        test(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC(), 10_000L);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC(), -10_000L);
+
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC(), -1);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC(), -9_999_999);
+        test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC(), -10_000_000);
+    }
 
     /++
         Params:
@@ -655,10 +626,7 @@ public:
       +/
     this(in Date date, immutable TimeZone tz = null) nothrow
     {
-        if(tz is null)
-            _timezone = LocalTime();
-        else
-            _timezone = tz;
+        _timezone = tz is null ? LocalTime() : tz;
 
         try
         {
@@ -668,20 +636,24 @@ public:
             this(standardTime, _timezone.get);
         }
         catch(Exception e)
-            assert(0, "Date's constructor through when it shouldn't have");
+            assert(0, "Date's constructor through when it shouldn't have.");
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(Date d, immutable TimeZone tz, long expected)
         {
-            _assertPred!"=="(SysTime(Date.init, UTC())._stdTime, 0);
-            _assertPred!"=="(SysTime(Date(1, 1, 1), UTC())._stdTime, 0);
-            _assertPred!"=="(SysTime(Date(1, 1, 2), UTC())._stdTime, 864000000000);
-            _assertPred!"=="(SysTime(Date(0, 12, 31), UTC())._stdTime, -864000000000);
+            auto sysTime = SysTime(d, tz);
+            _assertPred!"=="(sysTime._stdTime, expected);
+            assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
+                   format("Given Date: %s", d));
         }
-    }
 
+        test(Date.init, UTC(), 0);
+        test(Date(1, 1, 1), UTC(), 0);
+        test(Date(1, 1, 2), UTC(), 864000000000);
+        test(Date(0, 12, 31), UTC(), -864000000000);
+    }
 
     /++
         Note:
@@ -702,21 +674,25 @@ public:
     this(long stdTime, immutable TimeZone tz = null) pure nothrow
     {
         _stdTime = stdTime;
-
-        if(tz is null)
-            _timezone = LocalTime();
-        else
-            _timezone = tz;
+        _timezone = tz is null ? LocalTime() : tz;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(long stdTime, immutable TimeZone tz)
         {
-            _assertPred!"=="(SysTime(0)._stdTime, 0);
+            auto sysTime = SysTime(stdTime, tz);
+            _assertPred!"=="(sysTime._stdTime, stdTime);
+            assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
+                   format("Given stdTime: %s", stdTime));
+        }
+
+        foreach(stdTime; [-1234567890L, -250, 0, 250, 1235657390L])
+        {
+            foreach(tz; testTZs)
+                test(stdTime, tz);
         }
     }
-
 
     /++
         Params:
@@ -730,7 +706,6 @@ public:
         return this;
     }
 
-
     /++
         Params:
             rhs = The $(D SysTime) to assign to this one.
@@ -742,7 +717,6 @@ public:
 
         return this;
     }
-
 
     /++
         Checks for equality between this $(D SysTime) and the given
@@ -756,114 +730,48 @@ public:
         return _stdTime == rhs._stdTime;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        _assertPred!"=="(SysTime(DateTime.init, UTC()), SysTime(0, UTC()));
+        _assertPred!"=="(SysTime(DateTime.init, UTC()), SysTime(0));
+        _assertPred!"=="(SysTime(Date.init, UTC()), SysTime(0));
+        _assertPred!"=="(SysTime(0), SysTime(0));
+
+        static void test(DateTime dt,
+                         immutable TimeZone tz1,
+                         immutable TimeZone tz2)
         {
-            auto a = SysTime(DateTime.init, UTC());
-            auto b = SysTime(0, UTC());
-            assert(a == b);
-            _assertPred!"=="(a, b);
-            _assertPred!"=="(SysTime(DateTime.init, UTC()), SysTime(0, UTC()));
-            _assertPred!"=="(SysTime(Date.init, UTC()), SysTime(0, UTC()));
-            _assertPred!"=="(SysTime(0), SysTime(0));
+            auto st1 = SysTime(dt);
+            st1.timezone = tz1;
 
-            _assertPred!"=="(SysTime(Date(1999, 1, 1)), SysTime(Date(1999, 1, 1)));
-            _assertPred!"=="(SysTime(Date(1999, 1, 1)), SysTime(Date(1999, 1, 1)));
-            _assertPred!"=="(SysTime(Date(1, 7, 1)), SysTime(Date(1, 7, 1)));
-            _assertPred!"=="(SysTime(Date(1, 1, 6)), SysTime(Date(1, 1, 6)));
+            auto st2 = SysTime(dt);
+            st2.timezone = tz2;
 
-            _assertPred!"=="(SysTime(Date(1999, 7, 1)), SysTime(Date(1999, 7, 1)));
-            _assertPred!"=="(SysTime(Date(1999, 7, 6)), SysTime(Date(1999, 7, 6)));
-
-            _assertPred!"=="(SysTime(Date(1, 7, 6)), SysTime(Date(1, 7, 6)));
-
-            _assertPred!"=="(SysTime(DateTime(1999, 1, 1, 0, 0, 0)), SysTime(Date(1999, 1, 1)));
-            _assertPred!"=="(SysTime(Date(1999, 1, 1)), SysTime(DateTime(1999, 1, 1, 0, 0, 0)));
-
-            _assertPred!"!="(SysTime(DateTime(1999, 1, 1, 11, 30, 20)), SysTime(Date(1999, 1, 1)));
-            _assertPred!"!="(SysTime(Date(1999, 1, 1)), SysTime(DateTime(1999, 1, 1, 11, 30, 20)));
-
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0))));
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0))));
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0))));
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))));
-
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0))));
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33))));
-            _assertPred!"=="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))),
-                        SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))));
-
-            {
-                auto sysUTC = SysTime(Date(1999, 1, 1));
-                sysUTC.timezone = UTC();
-
-                auto sysLocal = SysTime(Date(1999, 1, 1));
-                sysUTC.timezone = LocalTime();
-
-                _assertPred!"=="(sysUTC, sysLocal);
-                _assertPred!"=="(sysLocal, sysUTC);
-
-                if(!localTimeIsUTC)
-                {
-                    _assertPred!"!="(SysTime(Date(1999, 1, 1), UTC()), SysTime(Date(1999, 1, 1), LocalTime()));
-                    _assertPred!"!="(SysTime(Date(1999, 7, 1), LocalTime()), SysTime(Date(1999, 7, 1), UTC()));
-                }
-            }
-
-            {
-                auto sysUTC = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-                sysUTC.timezone = UTC();
-
-                auto sysSimple = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-                sysSimple.timezone = new SimpleTimeZone(-360);
-
-                _assertPred!"=="(sysUTC, sysSimple);
-                _assertPred!"=="(sysSimple, sysUTC);
-
-                _assertPred!"!="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC()),
-                               SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), sysSimple.timezone));
-                _assertPred!"!="(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), sysSimple.timezone),
-                               SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC()));
-            }
-
-            {
-                auto sysUTC = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC());
-                auto sysSimple = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), new SimpleTimeZone(240));
-
-                _assertPred!"!="(sysUTC, sysSimple);
-                _assertPred!"!="(sysSimple, sysUTC);
-
-                sysUTC = SysTime(DateTime(Date(1999, 7, 5), TimeOfDay(20, 0, 0)), UTC());
-
-                _assertPred!"=="(sysUTC, sysSimple);
-                _assertPred!"=="(sysSimple, sysUTC);
-            }
-
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            static assert(__traits(compiles, st == st));
-            static assert(__traits(compiles, st == cst));
-            //static assert(__traits(compiles, st == ist));
-            static assert(__traits(compiles, cst == st));
-            static assert(__traits(compiles, cst == cst));
-            //static assert(__traits(compiles, cst == ist));
-            //static assert(__traits(compiles, ist == st));
-            //static assert(__traits(compiles, ist == cst));
-            //static assert(__traits(compiles, ist == ist));
+            _assertPred!"=="(st1, st2);
         }
-    }
 
+        foreach(tz1; testTZs)
+        {
+            foreach(tz2; testTZs)
+            {
+                foreach(dt; chain(testDateTimesBC, testDateTimesAD))
+                        test(dt, tz1, tz2);
+            }
+        }
+
+        auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        static assert(__traits(compiles, st == st));
+        static assert(__traits(compiles, st == cst));
+        //static assert(__traits(compiles, st == ist));
+        static assert(__traits(compiles, cst == st));
+        static assert(__traits(compiles, cst == cst));
+        //static assert(__traits(compiles, cst == ist));
+        //static assert(__traits(compiles, ist == st));
+        //static assert(__traits(compiles, ist == cst));
+        //static assert(__traits(compiles, ist == ist));
+    }
 
     /++
         Compares this $(D SysTime) with the given $(D SysTime).
@@ -887,238 +795,77 @@ public:
         return 0;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        _assertPred!("opCmp", "==")(SysTime(DateTime.init, UTC()),
+                                    SysTime(0, UTC()));
+        _assertPred!("opCmp", "==")(SysTime(DateTime.init, UTC()), SysTime(0));
+        _assertPred!("opCmp", "==")(SysTime(Date.init, UTC()), SysTime(0));
+        _assertPred!("opCmp", "==")(SysTime(0), SysTime(0));
+
+        static void testEqual(DateTime dt,
+                              immutable TimeZone tz1,
+                              immutable TimeZone tz2)
         {
-            //Test A.D.
-            _assertPred!("opCmp", "==")(SysTime(DateTime.init, UTC()), SysTime(0));
-            _assertPred!("opCmp", "==")(SysTime(Date.init, UTC()), SysTime(0));
+            auto st1 = SysTime(dt);
+            st1.timezone = tz1;
 
-            _assertPred!("opCmp", "==")(SysTime(Date(1999, 1, 1)), SysTime(Date(1999, 1, 1)));
-            _assertPred!("opCmp", "==")(SysTime(Date(1999, 1, 1)), SysTime(Date(1999, 1, 1)));
-            _assertPred!("opCmp", "==")(SysTime(Date(1, 7, 1)), SysTime(Date(1, 7, 1)));
-            _assertPred!("opCmp", "==")(SysTime(Date(1, 1, 6)), SysTime(Date(1, 1, 6)));
+            auto st2 = SysTime(dt);
+            st2.timezone = tz2;
 
-            _assertPred!("opCmp", "==")(SysTime(Date(1999, 7, 1)), SysTime(Date(1999, 7, 1)));
-            _assertPred!("opCmp", "==")(SysTime(Date(1999, 7, 6)), SysTime(Date(1999, 7, 6)));
-
-            _assertPred!("opCmp", "==")(SysTime(Date(1, 7, 6)), SysTime(Date(1, 7, 6)));
-
-            _assertPred!("opCmp", ">")(SysTime(DateTime(1999, 1, 1, 11, 30, 20)), SysTime(Date(1999, 1, 1)));
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 1, 1)), SysTime(DateTime(1999, 1, 1, 11, 30, 20)));
-
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 7, 6)), SysTime(Date(2000, 7, 6)));
-            _assertPred!("opCmp", ">")(SysTime(Date(2000, 7, 6)), SysTime(Date(1999, 7, 6)));
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 7, 6)), SysTime(Date(1999, 8, 6)));
-            _assertPred!("opCmp", ">")(SysTime(Date(1999, 8, 6)), SysTime(Date(1999, 7, 6)));
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 7, 6)), SysTime(Date(1999, 7, 7)));
-            _assertPred!("opCmp", ">")(SysTime(Date(1999, 7, 7)), SysTime(Date(1999, 7, 6)));
-
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 8, 7)), SysTime(Date(2000, 7, 6)));
-            _assertPred!("opCmp", ">")(SysTime(Date(2000, 8, 6)), SysTime(Date(1999, 7, 7)));
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 7, 7)), SysTime(Date(2000, 7, 6)));
-            _assertPred!("opCmp", ">")(SysTime(Date(2000, 7, 6)), SysTime(Date(1999, 7, 7)));
-            _assertPred!("opCmp", "<")(SysTime(Date(1999, 7, 7)), SysTime(Date(1999, 8, 6)));
-            _assertPred!("opCmp", ">")(SysTime(Date(1999, 8, 6)), SysTime(Date(1999, 7, 7)));
-
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0)))),
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))));
-
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))),
-                                       SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                     SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                      SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 31, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))),
-                                      SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34))));
-
-            //Test B.C.
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "==")(SysTime(DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33))),
-                                       SysTime(DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-2000, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))));
-
-            //Test Both
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33))));
-
-            _assertPred!("opCmp", "<")(SysTime(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(1999, 6, 6), TimeOfDay(12, 30, 33))));
-            _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 6, 8), TimeOfDay(12, 30, 33))),
-                                      SysTime(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33))));
-
-            {
-                auto sysUTC = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-                sysUTC.timezone = UTC();
-
-                auto sysSimple = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-                sysSimple.timezone = new SimpleTimeZone(-360);
-
-                _assertPred!("opCmp", "==")(sysUTC, sysSimple);
-                _assertPred!("opCmp", "==")(sysSimple, sysUTC);
-
-                _assertPred!("opCmp", "<")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC()),
-                                         SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), sysSimple.timezone));
-                _assertPred!("opCmp", ">")(SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), sysSimple.timezone),
-                                         SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC()));
-            }
-
-            {
-                auto sysUTC = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), UTC());
-                auto sysSimple = SysTime(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), new SimpleTimeZone(240));
-
-                _assertPred!("opCmp", ">")(sysUTC, sysSimple);
-                _assertPred!("opCmp", "<")(sysSimple, sysUTC);
-
-                sysUTC = SysTime(DateTime(Date(1999, 7, 5), TimeOfDay(20, 0, 0)), UTC());
-
-                _assertPred!("opCmp", "==")(sysUTC, sysSimple);
-                _assertPred!("opCmp", "==")(sysSimple, sysUTC);
-            }
-
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
-            static assert(__traits(compiles, st.opCmp(st)));
-            static assert(__traits(compiles, st.opCmp(cst)));
-            //static assert(__traits(compiles, st.opCmp(ist)));
-            static assert(__traits(compiles, cst.opCmp(st)));
-            static assert(__traits(compiles, cst.opCmp(cst)));
-            //static assert(__traits(compiles, cst.opCmp(ist)));
-            //static assert(__traits(compiles, ist.opCmp(st)));
-            //static assert(__traits(compiles, ist.opCmp(cst)));
-            //static assert(__traits(compiles, ist.opCmp(ist)));
+            _assertPred!("opCmp", "==")(st1, st2);
         }
-    }
 
+        foreach(dt; chain(testDateTimesBC, testDateTimesAD))
+        {
+            foreach(tz1; testTZs)
+            {
+                foreach(tz2; testTZs)
+                    testEqual(dt, tz1, tz2);
+            }
+        }
+
+        static void testCmp(DateTime dt1,
+                            immutable TimeZone tz1,
+                            DateTime dt2,
+                            immutable TimeZone tz2)
+        {
+            auto st1 = SysTime(dt1);
+            st1.timezone = tz1;
+
+            auto st2 = SysTime(dt2);
+            st2.timezone = tz2;
+
+            _assertPred!("opCmp", "<")(st1, st2);
+            _assertPred!("opCmp", ">")(st2, st1);
+        }
+
+        auto dts = testDateTimesBC ~ testDateTimesAD;
+        foreach(tz1; testTZs)
+        {
+            foreach(tz2; testTZs)
+            {
+                for(size_t i = 0; i < dts.length; ++i)
+                {
+                    for(size_t j = i + 1; j < dts.length; ++j)
+                        testCmp(dts[i], tz1, dts[j], tz2);
+                }
+            }
+        }
+
+        auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        static assert(__traits(compiles, st.opCmp(st)));
+        static assert(__traits(compiles, st.opCmp(cst)));
+        //static assert(__traits(compiles, st.opCmp(ist)));
+        static assert(__traits(compiles, cst.opCmp(st)));
+        static assert(__traits(compiles, cst.opCmp(cst)));
+        //static assert(__traits(compiles, cst.opCmp(ist)));
+        //static assert(__traits(compiles, ist.opCmp(st)));
+        //static assert(__traits(compiles, ist.opCmp(cst)));
+        //static assert(__traits(compiles, ist.opCmp(ist)));
+    }
 
     /++
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
@@ -1129,25 +876,40 @@ public:
         return (cast(Date)this).year;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime sysTime, long expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).year, 1);
-            _assertPred!"=="(SysTime(1, UTC()).year, 1);
-            _assertPred!"=="(SysTime(-1, UTC()).year, 0);
-            _assertPred!"=="(SysTime(DateTime(12, 1, 1, 0, 0, 0)).year, 12);
-            _assertPred!"=="(SysTime(DateTime(-12, 1, 1, 0, 0, 0)).year, -12);
-            _assertPred!"=="(SysTime(Date(1999, 7, 6)).year, 1999);
-            _assertPred!"=="(SysTime(Date(-1999, 7, 6)).year, -1999);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.year));
-            //static assert(__traits(compiles, ist.year));
+            _assertPred!"=="(sysTime.year, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
-    }
 
+        test(SysTime(0, UTC()), 1);
+        test(SysTime(1, UTC()), 1);
+        test(SysTime(-1, UTC()), 0);
+
+        foreach(year; chain(testYearsBC, testYearsAD))
+        {
+            foreach(md; testMonthDays)
+            {
+                foreach(tod; testTODs)
+                {
+                    auto dt = DateTime(Date(year, md.month, md.day), tod);
+
+                    foreach(tz; testTZs)
+                    {
+                        foreach(fs; testFracSecs)
+                            test(SysTime(dt, fs, tz), year);
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.year));
+        //static assert(__traits(compiles, ist.year));
+    }
 
     /++
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
@@ -1186,84 +948,60 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            static void testST(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
-            {
-                st.year = year;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 1999, SysTime(Date(1999, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 0, SysTime(Date(0, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), -1999, SysTime(Date(-1999, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1999, SysTime(DateTime(1999, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 0, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), -1999, SysTime(DateTime(-1999, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), 1999, SysTime(Date(1999, 1, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), 0, SysTime(Date(0, 1, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), -1999, SysTime(Date(-1999, 1, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1999, SysTime(DateTime(1999, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 0, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), -1999, SysTime(DateTime(-1999, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(Date(12, 7, 2)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(Date(5, 7, 2)));
-            testST(SysTime(Date(0, 7, 2)), 999, SysTime(Date(999, 7, 2)));
-            testST(SysTime(Date(-1202, 7, 2)), 2300, SysTime(Date(2300, 7, 2)));
-
-            testST(SysTime(Date(1, 7, 2)), -12, SysTime(Date(-12, 7, 2)));
-            testST(SysTime(Date(5007, 7, 2)), -5, SysTime(Date(-5, 7, 2)));
-            testST(SysTime(Date(0, 7, 2)), -999, SysTime(Date(-999, 7, 2)));
-            testST(SysTime(Date(-1202, 7, 2)), -2300, SysTime(Date(-2300, 7, 2)));
-
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 12, SysTime(DateTime(12, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 12, SysTime(DateTime(12, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 0, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), -1, SysTime(DateTime(-1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 1, SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 999, SysTime(DateTime(999, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2010, SysTime(DateTime(2010, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 5, SysTime(DateTime(5, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5, SysTime(DateTime(5, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 0, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), -507, SysTime(DateTime(-507, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2300, SysTime(DateTime(2300, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5007, SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 12, SysTime(DateTime(12, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 12, SysTime(DateTime(12, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 0, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), -1, SysTime(DateTime(-1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 1, SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 999, SysTime(DateTime(999, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2010, SysTime(DateTime(2010, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 5, SysTime(DateTime(5, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5, SysTime(DateTime(5, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 0, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), -507, SysTime(DateTime(-507, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2300, SysTime(DateTime(2300, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5007, SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(12, 1, 1, 0, 0, 0), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.year = 7));
-            //static assert(!__traits(compiles, ist.year = 7));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
-            assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
-            assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
-        }
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
     }
 
+    version(testStdDateTime) unittest
+    {
+        static void test(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
+        {
+            st.year = year;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
+        }
+
+        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        {
+            auto dt = cast(DateTime)st;
+
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+                test(st, year, e);
+            }
+        }
+
+        foreach(fs; testFracSecs)
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(tod; testTODs)
+                {
+                    test(SysTime(DateTime(Date(1999, 2, 28), tod), fs, tz), 2000,
+                         SysTime(DateTime(Date(2000, 2, 28), tod), fs, tz));
+                    test(SysTime(DateTime(Date(2000, 2, 28), tod), fs, tz), 1999,
+                         SysTime(DateTime(Date(1999, 2, 28), tod), fs, tz));
+                }
+
+                foreach(tod; testTODsThrown)
+                {
+                    auto st = SysTime(DateTime(Date(2000, 2, 29), tod), fs, tz);
+                    assertThrown!DateTimeException(st.year = 1999);
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.year = 7));
+        //static assert(!__traits(compiles, ist.year = 7));
+    }
 
     /++
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
@@ -1283,29 +1021,32 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
         return (cast(Date)this).yearBC;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
+        assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
+        assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        foreach(st; testSysTimesBC)
         {
-            assertThrown!DateTimeException((in SysTime st){st.yearBC;}(SysTime(Date(1, 1, 1), UTC())));
-            assertThrown!DateTimeException((in SysTime st){st.yearBC;}(SysTime(0, UTC())));
-            assertThrown!DateTimeException((in SysTime st){st.yearBC;}(SysTime(1, UTC())));
-
-            _assertPred!"=="(SysTime(-1, UTC()).yearBC, 1);
-            _assertPred!"=="(SysTime(DateTime(-12, 1, 1, 0, 0, 0)).yearBC, 13);
-
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, st.year = 12));
-            static assert(!__traits(compiles, cst.year = 12));
-            //static assert(!__traits(compiles, ist.year = 12));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
-            assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
-            assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
+            auto msg = format("SysTime: %s", st);
+            assertNotThrown!DateTimeException(st.yearBC, msg);
+            _assertPred!"=="(st.yearBC, (st.year * -1) + 1, msg);
         }
+
+        foreach(st; [testSysTimesAD[0], testSysTimesAD[$/2], testSysTimesAD[$-1]])
+            assertThrown!DateTimeException(st.yearBC, format("SysTime: %s", st));
+
+        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, st.year = 12));
+        static assert(!__traits(compiles, cst.year = 12));
+        //static assert(!__traits(compiles, ist.year = 12));
     }
 
 
@@ -1347,80 +1088,73 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    //Verify Examples
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            static void testSTInvalid(SysTime st, int year)
-            {
-                st.yearBC = year;
-            }
+        auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
+        st.yearBC = 1;
+        assert(st == SysTime(DateTime(0, 1, 1, 7, 30, 0)));
 
-            static void testST(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
-            {
-                st.yearBC = year;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), 0));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), -1));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), -1202));
-
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 1999, SysTime(Date(-1998, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 1, SysTime(Date(0, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1999, SysTime(DateTime(-1998, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(Date(-11, 7, 2)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(Date(-4, 7, 2)));
-            testST(SysTime(Date(0, 7, 2)), 999, SysTime(Date(-998, 7, 2)));
-            testST(SysTime(Date(-1202, 7, 2)), 2300, SysTime(Date(-2299, 7, 2)));
-
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 12, SysTime(DateTime(-11, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 12, SysTime(DateTime(-11, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 1, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 999, SysTime(DateTime(-998, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(1, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2010, SysTime(DateTime(-2009, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 5, SysTime(DateTime(-4, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5, SysTime(DateTime(-4, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2300, SysTime(DateTime(-2299, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(5007, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5007, SysTime(DateTime(-5006, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 12, SysTime(DateTime(-11, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 12, SysTime(DateTime(-11, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 1, SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 999, SysTime(DateTime(-998, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(0, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2010, SysTime(DateTime(-2009, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)), 5, SysTime(DateTime(-4, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5, SysTime(DateTime(-4, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 2300, SysTime(DateTime(-2299, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-            testST(SysTime(DateTime(-1202, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)), 5007, SysTime(DateTime(-5006, 7, 2, 1, 3, 2), FracSec.from!"hnsecs"(5007)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(-11, 1, 1, 0, 0, 0), UTC()));
-
-            {
-                auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-                const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-                //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-                static assert(__traits(compiles, st.yearBC = 12));
-                static assert(!__traits(compiles, cst.yearBC = 12));
-                //static assert(!__traits(compiles, ist.yearBC = 12));
-            }
-
-            //Verify Examples.
-            {
-                auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
-                st.yearBC = 1;
-                assert(st == SysTime(DateTime(0, 1, 1, 7, 30, 0)));
-
-                st.yearBC = 10;
-                assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
-            }
-        }
+        st.yearBC = 10;
+        assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
     }
 
+    version(testStdDateTime) unittest
+    {
+        static void test(SysTime st, int year, in SysTime expected, size_t line = __LINE__)
+        {
+            st.yearBC = year;
+            _assertPred!"=="(st, expected, format("SysTime: %s", st), __FILE__, line);
+        }
+
+        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        {
+            auto dt = cast(DateTime)st;
+
+            foreach(year; testYearsBC)
+            {
+                auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, (year * -1) + 1, e);
+            }
+        }
+
+        foreach(st; [testSysTimesBC[0], testSysTimesBC[$ - 1],
+                     testSysTimesAD[0], testSysTimesAD[$ - 1]])
+        {
+            foreach(year; testYearsBC)
+                assertThrown!DateTimeException(st.yearBC = year);
+        }
+
+        foreach(fs; testFracSecs)
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(tod; testTODs)
+                {
+                    test(SysTime(DateTime(Date(-1999, 2, 28), tod), fs, tz), 2001,
+                         SysTime(DateTime(Date(-2000, 2, 28), tod), fs, tz));
+                    test(SysTime(DateTime(Date(-2000, 2, 28), tod), fs, tz), 2000,
+                         SysTime(DateTime(Date(-1999, 2, 28), tod), fs, tz));
+                }
+
+                foreach(tod; testTODsThrown)
+                {
+                    auto st = SysTime(DateTime(Date(-2000, 2, 29), tod), fs, tz);
+                    assertThrown!DateTimeException(st.year = -1999);
+                }
+            }
+        }
+
+        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, st.yearBC = 12));
+        static assert(!__traits(compiles, cst.yearBC = 12));
+        //static assert(!__traits(compiles, ist.yearBC = 12));
+    }
 
     /++
         Month of a Gregorian Year.
@@ -1437,28 +1171,47 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         return (cast(Date)this).month;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        static void test(SysTime sysTime, Month expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).month, 1);
-            _assertPred!"=="(SysTime(1, UTC()).month, 1);
-            _assertPred!"=="(SysTime(-1, UTC()).month, 12);
-            _assertPred!"=="(SysTime(DateTime(1, 12, 1, 0, 0, 0)).month, 12);
-            _assertPred!"=="(SysTime(DateTime(0, 12, 1, 0, 0, 0)).month, 12);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)).month, 7);
-            _assertPred!"=="(SysTime(DateTime(-1999, 7, 6, 12, 30, 33)).month, 7);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.month));
-            //static assert(__traits(compiles, ist.month));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
-            assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
-            assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
+            _assertPred!"=="(sysTime.month, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), Month.jan);
+        test(SysTime(1, UTC()), Month.jan);
+        test(SysTime(-1, UTC()), Month.dec);
+
+        foreach(year; chain(testYearsBC, testYearsAD))
+        {
+            foreach(md; testMonthDays)
+            {
+                foreach(tod; testTODs)
+                {
+                    auto dt = DateTime(Date(year, md.month, md.day), tod);
+
+                    foreach(fs; testFracSecs)
+                    {
+                        foreach(tz; testTZs)
+                            test(SysTime(dt, fs, tz), md.month);
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.month));
+        //static assert(__traits(compiles, ist.month));
     }
 
 
@@ -1490,91 +1243,84 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, Month month, in SysTime expected, size_t line = __LINE__)
         {
-            static void testSTInvalid(SysTime st, Month month)
-            {
-                st.month = month;
-            }
-
-            static void testST(SysTime st, Month month, in SysTime expected, size_t line = __LINE__)
-            {
-                st.month = month;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testSTInvalid(SysTime(DateTime(1, 1, 1, 12, 30, 33)), cast(Month)0));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(DateTime(1, 1, 1, 12, 30, 33)), cast(Month)13));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(DateTime(1, 1, 29, 12, 30, 33)), cast(Month)2));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(DateTime(1, 7, 31, 12, 30, 33)), cast(Month)6));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(DateTime(4, 7, 30, 12, 30, 33)), cast(Month)2));
-
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), cast(Month)1, SysTime(Date(1, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), cast(Month)7, SysTime(Date(1, 7, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), cast(Month)12, SysTime(Date(1, 12, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)7, SysTime(DateTime(1, 7, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)12, SysTime(DateTime(1, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), cast(Month)1, SysTime(Date(0, 1, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), cast(Month)7, SysTime(Date(0, 7, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), cast(Month)12, SysTime(Date(0, 12, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)1, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)7, SysTime(DateTime(0, 7, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)12, SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), cast(Month)12, SysTime(Date(1, 12, 2)));
-            testST(SysTime(Date(5007, 7, 2)), cast(Month)5, SysTime(Date(5007, 5, 2)));
-            testST(SysTime(Date(0, 7, 2)), cast(Month)7, SysTime(Date(0, 7, 2)));
-            testST(SysTime(Date(-1202, 7, 2)), cast(Month)1, SysTime(Date(-1202, 1, 2)));
-
-            testST(SysTime(DateTime(1, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(0)), cast(Month)12, SysTime(DateTime(1, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(1, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(1)), cast(Month)12, SysTime(DateTime(1, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(2)), cast(Month)7, SysTime(DateTime(1, 7, 29, 9, 13, 2), FracSec.from!"hnsecs"(2)));
-            testST(SysTime(DateTime(1, 11, 28, 10, 13, 2), FracSec.from!"hnsecs"(3)), cast(Month)1, SysTime(DateTime(1, 1, 28, 10, 13, 2), FracSec.from!"hnsecs"(3)));
-            testST(SysTime(DateTime(1, 1, 28, 10, 13, 2), FracSec.from!"hnsecs"(4)), cast(Month)2, SysTime(DateTime(1, 2, 28, 10, 13, 2), FracSec.from!"hnsecs"(4)));
-            testST(SysTime(DateTime(1, 7, 28, 10, 13, 2), FracSec.from!"hnsecs"(5)),cast(Month) 6, SysTime(DateTime(1, 6, 28, 10, 13, 2), FracSec.from!"hnsecs"(5)));
-            testST(SysTime(DateTime(4, 7, 29, 10, 13, 2), FracSec.from!"hnsecs"(6)), cast(Month)2, SysTime(DateTime(4, 2, 29, 10, 13, 2), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(4, 7, 31, 10, 13, 2), FracSec.from!"hnsecs"(6)), cast(Month)8, SysTime(DateTime(4, 8, 31, 10, 13, 2), FracSec.from!"hnsecs"(6)));
-
-            testST(SysTime(DateTime(1207, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(0)), cast(Month)12, SysTime(DateTime(1207, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(1207, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(11)), cast(Month)12, SysTime(DateTime(1207, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(11)));
-            testST(SysTime(DateTime(1207, 12, 29, 9, 12, 3), FracSec.from!"hnsecs"(10)), cast(Month)7, SysTime(DateTime(1207, 7, 29, 9, 12, 3), FracSec.from!"hnsecs"(10)));
-            testST(SysTime(DateTime(1207, 11, 28, 10, 12, 3), FracSec.from!"hnsecs"(9)), cast(Month)1, SysTime(DateTime(1207, 1, 28, 10, 12, 3), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(1207, 1, 28, 10, 12, 3), FracSec.from!"hnsecs"(8)), cast(Month)2, SysTime(DateTime(1207, 2, 28, 10, 12, 3), FracSec.from!"hnsecs"(8)));
-            testST(SysTime(DateTime(1207, 7, 28, 10, 12, 3), FracSec.from!"hnsecs"(7)), cast(Month)6, SysTime(DateTime(1207, 6, 28, 10, 12, 3), FracSec.from!"hnsecs"(7)));
-
-            testST(SysTime(DateTime(0, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(0)), cast(Month)12, SysTime(DateTime(0, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(0, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(1)), cast(Month)12, SysTime(DateTime(0, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 29, 9, 13, 2), FracSec.from!"hnsecs"(2)), cast(Month)7, SysTime(DateTime(0, 7, 29, 9, 13, 2), FracSec.from!"hnsecs"(2)));
-            testST(SysTime(DateTime(0, 11, 28, 10, 13, 2), FracSec.from!"hnsecs"(3)), cast(Month)1, SysTime(DateTime(0, 1, 28, 10, 13, 2), FracSec.from!"hnsecs"(3)));
-            testST(SysTime(DateTime(0, 1, 28, 10, 13, 2), FracSec.from!"hnsecs"(4)), cast(Month)2, SysTime(DateTime(0, 2, 28, 10, 13, 2), FracSec.from!"hnsecs"(4)));
-            testST(SysTime(DateTime(0, 7, 28, 10, 13, 2), FracSec.from!"hnsecs"(5)), cast(Month)6, SysTime(DateTime(0, 6, 28, 10, 13, 2), FracSec.from!"hnsecs"(5)));
-
-            testST(SysTime(DateTime(0, 12, 30, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)11, SysTime(DateTime(0, 11, 30, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(-1, 7, 28, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)2, SysTime(DateTime(-1, 2, 28, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 7, 29, 0, 0, 0), FracSec.from!"hnsecs"(1)), cast(Month)2, SysTime(DateTime(0, 2, 29, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 7, 29, 10, 13, 2), FracSec.from!"hnsecs"(6)), cast(Month)2, SysTime(DateTime(0, 2, 29, 10, 13, 2), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(0, 7, 31, 10, 13, 2), FracSec.from!"hnsecs"(6)), cast(Month)8, SysTime(DateTime(0, 8, 31, 10, 13, 2), FracSec.from!"hnsecs"(6)));
-
-            testST(SysTime(DateTime(-9999, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(0)), cast(Month)12, SysTime(DateTime(-9999, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(-9999, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(11)), cast(Month)12, SysTime(DateTime(-9999, 12, 29, 9, 12, 2), FracSec.from!"hnsecs"(11)));
-            testST(SysTime(DateTime(-9999, 12, 29, 9, 12, 3), FracSec.from!"hnsecs"(10)), cast(Month)7, SysTime(DateTime(-9999, 7, 29, 9, 12, 3), FracSec.from!"hnsecs"(10)));
-            testST(SysTime(DateTime(-9999, 11, 28, 10, 12, 3), FracSec.from!"hnsecs"(9)), cast(Month)1, SysTime(DateTime(-9999, 1, 28, 10, 12, 3), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(-9999, 1, 28, 10, 12, 3), FracSec.from!"hnsecs"(8)), cast(Month)2, SysTime(DateTime(-9999, 2, 28, 10, 12, 3), FracSec.from!"hnsecs"(8)));
-            testST(SysTime(DateTime(-9999, 7, 28, 10, 12, 3), FracSec.from!"hnsecs"(7)), cast(Month)6, SysTime(DateTime(-9999, 6, 28, 10, 12, 3), FracSec.from!"hnsecs"(7)));
-
-            testST(SysTime(0, UTC()), cast(Month)12, SysTime(DateTime(1, 12, 1, 0, 0, 0), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.month = 12));
-            //static assert(!__traits(compiles, ist.month = 12));
+            st.month = cast(Month)month;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
-    }
 
+        foreach(st; chain(testSysTimesBC, testSysTimesAD))
+        {
+            auto dt = cast(DateTime)st;
+
+            foreach(md; testMonthDays)
+            {
+                if(st.day > maxDay(dt.year, md.month))
+                    continue;
+
+                auto e = SysTime(DateTime(dt.year, md.month, dt.day, dt.hour, dt.minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, md.month, e);
+            }
+        }
+
+        foreach(fs; testFracSecs)
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(tod; testTODs)
+                {
+                    foreach(year; filter!((a){return yearIsLeapYear(a);})
+                                         (chain(testYearsBC, testYearsAD)))
+                    {
+                        test(SysTime(DateTime(Date(year, 1, 29), tod), fs, tz),
+                             Month.feb,
+                             SysTime(DateTime(Date(year, 2, 29), tod), fs, tz));
+                    }
+
+                    foreach(year; chain(testYearsBC, testYearsAD))
+                    {
+                        test(SysTime(DateTime(Date(year, 1, 28), tod), fs, tz),
+                             Month.feb,
+                             SysTime(DateTime(Date(year, 2, 28), tod), fs, tz));
+                        test(SysTime(DateTime(Date(year, 7, 30), tod), fs, tz),
+                             Month.jun,
+                             SysTime(DateTime(Date(year, 6, 30), tod), fs, tz));
+                    }
+                }
+            }
+        }
+
+        foreach(fs; [testFracSecs[0], testFracSecs[$-1]])
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(tod; testTODsThrown)
+                {
+                    foreach(year; [testYearsBC[$-3], testYearsBC[$-2],
+                                   testYearsBC[$-2], testYearsAD[0],
+                                   testYearsAD[$-2], testYearsAD[$-1]])
+                    {
+                        auto day = yearIsLeapYear(year) ? 30 : 29;
+                        auto st1 = SysTime(DateTime(Date(year, 1, day), tod), fs, tz);
+                        assertThrown!DateTimeException(st1.month = Month.feb);
+
+                        auto st2 = SysTime(DateTime(Date(year, 7, 31), tod), fs, tz);
+                        assertThrown!DateTimeException(st2.month = Month.jun);
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.month = 12));
+        //static assert(!__traits(compiles, ist.month = 12));
+    }
 
     /++
         Day of a Gregorian Month.
@@ -1591,37 +1337,47 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return (cast(Date)this).day;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
+        assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
+        assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        static void test(SysTime sysTime, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).day, 1);
-            _assertPred!"=="(SysTime(1, UTC()).day, 1);
-            _assertPred!"=="(SysTime(-1, UTC()).day, 31);
-            _assertPred!"=="(SysTime(DateTime(50, 2, 4)).day, 4);
-            _assertPred!"=="(SysTime(DateTime(50, 2, 4, 0, 0, 1)).day, 4);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 6)).day, 6);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 0, 0, 0)).day, 6);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)).day, 6);
-            _assertPred!"=="(SysTime(DateTime(-50, 2, 4)).day, 4);
-            _assertPred!"=="(SysTime(DateTime(-50, 2, 4, 0, 0, 1)).day, 4);
-            _assertPred!"=="(SysTime(Date(-1999, 7, 6)).day, 6);
-            _assertPred!"=="(SysTime(DateTime(-1999, 7, 6, 0, 0, 0)).day, 6);
-            _assertPred!"=="(SysTime(DateTime(-1999, 7, 6, 12, 30, 33)).day, 6);
-
-            _assertPred!"=="(SysTime(DateTime(1, 1, 12, 0, 0, 0)).day, 12);
-            _assertPred!"=="(SysTime(DateTime(0, 1, 12, 0, 0, 0)).day, 12);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.day));
-            //static assert(__traits(compiles, ist.day));
-
-            //Verify Examples.
-            assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
-            assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
-            assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
+            _assertPred!"=="(sysTime.day, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), 1);
+        test(SysTime(1, UTC()), 1);
+        test(SysTime(-1, UTC()), 31);
+
+        foreach(year; chain(testYearsBC, testYearsAD))
+        {
+            foreach(md; testMonthDays)
+            {
+                foreach(tod; testTODs)
+                {
+                    auto dt = DateTime(Date(year, md.month, md.day), tod);
+
+                    foreach(tz; testTZs)
+                    {
+                        foreach(fs; testFracSecs)
+                            test(SysTime(dt, fs, tz), md.day);
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.day));
+        //static assert(__traits(compiles, ist.day));
     }
 
 
@@ -1654,136 +1410,77 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, int day, in SysTime expected, size_t line = __LINE__)
         {
-            static void testSTInvalid(SysTime st, int day)
-            {
-                st.day = day;
-            }
-
-            static void testST(SysTime st, int day, in SysTime expected, size_t line = __LINE__)
-            {
-                st.day = day;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), 0));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 2, 1)), 29));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(4, 2, 1)), 30));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 3, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 4, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 5, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 6, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 7, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 8, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 9, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 10, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 11, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 12, 1)), 32));
-
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 1, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 2, 1)), 28));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(4, 2, 1)), 29));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 3, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 4, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 5, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 6, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 7, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 8, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 9, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 10, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 11, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(1, 12, 1)), 31));
-
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 1, SysTime(Date(1, 1, 1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 7, SysTime(Date(1, 1, 7)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0)), 12, SysTime(Date(1, 1, 12)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 1, 7, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 1, 12, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(Date(1, 7, 12)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(Date(5007, 7, 5)));
-
-            testST(SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(1, 1, 6, 12, 22, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(1, 2, 5, 12, 22, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 29, SysTime(DateTime(1, 12, 29, 12, 22, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(999, 1, 6, 12, 22, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(999, 2, 5, 12, 22, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 29, SysTime(DateTime(999, 12, 29, 12, 22, 17), FracSec.from!"hnsecs"(900_000)));
-
-            //Test B.C.
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 1, 1)), 0));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 1, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 2, 1)), 29));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(0, 2, 1)), 30));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 3, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 4, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 5, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 6, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 7, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 8, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 9, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 10, 1)), 32));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 11, 1)), 31));
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 12, 1)), 32));
-
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 1, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 2, 1)), 28));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(0, 2, 1)), 29));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 3, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 4, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 5, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 6, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 7, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 8, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 9, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 10, 1)), 31));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 11, 1)), 30));
-            assertNotThrown!DateTimeException(testSTInvalid(SysTime(Date(-1, 12, 1)), 31));
-
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), 1, SysTime(Date(0, 1, 1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), 7, SysTime(Date(0, 1, 7)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0)), 12, SysTime(Date(0, 1, 12)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 1, 7, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 1, 12, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(0, 7, 2)), 7, SysTime(Date(0, 7, 7)));
-            testST(SysTime(Date(-1202, 7, 2)), 1, SysTime(Date(-1202, 7, 1)));
-
-            testST(SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(0, 1, 6, 12, 22, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(0, 2, 5, 12, 22, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 29, SysTime(DateTime(0, 12, 29, 12, 22, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(-1, 1, 6, 12, 22, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(-1, 2, 5, 12, 22, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 29, SysTime(DateTime(-1, 12, 29, 12, 22, 17), FracSec.from!"hnsecs"(900_000)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(1, 1, 12, 0, 0, 0), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.day = 27));
-            //static assert(!__traits(compiles, ist.day = 27));
+            st.day = day;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
+
+        foreach(day; chain(testDays))
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+
+                if(day > maxDay(dt.year, dt.month))
+                    continue;
+
+                auto e = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, day, e);
+            }
+        }
+
+        foreach(tz; testTZs)
+        {
+            foreach(tod; testTODs)
+            {
+                foreach(fs; testFracSecs)
+                {
+                    foreach(year; chain(testYearsBC, testYearsAD))
+                    {
+                        foreach(month; EnumMembers!Month)
+                        {
+                            auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
+                            immutable max = maxDay(year, month);
+
+                            test(st, max, SysTime(DateTime(Date(year, month, max), tod), fs, tz));
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach(tz; testTZs)
+        {
+            foreach(tod; testTODsThrown)
+            {
+                foreach(fs; [testFracSecs[0], testFracSecs[$-1]])
+                {
+                    foreach(year; [testYearsBC[$-3], testYearsBC[$-2],
+                                   testYearsBC[$-2], testYearsAD[0],
+                                   testYearsAD[$-2], testYearsAD[$-1]])
+                    {
+                        foreach(month; EnumMembers!Month)
+                        {
+                            auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
+                            immutable max = maxDay(year, month);
+
+                            assertThrown!DateTimeException(st.day = max + 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.day = 27));
+        //static assert(!__traits(compiles, ist.day = 27));
     }
 
 
@@ -1804,21 +1501,46 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return cast(ubyte)getUnitsFromHNSecs!"hours"(hnsecs);
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime sysTime, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).hour, 0);
-            _assertPred!"=="(SysTime(1, UTC()).hour, 0);
-            _assertPred!"=="(SysTime(-1, UTC()).hour, 23);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 12, 0, 0)).hour, 12);
-            _assertPred!"=="(SysTime(DateTime(0, 1, 1, 12, 0, 0)).hour, 12);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.hour));
-            //static assert(__traits(compiles, ist.hour));
+            _assertPred!"=="(sysTime.hour, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), 0);
+        test(SysTime(1, UTC()), 0);
+        test(SysTime(-1, UTC()), 23);
+
+        foreach(tz; testTZs)
+        {
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                foreach(md; testMonthDays)
+                {
+                    foreach(hour; testHours)
+                    {
+                        foreach(minute; testMinSecs)
+                        {
+                            foreach(second; testMinSecs)
+                            {
+                                auto dt = DateTime(Date(year, md.month, md.day),
+                                                   TimeOfDay(hour, minute, second));
+
+                                foreach(fs; testFracSecs)
+                                    test(SysTime(dt, fs, tz), hour);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.hour));
+        //static assert(__traits(compiles, ist.hour));
     }
 
 
@@ -1853,94 +1575,36 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, int hour, in SysTime expected,
+                         size_t line = __LINE__)
         {
-            static void testSTInvalid(SysTime st, int hour)
-            {
-                st.hour = hour;
-            }
-
-            static void testST(SysTime st, int hour, in SysTime expected, size_t line = __LINE__)
-            {
-                st.hour = hour;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1999, 7, 6)), 24));
-
-            //Test A.D.
-            testST(SysTime(Date(1, 1, 1)), 1, SysTime(DateTime(1, 1, 1, 1, 0, 0)));
-            testST(SysTime(Date(1, 1, 1)), 7, SysTime(DateTime(1, 1, 1, 7, 0, 0)));
-            testST(SysTime(Date(1, 1, 1)), 12, SysTime(DateTime(1, 1, 1, 12, 0, 0)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 1, 1, 1, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 1, 1, 7, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 1, 1, 12, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(1, 12, 31, 1, 59, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(1, 12, 31, 7, 59, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(1, 12, 31, 12, 59, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 12, 31, 1, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 12, 31, 7, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 12, 31, 12, 59, 59), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(DateTime(1, 7, 2, 12, 0, 0)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(DateTime(5007, 7, 2, 5, 0, 0)));
-
-            testST(SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(1, 1, 7, 6, 22, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(1, 1, 1, 1, 22, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(1, 2, 1, 1, 22, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(1, 2, 27, 5, 22, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(1, 12, 1, 1, 22, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(1, 12, 31, 23, 22, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(999, 1, 7, 6, 22, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(999, 1, 1, 1, 22, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(999, 2, 1, 1, 22, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(999, 2, 27, 5, 22, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(999, 12, 1, 1, 22, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(999, 12, 31, 23, 22, 17), FracSec.from!"hnsecs"(900_000)));
-
-            //Test B.C.
-            testST(SysTime(Date(0, 1, 1)), 1, SysTime(DateTime(0, 1, 1, 1, 0, 0)));
-            testST(SysTime(Date(0, 1, 1)), 7, SysTime(DateTime(0, 1, 1, 7, 0, 0)));
-            testST(SysTime(Date(0, 1, 1)), 12, SysTime(DateTime(0, 1, 1, 12, 0, 0)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 1, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 1, 1, 7, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 1, 1, 12, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(0, 12, 31, 1, 59, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(0, 12, 31, 7, 59, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(0, 12, 31, 12, 59, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 12, 31, 1, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 12, 31, 7, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 12, 31, 12, 59, 59), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(0, 7, 2)), 7, SysTime(DateTime(0, 7, 2, 7, 0, 0)));
-            testST(SysTime(Date(-1202, 7, 2)), 1, SysTime(DateTime(-1202, 7, 2, 1, 0, 0)));
-
-            testST(SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(0, 1, 7, 6, 22, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(0, 1, 1, 1, 22, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(0, 2, 1, 1, 22, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(0, 2, 27, 5, 22, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(0, 12, 1, 1, 22, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(0, 12, 31, 23, 22, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(-1, 1, 7, 6, 22, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(-1, 1, 1, 1, 22, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(-1, 2, 1, 1, 22, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(-1, 2, 27, 5, 22, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(-1, 12, 1, 1, 22, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(-1, 12, 31, 23, 22, 17), FracSec.from!"hnsecs"(900_000)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(1, 1, 1, 12, 0, 0), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.hour = 27));
-            //static assert(!__traits(compiles, ist.hour = 27));
+            st.hour = hour;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
+
+        foreach(hour; chain(testHours))
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, hour, e);
+            }
+        }
+
+        auto st = testSysTimesAD[0];
+        assertThrown!DateTimeException(st.hour = -1);
+        assertThrown!DateTimeException(st.hour = 60);
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.hour = 27));
+        //static assert(!__traits(compiles, ist.hour = 27));
     }
 
 
@@ -1963,21 +1627,46 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return cast(ubyte)getUnitsFromHNSecs!"minutes"(hnsecs);
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime sysTime, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).minute, 0);
-            _assertPred!"=="(SysTime(1, UTC()).minute, 0);
-            _assertPred!"=="(SysTime(-1, UTC()).minute, 59);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 30, 0)).minute, 30);
-            _assertPred!"=="(SysTime(DateTime(0, 1, 1, 0, 30, 0)).minute, 30);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.minute));
-            //static assert(__traits(compiles, ist.minute));
+            _assertPred!"=="(sysTime.minute, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), 0);
+        test(SysTime(1, UTC()), 0);
+        test(SysTime(-1, UTC()), 59);
+
+        foreach(tz; testTZs)
+        {
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                foreach(md; testMonthDays)
+                {
+                    foreach(hour; testHours)
+                    {
+                        foreach(minute; testMinSecs)
+                        {
+                            foreach(second; testMinSecs)
+                            {
+                                auto dt = DateTime(Date(year, md.month, md.day),
+                                                   TimeOfDay(hour, minute, second));
+
+                                foreach(fs; testFracSecs)
+                                    test(SysTime(dt, fs, tz), minute);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.minute));
+        //static assert(__traits(compiles, ist.minute));
     }
 
 
@@ -2015,94 +1704,35 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, int minute, in SysTime expected, size_t line = __LINE__)
         {
-            static void testSTInvalid(SysTime st, int minute)
-            {
-                st.minute = minute;
-            }
-
-            static void testST(SysTime st, int minute, in SysTime expected, size_t line = __LINE__)
-            {
-                st.minute = minute;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1999, 7, 6)), 60));
-
-            //Test A.D.
-            testST(SysTime(Date(1, 1, 1)), 1, SysTime(DateTime(1, 1, 1, 0, 1, 0)));
-            testST(SysTime(Date(1, 1, 1)), 7, SysTime(DateTime(1, 1, 1, 0, 7, 0)));
-            testST(SysTime(Date(1, 1, 1)), 12, SysTime(DateTime(1, 1, 1, 0, 12, 0)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 1, 1, 0, 1, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 1, 1, 0, 7, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 1, 1, 0, 12, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(1, 12, 31, 23, 1, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(1, 12, 31, 23, 7, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(1, 12, 31, 23, 12, 59)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 12, 31, 23, 1, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 12, 31, 23, 7, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 12, 31, 23, 12, 59), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(DateTime(1, 7, 2, 0, 12, 0)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(DateTime(5007, 7, 2, 0, 5, 0)));
-
-            testST(SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(1, 1, 7, 12, 6, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(1, 1, 1, 12, 1, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(1, 2, 1, 12, 1, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(1, 2, 27, 12, 5, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(1, 12, 1, 12, 1, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(1, 12, 31, 12, 23, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(999, 1, 7, 12, 6, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(999, 1, 1, 12, 1, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(999, 2, 1, 12, 1, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(999, 2, 27, 12, 5, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(999, 12, 1, 12, 1, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(999, 12, 31, 12, 23, 17), FracSec.from!"hnsecs"(900_000)));
-
-            //Test B.C.
-            testST(SysTime(Date(0, 1, 1)), 1, SysTime(DateTime(0, 1, 1, 0, 1, 0)));
-            testST(SysTime(Date(0, 1, 1)), 7, SysTime(DateTime(0, 1, 1, 0, 7, 0)));
-            testST(SysTime(Date(0, 1, 1)), 12, SysTime(DateTime(0, 1, 1, 0, 12, 0)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 0, 1, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 1, 1, 0, 7, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 1, 1, 0, 12, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(0, 12, 31, 23, 1, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(0, 12, 31, 23, 7, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(0, 12, 31, 23, 12, 59)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 12, 31, 23, 1, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 12, 31, 23, 7, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 12, 31, 23, 12, 59), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(0, 7, 2)), 7, SysTime(DateTime(0, 7, 2, 0, 7, 0)));
-            testST(SysTime(Date(-1202, 7, 2)), 1, SysTime(DateTime(-1202, 7, 2, 0, 1, 0)));
-
-            testST(SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(0, 1, 7, 12, 6, 17), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(0, 1, 1, 12, 1, 17), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(0, 2, 1, 12, 1, 17), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(0, 2, 27, 12, 5, 17), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(0, 12, 1, 12, 1, 17), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(0, 12, 31, 12, 23, 17), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(-1, 1, 7, 12, 6, 17), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(-1, 1, 1, 12, 1, 17), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(-1, 2, 1, 12, 1, 17), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(-1, 2, 27, 12, 5, 17), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(-1, 12, 1, 12, 1, 17), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(-1, 12, 31, 12, 23, 17), FracSec.from!"hnsecs"(900_000)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(1, 1, 1, 0, 12, 0), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.minute = 27));
-            //static assert(!__traits(compiles, ist.minute = 27));
+            st.minute = minute;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
+
+        foreach(minute; testMinSecs)
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, minute, e);
+            }
+        }
+
+        auto st = testSysTimesAD[0];
+        assertThrown!DateTimeException(st.minute = -1);
+        assertThrown!DateTimeException(st.minute = 60);
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.minute = 27));
+        //static assert(!__traits(compiles, ist.minute = 27));
     }
 
 
@@ -2126,21 +1756,46 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return cast(ubyte)getUnitsFromHNSecs!"seconds"(hnsecs);
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime sysTime, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).second, 0);
-            _assertPred!"=="(SysTime(1, UTC()).second, 0);
-            _assertPred!"=="(SysTime(-1, UTC()).second, 59);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33)).second, 33);
-            _assertPred!"=="(SysTime(DateTime(0, 1, 1, 0, 0, 33)).second, 33);
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.second));
-            //static assert(__traits(compiles, ist.second));
+            _assertPred!"=="(sysTime.second, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), 0);
+        test(SysTime(1, UTC()), 0);
+        test(SysTime(-1, UTC()), 59);
+
+        foreach(tz; testTZs)
+        {
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                foreach(md; testMonthDays)
+                {
+                    foreach(hour; testHours)
+                    {
+                        foreach(minute; testMinSecs)
+                        {
+                            foreach(second; testMinSecs)
+                            {
+                                auto dt = DateTime(Date(year, md.month, md.day),
+                                                   TimeOfDay(hour, minute, second));
+
+                                foreach(fs; testFracSecs)
+                                    test(SysTime(dt, fs, tz), second);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.second));
+        //static assert(__traits(compiles, ist.second));
     }
 
 
@@ -2180,94 +1835,36 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, int second, in SysTime expected,
+                         size_t line = __LINE__)
         {
-            static void testSTInvalid(SysTime st, int second)
-            {
-                st.second = second;
-            }
-
-            static void testST(SysTime st, int second, in SysTime expected, size_t line = __LINE__)
-            {
-                st.second = second;
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testSTInvalid(SysTime(Date(1999, 7, 6)), 60));
-
-            //Test A.D.
-            testST(SysTime(Date(1, 1, 1)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 1)));
-            testST(SysTime(Date(1, 1, 1)), 7, SysTime(DateTime(1, 1, 1, 0, 0, 7)));
-            testST(SysTime(Date(1, 1, 1)), 12, SysTime(DateTime(1, 1, 1, 0, 0, 12)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 1, 1, 0, 0, 7), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 1, 1, 0, 0, 12), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(1, 12, 31, 23, 59, 1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(1, 12, 31, 23, 59, 7)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(1, 12, 31, 23, 59, 12)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 12, 31, 23, 59, 1), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 12, 31, 23, 59, 7), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 12, 31, 23, 59, 12), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(DateTime(1, 7, 2, 0, 0, 12)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(DateTime(5007, 7, 2, 0, 0, 5)));
-
-            testST(SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(1, 1, 7, 12, 22, 6), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(1, 1, 1, 12, 22, 1), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(1, 2, 1, 12, 22, 1), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(1, 2, 27, 12, 22, 5), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(1, 12, 1, 12, 22, 1), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(1, 12, 31, 12, 22, 23), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(999, 1, 7, 12, 22, 6), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(999, 1, 1, 12, 22, 1), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(999, 2, 1, 12, 22, 1), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(999, 2, 27, 12, 22, 5), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(999, 12, 1, 12, 22, 1), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(999, 12, 31, 12, 22, 23), FracSec.from!"hnsecs"(900_000)));
-
-            //Test B.C.
-            testST(SysTime(Date(0, 1, 1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 1)));
-            testST(SysTime(Date(0, 1, 1)), 7, SysTime(DateTime(0, 1, 1, 0, 0, 7)));
-            testST(SysTime(Date(0, 1, 1)), 12, SysTime(DateTime(0, 1, 1, 0, 0, 12)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 1, 1, 0, 0, 7), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 1, 1, 0, 0, 12), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(0, 12, 31, 23, 59, 1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(0, 12, 31, 23, 59, 7)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(0, 12, 31, 23, 59, 12)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 12, 31, 23, 59, 1), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 12, 31, 23, 59, 7), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 12, 31, 23, 59, 12), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(Date(0, 7, 2)), 7, SysTime(DateTime(0, 7, 2, 0, 0, 7)));
-            testST(SysTime(Date(-1202, 7, 2)), 1, SysTime(DateTime(-1202, 7, 2, 0, 0, 1)));
-
-            testST(SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(0, 1, 7, 12, 22, 6), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(0, 1, 1, 12, 22, 1), FracSec.from!"hnsecs"(70)));
-            testST(SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(0, 2, 1, 12, 22, 1), FracSec.from!"hnsecs"(700)));
-            testST(SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(0, 2, 27, 12, 22, 5), FracSec.from!"hnsecs"(7000)));
-            testST(SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(0, 12, 1, 12, 22, 1), FracSec.from!"hnsecs"(70_000)));
-            testST(SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(0, 12, 31, 12, 22, 23), FracSec.from!"hnsecs"(700_000)));
-
-            testST(SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(-1, 1, 7, 12, 22, 6), FracSec.from!"hnsecs"(9)));
-            testST(SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(-1, 1, 1, 12, 22, 1), FracSec.from!"hnsecs"(90)));
-            testST(SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(-1, 2, 1, 12, 22, 1), FracSec.from!"hnsecs"(900)));
-            testST(SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(-1, 2, 27, 12, 22, 5), FracSec.from!"hnsecs"(9000)));
-            testST(SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(-1, 12, 1, 12, 22, 1), FracSec.from!"hnsecs"(90_000)));
-            testST(SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(-1, 12, 31, 12, 22, 23), FracSec.from!"hnsecs"(900_000)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(1, 1, 1, 0, 0, 12), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.seconds = 27));
-            //static assert(!__traits(compiles, ist.seconds = 27));
+            st.second = second;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
+
+        foreach(second; testMinSecs)
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
+                                 st.fracSec,
+                                 st.timezone);
+
+                test(st, second, e);
+            }
+        }
+
+        auto st = testSysTimesAD[0];
+        assertThrown!DateTimeException(st.second = -1);
+        assertThrown!DateTimeException(st.second = 60);
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.seconds = 27));
+        //static assert(!__traits(compiles, ist.seconds = 27));
     }
 
 
@@ -2291,25 +1888,46 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime sysTime, FracSec expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(SysTime(0, UTC()).fracSec.hnsecs, 0);
-            _assertPred!"=="(SysTime(1, UTC()).fracSec.hnsecs, 1);
-            _assertPred!"=="(SysTime(-1, UTC()).fracSec.hnsecs, 9_999_999);
-
-            _assertPred!"=="(SysTime(DateTime(200, 3, 30, 1, 27, 19), FracSec.from!"hnsecs"(348), UTC()).fracSec.hnsecs, 348);
-            _assertPred!"=="(SysTime(DateTime(-1, 2, 17, 4, 5, 22), FracSec.from!"hnsecs"(347), UTC()).fracSec.hnsecs, 347);
-
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502)).fracSec, FracSec.from!"hnsecs"(502));
-            _assertPred!"=="(SysTime(DateTime(0, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502)).fracSec, FracSec.from!"hnsecs"(502));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.fracSec));
-            //static assert(__traits(compiles, ist.fracSec));
+            _assertPred!"=="(sysTime.fracSec, expected,
+                             format("Value given: %s", sysTime), __FILE__, line);
         }
+
+        test(SysTime(0, UTC()), FracSec.from!"hnsecs"(0));
+        test(SysTime(1, UTC()), FracSec.from!"hnsecs"(1));
+        test(SysTime(-1, UTC()), FracSec.from!"hnsecs"(9_999_999));
+
+        foreach(tz; testTZs)
+        {
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                foreach(md; testMonthDays)
+                {
+                    foreach(hour; testHours)
+                    {
+                        foreach(minute; testMinSecs)
+                        {
+                            foreach(second; testMinSecs)
+                            {
+                                auto dt = DateTime(Date(year, md.month, md.day),
+                                                   TimeOfDay(hour, minute, second));
+
+                                foreach(fs; testFracSecs)
+                                    test(SysTime(dt, fs, tz), fs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.fracSec));
+        //static assert(__traits(compiles, ist.fracSec));
     }
 
 
@@ -2345,92 +1963,31 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(SysTime st, FracSec fracSec, in SysTime expected, size_t line = __LINE__)
         {
-            static void testST(SysTime st, int hnsecs, in SysTime expected, size_t line = __LINE__)
-            {
-                st.fracSec = FracSec.from!"hnsecs"(hnsecs);
-                _assertPred!"=="(st, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testST(SysTime(Date(1, 1, 1)), 0, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(Date(1, 1, 1)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(Date(1, 1, 1)), 7, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(Date(1, 1, 1)), 12, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(12)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(12)));
-
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 0, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(12)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(12)));
-
-            testST(SysTime(Date(1, 7, 2)), 12, SysTime(DateTime(1, 7, 2, 0, 0, 0), FracSec.from!"hnsecs"(12)));
-            testST(SysTime(Date(5007, 7, 2)), 5, SysTime(DateTime(5007, 7, 2, 0, 0, 0), FracSec.from!"hnsecs"(5)));
-
-            testST(SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(5)));
-            testST(SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(23)));
-
-            testST(SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(999, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(999, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(999, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(999, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(5)));
-            testST(SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(999, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(999, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(23)));
-
-            //Test B.C.
-            testST(SysTime(Date(0, 1, 1)), 0, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(Date(0, 1, 1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(Date(0, 1, 1)), 7, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(Date(0, 1, 1)), 12, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(12)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 0, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(12)));
-
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 0, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 7, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59)), 12, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(12)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 7, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1)), 12, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(12)));
-
-            testST(SysTime(Date(0, 7, 2)), 7, SysTime(DateTime(0, 7, 2, 0, 0, 0), FracSec.from!"hnsecs"(7)));
-            testST(SysTime(Date(-1202, 7, 2)), 1, SysTime(DateTime(-1202, 7, 2, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-
-            testST(SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(7)), 6, SysTime(DateTime(0, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(70)), 1, SysTime(DateTime(0, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(700)), 1, SysTime(DateTime(0, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(7000)), 5, SysTime(DateTime(0, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(5)));
-            testST(SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(70_000)), 1, SysTime(DateTime(0, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(700_000)), 23, SysTime(DateTime(0, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(23)));
-
-            testST(SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(9)), 6, SysTime(DateTime(-1, 1, 7, 12, 22, 17), FracSec.from!"hnsecs"(6)));
-            testST(SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(90)), 1, SysTime(DateTime(-1, 1, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(900)), 1, SysTime(DateTime(-1, 2, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(9000)), 5, SysTime(DateTime(-1, 2, 27, 12, 22, 17), FracSec.from!"hnsecs"(5)));
-            testST(SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(90_000)), 1, SysTime(DateTime(-1, 12, 1, 12, 22, 17), FracSec.from!"hnsecs"(1)));
-            testST(SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(900_000)), 23, SysTime(DateTime(-1, 12, 31, 12, 22, 17), FracSec.from!"hnsecs"(23)));
-
-            testST(SysTime(0, UTC()), 12, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(12), UTC()));
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.fracSec = FracSec.from!"msecs"(7)));
-            //static assert(!__traits(compiles, ist.fracSec = FracSec.from!"msecs"(7)));
+            st.fracSec = fracSec;
+            _assertPred!"=="(st, expected, "", __FILE__, line);
         }
+
+        foreach(fracSec; testFracSecs)
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
+                                 fracSec,
+                                 st.timezone);
+
+                test(st, fracSec, e);
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.fracSec = FracSec.from!"msecs"(7)));
+        //static assert(!__traits(compiles, ist.fracSec = FracSec.from!"msecs"(7)));
     }
 
 
@@ -2443,19 +2000,20 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         return _stdTime;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            _assertPred!"=="(SysTime(0).stdTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()).stdTime, 330000502L);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()).stdTime, 621355968000000000L);
+        _assertPred!"=="(SysTime(0).stdTime, 0);
+        _assertPred!"=="(SysTime(1).stdTime, 1);
+        _assertPred!"=="(SysTime(-1).stdTime, -1);
+        _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()).stdTime,
+                         330000502L);
+        _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()).stdTime,
+                         621355968000000000L);
 
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.stdTime));
-            //static assert(__traits(compiles, ist.stdTime));
-        }
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.stdTime));
+        //static assert(__traits(compiles, ist.stdTime));
     }
 
 
@@ -2471,27 +2029,25 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         _stdTime = stdTime;
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(long stdTime, in SysTime expected, size_t line = __LINE__)
         {
-            {
-                auto st = SysTime(0, UTC());
-                st.stdTime = 330000502L;
-                _assertPred!"=="(st, SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()));
-            }
-
-            {
-                auto st = SysTime(0, UTC());
-                st.stdTime = 621355968000000000L;
-                _assertPred!"=="(st, SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()));
-            }
-
-            const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(!__traits(compiles, cst.stdTime = 27));
-            //static assert(!__traits(compiles, ist.stdTime = 27));
+            auto st = SysTime(0, UTC());
+            st.stdTime = stdTime;
+            _assertPred!"=="(st, expected);
         }
+
+        test(0, SysTime(Date(1, 1, 1), UTC()));
+        test(1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()));
+        test(-1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()));
+        test(330_000_502L, SysTime(DateTime(1, 1, 1, 0, 0, 33), FracSec.from!"hnsecs"(502), UTC()));
+        test(621_355_968_000_000_000L, SysTime(DateTime(1970, 1, 1, 0, 0, 0), UTC()));
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.stdTime = 27));
+        //static assert(!__traits(compiles, ist.stdTime = 27));
     }
 
 
@@ -8277,22 +7833,22 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
 
         Examples:
 --------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
+assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
        "2010-07-04T07:06:12");
 
 assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOExtendedString() ==
+               FracSec.from!"msecs"(24)).toISOExtString() ==
        "1998-12-25T02:15:00.024");
 
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
+assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
        "0000-01-05T23:09:59");
 
 assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
+               FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
        "-0004-01-05T00:00:02.052092");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
         {
@@ -8315,65 +7871,70 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
             if(_timezone.get is LocalTime())
-                return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs);
+                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs);
 
             if(_timezone.get is UTC())
-                return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
 
-            return dateTime.toISOExtendedString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
+            return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ SimpleTimeZone.toISOString(utcOffset);
         }
         catch(Exception e)
             assert(0, "format() threw.");
     }
+
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(SysTime(DateTime.init, UTC()).toISOExtendedString(), "0001-01-01T00:00:00Z");
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtendedString(), "0001-01-01T00:00:00.0000001Z");
+            _assertPred!"=="(SysTime(DateTime.init, UTC()).toISOExtString(), "0001-01-01T00:00:00Z");
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toISOExtString(), "0001-01-01T00:00:00.0000001Z");
 
-            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
-            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
-            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
-            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
-            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0)).toISOExtString(), "0009-12-04T00:00:00");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12)).toISOExtString(), "0099-12-04T05:06:12");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59)).toISOExtString(), "0999-12-04T13:44:59");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59)).toISOExtString(), "9999-07-04T23:59:59");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1)).toISOExtString(), "+10000-10-20T01:01:01");
 
-            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtendedString(), "0009-12-04T00:00:00.042");
-            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtendedString(), "0099-12-04T05:06:12.1");
-            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "0999-12-04T13:44:59.04502");
-            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "9999-07-04T23:59:59.0000012");
-            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "+10000-10-20T01:01:01.050789");
+            _assertPred!"=="(SysTime(DateTime(9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtString(), "0009-12-04T00:00:00.042");
+            _assertPred!"=="(SysTime(DateTime(99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtString(), "0099-12-04T05:06:12.1");
+            _assertPred!"=="(SysTime(DateTime(999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtString(), "0999-12-04T13:44:59.04502");
+            _assertPred!"=="(SysTime(DateTime(9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtString(), "9999-07-04T23:59:59.0000012");
+            _assertPred!"=="(SysTime(DateTime(10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtString(), "+10000-10-20T01:01:01.050789");
 
             _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
-                                    new SimpleTimeZone(-360)).toISOExtendedString(),
+                                    new SimpleTimeZone(-360)).toISOExtString(),
                             "2012-12-21T12:12:12-06:00");
 
             _assertPred!"=="(SysTime(DateTime(2012, 12, 21, 12, 12, 12),
-                                    new SimpleTimeZone(420)).toISOExtendedString(),
+                                    new SimpleTimeZone(420)).toISOExtString(),
                             "2012-12-21T12:12:12+07:00");
 
             //Test B.C.
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.9999999Z");
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).toISOExtendedString(), "0000-12-31T23:59:59.0000001Z");
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC()).toISOExtendedString(), "0000-12-31T23:59:59Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toISOExtString(), "0000-12-31T23:59:59.9999999Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC()).toISOExtString(), "0000-12-31T23:59:59.0000001Z");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), UTC()).toISOExtString(), "0000-12-31T23:59:59Z");
 
-            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
-            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
-            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
-            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
-            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
-            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 12, 4)).toISOExtString(), "0000-12-04T00:12:04");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0)).toISOExtString(), "-0009-12-04T00:00:00");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12)).toISOExtString(), "-0099-12-04T05:06:12");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59)).toISOExtString(), "-0999-12-04T13:44:59");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59)).toISOExtString(), "-9999-07-04T23:59:59");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1)).toISOExtString(), "-10000-10-20T01:01:01");
 
-            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 0, 0), FracSec.from!"msecs"(7)).toISOExtendedString(), "0000-12-04T00:00:00.007");
-            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtendedString(), "-0009-12-04T00:00:00.042");
-            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtendedString(), "-0099-12-04T05:06:12.1");
-            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtendedString(), "-0999-12-04T13:44:59.04502");
-            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtendedString(), "-9999-07-04T23:59:59.0000012");
-            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtendedString(), "-10000-10-20T01:01:01.050789");
+            _assertPred!"=="(SysTime(DateTime(0, 12, 4, 0, 0, 0), FracSec.from!"msecs"(7)).toISOExtString(), "0000-12-04T00:00:00.007");
+            _assertPred!"=="(SysTime(DateTime(-9, 12, 4, 0, 0, 0), FracSec.from!"msecs"(42)).toISOExtString(), "-0009-12-04T00:00:00.042");
+            _assertPred!"=="(SysTime(DateTime(-99, 12, 4, 5, 6, 12), FracSec.from!"msecs"(100)).toISOExtString(), "-0099-12-04T05:06:12.1");
+            _assertPred!"=="(SysTime(DateTime(-999, 12, 4, 13, 44, 59), FracSec.from!"usecs"(45020)).toISOExtString(), "-0999-12-04T13:44:59.04502");
+            _assertPred!"=="(SysTime(DateTime(-9999, 7, 4, 23, 59, 59), FracSec.from!"hnsecs"(12)).toISOExtString(), "-9999-07-04T23:59:59.0000012");
+            _assertPred!"=="(SysTime(DateTime(-10000, 10, 20, 1, 1, 1), FracSec.from!"hnsecs"(507890)).toISOExtString(), "-10000-10-20T01:01:01.050789");
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -8381,18 +7942,18 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             //static assert(__traits(compiles, cast(TimeOfDay)ist));
 
             //Verify Examples.
-            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtendedString() ==
+            assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
                    "2010-07-04T07:06:12");
 
             assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                           FracSec.from!"msecs"(24)).toISOExtendedString() ==
+                           FracSec.from!"msecs"(24)).toISOExtString() ==
                    "1998-12-25T02:15:00.024");
 
-            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtendedString() ==
+            assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
                    "0000-01-05T23:09:59");
 
             assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                           FracSec.from!"hnsecs"(520_920)).toISOExtendedString() ==
+                           FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
                    "-0004-01-05T00:00:02.052092");
         }
     }
@@ -8774,7 +8335,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         YYYY-MM-DDTHH:MM:SS.FFFFFFFTZ (where F is fractional seconds is the
         time zone). Whitespace is stripped from the given string.
 
-        The exact format is exactly as described in $(D toISOExtendedString)
+        The exact format is exactly as described in $(D toISOExtString)
         except that trailing zeroes are permitted - including having fractional
         seconds with all zeroes. However, a decimal point with nothing following
         it is invalid.
@@ -8802,26 +8363,26 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
 
         Examples:
 --------------------
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOExtendedString("1998-12-25T02:15:00.007") ==
+assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
        SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOExtendedString("0000-01-05T23:09:59.00002") ==
+assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
        SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
+assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
        SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
+assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12Z") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12-8:00") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
-assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
+assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
        SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
 --------------------
       +/
-    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+    static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -8855,7 +8416,7 @@ assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
 
         try
         {
-            auto dateTime = DateTime.fromISOExtendedString(dateTimeStr);
+            auto dateTime = DateTime.fromISOExtString(dateTimeStr);
             auto fracSec = fracSecFromISOString(fracSecStr);
             DTRebindable!(immutable TimeZone) parsedZone;
 
@@ -8877,93 +8438,105 @@ assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") ==
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString, tz);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString(""));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704 000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704t000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704T000000."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20100704T000000.0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString(""));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704 000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704t000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20100704T000000.0"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07:0400:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.A"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.Z"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.00000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00.00000000"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-1:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+1:"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+1:0"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00-24.00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-07-04T00:00:00+24.00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07:0400:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.A"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.Z"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00.00000000"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-1:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+1:0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00-24.00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-07-04T00:00:00+24.00"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Jul-04 00:00:00.0"));
 
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("20101222T172201"));
-            assertThrown!DateTimeException(SysTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("20101222T172201"));
+            assertThrown!DateTimeException(SysTime.fromISOExtString("2010-Dec-22 17:22:01"));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01"), SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("-1999-07-06T12:30:33"), SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("+01999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString(" 1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
-            _assertPred!"=="(SysTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01"), SysTime(DateTime(2010, 12, 22, 17, 22, 01)));
+            _assertPred!"=="(SysTime.fromISOExtString("1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("-1999-07-06T12:30:33"), SysTime(DateTime(-1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("+01999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString("1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString(" 1999-07-06T12:30:33"), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
+            _assertPred!"=="(SysTime.fromISOExtString(" 1999-07-06T12:30:33 "), SysTime(DateTime(1999, 7, 6, 12, 30, 33)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"hnsecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0000010"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("1907-07-07T12:12:12.0010000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"hnsecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.000001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0000010"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"usecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.001"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
+            _assertPred!"=="(SysTime.fromISOExtString("1907-07-07T12:12:12.0010000"), SysTime(DateTime(1907, 07, 07, 12, 12, 12), FracSec.from!"msecs"(1)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-480)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(-480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), new SimpleTimeZone(480)));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-11-03T06:51:06.57159Z"), SysTime(DateTime(2010, 11, 3, 6, 51, 6), FracSec.from!"hnsecs"(5715900), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-11-03T06:51:06.57159Z"), SysTime(DateTime(2010, 11, 3, 6, 51, 6), FracSec.from!"hnsecs"(5715900), UTC()));
 
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.23412Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_341_200), UTC()));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.23112-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_311_200), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.45-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(-60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.1-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_000_000), new SimpleTimeZone(-90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.55-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(5_500_000), new SimpleTimeZone(-480)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.1234567+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_234_567), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.0+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(60)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.0000000+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(90)));
-            _assertPred!"=="(SysTime.fromISOExtendedString("2010-12-22T17:22:01.45+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.23412Z"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_341_200), UTC()));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.23112-1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(2_311_200), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.45-1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(-60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.1-1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_000_000), new SimpleTimeZone(-90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.55-8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(5_500_000), new SimpleTimeZone(-480)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.1234567+1:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(1_234_567), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.0+1"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(60)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.0000000+1:30"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(0), new SimpleTimeZone(90)));
+            _assertPred!"=="(SysTime.fromISOExtString("2010-12-22T17:22:01.45+8:00"), SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000), new SimpleTimeZone(480)));
 
             //Verify Examples.
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-            assert(SysTime.fromISOExtendedString("1998-12-25T02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-            assert(SysTime.fromISOExtendedString("0000-01-05T23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-            assert(SysTime.fromISOExtendedString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-            assert(SysTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+            assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+            assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+            assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+            assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12-8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
-            assert(SysTime.fromISOExtendedString("2010-07-04T07:06:12+8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(-480)));
+            assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), new SimpleTimeZone(480)));
         }
     }
 
@@ -9367,14 +8940,38 @@ public:
             int years = (day / daysIn400Years) * 400 + 1;
             day %= daysIn400Years;
 
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
+            {
+                immutable tempYears = day / daysIn100Years;
+
+                if(tempYears == 4)
+                {
+                    years += 300;
+                    day -= daysIn100Years * 3;
+                }
+                else
+                {
+                    years += tempYears * 100;
+                    day %= daysIn100Years;
+                }
+            }
 
             years += (day / daysIn4Years) * 4;
             day %= daysIn4Years;
 
-            years += day / daysInYear;
-            day %= daysInYear;
+            {
+                immutable tempYears = day / daysInYear;
+
+                if(tempYears == 4)
+                {
+                    years += 3;
+                    day -= daysInYear * 3;
+                }
+                else
+                {
+                    years += tempYears;
+                    day %= daysInYear;
+                }
+            }
 
             if(day == 0)
             {
@@ -9407,14 +9004,38 @@ public:
             int years = (day / daysIn400Years) * 400 - 1;
             day %= daysIn400Years;
 
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
+            {
+                immutable tempYears = day / daysIn100Years;
+
+                if(tempYears == -4)
+                {
+                    years -= 300;
+                    day += daysIn100Years * 3;
+                }
+                else
+                {
+                    years += tempYears * 100;
+                    day %= daysIn100Years;
+                }
+            }
 
             years += (day / daysIn4Years) * 4;
             day %= daysIn4Years;
 
-            years += day / daysInYear;
-            day %= daysInYear;
+            {
+                immutable tempYears = day / daysInYear;
+
+                if(tempYears == -4)
+                {
+                    years -= 3;
+                    day += daysInYear * 3;
+                }
+                else
+                {
+                    years += tempYears;
+                    day %= daysInYear;
+                }
+            }
 
             if(day == 0)
             {
@@ -9435,159 +9056,11 @@ public:
         }
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            _assertPred!"=="(Date(1), Date(1, 1, 1));
-            _assertPred!"=="(Date(2), Date(1, 1, 2));
-            _assertPred!"=="(Date(32), Date(1, 2, 1));
-            _assertPred!"=="(Date(366), Date(2, 1, 1));
-            _assertPred!"=="(Date(731), Date(3, 1, 1));
-            _assertPred!"=="(Date(1096), Date(4, 1, 1));
-            _assertPred!"=="(Date(1462), Date(5, 1, 1));
-            _assertPred!"=="(Date(17_898), Date(50, 1, 1));
-            _assertPred!"=="(Date(35_065), Date(97, 1, 1));
-            _assertPred!"=="(Date(36_160), Date(100, 1, 1));
-            _assertPred!"=="(Date(36_525), Date(101, 1, 1));
-            _assertPred!"=="(Date(37_986), Date(105, 1, 1));
-            _assertPred!"=="(Date(72_684), Date(200, 1, 1));
-            _assertPred!"=="(Date(73_049), Date(201, 1, 1));
-            _assertPred!"=="(Date(109_208), Date(300, 1, 1));
-            _assertPred!"=="(Date(109_573), Date(301, 1, 1));
-            _assertPred!"=="(Date(145_732), Date(400, 1, 1));
-            _assertPred!"=="(Date(146_098), Date(401, 1, 1));
-            _assertPred!"=="(Date(182_257), Date(500, 1, 1));
-            _assertPred!"=="(Date(182_622), Date(501, 1, 1));
-            _assertPred!"=="(Date(364_878), Date(1000, 1, 1));
-            _assertPred!"=="(Date(365_243), Date(1001, 1, 1));
-            _assertPred!"=="(Date(584_023), Date(1600, 1, 1));
-            _assertPred!"=="(Date(584_389), Date(1601, 1, 1));
-            _assertPred!"=="(Date(693_596), Date(1900, 1, 1));
-            _assertPred!"=="(Date(693_961), Date(1901, 1, 1));
-            _assertPred!"=="(Date(729_755), Date(1999, 1, 1));
-            _assertPred!"=="(Date(730_120), Date(2000, 1, 1));
-            _assertPred!"=="(Date(730_486), Date(2001, 1, 1));
-
-            _assertPred!"=="(Date(733_773), Date(2010, 1, 1));
-            _assertPred!"=="(Date(733_803), Date(2010, 1, 31));
-            _assertPred!"=="(Date(733_804), Date(2010, 2, 1));
-            _assertPred!"=="(Date(733_831), Date(2010, 2, 28));
-            _assertPred!"=="(Date(733_832), Date(2010, 3, 1));
-            _assertPred!"=="(Date(733_862), Date(2010, 3, 31));
-            _assertPred!"=="(Date(733_863), Date(2010, 4, 1));
-            _assertPred!"=="(Date(733_892), Date(2010, 4, 30));
-            _assertPred!"=="(Date(733_893), Date(2010, 5, 1));
-            _assertPred!"=="(Date(733_923), Date(2010, 5, 31));
-            _assertPred!"=="(Date(733_924), Date(2010, 6, 1));
-            _assertPred!"=="(Date(733_953), Date(2010, 6, 30));
-            _assertPred!"=="(Date(733_954), Date(2010, 7, 1));
-            _assertPred!"=="(Date(733_984), Date(2010, 7, 31));
-            _assertPred!"=="(Date(733_985), Date(2010, 8, 1));
-            _assertPred!"=="(Date(734_015), Date(2010, 8, 31));
-            _assertPred!"=="(Date(734_016), Date(2010, 9, 1));
-            _assertPred!"=="(Date(734_045), Date(2010, 9, 30));
-            _assertPred!"=="(Date(734_046), Date(2010, 10, 1));
-            _assertPred!"=="(Date(734_076), Date(2010, 10, 31));
-            _assertPred!"=="(Date(734_077), Date(2010, 11, 1));
-            _assertPred!"=="(Date(734_106), Date(2010, 11, 30));
-            _assertPred!"=="(Date(734_107), Date(2010, 12, 1));
-            _assertPred!"=="(Date(734_137), Date(2010, 12, 31));
-
-            _assertPred!"=="(Date(734_534), Date(2012, 2, 1));
-            _assertPred!"=="(Date(734_561), Date(2012, 2, 28));
-            _assertPred!"=="(Date(734_562), Date(2012, 2, 29));
-            _assertPred!"=="(Date(734_563), Date(2012, 3, 1));
-
-            _assertPred!"=="(Date(734_534),  Date(2012, 2, 1));
-
-            _assertPred!"=="(Date(734_561), Date(2012, 2, 28));
-            _assertPred!"=="(Date(734_562), Date(2012, 2, 29));
-            _assertPred!"=="(Date(734_563), Date(2012, 3, 1));
-
-            //Test B.C.
-            _assertPred!"=="(Date(0), Date(0, 12, 31));
-            _assertPred!"=="(Date(-1), Date(0, 12, 30));
-            _assertPred!"=="(Date(-30), Date(0, 12, 1));
-            _assertPred!"=="(Date(-31), Date(0, 11, 30));
-
-            _assertPred!"=="(Date(-366), Date(-1, 12, 31));
-            _assertPred!"=="(Date(-367), Date(-1, 12, 30));
-            _assertPred!"=="(Date(-730), Date(-1, 1, 1));
-            _assertPred!"=="(Date(-731), Date(-2, 12, 31));
-            _assertPred!"=="(Date(-1095), Date(-2, 1, 1));
-            _assertPred!"=="(Date(-1096), Date(-3, 12, 31));
-            _assertPred!"=="(Date(-1460), Date(-3, 1, 1));
-            _assertPred!"=="(Date(-1461), Date(-4, 12, 31));
-            _assertPred!"=="(Date(-1826), Date(-4, 1, 1));
-            _assertPred!"=="(Date(-1827), Date(-5, 12, 31));
-            _assertPred!"=="(Date(-2191), Date(-5, 1, 1));
-            _assertPred!"=="(Date(-3652), Date(-9, 1, 1));
-
-            _assertPred!"=="(Date(-18_262), Date(-49, 1, 1));
-            _assertPred!"=="(Date(-18_627), Date(-50, 1, 1));
-            _assertPred!"=="(Date(-35_794), Date(-97, 1, 1));
-            _assertPred!"=="(Date(-36_160), Date(-99, 12, 31));
-            _assertPred!"=="(Date(-36_524), Date(-99, 1, 1));
-            _assertPred!"=="(Date(-36_889), Date(-100, 1, 1));
-            _assertPred!"=="(Date(-37_254), Date(-101, 1, 1));
-            _assertPred!"=="(Date(-38_715), Date(-105, 1, 1));
-            _assertPred!"=="(Date(-73_413), Date(-200, 1, 1));
-            _assertPred!"=="(Date(-73_778), Date(-201, 1, 1));
-            _assertPred!"=="(Date(-109_937), Date(-300, 1, 1));
-            _assertPred!"=="(Date(-110_302), Date(-301, 1, 1));
-            _assertPred!"=="(Date(-146_097), Date(-400, 12, 31));
-            _assertPred!"=="(Date(-146_462), Date(-400, 1, 1));
-            _assertPred!"=="(Date(-146_827), Date(-401, 1, 1));
-            _assertPred!"=="(Date(-182_621), Date(-499, 1, 1));
-            _assertPred!"=="(Date(-182_986), Date(-500, 1, 1));
-            _assertPred!"=="(Date(-183_351), Date(-501, 1, 1));
-            _assertPred!"=="(Date(-365_607), Date(-1000, 1, 1));
-            _assertPred!"=="(Date(-365_972), Date(-1001, 1, 1));
-            _assertPred!"=="(Date(-584_387), Date(-1599, 1, 1));
-            _assertPred!"=="(Date(-584_388), Date(-1600, 12, 31));
-            _assertPred!"=="(Date(-584_753), Date(-1600, 1, 1));
-            _assertPred!"=="(Date(-585_118), Date(-1601, 1, 1));
-            _assertPred!"=="(Date(-694_325), Date(-1900, 1, 1));
-            _assertPred!"=="(Date(-694_690), Date(-1901, 1, 1));
-            _assertPred!"=="(Date(-730_484), Date(-1999, 1, 1));
-            _assertPred!"=="(Date(-730_485), Date(-2000, 12, 31));
-            _assertPred!"=="(Date(-730_850), Date(-2000, 1, 1));
-            _assertPred!"=="(Date(-731_215), Date(-2001, 1, 1));
-
-            _assertPred!"=="(Date(-734_502), Date(-2010, 1, 1));
-            _assertPred!"=="(Date(-734_472), Date(-2010, 1, 31));
-            _assertPred!"=="(Date(-734_471), Date(-2010, 2, 1));
-            _assertPred!"=="(Date(-734_444), Date(-2010, 2, 28));
-            _assertPred!"=="(Date(-734_443), Date(-2010, 3, 1));
-            _assertPred!"=="(Date(-734_413), Date(-2010, 3, 31));
-            _assertPred!"=="(Date(-734_412), Date(-2010, 4, 1));
-            _assertPred!"=="(Date(-734_383), Date(-2010, 4, 30));
-            _assertPred!"=="(Date(-734_382), Date(-2010, 5, 1));
-            _assertPred!"=="(Date(-734_352), Date(-2010, 5, 31));
-            _assertPred!"=="(Date(-734_351), Date(-2010, 6, 1));
-            _assertPred!"=="(Date(-734_322), Date(-2010, 6, 30));
-            _assertPred!"=="(Date(-734_321), Date(-2010, 7, 1));
-            _assertPred!"=="(Date(-734_291), Date(-2010, 7, 31));
-            _assertPred!"=="(Date(-734_290), Date(-2010, 8, 1));
-            _assertPred!"=="(Date(-734_260), Date(-2010, 8, 31));
-            _assertPred!"=="(Date(-734_259), Date(-2010, 9, 1));
-            _assertPred!"=="(Date(-734_230), Date(-2010, 9, 30));
-            _assertPred!"=="(Date(-734_229), Date(-2010, 10, 1));
-            _assertPred!"=="(Date(-734_199), Date(-2010, 10, 31));
-            _assertPred!"=="(Date(-734_198), Date(-2010, 11, 1));
-            _assertPred!"=="(Date(-734_169), Date(-2010, 11, 30));
-            _assertPred!"=="(Date(-734_168), Date(-2010, 12, 1));
-            _assertPred!"=="(Date(-734_138), Date(-2010, 12, 31));
-
-            _assertPred!"=="(Date(-735_202), Date(-2012, 2, 1));
-            _assertPred!"=="(Date(-735_175), Date(-2012, 2, 28));
-            _assertPred!"=="(Date(-735_174), Date(-2012, 2, 29));
-            _assertPred!"=="(Date(-735_173), Date(-2012, 3, 1));
-
-            _assertPred!"=="(Date(-1_373_427), Date(-3760, 9, 7)); //Start of the Hebrew Calendar
-        }
+        //Test A.D.
+        foreach(gd; chain(testGregDaysBC, testGregDaysAD))
+            _assertPred!"=="(Date(gd.day), gd.date);
     }
 
 
@@ -9988,24 +9461,32 @@ assert(Date(-7, 4, 5).day == 5);
         return _day;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(Date(1999, 7, 6).day == 6);
+        assert(Date(2010, 10, 4).day == 4);
+        assert(Date(-7, 4, 5).day == 5);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        static void test(Date date, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(Date.init.day, 1);
-            _assertPred!"=="(Date(1999, 7, 6).day, 6);
-            _assertPred!"=="(Date(-1999, 7, 6).day, 6);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.day == 6));
-            static assert(__traits(compiles, idate.day == 6));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).day == 6);
-            assert(Date(2010, 10, 4).day == 4);
-            assert(Date(-7, 4, 5).day == 5);
+            _assertPred!"=="(date.day, expected,
+                             format("Value given: %s", date), __FILE__, line);
         }
+
+        foreach(year; chain(testYearsBC, testYearsAD))
+        {
+            foreach(md; testMonthDays)
+                test(Date(year, md.month, md.day), md.day);
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.day == 6));
+        static assert(__traits(compiles, idate.day == 6));
     }
 
     /++
@@ -12441,82 +11922,40 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         }
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(Date(1999, 1, 1).dayOfYear == 1);
+        assert(Date(1999, 12, 31).dayOfYear == 365);
+        assert(Date(2000, 12, 31).dayOfYear == 366);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        foreach(year; filter!((a){return !yearIsLeapYear(a);})
+                             (chain(testYearsBC, testYearsAD)))
         {
-            //Test A.D.
-            _assertPred!"=="(Date(1999, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(1999, 1, 2).dayOfYear, 2);
-            _assertPred!"=="(Date(1999, 1, 3).dayOfYear, 3);
-            _assertPred!"=="(Date(1999, 1, 31).dayOfYear, 31);
-            _assertPred!"=="(Date(1999, 2, 1).dayOfYear, 32);
-            _assertPred!"=="(Date(1999, 2, 28).dayOfYear, 59);
-            _assertPred!"=="(Date(1999, 3, 1).dayOfYear, 60);
-            _assertPred!"=="(Date(1999, 3, 31).dayOfYear, 90);
-            _assertPred!"=="(Date(1999, 4, 1).dayOfYear, 91);
-            _assertPred!"=="(Date(1999, 4, 30).dayOfYear, 120);
-            _assertPred!"=="(Date(1999, 5, 1).dayOfYear, 121);
-            _assertPred!"=="(Date(1999, 5, 31).dayOfYear, 151);
-            _assertPred!"=="(Date(1999, 6, 1).dayOfYear, 152);
-            _assertPred!"=="(Date(1999, 6, 30).dayOfYear, 181);
-            _assertPred!"=="(Date(1999, 7, 1).dayOfYear, 182);
-            _assertPred!"=="(Date(1999, 7, 31).dayOfYear, 212);
-            _assertPred!"=="(Date(1999, 8, 1).dayOfYear, 213);
-            _assertPred!"=="(Date(1999, 8, 31).dayOfYear, 243);
-            _assertPred!"=="(Date(1999, 9, 1).dayOfYear, 244);
-            _assertPred!"=="(Date(1999, 9, 30).dayOfYear, 273);
-            _assertPred!"=="(Date(1999, 10, 1).dayOfYear, 274);
-            _assertPred!"=="(Date(1999, 10, 31).dayOfYear, 304);
-            _assertPred!"=="(Date(1999, 11, 1).dayOfYear, 305);
-            _assertPred!"=="(Date(1999, 11, 30).dayOfYear, 334);
-            _assertPred!"=="(Date(1999, 12, 1).dayOfYear, 335);
-            _assertPred!"=="(Date(1999, 12, 31).dayOfYear, 365);
-
-            _assertPred!"=="(Date(2000, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(2000, 2, 1).dayOfYear, 32);
-            _assertPred!"=="(Date(2000, 2, 29).dayOfYear, 60);
-            _assertPred!"=="(Date(2000, 3, 1).dayOfYear, 61);
-            _assertPred!"=="(Date(2000, 3, 31).dayOfYear, 91);
-            _assertPred!"=="(Date(2000, 4, 1).dayOfYear, 92);
-            _assertPred!"=="(Date(2000, 4, 30).dayOfYear, 121);
-            _assertPred!"=="(Date(2000, 5, 1).dayOfYear, 122);
-            _assertPred!"=="(Date(2000, 5, 31).dayOfYear, 152);
-            _assertPred!"=="(Date(2000, 6, 1).dayOfYear, 153);
-            _assertPred!"=="(Date(2000, 6, 30).dayOfYear, 182);
-            _assertPred!"=="(Date(2000, 7, 1).dayOfYear, 183);
-            _assertPred!"=="(Date(2000, 7, 31).dayOfYear, 213);
-            _assertPred!"=="(Date(2000, 8, 1).dayOfYear, 214);
-            _assertPred!"=="(Date(2000, 8, 31).dayOfYear, 244);
-            _assertPred!"=="(Date(2000, 9, 1).dayOfYear, 245);
-            _assertPred!"=="(Date(2000, 9, 30).dayOfYear, 274);
-            _assertPred!"=="(Date(2000, 10, 1).dayOfYear, 275);
-            _assertPred!"=="(Date(2000, 10, 31).dayOfYear, 305);
-            _assertPred!"=="(Date(2000, 11, 1).dayOfYear, 306);
-            _assertPred!"=="(Date(2000, 11, 30).dayOfYear, 335);
-            _assertPred!"=="(Date(2000, 12, 1).dayOfYear, 336);
-            _assertPred!"=="(Date(2000, 12, 31).dayOfYear, 366);
-
-            //Test B.C.
-            _assertPred!"=="(Date(0, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(0, 12, 31).dayOfYear, 366);
-            _assertPred!"=="(Date(1, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(1, 12, 31).dayOfYear, 365);
-            _assertPred!"=="(Date(-1, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(-1, 12, 31).dayOfYear, 365);
-            _assertPred!"=="(Date(4, 1, 1).dayOfYear, 1);
-            _assertPred!"=="(Date(4, 12, 31).dayOfYear, 366);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.dayOfYear == 187));
-            static assert(__traits(compiles, idate.dayOfYear == 187));
-
-            //Verify Examples.
-            assert(Date(1999, 1, 1).dayOfYear == 1);
-            assert(Date(1999, 12, 31).dayOfYear == 365);
-            assert(Date(2000, 12, 31).dayOfYear == 366);
+            foreach(doy; testDaysOfYear)
+            {
+                _assertPred!"=="(Date(year, doy.md.month, doy.md.day).dayOfYear,
+                                 doy.day);
+            }
         }
+
+        foreach(year; filter!((a){return yearIsLeapYear(a);})
+                             (chain(testYearsBC, testYearsAD)))
+        {
+            foreach(doy; testDaysOfLeapYear)
+            {
+                _assertPred!"=="(Date(year, doy.md.month, doy.md.day).dayOfYear,
+                                 doy.day);
+            }
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.dayOfYear == 187));
+        static assert(__traits(compiles, idate.dayOfYear == 187));
     }
 
     /++
@@ -12700,133 +12139,31 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         }
     }
 
-    unittest
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        static void test(Date date, int day, MonthDay expected, size_t line = __LINE__)
         {
-            auto date = Date(1999, 1, 1);
-
-            void testFunc(int day, int expectedMonth, int expectedDay, size_t line = __LINE__)
-            {
-                date.dayOfYear = day;
-                _assertPred!"=="(date.month, expectedMonth, "", __FILE__, line);
-                _assertPred!"=="(date.day, expectedDay, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testFunc(1, 1, 1);
-            testFunc(2, 1, 2);
-            testFunc(3, 1, 3);
-            testFunc(31, 1, 31);
-
-            testFunc(32, 2, 1);
-            testFunc(59, 2, 28);
-            testFunc(60, 3, 1);
-            testFunc(90, 3, 31);
-            testFunc(91, 4, 1);
-            testFunc(120, 4, 30);
-            testFunc(121, 5, 1);
-            testFunc(151, 5, 31);
-            testFunc(152, 6, 1);
-            testFunc(181, 6, 30);
-            testFunc(182, 7, 1);
-            testFunc(212, 7, 31);
-            testFunc(213, 8, 1);
-            testFunc(243, 8, 31);
-            testFunc(244, 9, 1);
-            testFunc(273, 9, 30);
-            testFunc(274, 10, 1);
-            testFunc(304, 10, 31);
-            testFunc(305, 11, 1);
-            testFunc(334, 11, 30);
-            testFunc(335, 12, 1);
-            testFunc(365, 12, 31);
-
-            date.year = 2000;
-            testFunc(1, 1, 1);
-            testFunc(32, 2, 1);
-            testFunc(60, 2, 29);
-            testFunc(61, 3, 1);
-            testFunc(91, 3, 31);
-            testFunc(92, 4, 1);
-            testFunc(121, 4, 30);
-            testFunc(122, 5, 1);
-            testFunc(152, 5, 31);
-            testFunc(153, 6, 1);
-            testFunc(182, 6, 30);
-            testFunc(183, 7, 1);
-            testFunc(213, 7, 31);
-            testFunc(214, 8, 1);
-            testFunc(244, 8, 31);
-            testFunc(245, 9, 1);
-            testFunc(274, 9, 30);
-            testFunc(275, 10, 1);
-            testFunc(305, 10, 31);
-            testFunc(306, 11, 1);
-            testFunc(335, 11, 30);
-            testFunc(336, 12, 1);
-            testFunc(366, 12, 31);
-
-            //Test B.C.
-            date.year = 0;
-            testFunc(1, 1, 1);
-            testFunc(32, 2, 1);
-            testFunc(60, 2, 29);
-            testFunc(61, 3, 1);
-            testFunc(91, 3, 31);
-            testFunc(92, 4, 1);
-            testFunc(121, 4, 30);
-            testFunc(122, 5, 1);
-            testFunc(152, 5, 31);
-            testFunc(153, 6, 1);
-            testFunc(182, 6, 30);
-            testFunc(183, 7, 1);
-            testFunc(213, 7, 31);
-            testFunc(214, 8, 1);
-            testFunc(244, 8, 31);
-            testFunc(245, 9, 1);
-            testFunc(274, 9, 30);
-            testFunc(275, 10, 1);
-            testFunc(305, 10, 31);
-            testFunc(306, 11, 1);
-            testFunc(335, 11, 30);
-            testFunc(336, 12, 1);
-            testFunc(366, 12, 31);
-
-            date.year = -1;
-            testFunc(1, 1, 1);
-            testFunc(2, 1, 2);
-            testFunc(3, 1, 3);
-            testFunc(31, 1, 31);
-
-            testFunc(32, 2, 1);
-            testFunc(59, 2, 28);
-            testFunc(60, 3, 1);
-            testFunc(90, 3, 31);
-            testFunc(91, 4, 1);
-            testFunc(120, 4, 30);
-            testFunc(121, 5, 1);
-            testFunc(151, 5, 31);
-            testFunc(152, 6, 1);
-            testFunc(181, 6, 30);
-            testFunc(182, 7, 1);
-            testFunc(212, 7, 31);
-            testFunc(213, 8, 1);
-            testFunc(243, 8, 31);
-            testFunc(244, 9, 1);
-            testFunc(273, 9, 30);
-            testFunc(274, 10, 1);
-            testFunc(304, 10, 31);
-            testFunc(305, 11, 1);
-            testFunc(334, 11, 30);
-            testFunc(335, 12, 1);
-            testFunc(365, 12, 31);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.dayOfYear = 187));
-            static assert(!__traits(compiles, idate.dayOfYear = 187));
+            date.dayOfYear = day;
+            _assertPred!"=="(date.month, expected.month, "", __FILE__, line);
+            _assertPred!"=="(date.day, expected.day, "", __FILE__, line);
         }
+
+        foreach(doy; testDaysOfYear)
+        {
+            test(Date(1999, 1, 1), doy.day, doy.md);
+            test(Date(-1, 1, 1), doy.day, doy.md);
+        }
+
+        foreach(doy; testDaysOfLeapYear)
+        {
+            test(Date(2000, 1, 1), doy.day, doy.md);
+            test(Date(-4, 1, 1), doy.day, doy.md);
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.dayOfYear = 187));
+        static assert(!__traits(compiles, idate.dayOfYear = 187));
     }
 
 
@@ -12900,173 +12237,32 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
         }
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            _assertPred!"=="(Date(1, 1, 1).dayOfGregorianCal, 1);
-            _assertPred!"=="(Date(1, 1, 2).dayOfGregorianCal, 2);
-            _assertPred!"=="(Date(1, 2, 1).dayOfGregorianCal, 32);
-            _assertPred!"=="(Date(2, 1, 1).dayOfGregorianCal, 366);
-            _assertPred!"=="(Date(3, 1, 1).dayOfGregorianCal, 731);
-            _assertPred!"=="(Date(4, 1, 1).dayOfGregorianCal, 1096);
-            _assertPred!"=="(Date(5, 1, 1).dayOfGregorianCal, 1462);
-            _assertPred!"=="(Date(50, 1, 1).dayOfGregorianCal, 17_898);
-            _assertPred!"=="(Date(97, 1, 1).dayOfGregorianCal, 35_065);
-            _assertPred!"=="(Date(100, 1, 1).dayOfGregorianCal, 36_160);
-            _assertPred!"=="(Date(101, 1, 1).dayOfGregorianCal, 36_525);
-            _assertPred!"=="(Date(105, 1, 1).dayOfGregorianCal, 37_986);
-            _assertPred!"=="(Date(200, 1, 1).dayOfGregorianCal, 72_684);
-            _assertPred!"=="(Date(201, 1, 1).dayOfGregorianCal, 73_049);
-            _assertPred!"=="(Date(300, 1, 1).dayOfGregorianCal, 109_208);
-            _assertPred!"=="(Date(301, 1, 1).dayOfGregorianCal, 109_573);
-            _assertPred!"=="(Date(400, 1, 1).dayOfGregorianCal, 145_732);
-            _assertPred!"=="(Date(401, 1, 1).dayOfGregorianCal, 146_098);
-            _assertPred!"=="(Date(500, 1, 1).dayOfGregorianCal, 182_257);
-            _assertPred!"=="(Date(501, 1, 1).dayOfGregorianCal, 182_622);
-            _assertPred!"=="(Date(1000, 1, 1).dayOfGregorianCal, 364_878);
-            _assertPred!"=="(Date(1001, 1, 1).dayOfGregorianCal, 365_243);
-            _assertPred!"=="(Date(1600, 1, 1).dayOfGregorianCal, 584_023);
-            _assertPred!"=="(Date(1601, 1, 1).dayOfGregorianCal, 584_389);
-            _assertPred!"=="(Date(1900, 1, 1).dayOfGregorianCal, 693_596);
-            _assertPred!"=="(Date(1901, 1, 1).dayOfGregorianCal, 693_961);
-            _assertPred!"=="(Date(1945, 11, 12).dayOfGregorianCal, 710_347);
-            _assertPred!"=="(Date(1999, 1, 1).dayOfGregorianCal, 729_755);
-            _assertPred!"=="(Date(2000, 1, 1).dayOfGregorianCal, 730_120);
-            _assertPred!"=="(Date(2001, 1, 1).dayOfGregorianCal, 730_486);
+        assert(Date(1, 1, 1).dayOfGregorianCal == 1);
+        assert(Date(1, 12, 31).dayOfGregorianCal == 365);
+        assert(Date(2, 1, 1).dayOfGregorianCal == 366);
 
-            _assertPred!"=="(Date(2010, 1, 1).dayOfGregorianCal, 733_773);
-            _assertPred!"=="(Date(2010, 1, 31).dayOfGregorianCal, 733_803);
-            _assertPred!"=="(Date(2010, 2, 1).dayOfGregorianCal, 733_804);
-            _assertPred!"=="(Date(2010, 2, 28).dayOfGregorianCal, 733_831);
-            _assertPred!"=="(Date(2010, 3, 1).dayOfGregorianCal, 733_832);
-            _assertPred!"=="(Date(2010, 3, 31).dayOfGregorianCal, 733_862);
-            _assertPred!"=="(Date(2010, 4, 1).dayOfGregorianCal, 733_863);
-            _assertPred!"=="(Date(2010, 4, 30).dayOfGregorianCal, 733_892);
-            _assertPred!"=="(Date(2010, 5, 1).dayOfGregorianCal, 733_893);
-            _assertPred!"=="(Date(2010, 5, 31).dayOfGregorianCal, 733_923);
-            _assertPred!"=="(Date(2010, 6, 1).dayOfGregorianCal, 733_924);
-            _assertPred!"=="(Date(2010, 6, 30).dayOfGregorianCal, 733_953);
-            _assertPred!"=="(Date(2010, 7, 1).dayOfGregorianCal, 733_954);
-            _assertPred!"=="(Date(2010, 7, 31).dayOfGregorianCal, 733_984);
-            _assertPred!"=="(Date(2010, 8, 1).dayOfGregorianCal, 733_985);
-            _assertPred!"=="(Date(2010, 8, 31).dayOfGregorianCal, 734_015);
-            _assertPred!"=="(Date(2010, 9, 1).dayOfGregorianCal, 734_016);
-            _assertPred!"=="(Date(2010, 9, 30).dayOfGregorianCal, 734_045);
-            _assertPred!"=="(Date(2010, 10, 1).dayOfGregorianCal, 734_046);
-            _assertPred!"=="(Date(2010, 10, 31).dayOfGregorianCal, 734_076);
-            _assertPred!"=="(Date(2010, 11, 1).dayOfGregorianCal, 734_077);
-            _assertPred!"=="(Date(2010, 11, 30).dayOfGregorianCal, 734_106);
-            _assertPred!"=="(Date(2010, 12, 1).dayOfGregorianCal, 734_107);
-            _assertPred!"=="(Date(2010, 12, 31).dayOfGregorianCal, 734_137);
+        assert(Date(0, 12, 31).dayOfGregorianCal == 0);
+        assert(Date(0, 1, 1).dayOfGregorianCal == -365);
+        assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
 
-            _assertPred!"=="(Date(2012, 2, 1).dayOfGregorianCal, 734_534);
-            _assertPred!"=="(Date(2012, 2, 28).dayOfGregorianCal, 734_561);
-            _assertPred!"=="(Date(2012, 2, 29).dayOfGregorianCal, 734_562);
-            _assertPred!"=="(Date(2012, 3, 1).dayOfGregorianCal, 734_563);
+        assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
+        assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
+    }
 
-            //Test B.C.
-            _assertPred!"=="(Date(0, 12, 31).dayOfGregorianCal, 0);
-            _assertPred!"=="(Date(0, 12, 30).dayOfGregorianCal, -1);
-            _assertPred!"=="(Date(0, 12, 1).dayOfGregorianCal, -30);
-            _assertPred!"=="(Date(0, 11, 30).dayOfGregorianCal, -31);
+    version(testStdDateTime) unittest
+    {
+        foreach(gd; chain(testGregDaysBC, testGregDaysAD))
+            _assertPred!"=="(gd.date.dayOfGregorianCal, gd.day);
 
-            _assertPred!"=="(Date(-1, 12, 31).dayOfGregorianCal, -366);
-            _assertPred!"=="(Date(-1, 12, 30).dayOfGregorianCal, -367);
-            _assertPred!"=="(Date(-1, 1, 1).dayOfGregorianCal, -730);
-            _assertPred!"=="(Date(-2, 12, 31).dayOfGregorianCal, -731);
-            _assertPred!"=="(Date(-2, 1, 1).dayOfGregorianCal, -1095);
-            _assertPred!"=="(Date(-3, 12, 31).dayOfGregorianCal, -1096);
-            _assertPred!"=="(Date(-3, 1, 1).dayOfGregorianCal, -1460);
-            _assertPred!"=="(Date(-4, 12, 31).dayOfGregorianCal, -1461);
-            _assertPred!"=="(Date(-4, 1, 1).dayOfGregorianCal, -1826);
-            _assertPred!"=="(Date(-5, 12, 31).dayOfGregorianCal, -1827);
-            _assertPred!"=="(Date(-5, 1, 1).dayOfGregorianCal, -2191);
-            _assertPred!"=="(Date(-9, 1, 1).dayOfGregorianCal, -3652);
-
-            _assertPred!"=="(Date(-49, 1, 1).dayOfGregorianCal, -18_262);
-            _assertPred!"=="(Date(-50, 1, 1).dayOfGregorianCal, -18_627);
-            _assertPred!"=="(Date(-97, 1, 1).dayOfGregorianCal, -35_794);
-            _assertPred!"=="(Date(-99, 12, 31).dayOfGregorianCal, -36_160);
-            _assertPred!"=="(Date(-99, 1, 1).dayOfGregorianCal, -36_524);
-            _assertPred!"=="(Date(-100, 1, 1).dayOfGregorianCal, -36_889);
-            _assertPred!"=="(Date(-101, 1, 1).dayOfGregorianCal, -37_254);
-            _assertPred!"=="(Date(-105, 1, 1).dayOfGregorianCal, -38_715);
-            _assertPred!"=="(Date(-200, 1, 1).dayOfGregorianCal, -73_413);
-            _assertPred!"=="(Date(-201, 1, 1).dayOfGregorianCal, -73_778);
-            _assertPred!"=="(Date(-300, 1, 1).dayOfGregorianCal, -109_937);
-            _assertPred!"=="(Date(-301, 1, 1).dayOfGregorianCal, -110_302);
-            _assertPred!"=="(Date(-400, 12, 31).dayOfGregorianCal, -146_097);
-            _assertPred!"=="(Date(-400, 1, 1).dayOfGregorianCal, -146_462);
-            _assertPred!"=="(Date(-401, 1, 1).dayOfGregorianCal, -146_827);
-            _assertPred!"=="(Date(-499, 1, 1).dayOfGregorianCal, -182_621);
-            _assertPred!"=="(Date(-500, 1, 1).dayOfGregorianCal, -182_986);
-            _assertPred!"=="(Date(-501, 1, 1).dayOfGregorianCal, -183_351);
-            _assertPred!"=="(Date(-1000, 1, 1).dayOfGregorianCal, -365_607);
-            _assertPred!"=="(Date(-1001, 1, 1).dayOfGregorianCal, -365_972);
-            _assertPred!"=="(Date(-1599, 1, 1).dayOfGregorianCal, -584_387);
-            _assertPred!"=="(Date(-1600, 12, 31).dayOfGregorianCal, -584_388);
-            _assertPred!"=="(Date(-1600, 1, 1).dayOfGregorianCal, -584_753);
-            _assertPred!"=="(Date(-1601, 1, 1).dayOfGregorianCal, -585_118);
-            _assertPred!"=="(Date(-1900, 1, 1).dayOfGregorianCal, -694_325);
-            _assertPred!"=="(Date(-1901, 1, 1).dayOfGregorianCal, -694_690);
-            _assertPred!"=="(Date(-1999, 1, 1).dayOfGregorianCal, -730_484);
-            _assertPred!"=="(Date(-2000, 12, 31).dayOfGregorianCal, -730_485);
-            _assertPred!"=="(Date(-2000, 1, 1).dayOfGregorianCal, -730_850);
-            _assertPred!"=="(Date(-2001, 1, 1).dayOfGregorianCal, -731_215);
-
-            _assertPred!"=="(Date(-2010, 1, 1).dayOfGregorianCal, -734_502);
-            _assertPred!"=="(Date(-2010, 1, 31).dayOfGregorianCal, -734_472);
-            _assertPred!"=="(Date(-2010, 2, 1).dayOfGregorianCal, -734_471);
-            _assertPred!"=="(Date(-2010, 2, 28).dayOfGregorianCal, -734_444);
-            _assertPred!"=="(Date(-2010, 3, 1).dayOfGregorianCal, -734_443);
-            _assertPred!"=="(Date(-2010, 3, 31).dayOfGregorianCal, -734_413);
-            _assertPred!"=="(Date(-2010, 4, 1).dayOfGregorianCal, -734_412);
-            _assertPred!"=="(Date(-2010, 4, 30).dayOfGregorianCal, -734_383);
-            _assertPred!"=="(Date(-2010, 5, 1).dayOfGregorianCal, -734_382);
-            _assertPred!"=="(Date(-2010, 5, 31).dayOfGregorianCal, -734_352);
-            _assertPred!"=="(Date(-2010, 6, 1).dayOfGregorianCal, -734_351);
-            _assertPred!"=="(Date(-2010, 6, 30).dayOfGregorianCal, -734_322);
-            _assertPred!"=="(Date(-2010, 7, 1).dayOfGregorianCal, -734_321);
-            _assertPred!"=="(Date(-2010, 7, 31).dayOfGregorianCal, -734_291);
-            _assertPred!"=="(Date(-2010, 8, 1).dayOfGregorianCal, -734_290);
-            _assertPred!"=="(Date(-2010, 8, 31).dayOfGregorianCal, -734_260);
-            _assertPred!"=="(Date(-2010, 9, 1).dayOfGregorianCal, -734_259);
-            _assertPred!"=="(Date(-2010, 9, 30).dayOfGregorianCal, -734_230);
-            _assertPred!"=="(Date(-2010, 10, 1).dayOfGregorianCal, -734_229);
-            _assertPred!"=="(Date(-2010, 10, 31).dayOfGregorianCal, -734_199);
-            _assertPred!"=="(Date(-2010, 11, 1).dayOfGregorianCal, -734_198);
-            _assertPred!"=="(Date(-2010, 11, 30).dayOfGregorianCal, -734_169);
-            _assertPred!"=="(Date(-2010, 12, 1).dayOfGregorianCal, -734_168);
-            _assertPred!"=="(Date(-2010, 12, 31).dayOfGregorianCal, -734_138);
-
-            _assertPred!"=="(Date(-2012, 2, 1).dayOfGregorianCal, -735_202);
-            _assertPred!"=="(Date(-2012, 2, 28).dayOfGregorianCal, -735_175);
-            _assertPred!"=="(Date(-2012, 2, 29).dayOfGregorianCal, -735_174);
-            _assertPred!"=="(Date(-2012, 3, 1).dayOfGregorianCal, -735_173);
-
-            _assertPred!"=="(Date(-3760, 9, 7).dayOfGregorianCal, -1_373_427); //Start of Hebrew Calendar
-
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.dayOfGregorianCal));
-            static assert(__traits(compiles, cdate.dayOfGregorianCal));
-            static assert(__traits(compiles, idate.dayOfGregorianCal));
-
-            //Verify Examples.
-            assert(Date(1, 1, 1).dayOfGregorianCal == 1);
-            assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-            assert(Date(2, 1, 1).dayOfGregorianCal == 366);
-
-            assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-            assert(Date(0, 1, 1).dayOfGregorianCal == -365);
-            assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
-
-            assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
-            assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
-        }
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date.dayOfGregorianCal));
+        static assert(__traits(compiles, cdate.dayOfGregorianCal));
+        static assert(__traits(compiles, idate.dayOfGregorianCal));
     }
 
     /++
@@ -13550,13 +12746,13 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
 
         Examples:
 --------------------
-assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
         {
@@ -13576,35 +12772,40 @@ assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
             assert(0, "format() threw.");
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
+
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(Date(9, 12, 4).toISOExtendedString(), "0009-12-04");
-            _assertPred!"=="(Date(99, 12, 4).toISOExtendedString(), "0099-12-04");
-            _assertPred!"=="(Date(999, 12, 4).toISOExtendedString(), "0999-12-04");
-            _assertPred!"=="(Date(9999, 7, 4).toISOExtendedString(), "9999-07-04");
-            _assertPred!"=="(Date(10000, 10, 20).toISOExtendedString(), "+10000-10-20");
+            _assertPred!"=="(Date(9, 12, 4).toISOExtString(), "0009-12-04");
+            _assertPred!"=="(Date(99, 12, 4).toISOExtString(), "0099-12-04");
+            _assertPred!"=="(Date(999, 12, 4).toISOExtString(), "0999-12-04");
+            _assertPred!"=="(Date(9999, 7, 4).toISOExtString(), "9999-07-04");
+            _assertPred!"=="(Date(10000, 10, 20).toISOExtString(), "+10000-10-20");
 
             //Test B.C.
-            _assertPred!"=="(Date(0, 12, 4).toISOExtendedString(), "0000-12-04");
-            _assertPred!"=="(Date(-9, 12, 4).toISOExtendedString(), "-0009-12-04");
-            _assertPred!"=="(Date(-99, 12, 4).toISOExtendedString(), "-0099-12-04");
-            _assertPred!"=="(Date(-999, 12, 4).toISOExtendedString(), "-0999-12-04");
-            _assertPred!"=="(Date(-9999, 7, 4).toISOExtendedString(), "-9999-07-04");
-            _assertPred!"=="(Date(-10000, 10, 20).toISOExtendedString(), "-10000-10-20");
+            _assertPred!"=="(Date(0, 12, 4).toISOExtString(), "0000-12-04");
+            _assertPred!"=="(Date(-9, 12, 4).toISOExtString(), "-0009-12-04");
+            _assertPred!"=="(Date(-99, 12, 4).toISOExtString(), "-0099-12-04");
+            _assertPred!"=="(Date(-999, 12, 4).toISOExtString(), "-0999-12-04");
+            _assertPred!"=="(Date(-9999, 7, 4).toISOExtString(), "-9999-07-04");
+            _assertPred!"=="(Date(-10000, 10, 20).toISOExtString(), "-10000-10-20");
 
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOExtendedString()));
-            static assert(__traits(compiles, idate.toISOExtendedString()));
+            static assert(__traits(compiles, cdate.toISOExtString()));
+            static assert(__traits(compiles, idate.toISOExtString()));
 
             //Verify Examples.
-            assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-            assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-            assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-            assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+            assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+            assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+            assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+            assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
         }
     }
 
@@ -13846,14 +13047,14 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
 
         Examples:
 --------------------
-assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 --------------------
       +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
+    static Date fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -13880,79 +13081,91 @@ assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static Date fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(Date.fromISOExtendedString(""));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("990704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010a704"));
+            assertThrown!DateTimeException(Date.fromISOExtString(""));
+            assertThrown!DateTimeException(Date.fromISOExtString("990704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("120100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010070a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("20100a04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010a704"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-0a-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-a7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-4"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-4"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010aul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jua04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010aul04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-aul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("99-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0 "));
+            assertThrown!DateTimeException(Date.fromISOExtString("12010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("-010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("+010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jua-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jal-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-aul-04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtString("20100704"));
+            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-04"));
 
-            _assertPred!"=="(Date.fromISOExtendedString("1999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("-1999-07-06"), Date(-1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("+01999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString("1999-07-06 "), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06"), Date(1999, 7, 6));
-            _assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06 "), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("1999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("-1999-07-06"), Date(-1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("+01999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString("1999-07-06 "), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString(" 1999-07-06"), Date(1999, 7, 6));
+            _assertPred!"=="(Date.fromISOExtString(" 1999-07-06 "), Date(1999, 7, 6));
 
             //Verify Examples.
-            assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-            assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-            assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-            assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-            assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+            assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+            assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+            assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+            assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+            assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
         }
     }
 
@@ -15258,11 +14471,11 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
         Examples:
 --------------------
-assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
+assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
+assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
@@ -15270,6 +14483,10 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
             assert(0, "format() threw.");
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
@@ -15278,13 +14495,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
             auto tod = TimeOfDay(12, 30, 33);
             const ctod = TimeOfDay(12, 30, 33);
             immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOExtendedString()));
-            static assert(__traits(compiles, ctod.toISOExtendedString()));
-            static assert(__traits(compiles, itod.toISOExtendedString()));
+            static assert(__traits(compiles, tod.toISOExtString()));
+            static assert(__traits(compiles, ctod.toISOExtString()));
+            static assert(__traits(compiles, itod.toISOExtString()));
 
             //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "00:00:00");
-            assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "12:30:33");
+            assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+            assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
         }
     }
 
@@ -15297,7 +14514,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
     //with modifiers and one without.
     string toString()
     {
-        return toISOExtendedString();
+        return toISOExtString();
     }
 
 
@@ -15309,7 +14526,7 @@ assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
     //with modifiers and one without.
     string toString() const nothrow
     {
-        return toISOExtendedString();
+        return toISOExtString();
     }
 
     unittest
@@ -15451,12 +14668,12 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
 
         Examples:
 --------------------
-assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 --------------------
       +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+    static TimeOfDay fromISOExtString(S)(in S isoExtString)
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -15476,74 +14693,86 @@ assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
 
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
+    }
+
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033pm"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1277"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12707"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12070"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12303a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1230a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("123a33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12a033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a0033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a20033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1200330"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33pm"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0::"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(":0:"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("::0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13:0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:7"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:07"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:07:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:3a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:3a:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:a0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a2:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:003:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120:03:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("012:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("01:200:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033"));
 
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17"), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("00:14:12"), TimeOfDay(0, 14, 12));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("00:00:07"), TimeOfDay(0, 0, 7));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17 "), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17"), TimeOfDay(1, 12, 17));
-            _assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17 "), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("01:12:17"), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("00:14:12"), TimeOfDay(0, 14, 12));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("00:00:07"), TimeOfDay(0, 0, 7));
+            _assertPred!"=="(TimeOfDay.fromISOExtString("01:12:17 "), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString(" 01:12:17"), TimeOfDay(1, 12, 17));
+            _assertPred!"=="(TimeOfDay.fromISOExtString(" 01:12:17 "), TimeOfDay(1, 12, 17));
 
             //Verify Examples.
-            assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+            assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
         }
     }
 
@@ -16423,24 +15652,35 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
         return _date.day;
     }
 
-    unittest
+    //Verify Examples.
+    version(testStdDateTime) unittest
     {
-        version(testStdDateTime)
+        assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
+        assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
+        assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
+    }
+
+    version(testStdDateTime) unittest
+    {
+        static void test(DateTime dateTime, int expected, size_t line = __LINE__)
         {
-            _assertPred!"=="(DateTime.init.day, 1);
-            _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
-            _assertPred!"=="(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.day));
-            static assert(__traits(compiles, idt.day));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
-            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
-            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
+            _assertPred!"=="(dateTime.day, expected,
+                             format("Value given: %s", dateTime), __FILE__, line);
         }
+
+        foreach(year; chain(testYearsBC, testYearsAD))
+        {
+            foreach(md; testMonthDays)
+            {
+                foreach(tod; testTODs)
+                    test(DateTime(Date(year, md.month, md.day), tod), md.day);
+            }
+        }
+
+        const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+        immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+        static assert(__traits(compiles, cdt.day));
+        static assert(__traits(compiles, idt.day));
     }
 
 
@@ -18395,56 +17635,61 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() ==
 
         Examples:
 --------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() ==
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
        "2010-07-04T07:06:12");
 
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() ==
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() ==
        "1998-12-25T02:15:00");
 
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() ==
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() ==
        "0000-01-05T23:09:59");
 
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() ==
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
        "-0004-01-05T00:00:02");
 --------------------
       +/
-    string toISOExtendedString() const nothrow
+    string toISOExtString() const nothrow
     {
         try
-            return format("%sT%s", _date.toISOExtendedString(), _tod.toISOExtendedString());
+            return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
         catch(Exception e)
             assert(0, "format() threw.");
     }
+
+    /++
+        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+      +/
+    alias toISOExtString toISOExtendedString;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
-            _assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
-            _assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
-            _assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
-            _assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
+            _assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString(), "0009-12-04T00:00:00");
+            _assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtString(), "0099-12-04T05:06:12");
+            _assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtString(), "0999-12-04T13:44:59");
+            _assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtString(), "9999-07-04T23:59:59");
+            _assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtString(), "+10000-10-20T01:01:01");
 
             //Test B.C.
-            _assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
-            _assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
-            _assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
-            _assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
-            _assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
-            _assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
+            _assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtString(), "0000-12-04T00:12:04");
+            _assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString(), "-0009-12-04T00:00:00");
+            _assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtString(), "-0099-12-04T05:06:12");
+            _assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtString(), "-0999-12-04T13:44:59");
+            _assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtString(), "-9999-07-04T23:59:59");
+            _assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtString(), "-10000-10-20T01:01:01");
 
             const cdt = DateTime(1999, 7, 6, 12, 30, 33);
             immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.toISOExtendedString()));
-            static assert(__traits(compiles, idt.toISOExtendedString()));
+            static assert(__traits(compiles, cdt.toISOExtString()));
+            static assert(__traits(compiles, idt.toISOExtString()));
 
             //Verify Examples.
-            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
-            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
+            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() == "2010-07-04T07:06:12");
+            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtString() == "1998-12-25T02:15:00");
+            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtString() == "0000-01-05T23:09:59");
+            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() == "-0004-01-05T00:00:02");
         }
     }
 
@@ -18650,23 +17895,23 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
 
         Examples:
 --------------------
-assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") ==
+assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
-assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") ==
+assert(DateTime.fromISOExtString("1998-12-25T02:15:00") ==
        DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
 
-assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") ==
+assert(DateTime.fromISOExtString("0000-01-05T23:09:59") ==
        DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
 
-assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
+assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") ==
        DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
 
-assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
+assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
        DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 --------------------
       +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
+    static DateTime fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(isoExtString));
@@ -18676,52 +17921,64 @@ assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        immutable date = Date.fromISOExtendedString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+        immutable date = Date.fromISOExtString(dstr[0..t]);
+        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
+    }
+
+    /++
+        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+      +/
+    static DateTime fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
+                    "Use fromISOExtString instead.");
+
+        return fromISOExtString!string(isoExtString);
     }
 
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString(""));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704 000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704t000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString(""));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704 000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704t000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704T000000."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20100704T000000.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07:0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07:0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-07-04T00:00:00.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Jul-04 00:00:00.0"));
 
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20101222T172201"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("20101222T172201"));
+            assertThrown!DateTimeException(DateTime.fromISOExtString("2010-Dec-22 17:22:01"));
 
-            _assertPred!"=="(DateTime.fromISOExtendedString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+            _assertPred!"=="(DateTime.fromISOExtString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(DateTime.fromISOExtString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
 
             //Verify Examples.
-            assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-            assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-            assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-            assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-            assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOExtString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOExtString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+            assert(DateTime.fromISOExtString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+            assert(DateTime.fromISOExtString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+            assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
         }
     }
 
@@ -18763,7 +18020,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         immutable date = Date.fromSimpleString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
     }
@@ -28410,12 +27667,138 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             return WindowsTimeZone.getTimeZone(tzDatabaseNameToWindowsTZName(name));
     }
 
-    unittest
+    //Since reading in the time zone files could be expensive, most unit tests
+    //are consolidated into this one unittest block which minimizes how often it
+    //reads a time zone file.
+    version(testStdDateTime) unittest
     {
-        version(enableWindowsTest)
+        version(Posix) scope(exit) clearTZEnvVar();
+
+        static void testTZ(string tzName,
+                           string stdName,
+                           string dstName,
+                           int utcOffset,
+                           int dstOffset,
+                           bool north = true)
         {
-            //Verify Example.
-            auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+            scope(failure) writefln("Failed time zone: %s", tzName);
+
+            immutable tz = TimeZone.getTimeZone(tzName);
+            immutable hasDST = dstOffset != 0;
+
+            version(Posix)
+                _assertPred!"=="(tz.name, tzName);
+            else version(Windows)
+                _assertPred!"=="(tz.name, stdName);
+
+            _assertPred!"=="(tz.stdName, stdName);
+            _assertPred!"=="(tz.dstName, dstName);
+            _assertPred!"=="(tz.hasDST, hasDST);
+
+            immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 6, 0, 0);
+            immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 6, 0, 0);
+            auto std = SysTime(stdDate, tz);
+            auto dst = SysTime(dstDate, tz);
+            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
+            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
+
+            assert(!std.dstInEffect);
+            _assertPred!"=="(dst.dstInEffect, hasDST);
+
+            _assertPred!"=="(cast(DateTime)std, stdDate);
+            _assertPred!"=="(cast(DateTime)dst, dstDate);
+            _assertPred!"=="(std, stdUTC);
+
+            version(Posix)
+            {
+                setTZEnvVar(tzName);
+
+                static void testTM(in SysTime st)
+                {
+                    time_t unixTime = st.toUnixTime();
+                    tm* osTimeInfo = localtime(&unixTime);
+                    tm ourTimeInfo = st.toTM();
+
+                    _assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
+                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    _assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
+                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
+                    _assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
+                    _assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
+                    _assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
+                    _assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
+                    _assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
+                    _assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
+                    _assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
+                    _assertPred!"=="(to!string(ourTimeInfo.tm_zone),
+                                    to!string(osTimeInfo.tm_zone));
+                }
+
+                testTM(std);
+                testTM(dst);
+
+                //Apparently, right/ does not exist on Mac OS X. I don't know
+                //whether or not it exists on FreeBSD. It's rather pointless
+                //normally, since the Posix standard requires that leap seconds
+                //be ignored, so it does make some sense that right/ wouldn't
+                //be there, but since PosixTimeZone _does_ use leap seconds if
+                //the time zone file does, we'll test that functionality if the
+                //appropriate files exist.
+                if((PosixTimeZone.defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
+                {
+                    auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
+
+                    assert(leapTZ.name == "right/" ~ tzName);
+                    assert(leapTZ.stdName == stdName);
+                    assert(leapTZ.dstName == dstName);
+                    assert(leapTZ.hasDST == hasDST);
+
+                    auto leapSTD = SysTime(std.stdTime, leapTZ);
+                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+
+                    assert(!leapSTD.dstInEffect);
+                    assert(leapDST.dstInEffect == hasDST);
+
+                    _assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                    _assertPred!"=="(leapDST.stdTime, dst.stdTime);
+
+                    //Whenever a leap second is added/removed,
+                    //this will have to be adjusted.
+                    enum leapDiff = convert!("seconds", "hnsecs")(24);
+                    _assertPred!"=="(leapSTD.adjTime - leapDiff, std.adjTime);
+                    _assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
+                }
+            }
+        }
+
+        version(Posix)
+        {
+            version(FreeBSD) enum utcZone = "Etc/UTC";
+            version(linux)   enum utcZone = "UTC";
+            version(OSX)     enum utcZone = "UTC";
+
+            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
+            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
+            testTZ(utcZone, "UTC", "UTC", 0, 0);
+            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
+            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
+
+            assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
+        }
+        version(Windows)
+        {
+            testTZ("America/Los_Angeles", "Pacific Standard Time",
+                   "Pacific Daylight Time", -8 * 60, 60);
+            testTZ("America/New_York", "Eastern Standard Time",
+                   "Eastern Daylight Time", -5 * 60, 60);
+            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+                   "Greenwich Daylight Time", 0, 0);
+            testTZ("Europe/Paris", "Romance Standard Time",
+                   "Romance Daylight Time", 60, 60);
+            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
+
+            assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
         }
     }
 
@@ -28466,7 +27849,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static void testPZSuccess(string tzName)
             {
@@ -28606,7 +27989,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assert(LocalTime().stdName !is null);
 
@@ -28679,7 +28062,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assert(LocalTime().dstName !is null);
 
@@ -28741,7 +28124,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().hasDST;
 
@@ -28805,7 +28188,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto currTime = Clock.currStdTime;
             LocalTime().dstInEffect(currTime);
@@ -28868,7 +28251,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().utcToTZ(0);
 
@@ -28932,7 +28315,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             LocalTime().tzToUTC(0);
             _assertPred!"=="(LocalTime().tzToUTC(LocalTime().utcToTZ(0)), 0);
@@ -29033,7 +28416,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="(UTC().utcToTZ(0), 0);
 
@@ -29068,7 +28451,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="(UTC().tzToUTC(0), 0);
 
@@ -29109,8 +28492,7 @@ private:
     UTC but no DST.
 
     It's primarily used as the time zone in the result of $(D SysTime)'s
-    $(D fromISOString), $(D fromISOExtendedString), and
-    $(D fromSimpleString).
+    $(D fromISOString), $(D fromISOExtString), and $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
     has no DST, and while it may be meant to represent a time zone which is in
@@ -29154,7 +28536,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="((new SimpleTimeZone(-8 * 60)).utcToTZ(0), -288_000_000_000L);
             _assertPred!"=="((new SimpleTimeZone(8 * 60)).utcToTZ(0), 288_000_000_000L);
@@ -29182,7 +28564,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             _assertPred!"=="((new SimpleTimeZone(-8 * 60)).tzToUTC(-288_000_000_000L), 0);
             _assertPred!"=="((new SimpleTimeZone(8 * 60)).tzToUTC(288_000_000_000L), 0);
@@ -29215,7 +28597,7 @@ public:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto stz = new SimpleTimeZone(-8 * 60, "PST");
 
@@ -29260,7 +28642,7 @@ private:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static string testSTZInvalid(int offset)
             {
@@ -29339,7 +28721,7 @@ private:
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             assertThrown!DateTimeException(SimpleTimeZone.fromISOString(""));
             assertThrown!DateTimeException(SimpleTimeZone.fromISOString("Z"));
@@ -29398,7 +28780,7 @@ private:
     //Test that converting from an ISO string to a SimpleTimeZone to an ISO String works properly.
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
             {
@@ -29444,17 +28826,6 @@ private:
     yourself and tell $(D PosixTimeZone.getTimeZone) where the directory holding
     them is.
 
-    TZ Database files hold DST transitions for a large interval of the time
-    covered by $(D time_t). So, barring errors in the information in the TZ
-    Database files, it will use the correct DST rules for any date. Windows, on
-    the other hand, maintains only the current DST rules, so historical dates
-    will use the current DST rules (and therefore potentially be incorrect). So,
-    if you want the DST rules that you use to be more accurate, or if you're
-    looking for your program to act consistently on both Posix and Windows
-    systems, then, as mentioned above, you'll need to include the TZ Database
-    files with your program and give $(D PosixTimeZone.getTimeZone) the
-    directory on disk where they are located.
-
     To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
     (which will allow you to specify the location the time zone files) or call
     $(D TimeZone.getTimeZone) (which will give you a $(D PosixTimeZone) on Posix
@@ -29467,8 +28838,8 @@ private:
         time zone whose name starts with "right/". Those time zone files do
         include leap seconds, and $(D PosixTimeZone) will take them into account
         (though posix systems which use a "right/" time zone as their local time
-         zone will $(I not) take leap seconds into account even though they're
-         in the file).
+        zone will $(I not) take leap seconds into account even though they're
+        in the file).
 
     See_Also:
         $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
@@ -29511,10 +28882,6 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return _transitions.front.ttInfo.isDST;
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -29549,10 +28916,6 @@ public:
             if(_transitions.front.timeT >= unixTime)
                 return stdTime + convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
             auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
@@ -29957,142 +29320,6 @@ assert(tz.dstName == "PDT");
             throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
     }
 
-
-    //Since reading in the time zone files could be expensive, most unit tests
-    //are consolidated into this one unittest block which minimizes how often it
-    //reads a time zone file.
-    version(enableWindowsTest) unittest
-    {
-        version(Posix) scope(exit) clearTZEnvVar();
-
-        static void testTZ(string tzName,
-                           string stdName,
-                           string dstName,
-                           int utcOffset,
-                           int dstOffset,
-                           bool north = true)
-        {
-            scope(failure) writefln("Failed time zone: %s", tzName);
-
-            immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != 0;
-
-            version(Posix)
-                _assertPred!"=="(tz.name, tzName);
-            else version(Windows)
-                _assertPred!"=="(tz.name, stdName);
-
-            _assertPred!"=="(tz.stdName, stdName);
-            _assertPred!"=="(tz.dstName, dstName);
-            _assertPred!"=="(tz.hasDST, hasDST);
-
-            immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 12, 0, 0);
-            immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 12, 0, 0);
-            auto std = SysTime(stdDate, tz);
-            auto dst = SysTime(dstDate, tz);
-            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
-            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
-
-            assert(!std.dstInEffect);
-            _assertPred!"=="(dst.dstInEffect, hasDST);
-
-            _assertPred!"=="(cast(DateTime)std, stdDate);
-            _assertPred!"=="(cast(DateTime)dst, dstDate);
-            _assertPred!"=="(std, stdUTC);
-
-            version(Posix)
-            {
-                setTZEnvVar(tzName);
-
-                static void testTM(in SysTime st)
-                {
-                    time_t unixTime = st.toUnixTime();
-                    tm* osTimeInfo = localtime(&unixTime);
-                    tm ourTimeInfo = st.toTM();
-
-                    _assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
-                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                    _assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
-                    _assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
-                    _assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
-                    _assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
-                    _assertPred!"=="(ourTimeInfo.tm_wday, osTimeInfo.tm_wday);
-                    _assertPred!"=="(ourTimeInfo.tm_yday, osTimeInfo.tm_yday);
-                    _assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
-                    _assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
-                    _assertPred!"=="(to!string(ourTimeInfo.tm_zone),
-                                    to!string(osTimeInfo.tm_zone));
-                }
-
-                testTM(std);
-                testTM(dst);
-
-                //Apparently, right/ does not exist on Mac OS X. I don't know
-                //whether or not it exists on FreeBSD. It's rather pointless
-                //normally, since the Posix standard requires that leap seconds
-                //be ignored, so it does make some sense that right/ wouldn't
-                //be there, but since PosixTimeZone _does_ use leap seconds if
-                //the time zone file does, we'll test that functionality if the
-                //appropriate files exist.
-                if((defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
-                {
-                    auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
-
-                    assert(leapTZ.name == "right/" ~ tzName);
-                    assert(leapTZ.stdName == stdName);
-                    assert(leapTZ.dstName == dstName);
-                    assert(leapTZ.hasDST == hasDST);
-
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
-
-                    assert(!leapSTD.dstInEffect);
-                    assert(leapDST.dstInEffect == hasDST);
-
-                    _assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                    _assertPred!"=="(leapDST.stdTime, dst.stdTime);
-
-                    //Whenever a leap second is added/removed,
-                    //this will have to be adjusted.
-                    enum leapDiff = convert!("seconds", "hnsecs")(24);
-                    _assertPred!"=="(leapSTD.adjTime - leapDiff, std.adjTime);
-                    _assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
-                }
-            }
-        }
-
-        version(Posix)
-        {
-            version(FreeBSD) enum utcZone = "Etc/UTC";
-            version(linux)   enum utcZone = "UTC";
-            version(OSX)     enum utcZone = "UTC";
-
-            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
-            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
-            testTZ(utcZone, "UTC", "UTC", 0, 0);
-            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
-            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
-
-            assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
-        }
-        version(Windows)
-        {
-            testTZ("America/Los_Angeles", "Pacific Standard Time",
-                   "Pacific Daylight Time", -8 * 60, 60);
-            testTZ("America/New_York", "Eastern Standard Time",
-                   "Eastern Daylight Time", -5 * 60, 60);
-            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
-                   "Greenwich Daylight Time", 0, 0);
-            testTZ("Europe/Paris", "Romance Standard Time",
-                   "Romance Daylight Time", 60, 60);
-            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
-                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
-
-            assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
-        }
-    }
-
     /++
         Returns a list of the names of the time zones installed on the system.
 
@@ -30146,7 +29373,7 @@ assert(tz.dstName == "PDT");
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             version(Posix)
             {
@@ -30486,7 +29713,6 @@ private:
 
 version(StdDdoc)
 {
-
     /++
         $(BLUE This class is Windows-Only.)
 
@@ -30499,21 +29725,14 @@ version(StdDdoc)
         yourself and tell $(D PosixTimeZone.getTimeZone) where the directory
         holding them is.
 
-        TZ Database files hold DST transitions for a large interval of the time
-        covered by $(D time_t). So, barring errors in the information in the TZ
-        Database files, it will use the correct DST rules for any date. Windows,
-        on the other hand, maintains only the current DST rules, so historical
-        dates will use the current DST rules (and therefore potentially be
-        incorrect). So, if you want the DST rules that you use to be more
-        accurate, or if you're looking for your program to act consistently on
-        both Posix and Windows systems, then, as mentioned above, you'll need to
-        include the TZ Database files with your program and give
-        $(D PosixTimeZone.getTimeZone) the directory on disk where they are
-        located.
+        The TZ Dabatase files and Windows are not likely to always match,
+        particularly for historical dates, so if you want complete consistency
+        between Posix and Windows, then you should provide the appropriate
+        TZ Database files on Windows and use $(D PosixTimeZone). But as
+        $(D WindowsTimeZone) uses the Windows functions, $(D WindowsTimeZone)
+        is more likely to match the behavior of other Windows programs.
+        $(D WindowsTimeZone) should be fine for most programs.
 
-        However, if all you care about is whether current times use the correct
-        DST rules, or if you don't care whether the DST rules are historically
-        accurate, then you can just use $(D WindowsTimeZone) on Windows.
         $(D WindowsTimeZone) does not exist on Posix systems.
 
         To get a $(D WindowsTimeZone), either call
@@ -30797,7 +30016,7 @@ else version(Windows)
 
         unittest
         {
-            version(enableWindowsTest)
+            version(testStdDateTime)
             {
                 static void testWTZSuccess(string tzName)
                 {
@@ -30864,7 +30083,9 @@ else version(Windows)
                 utcTime.wSecond = utcDateTime.second;
                 utcTime.wMilliseconds = 0;
 
-                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
+                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                                   &utcTime,
+                                                                   &otherTime);
                 assert(result);
 
                 immutable otherDateTime = DateTime(otherTime.wYear,
@@ -30887,18 +30108,13 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        unittest
+        version(testStdDateTime) unittest
         {
-            version(enableWindowsTest)
-            {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
 
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1600, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1601, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_827, 1, 1)).stdTime);
-                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_828, 1, 1)).stdTime);
-            }
+            foreach(year; [1600, 1601, 30_827, 30_828])
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(year, 1, 1)).stdTime);
         }
 
 
@@ -30917,52 +30133,91 @@ else version(Windows)
             {
                 try
                 {
-                    auto localTime = cast(DateTime)SysTime(adjTime, UTC());
-
-                    DateTime getTransitionTime(const ref SYSTEMTIME transition)
+                    bool dstInEffectForLocalDateTime(DateTime localDateTime)
                     {
-                        DateTime switchDate;
-
-                        if(transition.wYear == 0)
-                            switchDate.year = localTime.year;
-                        else
-                            switchDate.year = transition.wYear;
-
-                        switchDate.month = cast(Month)transition.wMonth;
-
-                        DayOfWeek dow = cast(DayOfWeek)transition.wDayOfWeek;
-                        int occurrence = transition.wDay;
-
-                        if(occurrence < 5)
+                        //The limits of what SystemTimeToTZSpecificLocalTime will accept.
+                        if(localDateTime.year < 1601)
                         {
-                            Date date = localTime.date;
+                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
 
-                            date.day = 1;
-                            date.day = cast(int)(date.day + daysToDayOfWeek(date.dayOfWeek, dow) + convert!("weeks", "days")(occurrence - 1));
-                            switchDate.day = date.day;
+                            localDateTime.year = 1601;
                         }
-                        else
+                        else if(localDateTime.year > 30_827)
                         {
-                            Date date = localTime.date.endOfMonth;
+                            if(localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
 
-                            switchDate.day = date.day - daysToDayOfWeek(dow, date.dayOfWeek);
+                            localDateTime.year = 30_827;
                         }
 
-                        switchDate.hour = transition.wHour;
-                        switchDate.minute = transition.wMinute;
+                        //SystemTimeToTZSpecificLocalTime doesn't act correctly at the
+                        //beginning or end of the year (bleh). Unless some bizarre time
+                        //zone changes DST on January 1st or December 31st, this should
+                        //fix the problem.
+                        if(localDateTime.month == Month.jan)
+                        {
+                            if(localDateTime.day == 1)
+                                localDateTime.day = 2;
+                        }
+                        else if(localDateTime.month == Month.dec && localDateTime.day == 31)
+                            localDateTime.day = 30;
 
-                        return switchDate;
+                        SYSTEMTIME utcTime = void;
+                        SYSTEMTIME localTime = void;
+
+                        localTime.wYear = localDateTime.year;
+                        localTime.wMonth = localDateTime.month;
+                        localTime.wDay = localDateTime.day;
+                        localTime.wHour = localDateTime.hour;
+                        localTime.wMinute = localDateTime.minute;
+                        localTime.wSecond = localDateTime.second;
+                        localTime.wMilliseconds = 0;
+
+                        immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                                           &localTime,
+                                                                           &utcTime);
+                        assert(result);
+
+                        immutable utcDateTime = DateTime(utcTime.wYear,
+                                                         utcTime.wMonth,
+                                                         utcTime.wDay,
+                                                         utcTime.wHour,
+                                                         utcTime.wMinute,
+                                                         utcTime.wSecond);
+
+                        immutable diff = localDateTime - utcDateTime;
+                        immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
+
+                        if(minutes == tzInfo.DaylightBias)
+                            return true;
+
+                        assert(minutes == tzInfo.StandardBias);
+
+                        return false;
                     }
 
-                    auto stdSwitch = getTransitionTime(tzInfo.StandardDate);
-                    auto dstSwitch = getTransitionTime(tzInfo.DaylightDate);
+                    auto localDateTime = cast(DateTime)SysTime(adjTime, UTC());
+                    auto localDateTimeBefore = localDateTime - dur!"hours"(1);
+                    auto localDateTimeAfter = localDateTime + dur!"hours"(1);
 
-                    bool isDST = false;
+                    auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
+                    auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
+                    auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
 
-                    if(localTime < stdSwitch)
-                        isDST = localTime < dstSwitch ? stdSwitch < dstSwitch : true;
+                    bool isDST;
+
+                    if(dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
+                        isDST = true;
+                    else if(!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
+                        isDST = false;
+                    else if((!dstInEffectBefore && dstInEffectAfter) ||
+                            (dstInEffectBefore && !dstInEffectAfter))
+                    {
+                        isDST = dstInEffectNow;
+                    }
                     else
-                        isDST = localTime < dstSwitch ? false : dstSwitch > stdSwitch;
+                        assert(0, "Bad Logic.");
 
                     if(isDST)
                         return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
@@ -31033,13 +30288,13 @@ else version(Posix)
     {
         try
         {
-            char[] env = to!(char[])("TZ=:" ~ PosixTimeZone.defaultTZDatabaseDir ~ tzDatabaseName ~ "\0");
+            auto value = PosixTimeZone.defaultTZDatabaseDir ~ tzDatabaseName ~ "\0";
 
-            putenv(env.ptr);
+            setenv("TZ", value.ptr, 1);
             tzset();
         }
         catch(Exception e)
-            assert(0, "to!(char[]) threw when it shouldn't have.");
+            assert(0, "The impossible happened. setenv or tzset threw.");
     }
 
 
@@ -31047,13 +30302,11 @@ else version(Posix)
     {
         try
         {
-            char[] env = to!(char[])("TZ\0");
-
-            unsetenv(env.ptr);
+            unsetenv("TZ");
             tzset();
         }
         catch(Exception e)
-            assert(0, "to!(char[]) threw when it shouldn't have.");
+            assert(0, "The impossible happened. unsetenv or tzset threw.");
     }
 }
 
@@ -31190,7 +30443,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
 
 unittest
 {
-    version(enableWindowsTest)
+    version(testStdDateTime)
     {
         version(Windows)
         {
@@ -31337,7 +30590,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
 
 unittest
 {
-    version(enableWindowsTest)
+    version(testStdDateTime)
     {
         version(Windows)
         {
@@ -31362,12 +30615,6 @@ unittest
 //==============================================================================
 
 /++
-   $(D StopWatch)'s AutoStart flag
-  +/
-enum autoStart = AutoStart.yes;
-
-
-/++
    $(D StopWatch) measures time as precisely as possible.
 
    This class uses a high-performance counter. On Windows systems, it uses
@@ -31377,167 +30624,176 @@ enum autoStart = AutoStart.yes;
    But the precision of $(D StopWatch) differs from system to system. It is
    impossible to for it to be the same from system to system since the precision
    of the system clock varies from system to system, and other system-dependent
-   and situation-dependent stuff (such as the overhead of a context switching
+   and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
 
    Examples:
 --------------------
-void foo() {
-   StopWatch sw;
-   static immutable N = 100;
-   TickDuration[N] times;
-   TickDuration last = TickDuration.from!"seconds"(0);
-   foreach (i; 0..N) {
-       sw.start(); // start/resume mesuring.
-       foreach (Unused; 0..1000000) bar();
-       sw.stop();  // stop/pause mesuring.
-       // Return value of peek() after having stopped are the always same.
-       writeln((i+1)*1000000, " times done, lap time: ",
-               sw.peek().msec, "[ms]");
+void foo()
+{
+    StopWatch sw;
+    enum n = 100;
+    TickDuration[n] times;
+    TickDuration last = TickDuration.from!"seconds"(0);
+    foreach(i; 0..n)
+    {
+       sw.start(); //start/resume mesuring.
+       foreach(unused; 0..1_000_000)
+           bar();
+       sw.stop();  //stop/pause measuring.
+       //Return value of peek() after having stopped are the always same.
+       writeln((i + 1) * 1_000_000, " times done, lap time: ",
+               sw.peek().msecs, "[ms]");
        times[i] = sw.peek() - last;
        last = sw.peek();
-   }
-   real sum = 0;
-   // When you want to know the number of seconds of the fact,
-   // you can use properties of TickDuration.
-   // (seconds, mseconds, useconds, hnsecs)
-   foreach (e; times) sum += e.hnsecs;
-   writeln("Average time: ", sum/N, " hnsecs");
+    }
+    real sum = 0;
+    // When you want to know the number of seconds,
+    // you can use properties of TickDuration.
+    // (seconds, mseconds, useconds, hnsecs)
+    foreach(t; times)
+       sum += t.hnsecs;
+    writeln("Average time: ", sum/n, " hnsecs");
 }
 --------------------
   +/
-struct StopWatch
+@safe struct StopWatch
 {
-@safe:// @@@BUG@@@ workaround for bug 4211
-private:
-
-
-    // true if observing.
-    bool m_FlagStarted = false;
-
-
-    // TickDuration at the time of StopWatch starting measurement.
-    TickDuration m_TimeStart;
-
-
-    // Total time that StopWatch ran.
-    TickDuration m_TimeMeasured;
-
-
 public:
+    //Verify Example
+    @safe unittest
+    {
+        void writeln(S...)(S args){}
+        static void bar() {}
 
+        StopWatch sw;
+        enum n = 100;
+        TickDuration[n] times;
+        TickDuration last = TickDuration.from!"seconds"(0);
+        foreach(i; 0..n)
+        {
+           sw.start(); //start/resume mesuring.
+           foreach(unused; 0..1_000_000)
+               bar();
+           sw.stop();  //stop/pause measuring.
+           //Return value of peek() after having stopped are the always same.
+           writeln((i + 1) * 1_000_000, " times done, lap time: ",
+                   sw.peek().msecs, "[ms]");
+           times[i] = sw.peek() - last;
+           last = sw.peek();
+        }
+        real sum = 0;
+        // When you want to know the number of seconds,
+        // you can use properties of TickDuration.
+        // (seconds, mseconds, useconds, hnsecs)
+        foreach(t; times)
+           sum += t.hnsecs;
+        writeln("Average time: ", sum/n, " hnsecs");
+    }
 
     /++
        Auto start with constructor.
       +/
     this(AutoStart autostart)
     {
-        if (autostart)
-        {
+        if(autostart)
             start();
-        }
+    }
+
+    version(testStdDateTime) @safe unittest
+    {
+        auto sw = StopWatch(AutoStart.yes);
+        sw.stop();
     }
 
 
-    unittest
+    ///
+    bool opEquals(const ref StopWatch rhs) const pure nothrow
     {
-        version(testStdDateTime)
-        {
-            auto sw = StopWatch(autoStart);
-            sw.stop();
-        }
+        return _timeStart == rhs._timeStart &&
+               _timeMeasured == rhs._timeMeasured;
     }
 
 
     /++
-       Reset the stop watch.
+       Resets the stop watch.
       +/
-    @safe
     void reset()
     {
-        if (m_FlagStarted)
+        if(_flagStarted)
         {
             // Set current system time if StopWatch is measuring.
-            m_TimeStart = Clock.currSystemTick;
+            _timeStart = Clock.currSystemTick;
         }
         else
         {
             // Set zero if StopWatch is not measuring.
-            m_TimeStart.length = 0;
+            _timeStart.length = 0;
         }
-        m_TimeMeasured.length = 0;
+
+        _timeMeasured.length = 0;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
-            sw.stop();
-            sw.reset();
-            assert(sw.peek().to!("seconds", real) == 0);
-        }
+        StopWatch sw;
+        sw.start();
+        sw.stop();
+        sw.reset();
+        assert(sw.peek().to!("seconds", real) == 0);
     }
 
 
     /++
-       Start the stop watch.
+       Starts the stop watch.
       +/
-    @safe
     void start()
     {
-        assert(!m_FlagStarted);
+        assert(!_flagStarted);
         StopWatch sw;
-        m_FlagStarted = true;
-        m_TimeStart = Clock.currSystemTick;
+        _flagStarted = true;
+        _timeStart = Clock.currSystemTick;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
+        StopWatch sw;
+        sw.start();
+        auto t1 = sw.peek();
+        bool doublestart = true;
+        try
             sw.start();
-            auto t1 = sw.peek();
-            bool doublestart = true;
-            try sw.start();
-            catch (Error e) doublestart = false;
-            assert(!doublestart);
-            sw.stop();
-            assert((t1 - sw.peek()).to!("seconds", real) <= 0);
-        }
+        catch(AssertError e)
+            doublestart = false;
+        assert(!doublestart);
+        sw.stop();
+        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
     }
 
 
     /++
-       Stop the stop watch.
+       Stops the stop watch.
       +/
-    @safe
     void stop()
     {
-        assert(m_FlagStarted);
-        m_FlagStarted = false;
-        m_TimeMeasured += Clock.currSystemTick - m_TimeStart;
+        assert(_flagStarted);
+        _flagStarted = false;
+        _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
+        StopWatch sw;
+        sw.start();
+        sw.stop();
+        auto t1 = sw.peek();
+        bool doublestop = true;
+        try
             sw.stop();
-            auto t1 = sw.peek();
-            bool doublestop = true;
-            try sw.stop();
-            catch (Error e) doublestop = false;
-            assert(!doublestop);
-            assert((t1 - sw.peek()).to!("seconds", real) == 0);
-        }
+        catch(AssertError e)
+            doublestop = false;
+        assert(!doublestop);
+        assert((t1 - sw.peek()).to!("seconds", real) == 0);
     }
 
 
@@ -31545,160 +30801,176 @@ public:
        Peek at the amount of time which has passed since the stop watch was
        started.
       +/
-    @safe
     TickDuration peek() const
     {
-        if(m_FlagStarted)
-        {
-            return Clock.currSystemTick - m_TimeStart + m_TimeMeasured;
-        }
-        return m_TimeMeasured;
+        if(_flagStarted)
+            return Clock.currSystemTick - _timeStart + _timeMeasured;
+
+        return _timeMeasured;
     }
 
-
-    unittest
+    version(testStdDateTime) @safe unittest
     {
-        version(testStdDateTime)
-        {
-            StopWatch sw;
-            sw.start();
-            auto t1 = sw.peek();
-            sw.stop();
-            auto t2 = sw.peek();
-            auto t3 = sw.peek();
-            assert(t1 <= t2);
-            assert(t2 == t3);
-        }
+        StopWatch sw;
+        sw.start();
+        auto t1 = sw.peek();
+        sw.stop();
+        auto t2 = sw.peek();
+        auto t3 = sw.peek();
+        assert(t1 <= t2);
+        assert(t2 == t3);
     }
+
+private:
+
+    // true if observing.
+    bool _flagStarted = false;
+
+    // TickDuration at the time of StopWatch starting measurement.
+    TickDuration _timeStart;
+
+    // Total time that StopWatch ran.
+    TickDuration _timeMeasured;
 }
 
 
 // workaround for bug4886
-@safe
-size_t lengthof(aliases...)() pure nothrow
+@safe size_t lengthof(aliases...)() pure nothrow
 {
     return aliases.length;
 }
 
 
 /++
-   Benchmarks code for speed assessment and comparison.
+    Benchmarks code for speed assessment and comparison.
 
-   Params:
-       fun = aliases of callable objects (e.g. function names). Each should
-             take no arguments.
-       times = The number of times each function is to be executed.
+    Params:
+        fun = aliases of callable objects (e.g. function names). Each should
+              take no arguments.
+        n   = The number of times each function is to be executed.
 
-   Returns:
-       An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
-       number of msecs spent in calling the $(D i)th function $(D times) times.
+    Returns:
+        The amount of time (as a $(CXREF time, TickDuration)) that it took to
+        call each function $(D n) times. The first value is the length of time
+        that it took to call $(D fun[0]) $(D n) times. The second value is the
+        length of time it took to call $(D fun[1]) $(D n) times. Etc.
 
    Examples:
 --------------------
 int a;
-void f0() { }
-void f1() { auto b = a; }
-void f2() { auto b = to!(string)(a); }
+void f0() {}
+void f1() {auto b = a;}
+void f2() {auto b = to!(string)(a);}
 auto r = benchmark!(f0, f1, f2)(10_000_000);
+writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
 --------------------
   +/
-@safe
-TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
+@safe TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
     if(areAllSafe!fun)
 {
     TickDuration[lengthof!(fun)()] result;
     StopWatch sw;
     sw.start();
-    foreach (i, Unused; fun)
+
+    foreach(i, unused; fun)
     {
         sw.reset();
-        foreach (j; 0 .. times)
-        {
+        foreach(j; 0 .. n)
             fun[i]();
-        }
         result[i] = sw.peek();
     }
+
     return result;
 }
 
-
-@system
+/++ Ditto +/
 TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
     if(!areAllSafe!fun)
 {
     TickDuration[lengthof!(fun)()] result;
     StopWatch sw;
     sw.start();
-    foreach (i, Unused; fun)
+
+    foreach(i, unused; fun)
     {
         sw.reset();
-        foreach (j; 0 .. times)
-        {
+        foreach(j; 0 .. times)
             fun[i]();
-        }
+
         result[i] = sw.peek();
     }
+
     return result;
 }
 
-
-unittest
+//Verify Examples.
+version(testStdDateTime) unittest
 {
-    version(testStdDateTime)
-    {
-        int a;
-        void f0() { }
-        //void f1() { auto b = to!(string)(a); }
-        void f2() { auto b = (a); }
-        auto r = benchmark!(f0, f2)(100);
-    }
+    void writefln(S...)(S args){}
+
+    int a;
+    void f0() {}
+    void f1() {auto b = a;}
+    void f2() {auto b = to!(string)(a);}
+    auto r = benchmark!(f0, f1, f2)(10_000_000);
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
+}
+
+version(testStdDateTime) @safe unittest
+{
+    int a;
+    void f0() {}
+    //void f1() {auto b = to!(string)(a);}
+    void f2() {auto b = (a);}
+    auto r = benchmark!(f0, f2)(100);
 }
 
 
 /++
    Return value of benchmark with two functions comparing.
   +/
-immutable struct ComparingBenchmarkResult
+@safe struct ComparingBenchmarkResult
 {
-@safe:
-    private TickDuration m_tmBase;
-    private TickDuration m_tmTarget;
-
-
     /++
        Evaluation value
 
-       This returns the evaluation value of performance as the ratio that is
-       compared between BaseFunc's time and TargetFunc's time.
-       If performance is high, this returns a high value.
+       This returns the evaluation value of performance as the ratio of
+       baseFunc's time over targetFunc's time. If performance is high, this
+       returns a high value.
       +/
-    @property
-    real point() immutable pure
+    @property real point() const pure nothrow
     {
-        // @@@BUG@@@ workaround for bug 4689
-        long t = m_tmTarget.length;
-        return m_tmBase.length / cast(real)t;
-    }
-
-
-    /++
-       The time required of the target function
-      +/
-    @property
-    public TickDuration targetTime() immutable pure
-    {
-        return m_tmTarget;
+        return _baseTime.length / cast(const real)_targetTime.length;
     }
 
 
     /++
        The time required of the base function
       +/
-    @property
-    public TickDuration baseTime() immutable pure
+    @property public TickDuration baseTime() const pure nothrow
     {
-        return m_tmBase;
+        return _baseTime;
     }
+
+
+    /++
+       The time required of the target function
+      +/
+    @property public TickDuration targetTime() const pure nothrow
+    {
+        return _targetTime;
+    }
+
+private:
+
+    this(TickDuration baseTime, TickDuration targetTime) pure nothrow
+    {
+        _baseTime = baseTime;
+        _targetTime = targetTime;
+    }
+
+    TickDuration _baseTime;
+    TickDuration _targetTime;
 }
 
 
@@ -31725,54 +30997,46 @@ void main() {
 }
 --------------------
   +/
-@safe
-ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int times = 0xfff)()
-    if (isSafe!baseFunc && isSafe!targetFunc)
+@safe ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
+                                                  alias targetFunc,
+                                                  int times = 0xfff)()
+    if(isSafe!baseFunc && isSafe!targetFunc)
 {
     auto t = benchmark!(baseFunc, targetFunc)(times);
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
-/// ditto
-@system
-ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int times = 0xfff)()
-    if (!(isSafe!baseFunc && isSafe!targetFunc))
+/++ Ditto +/
+ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
+                                            alias targetFunc,
+                                            int times = 0xfff)()
+    if(!isSafe!baseFunc || !isSafe!targetFunc)
 {
     auto t = benchmark!(baseFunc, targetFunc)(times);
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
-@safe
-unittest
+version(testStdDateTime) @safe unittest
 {
-    version(testStdDateTime)
-    {
-        @system void f1x() { }
-        @system void f2x() { }
-        @safe void f1o() { }
-        @safe void f2o() { }
-        auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-        //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
-    }
+    void f1x() {}
+    void f2x() {}
+    @safe void f1o() {}
+    @safe void f2o() {}
+    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
 
-@system
-unittest
+version(testStdDateTime) unittest
 {
-    version(testStdDateTime)
-    {
-        @system void f1x() { }
-        @system void f2x() { }
-        @safe void f1o() { }
-        @safe void f2o() { }
-        auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-        auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
-    }
+    void f1x() {}
+    void f2x() {}
+    @safe void f1o() {}
+    @safe void f2o() {}
+    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
 }
 
 
@@ -31791,7 +31055,7 @@ long sysTimeToDTime(in SysTime sysTime)
     return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
 }
 
-unittest
+version(testStdDateTime) unittest
 {
     _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), UTC())),
                     0);
@@ -31820,7 +31084,7 @@ SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
     return SysTime(hnsecs, tz);
 }
 
-unittest
+version(testStdDateTime) unittest
 {
     _assertPred!"=="(dTimeToSysTime(0),
                     SysTime(DateTime(1970, 1, 1), UTC()));
@@ -31896,7 +31160,6 @@ unittest
     }
 }
 
-
 /++
     Whether the given Gregorian Year is a leap year.
 
@@ -31914,83 +31177,21 @@ static bool yearIsLeapYear(int year) pure nothrow
     return year % 4 == 0;
 }
 
-unittest
+version(testStdDateTime) unittest
 {
-    version(testStdDateTime)
+    foreach(year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
+                   2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
     {
-        //Test A.D.
-        assert(!yearIsLeapYear(1));
-        assert(!yearIsLeapYear(2));
-        assert(!yearIsLeapYear(3));
-        assert(yearIsLeapYear(4));
-        assert(!yearIsLeapYear(5));
-        assert(!yearIsLeapYear(6));
-        assert(!yearIsLeapYear(7));
-        assert(yearIsLeapYear(8));
+        assert(!yearIsLeapYear(year), format("year: %s.", year));
+        assert(!yearIsLeapYear(-year), format("year: %s.", year));
+    }
 
-        assert(!yearIsLeapYear(100));
-        assert(!yearIsLeapYear(200));
-        assert(!yearIsLeapYear(300));
-        assert(yearIsLeapYear(400));
-        assert(!yearIsLeapYear(500));
-        assert(!yearIsLeapYear(600));
-        assert(!yearIsLeapYear(700));
-        assert(yearIsLeapYear(800));
-
-        assert(yearIsLeapYear(1996));
-        assert(!yearIsLeapYear(1997));
-        assert(!yearIsLeapYear(1998));
-        assert(!yearIsLeapYear(1999));
-        assert(yearIsLeapYear(2000));
-        assert(!yearIsLeapYear(2001));
-        assert(!yearIsLeapYear(2002));
-        assert(!yearIsLeapYear(2003));
-        assert(yearIsLeapYear(2004));
-        assert(!yearIsLeapYear(2005));
-        assert(!yearIsLeapYear(2006));
-        assert(!yearIsLeapYear(2007));
-        assert(yearIsLeapYear(2008));
-        assert(!yearIsLeapYear(2009));
-        assert(!yearIsLeapYear(2010));
-
-        //Test B.C.
-        assert(yearIsLeapYear(0));
-        assert(!yearIsLeapYear(-1));
-        assert(!yearIsLeapYear(-2));
-        assert(!yearIsLeapYear(-3));
-        assert(yearIsLeapYear(-4));
-        assert(!yearIsLeapYear(-5));
-        assert(!yearIsLeapYear(-6));
-        assert(!yearIsLeapYear(-7));
-        assert(yearIsLeapYear(-8));
-
-        assert(!yearIsLeapYear(-100));
-        assert(!yearIsLeapYear(-200));
-        assert(!yearIsLeapYear(-300));
-        assert(yearIsLeapYear(-400));
-        assert(!yearIsLeapYear(-500));
-        assert(!yearIsLeapYear(-600));
-        assert(!yearIsLeapYear(-700));
-        assert(yearIsLeapYear(-800));
-
-        assert(yearIsLeapYear(-1996));
-        assert(!yearIsLeapYear(-1997));
-        assert(!yearIsLeapYear(-1998));
-        assert(!yearIsLeapYear(-1999));
-        assert(yearIsLeapYear(-2000));
-        assert(!yearIsLeapYear(-2001));
-        assert(!yearIsLeapYear(-2002));
-        assert(!yearIsLeapYear(-2003));
-        assert(yearIsLeapYear(-2004));
-        assert(!yearIsLeapYear(-2005));
-        assert(!yearIsLeapYear(-2006));
-        assert(!yearIsLeapYear(-2007));
-        assert(yearIsLeapYear(-2008));
-        assert(!yearIsLeapYear(-2009));
-        assert(!yearIsLeapYear(-2010));
+    foreach(year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
+    {
+        assert(yearIsLeapYear(year), format("year: %s.", year));
+        assert(yearIsLeapYear(-year), format("year: %s.", year));
     }
 }
-
 
 /++
     Converts a $(D time_t) (which uses midnight, January 1st, 1970 UTC as its
@@ -32212,7 +31413,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto sysTime = Clock.currTime(UTC());
             SYSTEMTIME st = void;
@@ -32248,7 +31449,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             SYSTEMTIME st = void;
             GetSystemTime(&st);
@@ -32283,7 +31484,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             auto sysTime = Clock.currTime(UTC());
             SYSTEMTIME st = void;
@@ -32312,7 +31513,7 @@ else version(Windows)
 
     unittest
     {
-        version(enableWindowsTest)
+        version(testStdDateTime)
         {
             SYSTEMTIME st = void;
             GetSystemTime(&st);
@@ -32869,76 +32070,102 @@ unittest
     }
 }
 
-/++
-Function for starting to a stop watch time when the function is called
-and stopping it when its return value goes out of scope and is
-destroyed.
 
-When the value that is returned by this function is destroyed, $(D
-func) will run. $(D func) is a unary function that takes a $(D
-TickDuration).
+version(StdDdoc)
+{
+    /++
+        Function for starting to a stop watch time when the function is called
+        and stopping it when its return value goes out of scope and is destroyed.
 
-Examples:
+        When the value that is returned by this function is destroyed,
+        $(D func) will run. $(D func) is a unary function that takes a
+        $(CXREF TickDuration).
+
+        Examples:
 --------------------
 writeln("benchmark start!");
 {
-    auto mt = measureTime!((a){assert(a.seconds);});
-    doSomething();
+auto mt = measureTime!((a){assert(a.seconds);});
+doSomething();
 }
 writeln("benchmark end!");
 --------------------
-+/
-@safe auto measureTime(alias func)()
-if(isSafe!func)
+      +/
+    auto measureTime(alias func)();
+}
+else
 {
-    struct Result
+    @safe auto measureTime(alias func)()
+        if(isSafe!func)
     {
-        private StopWatch sw = void;
-        this(StopWatch.AutoStart as)
+        struct Result
         {
-            sw = StopWatch(as);
+            private StopWatch _sw = void;
+            this(AutoStart as)
+            {
+                _sw = StopWatch(as);
+            }
+            ~this()
+            {
+                unaryFun!(func)(_sw.peek());
+            }
         }
-        ~this()
-        {
-            unaryFun!(func)(sw.peek());
-        }
+        return Result(AutoStart.yes);
     }
-    return Result(autoStart);
+
+    auto measureTime(alias func)()
+        if(!isSafe!func)
+    {
+        struct Result
+        {
+            private StopWatch _sw = void;
+            this(AutoStart as)
+            {
+                _sw = StopWatch(as);
+            }
+            ~this()
+            {
+                unaryFun!(func)(_sw.peek());
+            }
+        }
+        return Result(AutoStart.yes);
+    }
 }
 
-@system auto measureTime(alias func)() if (!isSafe!func)
+version(testStdDateTime) @safe unittest
 {
-    struct TMP
+    @safe static void func(TickDuration td)
     {
-        private StopWatch sw = void;
-        this(AutoStart as)
-        {
-            sw = StopWatch(as);
-        }
-        ~this()
-        {
-            unaryFun!(func)(sw.peek());
-        }
+        assert(td.to!("seconds", real) <>= 0);
     }
-    return TMP(autoStart);
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
 }
 
-@system unittest
+version(testStdDateTime) unittest
 {
-    version(testStdDateTime)
+    static void func(TickDuration td)
     {
-        {
-            auto mt = measureTime!((a){assert(a.to!("seconds", real) <>= 0);});
-        }
-
-        /+
-        with (measureTime!((a){assert(a.seconds);}))
-        {
-            // doSomething();
-            // @@@BUG@@@ doesn't work yet.
-        }
-        +/
+        assert(td.to!("seconds", real) <>= 0);
     }
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
 }
 
 //==============================================================================
@@ -34017,6 +33244,347 @@ template DTRebindable(T) if (is(T == class) || is(T == interface) || isArray!(T)
     }
 }
 
+version(unittest)
+{
+    //Variables to help in testing.
+    Duration currLocalDiffFromUTC;
+    immutable (TimeZone)[] testTZs;
+
+    //All of these helper arrays are sorted in ascending order.
+    auto testYearsBC = [-1999, -1200, -600, -4, -1, 0];
+    auto testYearsAD = [1, 4, 1000, 1999, 2000, 2012];
+
+    //I'd use a Tuple, but I get forward reference errors if I try.
+    struct MonthDay
+    {
+        Month month;
+        short day;
+
+        this(int m, short d)
+        {
+            month = cast(Month)m;
+            day = d;
+        }
+    }
+
+    MonthDay[] testMonthDays = [MonthDay(1, 1),
+                                MonthDay(1, 2),
+                                MonthDay(3, 17),
+                                MonthDay(7, 4),
+                                MonthDay(10, 27),
+                                MonthDay(12, 30),
+                                MonthDay(12, 31)];
+
+    auto testDays = [1, 2, 9, 10, 16, 20, 25, 28, 29, 30, 31];
+
+    auto testTODs = [TimeOfDay(0, 0, 0),
+                     TimeOfDay(0, 0, 1),
+                     TimeOfDay(0, 1, 0),
+                     TimeOfDay(1, 0, 0),
+                     TimeOfDay(13, 13, 13),
+                     TimeOfDay(23, 59, 59)];
+
+    auto testHours = [0, 1, 12, 22, 23];
+    auto testMinSecs = [0, 1, 30, 58, 59];
+
+    //Throwing exceptions is incredibly expensive, so we want to use a smaller
+    //set of values for tests using assertThrown.
+    auto testTODsThrown = [TimeOfDay(0, 0, 0),
+                           TimeOfDay(13, 13, 13),
+                           TimeOfDay(23, 59, 59)];
+
+    Date[] testDatesBC;
+    Date[] testDatesAD;
+
+    DateTime[] testDateTimesBC;
+    DateTime[] testDateTimesAD;
+
+    FracSec[] testFracSecs;
+
+    SysTime[] testSysTimesBC;
+    SysTime[] testSysTimesAD;
+
+    //I'd use a Tuple, but I get forward reference errors if I try.
+    struct GregDay { int day; Date date; }
+    auto testGregDaysBC = [GregDay(-1_373_427, Date(-3760, 9, 7)), //Start of the Hebrew Calendar
+                           GregDay(-735_233, Date(-2012, 1, 1)),
+                           GregDay(-735_202, Date(-2012, 2, 1)),
+                           GregDay(-735_175, Date(-2012, 2, 28)),
+                           GregDay(-735_174, Date(-2012, 2, 29)),
+                           GregDay(-735_173, Date(-2012, 3, 1)),
+                           GregDay(-734_502, Date(-2010, 1, 1)),
+                           GregDay(-734_472, Date(-2010, 1, 31)),
+                           GregDay(-734_471, Date(-2010, 2, 1)),
+                           GregDay(-734_444, Date(-2010, 2, 28)),
+                           GregDay(-734_443, Date(-2010, 3, 1)),
+                           GregDay(-734_413, Date(-2010, 3, 31)),
+                           GregDay(-734_412, Date(-2010, 4, 1)),
+                           GregDay(-734_383, Date(-2010, 4, 30)),
+                           GregDay(-734_382, Date(-2010, 5, 1)),
+                           GregDay(-734_352, Date(-2010, 5, 31)),
+                           GregDay(-734_351, Date(-2010, 6, 1)),
+                           GregDay(-734_322, Date(-2010, 6, 30)),
+                           GregDay(-734_321, Date(-2010, 7, 1)),
+                           GregDay(-734_291, Date(-2010, 7, 31)),
+                           GregDay(-734_290, Date(-2010, 8, 1)),
+                           GregDay(-734_260, Date(-2010, 8, 31)),
+                           GregDay(-734_259, Date(-2010, 9, 1)),
+                           GregDay(-734_230, Date(-2010, 9, 30)),
+                           GregDay(-734_229, Date(-2010, 10, 1)),
+                           GregDay(-734_199, Date(-2010, 10, 31)),
+                           GregDay(-734_198, Date(-2010, 11, 1)),
+                           GregDay(-734_169, Date(-2010, 11, 30)),
+                           GregDay(-734_168, Date(-2010, 12, 1)),
+                           GregDay(-734_139, Date(-2010, 12, 30)),
+                           GregDay(-734_138, Date(-2010, 12, 31)),
+                           GregDay(-731_215, Date(-2001, 1, 1)),
+                           GregDay(-730_850, Date(-2000, 1, 1)),
+                           GregDay(-730_849, Date(-2000, 1, 2)),
+                           GregDay(-730_486, Date(-2000, 12, 30)),
+                           GregDay(-730_485, Date(-2000, 12, 31)),
+                           GregDay(-730_484, Date(-1999, 1, 1)),
+                           GregDay(-694_690, Date(-1901, 1, 1)),
+                           GregDay(-694_325, Date(-1900, 1, 1)),
+                           GregDay(-585_118, Date(-1601, 1, 1)),
+                           GregDay(-584_753, Date(-1600, 1, 1)),
+                           GregDay(-584_388, Date(-1600, 12, 31)),
+                           GregDay(-584_387, Date(-1599, 1, 1)),
+                           GregDay(-365_972, Date(-1001, 1, 1)),
+                           GregDay(-365_607, Date(-1000, 1, 1)),
+                           GregDay(-183_351, Date(-501, 1, 1)),
+                           GregDay(-182_986, Date(-500, 1, 1)),
+                           GregDay(-182_621, Date(-499, 1, 1)),
+                           GregDay(-146_827, Date(-401, 1, 1)),
+                           GregDay(-146_462, Date(-400, 1, 1)),
+                           GregDay(-146_097, Date(-400, 12, 31)),
+                           GregDay(-110_302, Date(-301, 1, 1)),
+                           GregDay(-109_937, Date(-300, 1, 1)),
+                           GregDay(-73_778, Date(-201, 1, 1)),
+                           GregDay(-73_413, Date(-200, 1, 1)),
+                           GregDay(-38_715, Date(-105, 1, 1)),
+                           GregDay(-37_254, Date(-101, 1, 1)),
+                           GregDay(-36_889, Date(-100, 1, 1)),
+                           GregDay(-36_524, Date(-99, 1, 1)),
+                           GregDay(-36_160, Date(-99, 12, 31)),
+                           GregDay(-35_794, Date(-97, 1, 1)),
+                           GregDay(-18_627, Date(-50, 1, 1)),
+                           GregDay(-18_262, Date(-49, 1, 1)),
+                           GregDay(-3652, Date(-9, 1, 1)),
+                           GregDay(-2191, Date(-5, 1, 1)),
+                           GregDay(-1827, Date(-5, 12, 31)),
+                           GregDay(-1826, Date(-4, 1, 1)),
+                           GregDay(-1825, Date(-4, 1, 2)),
+                           GregDay(-1462, Date(-4, 12, 30)),
+                           GregDay(-1461, Date(-4, 12, 31)),
+                           GregDay(-1460, Date(-3, 1, 1)),
+                           GregDay(-1096, Date(-3, 12, 31)),
+                           GregDay(-1095, Date(-2, 1, 1)),
+                           GregDay(-731, Date(-2, 12, 31)),
+                           GregDay(-730, Date(-1, 1, 1)),
+                           GregDay(-367, Date(-1, 12, 30)),
+                           GregDay(-366, Date(-1, 12, 31)),
+                           GregDay(-365, Date(0, 1, 1)),
+                           GregDay(-31, Date(0, 11, 30)),
+                           GregDay(-30, Date(0, 12, 1)),
+                           GregDay(-1, Date(0, 12, 30)),
+                           GregDay(0, Date(0, 12, 31))];
+
+    auto testGregDaysAD = [GregDay(1, Date(1, 1, 1)),
+                           GregDay(2, Date(1, 1, 2)),
+                           GregDay(32, Date(1, 2, 1)),
+                           GregDay(365, Date(1, 12, 31)),
+                           GregDay(366, Date(2, 1, 1)),
+                           GregDay(731, Date(3, 1, 1)),
+                           GregDay(1096, Date(4, 1, 1)),
+                           GregDay(1097, Date(4, 1, 2)),
+                           GregDay(1460, Date(4, 12, 30)),
+                           GregDay(1461, Date(4, 12, 31)),
+                           GregDay(1462, Date(5, 1, 1)),
+                           GregDay(17_898, Date(50, 1, 1)),
+                           GregDay(35_065, Date(97, 1, 1)),
+                           GregDay(36_160, Date(100, 1, 1)),
+                           GregDay(36_525, Date(101, 1, 1)),
+                           GregDay(37_986, Date(105, 1, 1)),
+                           GregDay(72_684, Date(200, 1, 1)),
+                           GregDay(73_049, Date(201, 1, 1)),
+                           GregDay(109_208, Date(300, 1, 1)),
+                           GregDay(109_573, Date(301, 1, 1)),
+                           GregDay(145_732, Date(400, 1, 1)),
+                           GregDay(146_098, Date(401, 1, 1)),
+                           GregDay(182_257, Date(500, 1, 1)),
+                           GregDay(182_622, Date(501, 1, 1)),
+                           GregDay(364_878, Date(1000, 1, 1)),
+                           GregDay(365_243, Date(1001, 1, 1)),
+                           GregDay(584_023, Date(1600, 1, 1)),
+                           GregDay(584_389, Date(1601, 1, 1)),
+                           GregDay(693_596, Date(1900, 1, 1)),
+                           GregDay(693_961, Date(1901, 1, 1)),
+                           GregDay(729_755, Date(1999, 1, 1)),
+                           GregDay(730_120, Date(2000, 1, 1)),
+                           GregDay(730_121, Date(2000, 1, 2)),
+                           GregDay(730_484, Date(2000, 12, 30)),
+                           GregDay(730_485, Date(2000, 12, 31)),
+                           GregDay(730_486, Date(2001, 1, 1)),
+                           GregDay(733_773, Date(2010, 1, 1)),
+                           GregDay(733_774, Date(2010, 1, 2)),
+                           GregDay(733_803, Date(2010, 1, 31)),
+                           GregDay(733_804, Date(2010, 2, 1)),
+                           GregDay(733_831, Date(2010, 2, 28)),
+                           GregDay(733_832, Date(2010, 3, 1)),
+                           GregDay(733_862, Date(2010, 3, 31)),
+                           GregDay(733_863, Date(2010, 4, 1)),
+                           GregDay(733_892, Date(2010, 4, 30)),
+                           GregDay(733_893, Date(2010, 5, 1)),
+                           GregDay(733_923, Date(2010, 5, 31)),
+                           GregDay(733_924, Date(2010, 6, 1)),
+                           GregDay(733_953, Date(2010, 6, 30)),
+                           GregDay(733_954, Date(2010, 7, 1)),
+                           GregDay(733_984, Date(2010, 7, 31)),
+                           GregDay(733_985, Date(2010, 8, 1)),
+                           GregDay(734_015, Date(2010, 8, 31)),
+                           GregDay(734_016, Date(2010, 9, 1)),
+                           GregDay(734_045, Date(2010, 9, 30)),
+                           GregDay(734_046, Date(2010, 10, 1)),
+                           GregDay(734_076, Date(2010, 10, 31)),
+                           GregDay(734_077, Date(2010, 11, 1)),
+                           GregDay(734_106, Date(2010, 11, 30)),
+                           GregDay(734_107, Date(2010, 12, 1)),
+                           GregDay(734_136, Date(2010, 12, 30)),
+                           GregDay(734_137, Date(2010, 12, 31)),
+                           GregDay(734_503, Date(2012, 1, 1)),
+                           GregDay(734_534, Date(2012, 2, 1)),
+                           GregDay(734_561, Date(2012, 2, 28)),
+                           GregDay(734_562, Date(2012, 2, 29)),
+                           GregDay(734_563, Date(2012, 3, 1)),
+                           GregDay(734_858, Date(2012, 12, 21))];
+
+    //I'd use a Tuple, but I get forward reference errors if I try.
+    struct DayOfYear { int day; MonthDay md; }
+    auto testDaysOfYear = [DayOfYear(1, MonthDay(1, 1)),
+                           DayOfYear(2, MonthDay(1, 2)),
+                           DayOfYear(3, MonthDay(1, 3)),
+                           DayOfYear(31, MonthDay(1, 31)),
+                           DayOfYear(32, MonthDay(2, 1)),
+                           DayOfYear(59, MonthDay(2, 28)),
+                           DayOfYear(60, MonthDay(3, 1)),
+                           DayOfYear(90, MonthDay(3, 31)),
+                           DayOfYear(91, MonthDay(4, 1)),
+                           DayOfYear(120, MonthDay(4, 30)),
+                           DayOfYear(121, MonthDay(5, 1)),
+                           DayOfYear(151, MonthDay(5, 31)),
+                           DayOfYear(152, MonthDay(6, 1)),
+                           DayOfYear(181, MonthDay(6, 30)),
+                           DayOfYear(182, MonthDay(7, 1)),
+                           DayOfYear(212, MonthDay(7, 31)),
+                           DayOfYear(213, MonthDay(8, 1)),
+                           DayOfYear(243, MonthDay(8, 31)),
+                           DayOfYear(244, MonthDay(9, 1)),
+                           DayOfYear(273, MonthDay(9, 30)),
+                           DayOfYear(274, MonthDay(10, 1)),
+                           DayOfYear(304, MonthDay(10, 31)),
+                           DayOfYear(305, MonthDay(11, 1)),
+                           DayOfYear(334, MonthDay(11, 30)),
+                           DayOfYear(335, MonthDay(12, 1)),
+                           DayOfYear(363, MonthDay(12, 29)),
+                           DayOfYear(364, MonthDay(12, 30)),
+                           DayOfYear(365, MonthDay(12, 31))];
+
+    auto testDaysOfLeapYear = [DayOfYear(1, MonthDay(1, 1)),
+                               DayOfYear(2, MonthDay(1, 2)),
+                               DayOfYear(3, MonthDay(1, 3)),
+                               DayOfYear(31, MonthDay(1, 31)),
+                               DayOfYear(32, MonthDay(2, 1)),
+                               DayOfYear(59, MonthDay(2, 28)),
+                               DayOfYear(60, MonthDay(2, 29)),
+                               DayOfYear(61, MonthDay(3, 1)),
+                               DayOfYear(91, MonthDay(3, 31)),
+                               DayOfYear(92, MonthDay(4, 1)),
+                               DayOfYear(121, MonthDay(4, 30)),
+                               DayOfYear(122, MonthDay(5, 1)),
+                               DayOfYear(152, MonthDay(5, 31)),
+                               DayOfYear(153, MonthDay(6, 1)),
+                               DayOfYear(182, MonthDay(6, 30)),
+                               DayOfYear(183, MonthDay(7, 1)),
+                               DayOfYear(213, MonthDay(7, 31)),
+                               DayOfYear(214, MonthDay(8, 1)),
+                               DayOfYear(244, MonthDay(8, 31)),
+                               DayOfYear(245, MonthDay(9, 1)),
+                               DayOfYear(274, MonthDay(9, 30)),
+                               DayOfYear(275, MonthDay(10, 1)),
+                               DayOfYear(305, MonthDay(10, 31)),
+                               DayOfYear(306, MonthDay(11, 1)),
+                               DayOfYear(335, MonthDay(11, 30)),
+                               DayOfYear(336, MonthDay(12, 1)),
+                               DayOfYear(364, MonthDay(12, 29)),
+                               DayOfYear(365, MonthDay(12, 30)),
+                               DayOfYear(366, MonthDay(12, 31))];
+
+    static this()
+    {
+        currLocalDiffFromUTC = Clock.currTime(UTC()) -
+                               Clock.currTime(LocalTime());
+
+        immutable simpleTZ = new SimpleTimeZone(cast(int)
+                (currLocalDiffFromUTC + dur!"hours"(2)).total!"minutes"());
+
+        immutable lt = LocalTime().utcToTZ(0);
+        immutable st = simpleTZ.utcToTZ(0);
+        auto diffs = [0, lt, st];
+        auto diffAA = [0 : cast(immutable TimeZone)UTC(),
+                       lt : cast(immutable TimeZone)LocalTime(),
+                       st : cast(immutable TimeZone)simpleTZ];
+        sort(diffs);
+        testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
+
+        testFracSecs = [FracSec.from!"hnsecs"(0),
+                        FracSec.from!"hnsecs"(1),
+                        FracSec.from!"hnsecs"(5007),
+                        FracSec.from!"hnsecs"(9999999)];
+
+        foreach(year; testYearsBC)
+        {
+            foreach(md; testMonthDays)
+                testDatesBC ~= Date(year, md.month, md.day);
+        }
+
+        foreach(year; testYearsAD)
+        {
+            foreach(md; testMonthDays)
+                testDatesAD ~= Date(year, md.month, md.day);
+        }
+
+        foreach(dt; testDatesBC)
+        {
+            foreach(tod; testTODs)
+                testDateTimesBC ~= DateTime(dt, tod);
+        }
+
+        foreach(dt; testDatesAD)
+        {
+            foreach(tod; testTODs)
+                testDateTimesAD ~= DateTime(dt, tod);
+        }
+
+        foreach(dt; testDateTimesBC)
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(fs; testFracSecs)
+                    testSysTimesBC ~= SysTime(dt, fs, tz);
+            }
+        }
+
+        foreach(dt; testDateTimesAD)
+        {
+            foreach(tz; testTZs)
+            {
+                foreach(fs; testFracSecs)
+                    testSysTimesAD ~= SysTime(dt, fs, tz);
+            }
+        }
+    }
+}
+
 
 //==============================================================================
 // Unit testing functions.
@@ -34215,7 +33783,6 @@ void _assertPred(string func, string expected, L, R)
     else
         static assert(0);
 }
-
 
 void _assertPred(string op, L, R, E)
                (L lhs, R rhs, E expected, lazy string msg = null, string file = __FILE__, size_t line = __LINE__)

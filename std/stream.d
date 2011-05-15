@@ -75,8 +75,8 @@ private {
   import std.conv;
   import std.format;
   import std.system;    // for Endian enumeration
-  import std.intrinsic; // for bswap
   import std.utf;
+  import core.bitop; // for bswap
   import core.vararg;
 }
 

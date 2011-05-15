@@ -1025,41 +1025,56 @@ struct Banner {
 
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
-  BUG: bugzilla 2029 prevents the signature from being (string[] names...),
-  so we need to use an ugly array literal instead.
 */
-char [] alignForSize(E...)(string[E.length] names)
+string alignForSize(E...)(string[] names...)
 {
     // Sort all of the members by .alignof.
     // BUG: Alignment is not always optimal for align(1) structs
-    // or 80-bit reals.
+    // or 80-bit reals or 64-bit primitives on x86.
     // TRICK: Use the fact that .alignof is always a power of 2,
     // and maximum 16 on extant systems. Thus, we can perform
     // a very limited radix sort.
     // Contains the members with .alignof = 64,32,16,8,4,2,1
-    int [][] alignlist; // workaround for bugzilla 2569
-    alignlist = [ [],[],[],[],[],[],[]]; // workaround for bugzilla 2562
-    char[][] declaration;
-    foreach(int i_bug,T; E) {
-        int i = i_bug; // workaround for bugzilla 2564 (D2 only)
-        declaration ~= T.stringof ~ " " ~ names[i].dup ~ ";\n";
-        int a = T.alignof;
-        int k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
-        alignlist[k]~=i;
+
+    assert(E.length == names.length,
+        "alignForSize: There should be as many member names as the types");
+
+    string[7] declaration = ["", "", "", "", "", "", ""];
+
+    foreach (i, T; E) {
+        auto a = T.alignof;
+        auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
     }
-    char [] s;
-    foreach(q; alignlist) {
-      foreach(int i; q) {
-        s~=  declaration[i];
-      }
-    }
+
+    auto s = "";
+    foreach (decl; declaration)
+        s ~= decl;
     return s;
 }
 
 unittest {
-    // assert(alignForSize!(int[], char[3], short, double[5])(["x", "y","z", "w"]) =="double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n");
+    enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
     struct Foo{ int x; }
-    // assert(alignForSize!(ubyte, Foo, cdouble)(["x", "y","z"]) =="cdouble z;\nFoo y;\nubyte x;\n");
+    enum y = alignForSize!(ubyte, Foo, cdouble)("x", "y","z");
+
+    static if(size_t.sizeof == uint.sizeof)
+    {
+        enum passNormalX = x == "double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n";
+        enum passNormalY = y == "cdouble z;\nFoo y;\nubyte x;\n";
+
+        enum passAbnormalX = x == "int[] x;\ndouble[5u] w;\nshort z;\nchar[3u] y;\n";
+        enum passAbnormalY = y == "Foo y;\ncdouble z;\nubyte x;\n";
+        // ^ blame http://d.puremagic.com/issues/show_bug.cgi?id=231
+
+        static assert(passNormalX || double.alignof <= (int[]).alignof && passAbnormalX);
+        static assert(passNormalY || double.alignof <= int.alignof && passAbnormalY);
+    }
+    else
+    {
+        static assert(x == "int[] x;\ndouble[5LU] w;\nshort z;\nchar[3LU] y;\n");
+        static assert(y == "cdouble z;\nFoo y;\nubyte x;\n");
+    }
 }
 
 /*--*

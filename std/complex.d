@@ -19,14 +19,7 @@ import std.traits;
 
 
 
-/** A complex number parametrised by a type T.
-
-    Bugs:
-    Some operators, such as opAssign and opOpAssign, should return by ref,
-    but currently don't.  This will be implemented as soon as
-    $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=2460, DMD bug 2460)
-    is fixed.
-*/
+/** A complex number parametrised by a type T. */
 struct Complex(T)  if (isFloatingPoint!T)
 {
     /** The real part of the number. */
@@ -38,7 +31,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 @safe pure nothrow  // The following functions depend only on std.math.
 {
-    
+
     /** Calculate the absolute value (or modulus) of the number. */
     @property T abs() const
     {
@@ -68,7 +61,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // this = complex
-    Complex opAssign(R : T)(Complex!R z)
+    ref Complex opAssign(R : T)(Complex!R z)
     {
         re = z.re;
         im = z.im;
@@ -77,7 +70,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // this = numeric
-    Complex opAssign(R : T)(R r)
+    ref Complex opAssign(R : T)(R r)
     {
         re = r;
         im = 0;
@@ -196,7 +189,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex += complex,  complex -= complex
-    Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(C z)
         if ((op == "+" || op == "-") && is(C R == Complex!R))
     {
         mixin ("re "~op~"= z.re;");
@@ -206,7 +199,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex *= complex
-    Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(C z)
         if (op == "*" && is(C R == Complex!R))
     {
         auto temp = re*z.re - im*z.im;
@@ -217,7 +210,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex /= complex
-    Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(C z)
         if (op == "/" && is(C R == Complex!R))
     {
         if (fabs(z.re) < fabs(z.im))
@@ -243,7 +236,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= complex
-    Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
         FPTemporary!T r = abs;
@@ -258,7 +251,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex += numeric,  complex -= numeric
-    Complex opOpAssign(string op, U : T)(U a)
+    ref Complex opOpAssign(string op, U : T)(U a)
         if (op == "+" || op == "-")
     {
         mixin ("re "~op~"= a;");
@@ -267,7 +260,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex *= numeric,  complex /= numeric
-    Complex opOpAssign(string op, U : T)(U a)
+    ref Complex opOpAssign(string op, U : T)(U a)
         if (op == "*" || op == "/")
     {
         mixin ("re "~op~"= a;");
@@ -277,7 +270,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= real
-    Complex opOpAssign(string op, R)(R r)
+    ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
         FPTemporary!T ab = abs^^r;
@@ -289,7 +282,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= int
-    Complex opOpAssign(string op, U)(U i)
+    ref Complex opOpAssign(string op, U)(U i)
         if (op == "^^" && isIntegral!U)
     {
         switch (i)

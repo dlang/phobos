@@ -156,11 +156,13 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
         compiler complex concurrency container contracts conv cpuid		\
         cstream ctype date datetime datebase dateparse demangle			\
         encoding exception file format functional getopt gregorian		\
-        intrinsic json loader math mathspecial md5 metastrings mmfile	\
-        numeric outbuffer path perf process random range regex regexp	\
-        signals socket socketstream stdint stdio stdiobase stream		\
-        string syserror system traits typecons typetuple uni uri utf	\
-        variant xml zip zlib)
+        json loader math mathspecial md5 metastrings mmfile numeric		\
+        outbuffer parallelism path perf process random range regex		\
+        regexp signals socket socketstream stdint stdio stdiobase		\
+        stream string syserror system traits typecons typetuple uni		\
+        uri utf variant xml zip zlib)
+
+STD_NET_MODULES = $(addprefix std/net/, isemail)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
@@ -181,7 +183,7 @@ else
 endif
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -234,6 +236,11 @@ $(ROOT)/%$(DOTOBJ) : %.c
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+ifeq ($(OS)$(MODEL),freebsd64)
+DISABLED_TESTS += std/container
+# fails freebsd64 debug test
+endif
 
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/conv

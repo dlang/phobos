@@ -73,10 +73,10 @@ else static if (BigDigit.sizeof == long.sizeof)
 }
 else static assert(0, "Unsupported BigDigit size");
 
-immutable BigDigit [] ZERO = [0];
-immutable BigDigit [] ONE = [1];
-immutable BigDigit [] TWO = [2];
-immutable BigDigit [] TEN = [10];
+enum BigDigit [] ZERO = [0];
+enum BigDigit [] ONE = [1];
+enum BigDigit [] TWO = [2];
+enum BigDigit [] TEN = [10];
 
 
 public:
@@ -195,7 +195,7 @@ int opCmp(Tdummy = void)(BigUint y)
 {
     if (data.length != y.data.length)
         return (data.length > y.data.length) ?  1 : -1;
-    uint k = highestDifferentDigit(data, y.data);
+    size_t k = highestDifferentDigit(data, y.data);
     if (data[k] == y.data[k])
         return 0;
     return data[k] > y.data[k] ? 1 : -1;

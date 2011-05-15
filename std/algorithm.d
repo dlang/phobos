@@ -1,10 +1,9 @@
 // Written in the D programming language.
 
 /**
-<script>inhibitQuickIndex = 1</script>
+<script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
-
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
@@ -75,15 +74,15 @@ $(TR $(TH Function Name) $(TH Description)
 )
 $(LEADINGROW Searching
 )
-$(TR $(TDNW $(MYREF balancedParens)) $(TD $(D
+$(TR $(TDNW $(LREF balancedParens)) $(TD $(D
 balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
 has balanced parentheses.)
 )
-$(TR $(TDNW $(MYREF boyerMooreFinder)) $(TD $(D find("hello
+$(TR $(TDNW $(LREF boyerMooreFinder)) $(TD $(D find("hello
 world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY
 Boyer-Moore _algorithm).)
 )
-$(TR $(TDNW $(LREF canFind)) $(TD $(D find("hello world",
+$(TR $(TDNW $(LREF canFind)) $(TD $(D canFind("hello world",
 "or")) returns $(D true).)
 )
 $(TR $(TDNW $(LREF count)) $(TD Counts elements that are equal
@@ -97,7 +96,7 @@ example, $(D countUntil("hello!", "o")) returns $(D 4).)
 $(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
 returns $(D true).)
 )
-$(TR $(TD $(MYREF find)) $(TD $(D find("hello world",
+$(TR $(TD $(LREF find)) $(TD $(D find("hello world",
 "or")) returns $(D "orld") using linear search.)
 )
 $(TR $(TDNW $(LREF findAdjacent)) $(TD $(D findAdjacent([1, 2,
@@ -179,8 +178,8 @@ filter), but also provides $(D back) and $(D popBack) at a small
 increase in cost.)
 )
 $(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
-returns a range containing the tuples $(D tuple(5, 1)), $(D tuple(5,
-1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+returns a range containing the tuples $(D tuple(5, 1)),
+$(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
 "world!"], ";")) returns a range that iterates over the characters $(D
@@ -659,7 +658,9 @@ template reduce(fun...) if (fun.length >= 1)
                 alias args[0] r;
                 static if (fun.length == 1)
                 {
-                    return reduce(r.front, (r.popFront(), r));
+                    auto seed = r.front;
+                    r.popFront();
+                    return reduce(seed, r);
                 }
                 else
                 {
@@ -1320,11 +1321,11 @@ void move(T)(ref T source, ref T target)
     {
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
-        static if (is(typeof(target.__dtor()))) target.__dtor();
+        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
         memcpy(&target, &source, T.sizeof);
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
-        static if (is(typeof(source.__dtor())) || is(typeof(source.__postblit())))
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
             memcpy(&source, &empty, T.sizeof);
@@ -1360,10 +1361,37 @@ unittest
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
     struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, new int };
+    S2 s21 = { 10, null };
+    s21.b = new int;
     S2 s22;
     move(s21, s22);
     assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    struct S3
+    {
+        struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31, s32;
+    s31.x.n = 1;
+    move(s31, s32);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    struct S4
+    {
+        struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41, s42;
+    s41.x.n = 1;
+    move(s41, s42);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
 }
 
 /// Ditto
@@ -4300,7 +4328,7 @@ for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
 $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). See also
-$(WEB sgi.com/tech/stl/_equal.html, STL's equal).
+$(WEB sgi.com/tech/stl/_equal.html, STL's _equal).
 
 Example:
 ----
@@ -4322,11 +4350,10 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 if (isInputRange!(Range1) && isInputRange!(Range2)
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    foreach (e1; r1)
+    for (; !r1.empty; r1.popFront(), r2.popFront())
     {
         if (r2.empty) return false;
-        if (!binaryFun!(pred)(e1, r2.front)) return false;
-        r2.popFront;
+        if (!binaryFun!(pred)(r1.front, r2.front)) return false;
     }
     return r2.empty;
 }
@@ -4346,6 +4373,9 @@ unittest
     // predicated
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
+
+    // utf-8 strings
+    assert(equal("æøå", "æøå"));
 }
 
 // cmp
@@ -4703,7 +4733,7 @@ stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of $(D pred). See also $(WEB
-sgi.com/tech/stl/_mismatch.html, STL's mismatch).
+sgi.com/tech/stl/_mismatch.html, STL's _mismatch).
 
 Example:
 ----
@@ -4965,7 +4995,7 @@ unittest
 /**
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target). See also $(WEB
-sgi.com/tech/stl/_copy.html, STL's copy). If a behavior similar to
+sgi.com/tech/stl/_copy.html, STL's _copy). If a behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
 needed, use $(D copy(retro(source), retro(target))). See also $(XREF
 range, retro).
@@ -5080,7 +5110,7 @@ unittest
 // reverse
 /**
 Reverses $(D r) in-place.  Performs $(D r.length) evaluations of $(D
-swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's reverse).
+swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse).
 
 Example:
 ----
@@ -5772,7 +5802,7 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
-See also STL's $(WEB sgi.com/tech/stl/_partition.html, partition) and
+See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
 $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
 
 Returns:
@@ -6144,7 +6174,7 @@ unittest
 Sorts a random-access range according to predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
-and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, sort)
+and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
 and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
 
 Example:
@@ -6181,7 +6211,8 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
             enum maxLen = 8;
             assert(isSorted!lessFun(r), text("Failed to sort range of type ",
                             Range.stringof, ". Actual result is: ",
-                            r[0 .. maxLen], r.length > maxLen ? "..." : ""));
+                            r[0 .. r.length > maxLen ? maxLen : r.length ],
+                            r.length > maxLen ? "..." : ""));
         }
         else
             assert(isSorted!lessFun(r), text("Unable to sort range of type ",
