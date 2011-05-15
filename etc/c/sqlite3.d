@@ -1,4 +1,4 @@
-module etc.c.sqlite3;
+module sqlite3_bindings;
 /*
 ** 2001 September 15
 **
@@ -37,10 +37,10 @@ extern (C) {
 /*
 ** CAPI3REF: Compile-Time Library Version Numbers
 */
-string SQLITE_VERSION           = "3.7.3";
-const int SQLITE_VERSION_NUMBER = 3007003;
+string SQLITE_VERSION           = "3.7.6.2";
+const int SQLITE_VERSION_NUMBER = 3007006;
 enum
-string SQLITE_SOURCE_ID         = "2010-10-08; 02:34:02 2677848087c9c090efb17c1893e77d6136a9111d";
+string SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52af1225eb7cb5e";
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -111,7 +111,7 @@ enum
 	SQLITE_INTERRUPT    = 9,   /* Operation terminated by sqlite3_interrupt()*/
 	SQLITE_IOERR       = 10,   /* Some kind of disk I/O error occurred */
 	SQLITE_CORRUPT     = 11,   /* The database disk image is malformed */
-	SQLITE_NOTFOUND    = 12,   /* NOT USED. Table or record not found */
+	SQLITE_NOTFOUND    = 12,   /* Unknown opcode in sqlite3_file_control() */
 	SQLITE_FULL        = 13,   /* Insertion failed because database is full */
 	SQLITE_CANTOPEN    = 14,   /* Unable to open the database file */
 	SQLITE_PROTOCOL    = 15,   /* Database lock protocol error */
@@ -273,6 +273,7 @@ struct sqlite3_mutex {};
 */
 
 alias void * function() xDlSymReturn;
+alias void function() sqlite3_syscall_ptr;
 
 struct sqlite3_vfs {
   int iVersion;            /* Structure version number (currently 2) */
@@ -389,7 +390,9 @@ enum
 ** CAPI3REF: Database Connection Configuration Options
 */
 enum
-	SQLITE_DBCONFIG_LOOKASIDE    = 1001;  /* void* int int */
+	SQLITE_DBCONFIG_LOOKASIDE      = 1001,  /* void* int int */
+	SQLITE_DBCONFIG_ENABLE_FKEY    = 1002,  /* int int* */
+	SQLITE_DBCONFIG_ENABLE_TRIGGER = 1003;  /* int int* */
 
 
 /*
@@ -1085,17 +1088,17 @@ struct sqlite3_module {
 struct sqlite3_index_info {
   struct sqlite3_index_constraint {
      int iColumn;            /* Column on left-hand side of constraint */
-     ubyte op;                /* Constraint operator */
-     ubyte usable;            /* True if this constraint is usable */
+     char op;                /* Constraint operator */
+     char usable;            /* True if this constraint is usable */
      int iTermOffset;        /* Used internally - xBestIndex should ignore */
   };
   struct sqlite3_index_orderby {
      int iColumn;            /* Column number */
-     ubyte desc;              /* True for DESC.  False for ASC. */
+     char desc;              /* True for DESC.  False for ASC. */
   };
   struct sqlite3_index_constraint_usage {
     int argvIndex;           /* if >0, constraint is part of argv to xFilter */
-    ubyte omit;               /* Do not code a test for this constraint */
+    char omit;               /* Do not code a test for this constraint */
   };
   /* Inputs */
   int nConstraint;           /* Number of entries in aConstraint */
@@ -1196,6 +1199,11 @@ int sqlite3_blob_open(
 );
 
 /*
+** CAPI3REF: Move a BLOB Handle to a New Row
+*/
+int sqlite3_blob_reopen(sqlite3_blob *, sqlite3_int64);
+
+/*
 ** CAPI3REF: Close A BLOB Handle
 */
 int sqlite3_blob_close(sqlite3_blob *);
@@ -1268,7 +1276,8 @@ enum
 	SQLITE_MUTEX_STATIC_OPEN      = 4,  /* sqlite3BtreeOpen() */
 	SQLITE_MUTEX_STATIC_PRNG      = 5,  /* sqlite3_random() */
 	SQLITE_MUTEX_STATIC_LRU       = 6,  /* lru page list */
-	SQLITE_MUTEX_STATIC_PMEM      = 7;  /* sqlite3PageMalloc() */
+	SQLITE_MUTEX_STATIC_LRU2      = 7,  /* NOT USED */
+	SQLITE_MUTEX_STATIC_PMEM      = 7;
 
 /*
 ** CAPI3REF: Retrieve the mutex for a database connection
@@ -1344,7 +1353,7 @@ enum
 	SQLITE_DBSTATUS_LOOKASIDE_MISS_SIZE = 5,
 	SQLITE_DBSTATUS_LOOKASIDE_MISS_FULL = 6;
 enum
-	SQLITE_DBSTATUS_MAX                = 6;   /* Largest defined DBSTATUS */
+	SQLITE_DBSTATUS_MAX                 = 6;   /* Largest defined DBSTATUS */
 
 
 /*
@@ -1439,6 +1448,25 @@ int sqlite3_wal_autocheckpoint(sqlite3 *db, int N);
 ** CAPI3REF: Checkpoint a database
 */
 int sqlite3_wal_checkpoint(sqlite3 *db, const char *zDb);
+
+/*
+** CAPI3REF: Checkpoint a database
+*/
+int sqlite3_wal_checkpoint_v2(
+  sqlite3 *db,                    /* Database handle */
+  const char *zDb,                /* Name of attached database (or NULL) */
+  int eMode,                      /* SQLITE_CHECKPOINT_* value */
+  int *pnLog,                     /* OUT: Size of WAL log in frames */
+  int *pnCkpt                     /* OUT: Total number of frames checkpointed */
+);
+
+/*
+** CAPI3REF: Checkpoint operation parameters
+*/
+enum
+	SQLITE_CHECKPOINT_PASSIVE = 0,
+	SQLITE_CHECKPOINT_FULL    = 1,
+	SQLITE_CHECKPOINT_RESTART = 2;
 
 }  /* End of the 'extern (C) block */
 
