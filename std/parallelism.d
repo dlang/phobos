@@ -1579,6 +1579,11 @@ public:
                     }
                 }
 
+                // Recycle an AmapImpl struct so we don't have to allocate
+                // one on every buffer swap.  This declaration has to be down
+                // here b/c of weird forward referencing issues.
+                AmapImpl!(fun, FromType, E[]) amapImpl;
+
                 static if(hasLength!R) {
                     size_t _length;
 
@@ -1608,6 +1613,7 @@ public:
                         _length = range.length;
                     }
 
+                    amapImpl.__ctor(pool, workUnitSize, FromType.init, buf1);
                     fillBuf(buf1);
                     submitBuf2();
                 }
@@ -1623,11 +1629,18 @@ public:
                     }
 
                     buf = buf[0..min(buf.length, toMap.length)];
-                    pool.amap!(functions)(
-                            toMap,
-                            workUnitSize,
-                            buf
-                        );
+
+                    // Handle as a special case:
+                    if(pool.size == 0) {
+                        size_t index = 0;
+                        foreach(elem; toMap) {
+                            buf[index++] = fun(elem);
+                        }
+                        return buf;
+                    }
+
+                    amapImpl.reuse(toMap, buf);
+                    amapImpl.submitAndExecute();
 
                     return buf;
                 }
@@ -2799,7 +2812,7 @@ private mixin template ResubmittingTasks() {
         // Synchronizing on the pool to prevent some other thread from deleting
         // the job before it's submitted.
         pool.lock();
-        atomicSetUbyte(toSubmit.taskStatus, TaskStatus.notStarted);
+        toSubmit.taskStatus = TaskStatus.notStarted;
         pool.abstractPutNoSync(toSubmit);
         pool.unlock();
     }
@@ -2889,6 +2902,21 @@ private struct AmapImpl(alias fun, Range, Buf) {
         // thread.
         tasks.length = pool.size * 2 + 2;
         len = range.length;  // In case evaluating length is expensive.
+    }
+
+    // This funciton resets the struct for reuse.  It's called from Map.
+    // This has to be done carefully to avoid touching submitNextBatch,
+    // since there's a slight chance it could still be referenced from the
+    // previous use.
+    void reuse(Range range, Buf buf) {
+        this.range = range;
+        this.buf = buf;
+        len = range.length;
+        curPos = 0;
+        firstException = null;
+        lastException = null;
+        doneSubmitting = 0;
+        tasks[] = MTask.init;
     }
 
     bool emptyCheck() {
@@ -3556,3 +3584,4 @@ version(parallelismStressTest) {
         }
     }
 }
+void main() {}
