@@ -12,7 +12,8 @@
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
- *            Shin Fujishiro
+ *            Shin Fujishiro,
+ *            $(WEB octarineparrot.com, Robert Clipsham ($(D WrapTypes)))
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -3615,4 +3616,38 @@ unittest
     auto b = select!false(dontcallme(), pleasecallme());
     static assert(is(typeof(a) == real));
     static assert(is(typeof(b) == real));
+}
+
+/**
+Wrap types $(D T...) with template $(D U)
+
+Example:
+----
+static assert(is(WrapTypes!(int, float).With!MyTempl == TypeTuple!(MyTempl!int, MyTempl!float)));
+----
+*/
+template WrapTypes(T...) if (T.length > 1)
+{
+    alias WrapTypes!T WrapTypes;
+    template With(alias U)
+    {
+        alias TypeTuple!(U!(T[0]), WrapTypes!(T[1..$]).With!U) With;
+    }
+}
+
+template WrapTypes(T)
+{
+    template With(alias U)
+    {
+        alias TypeTuple!(U!T) With;
+    }
+}
+
+unittest
+{
+    class Wrapper(T)
+    {
+    }
+
+    static assert(is(WrapTypes!(int, float, double).With!Wrapper == TypeTuple!(Wrapper!int, Wrapper!float, Wrapper!double)));
 }
