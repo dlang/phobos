@@ -120,8 +120,6 @@ import std.string;
 import std.system;
 import std.traits;
 
-private alias std.algorithm.find find;
-
 version(Windows)
 {
     import core.sys.windows.windows;
@@ -151,7 +149,8 @@ version(unittest)
     import std.stdio;
 }
 
-alias std.string.indexOf indexOf;
+private alias std.algorithm.find find;
+private alias std.string.indexOf indexOf;
 
 //Verify module example.
 version(testStdDateTime) unittest
