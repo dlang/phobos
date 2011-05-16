@@ -2159,7 +2159,7 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
-if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         && isForwardRange!Separator
         && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
@@ -2287,6 +2287,13 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+}
+
+unittest
+{
+    // joiner() should work for non-forward ranges too.
+    InputRange!string r = inputRangeObject(["abc", "def"]);
+    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
 auto joiner(RoR)(RoR r)
