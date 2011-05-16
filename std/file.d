@@ -56,8 +56,10 @@ version (unittest)
         {
             version(Windows)
                 _deleteme = std.path.join(std.process.getenv("TEMP"), _deleteme);
-            else
+            else version(Posix)
                 _deleteme = "/tmp/" ~ _deleteme;
+            else
+                static assert(0, "Unsupported/Unknown OS");
 
             _first = false;
         }
@@ -280,75 +282,78 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void[] read(in char[] name, size_t upTo = size_t.max)
+void[] read(in char[] name, size_t upTo = size_t.max)
 {
-    alias TypeTuple!(GENERIC_READ,
-            FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-            HANDLE.init)
-        defaults;
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
-
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    auto size = GetFileSize(h, null);
-    cenforce(size != INVALID_FILE_SIZE, name);
-    size = min(upTo, size);
-    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
-    scope(failure) delete buf;
-
-    DWORD numread = void;
-    cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
-            && numread == size, name);
-    return buf[0 .. size];
-}
-
-version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
-{
-    // A few internal configuration parameters {
-    enum size_t
-        minInitialAlloc = 1024 * 4,
-        maxInitialAlloc = size_t.max / 2,
-        sizeIncrement = 1024 * 16,
-        maxSlackMemoryAllowed = 1024;
-    // }
-
-    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
-            core.sys.posix.fcntl.O_RDONLY);
-    cenforce(fd != -1, name);
-    scope(exit) core.sys.posix.unistd.close(fd);
-
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, name);
-    //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
-
-    immutable initialAlloc = to!size_t(statbuf.st_size
-        ? min(statbuf.st_size + 1, maxInitialAlloc)
-        : minInitialAlloc);
-    auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
-        [0 .. initialAlloc];
-    scope(failure) delete result;
-    size_t size = 0;
-
-    for (;;)
+    version(Windows)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
-                min(result.length, upTo) - size);
-        cenforce(actual != -1, name);
-        if (actual == 0) break;
-        size += actual;
-        if (size < result.length) continue;
-        immutable newAlloc = size + sizeIncrement;
-        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
-            [0 .. newAlloc];
-    }
+        alias TypeTuple!(GENERIC_READ,
+                FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    return result.length - size >= maxSlackMemoryAllowed
-        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
-        : result[0 .. size];
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        auto size = GetFileSize(h, null);
+        cenforce(size != INVALID_FILE_SIZE, name);
+        size = min(upTo, size);
+        auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
+        scope(failure) delete buf;
+
+        DWORD numread = void;
+        cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+                && numread == size, name);
+        return buf[0 .. size];
+    }
+    else version(Posix)
+    {
+        // A few internal configuration parameters {
+        enum size_t
+            minInitialAlloc = 1024 * 4,
+            maxInitialAlloc = size_t.max / 2,
+            sizeIncrement = 1024 * 16,
+            maxSlackMemoryAllowed = 1024;
+        // }
+
+        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+                core.sys.posix.fcntl.O_RDONLY);
+        cenforce(fd != -1, name);
+        scope(exit) core.sys.posix.unistd.close(fd);
+
+        struct_stat64 statbuf = void;
+        cenforce(fstat64(fd, &statbuf) == 0, name);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
+
+        immutable initialAlloc = to!size_t(statbuf.st_size
+            ? min(statbuf.st_size + 1, maxInitialAlloc)
+            : minInitialAlloc);
+        auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
+            [0 .. initialAlloc];
+        scope(failure) delete result;
+        size_t size = 0;
+
+        for (;;)
+        {
+            immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+                    min(result.length, upTo) - size);
+            cenforce(actual != -1, name);
+            if (actual == 0) break;
+            size += actual;
+            if (size < result.length) continue;
+            immutable newAlloc = size + sizeIncrement;
+            result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
+                [0 .. newAlloc];
+        }
+
+        return result.length - size >= maxSlackMemoryAllowed
+            ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+            : result[0 .. size];
+    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -418,28 +423,29 @@ void main()
 }
 ----
  */
-
-version(Windows) void write(in char[] name, const void[] buffer)
+void write(in char[] name, const void[] buffer)
 {
-    alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-            HANDLE.init)
-        defaults;
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
+    version(Windows)
+    {
+        alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    DWORD numwritten;
-    cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
-            && buffer.length == numwritten,
-            name);
-}
-
-version(Posix) void write(in char[] name, in void[] buffer)
-{
-    return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        DWORD numwritten;
+        cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
+                && buffer.length == numwritten,
+                name);
+    }
+    else version(Posix)
+        return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 /*********************************************
@@ -460,29 +466,30 @@ void main()
 }
 ----
  */
-
-version(Windows) void append(in char[] name, in void[] buffer)
+void append(in char[] name, in void[] buffer)
 {
-    alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
-        defaults;
+    version(Windows)
+    {
+        alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
+            defaults;
 
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    DWORD numwritten;
-    cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-            && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
-            && buffer.length == numwritten,
-            name);
-}
-
-version(Posix) void append(in char[] name, in void[] buffer)
-{
-    return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        DWORD numwritten;
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+                && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
+                && buffer.length == numwritten,
+                name);
+    }
+    else version(Posix)
+        return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 // Posix implementation helper for write and append
@@ -507,38 +514,40 @@ version(Posix) private void writeImpl(in char[] name,
  * Rename file $(D from) to $(D to).
  * Throws: $(D FileException) on error.
  */
-
-version(Windows) void rename(in char[] from, in char[] to)
+void rename(in char[] from, in char[] to)
 {
-    enforce(useWfuncs
-            ? MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to))
-            : MoveFileA(toMBSz(from), toMBSz(to)),
-            new FileException(
-                text("Attempting to rename file ", from, " to ",
-                        to)));
-}
-
-version(Posix) void rename(in char[] from, in char[] to)
-{
-    cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to))
+                : MoveFileA(toMBSz(from), toMBSz(to)),
+                new FileException(
+                    text("Attempting to rename file ", from, " to ",
+                            to)));
+    }
+    else version(Posix)
+        cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 /***************************************************
 Delete file $(D name).
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void remove(in char[] name)
+void remove(in char[] name)
 {
-    cenforce(useWfuncs
-            ? DeleteFileW(std.utf.toUTF16z(name))
-            : DeleteFileA(toMBSz(name)),
-            name);
-}
-
-version(Posix) void remove(in char[] name)
-{
-    cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
+    version(Windows)
+    {
+        cenforce(useWfuncs
+                ? DeleteFileW(std.utf.toUTF16z(name))
+                : DeleteFileA(toMBSz(name)),
+                name);
+    }
+    else version(Posix)
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 /***************************************************
@@ -546,44 +555,47 @@ Get size of file $(D name) in bytes.
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
-
-version(Windows) ulong getSize(in char[] name)
+ulong getSize(in char[] name)
 {
-    HANDLE findhndl = void;
-    uint resulth = void;
-    uint resultl = void;
-    const (char)[] file = name[];
-
-    //FindFirstFileX can't handle file names which end in a backslash.
-    if(file.endsWith(sep))
-        file.popBackN(sep.length);
-
-    if (useWfuncs)
+    version(Windows)
     {
-        WIN32_FIND_DATAW filefindbuf;
+        HANDLE findhndl = void;
+        uint resulth = void;
+        uint resultl = void;
+        const (char)[] file = name[];
 
-        findhndl = FindFirstFileW(std.utf.toUTF16z(file), &filefindbuf);
-        resulth = filefindbuf.nFileSizeHigh;
-        resultl = filefindbuf.nFileSizeLow;
+        //FindFirstFileX can't handle file names which end in a backslash.
+        if(file.endsWith(sep))
+            file.popBackN(sep.length);
+
+        if (useWfuncs)
+        {
+            WIN32_FIND_DATAW filefindbuf;
+
+            findhndl = FindFirstFileW(std.utf.toUTF16z(file), &filefindbuf);
+            resulth = filefindbuf.nFileSizeHigh;
+            resultl = filefindbuf.nFileSizeLow;
+        }
+        else
+        {
+            WIN32_FIND_DATA filefindbuf;
+
+            findhndl = FindFirstFileA(toMBSz(file), &filefindbuf);
+            resulth = filefindbuf.nFileSizeHigh;
+            resultl = filefindbuf.nFileSizeLow;
+        }
+
+        cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), file);
+        return (cast(ulong) resulth << 32) + resultl;
+    }
+    else version(Posix)
+    {
+        struct_stat64 statbuf = void;
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        return statbuf.st_size;
     }
     else
-    {
-        WIN32_FIND_DATA filefindbuf;
-
-        findhndl = FindFirstFileA(toMBSz(file), &filefindbuf);
-        resulth = filefindbuf.nFileSizeHigh;
-        resultl = filefindbuf.nFileSizeLow;
-    }
-
-    cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), file);
-    return (cast(ulong) resulth << 32) + resultl;
-}
-
-version(Posix) ulong getSize(in char[] name)
-{
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    return statbuf.st_size;
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1581,19 +1593,22 @@ assert(getLinkAttributes("/tmp/alink").isSymLink);
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-
-version(Windows) void chdir(in char[] pathname)
+void chdir(in char[] pathname)
 {
-    enforce(useWfuncs
-            ? SetCurrentDirectoryW(std.utf.toUTF16z(pathname))
-            : SetCurrentDirectoryA(toMBSz(pathname)),
-            new FileException(pathname.idup));
-}
-
-version(Posix) void chdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
-            pathname);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? SetCurrentDirectoryW(std.utf.toUTF16z(pathname))
+                : SetCurrentDirectoryA(toMBSz(pathname)),
+                new FileException(pathname.idup));
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
+                pathname);
+    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 /****************************************************
@@ -1601,19 +1616,20 @@ Make directory $(D pathname).
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void mkdir(in char[] pathname)
+void mkdir(in char[] pathname)
 {
-    enforce(useWfuncs
-            ? CreateDirectoryW(std.utf.toUTF16z(pathname), null)
-            : CreateDirectoryA(toMBSz(pathname), null),
-            new FileException(pathname.idup));
-}
-
-version(Posix) void mkdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
-            pathname);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? CreateDirectoryW(std.utf.toUTF16z(pathname), null)
+                : CreateDirectoryA(toMBSz(pathname), null),
+                new FileException(pathname.idup));
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
+                 pathname);
+    }
 }
 
 /****************************************************
@@ -1666,55 +1682,57 @@ Remove directory $(D pathname).
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void rmdir(in char[] pathname)
+void rmdir(in char[] pathname)
 {
-    cenforce(useWfuncs
-            ? RemoveDirectoryW(std.utf.toUTF16z(pathname))
-            : RemoveDirectoryA(toMBSz(pathname)),
-            pathname);
-}
-
-version(Posix) void rmdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
-            pathname);
+    version(Windows)
+    {
+        cenforce(useWfuncs
+                ? RemoveDirectoryW(std.utf.toUTF16z(pathname))
+                : RemoveDirectoryA(toMBSz(pathname)),
+                pathname);
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
+                pathname);
+    }
 }
 
 /****************************************************
  * Get current directory.
  * Throws: $(D FileException) on error.
  */
-
-version(Windows) string getcwd()
+string getcwd()
 {
-    // A bit odd API: calling GetCurrentDirectory(0, null) returns
-    // length including the \0, whereas calling with non-zero
-    // params returns length excluding the \0.
-    if (useWfuncs)
+    version(Windows)
     {
-        auto dir =
-            new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return to!string(dir);
+        // A bit odd API: calling GetCurrentDirectory(0, null) returns
+        // length including the \0, whereas calling with non-zero
+        // params returns length excluding the \0.
+        if (useWfuncs)
+        {
+            auto dir =
+                new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
+            dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
+            cenforce(dir.length, "getcwd");
+            return to!string(dir);
+        }
+        else
+        {
+            auto dir =
+                new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
+            dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
+            cenforce(dir.length, "getcwd");
+            return assumeUnique(dir);
+        }
     }
-    else
+    else version(Posix)
     {
-        auto dir =
-            new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return assumeUnique(dir);
+        auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
+                "cannot get cwd");
+        scope(exit) std.c.stdlib.free(p);
+        return p[0 .. std.c.string.strlen(p)].idup;
     }
-}
-
-version(Posix) string getcwd()
-{
-    auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
-            "cannot get cwd");
-    scope(exit) std.c.stdlib.free(p);
-    return p[0 .. std.c.string.strlen(p)].idup;
 }
 
 unittest
@@ -2439,62 +2457,65 @@ void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
  */
-
-version(Windows) void copy(in char[] from, in char[] to)
+void copy(in char[] from, in char[] to)
 {
-    immutable result = useWfuncs
-        ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
-        : CopyFileA(toMBSz(from), toMBSz(to), false);
-    if (!result)
-        throw new FileException(to.idup);
-}
-
-version(Posix) void copy(in char[] from, in char[] to)
-{
-    immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
-    cenforce(fd != -1, from);
-    scope(exit) core.sys.posix.unistd.close(fd);
-
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, from);
-    //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
-
-    auto toz = toStringz(to);
-    immutable fdw = core.sys.posix.fcntl.open(toz,
-            O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-    cenforce(fdw != -1, from);
-    scope(failure) std.c.stdio.remove(toz);
+    version(Windows)
     {
-        scope(failure) core.sys.posix.unistd.close(fdw);
-        auto BUFSIZ = 4096u * 16;
-        auto buf = std.c.stdlib.malloc(BUFSIZ);
-        if (!buf)
-        {
-            BUFSIZ = 4096;
-            buf = std.c.stdlib.malloc(BUFSIZ);
-            buf || assert(false, "Out of memory in std.file.copy");
-        }
-        scope(exit) std.c.stdlib.free(buf);
-
-        for (auto size = statbuf.st_size; size; )
-        {
-            immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
-            cenforce(
-                core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
-                && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
-                from);
-            assert(size >= toxfer);
-            size -= toxfer;
-        }
+        immutable result = useWfuncs
+            ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
+            : CopyFileA(toMBSz(from), toMBSz(to), false);
+        if (!result)
+            throw new FileException(to.idup);
     }
+    else version(Posix)
+    {
+        immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
+        cenforce(fd != -1, from);
+        scope(exit) core.sys.posix.unistd.close(fd);
 
-    cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        struct_stat64 statbuf = void;
+        cenforce(fstat64(fd, &statbuf) == 0, from);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
-    utimbuf utim = void;
-    utim.actime = cast(time_t)statbuf.st_atime;
-    utim.modtime = cast(time_t)statbuf.st_mtime;
+        auto toz = toStringz(to);
+        immutable fdw = core.sys.posix.fcntl.open(toz,
+                O_CREAT | O_WRONLY | O_TRUNC, octal!666);
+        cenforce(fdw != -1, from);
+        scope(failure) std.c.stdio.remove(toz);
+        {
+            scope(failure) core.sys.posix.unistd.close(fdw);
+            auto BUFSIZ = 4096u * 16;
+            auto buf = std.c.stdlib.malloc(BUFSIZ);
+            if (!buf)
+            {
+                BUFSIZ = 4096;
+                buf = std.c.stdlib.malloc(BUFSIZ);
+                buf || assert(false, "Out of memory in std.file.copy");
+            }
+            scope(exit) std.c.stdlib.free(buf);
 
-    cenforce(utime(toz, &utim) != -1, from);
+            for (auto size = statbuf.st_size; size; )
+            {
+                immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
+                cenforce(
+                    core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
+                    && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
+                    from);
+                assert(size >= toxfer);
+                size -= toxfer;
+            }
+        }
+
+        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+
+        utimbuf utim = void;
+        utim.actime = cast(time_t)statbuf.st_atime;
+        utim.modtime = cast(time_t)statbuf.st_mtime;
+
+        cenforce(utime(toz, &utim) != -1, from);
+    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 version(StdDdoc)
