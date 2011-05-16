@@ -2159,7 +2159,7 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
-if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         && isForwardRange!Separator
         && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
