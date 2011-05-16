@@ -3655,29 +3655,32 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         }
     }
 
-    static if (!is(Sentinel == void))
-        @property Until save()
-        {
-            Until result;
+    static if (isForwardRange!Range)
+    {
+        static if (!is(Sentinel == void))
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._sentinel  = _sentinel;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._sentinel  = _sentinel;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
-    else
-        @property Until save()
-        {
-            Until result;
+                return result;
+            }
+        else
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
+                return result;
+            }
+    }
 }
 
 /// Ditto
