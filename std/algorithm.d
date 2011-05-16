@@ -2289,6 +2289,13 @@ unittest
                     "Mary...has...a...little...lamb"));
 }
 
+unittest
+{
+    // joiner() should work for non-forward ranges too.
+    InputRange!string r = inputRangeObject(["abc", "def"]);
+    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
+}
+
 auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
