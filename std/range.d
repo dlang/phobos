@@ -23,7 +23,8 @@ fantascienza.net/leonardo/so/, Leonardo Maffi).
 module std.range;
 
 public import std.array;
-import std.algorithm, std.conv, std.exception,  std.functional, std.intrinsic,
+import core.bitop;
+import std.algorithm, std.conv, std.exception,  std.functional,
     std.random, std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
@@ -3960,7 +3961,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             ret.pastLast -= this.length - upper;
             return ret;
         }
-        @property auto length()        //const
+        @property typeof(unsigned(pastLast - current)) length()        //const
         {
             return unsigned(pastLast - current);
         }
@@ -4054,6 +4055,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 
 unittest
 {
+    static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
 

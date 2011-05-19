@@ -115,7 +115,7 @@ SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
     std\contracts.d std\exception.d \
-    std\intrinsic.d std\compiler.d std\cpuid.d \
+    std\compiler.d std\cpuid.d \
     std\process.d std\system.d std\concurrency.d
 
 SRCS_3 = std\variant.d \
@@ -128,6 +128,7 @@ SRCS_3 = std\variant.d \
 	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
+	std\parallelism.d \
 	std\gregorian.d \
     std\mathspecial.d \
 	std\internal\math\biguintcore.d \
@@ -198,7 +199,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_gregorian.html \
-	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -207,6 +207,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_outbuffer.html \
+	$(DOC)\std_parallelism.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
@@ -256,7 +257,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\ctype.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\dateparse.d std\mmfile.d \
-	std\intrinsic.d std\syserror.d \
+	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d \
@@ -266,7 +267,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d \
+	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d std\datebase.d \
 	std\__fileinit.d std\gregorian.d std\exception.d
 
@@ -470,6 +471,9 @@ numeric.obj : std\numeric.d
 
 outbuffer.obj : std\outbuffer.d
 	$(DMD) -c $(DFLAGS) std\outbuffer.d
+
+parallelism.obj : std\parallelism.d
+	$(DMD) -c $(DFLAGS) std\parallelism.d
 
 path.obj : std\path.d
 	$(DMD) -c $(DFLAGS) std\path.d
@@ -743,9 +747,6 @@ $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 $(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
 
-$(DOC)\std_intrinsic.html : $(STDDOC) std\intrinsic.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html $(STDDOC) std\intrinsic.d
-
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
 
@@ -769,6 +770,9 @@ $(DOC)\std_numeric.html : $(STDDOC) std\numeric.d
 
 $(DOC)\std_outbuffer.html : $(STDDOC) std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html $(STDDOC) std\outbuffer.d
+
+$(DOC)\std_parallelism.html : $(STDDOC) std\parallelism.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_parallelism.html $(STDDOC) std\parallelism.d
 
 $(DOC)\std_path.html : $(STDDOC) std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
@@ -899,7 +903,7 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -913,6 +917,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
+	zip32 -u phobos $(SRC_STD_NET)
 
 clean:
 	cd etc\c\zlib

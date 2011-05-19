@@ -1503,7 +1503,7 @@ struct Array(T) if (!is(T : const(bool)))
                 {
                     foreach (ref e; _payload.ptr[newLength .. _payload.length])
                     {
-                        clear(e);
+                        .clear(e);
                     }
                 }
                 _payload = _payload.ptr[0 .. newLength];
@@ -1545,9 +1545,9 @@ struct Array(T) if (!is(T : const(bool)))
                         0,
                         (elements - oldLength) * T.sizeof);
                 GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_data._payload.ptr);
-                free(_data._payload.ptr);
-                _data._payload = newPayload;
+                GC.removeRange(_payload.ptr);
+                free(_payload.ptr);
+                _payload = newPayload;
             }
             else
             {
@@ -2319,6 +2319,63 @@ unittest
     assert(equal(retro(b), a));
     assert(a.length == 7);
     assert(equal(a[1..4], [1, 2, 3]));
+}
+// Test issue 5920
+version(unittest)
+{
+    //@@@BUG4274@@@: This cannot be declared as an inner struct.
+    private struct structBug5920
+    {
+        int order;
+        uint* pDestructionMask;
+        ~this()
+        {
+            if (pDestructionMask) 
+                *pDestructionMask += 1 << order; 
+        }
+    }
+}
+unittest
+{
+    alias structBug5920 S;
+    uint dMask;
+
+    auto arr = Array!S(cast(S[])[]);
+    foreach (i; 0..8)
+        arr.insertBack(S(i, &dMask));
+    // don't check dMask now as S may be copied multiple times (it's ok?)
+    {
+        assert(arr.length == 8);
+        dMask = 0;
+        arr.length = 6;
+        assert(arr.length == 6);    // make sure shrinking calls the d'tor
+        assert(dMask == 0b1100_0000);
+        arr.removeBack();
+        assert(arr.length == 5);    // make sure removeBack() calls the d'tor
+        assert(dMask == 0b1110_0000);
+        arr.removeBack(3);
+        assert(arr.length == 2);    // ditto
+        assert(dMask == 0b1111_1100);
+        arr.clear();
+        assert(arr.length == 0);    // make sure clear() calls the d'tor
+        assert(dMask == 0b1111_1111);
+    }
+    assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
+}
+// Test issue 5792 (mainly just to check if this piece of code is compilable)
+unittest
+{
+    auto a = Array!(int[])([[1,2],[3,4]]);
+    a.reserve(4);
+    assert(a.capacity >= 4);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
+    a.reserve(16);
+    assert(a.capacity >= 16);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
 }
 
 // BinaryHeap
