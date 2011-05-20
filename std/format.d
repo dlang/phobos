@@ -22,12 +22,13 @@ module std.format;
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
 import std.algorithm, std.array, std.bitmanip, std.conv,
-    std.ctype, std.exception, std.functional, std.math, std.range, 
+    std.ctype, std.exception, std.functional, std.math, std.range,
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
     import std.stdio;
 }
+import std.stdio;
 
 version (Windows) version (DigitalMars)
 {
@@ -323,7 +324,7 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     auto spec = FormatSpec!Char(fmt);
     for (;spec.writeUpToNextSpec(w);)
     {
-        if (currentArg == funs.length && !spec.index)
+        if (currentArg == funs.length && !spec.indexStart)
         {
             // leftover spec?
             enforce(fmt.length == 0, new FormatError(
@@ -375,11 +376,15 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             else spec.precision = spec.UNSPECIFIED;
         }
         // Format!
-        if (spec.index > 0)
+        if (spec.indexStart > 0)
         {
             // using positional parameters!
-            funs[spec.index - 1](w, argsAddresses[spec.index - 1], spec);
-            if (currentArg < spec.index) currentArg = spec.index;
+            foreach (i; spec.indexStart - 1 .. spec.indexEnd)
+            {
+                if (funs.length <= i) break;
+                funs[i](w, argsAddresses[i], spec);
+            }
+            if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
         }
         else
         {
@@ -438,7 +443,6 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
         {
             foreach (i, T; A.Types)
             {
-                //writeln("Parsing ", r, " with format ", fmt);
                 (*args[0])[i] = unformatValue!(T)(r, spec);
                 skipUnstoredFields();
             }
@@ -497,8 +501,13 @@ struct FormatSpec(Char)
        Index of the argument for positional parameters, from $(D 1) to
        $(D ubyte.max). ($(D 0) means not used).
     */
-    ubyte index;
-    version(D_Ddoc) {
+    ubyte indexStart;
+    /**
+       Index of the last argument for positional parameter range, from
+       $(D 1) to $(D ubyte.max). ($(D 0) means not used).
+    */
+    ubyte indexEnd;
+    version(StdDdoc) {
         /**
          The format specifier contained a $(D '-') ($(D printf)
          compatibility).
@@ -716,9 +725,25 @@ struct FormatSpec(Char)
                     i = tmp.ptr - trailing.ptr;
                     if (tmp.length && tmp[0] == '$')
                     {
-                        // index!
-                        index = to!(ubyte)(widthOrArgIndex);
+                        // index of the form %n$
+                        indexEnd = indexStart = to!(ubyte)(widthOrArgIndex);
                         ++i;
+                    }
+                    else if (tmp.length && tmp[0] == ':')
+                    {
+                        // two indexes of the form %m:n$, or one index of the form %m:$
+                        indexStart = to!(ubyte)(widthOrArgIndex);
+                        tmp = tmp[1 .. $];
+                        if (tmp[0] == '$')
+                        {
+                            indexEnd = indexEnd.max;
+                        }
+                        else
+                        {
+                            indexEnd = .parse!(typeof(indexEnd))(tmp);
+                        }
+                        i = tmp.ptr - trailing.ptr;
+                        enforce(trailing[i++] == '$', new FormatError("$ expected"));
                     }
                     else
                     {
@@ -831,10 +856,12 @@ struct FormatSpec(Char)
 
     string toString()
     {
-        return text("width = ", width,
+        return text("address = ", cast(void*) &this,
+                "\nwidth = ", width,
                 "\nprecision = ", precision,
                 "\nspec = ", spec,
-                "\nindex = ", index,
+                "\nindexStart = ", indexStart,
+                "\nindexEnd = ", indexEnd,
                 "\nflDash = ", flDash,
                 "\nflZero = ", flZero,
                 "\nflSpace = ", flSpace,
@@ -879,7 +906,7 @@ if (is(T == enum))
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+        /*ref*/ FormatSpec!Char f)
 if (isIntegral!T)
 {
     Unqual!T arg = val;
@@ -975,7 +1002,6 @@ if (isIntegral!T)
         - (base == 16 && f.flHash && arg ? 2 : 0); // 0x or 0X
     const sizediff_t delta = f.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
-    //writeln(spacesToPrint);
     if (spacesToPrint > 0) // need to do some padding
     {
         if (leftPad == '0')
@@ -1052,7 +1078,6 @@ if (isFloatingPoint!D)
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
-    //writeln("Spec is: ", sprintfSpec);
     immutable n = snprintf(buf.ptr, buf.length,
             sprintfSpec.ptr,
             f.width,
@@ -1456,7 +1481,7 @@ if (is(T == struct) && !isInputRange!T)
         string outbuff = "";
         void sink(const(char)[] s) { outbuff ~= s; }
         val.toString(&sink, f);
-        put (w, outbuff);        
+        put (w, outbuff);
     }
     else static if (is(typeof(val.toString(SinkType, "s"))))
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
@@ -1942,7 +1967,7 @@ here:
     stream.clear; formattedWrite(stream, "%#X", 0xABCD);
     assert(stream.data == "0XABCD");
 
-    stream.clear; formattedWrite(stream, "%#o", 012345);
+    stream.clear; formattedWrite(stream, "%#o", octal!12345);
     assert(stream.data == "012345");
     stream.clear; formattedWrite(stream, "%o", 9);
     assert(stream.data == "11");
@@ -2904,9 +2929,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           return m;
         }
 
-        /* p = pointer to the first element in the array 
-         * len = number of elements in the array 
-         * valti = type of the elements 
+        /* p = pointer to the first element in the array
+         * len = number of elements in the array
+         * valti = type of the elements
          */
         void putArray(void* p, size_t len, TypeInfo valti)
         {
@@ -2927,8 +2952,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 argptr = p;
             else version(X86_64)
             {
-                __va_list va; 
-                va.stack_args = p; 
+                __va_list va;
+                va.stack_args = p;
                 argptr = &va;
             }
             else
@@ -2957,29 +2982,29 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             {
                 if (comma) putc(',');
                 comma = true;
-                void *pkey = &fakevalue; 
-                version (X86) 
-                    pkey -= long.sizeof; 
+                void *pkey = &fakevalue;
+                version (X86)
+                    pkey -= long.sizeof;
                 else version(X86_64)
                     pkey -= 16;
                 else static assert(false, "unsupported platform");
 
                 // the key comes before the value
                 auto keysize = keyti.tsize;
-                version (X86) 
-                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1); 
-                else 
-                    auto keysizet = (keysize + 15) & ~(15); 
-                
-                void* pvalue = pkey + keysizet; 
-                
-                //doFormat(putc, (&keyti)[0..1], pkey); 
-                version (X86) 
-                    argptr = pkey; 
-                else 
-                {   __va_list va; 
-                    va.stack_args = pkey; 
-                    argptr = &va; 
+                version (X86)
+                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                else
+                    auto keysizet = (keysize + 15) & ~(15);
+
+                void* pvalue = pkey + keysizet;
+
+                //doFormat(putc, (&keyti)[0..1], pkey);
+                version (X86)
+                    argptr = pkey;
+                else
+                {   __va_list va;
+                    va.stack_args = pkey;
+                    argptr = &va;
                 }
                 ti = keyti;
                 m = getMan(keyti);
@@ -2987,12 +3012,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
                 putc(':');
                 //doFormat(putc, (&valti)[0..1], pvalue);
-                version (X86) 
-                    argptr = pvalue; 
-                else 
-                {   __va_list va2; 
-                    va2.stack_args = pvalue; 
-                    argptr = &va2; 
+                version (X86)
+                    argptr = pvalue;
+                else
+                {   __va_list va2;
+                    va2.stack_args = pvalue;
+                    argptr = &va2;
                 }
 
                 ti = valti;
@@ -3143,9 +3168,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 goto Lcomplex;
 
             case Mangle.Tsarray:
-                version (X86) 
-                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next); 
-                else 
+                version (X86)
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
+                else
                     putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
@@ -3243,31 +3268,31 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     s = tis.xtoString(argptr);
                     argptr += (tis.tsize() + 3) & ~3;
                 }
-                else version (X86_64) 
-                { 
-                    void[32] parmn = void; // place to copy struct if passed in regs 
-                    void* p; 
-                    auto tsize = tis.tsize(); 
-                    TypeInfo arg1, arg2; 
-                    if (!tis.argTypes(arg1, arg2))      // if could be passed in regs 
-                    {   assert(tsize <= parmn.length); 
-                        p = parmn.ptr; 
-                        va_arg(argptr, tis, p); 
-                    } 
-                    else 
-                    {   /* Avoid making a copy of the struct; take advantage of 
-                         * it always being passed in memory 
-                         */ 
-                        // The arg may have more strict alignment than the stack 
-                        auto talign = tis.talign(); 
-                        __va_list* ap = cast(__va_list*)argptr; 
-                        p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1)); 
-                        ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1))); 
-                    } 
-                    s = tis.xtoString(p); 
-                } 
-                else 
-                     static assert(0); 
+                else version (X86_64)
+                {
+                    void[32] parmn = void; // place to copy struct if passed in regs
+                    void* p;
+                    auto tsize = tis.tsize();
+                    TypeInfo arg1, arg2;
+                    if (!tis.argTypes(arg1, arg2))      // if could be passed in regs
+                    {   assert(tsize <= parmn.length);
+                        p = parmn.ptr;
+                        va_arg(argptr, tis, p);
+                    }
+                    else
+                    {   /* Avoid making a copy of the struct; take advantage of
+                         * it always being passed in memory
+                         */
+                        // The arg may have more strict alignment than the stack
+                        auto talign = tis.talign();
+                        __va_list* ap = cast(__va_list*)argptr;
+                        p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1));
+                        ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                    }
+                    s = tis.xtoString(p);
+                }
+                else
+                     static assert(0);
                 goto Lputstr;
             }
 
@@ -3812,7 +3837,7 @@ unittest
     r = std.string.format("%#X", 0xABCD);
     assert(r == "0XABCD");
 
-    r = std.string.format("%#o", 012345);
+    r = std.string.format("%#o", octal!12345);
     assert(r == "012345");
     r = std.string.format("%o", 9);
     assert(r == "11");

@@ -142,7 +142,7 @@ version (Posix)
                 ulong st_ino64;
             }
             //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }   
+        }
         else version (X86_64)
         {
             struct struct_stat64
@@ -601,7 +601,7 @@ unittest
  * $(RED Scheduled for deprecation. Please use getTimesWin (for Windows)
  *       or getTimesPosix (for Posix) instead.)
  */
-version(D_Ddoc)
+version(StdDdoc)
 {
     void getTimes(in char[] name,
             out d_time ftc,
@@ -668,7 +668,7 @@ else
     static assert(0, "Unsupported/Unknown OS");
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(BLUE This function is Windows-Only.)
@@ -769,7 +769,7 @@ else version(Windows)
 
             getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-            enum leeway = dur!"seconds"(2);
+            enum leeway = dur!"seconds"(4);
 
             {
                 auto diffc = creationTime1 - currTime;
@@ -835,7 +835,7 @@ else version(Posix)
 
         getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
 
-        enum leeway = dur!"seconds"(2);
+        enum leeway = dur!"seconds"(4);
 
         {
             auto diffc = statusChangedTime1 - currTime;
@@ -877,7 +877,7 @@ else
     static assert(0, "Unsupported/Unknown OS");
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
      $(RED Scheduled for deprecation. Please use
@@ -911,14 +911,14 @@ else
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(RED Scheduled for deprecation. Please use timeLastModified instead.)
     +/
     d_time lastModified(in char[] name, d_time returnIfMissing);
 }
-else version(Windows)
+else
 {
     d_time lastModified(C)(in C[] name, d_time returnIfMissing)
         if(is(Unqual!C == char))
@@ -1138,7 +1138,7 @@ uint getAttributes(in char[] name)
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         If the given file is a symbolic link, then this returns the attributes of the
@@ -1612,7 +1612,7 @@ version(Windows) void mkdir(in char[] pathname)
 
 version(Posix) void mkdir(in char[] pathname)
 {
-    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), 0777) == 0,
+    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
             pathname);
 }
 
@@ -1724,7 +1724,7 @@ unittest
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
@@ -2497,7 +2497,7 @@ version(Posix) void copy(in char[] from, in char[] to)
     cenforce(utime(toz, &utim) != -1, from);
 }
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         $(RED Scheduled for deprecation. Please use the version which takes
@@ -2553,7 +2553,7 @@ else
 }
 
 
-version(D_Ddoc)
+version(StdDdoc)
 {
     /++
         Set access/modified times of file $(D name).

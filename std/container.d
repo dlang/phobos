@@ -7,7 +7,6 @@ Source: $(PHOBOSSRC std/_container.d)
 Macros:
 WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
-LEADINGROW = <tr style=leadingrow bgcolor=#E4E9EF><td colspan=3><b><em>$0</em></b></td></tr>
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
@@ -1234,7 +1233,7 @@ $(D r) and $(D m) is the length of $(D stuff).
      */
     size_t insertAfter(Stuff)(Take!Range r, Stuff stuff)
     {
-        auto orig = r.original;
+        auto orig = r.source;
         if (!orig._head)
         {
             // Inserting after a null range counts as insertion to the
@@ -1287,7 +1286,7 @@ Complexity: $(BIGOH n)
      */
     Range linearRemove(Take!Range r)
     {
-        auto orig = r.original;
+        auto orig = r.source;
         // We have something to remove here
         if (orig._head == _root)
         {
@@ -1504,7 +1503,7 @@ struct Array(T) if (!is(T : const(bool)))
                 {
                     foreach (ref e; _payload.ptr[newLength .. _payload.length])
                     {
-                        clear(e);
+                        .clear(e);
                     }
                 }
                 _payload = _payload.ptr[0 .. newLength];
@@ -1546,9 +1545,9 @@ struct Array(T) if (!is(T : const(bool)))
                         0,
                         (elements - oldLength) * T.sizeof);
                 GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_data._payload.ptr);
-                free(_data._payload.ptr);
-                _data._payload = newPayload;
+                GC.removeRange(_payload.ptr);
+                free(_payload.ptr);
+                _payload = newPayload;
             }
             else
             {
@@ -1571,9 +1570,7 @@ struct Array(T) if (!is(T : const(bool)))
                 reserve(1 + capacity * 3 / 2);
             }
             assert(capacity > length && _payload.ptr);
-            emplace!T((cast(void*) (_payload.ptr + _payload.length))
-                    [0 .. T.sizeof],
-                    stuff);
+            emplace(_payload.ptr + _payload.length, stuff);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
         }
@@ -1605,17 +1602,17 @@ struct Array(T) if (!is(T : const(bool)))
 
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
-        auto p = malloc(T.sizeof * values.length);
+        auto p = cast(T*) malloc(T.sizeof * values.length);
         if (hasIndirections!T && p)
         {
             GC.addRange(p, T.sizeof * values.length);
         }
         foreach (i, e; values)
         {
-            emplace!T(p[i * T.sizeof .. (i + 1) * T.sizeof], e);
-            assert((cast(T*) p)[i] == e);
+            emplace(p + i, e);
+            assert(p[i] == e);
         }
-        _data.RefCounted.initialize((cast(T*) p)[0 .. values.length]);
+        _data.RefCounted.initialize(p[0 .. values.length]);
     }
 
 /**
@@ -2089,8 +2086,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         memmove(_data._payload.ptr + r._a + 1,
                 _data._payload.ptr + r._a,
                 T.sizeof * (length - r._a));
-        emplace!T((cast(void*) (_data._payload.ptr + r._a))[0 .. T.sizeof],
-                stuff);
+        emplace(_data._payload.ptr + r._a, stuff);
         _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
         return 1;
     }
@@ -2114,7 +2110,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             foreach (p; _data._payload.ptr + r._a ..
                     _data._payload.ptr + r._a + extra)
             {
-                emplace!T((cast(void*) p)[0 .. T.sizeof], stuff.front);
+                emplace(p, stuff.front);
                 stuff.popFront();
             }
             _data._payload =
@@ -2323,6 +2319,63 @@ unittest
     assert(equal(retro(b), a));
     assert(a.length == 7);
     assert(equal(a[1..4], [1, 2, 3]));
+}
+// Test issue 5920
+version(unittest)
+{
+    //@@@BUG4274@@@: This cannot be declared as an inner struct.
+    private struct structBug5920
+    {
+        int order;
+        uint* pDestructionMask;
+        ~this()
+        {
+            if (pDestructionMask) 
+                *pDestructionMask += 1 << order; 
+        }
+    }
+}
+unittest
+{
+    alias structBug5920 S;
+    uint dMask;
+
+    auto arr = Array!S(cast(S[])[]);
+    foreach (i; 0..8)
+        arr.insertBack(S(i, &dMask));
+    // don't check dMask now as S may be copied multiple times (it's ok?)
+    {
+        assert(arr.length == 8);
+        dMask = 0;
+        arr.length = 6;
+        assert(arr.length == 6);    // make sure shrinking calls the d'tor
+        assert(dMask == 0b1100_0000);
+        arr.removeBack();
+        assert(arr.length == 5);    // make sure removeBack() calls the d'tor
+        assert(dMask == 0b1110_0000);
+        arr.removeBack(3);
+        assert(arr.length == 2);    // ditto
+        assert(dMask == 0b1111_1100);
+        arr.clear();
+        assert(arr.length == 0);    // make sure clear() calls the d'tor
+        assert(dMask == 0b1111_1111);
+    }
+    assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
+}
+// Test issue 5792 (mainly just to check if this piece of code is compilable)
+unittest
+{
+    auto a = Array!(int[])([[1,2],[3,4]]);
+    a.reserve(4);
+    assert(a.capacity >= 4);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
+    a.reserve(16);
+    assert(a.capacity >= 16);
+    assert(a.length == 2);
+    assert(a[0] == [1,2]);
+    assert(a[1] == [3,4]);
 }
 
 // BinaryHeap
@@ -4693,12 +4746,12 @@ class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      +/
     Range remove(Take!Range r)
     {
-        auto b = r.original._begin;
+        auto b = r.source._begin;
 
         while(!r.empty)
             r.popFront(); // move take range to its last element
 
-        auto e = r.original._begin;
+        auto e = r.source._begin;
 
         while(b != e)
         {

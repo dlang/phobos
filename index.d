@@ -8,11 +8,11 @@ D language compiler. Also, check out the
 <h2>Philosophy</h2>
 
 	Each module in Phobos conforms as much as possible to the
-	following design goals. These are goals 
+	following design goals. These are goals
 	rather than requirements because D is not a religion,
-	it's a programming language, and it recognizes that 
+	it's a programming language, and it recognizes that
 	sometimes the goals are contradictory and counterproductive
-	in certain situations, and programmers have 
+	in certain situations, and programmers have
 	jobs that need to get done.
 
 	<dl><dl>
@@ -21,7 +21,7 @@ D language compiler. Also, check out the
 	<dt>Machine and Operating System Independent Interfaces
 
 	<dd>It's pretty well accepted that gratuitous non-portability
-	should be avoided. This should not be 
+	should be avoided. This should not be
 	construed, however, as meaning that access to unusual
 	features of an operating system should be prevented.
 
@@ -29,7 +29,7 @@ D language compiler. Also, check out the
 	<dt>Simple Operations should be Simple
 
 	<dd>A common and simple operation, like writing an array of
-	bytes to a file, should be simple to 
+	bytes to a file, should be simple to
 	code. I haven't seen a class library yet that simply and efficiently
 	implemented common, basic file I/O operations.
 
@@ -37,7 +37,7 @@ D language compiler. Also, check out the
 	<dt>Classes should strive to be independent of one another
 
 	<dd>It's discouraging to pull in a megabyte of code bloat
-	by just trying to read a file into an array of 
+	by just trying to read a file into an array of
 	bytes. Class independence also means that classes that turn
 	out to be mistakes can be deprecated and redesigned without
 	forcing a rewrite of the rest of the class library.
@@ -46,7 +46,7 @@ D language compiler. Also, check out the
 	<dt>No pointless wrappers around C runtime library functions or OS API functions
 
 	<dd>D provides direct access to C runtime library functions
-	and operating system API functions. 
+	and operating system API functions.
 	Pointless D wrappers around those functions just adds blather,
 	bloat, baggage and bugs.
 
@@ -160,9 +160,6 @@ D language compiler. Also, check out the
 	<dt><a href="std_gc.html"><b>std.gc</b></a>
 	<dd>Control the garbage collector.
 
-	<dt><a href="std_intrinsic.html"><b>std.intrinsic</b></a>
-	<dd>Compiler built in intrinsic functions
-
 	<dt><a href="std_math.html"><b>std.math</b></a>
 	<dd>Include all the usual math functions like sin, cos, atan, etc.
 
@@ -188,7 +185,7 @@ D language compiler. Also, check out the
 	<dd>Random number generation.
 
 	<dt><a href="std_recls.html"><b>std.recls</b></a>
-	<dd>Recursively search file system and (currently Windows 
+	<dd>Recursively search file system and (currently Windows
 	only) FTP sites.
 
 	<dt><a href="std_regexp.html"><b>std.regexp</b></a>
@@ -218,8 +215,8 @@ D language compiler. Also, check out the
 	<dt><a href="std_system.html"><b>std.system</b></a>
 	<dd>Inquire about the CPU, operating system.
 
-	<dt><a href="std_thread.html"><b>std.thread</b></a>
-	<dd>One per thread. Operations to do on a thread.
+	<!--dt><a href="std_thread.html"><b>std.thread</b></a>
+	<dd>One per thread. Operations to do on a thread.-->
 
 	<dt><a href="std_uri.html"><b>std.uri</b></a>
 	<dd>Encode and decode Uniform Resource Identifiers (URIs).

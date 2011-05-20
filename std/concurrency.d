@@ -162,11 +162,14 @@ private
 }
 
 
-static this()
+shared static this()
 {
-    // NOTE: thisTid will construct a new MessageBox if one doesn't exist,
-    //       which should only be true of the main thread and threads created
-    //       via core.thread instead of spawn.
+    // NOTE: Normally, mbox is initialized by spawn() or thisTid().  This
+    //       doesn't support the simple case of calling only receive() in main
+    //       however.  To ensure that this works, initialize the main thread's
+    //       mbox field here (as shared static ctors are run once on startup
+    //       by the main thread).
+    mbox = new MessageBox;
 }
 
 

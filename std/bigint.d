@@ -284,23 +284,26 @@ public:
     }
         
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T y)
+    T opBinaryRight(string op, T)(T x)
         if ((op=="%" || op=="/") && is(T: long))
     {
         static if (op == "%")
         {
             checkDivByZero();            
-            // y%x always has the same sign as y.            
+            // x%y always has the same sign as x.
             if (data.ulongLength() > 1)
-                return y;
-            return cast(T)(y % data.peekUlong(0));
+                return x;
+            ulong u = x < 0 ? -x : x;
+            ulong rem = u % data.peekUlong(0);
+            // x%y always has the same sign as x.
+            return cast(T)((x<0) ? -rem : rem);
         }
         else static if (op == "/")
         {
             checkDivByZero();            
             if (data.ulongLength() > 1)
                 return 0;
-            return cast(T)(y / data.peekUlong(0));
+            return cast(T)(x / data.peekUlong(0));
         }
     }
 	// const unary operations
@@ -493,6 +496,8 @@ unittest {
     b = long.max / a;
     assert( b == long.max /(ulong.max - 5));
     assert(BigInt(1) - 1 == 0);
+    assert((-4) % BigInt(5) == -4); // bug 5928
+    assert(BigInt(-4) % BigInt(5) == -4);
 }
 
 unittest // Recursive division, bug 5568
