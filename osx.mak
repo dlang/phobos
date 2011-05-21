@@ -79,7 +79,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	pthread.o
 
 ALLMAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
+	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
 
 SRCS= \
 	internal/aaA.d internal/adi.d \
@@ -215,6 +215,7 @@ SRC_ZLIB= \
 	etc/c/zlib/linux.mak \
 	etc/c/zlib/osx.mak \
 	etc/c/zlib/freebsd.mak \
+	etc/c/zlib/openbsd.mak \
 	etc/c/zlib/solaris.mak
 
 SRC_GC= internal/gc/gc.d \
@@ -230,6 +231,7 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/linux.mak \
 	internal/gc/osx.mak \
 	internal/gc/freebsd.mak \
+	internal/gc/openbsd.mak \
 	internal/gc/solaris.mak
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \

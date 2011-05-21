@@ -66,7 +66,7 @@ OBJS= deh.obj complex.obj gcstats.obj \
 #	ti_bit.obj ti_Abit.obj
 
 MAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
+	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\regexp.d \
@@ -313,6 +313,7 @@ SRC_ZLIB= \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak \
 	etc\c\zlib\freebsd.mak \
+	etc\c\zlib\openbsd.mak \
 	etc\c\zlib\solaris.mak
 
 SRC_GC= internal\gc\gc.d \
@@ -328,6 +329,7 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\linux.mak \
 	internal\gc\osx.mak \
 	internal\gc\freebsd.mak \
+	internal\gc\openbsd.mak \
 	internal\gc\solaris.mak
 
 phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
@@ -963,10 +965,13 @@ detab:
 
 tolf:
 	tolf freebsd.mak \
+	tolf openbsd.mak \
 	internal\gc\freebsd.mak \
+	internal\gc\openbsd.mak \
 	internal\gc\osx.mak \
 	internal\gc\solaris.mak \
 	etc\c\zlib\freebsd.mak \
+	etc\c\zlib\openbsd.mak \
 	etc\c\zlib\osx.mak \
 	etc\c\zlib\solaris.mak \
 	$(SRC) \
