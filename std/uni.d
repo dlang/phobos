@@ -25,9 +25,9 @@
 module std.uni;
 
 /**
- * Returns !=0 if c is a Unicode lower case character.
+ * Returns $(D false) if c is a Unicode lower case character.
  */
-int isUniLower(dchar c)
+bool isUniLower(dchar c)
 {
     if (c <= 0x7F)
         return (c >= 'a' && c <= 'z');
@@ -36,9 +36,9 @@ int isUniLower(dchar c)
 }
 
 /**
- * Returns !=0 if c is a Unicode upper case character.
+ * Returns $(D false) if c is a Unicode upper case character.
  */
-int isUniUpper(dchar c)
+bool isUniUpper(dchar c)
 {
     if (c <= 0x7F)
     return (c >= 'A' && c <= 'Z');
@@ -180,13 +180,13 @@ dchar toUniUpper(dchar c)
 
 
 /*******************************
- * Return !=0 if u is a Unicode alpha character.
+ * Returns $(D false) if u is a Unicode alpha character.
  * (general Unicode category: Lu, Ll, Lt, Lm and Lo)
  *
  * Standards: Unicode 5.0.0
  */
 
-int isUniAlpha(dchar u)
+bool isUniAlpha(dchar u)
 {
     static immutable dchar table[][2] =
     [
@@ -602,7 +602,7 @@ Lisnot:
         assert(u < table[i][0] || u > table[i][1]);
     }
     }
-    return 0;
+    return false;
 
 Lis:
     debug
@@ -610,12 +610,12 @@ Lis:
     for (int i = 0; i < table.length; i++)
     {
         if (u >= table[i][0] && u <= table[i][1])
-        return 1;
+        return true;
     }
     assert(0);      // should have been in table
     }
     else
-    return 1;
+    return true;
 }
 
 unittest
