@@ -681,7 +681,7 @@ arguments in text format to the file, followed by a newline. */
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, according to the format in the
 first argument. */
-    void writef(S...)(S args)// if (isSomeString!(S[0]))
+    void writef(S...)(S args) // if (isSomeString!(S[0]))
     {
         assert(p);
         assert(p.handle);

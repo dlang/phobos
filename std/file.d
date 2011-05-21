@@ -142,7 +142,7 @@ version (Posix)
                 ulong st_ino64;
             }
             //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }   
+        }
         else version (X86_64)
         {
             struct struct_stat64
@@ -769,7 +769,7 @@ else version(Windows)
 
             getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-            enum leeway = dur!"seconds"(2);
+            enum leeway = dur!"seconds"(4);
 
             {
                 auto diffc = creationTime1 - currTime;
@@ -918,7 +918,7 @@ version(StdDdoc)
     +/
     d_time lastModified(in char[] name, d_time returnIfMissing);
 }
-else version(Windows)
+else
 {
     d_time lastModified(C)(in C[] name, d_time returnIfMissing)
         if(is(Unqual!C == char))

@@ -1321,11 +1321,11 @@ void move(T)(ref T source, ref T target)
     {
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
-        static if (is(typeof(target.__dtor()))) target.__dtor();
+        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
         memcpy(&target, &source, T.sizeof);
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
-        static if (is(typeof(source.__dtor())) || is(typeof(source.__postblit())))
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
             memcpy(&source, &empty, T.sizeof);
@@ -1366,6 +1366,32 @@ unittest
     S2 s22;
     move(s21, s22);
     assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    struct S3
+    {
+        struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31, s32;
+    s31.x.n = 1;
+    move(s31, s32);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    struct S4
+    {
+        struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41, s42;
+    s41.x.n = 1;
+    move(s41, s42);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
 }
 
 /// Ditto
@@ -2133,7 +2159,7 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
-if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         && isForwardRange!Separator
         && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
@@ -2261,6 +2287,13 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+}
+
+unittest
+{
+    // joiner() should work for non-forward ranges too.
+    InputRange!string r = inputRangeObject(["abc", "def"]);
+    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
 auto joiner(RoR)(RoR r)
@@ -3629,29 +3662,32 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         }
     }
 
-    static if (!is(Sentinel == void))
-        @property Until save()
-        {
-            Until result;
+    static if (isForwardRange!Range)
+    {
+        static if (!is(Sentinel == void))
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._sentinel  = _sentinel;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._sentinel  = _sentinel;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
-    else
-        @property Until save()
-        {
-            Until result;
+                return result;
+            }
+        else
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
+                return result;
+            }
+    }
 }
 
 /// Ditto
