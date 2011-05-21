@@ -10,6 +10,10 @@ version (FreeBSD)
 {
     public import std.c.freebsd.socket;
 }
+else version (OpenBSD)
+{
+    public import std.c.openbsd.socket;
+}
 else version (Solaris)
 {
     public import std.c.solaris.socket;

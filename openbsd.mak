@@ -1,4 +1,4 @@
-# Makefile to build FreeBSD D runtime library libphobos.a.
+# Makefile to build OpenBSD D runtime library libphobos.a.
 # Targets:
 #	make
 #		Same as make unittest
@@ -11,7 +11,7 @@
 
 LIB=libphobos.a
 
-MAKEFILE=freebsd.mak
+MAKEFILE=openbsd.mak
 MODEL=32
 
 CFLAGS=-O -m$(MODEL)
@@ -53,7 +53,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	path.o string.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o \
-	freebsd.o freebsdsocket.o freebsdmath.o \
+	openbsd.o openbsdsocket.o \
 	linux.o \
 	posix.o posixsocket.o posixpthread.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
@@ -76,7 +76,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
-	pthread.o
+	openbsdpthread.o
 
 ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
@@ -168,6 +168,9 @@ SRC_STD_C_FREEBSD= std/c/freebsd/freebsd.d \
 	std/c/freebsd/socket.d std/c/freebsd/pthread.d \
 	std/c/freebsd/math.d
 
+SRC_STD_C_OPENBSD= std/c/openbsd/openbsd.d \
+	std/c/openbsd/socket.d std/c/openbsd/pthread.d
+
 SRC_STD_C_SOLARIS= std/c/solaris/solaris.d \
 	std/c/solaris/socket.d std/c/solaris/pthread.d
 
@@ -237,6 +240,7 @@ SRC_GC= internal/gc/gc.d \
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS) \
+	$(SRC_STD_OPENBSD) \
 	$(SRC_STD_C_POSIX)
 
 
@@ -509,19 +513,16 @@ zip.o : std/zip.d
 stdarg.o : std/c/stdarg.d
 	$(DMD) -c $(DFLAGS) std/c/stdarg.d
 
-### std/c/freebsd
+### std/c/openbsd
 
-freebsd.o : std/c/freebsd/freebsd.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/freebsd.d
+openbsd.o : std/c/openbsd/openbsd.d
+	$(DMD) -c $(DFLAGS) std/c/openbsd/openbsd.d
 
-freebsdsocket.o : std/c/freebsd/socket.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/socket.d -offreebsdsocket.o
+openbsdsocket.o : std/c/openbsd/socket.d
+	$(DMD) -c $(DFLAGS) std/c/openbsd/socket.d -ofopenbsdsocket.o
 
-freebsdmath.o : std/c/freebsd/math.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/math.d -offreebsdmath.o
-
-pthread.o : std/c/freebsd/pthread.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/pthread.d
+openbsdpthread.o : std/c/openbsd/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/openbsd/pthread.d -ofopenbsdpthread.o
 
 ### std/c/linux
 

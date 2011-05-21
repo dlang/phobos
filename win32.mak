@@ -266,6 +266,9 @@ SRC_STD_C_FREEBSD= std\c\freebsd\freebsd.d \
 	std\c\freebsd\socket.d std\c\freebsd\pthread.d \
 	std\c\freebsd\math.d
 
+SRC_STD_C_OPENBSD= std\c\openbsd\openbsd.d \
+	std\c\openbsd\socket.d std\c\openbsd\pthread.d
+
 SRC_STD_C_SOLARIS= std/c/solaris/solaris.d \
        std/c/solaris/socket.d std/c/solaris/pthread.d
 
@@ -941,6 +944,7 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
+	zip32 -u phobos $(SRC_STD_C_OPENBSD)
 	zip32 -u phobos $(SRC_STD_C_SOLARIS)
 	zip32 -u phobos $(SRC_STD_C_POSIX)
 	zip32 -u phobos $(SRC_ETC)
@@ -991,6 +995,7 @@ install:
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
+	$(CP) $(SRC_STD_C_OPENBSD) $(DIR)\src\phobos\std\c\openbsd
 	$(CP) $(SRC_STD_C_SOLARIS) $(DIR)\src\phobos\std\c\solaris
 	$(CP) $(SRC_STD_C_POSIX) $(DIR)\src\phobos\std\c\posix
 	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
@@ -1014,6 +1019,7 @@ svn2:
 	$(CP) $(SRC_STD_C_LINUX) $(PHOBOSSVN)\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(PHOBOSSVN)\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(PHOBOSSVN)\std\c\freebsd
+	$(CP) $(SRC_STD_C_OPENBSD) $(PHOBOSSVN)\std\c\openbsd
 	$(CP) $(SRC_STD_C_SOLARIS) $(PHOBOSSVN)\std\c\solaris
 	$(CP) $(SRC_STD_C_POSIX) $(PHOBOSSVN)\std\c\posix
 	$(CP) $(SRC_ETC) $(PHOBOSSVN)\etc

@@ -366,6 +366,75 @@ else version (FreeBSD)
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
 }
+else version (OpenBSD)
+{
+    const int EOF = -1;
+    const int BUFSIZ = 1024;
+    const int FOPEN_MAX = 20;
+    const int FILENAME_MAX = 1024;
+    const int TMP_MAX = 308915776;
+    const int L_tmpnam = 1024;
+
+    alias off_t fpos_t;
+
+    struct __sbuf
+    {
+        unsigned char *_base;
+        int     _size;
+    }
+
+    struct FILE
+    {
+        char* _p;
+        int     _r;
+        int     _w;
+        short   _flags;
+        short   _file;
+        __sbuf _bf;
+        int     _lbfsize;
+
+        void    *_cookie;
+        int     (*_close)(void *);
+        int     (*_read)(void *, char *, int);
+        fpos_t  (*_seek)(void *, fpos_t, int);
+        int     (*_write)(void *, __const char *, int);
+
+        __sbuf _ext;
+        char *_up;
+        int     _ur;
+        char _ubuf[3];
+        char _nbuf[1];
+        __sbuf _lb;
+        int     _blksize;
+        fpos_t  _offset;
+    } FILE;
+
+
+    extern FILE __sF[];
+
+    const FILE *stdin  = &__sF[0];      ///
+    const FILE *stdout = &__sF[1];      ///
+    const FILE *stderr = &__sF[2];      ///
+
+    enum
+    {
+        _IOFBF = 0,
+        _IOLBF = 1,
+        _IONBF = 2,
+    }
+
+    enum { SEEK_SET, SEEK_CUR, SEEK_END }
+
+    int ferror(FILE *);
+    int feof(FILE *);
+    void clearerr(FILE *);
+    void rewind(FILE *);
+    int fileno(FILE *);
+    int snprintf(char *, size_t, char *, ...);
+    int vsnprintf(char *, size_t, __const char *, __va_list);
+    int fseeko(FILE *, off_t, int);
+    off_t ftello(FILE *);
+}
 else version (Solaris)
 {
     const int EOF = -1;

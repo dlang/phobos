@@ -9,6 +9,10 @@ version (FreeBSD)
 {
     public import std.c.freebsd.pthread;
 }
+else version (OpenBSD)
+{
+    public import std.c.openbsd.pthread;
+}
 else version (Solaris)
 {
     public import std.c.solaris.pthread;
