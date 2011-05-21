@@ -379,8 +379,8 @@ else version (OpenBSD)
 
     struct __sbuf
     {
-        unsigned char *_base;
-        int     _size;
+        char* _base;
+        int _size;
     }
 
     struct FILE
@@ -397,7 +397,7 @@ else version (OpenBSD)
         int     (*_close)(void *);
         int     (*_read)(void *, char *, int);
         fpos_t  (*_seek)(void *, fpos_t, int);
-        int     (*_write)(void *, __const char *, int);
+        int     (*_write)(void *, char *, int);
 
         __sbuf _ext;
         char *_up;
@@ -407,7 +407,7 @@ else version (OpenBSD)
         __sbuf _lb;
         int     _blksize;
         fpos_t  _offset;
-    } FILE;
+    }
 
 
     extern FILE __sF[];
@@ -431,7 +431,7 @@ else version (OpenBSD)
     void rewind(FILE *);
     int fileno(FILE *);
     int snprintf(char *, size_t, char *, ...);
-    int vsnprintf(char *, size_t, __const char *, __va_list);
+    int vsnprintf(char *, size_t, char *, va_list);
     int fseeko(FILE *, off_t, int);
     off_t ftello(FILE *);
 }
