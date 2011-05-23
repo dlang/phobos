@@ -1097,15 +1097,6 @@ private:
         return true;
     }
 
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
-        if(this.size == 0) {
-            return rangeLen;
-        }
-
-        immutable size_t fourSize = 4 * (this.size + 1);
-        return (rangeLen / fourSize) + ((rangeLen % fourSize == 0) ? 0 : 1);
-    }
-
     void queueLock() {
         if(!isSingleTask) queueMutex.lock();
     }
@@ -1182,6 +1173,16 @@ private:
     }
 
 public:
+    // This is used in parallel_algorithm but is too unstable to document
+    // as public API.
+    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
+        if(this.size == 0) {
+            return rangeLen;
+        }
+
+        immutable size_t fourSize = 4 * (this.size + 1);
+        return (rangeLen / fourSize) + ((rangeLen % fourSize == 0) ? 0 : 1);
+    }
 
     /**
     Default constructor that initializes a $(D TaskPool) with
@@ -1892,6 +1893,14 @@ public:
     serially.  However, for many practical purposes floating point addition
     can be treated as associative.
 
+    Note that, since $(D functions) are assumed to be associative, additional
+    optimizations are made to the serial portion of the reduction algorithm.
+    These take advantage of the instruction level parallelism of modern CPUs,
+    in addition to the thread-level parallelism that the rest of this
+    module exploits.  This can lead to better than linear speedups relative
+    to $(XREF algorithm, reduce), especially for fine-grained benchmarks
+    like dot products.
+
     An explicit seed may be provided as the first argument.  If
     provided, it is used as the seed for all work units and for the final
     reduction of results from all work units.  Therefore, if it is not the
@@ -1903,10 +1912,12 @@ public:
     //
     // Timings on an Athlon 64 X2 dual core machine:
     //
-    // Parallel reduce:                     100 milliseconds
-    // Using std.algorithm.reduce instead:  169 milliseconds
+    // Parallel reduce:                     72 milliseconds
+    // Using std.algorithm.reduce instead:  181 milliseconds
     auto nums = iota(10_000_000.0f);
-    auto sumSquares = taskPool.reduce!"a + b * b"(0.0, nums);
+    auto sumSquares = taskPool.reduce!"a + b"(
+        0.0, std.algorithm.map!"a * a"(nums)
+    );
     ---
 
     If no explicit seed is provided, the first element of each work unit
@@ -2026,16 +2037,69 @@ public:
                 ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
-            static E reduceOnRange
-            (E seed, R range, size_t lowerBound, size_t upperBound) {
-                E result = seed;
-                foreach(i; lowerBound..upperBound) {
-                    result = fun(result, range[i]);
+            E reduceOnRange
+            (R range, size_t lowerBound, size_t upperBound) {
+                // This is for exploiting instruction level parallelism by
+                // using multiple accumulator variables within each thread,
+                // since we're assuming functions are associative anyhow.
+
+                // This is so that loops can be unrolled automatically.
+                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
+                enum nILP = ilpTuple.length;
+                immutable subSize = (upperBound - lowerBound) / nILP;
+
+                if(subSize <= 1) {
+                    // Handle as a special case.
+                    static if(explicitSeed) {
+                        E result = seed;
+                    } else {
+                        E result = makeStartValue(range[lowerBound]);
+                        lowerBound++;
+                    }
+
+                    foreach(i; lowerBound..upperBound) {
+                        result = fun(result, range[i]);
+                    }
+
+                    return result;
                 }
-                return result;
+
+                assert(subSize > 1);
+                E[nILP] results;
+                size_t[nILP] offsets;
+
+                foreach(i; ilpTuple) {
+                    offsets[i] = lowerBound + subSize * i;
+
+                    static if(explicitSeed) {
+                        results[i] = seed;
+                    } else {
+                        results[i] = makeStartValue(range[offsets[i]]);
+                        offsets[i]++;
+                    }
+                }
+
+                immutable nLoop = subSize - (!explicitSeed);
+                foreach(i; 0..nLoop) {
+                    foreach(j; ilpTuple) {
+                        results[j] = fun(results[j], range[offsets[j]]);
+                        offsets[j]++;
+                    }
+                }
+
+                // Finish the remainder.
+                foreach(i; nILP * subSize + lowerBound..upperBound) {
+                    results[$ - 1] = fun(results[$ - 1], range[i]);
+                }
+
+                foreach(i; ilpTuple[1..$]) {
+                    results[0] = finishFun(results[0], results[i]);
+                }
+
+                return results[0];
             }
 
-            alias Task!(reduceOnRange, E, R, size_t, size_t) RTask;
+            alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
             RTask[] tasks;
 
             enum MAX_STACK = 512;
@@ -2048,19 +2112,17 @@ public:
                 tasks = new RTask[nWorkUnits];
             }
 
+            // Hack to take the address of a nested function w/o
+            // making a closure.
+            static auto scopedAddress(D)(scope D del) { return del; }
+
             size_t curPos = 0;
             void useTask(ref RTask task) {
                 task.pool = this;
-                task.args[3] = min(len, curPos + workUnitSize);  // upper bound.
-                task.args[1] = range;  // range
-
-                static if(explicitSeed) {
-                    task.args[2] = curPos; // lower bound.
-                    task.args[0] = seed;
-                } else {
-                    task.args[2] = curPos + 1; // lower bound.
-                    task.args[0] = makeStartValue(range[curPos]);
-                }
+                task._args[0] = scopedAddress(&reduceOnRange);
+                task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
+                task._args[1] = range;  // range
+                task._args[2] = curPos; // lower bound.
 
                 curPos += workUnitSize;
             }
@@ -3397,6 +3459,10 @@ unittest {
     assert(poolInstance.reduce!(min, max)([1,2,3,4]) == tuple(1, 4));
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
         tuple(10, 24));
+
+    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
+    assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
     // Test worker-local storage.
     auto wl = poolInstance.workerLocalStorage(0);
