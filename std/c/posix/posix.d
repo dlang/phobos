@@ -7,8 +7,7 @@ version (linux)
 }
 else version (OSX)
 {
-    // We really should separate osx out from linux
-    public import std.c.linux.linux;
+    public import std.c.osx.osx;
 }
 else version (FreeBSD)
 {
