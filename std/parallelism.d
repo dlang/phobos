@@ -2912,6 +2912,11 @@ private mixin template ResubmittingTasks() {
     Throwable firstException, lastException;
     ubyte doneSubmitting;
 
+    // Each struct that mixes this in has an array of tasks.  This array should
+    // have four elements for each worker thread plus four for the submitter
+    // thread.
+    enum slotsPerThread = 4;
+
     void submitResubmittingTask(AbstractTask* toSubmit) {
         // Synchronizing on the pool to prevent some other thread from deleting
         // the job before it's submitted.
@@ -3059,10 +3064,8 @@ private struct AmapImpl(alias fun, Range, Buf) {
         submitNextBatch = scopedTask(&submitJobs);
         len = range.length;  // In case evaluating length is expensive.
 
-        // Four tasks for every worker thread, plus four for the submitting
-        // thread.
         tasks.length = min(
-            pool.size * 4 + 4,
+            (pool.size + 1) * slotsPerThread,
             len / workUnitSize + (len % workUnitSize > 0)
         );
     }
@@ -3127,7 +3130,7 @@ if(randLen!Range) {
         // Four tasks for every worker thread, plus four for the submitting
         // thread.
         tasks.length = min(
-            pool.size * 4 + 4,
+            (pool.size + 1) * slotsPerThread,
             len / workUnitSize + (len % workUnitSize > 0)
         );
     }
@@ -3170,10 +3173,7 @@ if(!randLen!Range) {
         this.range = range;
         this.dg = dg;
         submitNextBatch = scopedTask(&submitJobs);
-
-        // Four tasks for every worker thread, plus four for the submitting
-        // thread.
-        tasks.length = pool.size * 4 + 4;
+        tasks.length = (pool.size + 1) * slotsPerThread;
     }
 
     void useTask(ref PTask task) {
