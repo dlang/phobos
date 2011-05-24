@@ -583,16 +583,17 @@ struct Task(alias fun, Args...) {
                 }
             }
 
-            pool.queueLock();
             AbstractTask* job;
-            try {
+            {
                 // Locking explicitly and calling popNoSync() because
                 // pop() waits on a condition variable if there are no Tasks
                 // in the queue.
+
+                pool.queueLock();
+                scope(exit) pool.queueUnlock();
                 job = pool.popNoSync();
-            } finally {
-                pool.queueUnlock();
             }
+
 
             if(job !is null) {
 
@@ -909,8 +910,8 @@ private:
         scope(exit) {
             if(!isSingleTask) {
                 waiterLock();
+                scope(exit) waiterUnlock();
                 notifyWaiters();
-                waiterUnlock();
             }
         }
 
@@ -939,10 +940,12 @@ private:
     // does more than one task.
     void workLoop() {
         // Initialize thread index.
-        queueLock();
-        threadIndex = nextThreadIndex;
-        nextThreadIndex++;
-        queueUnlock();
+        {
+            queueLock();
+            scope(exit) queueUnlock();
+            threadIndex = nextThreadIndex;
+            nextThreadIndex++;
+        }
 
         while(atomicReadUbyte(status) != PoolState.stopNow) {
             AbstractTask* task = pop();
@@ -960,12 +963,12 @@ private:
     // Pop a task off the queue.
     AbstractTask* pop() {
         queueLock();
+        scope(exit) queueUnlock();
         auto ret = popNoSync();
         while(ret is null && status == PoolState.running) {
             wait();
             ret = popNoSync();
         }
-        queueUnlock();
         return ret;
     }
 
@@ -999,8 +1002,8 @@ private:
     // Push a task onto the queue.
     void abstractPut(AbstractTask* task) {
         queueLock();
+        scope(exit) queueUnlock();
         abstractPutNoSync(task);
-        queueUnlock();
     }
 
     void abstractPutNoSync(AbstractTask* task)
@@ -1059,9 +1062,8 @@ private:
 
     bool deleteItem(AbstractTask* item) {
         queueLock();
-        auto ret = deleteItemNoSync(item);
-        queueUnlock();
-        return ret;
+        scope(exit) queueUnlock();
+        return deleteItemNoSync(item);
     }
 
     bool deleteItemNoSync(AbstractTask* item) {
@@ -2914,13 +2916,12 @@ private mixin template ResubmittingTasks() {
         // Synchronizing on the pool to prevent some other thread from deleting
         // the job before it's submitted.
         pool.queueLock();
+        scope(exit) pool.queueUnlock();
         toSubmit.taskStatus = TaskStatus.notStarted;
         pool.abstractPutNoSync(toSubmit);
-        pool.queueUnlock();
     }
 
     void submitJobs() {
-        AbstractTask* first;  // Do in this thread.
         AbstractTask* head;  // For abstractPutGroupNoSync
         AbstractTask* tail;  // For abstactPutGroupNoSync
 
@@ -2941,6 +2942,8 @@ private mixin template ResubmittingTasks() {
             pool.abstractPutGroupNoSync(head, tail);
         }
 
+        AbstractTask* first;  // Do in this thread.
+
         void doFirst() {
             if(first is null) return;
             try {
@@ -2950,7 +2953,6 @@ private mixin template ResubmittingTasks() {
             }
             atomicSetUbyte(first.taskStatus, TaskStatus.done);
         }
-
 
         // Search for slots.
         foreach(ref task; tasks) {
@@ -3065,7 +3067,7 @@ private struct AmapImpl(alias fun, Range, Buf) {
         );
     }
 
-    // This funciton resets the struct for reuse.  It's called from Map.
+    // This function resets the struct for reuse.  It's called from Map.
     // This has to be done carefully to avoid touching submitNextBatch,
     // since there's a slight chance it could still be referenced from the
     // previous use.
