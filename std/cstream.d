@@ -19,8 +19,8 @@
  */
 module std.cstream;
 
-import std.stream;
-import std.c.stdio;
+public import std.stream;
+public import std.c.stdio;
 version(unittest) import std.stdio;
 
 /**
