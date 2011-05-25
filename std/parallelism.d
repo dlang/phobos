@@ -2008,7 +2008,6 @@ public:
                     size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
 
-
                 enforce(!range.empty,
                     "Cannot reduce an empty range with first element as start value.");
 
@@ -2019,25 +2018,6 @@ public:
 
             alias typeof(seed) E;
             alias typeof(range) R;
-
-            if(this.size == 0) {
-                return std.algorithm.reduce!(fun)(seed, range);
-            }
-
-            // Unlike the rest of the functions here, I can't use the Task object
-            // recycling trick here because this has to work on non-commutative
-            // operations.  After all the tasks are done executing, fun() has to
-            // be applied on the results of these to get a final result, but
-            // it can't be evaluated out of order.
-
-            immutable len = range.length;
-            if(workUnitSize > len) {
-                workUnitSize = len;
-            }
-
-            immutable size_t nWorkUnits = (len / workUnitSize) +
-                ((len % workUnitSize == 0) ? 0 : 1);
-            assert(nWorkUnits * workUnitSize >= len);
 
             E reduceOnRange
             (R range, size_t lowerBound, size_t upperBound) {
@@ -2100,6 +2080,29 @@ public:
 
                 return results[0];
             }
+
+            immutable len = range.length;
+            if(len == 0) {
+                return seed;
+            }
+
+            if(this.size == 0) {
+                return finishFun(seed, reduceOnRange(range, 0, len));
+            }
+
+            // Unlike the rest of the functions here, I can't use the Task object
+            // recycling trick here because this has to work on non-commutative
+            // operations.  After all the tasks are done executing, fun() has to
+            // be applied on the results of these to get a final result, but
+            // it can't be evaluated out of order.
+
+            if(workUnitSize > len) {
+                workUnitSize = len;
+            }
+
+            immutable size_t nWorkUnits = (len / workUnitSize) +
+                ((len % workUnitSize == 0) ? 0 : 1);
+            assert(nWorkUnits * workUnitSize >= len);
 
             alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
             RTask[] tasks;
@@ -3455,6 +3458,7 @@ unittest {
     poolInstance.amap!"a * a"([1,2,3,4,5], 4, buf);
     assert(buf == [1,4,9,16,25]);
 
+    assert(poolInstance.reduce!"a + b"([1]) == 1);
     assert(poolInstance.reduce!"a + b"([1,2,3,4]) == 10);
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4]) == 10);
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4], 1) == 10);
