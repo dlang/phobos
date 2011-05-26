@@ -616,75 +616,65 @@ unittest
  * $(RED Scheduled for deprecation in August 2011. Please use $(D getTimesWin)
  *       (for Windows) or $(D getTimesPosix) (for Posix) instead.)
  */
-version(StdDdoc)
+version(StdDdoc) void getTimes(in char[] name,
+                               out d_time ftc,
+                               out d_time fta,
+                               out d_time ftm);
+else version(Windows) void getTimes(C)(in C[] name,
+                                       out d_time ftc,
+                                       out d_time fta,
+                                       out d_time ftm) if(is(Unqual!C == char))
 {
-    void getTimes(in char[] name,
-            out d_time ftc,
-            out d_time fta,
-            out d_time ftm);
-}
-else version(Windows)
-{
-    void getTimes(C)(in C[] name,
-                     out d_time ftc,
-                     out d_time fta,
-                     out d_time ftm)
-        if(is(Unqual!C == char))
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+
+    HANDLE findhndl = void;
+
+    if (useWfuncs)
     {
-        pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
-                    "scheduled for deprecation in August 2011. Please use " ~
-                    "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+        WIN32_FIND_DATAW filefindbuf;
 
-        HANDLE findhndl = void;
-
-        if (useWfuncs)
-        {
-            WIN32_FIND_DATAW filefindbuf;
-
-            findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-            ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
-            fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-            ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
-        }
-        else
-        {
-            WIN32_FIND_DATA filefindbuf;
-
-            findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-            ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
-            fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-            ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
-        }
-
-        if (findhndl == cast(HANDLE)-1)
-        {
-            throw new FileException(name.idup);
-        }
-        FindClose(findhndl);
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
     }
-}
-else version(Posix)
-{
-    void getTimes(C)(in C[] name, out d_time ftc, out d_time fta, out d_time ftm)
-        if(is(Unqual!C == char))
+    else
     {
-        pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
-                    "scheduled for deprecation in August 2011. Please use " ~
-                    "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+        WIN32_FIND_DATA filefindbuf;
 
-        struct_stat64 statbuf = void;
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-        ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
-        fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
-        ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
     }
+
+    if (findhndl == cast(HANDLE)-1)
+    {
+        throw new FileException(name.idup);
+    }
+    FindClose(findhndl);
+}
+else version(Posix) void getTimes(C)(in C[] name,
+                                     out d_time ftc,
+                                     out d_time fta,
+                                     out d_time ftm) if(is(Unqual!C == char))
+{
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+
+    struct_stat64 statbuf = void;
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
+    fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
+    ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
 }
 else
     static assert(0, "Unsupported/Unknown OS");
 
 
-version(StdDdoc)
-{
     /++
         $(BLUE This function is Windows-Only.)
 
@@ -703,260 +693,235 @@ version(StdDdoc)
         Throws:
             $(D FileException) on error.
      +/
-    void getTimesWin(in char[] name,
-            out SysTime fileCreationTime,
-            out SysTime fileAccessTime,
-            out SysTime fileModificationTime);
-
-
-    /++
-        $(BLUE This function is Posix-Only.)
-
-        Get file status change time, acces time, and modification times
-        of file $(D name).
-
-        Note that the Windows and Posix versions of getTimesX differ
-        because Posix has no file creation time whereas Windows
-        has no file status changed time.
-
-        Params:
-            name                 = File name to get times for.
-            fileStatusChangeTime = Time the file's status was last changed.
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
-
-        Throws:
-            $(D FileException) on error.
-     +/
-    version(Posix) void getTimesPosix(in char[] name,
-                                      out SysTime fileStatusChangeTime,
-                                      out SysTime fileAccessTime,
-            out SysTime fileModificationTime);
-}
-else version(Windows)
+version(StdDdoc) void getTimesWin(in char[] name,
+                                  out SysTime fileCreationTime,
+                                  out SysTime fileAccessTime,
+                                  out SysTime fileModificationTime);
+else version(Windows) void getTimesWin(in char[] name,
+                                       out SysTime fileCreationTime,
+                                       out SysTime fileAccessTime,
+                                       out SysTime fileModificationTime)
 {
-    void getTimesWin(in char[] name,
-                     out SysTime fileCreationTime,
-                     out SysTime fileAccessTime,
-                     out SysTime fileModificationTime)
+    HANDLE findhndl = void;
+
+    if (useWfuncs)
     {
-        HANDLE findhndl = void;
+        WIN32_FIND_DATAW filefindbuf;
 
-        if (useWfuncs)
-        {
-            WIN32_FIND_DATAW filefindbuf;
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
+        fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+        fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
+    }
+    else
+    {
+        WIN32_FIND_DATA filefindbuf;
 
-            findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
-        }
-        else
-        {
-            WIN32_FIND_DATA filefindbuf;
-
-            findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
-        }
-
-        if(findhndl == cast(HANDLE)-1)
-        {
-            throw new FileException(name.idup);
-        }
-
-        FindClose(findhndl);
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
+        fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+        fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
     }
 
-    unittest
+    if(findhndl == cast(HANDLE)-1)
     {
-        version(Windows)
-        {
-            auto currTime = Clock.currTime();
-
-            write(deleteme, "a");
-            scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-
-            SysTime creationTime1 = void;
-            SysTime accessTime1 = void;
-            SysTime modificationTime1 = void;
-
-            getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
-
-            enum leeway = dur!"seconds"(4);
-
-            {
-                auto diffc = creationTime1 - currTime;
-                auto diffa = accessTime1 - currTime;
-                auto diffm = modificationTime1 - currTime;
-
-                assert(abs(diffc) <= leeway);
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            Thread.sleep(dur!"seconds"(1));
-
-            currTime = Clock.currTime();
-            write(deleteme, "b");
-
-            SysTime creationTime2 = void;
-            SysTime accessTime2 = void;
-            SysTime modificationTime2 = void;
-
-            getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
-
-            {
-                auto diffa = accessTime2 - currTime;
-                auto diffm = modificationTime2 - currTime;
-
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            assert(creationTime1 <= creationTime2);
-            assert(accessTime1 <= accessTime2);
-            assert(modificationTime1 <= modificationTime2);
-        }
+        throw new FileException(name.idup);
     }
+
+    FindClose(findhndl);
 }
-else version(Posix)
+
+version(Windows) unittest
 {
-    void getTimesPosix(in char[] name,
-            out SysTime fileStatusChangeTime,
-            out SysTime fileAccessTime,
-            out SysTime fileModificationTime)
+    auto currTime = Clock.currTime();
+
+    write(deleteme, "a");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+
+    SysTime creationTime1 = void;
+    SysTime accessTime1 = void;
+    SysTime modificationTime1 = void;
+
+    getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
+
+    enum leeway = dur!"seconds"(4);
+
+    {
+        auto diffc = creationTime1 - currTime;
+        auto diffa = accessTime1 - currTime;
+        auto diffm = modificationTime1 - currTime;
+
+        assert(abs(diffc) <= leeway);
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    Thread.sleep(dur!"seconds"(1));
+
+    currTime = Clock.currTime();
+    write(deleteme, "b");
+
+    SysTime creationTime2 = void;
+    SysTime accessTime2 = void;
+    SysTime modificationTime2 = void;
+
+    getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
+
+    {
+        auto diffa = accessTime2 - currTime;
+        auto diffm = modificationTime2 - currTime;
+
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    assert(creationTime1 <= creationTime2);
+    assert(accessTime1 <= accessTime2);
+    assert(modificationTime1 <= modificationTime2);
+}
+
+/++
+    $(BLUE This function is Posix-Only.)
+
+    Get file status change time, acces time, and modification times
+    of file $(D name).
+
+    Note that the Windows and Posix versions of getTimesX differ
+    because Posix has no file creation time whereas Windows
+    has no file status changed time.
+
+    Params:
+        name                 = File name to get times for.
+        fileStatusChangeTime = Time the file's status was last changed.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void getTimesPosix(in char[] name,
+                                    out SysTime fileStatusChangeTime,
+                                    out SysTime fileAccessTime,
+                                    out SysTime fileModificationTime);
+else version(Posix) void getTimesPosix(in char[] name,
+                                       out SysTime fileStatusChangeTime,
+                                       out SysTime fileAccessTime,
+                                       out SysTime fileModificationTime)
+{
+    struct_stat64 statbuf = void;
+
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+
+    fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
+    fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+    fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+}
+
+version(Posix) unittest
+{
+    auto currTime = Clock.currTime();
+
+    write(deleteme, "a");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+
+    SysTime statusChangedTime1 = void;
+    SysTime accessTime1 = void;
+    SysTime modificationTime1 = void;
+
+    getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
+
+    enum leeway = dur!"seconds"(4);
+
+    {
+        auto diffc = statusChangedTime1 - currTime;
+        auto diffa = accessTime1 - currTime;
+        auto diffm = modificationTime1 - currTime;
+
+        assert(abs(diffc) <= leeway);
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    Thread.sleep(dur!"seconds"(1));
+
+    currTime = Clock.currTime();
+    write(deleteme, "b");
+
+    SysTime statusChangedTime2 = void;
+    SysTime accessTime2 = void;
+    SysTime modificationTime2 = void;
+
+    getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
+
+    {
+        auto diffc = statusChangedTime2 - currTime;
+        auto diffa = accessTime2 - currTime;
+        auto diffm = modificationTime2 - currTime;
+
+        assert(abs(diffc) <= leeway);
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    assert(statusChangedTime1 <= statusChangedTime2);
+    assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
+}
+
+
+/++
+ $(RED Scheduled for deprecation in August 2011. Please use
+       $(D timeLastModified) instead.)
+ +/
+version(StdDdoc) d_time lastModified(in char[] name);
+else d_time lastModified(C)(in C[] name)
+    if(is(Unqual!C == char))
+{
+    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+
+    version(Windows)
+    {
+        d_time dummy = void, ftm = void;
+        getTimes(name, dummy, dummy, ftm);
+        return ftm;
+    }
+    else version(Posix)
     {
         struct_stat64 statbuf = void;
-
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-
-        fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
-        fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+        return cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
+    else
+        static assert(0, "Unsupported/Unknown OS");
+}
 
-    unittest
+
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D timeLastModified) instead.)
++/
+version(StdDdoc) d_time lastModified(in char[] name, d_time returnIfMissing);
+else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
+    if(is(Unqual!C == char))
+{
+    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+
+    version(Windows)
     {
-        auto currTime = Clock.currTime();
-
-        write(deleteme, "a");
-        scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-
-        SysTime statusChangedTime1 = void;
-        SysTime accessTime1 = void;
-        SysTime modificationTime1 = void;
-
-        getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
-
-        enum leeway = dur!"seconds"(4);
-
-        {
-            auto diffc = statusChangedTime1 - currTime;
-            auto diffa = accessTime1 - currTime;
-            auto diffm = modificationTime1 - currTime;
-
-            assert(abs(diffc) <= leeway);
-            assert(abs(diffa) <= leeway);
-            assert(abs(diffm) <= leeway);
-        }
-
-        Thread.sleep(dur!"seconds"(1));
-
-        currTime = Clock.currTime();
-        write(deleteme, "b");
-
-        SysTime statusChangedTime2 = void;
-        SysTime accessTime2 = void;
-        SysTime modificationTime2 = void;
-
-        getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
-
-        {
-            auto diffc = statusChangedTime2 - currTime;
-            auto diffa = accessTime2 - currTime;
-            auto diffm = modificationTime2 - currTime;
-
-            assert(abs(diffc) <= leeway);
-            assert(abs(diffa) <= leeway);
-            assert(abs(diffm) <= leeway);
-        }
-
-        assert(statusChangedTime1 <= statusChangedTime2);
-        assert(accessTime1 <= accessTime2);
-            assert(modificationTime1 <= modificationTime2);
+        if (!exists(name)) return returnIfMissing;
+        d_time dummy = void, ftm = void;
+        getTimes(name, dummy, dummy, ftm);
+        return ftm;
     }
-}
-else
-    static assert(0, "Unsupported/Unknown OS");
-
-
-version(StdDdoc)
-{
-    /++
-     $(RED Scheduled for deprecation in August 2011. Please use
-           $(D timeLastModified) instead.)
-     +/
-    d_time lastModified(in char[] name);
-}
-else
-{
-    d_time lastModified(C)(in C[] name)
-        if(is(Unqual!C == char))
+    else version(Posix)
     {
-        pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
-
-        version(Windows)
-        {
-            d_time dummy = void, ftm = void;
-            getTimes(name, dummy, dummy, ftm);
-            return ftm;
-        }
-        else version(Posix)
-        {
-            struct_stat64 statbuf = void;
-            cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-            return cast(d_time) statbuf.st_mtime * ticksPerSecond;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        struct_stat64 statbuf = void;
+        return stat64(toStringz(name), &statbuf) != 0
+            ? returnIfMissing
+            : cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
-}
-
-
-version(StdDdoc)
-{
-    /++
-        $(RED Scheduled for deprecation in August 2011.
-              Please use $(D timeLastModified) instead.)
-    +/
-    d_time lastModified(in char[] name, d_time returnIfMissing);
-}
-else
-{
-    d_time lastModified(C)(in C[] name, d_time returnIfMissing)
-        if(is(Unqual!C == char))
-    {
-        pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
-
-        version(Windows)
-        {
-            if (!exists(name)) return returnIfMissing;
-            d_time dummy = void, ftm = void;
-            getTimes(name, dummy, dummy, ftm);
-            return ftm;
-        }
-        else version(Posix)
-        {
-            struct_stat64 statbuf = void;
-            return stat64(toStringz(name), &statbuf) != 0
-                ? returnIfMissing
-                : cast(d_time) statbuf.st_mtime * ticksPerSecond;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
-    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -971,10 +936,10 @@ unittest
 }
 
 /++
-Returns the time that the given file was last modified.
+    Returns the time that the given file was last modified.
 
-Throws:
-$(D FileException) if the given file does not exist.
+    Throws:
+        $(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(in char[] name)
 {
@@ -1015,7 +980,7 @@ SysTime timeLastModified(in char[] name)
     correctly prompts building it.
 
     Params:
-        name = The name of the file to get the modification time for.
+        name            = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
 
 Examples:
@@ -1152,8 +1117,6 @@ uint getAttributes(in char[] name)
 }
 
 
-version(StdDdoc)
-{
     /++
         If the given file is a symbolic link, then this returns the attributes of the
         symbolic link itself rather than file that it points to. If the given file
@@ -1170,33 +1133,29 @@ version(StdDdoc)
         Throws:
             FileException on error.
      +/
-    uint getLinkAttributes(in char[] name);
-}
-else
+version(StdDdoc) uint getLinkAttributes(in char[] name);
+else uint getLinkAttributes(in char[] name)
 {
-    uint getLinkAttributes(in char[] name)
+    version(Windows)
     {
-        version(Windows)
-        {
-            return getAttributes(name);
-        }
-        else version(OSX)
-        {
-            struct_stat64 lstatbuf = void;
-            cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
-            return lstatbuf.st_mode;
-        }
-        else version(Posix)
-        {
-            struct_stat64 lstatbuf = void;
-
-            cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
-
-            return lstatbuf.st_mode;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        return getAttributes(name);
     }
+    else version(OSX)
+    {
+        struct_stat64 lstatbuf = void;
+        cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
+        return lstatbuf.st_mode;
+    }
+    else version(Posix)
+    {
+        struct_stat64 lstatbuf = void;
+
+        cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
+
+        return lstatbuf.st_mode;
+    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1756,9 +1715,9 @@ version(StdDdoc)
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
 
-        A DirEntry is obtained by using the functions dirEntry (to get the DirEntry
-        for a specific file) or dirEntries (to get a DirEntry for each file/directory
-        in a particular directory).
+        A $(D DirEntry) is obtained by using the functions $(D dirEntry) (to get
+        the $(D DirEntry) for a specific file) or $(D dirEntries) (to get a
+        $(D DirEntry) for each file/directory in a particular directory).
       +/
     struct DirEntry
     {
@@ -1766,7 +1725,7 @@ version(StdDdoc)
     public:
 
         /++
-            Returns the path to the file represented by this DirEntry.
+            Returns the path to the file represented by this $(D DirEntry).
 
 Examples:
 --------------------
@@ -1781,7 +1740,8 @@ assert(de2.name == "/usr/share/include");
 
 
         /++
-            Returns whether the file represented by this DirEntry is a directory.
+            Returns whether the file represented by this $(D DirEntry) is a
+            directory.
 
 Examples:
 --------------------
@@ -1797,24 +1757,23 @@ assert(de2.isDir);
         /++
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D isDir) instead.)
-
-            Same as isdir.
           +/
         alias isDir isdir;
 
 
         /++
-            Returns whether the file represented by this DirEntry is a file.
+            Returns whether the file represented by this $(D DirEntry) is a file.
 
             On Windows, if a file is not a directory, then it's a file. So,
-            either isFile or isDir will return true.
+            either $(D isFile) or $(D isDir) will return $(D true).
 
-            On Posix systems, if isFile is true, that indicates that the file is
-            a regular file (e.g. not a block not device). So, on Posix systems,
-            it's possible for both isFile and isDir to be false for a particular
-            file (in which case, it's a special file). You can use attributes
-            or statBuf to get more information about a special file (see the
-            stat man page for more details).
+            On Posix systems, if $(D isFile) is $(D true), that indicates that
+            the file is a regular file (e.g. not a block not device). So, on
+            Posix systems, it's possible for both $(D isFile) and $(D isDir) to
+            be $(D false) for a particular file (in which case, it's a special
+            file). You can use $(D attributes) or $(D statBuf) to get more
+            information about a special file (see the stat man page for more
+            details).
 
 Examples:
 --------------------
@@ -1830,13 +1789,12 @@ assert(!de2.isFile);
         /++
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D isFile) instead.)
-
-            Same as isfile.
           +/
         alias isFile isfile;
 
         /++
-            Returns whether the file represented by this DirEntry is a symbol link.
+            Returns whether the file represented by this $(D DirEntry) is a
+            symbolic link.
 
             Always return false on Windows. It exists on Windows so that you don't
             have to special-case code for Windows when dealing with symbolic links.
@@ -1844,7 +1802,8 @@ assert(!de2.isFile);
         @property bool isSymLink();
 
         /++
-            Returns the size of the the file represented by this DirEntry in bytes.
+            Returns the size of the the file represented by this $(D DirEntry)
+            in bytes.
           +/
         @property ulong size();
 
@@ -1852,20 +1811,23 @@ assert(!de2.isFile);
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D timeCreated) instead.)
 
-            Returns the creation time of the file represented by this DirEntry.
+            Returns the creation time of the file represented by this
+            $(D DirEntry).
 
-            $(RED Note that this property has existed for both Windows and Posix systems
-                  but that it is $(I incorrect) on Posix systems. Posix systems do not have
-                  access to the creation time of a file. On Posix systems this property
-                  has incorrectly been the time that the file's status status last changed.
-                  If you want that value, use timeStatusChanged.)
+            $(RED Note that this property has existed for both Windows and Posix
+                  systems but that it is $(I incorrect) on Posix systems. Posix
+                  systems do not have access to the creation time of a file. On
+                  Posix systems this property has incorrectly been the time that
+                  the file's status status last changed. If you want that value,
+                  use $(D timeStatusChanged).)
           +/
         @property d_time creationTime() const;
 
         /++
             $(BLUE This function is Windows-Only.)
 
-            Returns the creation time of the file represented by this DirEntry.
+            Returns the creation time of the file represented by this
+            $(D DirEntry).
           +/
         @property SysTime timeCreated() const;
 
@@ -1873,8 +1835,8 @@ assert(!de2.isFile);
         /++
             $(BLUE This function is Posix-Only.)
 
-            Returns the last time that the status of file represented by this DirEntry
-            was changed (i.e. owner, group, link count, mode, etc.).
+            Returns the last time that the status of file represented by this
+            $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
           +/
         @property SysTime timeStatusChanged();
 
@@ -1882,55 +1844,63 @@ assert(!de2.isFile);
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D timeLastAccessed) instead.)
 
-            Returns the time that the file represented by this DirEntry was last accessed.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last accessed.
 
-            Note that many file systems do not update the access time for files (generally
-            for performance reasons), so there's a good chance that lastAccessTime will
-            return the same value as lastWriteTime.
+            Note that many file systems do not update the access time for files
+            (generally for performance reasons), so there's a good chance that
+            $(D lastAccessTime) will return the same value as $(D lastWriteTime).
           +/
         @property d_time lastAccessTime();
         /++
-            Returns the time that the file represented by this DirEntry was last accessed.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last accessed.
 
-            Note that many file systems do not update the access time for files (generally
-            for performance reasons), so there's a good chance that timeLastAccessed will
-            return the same value as timeLastModified.
+            Note that many file systems do not update the access time for files
+            (generally for performance reasons), so there's a good chance that
+            $(D timeLastAccessed) will return the same value as
+            $(D timeLastModified).
           +/
         @property SysTime timeLastAccessed();
         /++
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D timeLastModified) instead.)
 
-            Returns the time that the file represented by this DirEntry was last modified.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last modified.
           +/
         @property d_time lastWriteTime();
         /++
-            Returns the time that the file represented by this DirEntry was last modified.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last modified.
           +/
         @property SysTime timeLastModified();
 
         /++
-            Returns the attributes of the file represented by this DirEntry.
+            Returns the attributes of the file represented by this $(D DirEntry).
 
-            Note that the file attributes on Windows and Posix systems are completely
-            different. On, Windows, they're what is returned by GetFileAttributes
-            <a href="http://msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx">GetFileAttributes</a>.
-            Whereas, an Posix systems, they're the st_mode value which is part of the
-            stat struct gotten by calling stat.
+            Note that the file attributes on Windows and Posix systems are
+            completely different. On, Windows, they're what is returned by
+            $(D GetFileAttributes)
+            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
+            Whereas, an Posix systems, they're the $(D st_mode) value which is
+            part of the $(D stat) struct gotten by calling $(D stat).
 
-            On Posix systems, if the file represented by this DirEntry is a symbolic link,
-            then attributes are the attributes of the file pointed to by the symbolic link.
+            On Posix systems, if the file represented by this $(D DirEntry) is a
+            symbolic link, then attributes are the attributes of the file
+            pointed to by the symbolic link.
           +/
         @property uint attributes();
 
         /++
-            On Posix systems, if the file represented by this DirEntry is a symbolic link,
-            then linkAttributes are the attributes of the symbolic link itself. Otherwise,
-            linkAttributes is identical to attributes.
+            On Posix systems, if the file represented by this $(D DirEntry) is a
+            symbolic link, then $(D linkAttributes) are the attributes of the
+            symbolic link itself. Otherwise, $(D linkAttributes) is identical to
+            $(D attributes).
 
-            On Windows, linkAttributes is identical to attributes. It exists on
-            Windows so that you don't have to special-case code for Windows when dealing
-            with symbolic links.
+            On Windows, $(D linkAttributes) is identical to $(D attributes). It
+            exists on Windows so that you don't have to special-case code for
+            Windows when dealing with symbolic links.
           +/
         @property uint linkAttributes();
 
@@ -1939,7 +1909,7 @@ assert(!de2.isFile);
         /++
             $(BLUE This function is Posix-Only.)
 
-            The stat struct gotten from calling stat.
+            The $(D stat) struct gotten from calling $(D stat).
           +/
         @property struct_stat64 statBuf();
     }
@@ -2537,8 +2507,6 @@ void copy(in char[] from, in char[] to)
         static assert(0, "Unsupported/Unknown OS");
 }
 
-version(StdDdoc)
-{
     /++
         $(RED Scheduled for deprecation in August 2011. Please use the version
               which takes $(XREF datetime, SysTime) instead).
@@ -2548,108 +2516,98 @@ version(StdDdoc)
         Throws:
             $(D_PARAM FileException) on error.
      +/
-    void setTimes(in char[] name, d_time fta, d_time ftm);
-}
-else
+version(StdDdoc) void setTimes(in char[] name, d_time fta, d_time ftm);
+else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
+    if(is(Unqual!C == char))
 {
-    void setTimes(C)(in C[] name, d_time fta, d_time ftm)
-        if(is(Unqual!C == char))
+    pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
+                "which takes std.date.d_time has been scheduled for deprecation " ~
+                "in August 2011. Please use the version which takes " ~
+                "std.datetime.SysTime instead.");
+
+    version(Windows)
     {
-        pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
-                    "which takes std.date.d_time has been scheduled for deprecation " ~
-                    "in August 2011. Please use the version which takes " ~
-                    "std.datetime.SysTime instead.");
+        const ta = d_time2FILETIME(fta);
+        const tm = d_time2FILETIME(ftm);
+        alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL, HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
 
-        version(Windows)
-        {
-            const ta = d_time2FILETIME(fta);
-            const tm = d_time2FILETIME(ftm);
-            alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-                defaults;
-            auto h = useWfuncs
-                ? CreateFileW(std.utf.toUTF16z(name), defaults)
-                : CreateFileA(toMBSz(name), defaults);
-            cenforce(h != INVALID_HANDLE_VALUE, name);
-            scope(exit) cenforce(CloseHandle(h), name);
-
-            cenforce(SetFileTime(h, null, &ta, &tm), name);
-        }
-        else version(Posix)
-        {
-            timeval[2] t = void;
-            t[0].tv_sec = to!int(fta / ticksPerSecond);
-            t[0].tv_usec = cast(int)
-                (cast(long) ((cast(double) fta / ticksPerSecond)
-                        * 1_000_000) % 1_000_000);
-            t[1].tv_sec = to!int(ftm / ticksPerSecond);
-            t[1].tv_usec = cast(int)
-                (cast(long) ((cast(double) ftm / ticksPerSecond)
-                        * 1_000_000) % 1_000_000);
-            enforce(utimes(toStringz(name), t) == 0);
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
     }
-}
-
-
-version(StdDdoc)
-{
-    /++
-        Set access/modified times of file $(D name).
-
-        Params:
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
-
-        Throws:
-            $(D FileException) on error.
-     +/
-    void setTimes(in char[] name,
-                  SysTime fileAccessTime,
-            SysTime fileModificationTime);
-}
-else
-{
-    void setTimes(C)(in C[] name,
-                     SysTime fileAccessTime,
-                     SysTime fileModificationTime)
-        if(is(Unqual!C == char))
+    else version(Posix)
     {
-        version(Windows)
-        {
-            const ta = SysTimeToFILETIME(fileAccessTime);
-            const tm = SysTimeToFILETIME(fileModificationTime);
-            alias TypeTuple!(GENERIC_WRITE,
-                             0,
-                             null,
-                             OPEN_EXISTING,
-                             FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-                  defaults;
-            auto h = useWfuncs ?
-                     CreateFileW(std.utf.toUTF16z(name), defaults) :
-                     CreateFileA(toMBSz(name), defaults);
-
-            cenforce(h != INVALID_HANDLE_VALUE, name);
-
-            scope(exit)
-                cenforce(CloseHandle(h), name);
-
-            cenforce(SetFileTime(h, null, &ta, &tm), name);
-        }
-        else version(Posix)
-        {
-            timeval[2] t = void;
-
-            t[0] = fileAccessTime.toTimeVal();
-            t[1] = fileModificationTime.toTimeVal();
-
-            enforce(utimes(toStringz(name), t) == 0);
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        timeval[2] t = void;
+        t[0].tv_sec = to!int(fta / ticksPerSecond);
+        t[0].tv_usec = cast(int)
+            (cast(long) ((cast(double) fta / ticksPerSecond)
+                    * 1_000_000) % 1_000_000);
+        t[1].tv_sec = to!int(ftm / ticksPerSecond);
+        t[1].tv_usec = cast(int)
+            (cast(long) ((cast(double) ftm / ticksPerSecond)
+                    * 1_000_000) % 1_000_000);
+        enforce(utimes(toStringz(name), t) == 0);
     }
+    else
+        static assert(0, "Unsupported/Unknown OS");
+}
+
+
+/++
+    Set access/modified times of file $(D name).
+
+    Params:
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void setTimes(in char[] name,
+                               SysTime fileAccessTime,
+                               SysTime fileModificationTime);
+else void setTimes(C)(in C[] name,
+                      SysTime fileAccessTime,
+                      SysTime fileModificationTime)
+    if(is(Unqual!C == char))
+{
+    version(Windows)
+    {
+        const ta = SysTimeToFILETIME(fileAccessTime);
+        const tm = SysTimeToFILETIME(fileModificationTime);
+        alias TypeTuple!(GENERIC_WRITE,
+                         0,
+                         null,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL, HANDLE.init)
+              defaults;
+        auto h = useWfuncs ?
+                 CreateFileW(std.utf.toUTF16z(name), defaults) :
+                 CreateFileA(toMBSz(name), defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+
+        scope(exit)
+            cenforce(CloseHandle(h), name);
+
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
+    }
+    else version(Posix)
+    {
+        timeval[2] t = void;
+
+        t[0] = fileAccessTime.toTimeVal();
+        t[1] = fileModificationTime.toTimeVal();
+
+        enforce(utimes(toStringz(name), t) == 0);
+    }
+    else
+        static assert(0, "Unsupported/Unknown OS");
 }
 
 /+
