@@ -2293,16 +2293,17 @@ struct FloatingPointControl
      */
     enum : uint
     {
-        inexactException   = 0x20,
-        underflowException = 0x10,
-        overflowException  = 0x08,
-        divByZeroException = 0x04,
-        invalidException   = 0x01,
+        inexactException      = 0x20,
+        underflowException    = 0x10,
+        overflowException     = 0x08,
+        divByZeroException    = 0x04,
+        denormalizedException = 0x02,
+        invalidException      = 0x01,
         /// Severe = The overflow, division by zero, and invalid exceptions.
         severeExceptions   = overflowException | divByZeroException
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
-                             | inexactException,
+                             | inexactException | denormalizedException,
     };
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
