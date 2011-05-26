@@ -338,6 +338,9 @@ class GC
         assert(gcx);
         //debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
 
+        if (gcx.running)
+            onOutOfMemoryError();
+
         size += SENTINEL_EXTRA;
 
         // Compute size bin
@@ -467,6 +470,9 @@ class GC
     //
     private void *reallocNoSync(void *p, size_t size)
     {
+        if (gcx.running)
+            onOutOfMemoryError();
+
         if (!size)
         {   if (p)
             {   freeNoSync(p);
@@ -594,6 +600,9 @@ class GC
     }
     body
     {
+        if (gcx.running)
+            onOutOfMemoryError();
+
         //debug(PRINTF) printf("GC::extend(p = %p, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
         version (SENTINEL)
         {
@@ -669,6 +678,9 @@ class GC
     private void freeNoSync(void *p)
     {
         assert (p);
+
+        if (gcx.running)
+            onOutOfMemoryError();
 
         Pool *pool;
         uint pagenum;
@@ -1231,6 +1243,7 @@ struct Gcx
     uint anychanges;
     void *stackBottom;
     uint inited;
+    uint running;
     int disabled;       // turn off collections if >0
 
     byte *minAddr;      // min(baseAddr)
@@ -1917,6 +1930,10 @@ struct Gcx
 
         debug(COLLECT_PRINTF) printf("Gcx.fullcollect()\n");
 
+        if (running)
+            onOutOfMemoryError();
+        running = 1;
+
         Thread.pauseAll();
 
         p_cache = null;
@@ -2250,6 +2267,8 @@ struct Gcx
 
         debug(COLLECT_PRINTF) printf("recovered pages = %d\n", recoveredpages);
         debug(COLLECT_PRINTF) printf("\tfree'd %u bytes, %u pages from %u pools\n", freed, freedpages, npools);
+
+        running = 0; // only clear on success
 
         return freedpages + recoveredpages;
     }
