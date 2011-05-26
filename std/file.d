@@ -25,6 +25,9 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
        std.typetuple, std.utf;
 
+import std.metastrings; //For generating deprecation messages only. Remove once
+                        //deprecation path complete.
+
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
@@ -610,8 +613,8 @@ unittest
 }
 
 /*************************
- * $(RED Scheduled for deprecation. Please use getTimesWin (for Windows)
- *       or getTimesPosix (for Posix) instead.)
+ * $(RED Scheduled for deprecation in August 2011. Please use $(D getTimesWin)
+ *       (for Windows) or $(D getTimesPosix) (for Posix) instead.)
  */
 version(StdDdoc)
 {
@@ -628,9 +631,9 @@ else version(Windows)
                      out d_time ftm)
         if(is(Unqual!C == char))
     {
-        pragma(msg, "std.file.getTimes has been scheduled for deprecation. " ~
-                    "Please use getTimesWin (for Windows) or getTimesPosix (for Posix) "
-                    "instead.");
+        pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+                    "scheduled for deprecation in August 2011. Please use " ~
+                    "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
 
         HANDLE findhndl = void;
 
@@ -665,9 +668,9 @@ else version(Posix)
     void getTimes(C)(in C[] name, out d_time ftc, out d_time fta, out d_time ftm)
         if(is(Unqual!C == char))
     {
-        pragma(msg, "std.file.getTimes has been scheduled for deprecation. " ~
-                    "Please use getTimesWin (for Windows) or getTimesPosix (for Posix) "
-                    "instead.");
+        pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+                    "scheduled for deprecation in August 2011. Please use " ~
+                    "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
 
         struct_stat64 statbuf = void;
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -892,8 +895,8 @@ else
 version(StdDdoc)
 {
     /++
-     $(RED Scheduled for deprecation. Please use
-     $(XREF file,timeLastModified) instead.)
+     $(RED Scheduled for deprecation in August 2011. Please use
+           $(D timeLastModified) instead.)
      +/
     d_time lastModified(in char[] name);
 }
@@ -902,8 +905,7 @@ else
     d_time lastModified(C)(in C[] name)
         if(is(Unqual!C == char))
     {
-        pragma(msg, "std.file.lastModified has been scheduled for deprecation. " ~
-                    "Please use timeLastModified instead.");
+        pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
 
         version(Windows)
         {
@@ -926,7 +928,8 @@ else
 version(StdDdoc)
 {
     /++
-        $(RED Scheduled for deprecation. Please use timeLastModified instead.)
+        $(RED Scheduled for deprecation in August 2011.
+              Please use $(D timeLastModified) instead.)
     +/
     d_time lastModified(in char[] name, d_time returnIfMissing);
 }
@@ -935,8 +938,7 @@ else
     d_time lastModified(C)(in C[] name, d_time returnIfMissing)
         if(is(Unqual!C == char))
     {
-        pragma(msg, "std.file.lastModified has been scheduled for deprecation. " ~
-                    "Please use timeLastModified instead.");
+        pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
 
         version(Windows)
         {
@@ -1311,30 +1313,37 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Please use isDir instead.)
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isDir) instead.)
  +/
-alias isDir isdir;
+version(StdDdoc) alias isDir isdir;
+else bool isdir(S)(in S name) if(is(Unqual!S == char[]))
+{
+    pragma(msg, softDeprec!("2.052", "August 2011", "isdir", "isDir"));
+    return name.isDir;
+}
 
 
 /++
     Returns whether the given file (or directory) is a file.
 
     On Windows, if a file is not a directory, then it's a file. So,
-    either isFile or isDir will return true for any given file.
+    either $(D isFile) or $(D isDir) will return true for any given file.
 
-    On Posix systems, if isFile is true, that indicates that the file is
-    a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both isFile and isDir to be false for a particular
-    file (in which case, it's a special file). You can use getAttributes
-    to get the attributes to figure out what type of special it is, or
-    you can use dirEntry to get at its statBuf, which is the result from
-    stat. In either case, see the stat man page for more details.
+    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
+    is a regular file (e.g. not a block not device). So, on Posix systems, it's
+    possible for both $(D isFile) and $(D isDir) to be $(D false) for a
+    particular file (in which case, it's a special file). You can use
+    $(D getAttributes) to get the attributes to figure out what type of special
+    it is, or you can use $(D dirEntry) to get at its $(D statBuf), which is the
+    result from $(D stat). In either case, see the stat man page for more
+    details.
 
     Params:
         name = The path to the file.
 
     Throws:
-        FileException if the given file does not exist.
+        $(D FileException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1345,13 +1354,9 @@ assert(!"/usr/share/include".isFile);
 @property bool isFile(in char[] name)
 {
     version(Windows)
-    {
         return !name.isDir;
-    }
     else version(Posix)
-    {
         return (getAttributes(name) & S_IFMT) == S_IFREG;
-    }
     else
         static assert(0, "Unsupported/Unknown OS");
 }
@@ -1383,12 +1388,12 @@ unittest
     Returns whether the given file attributes are for a file.
 
     On Windows, if a file is not a directory, it's a file. So,
-    either isFile or isDir will return true for any given file.
+    either $(D isFile) or $(D isDir) will return $(D true) for any given file.
 
-    On Posix systems, if isFile is true, that indicates that the file is
-    a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both isFile and isDir to be false for a particular
-    file (in which case, it's a special file). If a file is a special
+    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
+    is a regular file (e.g. not a block not device). So, on Posix systems,
+    it's possible for both $(D isFile) and $(D isDir) to be $(D false) for a
+    particular file (in which case, it's a special file). If a file is a special
     file, you can use the attributes to check what type of special
     file it is (see the stat man page for more information).
 
@@ -1450,11 +1455,15 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Please use isFile instead.)
-
-    Same is isFile.
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isFile) instead.)
  +/
-alias isFile isfile;
+version(StdDdoc) alias isFile isfile;
+else bool isfile(S)(in S name) if(is(Unqual!S == char[]))
+{
+    pragma(msg, softDeprec!("2.052", "August 2011", "isfile", "isFile"));
+    return name.isFile;
+}
 
 
 /++
@@ -1786,7 +1795,8 @@ assert(de2.isDir);
         @property bool isDir();
 
         /++
-            $(RED Scheduled for deprecation. Please use isDir instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D isDir) instead.)
 
             Same as isdir.
           +/
@@ -1818,7 +1828,8 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-            $(RED Scheduled for deprecation. Please use isFile instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D isFile) instead.)
 
             Same as isfile.
           +/
@@ -1838,7 +1849,8 @@ assert(!de2.isFile);
         @property ulong size();
 
         /++
-            $(RED Scheduled for deprecation. Please use timeCreated instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeCreated) instead.)
 
             Returns the creation time of the file represented by this DirEntry.
 
@@ -1867,7 +1879,8 @@ assert(!de2.isFile);
         @property SysTime timeStatusChanged();
 
         /++
-            $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeLastAccessed) instead.)
 
             Returns the time that the file represented by this DirEntry was last accessed.
 
@@ -1885,7 +1898,8 @@ assert(!de2.isFile);
           +/
         @property SysTime timeLastAccessed();
         /++
-            $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeLastModified) instead.)
 
             Returns the time that the file represented by this DirEntry was last modified.
           +/
@@ -1939,7 +1953,8 @@ else version(Windows)
         void init(C)(in C[] path)
             if(is(Unqual!C == char))
         {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
+            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
+                        "has been scheduled for deprecation in August 2011. " ~
                         "It was not documented before, and you shouldn't need it. " ~
                         "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
 
@@ -1949,7 +1964,8 @@ else version(Windows)
         void init(C)(in C[] path, in WIN32_FIND_DATA* fd)
             if(is(Unqual!C == char))
         {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
+            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
+                        "has been scheduled for deprecation in August 2011. " ~
                         "It was not documented before, and you shouldn't need it. " ~
                         "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
 
@@ -1959,7 +1975,8 @@ else version(Windows)
         void init(C)(in C[] path, in WIN32_FIND_DATAW* fd)
             if(is(Unqual!C == char))
         {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
+            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
+                        "has been scheduled for deprecation in August 2011. " ~
                         "It was not documented before, and you shouldn't need it. " ~
                         "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
 
@@ -2132,7 +2149,8 @@ else version(Posix)
         void init(C)(in C[] path)
             if(is(Unqual!C == char))
         {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
+            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
+                        "has been scheduled for deprecation in August 2011. " ~
                         "It was not documented before, and you shouldn't need it. " ~
                         "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
 
@@ -2142,7 +2160,8 @@ else version(Posix)
         void init(C)(in C[] path, core.sys.posix.dirent.dirent* fd)
             if(is(Unqual!C == char))
         {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
+            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
+                        "has been scheduled for deprecation in August 2011. " ~
                         "It was not documented before, and you shouldn't need it. " ~
                         "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
 
@@ -2183,8 +2202,7 @@ else version(Posix)
         // worthless, since the odds are high that it will be DT_UNKNOWN,
         // so it continues to be left undocumented.
         //
-        // For the moment, it's still here for backwards compatability, if
-        // nothing else. It may or may not be deprecated later.
+        // Scheduled for deprecation in August 2011.
         @property ubyte d_type()
         {
             return _dType;
@@ -2416,9 +2434,10 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation. Please use dirEntries instead.)
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(D dirEntries) instead.)
  *
- * For each file and directory DirEntry in pathname[],
+ * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
  *
  * Params:
@@ -2521,10 +2540,10 @@ void copy(in char[] from, in char[] to)
 version(StdDdoc)
 {
     /++
-        $(RED Scheduled for deprecation. Please use the version which takes
-              std.datetime.SysTime instead).
+        $(RED Scheduled for deprecation in August 2011. Please use the version
+              which takes $(XREF datetime, SysTime) instead).
 
-        Set access/modified times of file $(D_PARAM name).
+        Set access/modified times of file $(D name).
 
         Throws:
             $(D_PARAM FileException) on error.
@@ -2536,9 +2555,10 @@ else
     void setTimes(C)(in C[] name, d_time fta, d_time ftm)
         if(is(Unqual!C == char))
     {
-        pragma(msg, "The version of std.file.setTimes which takes std.date.d_time " ~
-                    "has been scheduled for deprecation. " ~
-                    "Please use the version which takes std.datetime.SysTime instead.");
+        pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
+                    "which takes std.date.d_time has been scheduled for deprecation " ~
+                    "in August 2011. Please use the version which takes " ~
+                    "std.datetime.SysTime instead.");
 
         version(Windows)
         {
@@ -2852,8 +2872,8 @@ struct DirIterator
                 {
                     assert(mode == SpanMode.depth);
 
-                    if(followSymLinks ? de.isdir
-                                      : isdir(de.linkAttributes))
+                    if(followSymLinks ? de.isDir
+                                      : isDir(de.linkAttributes))
                     {
                         _listDir(de.name, &callback);
                     }
@@ -3226,7 +3246,7 @@ import std.file;
 
 void main(string[] args)
 {
-    auto dirs = std.file.listdir(args[1]);
+    auto dirs = std.file.listDir(args[1]);
 
     foreach(d; dirs)
         writefln(d);
@@ -3250,9 +3270,7 @@ string[] listDir(in char[] pathname)
 }
 
 /++
-    $(RED Scheduled for deprecation. Please use listDir instead.)
-
-    Same is listDir.
+    $(RED Scheduled for deprecation in August 2011. Please use $(D listDir) instead.)
  +/
 alias listDir listdir;
 
@@ -3338,7 +3356,7 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
 
     bool callback(DirEntry* de)
     {
-        if(followSymLinks ? de.isdir : isDir(de.linkAttributes))
+        if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
@@ -3357,7 +3375,8 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
 
 
 /******************************************************
- * $(RED Scheduled for deprecation. Please use dirEntries instead.)
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
  * pass it to the callback delegate.
@@ -3528,4 +3547,11 @@ version(Windows)
 
         return sysTimeToDTime(sysTime);
     }
+}
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.file.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.file.%s instead.",
+                              vers, oldFunc, date, newFunc);
 }
