@@ -5678,7 +5678,7 @@ range that was moved.
 Example:
 ----
 int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-assert(a[0 .. $ - remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
+assert(a[0 .. remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
 ----
  */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
