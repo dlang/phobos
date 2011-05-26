@@ -279,7 +279,7 @@ private enum TaskStatus : ubyte {
 
 // This is conceptually the base class for all Task types.  The only Task type
 // that is public is the one actually named Task.  There is also a slightly
-// customized ParallelForeachTask and AMapTask.
+// customized ParallelForeachTask and AmapTask.
 private template BaseMixin(ubyte initTaskStatus) {
     AbstractTask* prev;
     AbstractTask* next;
@@ -545,8 +545,8 @@ struct Task(alias fun, Args...) {
             }
         }
 
-        pool.lock();
-        scope(exit) pool.unlock();
+        pool.waiterLock();
+        scope(exit) pool.waiterUnlock();
 
         while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {
             pool.waitUntilCompletion();
@@ -583,16 +583,17 @@ struct Task(alias fun, Args...) {
                 }
             }
 
-            pool.lock();
             AbstractTask* job;
-            try {
+            {
                 // Locking explicitly and calling popNoSync() because
                 // pop() waits on a condition variable if there are no Tasks
                 // in the queue.
+
+                pool.queueLock();
+                scope(exit) pool.queueUnlock();
                 job = pool.popNoSync();
-            } finally {
-                pool.unlock();
             }
+
 
             if(job !is null) {
 
@@ -880,7 +881,8 @@ private:
     PoolState status = PoolState.running;
     Condition workerCondition;
     Condition waiterCondition;
-    Mutex mutex;
+    Mutex queueMutex;
+    Mutex waiterMutex;  // For waiterCondition
 
     // The instanceStartIndex of the next instance that will be created.
     __gshared static size_t nextInstanceIndex = 1;
@@ -907,9 +909,9 @@ private:
 
         scope(exit) {
             if(!isSingleTask) {
-                lock();
+                waiterLock();
+                scope(exit) waiterUnlock();
                 notifyWaiters();
-                unlock();
             }
         }
 
@@ -938,10 +940,12 @@ private:
     // does more than one task.
     void workLoop() {
         // Initialize thread index.
-        lock();
-        threadIndex = nextThreadIndex;
-        nextThreadIndex++;
-        unlock();
+        {
+            queueLock();
+            scope(exit) queueUnlock();
+            threadIndex = nextThreadIndex;
+            nextThreadIndex++;
+        }
 
         while(atomicReadUbyte(status) != PoolState.stopNow) {
             AbstractTask* task = pop();
@@ -958,13 +962,13 @@ private:
 
     // Pop a task off the queue.
     AbstractTask* pop() {
-        lock();
+        queueLock();
+        scope(exit) queueUnlock();
         auto ret = popNoSync();
         while(ret is null && status == PoolState.running) {
             wait();
             ret = popNoSync();
         }
-        unlock();
         return ret;
     }
 
@@ -997,9 +1001,9 @@ private:
 
     // Push a task onto the queue.
     void abstractPut(AbstractTask* task) {
-        lock();
+        queueLock();
+        scope(exit) queueUnlock();
         abstractPutNoSync(task);
-        unlock();
     }
 
     void abstractPutNoSync(AbstractTask* task)
@@ -1023,6 +1027,19 @@ private:
         notify();
     }
 
+    void abstractPutGroupNoSync(AbstractTask* h, AbstractTask* t) {
+        if(head is null) {
+            head = h;
+            tail = t;
+        } else {
+            h.prev = tail;
+            tail.next = h;
+            tail = t;
+        }
+
+        notifyAll();
+    }
+
     void tryDeleteExecute(AbstractTask* toExecute) {
         if(isSingleTask) return;
 
@@ -1044,17 +1061,12 @@ private:
     }
 
     bool deleteItem(AbstractTask* item) {
-        lock();
-        auto ret = deleteItemNoSync(item);
-        unlock();
-        return ret;
+        queueLock();
+        scope(exit) queueUnlock();
+        return deleteItemNoSync(item);
     }
 
-    bool deleteItemNoSync(AbstractTask* item)
-    out {
-        assert(item.next is null);
-        assert(item.prev is null);
-    } body {
+    bool deleteItemNoSync(AbstractTask* item) {
         if(item.taskStatus != TaskStatus.notStarted) {
             return false;
         }
@@ -1087,21 +1099,20 @@ private:
         return true;
     }
 
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
-        if(this.size == 0) {
-            return rangeLen;
-        }
-
-        immutable size_t fourSize = 4 * (this.size + 1);
-        return (rangeLen / fourSize) + ((rangeLen % fourSize == 0) ? 0 : 1);
+    void queueLock() {
+        if(!isSingleTask) queueMutex.lock();
     }
 
-    void lock() {
-        if(!isSingleTask) mutex.lock();
+    void queueUnlock() {
+        if(!isSingleTask) queueMutex.unlock();
     }
 
-    void unlock() {
-        if(!isSingleTask) mutex.unlock();
+    void waiterLock() {
+        if(!isSingleTask) waiterMutex.lock();
+    }
+
+    void waiterUnlock() {
+        if(!isSingleTask) waiterMutex.unlock();
     }
 
     void wait() {
@@ -1164,6 +1175,16 @@ private:
     }
 
 public:
+    // This is used in parallel_algorithm but is too unstable to document
+    // as public API.
+    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
+        if(this.size == 0) {
+            return rangeLen;
+        }
+
+        immutable size_t fourSize = 4 * (this.size + 1);
+        return (rangeLen / fourSize) + ((rangeLen % fourSize == 0) ? 0 : 1);
+    }
 
     /**
     Default constructor that initializes a $(D TaskPool) with
@@ -1191,9 +1212,10 @@ public:
             nextInstanceIndex += nWorkers;
         }
 
-        mutex = new Mutex(this);
-        workerCondition = new Condition(mutex);
-        waiterCondition = new Condition(mutex);
+        queueMutex = new Mutex(this);
+        waiterMutex = new Mutex();
+        workerCondition = new Condition(queueMutex);
+        waiterCondition = new Condition(waiterMutex);
 
         pool = new Thread[nWorkers];
         foreach(ref poolThread; pool) {
@@ -1873,6 +1895,14 @@ public:
     serially.  However, for many practical purposes floating point addition
     can be treated as associative.
 
+    Note that, since $(D functions) are assumed to be associative, additional
+    optimizations are made to the serial portion of the reduction algorithm.
+    These take advantage of the instruction level parallelism of modern CPUs,
+    in addition to the thread-level parallelism that the rest of this
+    module exploits.  This can lead to better than linear speedups relative
+    to $(XREF algorithm, reduce), especially for fine-grained benchmarks
+    like dot products.
+
     An explicit seed may be provided as the first argument.  If
     provided, it is used as the seed for all work units and for the final
     reduction of results from all work units.  Therefore, if it is not the
@@ -1884,10 +1914,12 @@ public:
     //
     // Timings on an Athlon 64 X2 dual core machine:
     //
-    // Parallel reduce:                     100 milliseconds
-    // Using std.algorithm.reduce instead:  169 milliseconds
+    // Parallel reduce:                     72 milliseconds
+    // Using std.algorithm.reduce instead:  181 milliseconds
     auto nums = iota(10_000_000.0f);
-    auto sumSquares = taskPool.reduce!"a + b * b"(0.0, nums);
+    auto sumSquares = taskPool.reduce!"a + b"(
+        0.0, std.algorithm.map!"a * a"(nums)
+    );
     ---
 
     If no explicit seed is provided, the first element of each work unit
@@ -1976,7 +2008,6 @@ public:
                     size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
 
-
                 enforce(!range.empty,
                     "Cannot reduce an empty range with first element as start value.");
 
@@ -1988,8 +2019,75 @@ public:
             alias typeof(seed) E;
             alias typeof(range) R;
 
+            E reduceOnRange
+            (R range, size_t lowerBound, size_t upperBound) {
+                // This is for exploiting instruction level parallelism by
+                // using multiple accumulator variables within each thread,
+                // since we're assuming functions are associative anyhow.
+
+                // This is so that loops can be unrolled automatically.
+                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
+                enum nILP = ilpTuple.length;
+                immutable subSize = (upperBound - lowerBound) / nILP;
+
+                if(subSize <= 1) {
+                    // Handle as a special case.
+                    static if(explicitSeed) {
+                        E result = seed;
+                    } else {
+                        E result = makeStartValue(range[lowerBound]);
+                        lowerBound++;
+                    }
+
+                    foreach(i; lowerBound..upperBound) {
+                        result = fun(result, range[i]);
+                    }
+
+                    return result;
+                }
+
+                assert(subSize > 1);
+                E[nILP] results;
+                size_t[nILP] offsets;
+
+                foreach(i; ilpTuple) {
+                    offsets[i] = lowerBound + subSize * i;
+
+                    static if(explicitSeed) {
+                        results[i] = seed;
+                    } else {
+                        results[i] = makeStartValue(range[offsets[i]]);
+                        offsets[i]++;
+                    }
+                }
+
+                immutable nLoop = subSize - (!explicitSeed);
+                foreach(i; 0..nLoop) {
+                    foreach(j; ilpTuple) {
+                        results[j] = fun(results[j], range[offsets[j]]);
+                        offsets[j]++;
+                    }
+                }
+
+                // Finish the remainder.
+                foreach(i; nILP * subSize + lowerBound..upperBound) {
+                    results[$ - 1] = fun(results[$ - 1], range[i]);
+                }
+
+                foreach(i; ilpTuple[1..$]) {
+                    results[0] = finishFun(results[0], results[i]);
+                }
+
+                return results[0];
+            }
+
+            immutable len = range.length;
+            if(len == 0) {
+                return seed;
+            }
+
             if(this.size == 0) {
-                return std.algorithm.reduce!(fun)(seed, range);
+                return finishFun(seed, reduceOnRange(range, 0, len));
             }
 
             // Unlike the rest of the functions here, I can't use the Task object
@@ -1998,7 +2096,6 @@ public:
             // be applied on the results of these to get a final result, but
             // it can't be evaluated out of order.
 
-            immutable len = range.length;
             if(workUnitSize > len) {
                 workUnitSize = len;
             }
@@ -2007,16 +2104,7 @@ public:
                 ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
-            static E reduceOnRange
-            (E seed, R range, size_t lowerBound, size_t upperBound) {
-                E result = seed;
-                foreach(i; lowerBound..upperBound) {
-                    result = fun(result, range[i]);
-                }
-                return result;
-            }
-
-            alias Task!(reduceOnRange, E, R, size_t, size_t) RTask;
+            alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
             RTask[] tasks;
 
             enum MAX_STACK = 512;
@@ -2029,29 +2117,49 @@ public:
                 tasks = new RTask[nWorkUnits];
             }
 
+            // Hack to take the address of a nested function w/o
+            // making a closure.
+            static auto scopedAddress(D)(scope D del) { return del; }
+
             size_t curPos = 0;
             void useTask(ref RTask task) {
-                task.args[3] = min(len, curPos + workUnitSize);  // upper bound.
-                task.args[1] = range;  // range
-
-                static if(explicitSeed) {
-                    task.args[2] = curPos; // lower bound.
-                    task.args[0] = seed;
-                } else {
-                    task.args[2] = curPos + 1; // lower bound.
-                    task.args[0] = makeStartValue(range[curPos]);
-                }
+                task.pool = this;
+                task._args[0] = scopedAddress(&reduceOnRange);
+                task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
+                task._args[1] = range;  // range
+                task._args[2] = curPos; // lower bound.
 
                 curPos += workUnitSize;
-                put(task);
             }
 
             foreach(ref task; tasks) {
                 useTask(task);
             }
 
+            foreach(i; 1..tasks.length - 1) {
+                tasks[i].next = cast(AbstractTask*) &tasks[i + 1];
+                tasks[i + 1].prev = cast(AbstractTask*) &tasks[i];
+            }
+
+            if(tasks.length > 1) {
+                queueLock();
+                scope(exit) queueUnlock();
+
+                abstractPutGroupNoSync(
+                    cast(AbstractTask*) &tasks[1],
+                    cast(AbstractTask*) &tasks[$ - 1]
+                );
+            }
+
+            try {
+                (cast(AbstractTask*) &tasks[0]).job();
+            } catch(Throwable e) {
+                tasks[0].exception = e;
+            }
+            tasks[0].taskStatus = TaskStatus.done;
+
             // Try to execute each of these in the current thread
-            foreach(ref task; tasks) {
+            foreach(ref task; tasks[1..$]) {
                 tryDeleteExecute( cast(AbstractTask*) &task);
             }
 
@@ -2362,8 +2470,8 @@ public:
     need the results.
      */
     void stop() @trusted {
-        lock();
-        scope(exit) unlock();
+        queueLock();
+        scope(exit) queueUnlock();
         atomicSetUbyte(status, PoolState.stopNow);
         notifyAll();
     }
@@ -2410,8 +2518,8 @@ public:
     not block.
      */
     void finish() @trusted {
-        lock();
-        scope(exit) unlock();
+        queueLock();
+        scope(exit) queueUnlock();
         atomicCasUbyte(status, PoolState.running, PoolState.finishing);
         notifyAll();
     }
@@ -2495,15 +2603,15 @@ public:
            setter has no effect.
     */
     bool isDaemon() @property @trusted {
-        lock();
-        scope(exit) unlock();
+        queueLock();
+        scope(exit) queueUnlock();
         return (size == 0) ? true : pool[0].isDaemon();
     }
 
     /// Ditto
     void isDaemon(bool newVal) @property @trusted {
-        lock();
-        scope(exit) unlock();
+        queueLock();
+        scope(exit) queueUnlock();
         foreach(thread; pool) {
             thread.isDaemon = newVal;
         }
@@ -2662,8 +2770,8 @@ if(isRandomAccessRange!R && hasLength!R) {
             return;
         }
 
-        pool.lock();
-        scope(exit) pool.unlock();
+        pool.waiterLock();
+        scope(exit) pool.waiterUnlock();
 
         // No trying to execute here b/c the function that waits on this task
         // wants to recycle it as soon as it finishes.
@@ -2726,8 +2834,8 @@ if(!isRandomAccessRange!R || !hasLength!R) {
             return;
         }
 
-        pool.lock();
-        scope(exit) pool.unlock();
+        pool.waiterLock();
+        scope(exit) pool.waiterUnlock();
 
         // Don't try to execute in this thread b/c the function that waits on
         // this task wants to recycle it as soon as it finishes.
@@ -2742,13 +2850,13 @@ if(!isRandomAccessRange!R || !hasLength!R) {
     }
 }
 
-private struct AMapTask(alias fun, R, ReturnType)
+private struct AmapTask(alias fun, R, ReturnType)
 if(isRandomAccessRange!R && hasLength!R) {
     static void impl(void* myTask) {
-        auto myCastedTask = cast(AMapTask!(fun, R, ReturnType)*) myTask;
+        auto myCastedTask = cast(AmapTask!(fun, R, ReturnType)*) myTask;
 
         foreach(i; myCastedTask.lowerBound..myCastedTask.upperBound) {
-            myCastedTask.results[i] = uFun(myCastedTask.range[i]);
+            myCastedTask.results[i] = fun(myCastedTask.range[i]);
         }
 
         // Nullify stuff, make GC's life easier.
@@ -2761,7 +2869,6 @@ if(isRandomAccessRange!R && hasLength!R) {
     TaskPool pool;
 
     // More specific stuff.
-    alias unaryFun!fun uFun;
     R range;
     alias ElementType!R E;
     ReturnType results;
@@ -2774,8 +2881,8 @@ if(isRandomAccessRange!R && hasLength!R) {
             return;
         }
 
-        pool.lock();
-        scope(exit) pool.unlock();
+        pool.waiterLock();
+        scope(exit) pool.waiterUnlock();
 
          while(!done()) {
             pool.waitUntilCompletion();
@@ -2808,16 +2915,53 @@ private mixin template ResubmittingTasks() {
     Throwable firstException, lastException;
     ubyte doneSubmitting;
 
+    // Each struct that mixes this in has an array of tasks.  This array should
+    // have four elements for each worker thread plus four for the submitter
+    // thread.
+    enum slotsPerThread = 4;
+
     void submitResubmittingTask(AbstractTask* toSubmit) {
         // Synchronizing on the pool to prevent some other thread from deleting
         // the job before it's submitted.
-        pool.lock();
+        pool.queueLock();
+        scope(exit) pool.queueUnlock();
         toSubmit.taskStatus = TaskStatus.notStarted;
         pool.abstractPutNoSync(toSubmit);
-        pool.unlock();
     }
 
     void submitJobs() {
+        AbstractTask* head;  // For abstractPutGroupNoSync
+        AbstractTask* tail;  // For abstactPutGroupNoSync
+
+        void doGroupSubmit() {
+            if(head is null) return;
+            pool.queueLock();
+            scope(exit) pool.queueUnlock();
+            auto t = head;
+
+            while(t !is null) {
+                assert(t.taskStatus == TaskStatus.done);
+                t.taskStatus = TaskStatus.notStarted;
+                t = t.next;
+            }
+
+            assert(head.prev is null);
+            assert(tail.next is null);
+            pool.abstractPutGroupNoSync(head, tail);
+        }
+
+        AbstractTask* first;  // Do in this thread.
+
+        void doFirst() {
+            if(first is null) return;
+            try {
+                first.job();
+            } catch(Throwable e) {
+                first.exception = e;
+            }
+            atomicSetUbyte(first.taskStatus, TaskStatus.done);
+        }
+
         // Search for slots.
         foreach(ref task; tasks) {
             try {
@@ -2834,16 +2978,40 @@ private mixin template ResubmittingTasks() {
             }
 
             useTask(task);
+            assert(task.next is null);
+            assert(task.prev is null);
+
+            if(first is null) {
+                first = cast(AbstractTask*) &task;
+                first.taskStatus = TaskStatus.inProgress;
+            } else if(head is null) {
+                head = tail = cast(AbstractTask*) &task;
+            } else {
+                auto at = cast(AbstractTask*) &task;
+                tail.next = at;
+                at.prev = tail;
+                tail = at;
+            }
+
             if(emptyCheck()) {
+                doGroupSubmit();
                 atomicSetUbyte(doneSubmitting, 1);
+                doFirst();
                 return;
             }
         }
 
+        doGroupSubmit();
         submitResubmittingTask(cast(AbstractTask*) &submitNextBatch);
+        doFirst();
     }
 
     void submitAndExecute() {
+        if(tasks.length == 0) {
+            assert(range.empty);
+            return;
+        }
+
         // See documentation for BaseMixin.shouldSetDone.
         submitNextBatch.shouldSetDone = false;
         submitNextBatch.isScoped = false;
@@ -2888,7 +3056,7 @@ private struct AmapImpl(alias fun, Range, Buf) {
     Buf buf;
     size_t curPos;
     size_t len;
-    alias AMapTask!(fun, Range, typeof(buf)) MTask;
+    alias AmapTask!(fun, Range, typeof(buf)) MTask;
     MTask[] tasks;
 
     this(TaskPool pool, size_t workUnitSize, Range range, Buf buf) {
@@ -2897,14 +3065,15 @@ private struct AmapImpl(alias fun, Range, Buf) {
         this.range = range;
         this.buf = buf;
         submitNextBatch = scopedTask(&submitJobs);
-
-        // Two tasks for every worker thread, plus two for the submitting
-        // thread.
-        tasks.length = pool.size * 2 + 2;
         len = range.length;  // In case evaluating length is expensive.
+
+        tasks.length = min(
+            (pool.size + 1) * slotsPerThread,
+            len / workUnitSize + (len % workUnitSize > 0)
+        );
     }
 
-    // This funciton resets the struct for reuse.  It's called from Map.
+    // This function resets the struct for reuse.  It's called from Map.
     // This has to be done carefully to avoid touching submitNextBatch,
     // since there's a slight chance it could still be referenced from the
     // previous use.
@@ -2916,6 +3085,12 @@ private struct AmapImpl(alias fun, Range, Buf) {
         firstException = null;
         lastException = null;
         doneSubmitting = 0;
+
+        tasks.length = min(
+            pool.size * 4 + 4,
+            len / workUnitSize + (len % workUnitSize > 0)
+        );
+
         tasks[] = MTask.init;
     }
 
@@ -2931,8 +3106,6 @@ private struct AmapImpl(alias fun, Range, Buf) {
         task.results = buf;
         task.pool = pool;
         curPos += workUnitSize;
-
-        submitResubmittingTask(cast(AbstractTask*) &task);
     }
 }
 
@@ -2953,11 +3126,16 @@ if(randLen!Range) {
         this.range = range;
         this.dg = dg;
         submitNextBatch = scopedTask(&submitJobs);
+        len = range.length;  // In case evaluating length is expensive.
 
         // Two tasks for every worker thread, plus two for the submitting
         // thread.
-        tasks.length = pool.size * 2 + 2;
-        len = range.length;  // In case evaluating length is expensive.
+        // Four tasks for every worker thread, plus four for the submitting
+        // thread.
+        tasks.length = min(
+            (pool.size + 1) * slotsPerThread,
+            len / workUnitSize + (len % workUnitSize > 0)
+        );
     }
 
     void useTask(ref PTask task) {
@@ -2968,8 +3146,6 @@ if(randLen!Range) {
         task.runMe = dg;
         task.pool = pool;
         curPos += workUnitSize;
-
-        submitResubmittingTask(cast(AbstractTask*) &task);
     }
 
     bool emptyCheck() {
@@ -3000,10 +3176,7 @@ if(!randLen!Range) {
         this.range = range;
         this.dg = dg;
         submitNextBatch = scopedTask(&submitJobs);
-
-        // Two tasks for every worker thread, plus two for the submitting
-        // thread.
-        tasks.length = pool.size * 2 + 2;
+        tasks.length = (pool.size + 1) * slotsPerThread;
     }
 
     void useTask(ref PTask task) {
@@ -3049,7 +3222,6 @@ if(!randLen!Range) {
 
         task.startIndex = this.startIndex;
         this.startIndex += task.elements.length;
-        submitResubmittingTask(cast(AbstractTask*) &task);
     }
 
     bool emptyCheck() {
@@ -3260,6 +3432,15 @@ unittest {
     assert(nums == nums2);
     assert(nums == [0,1,2,3,4]);
 
+    auto logs = new double[1_000_000];
+    foreach(i, ref elem; poolInstance.parallel(logs)) {
+        elem = log(i + 1.0);
+    }
+
+    foreach(i, elem; logs) {
+        assert(approxEqual(elem, cast(double) log(i + 1)));
+    }
+
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
     assert(poolInstance.amap!"a * a"([1,2,3,4,5], new long[5]) == [1,4,9,16,25]);
     assert(poolInstance.amap!("a * a", "-a")([1,2,3]) ==
@@ -3277,12 +3458,17 @@ unittest {
     poolInstance.amap!"a * a"([1,2,3,4,5], 4, buf);
     assert(buf == [1,4,9,16,25]);
 
+    assert(poolInstance.reduce!"a + b"([1]) == 1);
     assert(poolInstance.reduce!"a + b"([1,2,3,4]) == 10);
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4]) == 10);
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4], 1) == 10);
     assert(poolInstance.reduce!(min, max)([1,2,3,4]) == tuple(1, 4));
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
         tuple(10, 24));
+
+    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
+    assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
     // Test worker-local storage.
     auto wl = poolInstance.workerLocalStorage(0);
