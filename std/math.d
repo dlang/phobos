@@ -2305,9 +2305,22 @@ struct FloatingPointControl
         allExceptions      = severeExceptions | underflowException
                              | inexactException | denormalizedException,
     };
+
+    alias uint PrecisionMode;
+
+    /** IEEE precision modes.
+     * The default mode is realPrecision.
+     */
+    enum : PrecisionMode
+    {
+        realPrecision   = 0x0300,
+        doublePrecision = 0x0200,
+        singlePrecision = 0x0000,
+    };
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
     enum ushort ROUNDING_MASK = 0xC00;
+    enum ushort PRECISION_MASK = 0x300;
 public:
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
     void enableExceptions(uint exceptions)
@@ -2327,6 +2340,12 @@ public:
         ushort old = getControlState();
         setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
+    //// Change the floating-point hardware precision mode
+    void precision(PrecisionMode newMode)
+    {
+        ushort old = getControlState();
+        setControlState((old & ~PRECISION_MASK) | (newMode & PRECISION_MASK));
+    }
     /// Return the exceptions which are currently enabled (unmasked)
     static uint enabledExceptions()
     {
@@ -2336,6 +2355,11 @@ public:
     static RoundingMode rounding()
     {
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+    }
+    /// Return the currently active precision mode
+    static PrecisionMode precision()
+    {
+        return cast(PrecisionMode)(getControlState() & PRECISION_MASK);
     }
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
     ~this()
@@ -2421,12 +2445,18 @@ unittest
             (FloatingPointControl.divByZeroException
           | FloatingPointControl.overflowException));
 
+        ctrl.precision = FloatingPointControl.singlePrecision;
+        assert(FloatingPointControl.precision
+          == FloatingPointControl.singlePrecision);
+
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
     assert(FloatingPointControl.rounding
        == FloatingPointControl.roundToNearest);
     assert(FloatingPointControl.enabledExceptions() ==0);
+    assert(FloatingPointControl.precision()
+       == FloatingPointControl.realPrecision));
 }
 
 
