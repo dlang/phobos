@@ -22,7 +22,7 @@
 
 ## Copy command
 
-CP=cp
+CP=copy
 
 ## Directory where dmd has been installed
 

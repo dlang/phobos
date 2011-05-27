@@ -2250,18 +2250,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         return true;
                     if (trymatch(pc,memory[lastState..$]))
                         return true;
-                    const sz = src - ss;
-                    const p = &input[src-1];
-                    if (sz >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-                        src--;
-                    else if (sz >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-                        src -= 2;
-                    else if (sz >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-                        src -= 3;
-                    else if (sz >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-                        src -= 4;
-                    else
-                        throw new UtfException("Invalid UTF character at end of string");
+                    src -= strideBack(input,src);
                 }
                 break;
 
