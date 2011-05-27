@@ -167,7 +167,7 @@ private immutable ubyte[256] UTF8stride =
  * Throws:
  *  UtfException if s[i] is not the start of the UTF-8 sequence.
  */
-uint stride(in char[] s, size_t i)
+uint stride(const(char)[] s, size_t i)
 {
     immutable result = UTF8stride[s[i]];
     if (result == 0xFF)
@@ -176,13 +176,47 @@ uint stride(in char[] s, size_t i)
 }
 
 /**
+ * strideBack() returns the length of a UTF-8 sequence ending at index $(D_PARAM i)
+ * in string $(D_PARAM s).
+ * Returns:
+ *  The number of bytes in the UTF-8 sequence.
+ * Throws:
+ *  UtfException if s[i-1] is not the end of the UTF-8 sequence.
+ */
+uint strideBack(const(char)[] s, size_t i)
+{
+    if (i >= 1 && (s[i-1] & 0b1100_0000) != 0b1000_0000)
+        return 1;
+    else if (i >= 2 && (s[i-2] & 0b1100_0000) != 0b1000_0000)
+        return 2;
+    else if (i >= 3 && (s[i-3] & 0b1100_0000) != 0b1000_0000)
+        return 3;
+    else if (i >= 4 && (s[i-4] & 0b1100_0000) != 0b1000_0000)
+        return 4;
+    else
+        throw new UtfException("Invalid UTF character at end of string");
+}
+
+/**
  * stride() returns the length of a UTF-16 sequence starting at index $(D_PARAM i)
  * in string $(D_PARAM s).
  */
-nothrow uint stride(in wchar[] s, size_t i)
+nothrow uint stride(const(wchar)[] s, size_t i)
 {
     immutable uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+/**
+ * strideBack() returns the length of a UTF-16 sequence preceding ending at index $(D_PARAM i)
+ * in string $(D_PARAM s).
+ */
+nothrow uint strideBack(const(wchar)[] s, size_t i)
+{
+    if (i <= 1)
+        return 1; // or check for incorrect surrogate pair?
+    immutable c = s[i - 2];
+    return 1 + (c >= 0xD800 && c <= 0xDBFF);
 }
 
 /**
@@ -190,7 +224,17 @@ nothrow uint stride(in wchar[] s, size_t i)
  * in string $(D_PARAM s).
  * Returns: The return value will always be 1.
  */
-nothrow uint stride(in dchar[] s, size_t i)
+nothrow uint stride(const(dchar)[] s, size_t i)
+{
+    return 1;
+}
+
+/**
+ * strideBack() returns the length of a UTF-32 sequence ending at index $(D_PARAM i)
+ * in string $(D_PARAM s).
+ * Returns: The return value will always be 1.
+ */
+nothrow uint strideBack(const(dchar)[] s, size_t i)
 {
     return 1;
 }

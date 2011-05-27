@@ -379,7 +379,7 @@ Returns the number of parenthesized captures
                 {
                     *cast(uint*)&prog[1] = counter;
                     counter++;
-                    nCounters = max(nCounters,counter);
+                    nCounters = max(nCounters, counter);
                     prog.popFrontN(1 + 2*uint.sizeof);
                 }
                 break;
@@ -1013,7 +1013,6 @@ Returns the number of parenthesized captures
                         return 0;
                     }
                     r.setbitmax(c2);
-                    //writefln("c = %x, c2 = %x",c,c2);
                     for (; c <= c2; c++)
                         r.bits[c] = 1;
                     rs = RS.start;
@@ -1318,7 +1317,7 @@ Returns the number of parenthesized captures
 
                 case REanystar:
                 case REanystarg:
-                    writefln("\tREanystar%s",prog[pc] == REanystarg ? "g":"");
+                    writefln("\tREanystar%s", prog[pc] == REanystarg ? "g":"");
                     pc++;
                     break;
 
@@ -1637,7 +1636,7 @@ void main()
 
         Range opIndex(size_t n)
         {
-            assert(n < length, text("length = ",length, ", requested match = ", n));
+            assert(n < length, text("length = ", length, ", requested match = ", n));
             return input[matches[n].startIdx .. matches[n].endIdx];
         }
     }
@@ -1756,7 +1755,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                             format,
                             replacement);
                 }
-                result = std.string.replace(result,slice,replacement);
+                result = std.string.replace(result, slice, replacement);
                 break;
             }
 +/
@@ -1797,7 +1796,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     return false;                   // fail
                 }
                 if (pmatch[0].endIdx == pmatch[0].startIdx)
-                    startindex += std.utf.stride(input,pmatch[0].endIdx);
+                    startindex += std.utf.stride(input, pmatch[0].endIdx);
             }
             else
                startindex = 0;
@@ -1923,7 +1922,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
  *      0 no match
  */
 
-    private bool trymatch(uint pc,ubyte[] memory)
+    private bool trymatch(uint pc, ubyte[] memory)
     {
         /*
          * All variables related to position in input are size_t
@@ -1950,10 +1949,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
             curCounter = tail.counter;
             lastState -= tail.size;
             debug(std_regex)
-                writefln("\tBacktracked pc=>%d src='%s'",pc,input[src..$]);
+                writefln("\tBacktracked pc=>%d src='%s'", pc, input[src..$]);
             auto matchPtr = cast(regmatch_t*)&memory[lastState];
             pmatch[1..matchesToSave+1]  = matchPtr[0..matchesToSave];
-            pmatch[matchesToSave+1..$] = regmatch_t(0,0);//remove any stale matches here
+            pmatch[matchesToSave+1..$] = regmatch_t(0, 0);//remove any stale matches here
             if (!counters.empty)
             {
                 auto counterPtr = cast(uint*)(matchPtr+matchesToSave);
@@ -2227,9 +2226,9 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     if (!(engine.attributes & engine.REA.dotmatchlf)
                             && input[src] == '\n')
                         break;
-                    if (trymatch(pc,memory[lastState..$]))
+                    if (trymatch(pc, memory[lastState..$]))
                         return true;
-                    src += std.utf.stride(input,src);
+                    src += std.utf.stride(input, src);
                 }
                 break;
 
@@ -2241,27 +2240,16 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     src = input.length;
                 else
                 {
-                    auto p = memchr(&input[src],'\n',input.length-src);
+                    auto p = memchr(&input[src],'\n', input.length-src);
                     src = p ? p - &input[src] : input.length;
                 }
                 while (src > ss)
                 {
-                    if (trymatch(pc,memory[lastState..$]))
+                    if (trymatch(pc, memory[lastState..$]))
                         return true;
-                    if (trymatch(pc,memory[lastState..$]))
+                    if (trymatch(pc, memory[lastState..$]))
                         return true;
-                    const sz = src - ss;
-                    const p = &input[src-1];
-                    if (sz >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-                        src--;
-                    else if (sz >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-                        src -= 2;
-                    else if (sz >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-                        src -= 3;
-                    else if (sz >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-                        src -= 4;
-                    else
-                        throw new UtfException("Invalid UTF character at end of string");
+                    src -= strideBack(input, src);
                 }
                 break;
 
@@ -2333,10 +2321,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex)
                 {
                     if (n % 2)
-                        writefln("\tmatch # %d at %d .. %d",n/2,
-                                 pmatch[n/2].startIdx,pmatch[n/2].endIdx);
+                        writefln("\tmatch # %d at %d .. %d", n/2,
+                                 pmatch[n/2].startIdx, pmatch[n/2].endIdx);
                 }
-                matchesToSave = max(n/2,matchesToSave);
+                matchesToSave = max(n/2, matchesToSave);
                 pc += cast(uint)uint.sizeof+1;
                 break;
 
@@ -2344,12 +2332,12 @@ Returns $(D hit) (converted to $(D string) if necessary).
             case engine.REneglookahead:
                 // len, ()
                 debug(std_regex)
-                    writef("\t%s",engine.program[pc] == engine.RElookahead ?
+                    writef("\t%s", engine.program[pc] == engine.RElookahead ?
                         "RElookahead" : "REneglookahead");
                 auto len = *cast(uint*)&engine.program[pc+1];
                 pop = pc + 1 + cast(uint)uint.sizeof;
                 bool invert = engine.program[pc] == engine.REneglookahead ? true : false;
-                auto tmp_match = trymatch(pop,memory[lastState..$]);
+                auto tmp_match = trymatch(pop, memory[lastState..$]);
                 //inverse the match if negative lookahead
                 tmp_match = tmp_match ^ invert;
                 if (!tmp_match)
@@ -2461,7 +2449,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 auto so = pmatch[n + 1].startIdx;
                 auto eo = pmatch[n + 1].endIdx;
                 auto len = eo - so;
-				debug(std_regex) writefln("len \t%d",len);
+				debug(std_regex) writefln("len \t%d", len);
                 if (src + len > input.length)
                     goto Lnomatch;
 
@@ -3351,13 +3339,13 @@ unittest
                 i = !m.empty;
                 //writefln("\ttest() = %d", i);
                 //fflush(stdout);
-                assert((c == 'y') ? i : !i,text("Match failed pattern: ",tvd.pattern));
+                assert((c == 'y') ? i : !i, text("Match failed pattern: ", tvd.pattern));
                 if (c == 'y')
                 {
-                    auto result = produceExpected(m,to!(String)(tvd.format));
+                    auto result = produceExpected(m, to!(String)(tvd.format));
                     assert(result == to!String(tvd.replace),
-                           text("Mismatch pattern: ",tvd.pattern," expected:",
-                                tvd.replace," vs ",result));
+                           text("Mismatch pattern: ", tvd.pattern," expected:",
+                                tvd.replace, " vs ", result));
                 }
 
             }
@@ -3461,10 +3449,10 @@ unittest
 unittest
 {
     auto nogreed = regex("<packet.*?/packet>");
-    assert(match("<packet>text</packet><packet>text</packet>",nogreed).hit
+    assert(match("<packet>text</packet><packet>text</packet>", nogreed).hit
            == "<packet>text</packet>");
     auto greed =  regex("<packet.*/packet>");
-    assert(match("<packet>text</packet><packet>text</packet>",greed).hit
+    assert(match("<packet>text</packet><packet>text</packet>", greed).hit
            == "<packet>text</packet><packet>text</packet>");
 
 }
