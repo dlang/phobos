@@ -1691,22 +1691,21 @@ version(Windows) string getcwd()
     // A bit odd API: calling GetCurrentDirectory(0, null) returns
     // length including the \0, whereas calling with non-zero
     // params returns length excluding the \0.
-    if (useWfuncs)
+    if (std.__fileinit.useWfuncs)
     {
         auto dir =
             new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return to!string(dir);
+        auto n = GetCurrentDirectoryW(dir.length, dir.ptr);
+        enforce(n && n < dir.length, "getcwd");
+        return std.conv.to!string(dir[0 .. n]);
     }
     else
     {
-        auto dirA =
+        auto dir =
             new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        GetCurrentDirectoryA(dirA.length, dirA.ptr);
-        string dir = fromMBSz(cast(immutable)dirA.ptr);
-        enforce(dir.length, "getcwd");
-        return dir;
+        auto n = GetCurrentDirectoryA(dir.length, dir.ptr);
+        enforce(n && n < dir.length, "getcwd");
+        return fromMBSz(cast(immutable)dir.ptr);
     }
 }
 
