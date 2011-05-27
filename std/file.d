@@ -1691,7 +1691,7 @@ version(Windows) string getcwd()
     // A bit odd API: calling GetCurrentDirectory(0, null) returns
     // length including the \0, whereas calling with non-zero
     // params returns length excluding the \0.
-    if (std.__fileinit.useWfuncs)
+    if (useWfuncs)
     {
         auto dir =
             new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
