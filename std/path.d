@@ -917,7 +917,7 @@ bool pathCharMatch(dchar c1, dchar c2)
 
 
 
-/** Matches a pattern against a filename.
+/** Matches a pattern against a path.
 
     Some characters of pattern have special a meaning (they are
     $(I meta-characters)) and can't be escaped. These are:
@@ -936,11 +936,11 @@ bool pathCharMatch(dchar c1, dchar c2)
     )
 
     Internally individual character comparisons are done calling
-    pathCharMatch(), so its rules apply here too. Note that path
+    pathCharMatch(), so its rules apply here too. Note that directory
     separators and dots don't stop a meta-character from matching
-    further portions of the filename.
+    further portions of the path.
 
-    Returns: $(D true) if pattern matches filename, $(D false) otherwise.
+    Returns: $(D true) if pattern matches path, $(D false) otherwise.
 
     Examples:
     -----
@@ -960,7 +960,7 @@ bool pathCharMatch(dchar c1, dchar c2)
     }
     -----
  */
-bool glob(const(char)[] filename, const(char)[] pattern)
+bool glob(const(char)[] path, const(char)[] pattern)
 in
 {
     // Verify that pattern[] is valid
@@ -969,7 +969,7 @@ in
 }
 body
 {
-	size_t ni; // current character in filename
+	size_t ni; // current character in path
 
 	foreach (pi; 0 .. pattern.length)
 	{
@@ -979,24 +979,24 @@ body
             case '*':
                 if (pi + 1 == pattern.length)
                     return true;
-                foreach (j; ni .. filename.length)
+                foreach (j; ni .. path.length)
                 {
-                    if (glob(filename[j .. filename.length],
+                    if (glob(path[j .. path.length],
                                     pattern[pi + 1 .. pattern.length]))
                         return true;
                 }
                 return false;
 
             case '?':
-                if (ni == filename.length)
+                if (ni == path.length)
                     return false;
                 ni++;
                 break;
 
             case '[': {
-                if (ni == filename.length)
+                if (ni == path.length)
                     return false;
-                auto nc = filename[ni];
+                auto nc = path[ni];
                 ni++;
                 auto not = false;
                 pi++;
@@ -1042,7 +1042,7 @@ body
 
                     if (pi0 == pi)
                     {
-                        if (glob(filename[ni..$], pattern[piRemain..$]))
+                        if (glob(path[ni..$], pattern[piRemain..$]))
                         {
                             return true;
                         }
@@ -1050,7 +1050,7 @@ body
                     }
                     else
                     {
-                        if (glob(filename[ni..$],
+                        if (glob(path[ni..$],
                                         pattern[pi0..pi-1]
                                         ~ pattern[piRemain..$]))
                         {
@@ -1066,16 +1066,16 @@ body
                 return false;
 
             default:
-                if (ni == filename.length)
+                if (ni == path.length)
                     return false;
-                if (!pathCharMatch(pc, filename[ni]))
+                if (!pathCharMatch(pc, path[ni]))
                     return false;
                 ni++;
                 break;
 	    }
 	}
-    assert(ni >= filename.length);
-	return ni == filename.length;
+    assert(ni >= path.length);
+	return ni == path.length;
 }
 
 unittest
