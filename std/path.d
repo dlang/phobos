@@ -1,13 +1,14 @@
 // Written in the D programming language.
 
-/** Proposal for a new std.path.
+/** Proposal for a new $(D std.path).
 
     This module is used to parse file names. All the operations work
     only on strings; they don't perform any input/output operations.
+    ($(D expandTilde()) is an exception to this rule.)
     This means that if a path contains a directory name with a dot,
-    functions like extension() will work with it just as if it was a file.
-    To differentiate these cases, use the std.file module first (i.e.
-    std.file.isDir()).
+    functions like $(D extension()) will work with it just as if it was a file.
+    To differentiate these cases, use the $(D std.file) module first (i.e.
+   $(D  std.file.isDir())).
 
     Authors:
         Lars Tandle Kyllingstad,
@@ -761,6 +762,9 @@ string toAbsolute(string path)
         $(LI multiple consecutive backslashes are reduced to just one)
         $(LI .\ and ..\ are resolved)
     )
+    Note that this function does not perform tilde expansion, as
+    this may be a very expensive operation.  Use $(D expandTilde())
+    for this.
 */
 string toCanonical(string path)
 {
@@ -1122,65 +1126,62 @@ unittest
 
 
 
-/**
- * Performs tilde expansion in paths.
- *
- * There are two ways of using tilde expansion in a path. One
- * involves using the tilde alone or followed by a path separator. In
- * this case, the tilde will be expanded with the value of the
- * environment variable <i>HOME</i>.  The second way is putting
- * a username after the tilde (i.e. <tt>~john/Mail</tt>). Here,
- * the username will be searched for in the user database
- * (i.e. <tt>/etc/passwd</tt> on Unix systems) and will expand to
- * whatever path is stored there.  The username is considered the
- * string after the tilde ending at the first instance of a path
- * separator.
- *
- * Note that using the <i>~user</i> syntax may give different
- * values from just <i>~</i> if the environment variable doesn't
- * match the value stored in the user database.
- *
- * When the environment variable version is used, the path won't
- * be modified if the environment variable doesn't exist or it
- * is empty. When the database version is used, the path won't be
- * modified if the user doesn't exist in the database or there is
- * not enough memory to perform the query.
- *
- * Returns: inputPath with the tilde expanded, or just inputPath
- * if it could not be expanded.
- * For Windows, expandTilde() merely returns its argument inputPath.
- *
- * Throws: std.outofmemory.OutOfMemoryException if there is not enough
- * memory to perform
- * the database lookup for the <i>~user</i> syntax.
- *
- * Examples:
- * -----
- * import std.path;
- *
- * void process_file(string filename)
- * {
- *     string path = expandTilde(filename);
- *     ...
- * }
- * -----
- *
- * -----
- * import std.path;
- *
- * string RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
- * string RESOURCE_DIR;    // This gets expanded in main().
- *
- * int main(string[] args)
- * {
- *     RESOURCE_DIR = expandTilde(RESOURCE_DIR_TEMPLATE);
- *     ...
- * }
- * -----
- * Version: Available since v0.143.
- * Authors: Grzegorz Adam Hankiewicz, Thomas Kühne.
- */
+/** Performs tilde expansion in paths.
 
+    There are two ways of using tilde expansion in a path. One
+    involves using the tilde alone or followed by a path separator. In
+    this case, the tilde will be expanded with the value of the
+    environment variable $(D HOME).  The second way is putting
+    a username after the tilde (i.e. $(D ~john/Mail)). Here,
+    the username will be searched for in the user database
+    (i.e. $(D /etc/passwd) on Unix systems) and will expand to
+    whatever path is stored there.  The username is considered the
+    string after the tilde ending at the first instance of a path
+    separator.
+
+    Note that using the $(D ~user) syntax may give different
+    values from just $(D ~) if the environment variable doesn't
+    match the value stored in the user database.
+
+    When the environment variable version is used, the path won't
+    be modified if the environment variable doesn't exist or it
+    is empty. When the database version is used, the path won't be
+    modified if the user doesn't exist in the database or there is
+    not enough memory to perform the query.
+
+    Returns:
+    inputPath with the tilde expanded, or just inputPath
+    if it could not be expanded.
+    For Windows, expandTilde() merely returns its argument inputPath.
+
+    Throws:
+    OutOfMemoryException if there is not enough memory to perform
+    the database lookup for the $(D ~user) syntax.
+
+    Examples:
+    -----
+    import std.path;
+
+    void process_file(string filename)
+    {
+        string path = expandTilde(filename);
+        ...
+    }
+    -----
+
+    -----
+    import std.path;
+
+    string RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
+    string RESOURCE_DIR;    // This gets expanded in main().
+
+    int main(string[] args)
+    {
+        RESOURCE_DIR = expandTilde(RESOURCE_DIR_TEMPLATE);
+        ...
+    }
+    -----
+*/
 string expandTilde(string inputPath)
 {
     version(Posix)
