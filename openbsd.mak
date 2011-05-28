@@ -264,13 +264,13 @@ $(GC_OBJS):
 #	cd internal/gc
 #	make -f $(MAKEFILE) dmgc.a
 #	cd ../..
-	make DMD=$(DMD) MODEL=$(MODEL) -C ./internal/gc -f $(MAKEFILE)
+	gmake DMD=$(DMD) MODEL=$(MODEL) -C ./internal/gc -f $(MAKEFILE)
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
 #	make -f $(MAKEFILE)
 #	cd ../../..
-	make -C ./etc/c/zlib -f $(MAKEFILE) MODEL=$(MODEL)
+	gmake -C ./etc/c/zlib -f $(MAKEFILE) MODEL=$(MODEL)
 
 ###
 
