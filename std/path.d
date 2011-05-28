@@ -869,31 +869,28 @@ else version (Posix) alias std.algorithm.cmp fcmp;
 
 
 
-/*********************************
- * Matches filename characters.
- *
- * Under Windows, the comparison is done ignoring case. Under Linux
- * an exact match is performed.
- *
- * Returns: non zero if c1 matches c2, zero otherwise.
- *
- * Throws: Nothing.
- *
- * Examples:
- * -----
- * version(Windows)
- * {
- *     fncharmatch('a', 'b') => 0
- *     fncharmatch('A', 'a') => 1
- * }
- * version(Posix)
- * {
- *     fncharmatch('a', 'b') => 0
- *     fncharmatch('A', 'a') => 0
- * }
- * -----
+/** Matches path characters.
+
+    Under Windows, the comparison is done ignoring case. Under Linux
+    an exact match is performed.
+
+    Returns: $(D true) if c1 matches c2, $(D false) otherwise.
+
+    Examples:
+    -----
+    version(Windows)
+    {
+        assert (!pathCharMatch('a', 'b'));
+        assert (pathCharMatch('A', 'a'));
+    }
+    version(Posix)
+    {
+        assert (!pathCharMatch('a', 'b'));
+        assert (!pathCharMatch('A', 'a'));
+    }
+    -----
  */
-bool fncharmatch(dchar c1, dchar c2)
+bool pathCharMatch(dchar c1, dchar c2)
 {
     version (Windows)
     {
@@ -939,7 +936,7 @@ bool fncharmatch(dchar c1, dchar c2)
     )
 
     Internally individual character comparisons are done calling
-    fncharmatch(), so its rules apply here too. Note that path
+    pathCharMatch(), so its rules apply here too. Note that path
     separators and dots don't stop a meta-character from matching
     further portions of the filename.
 
@@ -1014,7 +1011,7 @@ body
                     pc = pattern[pi];
                     if (pc == ']')
                         break;
-                    if (!anymatch && fncharmatch(nc, pc))
+                    if (!anymatch && pathCharMatch(nc, pc))
                         anymatch = true;
                     pi++;
                 }
@@ -1071,7 +1068,7 @@ body
             default:
                 if (ni == filename.length)
                     return false;
-                if (!fncharmatch(pc, filename[ni]))
+                if (!pathCharMatch(pc, filename[ni]))
                     return false;
                 ni++;
                 break;
