@@ -1695,17 +1695,17 @@ version(Windows) string getcwd()
     {
         auto dir =
             new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return to!string(dir);
+        auto n = GetCurrentDirectoryW(dir.length, dir.ptr);
+        enforce(n && n < dir.length, "getcwd");
+        return std.conv.to!string(dir[0 .. n]);
     }
     else
     {
         auto dir =
             new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return assumeUnique(dir);
+        auto n = GetCurrentDirectoryA(dir.length, dir.ptr);
+        enforce(n && n < dir.length, "getcwd");
+        return fromMBSz(cast(immutable)dir.ptr);
     }
 }
 
