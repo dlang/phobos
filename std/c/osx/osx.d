@@ -315,10 +315,10 @@ extern(C)
 
     struct dirent
     {
-        uint d_ino;             // this is int on some linuxes
-        off_t d_off;
+        uint d_ino;
         ushort d_reclen;
-        ubyte d_type;           // this field isn't there on some linuxes
+        ubyte d_type;
+        ubyte d_namlen;
         char[256] d_name;
     }
 
