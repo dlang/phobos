@@ -868,6 +868,7 @@ else version (Posix) alias std.algorithm.cmp fcmp;
 
 
 
+
 /*********************************
  * Matches filename characters.
  *
@@ -892,7 +893,6 @@ else version (Posix) alias std.algorithm.cmp fcmp;
  * }
  * -----
  */
-
 bool fncharmatch(dchar c1, dchar c2)
 {
     version (Windows)
@@ -917,53 +917,53 @@ bool fncharmatch(dchar c1, dchar c2)
     }
 }
 
-/************************************
- * Matches a pattern against a filename.
- *
- * Some characters of pattern have special a meaning (they are
- * <i>meta-characters</i>) and <b>can't</b> be escaped. These are:
- * <p><table>
- * <tr><td><b>*</b></td>
- *     <td>Matches 0 or more instances of any character.</td></tr>
- * <tr><td><b>?</b></td>
- *     <td>Matches exactly one instances of any character.</td></tr>
- * <tr><td><b>[</b><i>chars</i><b>]</b></td>
- *     <td>Matches one instance of any character that appears
- *     between the brackets.</td></tr>
- * <tr><td><b>[!</b><i>chars</i><b>]</b></td>
- *     <td>Matches one instance of any character that does not appear
- *     between the brackets after the exclamation mark.</td></tr>
- * </table><p>
- * Internally individual character comparisons are done calling
- * fncharmatch(), so its rules apply here too. Note that path
- * separators and dots don't stop a meta-character from matching
- * further portions of the filename.
- *
- * Returns: non zero if pattern matches filename, zero otherwise.
- *
- * See_Also: fncharmatch().
- *
- * Throws: Nothing.
- *
- * Examples:
- * -----
- * version(Windows)
- * {
- *     fnmatch("foo.bar", "*") => 1
- *     fnmatch(r"foo/foo\bar", "f*b*r") => 1
- *     fnmatch("foo.bar", "f?bar") => 0
- *     fnmatch("Goo.bar", "[fg]???bar") => 1
- *     fnmatch(r"d:\foo\bar", "d*foo?bar") => 1
- * }
- * version(Posix)
- * {
- *     fnmatch("Go*.bar", "[fg]???bar") => 0
- *     fnmatch("/foo*home/bar", "?foo*bar") => 1
- *     fnmatch("foobar", "foo?bar") => 1
- * }
- * -----
+
+
+
+/** Matches a pattern against a filename.
+
+    Some characters of pattern have special a meaning (they are
+    $(I meta-characters)) and can't be escaped. These are:
+
+    $(BOOKTABLE,
+    $(TR $(TD $(D *))
+         $(TD Matches 0 or more instances of any character.))
+    $(TR $(TD $(D ?))
+         $(TD Matches exactly one instances of any character.))
+    $(TR $(TD $(D [)$(I chars)$(D ]))
+         $(TD Matches one instance of any character that appears
+              between the brackets.))
+    $(TR $(TD $(D [!)$(I chars)$(D ]))
+         $(TD Matches one instance of any character that does not
+              appear between the brackets after the exclamation mark.))
+    )
+
+    Internally individual character comparisons are done calling
+    fncharmatch(), so its rules apply here too. Note that path
+    separators and dots don't stop a meta-character from matching
+    further portions of the filename.
+
+    Returns: $(D true) if pattern matches filename, $(D false) otherwise.
+
+    Examples:
+    -----
+    version(Windows)
+    {
+        assert (glob("foo.bar", "*"));
+        assert (glob(r"foo/foo\bar", "f*b*r"));
+        assert (!glob("foo.bar", "f?bar"));
+        assert (glob("Goo.bar", "[fg]???bar"));
+        assert (glob(r"d:\foo\bar", "d*foo?bar"));
+    }
+    version(Posix)
+    {
+        assert (!glob("Go*.bar", "[fg]???bar"));
+        assert (glob("/foo*home/bar", "?foo*bar"));
+        assert (glob("foobar", "foo?bar"));
+    }
+    -----
  */
-bool fnmatch(const(char)[] filename, const(char)[] pattern)
+bool glob(const(char)[] filename, const(char)[] pattern)
 in
 {
     // Verify that pattern[] is valid
@@ -984,7 +984,7 @@ body
                     return true;
                 foreach (j; ni .. filename.length)
                 {
-                    if (fnmatch(filename[j .. filename.length],
+                    if (glob(filename[j .. filename.length],
                                     pattern[pi + 1 .. pattern.length]))
                         return true;
                 }
@@ -1045,7 +1045,7 @@ body
 
                     if (pi0 == pi)
                     {
-                        if (fnmatch(filename[ni..$], pattern[piRemain..$]))
+                        if (glob(filename[ni..$], pattern[piRemain..$]))
                         {
                             return true;
                         }
@@ -1053,7 +1053,7 @@ body
                     }
                     else
                     {
-                        if (fnmatch(filename[ni..$],
+                        if (glob(filename[ni..$],
                                         pattern[pi0..pi-1]
                                         ~ pattern[piRemain..$]))
                         {
@@ -1083,48 +1083,47 @@ body
 
 unittest
 {
-    debug(path) printf("path.fnmatch.unittest\n");
+    version (Windows) assert(glob("foo", "Foo"));
+    version (POSIX) assert(!glob("foo", "Foo"));
+    assert(glob("foo", "*"));
+    assert(glob("foo.bar", "*"));
+    assert(glob("foo.bar", "*.*"));
+    assert(glob("foo.bar", "foo*"));
+    assert(glob("foo.bar", "f*bar"));
+    assert(glob("foo.bar", "f*b*r"));
+    assert(glob("foo.bar", "f???bar"));
+    assert(glob("foo.bar", "[fg]???bar"));
+    assert(glob("foo.bar", "[!gh]*bar"));
 
-    version (Win32)
-        assert(fnmatch("foo", "Foo"));
-    version (linux)
-	assert(!fnmatch("foo", "Foo"));
-    assert(fnmatch("foo", "*"));
-    assert(fnmatch("foo.bar", "*"));
-    assert(fnmatch("foo.bar", "*.*"));
-    assert(fnmatch("foo.bar", "foo*"));
-    assert(fnmatch("foo.bar", "f*bar"));
-    assert(fnmatch("foo.bar", "f*b*r"));
-    assert(fnmatch("foo.bar", "f???bar"));
-    assert(fnmatch("foo.bar", "[fg]???bar"));
-    assert(fnmatch("foo.bar", "[!gh]*bar"));
+    assert(!glob("foo", "bar"));
+    assert(!glob("foo", "*.*"));
+    assert(!glob("foo.bar", "f*baz"));
+    assert(!glob("foo.bar", "f*b*x"));
+    assert(!glob("foo.bar", "[gh]???bar"));
+    assert(!glob("foo.bar", "[!fg]*bar"));
+    assert(!glob("foo.bar", "[fg]???baz"));
 
-    assert(!fnmatch("foo", "bar"));
-    assert(!fnmatch("foo", "*.*"));
-    assert(!fnmatch("foo.bar", "f*baz"));
-    assert(!fnmatch("foo.bar", "f*b*x"));
-    assert(!fnmatch("foo.bar", "[gh]???bar"));
-    assert(!fnmatch("foo.bar", "[!fg]*bar"));
-    assert(!fnmatch("foo.bar", "[fg]???baz"));
+    assert(glob("foo.bar", "{foo,bif}.bar"));
+    assert(glob("bif.bar", "{foo,bif}.bar"));
 
-    assert(fnmatch("foo.bar", "{foo,bif}.bar"));
-    assert(fnmatch("bif.bar", "{foo,bif}.bar"));
+    assert(glob("bar.foo", "bar.{foo,bif}"));
+    assert(glob("bar.bif", "bar.{foo,bif}"));
 
-    assert(fnmatch("bar.foo", "bar.{foo,bif}"));
-    assert(fnmatch("bar.bif", "bar.{foo,bif}"));
+    assert(glob("bar.fooz", "bar.{foo,bif}z"));
+    assert(glob("bar.bifz", "bar.{foo,bif}z"));
 
-    assert(fnmatch("bar.fooz", "bar.{foo,bif}z"));
-    assert(fnmatch("bar.bifz", "bar.{foo,bif}z"));
+    assert(glob("bar.foo", "bar.{biz,,baz}foo"));
+    assert(glob("bar.foo", "bar.{biz,}foo"));
+    assert(glob("bar.foo", "bar.{,biz}foo"));
+    assert(glob("bar.foo", "bar.{}foo"));
 
-    assert(fnmatch("bar.foo", "bar.{biz,,baz}foo"));
-    assert(fnmatch("bar.foo", "bar.{biz,}foo"));
-    assert(fnmatch("bar.foo", "bar.{,biz}foo"));
-    assert(fnmatch("bar.foo", "bar.{}foo"));
-
-    assert(fnmatch("bar.foo", "bar.{ar,,fo}o"));
-    assert(fnmatch("bar.foo", "bar.{,ar,fo}o"));
-    assert(fnmatch("bar.o", "bar.{,ar,fo}o"));
+    assert(glob("bar.foo", "bar.{ar,,fo}o"));
+    assert(glob("bar.foo", "bar.{,ar,fo}o"));
+    assert(glob("bar.o", "bar.{,ar,fo}o"));
 }
+
+
+
 
 /**
  * Performs tilde expansion in paths.
@@ -1401,4 +1400,5 @@ alias setExtension addExt;
 alias isAbsolute isabs;
 alias toAbsolute rel2abs;
 alias joinPath join;
+alias glob fnmatch;
 
