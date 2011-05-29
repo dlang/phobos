@@ -51,7 +51,7 @@ pragma(lib, "advapi32.lib");
 
 //import std.windows.error_codes;
 //import std.windows.types;
-private import std.string;
+private import std.string, std.exception;
 private import std.c.windows.windows;
 import std.c.stdio;
 //private import std.windows.exceptions;
@@ -348,6 +348,42 @@ extern (Windows)
  * Private utility functions
  */
 
+shared static this() {
+    //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
+    //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
+    extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
+    BOOL bIsWow64;
+    isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
+    
+    advapi32Mutex = new shared(Object)();
+}
+
+private {
+    immutable shared bool isWow64;
+    shared Object advapi32Mutex;
+    shared HMODULE hAdvapi32 = null;
+    ///Returns true, if we are in WoW64 mode and have WoW64 flags
+    bool testFor64(ref REGSAM samDesired)
+    {
+        if(!(samDesired & REGSAM.KEY_WOW64_RES)) //do nothing if no WoW64 flags
+            return false;
+        if(!isWow64) //remove WoW64 flags for compatibility with Windows 2000
+            samDesired &= ~REGSAM.KEY_WOW64_RES;
+        return isWow64;
+    }
+}
+
+///It will free Advapi32.dll, which may be loaded for RegDeleteKeyEx function
+void freeAdvapi32()
+{
+    synchronized(advapi32Mutex)
+        if(hAdvapi32) {
+            RegDeleteKeyExA = null;
+            hAdvapi32 = null;
+            enforce(FreeLibrary(hAdvapi32));
+        }
+}
+
 private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
     switch(endian)
@@ -468,24 +504,10 @@ in
 }
 body
 {
+    testFor64(samDesired);
     return RegCreateKeyExA( hkey, toStringz(subKey), RESERVED, RESERVED
                         ,   dwOptions, samDesired, lpsa, hkeyResult
                         ,   disposition);
-}
-
-HMODULE hAdvapi32 = null;
-
-void loadAdvapi32()
-{
-    hAdvapi32 = LoadLibraryA("Advapi32.dll");
-    if(hAdvapi32)
-        RegDeleteKeyExA = GetProcAddress(hAdvapi32 , "RegDeleteKeyExA");
-}
-
-void freeAdvapi32()
-{
-    FreeLibrary(hAdvapi32);
-    hAdvapi32 = null;
 }
 
 private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey, in REGSAM samDesired)
@@ -496,12 +518,15 @@ in
 }
 body
 {
-    if(samDesired)
+    if(testFor64(samDesired))
     {
-        if(!hAdvapi32)
-            loadAdvapi32();
-        if(RegDeleteKeyExA)
-            return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
+        if(!RegDeleteKeyExA)
+            synchronized(advapi32Mutex)
+            {
+                hAdvapi32 = enforce(LoadLibraryA("Advapi32.dll"));
+                RegDeleteKeyExA = enforce(GetProcAddress(hAdvapi32 , "RegDeleteKeyExA"));
+            }
+        return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
     }
     return RegDeleteKeyA(hkey, toStringz(subKey));
 }
@@ -661,6 +686,7 @@ in
 }
 body
 {
+    testFor64(samDesired);
     return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, samDesired, hkeyResult);
 }
 
@@ -1097,7 +1123,7 @@ public:
     /// \param name The name of the subkey to create. May not be null
     /// \return The created key
     /// \note If the key cannot be created, a RegistryException is thrown.
-    Key createKey(string name, REGSAM access)
+    Key createKey(string name, REGSAM access = REGSAM.KEY_ALL_ACCESS)
     {
         if( null is name ||
             0 == name.length)
@@ -1144,22 +1170,11 @@ public:
 
     /// Returns the named sub-key of this key
     ///
-    /// \param name The name of the subkey to create. May not be null
-    /// \return The created key
-    /// \note If the key cannot be created, a RegistryException is thrown.
-    /// \note This function is equivalent to calling CreateKey(name, REGSAM.KEY_ALL_ACCESS), and returns a key with all access
-    Key createKey(string name)
-    {
-        return createKey(name, cast(REGSAM)REGSAM.KEY_ALL_ACCESS);
-    }
-
-    /// Returns the named sub-key of this key
-    ///
     /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
     /// \param access The desired access; one of the REGSAM enumeration
     /// \return The aquired key.
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
-    Key getKey(string name, REGSAM access)
+    Key getKey(string name, REGSAM access = REGSAM.KEY_READ)
     {
         if( null is name ||
             0 == name.length)
@@ -1199,17 +1214,6 @@ public:
                 }
             }
         }
-    }
-
-    /// Returns the named sub-key of this key
-    ///
-    /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
-    /// \return The aquired key.
-    /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
-    /// \note This function is equivalent to calling GetKey(name, REGSAM.KEY_READ), and returns a key with read/enum access
-    Key getKey(string name)
-    {
-        return getKey(name, cast(REGSAM)(REGSAM.KEY_READ));
     }
 
     /// Deletes the named key
