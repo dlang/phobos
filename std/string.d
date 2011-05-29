@@ -1363,7 +1363,7 @@ C[] chomp(C)(C[] s)
 }
 
 /// Ditto
-C[] chomp(C, C1)(C[] s, in C1[] delimiter)
+C[] chomp(C, C1)(C[] s, const(C1)[] delimiter)
 {
     if (endsWith(s, delimiter))
     {
