@@ -167,7 +167,8 @@ STD_NET_MODULES = $(addprefix std/net/, isemail)
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl)
+        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl \
+		  sqlite3)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
