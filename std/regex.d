@@ -345,7 +345,112 @@ Returns the number of parenthesized captures
         debug(std_regex) writefln("error: %s", msg);
         throw new Exception(msg);
     }
+    //adjust jumps, after removing instructions at 'place'
+    void fixup(ubyte[] prog, size_t place, uint change)
+    {
+        size_t len;
+        ushort* pu;
+        uint* dest;
 
+        for (size_t pc=0;pc<prog.length;)
+        {
+            switch (prog[pc])
+            {
+            case REend:
+                return;
+
+            case REcounter: //jump forward
+                if(pc < place)
+                {
+                    dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
+                    if (pc + *dest > place)
+                        *dest -= change; 
+                }
+                pc += 1 + 2*uint.sizeof;
+                break;
+
+            case REloop, REloopg: //jump back
+                if (pc > place)
+                {
+                    dest = cast(uint *)&prog[pc + 1 + 2*uint.sizeof];
+                    if (pc + *dest > place)
+                        *dest += change;
+                }
+                pc += 1 + 3*uint.sizeof;
+                break;
+                    
+            case REneglookahead://jump or call forward
+            case RElookahead:
+            case REor: 
+            case REgoto:
+                if (pc < place)
+                {
+                    dest = cast(uint *)&prog[pc+1];
+                    if (pc + *dest > place)
+                        *dest -= change;
+                }
+                pc += 1 + uint.sizeof;
+                break;
+                
+            case REret:
+            case REanychar:
+            case REanystarg: 
+            case REanystar:
+            case REbol:
+            case REeol:
+            case REwordboundary:
+            case REnotwordboundary:
+            case REdigit:
+            case REnotdigit:
+            case REspace:
+            case REnotspace:
+            case REword:
+            case REnotword:
+                pc++;
+                break;
+                
+            case REchar:
+            case REichar:
+            case REbackref:
+                pc += 2;
+                break;
+
+            case REdchar:
+            case REidchar:
+                pc += 1 + dchar.sizeof;
+                break;
+
+            case REstring:
+            case REistring:
+                len = *cast(size_t *)&prog[pc + 1];
+                assert(len % E.sizeof == 0);
+                pc += 1 + size_t.sizeof + len;
+                break;
+
+            case REtestbit:
+            case REbit:
+            case REnotbit:
+                pu = cast(ushort *)&prog[pc + 1];
+                len = pu[1];
+                pc += 1 + 2 * ushort.sizeof + len;
+                break;
+
+            case RErange:
+            case REnotrange:
+                len = *cast(uint *)&prog[pc + 1];
+                pc += 1 + uint.sizeof + len;
+                break;
+
+            case REsave:
+                pc += 1 + uint.sizeof;
+                break;
+
+            default:
+                writeln("%d",prog[pc]);
+                assert(0);
+            }
+        }
+    }
     //Fixup counter numbers, simplify instructions
     private void postprocess(ubyte[] prog)
     {
@@ -353,40 +458,40 @@ Returns the number of parenthesized captures
         size_t len;
         ushort* pu;
         nCounters = 0;
-
+        size_t pc = 0;
         for (;;)
         {
-            switch (prog.front)
+            switch (prog[pc])
             {
             case REend:
                 return;
 
             case REcounter:
-                size_t offs = 1 + 2*uint.sizeof;
+                size_t offs = pc + 1 + 2*uint.sizeof;
                 bool anyloop = counter == 0 && prog[offs] == REanychar
                     && (prog[offs+1] == REloop || prog[offs+1] == REloopg);
                 uint* puint = cast(uint*)&prog[offs+2];
                 if (anyloop && puint[0] == 0 && puint[1] == inf)
                 {
-                    prog[0] = prog[offs+1] == REloop ? REanystar : REanystarg;
-                    std.array.replaceInPlace(
-                            prog, 1,
-                            2*(1 + uint.sizeof) + 1 + 3*uint.sizeof,
-                            cast(ubyte[])[]);
-                    prog.popFront();
+                    prog[pc] = prog[offs+1] == REloop ? REanystar : REanystarg;
+                    uint change = 2*(1 + uint.sizeof) + 1 + 3*uint.sizeof - 1;
+                    std.array.replaceInPlace(prog, pc + 1, 
+                                             pc + change + 1, cast(ubyte[])[]);
+                    fixup(prog, pc, change);
+                    pc++;
                 }
                 else
                 {
-                    *cast(uint*)&prog[1] = counter;
+                    *cast(uint *)&prog[pc+1] = counter;
                     counter++;
                     nCounters = max(nCounters, counter);
-                    prog.popFrontN(1 + 2*uint.sizeof);
+                    pc += 1 + 2*uint.sizeof;
                 }
                 break;
 
             case REloop, REloopg:
                 counter--;
-                prog.popFrontN(1 + 3*uint.sizeof);
+                pc += 1 + 3*uint.sizeof;
                 break;
 
             case REret:
@@ -401,57 +506,52 @@ Returns the number of parenthesized captures
             case REnotspace:
             case REword:
             case REnotword:
-                prog.popFront();
+                pc++;
                 break;
 
             case REbackref:
-                prog.popFrontN(2);
-                break;
-
             case REchar:
             case REichar:
-                prog.popFrontN(2);
+                pc += 2;
                 break;
 
             case REdchar:
             case REidchar:
-                prog.popFrontN(1+dchar.sizeof);
+                pc += 1 + dchar.sizeof;
                 break;
 
             case REstring:
             case REistring:
-                len = *cast(size_t *)&prog[1];
+                len = *cast(size_t *)&prog[pc+1];
                 assert(len % E.sizeof == 0);
-                prog.popFrontN(1 + size_t.sizeof + len);
+                pc += 1 + size_t.sizeof + len;
                 break;
 
             case REtestbit:
             case REbit:
             case REnotbit:
-                pu = cast(ushort *)&prog[1];
+                pu = cast(ushort *)&prog[pc+1];
                 len = pu[1];
-                prog.popFrontN(1 + 2 * ushort.sizeof + len);
+                pc += 1 + 2 * ushort.sizeof + len;
                 break;
 
             case RErange:
             case REnotrange:
-                len = *cast(uint *)&prog[1];
-                prog.popFrontN(1 + uint.sizeof + len);
+                len = *cast(uint *)&prog[pc+1];
+                pc += 1 + uint.sizeof + len;
                 break;
-
+                
+            case REneglookahead:
+            case RElookahead:
             case REor:
             case REgoto:
-                prog.popFrontN(1 + uint.sizeof);
+                pc += 1 + uint.sizeof;
                 break;
 
             case REsave:
-                prog.popFrontN(1 + uint.sizeof);
+                pc += 1 + uint.sizeof;
                 break;
 
-            case REneglookahead:
-            case RElookahead:
-                prog.popFrontN(1 + uint.sizeof);
-                break;
             default:
                 assert(0);
             }
@@ -1459,7 +1559,7 @@ struct RegexMatch(Range = string)
     // Engine
     alias .Regex!(Unqual!E) Regex;
     private alias Regex.regmatch_t regmatch_t;
-    enum stackSize = 640*1024;
+    enum stackSize = 32*1024;
 /**
 Get or set the engine of the match.
 */
@@ -1965,7 +2065,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             auto stateSize = (counters.empty ? 0 : (curCounter+1)*uint.sizeof)
                     + matchesToSave*regmatch_t.sizeof;
             if (memory.length < lastState + stateSize + StateTail.sizeof)
-                memory.length += memory.length/2; //reallocates on heap
+                memory.length += memory.length; //reallocates on heap
             auto matchPtr = cast(regmatch_t*)&memory[lastState];
             matchPtr[0..matchesToSave] = pmatch[1..matchesToSave+1];
             if (!counters.empty)
@@ -2240,7 +2340,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     src = input.length;
                 else
                 {
-                    auto p = memchr(&input[src],'\n', input.length-src);
+                    auto p = memchr(input.ptr+src,'\n', input.length-src);
                     src = p ? p - &input[src] : input.length;
                 }
                 while (src > ss)
@@ -3488,4 +3588,13 @@ unittest
     ];
     assert(pres == array(retro(heads)));
     assert(posts == tails);
+}
+
+//issue 6076
+//regression on .*
+unittest 
+{
+    auto re = regex("c.*|d");
+    auto m = match("mm", re);
+    assert(m.empty);          
 }
