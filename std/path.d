@@ -52,12 +52,12 @@ version(Windows)
     enum string pardir = "..";      /// String representing the parent directory.
     
     static assert(sep.length == 1 && altsep.length == 1);
-    private bool isSepOrAltSep(Char)(Char ch) if (isSomeChar!Char) {
+    private bool isSep(dchar ch) {
         return (ch == sep[0]) | (ch == altsep[0]);
     }
     
-    private bool isSepOrAltSepOrDriveSep(Char)(Char ch) if (isSomeChar!Char) {
-        return isSepOrAltSep(ch) | (ch == ':');
+    private bool isSepOrDriveSep(dchar ch) {
+        return isSep(ch) | (ch == ':');
     }
 }
 version(Posix)
@@ -78,7 +78,7 @@ version(Posix)
     enum string pardir = "..";      /// String representing the parent directory.
     
     static assert(sep.length == 1 && altsep.length == 0);
-    private bool isSep(Char)(Char ch) if (isSomeChar!Char) {
+    private bool isSep(dchar ch) {
         return ch == sep[0];
     }
 }
@@ -137,7 +137,7 @@ string getExt(string fullname)
         i--;
         version(Windows)
         {
-            if (isSepOrAltSepOrDriveSep(fullname[i]))
+            if (isSepOrDriveSep(fullname[i]))
                 break;
         }
         else version(Posix)
@@ -232,7 +232,7 @@ string getName(string fullname)
         i--;
         version(Windows)
         {
-            if (isSepOrAltSepOrDriveSep(fullname[i]))
+            if (isSepOrDriveSep(fullname[i]))
                 break;
         }
         else version(Posix)
@@ -311,7 +311,7 @@ body
     {
         version(Windows)
         {
-            if (isSepOrAltSepOrDriveSep(fullname[i - 1]))
+            if (isSepOrDriveSep(fullname[i - 1]))
                 break;
         }
         else version(Posix)
@@ -758,7 +758,7 @@ bool isabs(in char[] path)
     auto d = getDrive(path);
     version (Windows)
     {
-        return d.length < path.length && isSepOrAltSep(path[d.length]);
+        return d.length < path.length && isSep(path[d.length]);
     }
     else version (Posix)
     {
@@ -892,16 +892,16 @@ string join(const(char)[] p1, const(char)[] p2, const(char)[][] more...)
             {
                 p = cast(string) (p1 ~ p2);
             }
-            else if (isSepOrAltSep(p2[0]))
+            else if (isSep(p2[0]))
             {
                 if (d1.length == 0)
                     p = p2.idup;
-                else if (isSepOrAltSep(p1[$ - 1]))
+                else if (isSep(p1[$ - 1]))
                     p = cast(string) (p1 ~ p2[1 .. $]);
                 else
                     p = cast(string) (p1 ~ p2);
             }
-            else if (isSepOrAltSep(p1[$ - 1]))
+            else if (isSep(p1[$ - 1]))
             {
                 p = cast(string) (p1 ~ p2);
             }
