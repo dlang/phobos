@@ -37,10 +37,9 @@ extern (C) {
 /*
 ** CAPI3REF: Compile-Time Library Version Numbers
 */
-string SQLITE_VERSION           = "3.7.6.2";
-const int SQLITE_VERSION_NUMBER = 3007006;
-enum
-string SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52af1225eb7cb5e";
+enum SQLITE_VERSION           = "3.7.6.2";
+enum SQLITE_VERSION_NUMBER    = 3007006;
+enum SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52af1225eb7cb5e";
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -64,7 +63,7 @@ int sqlite3_threadsafe();
 /*
 ** CAPI3REF: Database Connection Handle
 */
-struct sqlite3{};
+struct sqlite3;
 
 alias long sqlite3_int64;
 alias ulong sqlite3_uint64;
@@ -266,7 +265,7 @@ enum
 /*
 ** CAPI3REF: Mutex Handle
 */
-struct sqlite3_mutex {};
+struct sqlite3_mutex;
 
 /*
 ** CAPI3REF: OS Interface Object
@@ -573,7 +572,7 @@ const (void*) sqlite3_errmsg16(sqlite3*);
 /*
 ** CAPI3REF: SQL Statement Object
 */
-struct sqlite3_stmt {};
+struct sqlite3_stmt;
 
 /*
 ** CAPI3REF: Run-time Limits
@@ -641,12 +640,12 @@ int sqlite3_stmt_readonly(sqlite3_stmt *pStmt);
 /*
 ** CAPI3REF: Dynamically Typed Value Object
 */
-struct sqlite3_value {};
+struct sqlite3_value;
 
 /*
 ** CAPI3REF: SQL Function Context Object
 */
-struct sqlite3_context {};
+struct sqlite3_context;
 
 /*
 ** CAPI3REF: Binding Values To Prepared Statements
@@ -1183,7 +1182,7 @@ int sqlite3_overload_function(sqlite3*, const char *zFuncName, int nArg);
 /*
 ** CAPI3REF: A Handle To An Open BLOB
 */
-struct sqlite3_blob {};
+struct sqlite3_blob;
 
 /*
 ** CAPI3REF: Open A BLOB For Incremental I/O
@@ -1372,7 +1371,7 @@ enum
 /*
 ** CAPI3REF: Custom Page Cache Object
 */
-struct sqlite3_pcache {};
+struct sqlite3_pcache;
 
 /*
 ** CAPI3REF: Application Defined Page Cache.
@@ -1394,7 +1393,7 @@ struct sqlite3_pcache_methods {
 /*
 ** CAPI3REF: Online Backup Object
 */
-struct sqlite3_backup {};
+struct sqlite3_backup;
 
 /*
 ** CAPI3REF: Online Backup API.
