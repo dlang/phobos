@@ -3743,29 +3743,28 @@ assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
  */
 uint startsWith(alias pred = "a == b", Range, Ranges...)
                (Range doesThisStart, Ranges withOneOfThese)
-    if(isInputRange!Range && Ranges.length > 1 &&
-       is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
-       is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
+if (isInputRange!Range && Ranges.length > 1 &&
+    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
+    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisStart haystack;
     alias withOneOfThese needles;
 
     // Make one pass looking for empty ranges
-    foreach(i, Unused; Ranges)
+    foreach (i, Unused; Ranges)
     {
         // Empty range matches everything
-        static if(!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
+        static if (!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
         {
-            if(needles[i].empty)
-                return i + 1;
+            if (needles[i].empty) return i + 1;
         }
     }
 
-    for(; !haystack.empty; haystack.popFront())
+    for (; !haystack.empty; haystack.popFront())
     {
-        foreach(i, Unused; Ranges)
+        foreach (i, Unused; Ranges)
         {
-            static if(is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Single-element
                 if (binaryFun!pred(haystack.front, needles[i]))
@@ -3778,25 +3777,23 @@ uint startsWith(alias pred = "a == b", Range, Ranges...)
             }
             else
             {
-                if(binaryFun!pred(haystack.front, needles[i].front))
+                if (binaryFun!pred(haystack.front, needles[i].front))
                     continue;
             }
 
             // This code executed on failure to match
             // Out with this guy, check for the others
             uint result = startsWith!pred(haystack, needles[0 .. i], needles[i + 1 .. $]);
-            if(result > i)
-                ++result;
-
+            if (result > i) ++result;
             return result;
         }
 
         // If execution reaches this point, then the front matches for all
         // needles ranges. What we need to do now is to lop off the front of
         // all ranges involved and recurse.
-        foreach(i, Unused; Ranges)
+        foreach (i, Unused; Ranges)
         {
-            static if(is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Test has passed in the previous loop
                 return i + 1;
@@ -3804,64 +3801,54 @@ uint startsWith(alias pred = "a == b", Range, Ranges...)
             else
             {
                 needles[i].popFront();
-                if(needles[i].empty)
-                    return i + 1;
+                if (needles[i].empty) return i + 1;
             }
         }
     }
-
     return 0;
 }
 
 /// Ditto
 bool startsWith(alias pred = "a == b", R1, R2)
                (R1 doesThisStart, R2 withThis)
-    if(isInputRange!R1 &&
-       isInputRange!R2 &&
-       is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
+if (isInputRange!R1 &&
+    isInputRange!R2 &&
+    is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
 {
     alias doesThisStart haystack;
     alias withThis needle;
 
     // Special  case for two arrays
-    static if(isArray!R1 && isArray!R2 &&
-              ((!isSomeString!R1 && !isSomeString!R2) ||
-                (isSomeString!R1 && isSomeString!R2 &&
-                 is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
+    static if (isArray!R1 && isArray!R2 &&
+               ((!isSomeString!R1 && !isSomeString!R2) ||
+                 (isSomeString!R1 && isSomeString!R2 &&
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
     {
-        if(haystack.length < needle.length)
-            return false;
+        if (haystack.length < needle.length) return false;
 
-        foreach(j; 0 .. needle.length)
+        foreach (j; 0 .. needle.length)
         {
-            if(!binaryFun!pred(needle[j], haystack[j]))
+            if (!binaryFun!pred(needle[j], haystack[j]))
                 // not found
                 return false;
         }
-
         // found!
         return true;
     }
     else
     {
-        static if(hasLength!R1 && hasLength!R2)
+        static if (hasLength!R1 && hasLength!R2)
         {
-            if(haystack.length < needle.length)
-                return false;
+            if (haystack.length < needle.length) return false;
         }
 
-        if(needle.empty)
-            return true;
+        if (needle.empty) return true;
 
-        for(; !haystack.empty; haystack.popFront())
+        for (; !haystack.empty; haystack.popFront())
         {
-            if(!binaryFun!pred(haystack.front, needle.front))
-                break;
-
+            if (!binaryFun!pred(haystack.front, needle.front)) break;
             needle.popFront();
-
-            if(needle.empty)
-                return true;
+            if (needle.empty) return true;
         }
         return false;
     }
@@ -3870,11 +3857,12 @@ bool startsWith(alias pred = "a == b", R1, R2)
 /// Ditto
 bool startsWith(alias pred = "a == b", R, E)
                (R doesThisStart, E withThis)
-    if(isInputRange!R &&
-       is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
-    return doesThisStart.empty ? false
-                               : binaryFun!pred(doesThisStart.front, withThis);
+    return doesThisStart.empty
+        ? false
+        : binaryFun!pred(doesThisStart.front, withThis);
 }
 
 unittest
@@ -3882,15 +3870,15 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        assert(!startsWith(to!S("abc"), 'a'));
+        assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
         assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
@@ -4039,32 +4027,31 @@ assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
  */
 uint endsWith(alias pred = "a == b", Range, Ranges...)
              (Range doesThisEnd, Ranges withOneOfThese)
-    if(isInputRange!Range && Ranges.length > 1 &&
-       is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
-       is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
+if (isInputRange!Range && Ranges.length > 1 &&
+    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
+    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
     alias doesThisEnd haystack;
     alias withOneOfThese needles;
 
     // Make one pass looking for empty ranges
-    foreach(i, Unused; Ranges)
+    foreach (i, Unused; Ranges)
     {
         // Empty range matches everything
-        static if(!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
+        static if (!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
         {
-            if(needles[i].empty)
-                return i + 1;
+            if (needles[i].empty) return i + 1;
         }
     }
 
-    for(; !haystack.empty; haystack.popBack())
+    for (; !haystack.empty; haystack.popBack())
     {
-        foreach(i, Unused; Ranges)
+        foreach (i, Unused; Ranges)
         {
-            static if(is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
                 // Single-element
-                if(binaryFun!pred(haystack.back, needles[i]))
+                if (binaryFun!pred(haystack.back, needles[i]))
                 {
                     // found, but continue to account for one-element
                     // range matches (consider endsWith("ab", "b",
@@ -4074,25 +4061,23 @@ uint endsWith(alias pred = "a == b", Range, Ranges...)
             }
             else
             {
-                if(binaryFun!pred(haystack.back, needles[i].back))
+                if (binaryFun!pred(haystack.back, needles[i].back))
                     continue;
             }
 
             // This code executed on failure to match
             // Out with this guy, check for the others
             uint result = endsWith!pred(haystack, needles[0 .. i], needles[i + 1 .. $]);
-            if(result > i)
-                ++result;
-
+            if (result > i) ++result;
             return result;
         }
 
         // If execution reaches this point, then the back matches for all
         // needles ranges. What we need to do now is to lop off the back of
         // all ranges involved and recurse.
-        foreach(i, Unused; Ranges)
+        foreach (i, Unused; Ranges)
         {
-            static if(is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
                 // Test has passed in the previous loop
                 return i + 1;
@@ -4100,67 +4085,54 @@ uint endsWith(alias pred = "a == b", Range, Ranges...)
             else
             {
                 needles[i].popBack();
-                if(needles[i].empty)
-                    return i + 1;
+                if (needles[i].empty) return i + 1;
             }
         }
     }
-
     return 0;
 }
 
 /// Ditto
 bool endsWith(alias pred = "a == b", R1, R2)
              (R1 doesThisEnd, R2 withThis)
-    if(isInputRange!R1 &&
-       isInputRange!R2 &&
-       is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
+if (isInputRange!R1 &&
+    isInputRange!R2 &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
 {
     alias doesThisEnd haystack;
     alias withThis needle;
 
     // Special case for non-character arrays and strings of the same character type.
-    static if(isArray!R1 && isArray!R2 &&
-              ((!isSomeString!R1 && !isSomeString!R2) ||
-                (isSomeString!R1 && isSomeString!R2 &&
-                 is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
+    static if (isArray!R1 && isArray!R2 &&
+               ((!isSomeString!R1 && !isSomeString!R2) ||
+                 (isSomeString!R1 && isSomeString!R2 &&
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
     {
-        if(haystack.length < needle.length)
-            return false;
-
+        if (haystack.length < needle.length) return false;
         immutable diff = haystack.length - needle.length;
-        foreach(j; 0 .. needle.length)
+        foreach (j; 0 .. needle.length)
         {
-            if(!binaryFun!(pred)(needle[j], haystack[j + diff]))
+            if (!binaryFun!(pred)(needle[j], haystack[j + diff]))
                 // not found
                 return false;
         }
-
         // found!
         return true;
     }
     else
     {
-        static if(hasLength!R1 && hasLength!R2)
+        static if (hasLength!R1 && hasLength!R2)
         {
-            if(haystack.length < needle.length)
-                return false;
+            if (haystack.length < needle.length) return false;
         }
 
-        if(needle.empty)
-            return true;
-
-        for(; !haystack.empty; haystack.popBack())
+        if (needle.empty) return true;
+        for (; !haystack.empty; haystack.popBack())
         {
-            if(!binaryFun!pred(haystack.back, needle.back))
-                break;
-
+            if (!binaryFun!pred(haystack.back, needle.back)) break;
             needle.popBack();
-
-            if(needle.empty)
-                return true;
+            if (needle.empty) return true;
         }
-
         return false;
     }
 }
@@ -4168,11 +4140,12 @@ bool endsWith(alias pred = "a == b", R1, R2)
 /// Ditto
 bool endsWith(alias pred = "a == b", R, E)
              (R doesThisEnd, E withThis)
-    if(isInputRange!R &&
-       is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
-    return doesThisEnd.empty ? false
-                             : binaryFun!pred(doesThisEnd.back, withThis);
+    return doesThisEnd.empty
+        ? false
+        : binaryFun!pred(doesThisEnd.back, withThis);
 }
 
 unittest
@@ -4185,7 +4158,7 @@ unittest
     //in a range (such as filter) don't return bidirectional ranges, so I'm
     //creating one here.
     auto static wrap(R)(R r)
-        if(isBidirectionalRange!R)
+    if (isBidirectionalRange!R)
     {
         struct Result
         {
@@ -4200,7 +4173,7 @@ unittest
         return Result(r);
     }
 
-    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -4208,7 +4181,7 @@ unittest
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
