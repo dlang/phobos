@@ -45,20 +45,33 @@ version (Solaris)
  * The D main() function supplied by the user's program
  */
 int main(char[][] args);
+alias int function(char[][] args) MainFunc;
 
 /***********************************
  * Substitutes for the C main() function.
- * It's purpose is to wrap the call to the D main()
+ * Just calls into d_run_main with the default main function.
+ * Applications are free to implement their own
+ * main function and call the _d_run_main function
+ * themselves with any main function.
+ */
+extern (C) int main(size_t argc, char **argv)
+{
+    return _d_run_main(argc, argv, cast(void*)&main);
+}
+
+/***********************************
+ * Run the given main function.
+ * It's purpose is to wrap the D main()
  * function and catch any unhandled exceptions.
  */
-
-extern (C) int main(size_t argc, char **argv)
+extern (C) int _d_run_main(size_t argc, char **argv, void *p)
 {
     char[] *am;
     char[][] args;
     int result;
     int myesp;
     int myebx;
+    MainFunc main = cast(MainFunc)p;
 
     version (OSX)
     {   /* OSX does not provide a way to get at the top of the
