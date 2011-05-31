@@ -903,11 +903,10 @@ if (is(T == enum))
         }
     }
 
-    // Embed the actual value encountered into the error message.
+    // val is not a member of T, output cast(T)rawValue instead.
+    put(w, "cast(" ~ T.stringof ~ ")");
     static assert(!is(OriginalType!T == T));
-    OriginalType!T rawVal = val;
-    throw new FormatError("value '" ~ to!string(rawVal) ~
-        "' is not enumerated in " ~ T.stringof);
+    formatValue(w, cast(OriginalType!T)val, f);
 }
 
 /**
@@ -2049,6 +2048,8 @@ here:
     }
     stream.clear; formattedWrite(stream, "%s", TestEnum.Value2);
     assert(stream.data == "Value2", stream.data);
+    stream.clear; formattedWrite(stream, "%s", cast(TestEnum)5);
+    assert(stream.data == "cast(TestEnum)5", stream.data);
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     //stream.clear; formattedWrite(stream, "%s", aa.values);
