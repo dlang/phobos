@@ -930,37 +930,48 @@ bool pathCharMatch(dchar c1, dchar c2)
     $(TR $(TD $(D *))
          $(TD Matches 0 or more instances of any character.))
     $(TR $(TD $(D ?))
-         $(TD Matches exactly one instances of any character.))
+         $(TD Matches exactly one instance of any character.))
     $(TR $(TD $(D [)$(I chars)$(D ]))
          $(TD Matches one instance of any character that appears
               between the brackets.))
     $(TR $(TD $(D [!)$(I chars)$(D ]))
          $(TD Matches one instance of any character that does not
               appear between the brackets after the exclamation mark.))
+    $(TR $(TD $(D {)$(I string1)$(D ,)$(I string2)$(D ,)&hellip;$(D }))
+         $(TD Matches either of the specified strings.))
     )
 
     Internally individual character comparisons are done calling
-    pathCharMatch(), so its rules apply here too. Note that directory
+    $(D pathCharMatch()), so its rules apply here too. Note that directory
     separators and dots don't stop a meta-character from matching
     further portions of the path.
 
-    Returns: $(D true) if pattern matches path, $(D false) otherwise.
+    Returns:
+    $(D true) if pattern matches path, $(D false) otherwise.
+
+    See_also:
+    $(LINK2 http://en.wikipedia.org/wiki/Glob_%28programming%29,Wikipedia: _glob (programming))
 
     Examples:
     -----
-    version(Windows)
+    assert (glob("foo.bar", "*"));
+    assert (glob("foo.bar", "*.*"));
+    assert (glob(r"foo/foo\bar", "f*b*r"));
+    assert (glob("foo.bar", "f???bar"));
+    assert (glob("foo.bar", "[fg]???bar"));
+    assert (glob("foo.bar", "[!gh]*bar"));
+    assert (glob("bar.fooz", "bar.{foo,bif}z"));
+    assert (glob("bar.bifz", "bar.{foo,bif}z"));
+
+    version (Windows)
     {
-        assert (glob("foo.bar", "*"));
-        assert (glob(r"foo/foo\bar", "f*b*r"));
-        assert (!glob("foo.bar", "f?bar"));
+        assert (glob("foo", "Foo"));
         assert (glob("Goo.bar", "[fg]???bar"));
-        assert (glob(r"d:\foo\bar", "d*foo?bar"));
     }
-    version(Posix)
+    version (Posix)
     {
-        assert (!glob("Go*.bar", "[fg]???bar"));
-        assert (glob("/foo*home/bar", "?foo*bar"));
-        assert (glob("foobar", "foo?bar"));
+        assert (!glob("foo", "Foo"));
+        assert (!glob("Goo.bar", "[fg]???bar"));
     }
     -----
  */
@@ -1085,7 +1096,7 @@ body
 unittest
 {
     version (Windows) assert(glob("foo", "Foo"));
-    version (POSIX) assert(!glob("foo", "Foo"));
+    version (Posix) assert(!glob("foo", "Foo"));
     assert(glob("foo", "*"));
     assert(glob("foo.bar", "*"));
     assert(glob("foo.bar", "*.*"));
