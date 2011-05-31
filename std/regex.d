@@ -348,10 +348,6 @@ Returns the number of parenthesized captures
     //adjust jumps, after removing instructions at 'place'
     void fixup(ubyte[] prog, size_t place, uint change)
     {
-        size_t len;
-        ushort* pu;
-        uint* dest;
-
         for (size_t pc=0;pc<prog.length;)
         {
             switch (prog[pc])
@@ -362,7 +358,7 @@ Returns the number of parenthesized captures
             case REcounter: //jump forward
                 if(pc < place)
                 {
-                    dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
+                    auto dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
                     if (pc + *dest > place)
                         *dest -= change; 
                 }
@@ -372,7 +368,7 @@ Returns the number of parenthesized captures
             case REloop, REloopg: //jump back
                 if (pc > place)
                 {
-                    dest = cast(uint *)&prog[pc + 1 + 2*uint.sizeof];
+                    auto dest = cast(uint *)&prog[pc + 1 + 2*uint.sizeof];
                     if (pc + *dest > place)
                         *dest += change;
                 }
@@ -385,7 +381,7 @@ Returns the number of parenthesized captures
             case REgoto:
                 if (pc < place)
                 {
-                    dest = cast(uint *)&prog[pc+1];
+                    auto dest = cast(uint *)&prog[pc+1];
                     if (pc + *dest > place)
                         *dest -= change;
                 }
@@ -422,7 +418,7 @@ Returns the number of parenthesized captures
 
             case REstring:
             case REistring:
-                len = *cast(size_t *)&prog[pc + 1];
+                auto len = *cast(size_t *)&prog[pc + 1];
                 assert(len % E.sizeof == 0);
                 pc += 1 + size_t.sizeof + len;
                 break;
@@ -430,14 +426,14 @@ Returns the number of parenthesized captures
             case REtestbit:
             case REbit:
             case REnotbit:
-                pu = cast(ushort *)&prog[pc + 1];
-                len = pu[1];
+                auto pu = cast(ushort *)&prog[pc + 1];
+                auto len = pu[1];
                 pc += 1 + 2 * ushort.sizeof + len;
                 break;
 
             case RErange:
             case REnotrange:
-                len = *cast(uint *)&prog[pc + 1];
+                auto len = *cast(uint *)&prog[pc + 1];
                 pc += 1 + uint.sizeof + len;
                 break;
 

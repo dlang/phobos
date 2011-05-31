@@ -23,7 +23,7 @@ $(VERSION 053, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 5451): Three ideas for RedBlackTree)
         $(LI $(BUGZILLA 5474): unaryFun byRef is borked for custom parameter name)
         $(LI $(BUGZILLA 5485): TLS sections handled incorrectly in FreeBSD)
-        $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error
+        $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
         $(LI $(BUGZILLA 5616): std.datetime: not cross-platform)
         $(LI $(BUGZILLA 5654): BigInt returns ZERO with strings of single digit number with leading zeros)
         $(LI $(BUGZILLA 5661): std.algorithm.move does not work on elaborate struct)
@@ -33,7 +33,7 @@ $(VERSION 053, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 5781): std.datetime: On Windows, times off by one hour in some years due to DST rule changes)
         $(LI $(BUGZILLA 5794): std.datetime StopWatch (and perhaps benchmark) examples need a small fix)
         $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
-	$(LI $(BUGZILLA 6076): std.regex: "c.*|d" matches "mm")
+        $(LI $(BUGZILLA 6076): std.regex: "c.*|d" matches "mm")
      )
 
 )
