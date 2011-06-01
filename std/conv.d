@@ -381,11 +381,9 @@ T toImpl(T, S)(S s) if (is(S == enum) && isSomeString!(T)
             return __traits(allMembers, S)[i];
     }
 
-    // Embed the actual value encountered into the error message.
+    // val is not a member of T, output cast(T)rawValue instead.
     static assert(!is(OriginalType!S == S));
-    OriginalType!S v = s;
-    throw new ConvException(
-        "value '" ~ to!string(v) ~ "' is not enumerated in " ~ S.stringof);
+    return to!T("cast(" ~ S.stringof ~ ")") ~ to!T(cast(OriginalType!S)s);
 }
 
 unittest
@@ -401,14 +399,11 @@ unittest
     assert(to!wstring(F.y) == "y"w);
     assert(to!dstring(F.z) == "z"d);
 
-    try
-    {
-        to!string(cast(E) (E.max + 1));
-        assert(0);
-    }
-    catch (ConvException e)
-    {
-    }
+    // Test an value not corresponding to an enum member.
+    auto o = cast(E)5;
+    assert(to! string(o) == "cast(E)5"c);
+    assert(to!wstring(o) == "cast(E)5"w);
+    assert(to!dstring(o) == "cast(E)5"d);
 }
 
 /**
