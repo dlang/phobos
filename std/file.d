@@ -40,11 +40,13 @@ version (Win32)
  */
     version(Windows) alias std.windows.charset.toMBSz toMBSz;
 }
-version (Posix)
+else version (Posix)
 {
     import core.sys.posix.dirent, core.sys.posix.fcntl, core.sys.posix.sys.stat,
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 }
+else
+    static assert(0, "Unsupported/Unknown OS");
 
 version (unittest)
 {
@@ -61,8 +63,6 @@ version (unittest)
                 _deleteme = std.path.join(std.process.getenv("TEMP"), _deleteme);
             else version(Posix)
                 _deleteme = "/tmp/" ~ _deleteme;
-            else
-                static assert(0, "Unsupported/Unknown OS");
 
             _first = false;
         }
@@ -355,8 +355,6 @@ void[] read(in char[] name, size_t upTo = size_t.max)
             ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
             : result[0 .. size];
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -447,8 +445,6 @@ void write(in char[] name, const void[] buffer)
     }
     else version(Posix)
         return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /*********************************************
@@ -491,8 +487,6 @@ void append(in char[] name, in void[] buffer)
     }
     else version(Posix)
         return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 // Posix implementation helper for write and append
@@ -530,8 +524,6 @@ void rename(in char[] from, in char[] to)
     }
     else version(Posix)
         cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /***************************************************
@@ -549,8 +541,6 @@ void remove(in char[] name)
     }
     else version(Posix)
         cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /***************************************************
@@ -597,8 +587,6 @@ ulong getSize(in char[] name)
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
         return statbuf.st_size;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -671,8 +659,6 @@ else version(Posix) void getTimes(C)(in C[] name,
     fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
     ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
 }
-else
-    static assert(0, "Unsupported/Unknown OS");
 
 
     /++
@@ -891,8 +877,6 @@ else d_time lastModified(C)(in C[] name)
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
         return cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -920,8 +904,6 @@ else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
             ? returnIfMissing
             : cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -960,8 +942,6 @@ SysTime timeLastModified(in char[] name)
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1017,9 +997,6 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
-
 }
 
 unittest
@@ -1060,8 +1037,6 @@ unittest
     {
         return access(toStringz(name), 0) == 0;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1112,8 +1087,6 @@ uint getAttributes(in char[] name)
 
         return statbuf.st_mode;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1154,8 +1127,6 @@ else uint getLinkAttributes(in char[] name)
 
         return lstatbuf.st_mode;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1184,8 +1155,6 @@ assert("/usr/share/include".isDir);
     {
         return (getAttributes(name) & S_IFMT) == S_IFDIR;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1206,8 +1175,6 @@ unittest
         if("/usr/include/assert.h".exists)
             assert(!"/usr/include/assert.h".isDir);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1233,8 +1200,6 @@ assert(!getLinkAttributes("/etc/fonts/fonts.conf").isDir);
     {
         return (attributes & S_IFMT) == S_IFDIR;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1267,20 +1232,13 @@ unittest
             assert(!isDir(getLinkAttributes("/usr/include/assert.h")));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /++
     $(RED Scheduled for deprecation in August 2011.
           Please use $(D isDir) instead.)
  +/
-version(StdDdoc) alias isDir isdir;
-else bool isdir(S)(in S name) if(is(Unqual!S == char[]))
-{
-    pragma(msg, softDeprec!("2.052", "August 2011", "isdir", "isDir"));
-    return name.isDir;
-}
+alias isDir isdir;
 
 
 /++
@@ -1316,8 +1274,6 @@ assert(!"/usr/share/include".isFile);
         return !name.isDir;
     else version(Posix)
         return (getAttributes(name) & S_IFMT) == S_IFREG;
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1338,8 +1294,6 @@ unittest
         if("/usr/include/assert.h".exists)
             assert("/usr/include/assert.h".isFile);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1375,8 +1329,6 @@ assert(getLinkAttributes("/etc/fonts/fonts.conf").isFile);
     {
         return (attributes & S_IFMT) == S_IFREG;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1409,20 +1361,13 @@ unittest
             assert(isFile(getLinkAttributes("/usr/include/assert.h")));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /++
     $(RED Scheduled for deprecation in August 2011.
           Please use $(D isFile) instead.)
  +/
-version(StdDdoc) alias isFile isfile;
-else bool isfile(S)(in S name) if(is(Unqual!S == char[]))
-{
-    pragma(msg, softDeprec!("2.052", "August 2011", "isfile", "isFile"));
-    return name.isFile;
-}
+alias isFile isfile;
 
 
 /++
@@ -1447,8 +1392,6 @@ else bool isfile(S)(in S name) if(is(Unqual!S == char[]))
     {
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1520,8 +1463,6 @@ unittest
             assert(!isFile(getLinkAttributes(symfile)));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1552,8 +1493,6 @@ assert(getLinkAttributes("/tmp/alink").isSymLink);
     {
         return (attributes & S_IFMT) == S_IFLNK;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1575,8 +1514,6 @@ void chdir(in char[] pathname)
         cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
                 pathname);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /****************************************************
@@ -2338,10 +2275,6 @@ else version(Posix)
         bool _dTypeSet = false;   /// Whether the dType of the file has been set.
     }
 }
-else
-{
-    static assert(0, "Unsupported/Unknown OS");
-}
 
 unittest
 {
@@ -2398,8 +2331,6 @@ unittest
             assert(!de.isSymLink);
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -2503,8 +2434,6 @@ void copy(in char[] from, in char[] to)
 
         cenforce(utime(toz, &utim) != -1, from);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
     /++
@@ -2553,8 +2482,6 @@ else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
                     * 1_000_000) % 1_000_000);
         enforce(utimes(toStringz(name), t) == 0);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -2606,8 +2533,6 @@ else void setTimes(C)(in C[] name,
 
         enforce(utimes(toStringz(name), t) == 0);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 /+
@@ -2745,8 +2670,6 @@ unittest
                                        de.timeLastModified,
                                        de.timeLastAccessed);
         }
-        else
-            static assert(0, "Unsupported/Unknown OS");
 
         return true;
     }
@@ -3479,8 +3402,6 @@ else version(Posix)
         }
     }
 }
-else
-    static assert(0, "Unsupported/Unknown OS");
 
 
 //==============================================================================
