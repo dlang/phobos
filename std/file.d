@@ -601,8 +601,9 @@ unittest
 }
 
 /*************************
- * $(RED Scheduled for deprecation in August 2011. Please use $(D getTimesWin)
- *       (for Windows) or $(D getTimesPosix) (for Posix) instead.)
+ * $(RED Scheduled for deprecation in August 2011. Please use either the version
+ *       of $(D getTimes) which takes two arguments or $(D getTimesWin)
+ *       (Windows-Only) instead.)
  */
 version(StdDdoc) void getTimes(in char[] name,
                                out d_time ftc,
@@ -613,9 +614,10 @@ else version(Windows) void getTimes(C)(in C[] name,
                                        out d_time fta,
                                        out d_time ftm) if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
                 "scheduled for deprecation in August 2011. Please use " ~
-                "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+                "either the version of getTimes with two arguments or " ~
+                "getTimesWin (Windows-Only) instead.");
 
     HANDLE findhndl = void;
 
@@ -649,9 +651,10 @@ else version(Posix) void getTimes(C)(in C[] name,
                                      out d_time fta,
                                      out d_time ftm) if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes has been " ~
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
                 "scheduled for deprecation in August 2011. Please use " ~
-                "getTimesWin (for Windows) or getTimesPosix (for Posix) instead.");
+                "either the version of getTimes with two arguments or " ~
+                "getTimesWin (Windows-Only) instead.");
 
     struct_stat64 statbuf = void;
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -661,24 +664,125 @@ else version(Posix) void getTimes(C)(in C[] name,
 }
 
 
-    /++
-        $(BLUE This function is Windows-Only.)
+/++
+    Get the access and modified times of file $(D name).
 
-        Get creation/access/modified times of file $(D name).
+    Params:
+        name                 = File name to get times for.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
 
-        Note that the Windows and Posix versions of getTimesX differ
-        because Posix has no file creation time whereas Windows
-        has no file status changed time.
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void getTimes(in char[] name,
+                               out SysTime fileAccessTime,
+                               out SysTime fileModificationTime);
+//Oh, how it would be nice of you could overload templated functions with
+//non-templated functions. Untemplatize this when the old getTimes goes away.
+else void getTimes(C)(in C[] name,
+                      out SysTime fileAccessTime,
+                      out SysTime fileModificationTime)
+    if(is(Unqual!C == char))
+{
+    version(Windows)
+    {
+        HANDLE findhndl = void;
 
-        Params:
-            name                 = File name to get times for.
-            fileCreationTime     = Time the file was created.
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
+        if(useWfuncs)
+        {
+            WIN32_FIND_DATAW filefindbuf;
 
-        Throws:
-            $(D FileException) on error.
-     +/
+            findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+            fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+            fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
+        }
+        else
+        {
+            WIN32_FIND_DATA filefindbuf;
+
+            findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+            fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+            fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
+        }
+
+        enforce(findhndl != cast(HANDLE)-1, new FileException(name.idup));
+
+        FindClose(findhndl);
+    }
+    else version(Posix)
+    {
+        struct_stat64 statbuf = void;
+
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+
+        fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+        fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+    }
+}
+
+unittest
+{
+    auto currTime = Clock.currTime();
+
+    write(deleteme, "a");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+
+    SysTime accessTime1 = void;
+    SysTime modificationTime1 = void;
+
+    getTimes(deleteme, accessTime1, modificationTime1);
+
+    enum leeway = dur!"seconds"(4);
+
+    {
+        auto diffa = accessTime1 - currTime;
+        auto diffm = modificationTime1 - currTime;
+
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    Thread.sleep(dur!"seconds"(1));
+
+    currTime = Clock.currTime();
+    write(deleteme, "b");
+
+    SysTime accessTime2 = void;
+    SysTime modificationTime2 = void;
+
+    getTimes(deleteme, accessTime2, modificationTime2);
+
+    {
+        auto diffa = accessTime2 - currTime;
+        auto diffm = modificationTime2 - currTime;
+
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    assert(accessTime1 <= accessTime2);
+    assert(modificationTime1 <= modificationTime2);
+}
+
+
+/++
+    $(BLUE This function is Windows-Only.)
+
+    Get creation/access/modified times of file $(D name).
+
+    This is the same as $(D getTimes) except that it also gives you the file
+    creation time - which isn't possible on Posix systems.
+
+    Params:
+        name                 = File name to get times for.
+        fileCreationTime     = Time the file was created.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
 version(StdDdoc) void getTimesWin(in char[] name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
@@ -767,14 +871,26 @@ version(Windows) unittest
 }
 
 /++
+    $(RED Scheduled for deprecation in October 2011. Please use the
+          $(D getTimes) with two arguments instead.)
+
     $(BLUE This function is Posix-Only.)
 
     Get file status change time, acces time, and modification times
     of file $(D name).
 
-    Note that the Windows and Posix versions of getTimesX differ
-    because Posix has no file creation time whereas Windows
-    has no file status changed time.
+    $(D getTimes) is the same on both Windows and Posix, but it is not
+    possible to get the file creation time on Posix systems, so
+    $(D getTimes) cannot give you the file creation time. $(D getTimesWin)
+    does the same thing on Windows as $(D getTimes) except that it also gives
+    you the file creation time. This function was created to do the same
+    thing that the old, 3 argument $(D getTimes) was doing on Posix - giving
+    you the time that the file status last changed - but ultimately, that's
+    not really very useful, and we don't like having functions which are
+    OS-specific when we can reasonably avoid it. So, this function is being
+    deprecated. You can use $(D DirEntry)'s  $(D statBuf) property if you
+    really want to get at that information (along with all of the other
+    OS-specific stuff that $(D stat) gives you).
 
     Params:
         name                 = File name to get times for.
@@ -789,11 +905,16 @@ version(StdDdoc) void getTimesPosix(in char[] name,
                                     out SysTime fileStatusChangeTime,
                                     out SysTime fileAccessTime,
                                     out SysTime fileModificationTime);
-else version(Posix) void getTimesPosix(in char[] name,
-                                       out SysTime fileStatusChangeTime,
-                                       out SysTime fileAccessTime,
-                                       out SysTime fileModificationTime)
+else version(Posix) void getTimesPosix(C)(in C[] name,
+                                          out SysTime fileStatusChangeTime,
+                                          out SysTime fileAccessTime,
+                                          out SysTime fileModificationTime)
+    if(is(Unqual!C == char))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
+                "scheduled for deprecation in October 2011. Please use " ~
+                "the version of getTimes with two arguments instead.");
+
     struct_stat64 statbuf = void;
 
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -801,57 +922,6 @@ else version(Posix) void getTimesPosix(in char[] name,
     fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
     fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
     fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
-}
-
-version(Posix) unittest
-{
-    auto currTime = Clock.currTime();
-
-    write(deleteme, "a");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-
-    SysTime statusChangedTime1 = void;
-    SysTime accessTime1 = void;
-    SysTime modificationTime1 = void;
-
-    getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
-
-    enum leeway = dur!"seconds"(4);
-
-    {
-        auto diffc = statusChangedTime1 - currTime;
-        auto diffa = accessTime1 - currTime;
-        auto diffm = modificationTime1 - currTime;
-
-        assert(abs(diffc) <= leeway);
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
-    }
-
-    Thread.sleep(dur!"seconds"(1));
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime statusChangedTime2 = void;
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
-
-    {
-        auto diffc = statusChangedTime2 - currTime;
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-
-        assert(abs(diffc) <= leeway);
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
-    }
-
-    assert(statusChangedTime1 <= statusChangedTime2);
-    assert(accessTime1 <= accessTime2);
-        assert(modificationTime1 <= modificationTime2);
 }
 
 
@@ -1756,7 +1826,9 @@ assert(!de2.isFile);
                   systems do not have access to the creation time of a file. On
                   Posix systems this property has incorrectly been the time that
                   the file's status status last changed. If you want that value,
-                  use $(D timeStatusChanged).)
+                  then get it from the $(D statBuf) property, which gives you
+                  access to the $(D stat) struct which Posix systems use (check
+                  out $(D stat)'s man page for more details.))
           +/
         @property d_time creationTime() const;
 
@@ -1770,6 +1842,9 @@ assert(!de2.isFile);
 
 
         /++
+            $(RED Scheduled for deprecation in October 2011.
+                  Please use $(D timeLastAccessed) instead.)
+
             $(BLUE This function is Posix-Only.)
 
             Returns the last time that the status of file represented by this
