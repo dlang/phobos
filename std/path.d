@@ -580,8 +580,8 @@ version (unittest)
 
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
-    them. If any of the path components are absolute paths (see
-    $(LINK2 #isAbsolute,isAbsolute)) the preceding path components
+    them. If any of the path components are rooted (see
+    $(LINK2 #isRooted,isRooted)) the preceding path components
     will be dropped.
 
     Examples:
@@ -589,6 +589,7 @@ version (unittest)
     // On Windows:
     joinPath(r"c:\foo", "bar")  -->  r"c:\foo\bar"
     joinPath("foo", r"d:\bar")  -->  r"d:\bar"
+    joinPath("foo", r"\bar")    -->  r"\bar"
 
     // On POSIX
     joinPath("/foo/", "bar")    -->  "/foo/bar"
@@ -611,7 +612,7 @@ immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
         alias morePaths[0] path2;
         if (path2.length == 0) return path1.idup;
         if (path1.length == 0) return path2.idup;
-        if (isAbsolute(path2)) return path2.idup;
+        if (isRooted(path2)) return path2.idup;
 
         if (isDirSeparator(path1[$-1]) || isDirSeparator(path2[0]))
             return cast(typeof(return))(path1 ~ path2);
@@ -639,6 +640,7 @@ unittest
     }
     version (Windows)
     {
+        assert (joinPath("foo", r"\bar") == r"\bar");
         assert (joinPath(r"c:\foo", "bar") == r"c:\foo\bar");
         assert (joinPath("foo"w, r"d:\bar"w.dup) ==  r"d:\bar");
     }
@@ -647,15 +649,67 @@ unittest
 
 
 
+/** Determines whether a path starts at a root directory.
+
+    On POSIX, this function returns true if and only if the path starts
+    with a slash (/).
+    ---
+    assert (isRooted("/"));
+    assert (isRooted("/foo"));
+    assert (!isRooted("foo"));
+    assert (!isRooted("../foo"));
+    ---
+
+    On Windows, this function returns true if the path starts at
+    the root directory of the current drive, of some other drive,
+    or of a network drive.
+    ---
+    assert (isRooted(r"\"));
+    assert (isRooted(r"\foo"));
+    assert (isRooted(r"d:\foo"));
+    assert (isRooted(r"\\foo\bar"));
+    assert (!isRooted("foo"));
+    assert (!isRooted("d:foo"));
+    ---
+*/
+bool isRooted(C)(in C[] path)  if (isSomeChar!C)
+{
+    if (path.length >= 1 && isDirSeparator(path[0])) return true;
+    version (Posix)         return false;
+    else version (Windows)  return isAbsolute(path);
+}
+
+
+unittest
+{
+    assert (isRooted("/"));
+    assert (isRooted("/foo"));
+    assert (!isRooted("foo"));
+    assert (!isRooted("../foo"));
+
+    version (Windows)
+    {
+    assert (isRooted(r"\"));
+    assert (isRooted(r"\foo"));
+    assert (isRooted(r"d:\foo"));
+    assert (isRooted(r"\\foo\bar"));
+    assert (!isRooted("foo"));
+    assert (!isRooted("d:foo"));
+    }
+}
+
+
+
+
 /** Determines whether a path is absolute or relative.
 
-    isRelative() is just defined as !_isAbsolute(), with the
+    $(D isRelative()) is just defined as $(D !_isAbsolute()), with the
     notable exception that both functions return false if
     path is an empty string.
 
     Examples:
-    On POSIX, an absolute path starts at the root directory,
-    i.e. it starts with a slash (/).
+    On POSIX, an absolute path starts at the root directory.
+    (In fact, $(D _isAbsolute) is just an alias for $(D isRooted).)
     ---
     assert (isRelative("foo"));
     assert (isRelative("../foo"));
@@ -676,18 +730,17 @@ unittest
     assert (isAbsolute(r"\\foo\bar"));
     ---
 */
-bool isAbsolute(C)(in C[] path)  if (isSomeChar!C)
+version (StdDdoc) bool isAbsolute(C)(in C[] path)  if (isSomeChar!C);
+
+else version (Windows) bool isAbsolute(C)(in C[] path)  if (isSomeChar!C)
 {
-    version (Posix)
-    {
-        return path.length >= 1 && isDirSeparator(path[0]);
-    }
-    else version (Windows)
-    {
-        return (path.length >= 3 && isDriveSeparator(path[1]) && isDirSeparator(path[2]))
-            || (path.length >= 2 && isDirSeparator(path[0]) && isDirSeparator(path[1]));
-    }
+    return path.length >= 3 && (
+        (isDriveSeparator(path[1]) && isDirSeparator(path[2])) ||
+        (isDirSeparator(path[0]) && isDirSeparator(path[1]) && !isDirSeparator(path[2]))
+        );
 }
+
+else version (Posix) alias isRooted isAbsolute;
 
 
 /// ditto
