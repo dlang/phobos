@@ -2989,7 +2989,12 @@ Returns:
 A tuple containing $(D haystack) positioned to match one of the
 needles and also the 1-based index of the matching element in $(D
 needles) (0 if none of $(D needles) matched, 1 if $(D needles[0])
-matched, 2 if $(D needles[1]) matched...).
+matched, 2 if $(D needles[1]) matched...). The first needle to be found
+will be the one that matches. If multiple needles are found at the
+same spot in the range, then the shortest one is the one which matches
+(if multiple needles of the same length are found at the same spot (e.g
+$(D "a") and $(D 'a')), then the left-most of them in the argument list
+matches).
 
 The relationship between $(D haystack) and $(D needles) simply means
 that one can e.g. search for individual $(D int)s or arrays of $(D
@@ -3725,7 +3730,11 @@ unittest
 If the range $(D doesThisStart) starts with $(I any) of the $(D
 withOneOfThese) ranges or elements, returns 1 if it starts with $(D
 withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
-on. If no match, returns 0.
+on. If none match, returns 0. In the case where $(D doesThisStart) starts
+with multiple of the ranges or elements in $(D withOneOfThese), then the
+shortest one matches (if there are two which match which are of the same
+length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
+list matches).
 
 Example:
 ----
@@ -3735,6 +3744,7 @@ assert(!startsWith("abc", "b"));
 assert(startsWith("abc", 'a', "b") == 1);
 assert(startsWith("abc", "b", "a") == 2);
 assert(startsWith("abc", "a", "a") == 1);
+assert(startsWith("abc", "ab", "a") == 2);
 assert(startsWith("abc", "x", "a", "b") == 2);
 assert(startsWith("abc", "x", "aa", "ab") == 3);
 assert(startsWith("abc", "x", "aaa", "sab") == 0);
@@ -3778,7 +3788,9 @@ if (isInputRange!Range && Ranges.length > 1 &&
             else
             {
                 if (binaryFun!pred(haystack.front, needles[i].front))
+                {
                     continue;
+                }
             }
 
             // This code executed on failure to match
@@ -3885,7 +3897,7 @@ unittest
             assert(startsWith(to!S("abc"), to!T("a")));
             assert(!startsWith(to!S("abc"), to!T("b")));
             assert(!startsWith(to!S("abc"), to!T("b"), "bc", "abcd", "xyz"));
-            assert(startsWith(to!S("abc"), to!T("ab"), 'a') == 1);
+            assert(startsWith(to!S("abc"), to!T("ab"), 'a') == 2);
             assert(startsWith(to!S("abc"), to!T("a"), "b") == 1);
             assert(startsWith(to!S("abc"), to!T("b"), "a") == 2);
             assert(startsWith(to!S("abc"), to!T("a"), 'a') == 1);
@@ -3905,16 +3917,7 @@ unittest
     assert(!startsWith([0, 1, 2, 3, 4, 5], 5));
     assert(!startsWith([0, 1, 2, 3, 4, 5], 1));
     assert(startsWith([0, 1, 2, 3, 4, 5], 0));
-    assert(startsWith([0, 1, 2, 3, 4, 5], 5, 1, 2) == 3);
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1], 7) == 1);
-    assert(!startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], [0, 1, 2]) == 2);
-
-    assert(!startsWith([0, 1, 2, 3, 4, 5], 1));
-    assert(startsWith([0, 1, 2, 3, 4, 5], 0));
-    assert(startsWith([0, 1, 2, 3, 4, 5], 5, 1, 2) == 3);
+    assert(startsWith([0, 1, 2, 3, 4, 5], 5, 0, 1) == 2);
     assert(startsWith([0, 1, 2, 3, 4, 5], [0]));
     assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1]));
     assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1], 7) == 1);
@@ -3929,7 +3932,7 @@ unittest
     assert(!startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7]));
     assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7], [0, 1, 2]) == 2);
     assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1])));
-    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1]), 7));
+    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1]), 7) == 1);
     assert(!startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1, 7])));
     assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
 }
@@ -4019,6 +4022,7 @@ assert(!endsWith("abc", "b"));
 assert(endsWith("abc", "a", 'c') == 2);
 assert(endsWith("abc", "c", "a") == 1);
 assert(endsWith("abc", "c", "c") == 1);
+assert(endsWith("abc", "bc", "c") == 2);
 assert(endsWith("abc", "x", "c", "b") == 2);
 assert(endsWith("abc", "x", "aa", "bc") == 3);
 assert(endsWith("abc", "x", "aaa", "sab") == 0);
@@ -4186,7 +4190,7 @@ unittest
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
             assert(!endsWith(to!S("abc"), to!T("b")));
-            assert(!endsWith(to!S("abc"), to!T("bc"), 'c') == 1);
+            assert(endsWith(to!S("abc"), to!T("bc"), 'c') == 2);
             assert(endsWith(to!S("abc"), to!T("a"), "c") == 2);
             assert(endsWith(to!S("abc"), to!T("c"), "a") == 1);
             assert(endsWith(to!S("abc"), to!T("c"), "c") == 1);
@@ -4218,7 +4222,7 @@ unittest
     assert(!endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5]));
     assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5], [3, 4, 5]) == 2);
     assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5])));
-    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5]), 7));
+    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5]), 7) == 1);
     assert(!endsWith([0, 1, 2, 3, 4, 5], wrap([2, 4, 5])));
     assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], wrap([3, 4, 5])) == 2);
 }
