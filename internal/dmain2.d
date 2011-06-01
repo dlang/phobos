@@ -45,7 +45,7 @@ version (Solaris)
  * The D main() function supplied by the user's program
  */
 int main(char[][] args);
-alias int function(char[][] args) MainFunc;
+alias extern(C) int function(char[][] args) MainFunc;
 
 /***********************************
  * Substitutes for the C main() function.
