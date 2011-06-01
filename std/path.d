@@ -1,6 +1,6 @@
 // Written in the D programming language.
 
-/** Proposal for a new $(D std.path).
+/** Proposal for a new $(D std._path).
 
     This module is used to parse file names. All the operations work
     only on strings; they don't perform any input/output operations.
@@ -8,7 +8,12 @@
     This means that if a path contains a directory name with a dot,
     functions like $(D extension()) will work with it just as if it was a file.
     To differentiate these cases, use the $(D std.file) module first (i.e.
-   $(D  std.file.isDir())).
+    $(D  std.file.isDir())).
+
+    Note that on Windows, both the backslash (\) and the slash (/) are
+    in principle valid directory separators.  This module treats them
+    both on equal footing, but in cases where a $(I new) separator is
+    added, a backslash will be used.
 
     Authors:
         Lars Tandle Kyllingstad,
