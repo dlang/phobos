@@ -46,7 +46,7 @@ else version (Posix)
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 }
 else
-    static assert(0, "Unsupported/Unknown OS");
+    static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
 version (unittest)
 {
@@ -1160,24 +1160,23 @@ uint getAttributes(in char[] name)
 }
 
 
-    /++
-        If the given file is a symbolic link, then this returns the attributes of the
-        symbolic link itself rather than file that it points to. If the given file
-        is $(I not) a symbolic link, then this function returns the same result
-        as getAttributes.
+/++
+    If the given file is a symbolic link, then this returns the attributes of the
+    symbolic link itself rather than file that it points to. If the given file
+    is $(I not) a symbolic link, then this function returns the same result
+    as getAttributes.
 
-        On Windows, getLinkAttributes is identical to getAttributes. It exists on
-        Windows so that you don't have to special-case code for Windows when dealing
-        with symbolic links.
+    On Windows, getLinkAttributes is identical to getAttributes. It exists on
+    Windows so that you don't have to special-case code for Windows when dealing
+    with symbolic links.
 
-        Params:
-            name = The file to get the symbolic link attributes of.
+    Params:
+        name = The file to get the symbolic link attributes of.
 
-        Throws:
-            FileException on error.
-     +/
-version(StdDdoc) uint getLinkAttributes(in char[] name);
-else uint getLinkAttributes(in char[] name)
+    Throws:
+        FileException on error.
+ +/
+uint getLinkAttributes(in char[] name)
 {
     version(Windows)
     {
@@ -1247,6 +1246,34 @@ unittest
     }
 }
 
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isDir) instead.)
+ +/
+alias isDir isdir;
+
+
+/++
+    $(RED Scheduled for deprecation in October 2011.
+          Please use $(D attrIsDir) instead.)
+
+    Returns whether the given file attributes are for a directory.
+
+    Params:
+        attributes = The file attributes.
+  +/
+@property bool isDir(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFDIR;
+    }
+}
+
 
 /++
     Returns whether the given file attributes are for a directory.
@@ -1256,11 +1283,11 @@ unittest
 
 Examples:
 --------------------
-assert(!getAttributes("/etc/fonts/fonts.conf").isDir);
-assert(!getLinkAttributes("/etc/fonts/fonts.conf").isDir);
+assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
+assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
 --------------------
   +/
-@property bool isDir(uint attributes) nothrow
+bool attrIsDir(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1278,37 +1305,31 @@ unittest
     {
         if("C:\\Program Files\\".exists)
         {
-            assert(isDir(getAttributes("C:\\Program Files\\")));
-            assert(isDir(getLinkAttributes("C:\\Program Files\\")));
+            assert(attrIsDir(getAttributes("C:\\Program Files\\")));
+            assert(attrIsDir(getLinkAttributes("C:\\Program Files\\")));
         }
 
         if("C:\\Windows\\system.ini".exists)
         {
-            assert(!isDir(getAttributes("C:\\Windows\\system.ini")));
-            assert(!isDir(getLinkAttributes("C:\\Windows\\system.ini")));
+            assert(!attrIsDir(getAttributes("C:\\Windows\\system.ini")));
+            assert(!attrIsDir(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
     else version(Posix)
     {
         if("/usr/include".exists)
         {
-            assert(isDir(getAttributes("/usr/include")));
-            assert(isDir(getLinkAttributes("/usr/include")));
+            assert(attrIsDir(getAttributes("/usr/include")));
+            assert(attrIsDir(getLinkAttributes("/usr/include")));
         }
 
         if("/usr/include/assert.h".exists)
         {
-            assert(!isDir(getAttributes("/usr/include/assert.h")));
-            assert(!isDir(getLinkAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getLinkAttributes("/usr/include/assert.h")));
         }
     }
 }
-
-/++
-    $(RED Scheduled for deprecation in August 2011.
-          Please use $(D isDir) instead.)
- +/
-alias isDir isdir;
 
 
 /++
@@ -1323,8 +1344,8 @@ alias isDir isdir;
     particular file (in which case, it's a special file). You can use
     $(D getAttributes) to get the attributes to figure out what type of special
     it is, or you can use $(D dirEntry) to get at its $(D statBuf), which is the
-    result from $(D stat). In either case, see the stat man page for more
-    details.
+    result from $(D stat). In either case, see the man page for $(D stat) for
+    more information.
 
     Params:
         name = The path to the file.
@@ -1366,8 +1387,17 @@ unittest
     }
 }
 
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isFile) instead.)
+ +/
+alias isFile isfile;
+
 
 /++
+    $(RED Scheduled for deprecation in October 2011.
+          Please use $(D attrIsFile) instead.)
+
     Returns whether the given file attributes are for a file.
 
     On Windows, if a file is not a directory, it's a file. So,
@@ -1378,18 +1408,48 @@ unittest
     it's possible for both $(D isFile) and $(D isDir) to be $(D false) for a
     particular file (in which case, it's a special file). If a file is a special
     file, you can use the attributes to check what type of special
-    file it is (see the stat man page for more information).
+    file it is (see the man page for $(D stat) for more information).
+
+    Params:
+        attributes = The file attributes.
+  +/
+@property bool isFile(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFREG;
+    }
+}
+
+
+/++
+    Returns whether the given file attributes are for a file.
+
+    On Windows, if a file is not a directory, it's a file. So, either
+    $(D attrIsFile) or $(D attrIsDir) will return $(D true) for the
+    attributes of any given file.
+
+    On Posix systems, if $(D attrIsFile) is $(D true), that indicates that the
+    file is a regular file (e.g. not a block not device). So, on Posix systems,
+    it's possible for both $(D attrIsFile) and $(D attrIsDir) to be $(D false)
+    for a particular file (in which case, it's a special file). If a file is a
+    special file, you can use the attributes to check what type of special file
+    it is (see the man page for $(D stat) for more information).
 
     Params:
         attributes = The file attributes.
 
 Examples:
 --------------------
-assert(getAttributes("/etc/fonts/fonts.conf").isFile);
-assert(getLinkAttributes("/etc/fonts/fonts.conf").isFile);
+assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
+assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
 --------------------
   +/
-@property bool isFile(uint attributes) nothrow
+bool attrIsFile(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1407,37 +1467,31 @@ unittest
     {
         if("C:\\Program Files\\".exists)
         {
-            assert(!isFile(getAttributes("C:\\Program Files\\")));
-            assert(!isFile(getLinkAttributes("C:\\Program Files\\")));
+            assert(!attrIsFile(getAttributes("C:\\Program Files\\")));
+            assert(!attrIsFile(getLinkAttributes("C:\\Program Files\\")));
         }
 
         if("C:\\Windows\\system.ini".exists)
         {
-            assert(isFile(getAttributes("C:\\Windows\\system.ini")));
-            assert(isFile(getLinkAttributes("C:\\Windows\\system.ini")));
+            assert(attrIsFile(getAttributes("C:\\Windows\\system.ini")));
+            assert(attrIsFile(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
     else version(Posix)
     {
         if("/usr/include".exists)
         {
-            assert(!isFile(getAttributes("/usr/include")));
-            assert(!isFile(getLinkAttributes("/usr/include")));
+            assert(!attrIsFile(getAttributes("/usr/include")));
+            assert(!attrIsFile(getLinkAttributes("/usr/include")));
         }
 
         if("/usr/include/assert.h".exists)
         {
-            assert(isFile(getAttributes("/usr/include/assert.h")));
-            assert(isFile(getLinkAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getLinkAttributes("/usr/include/assert.h")));
         }
     }
 }
-
-/++
-    $(RED Scheduled for deprecation in August 2011.
-          Please use $(D isFile) instead.)
- +/
-alias isFile isfile;
 
 
 /++
@@ -1537,9 +1591,34 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in October 2011.
+          Please use $(D attrIsSymLink) instead.)
+
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return false on Windows. It exists on Windows so that you don't
+    Always return $(D false) on Windows. It exists on Windows so that you don't
+    have to special-case code for Windows when dealing with symbolic links.
+
+    Params:
+        attributes = The file attributes.
+  +/
+@property bool isSymLink(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return false;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFLNK;
+    }
+}
+
+
+/++
+    Returns whether the given file attributes are for a symbolic link.
+
+    Always return $(D false) on Windows. It exists on Windows so that you don't
     have to special-case code for Windows when dealing with symbolic links.
 
     Params:
@@ -1553,7 +1632,7 @@ assert(!getAttributes("/tmp/alink").isSymLink);
 assert(getLinkAttributes("/tmp/alink").isSymLink);
 --------------------
   +/
-@property bool isSymLink(uint attributes) nothrow
+bool attrIsSymLink(uint attributes) nothrow
 {
     version(Windows)
     {
