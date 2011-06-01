@@ -1445,4 +1445,5 @@ alias setExtension addExt;
 alias isAbsolute isabs;
 alias toAbsolute rel2abs;
 alias joinPath join;
+alias pathCharMatch fncharmatch;
 alias glob fnmatch;
