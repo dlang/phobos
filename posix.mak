@@ -53,7 +53,7 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
@@ -165,9 +165,11 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
 # Other D modules that aren't under std/
-EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
-        zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86 gammafunction errorfunction) $(addprefix etc/c/, curl)
+EXTRA_DOCUMENTABLES = $(addprefix etc/c/,curl zlib)
+EXTRA_MODULES := $(addprefix std/c/, stdarg stdio)			\
+	$(EXTRA_DOCUMENTABLES) $(addprefix std/internal/math/,	\
+	biguintcore biguintnoasm								\
+        biguintx86 gammafunction errorfunction)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -302,6 +304,9 @@ $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
