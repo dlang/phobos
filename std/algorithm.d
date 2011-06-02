@@ -2159,7 +2159,7 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
-if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         && isForwardRange!Separator
         && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
@@ -2287,6 +2287,13 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+}
+
+unittest
+{
+    // joiner() should work for non-forward ranges too.
+    InputRange!string r = inputRangeObject(["abc", "def"]);
+    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
 auto joiner(RoR)(RoR r)
@@ -3655,29 +3662,32 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         }
     }
 
-    static if (!is(Sentinel == void))
-        @property Until save()
-        {
-            Until result;
+    static if (isForwardRange!Range)
+    {
+        static if (!is(Sentinel == void))
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._sentinel  = _sentinel;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._sentinel  = _sentinel;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
-    else
-        @property Until save()
-        {
-            Until result;
+                return result;
+            }
+        else
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
+                return result;
+            }
+    }
 }
 
 /// Ditto
@@ -5668,7 +5678,7 @@ range that was moved.
 Example:
 ----
 int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-assert(a[0 .. $ - remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
+assert(a[0 .. remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
 ----
  */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)

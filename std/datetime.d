@@ -120,8 +120,6 @@ import std.string;
 import std.system;
 import std.traits;
 
-private alias std.algorithm.find find;
-
 version(Windows)
 {
     import core.sys.windows.windows;
@@ -151,7 +149,11 @@ version(unittest)
     import std.stdio;
 }
 
-alias std.string.indexOf indexOf;
+//I'd just alias it to indexOf, but
+//http://d.puremagic.com/issues/show_bug.cgi?id=6013 would mean that that would
+//pollute the global namespace. So, for now, I've created an alias which is
+//highly unlikely to conflict with anything that anyone else is doing.
+private alias std.string.indexOf stds_indexOf;
 
 //Verify module example.
 version(testStdDateTime) unittest
@@ -8388,7 +8390,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     {
         auto dstr = to!dstring(strip(isoExtString));
 
-        auto tIndex = dstr.indexOf("T");
+        auto tIndex = dstr.stds_indexOf("T");
         enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         auto found = dstr[tIndex + 1 .. $].find(".", "Z", "+", "-");
@@ -8600,7 +8602,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
     {
         auto dstr = to!dstring(strip(simpleString));
 
-        auto spaceIndex = dstr.indexOf(" ");
+        auto spaceIndex = dstr.stds_indexOf(" ");
         enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
 
         auto found = dstr[spaceIndex + 1 .. $].find(".", "Z", "+", "-");
@@ -17826,7 +17828,7 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
         immutable dstr = to!dstring(strip(isoString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = dstr.indexOf('T');
+        auto t = dstr.stds_indexOf('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
@@ -17918,7 +17920,7 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
         immutable dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = dstr.indexOf('T');
+        auto t = dstr.stds_indexOf('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
@@ -18016,7 +18018,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         immutable dstr = to!dstring(strip(simpleString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = dstr.indexOf(' ');
+        auto t = dstr.stds_indexOf(' ');
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
@@ -28697,7 +28699,7 @@ private:
         dstr.popFront();
         enforce(!dstr.empty, new DateTimeException("Invalid ISO String"));
 
-        immutable colon = dstr.indexOf(":");
+        immutable colon = dstr.stds_indexOf(":");
 
         dstring hoursStr;
         dstring minutesStr;
@@ -29250,7 +29252,7 @@ assert(tz.dstName == "PDT");
                     tempTTInfo.tt_gmtoff = -tempTTInfo.tt_gmtoff;
 
                 auto abbrevChars = tzAbbrevChars[tempTTInfo.tt_abbrind .. $];
-                string abbrev = abbrevChars[0 .. std.string.indexOf(abbrevChars, "\0")].idup;
+                string abbrev = abbrevChars[0 .. abbrevChars.stds_indexOf("\0")].idup;
 
                 ttInfo = new immutable(TTInfo)(tempTTInfos[i], abbrev);
             }

@@ -161,8 +161,9 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, string line; file) {
-   *   stdout.writefln("line %d: %s",n,line);
+   * foreach(ulong n, char[] line; file) 
+   * {
+   *     writefln("line %d: %s", n, line);
    * }
    * file.close();
    * ------------------------------------

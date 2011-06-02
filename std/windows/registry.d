@@ -1867,7 +1867,7 @@ public:
             {
                 try
                 {
-                    Key key =   m_key.getKey(cast(string)sName[0 .. cchName]);
+                    Key key =   m_key.getKey(sName[0 .. cchName].idup);
 
                     result = dg(key);
                 }

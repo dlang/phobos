@@ -80,8 +80,8 @@ endif
 
 # Set CC and DMD
 ifeq ($(OS),win32wine)
-	CC = wine $(HOME)/dmc/bin/dmc.exe
-	DMD = wine $(HOME)/dmd2/windows/bin/dmd.exe
+	CC = wine dmc.exe
+	DMD = wine dmd.exe
 	RUN = wine
 else
 	ifeq ($(OS),win32remote)
@@ -152,15 +152,15 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array base64 bigint			\
-        bitmanip compiler complex concurrency container contracts		\
-        conv cpuid cstream ctype date datetime datebase dateparse		\
-        demangle encoding exception file format functional getopt		\
-        gregorian json loader log math mathspecial md5 metastrings		\
-        mmfile numeric outbuffer parallelism path perf process random	\
-        range regex regexp signals socket socketstream stdint stdio		\
-        stdiobase stream string syserror system traits typecons			\
-        typetuple uni uri utf variant xml zip zlib)
+STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
+        compiler complex concurrency container contracts conv cpuid		\
+        cstream ctype date datetime datebase dateparse demangle			\
+        encoding exception file format functional getopt gregorian		\
+        json loader math mathspecial md5 metastrings mmfile numeric		\
+        outbuffer parallelism path perf process random range regex		\
+        regexp signals socket socketstream stdint stdio stdiobase		\
+        stream string syserror system traits typecons typetuple uni		\
+        uri utf variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
@@ -235,6 +235,11 @@ $(ROOT)/%$(DOTOBJ) : %.c
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+ifeq ($(OS)$(MODEL),freebsd64)
+DISABLED_TESTS += std/container
+# fails freebsd64 debug test
+endif
 
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/conv

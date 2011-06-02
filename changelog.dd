@@ -3,21 +3,37 @@ $(VERSION 053, ddd mm, 2011, =================================================,
     $(WHATSNEW
         $(LI Added bindings for libcurl: etc.c.curl)
         $(LI Added std.net.isemail)
-		$(LI Added std.parallelism)
+        $(LI Added std.parallelism)
+	$(LI Added support for positional parameter intervals, e.g. %1:3$s 
+	prints the first three parameters using the 's' format specifier)
+	$(LI Added findSplit, findSplitBefore, findSplitAfter to std.algorithm;
+	improved walkLength)
+	$(LI Improved online documentation for std.algorithm)
+	$(LI Added roundRobin, takeOne, and takeNone to std.range; improved
+	stride)
+	$(LI Added unsigned to std.traits)
     )
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 4367): std.regex: Captures is not a random access range)
+        $(LI $(BUGZILLA 4574): std.regex: breaks with empy string regex)
         $(LI $(BUGZILLA 4644): assertExceptionThrown to assert that a particular exception was thrown)
         $(LI $(BUGZILLA 4944): Missing tzname even though we have tzset)
+        $(LI $(BUGZILLA 5019): In std.regex, empty capture at end of string causes error)
+        $(LI $(BUGZILLA 5169): Add(?:) Non-capturing parentheses group support to std.regex)
         $(LI $(BUGZILLA 5451): Three ideas for RedBlackTree)
         $(LI $(BUGZILLA 5474): unaryFun byRef is borked for custom parameter name)
         $(LI $(BUGZILLA 5485): TLS sections handled incorrectly in FreeBSD)
+        $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
         $(LI $(BUGZILLA 5616): std.datetime: not cross-platform)
         $(LI $(BUGZILLA 5654): BigInt returns ZERO with strings of single digit number with leading zeros)
+        $(LI $(BUGZILLA 5661): std.algorithm.move does not work on elaborate struct)
         $(LI $(BUGZILLA 5731): std.datetime.SysTime prints UTC offsets backwards)
         $(LI $(BUGZILLA 5761): std.datetime: Date.this(int day) conversion fails for Dec 30 of leap years)
         $(LI $(BUGZILLA 5780): [patch] std.traits.hasIndirections incorrectly handles static arrays)
         $(LI $(BUGZILLA 5781): std.datetime: On Windows, times off by one hour in some years due to DST rule changes)
         $(LI $(BUGZILLA 5794): std.datetime StopWatch (and perhaps benchmark) examples need a small fix)
+        $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
+        $(LI $(BUGZILLA 6076): std.regex: "c.*|d" matches "mm")
      )
 
 )
