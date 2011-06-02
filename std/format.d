@@ -908,6 +908,36 @@ if (is(T == enum))
     static assert(!is(OriginalType!T == T));
     formatValue(w, cast(OriginalType!T)val, f);
 }
+unittest
+{
+    auto a = appender!string();
+    enum A { first, second, third }
+    FormatSpec!char spec;
+    formatValue(a, A.second, spec);
+    assert(a.data == "second");
+    formatValue(a, cast(A)72, spec);
+    assert(a.data == "secondcast(A)72");
+}
+unittest
+{
+    auto a = appender!string();
+    enum A : string { one = "uno", two = "dos", three = "tres" }
+    FormatSpec!char spec;
+    formatValue(a, A.three, spec);
+    assert(a.data == "three");
+    formatValue(a, cast(A)"mill\&oacute;n", spec);
+    assert(a.data == "threecast(A)mill\&oacute;n");
+}
+unittest
+{
+    auto a = appender!string();
+    enum A : bool { no, yes }
+    FormatSpec!char spec;
+    formatValue(a, A.yes, spec);
+    assert(a.data == "yes");
+    formatValue(a, A.no, spec);
+    assert(a.data == "yesno");
+}
 
 /**
    Integrals are formatted like $(D printf) does.
@@ -1110,7 +1140,7 @@ unittest
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (is(T : bool))
+if (is(T : bool) && !is(T == enum))
 {
     if (f.spec == 's') {
         put(w, val ? "true" : "false");
@@ -1142,7 +1172,7 @@ if (isSomeChar!T)
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (isSomeString!T && !isStaticArray!T)
+if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
     enforce(f.spec == 's');
     StringTypeOf!T val2 = val;		// for `alias this`
@@ -1434,7 +1464,7 @@ unittest
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (isAssociativeArray!T)
+if (isAssociativeArray!T && !is(T == enum))
 {
     bool firstTime = true;
     auto vf = f;
