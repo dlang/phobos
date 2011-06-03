@@ -29,7 +29,7 @@
 /**
  * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See /dmd/samples/d/listener.d.
- * Authors: Christopher E. Miller
+ * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger)
  * Source:  $(PHOBOSSRC std/_socket.d)
  * Macros:
  *      WIKI=Phobos/StdSocket
@@ -1760,6 +1760,19 @@ class UdpSocket: Socket
  * The two sockets are indistinguishable.
  *
  * Throws: SocketException if creation of the sockets fails.
+ *
+ * Example:
+ * ---
+ * immutable ubyte[] data = [1, 2, 3, 4];
+ * auto pair = socketPair();
+ * scope(exit) foreach (s; pair) s.close();
+ *
+ * pair[0].send(data);
+ *
+ * auto buf = new ubyte[data.length];
+ * pair[1].receive(buf);
+ * assert(buf == data);
+ * ---
  */
 Socket[2] socketPair() {
     version(BsdSockets) {
@@ -1795,15 +1808,13 @@ Socket[2] socketPair() {
 }
 
 unittest {
-    ubyte[] data = [1, 2, 3, 4];
+    immutable ubyte[] data = [1, 2, 3, 4];
     auto pair = socketPair();
+    scope(exit) foreach (s; pair) s.close();
 
     pair[0].send(data);
 
-    ubyte[] buf = new ubyte[data.length];
+    auto buf = new ubyte[data.length];
     pair[1].receive(buf);
     assert(buf == data);
-
-    pair[0].close();
-    pair[1].close();
 }
