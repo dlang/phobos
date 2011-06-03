@@ -131,7 +131,11 @@ $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
 int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
 if (is(Unqual!(ElementType!S1) == dchar) && is(Unqual!(ElementType!S2) == dchar))
 {
-    enum isLessThan = is(pred : string) && pred == "a < b";
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
+    else
+        enum isLessThan = false;
+
     foreach (e; zip(s1, s2))
     {
         dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);

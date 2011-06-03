@@ -3830,11 +3830,17 @@ if (isInputRange!R1 &&
     alias doesThisStart haystack;
     alias withThis needle;
 
+    static if(is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
     // Special  case for two arrays
     static if (isArray!R1 && isArray!R2 &&
                ((!isSomeString!R1 && !isSomeString!R2) ||
                  (isSomeString!R1 && isSomeString!R2 &&
-                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
+                  isDefaultPred)))
     {
         if (haystack.length < needle.length) return false;
 
@@ -4106,11 +4112,17 @@ if (isInputRange!R1 &&
     alias doesThisEnd haystack;
     alias withThis needle;
 
-    // Special case for non-character arrays and strings of the same character type.
+    static if(is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
+    // Special  case for two arrays
     static if (isArray!R1 && isArray!R2 &&
                ((!isSomeString!R1 && !isSomeString!R2) ||
                  (isSomeString!R1 && isSomeString!R2 &&
-                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))))))
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
+                  isDefaultPred)))
     {
         if (haystack.length < needle.length) return false;
         immutable diff = haystack.length - needle.length;
@@ -4557,7 +4569,11 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 // Specialization for strings (for speed purposes)
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
-    enum isLessThan = is(pred : string) && pred == "a < b";
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
+    else
+        enum isLessThan = false;
+
     // For speed only
     static int threeWay(size_t a, size_t b)
     {
