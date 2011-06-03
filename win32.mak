@@ -298,7 +298,9 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
+
+SRC_SQLITE= etc\c\sqlite3\sqlite3.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -340,15 +342,15 @@ SRC_ZLIB= \
 	etc\c\zlib\solaris.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
+	etc\c\zlib\zlib.lib etc\c\sqlite3\sqlite3.lib $(DRUNTIMELIB) win32.mak
 	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		etc\c\zlib\zlib.lib etc\c\sqlite3\sqlite3.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRCS_1)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest1.obj unittest2.obj \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
+		etc\c\zlib\zlib.lib etc\c\sqlite3\sqlite3.lib $(DRUNTIMELIB)
 	unittest
 
 #unittest : unittest.exe
@@ -369,6 +371,11 @@ html : $(DOCS)
 etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
 	make -f win32.mak zlib.lib
+	cd ..\..\..
+
+etc\c\sqlite3\sqlite3.lib:
+	cd etc\c\sqlite3
+	make -f win32.mak sqlite3.lib
 	cd ..\..\..
 
 ### std
@@ -601,6 +608,9 @@ Czlib.obj : etc\c\zlib.d
 
 Ccurl.obj : etc\c\curl.d
 	$(DMD) -c $(DFLAGS) etc\c\curl.d -ofCcurl.obj
+
+Csqlite3.obj : etc\c\sqlite3.d
+	$(DMD) -c $(DFLAGS) etc\c\sqlite3.d -ofCsqlite3.obj
 
 ### std\c\windows
 
@@ -903,7 +913,7 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_SQLITE)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -918,6 +928,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
+	zip32 -u phobos $(SRC_SQLITE)
 
 clean:
 	cd etc\c\zlib
@@ -949,6 +960,7 @@ install:
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
+	$(CP) $(SRC_SQLITE) $(DIR)\src\phobos\etc\c\sqlite3
 	$(CP) $(DOCS) $(DIR)\html\d\phobos
 
 svn:
@@ -966,5 +978,6 @@ svn:
 	#$(CP) $(SRC_ETC) $(SVN)\etc
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
+	$(CP) $(SRC_SQLITE) $(SVN)\etc\c\sqlite3
 
 
