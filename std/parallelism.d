@@ -2151,16 +2151,18 @@ public:
                 );
             }
 
-            try {
-                (cast(AbstractTask*) &tasks[0]).job();
-            } catch(Throwable e) {
-                tasks[0].exception = e;
-            }
-            tasks[0].taskStatus = TaskStatus.done;
+            if(tasks.length > 0) {
+                try {
+                    (cast(AbstractTask*) &tasks[0]).job();
+                } catch(Throwable e) {
+                    tasks[0].exception = e;
+                }
+                tasks[0].taskStatus = TaskStatus.done;
 
-            // Try to execute each of these in the current thread
-            foreach(ref task; tasks[1..$]) {
-                tryDeleteExecute( cast(AbstractTask*) &task);
+                // Try to execute each of these in the current thread
+                foreach(ref task; tasks[1..$]) {
+                    tryDeleteExecute( cast(AbstractTask*) &task);
+                }
             }
 
             // Now that we've tried to execute every task, they're all either
@@ -2950,18 +2952,6 @@ private mixin template ResubmittingTasks() {
             pool.abstractPutGroupNoSync(head, tail);
         }
 
-        AbstractTask* first;  // Do in this thread.
-
-        void doFirst() {
-            if(first is null) return;
-            try {
-                first.job();
-            } catch(Throwable e) {
-                first.exception = e;
-            }
-            atomicSetUbyte(first.taskStatus, TaskStatus.done);
-        }
-
         // Search for slots.
         foreach(ref task; tasks) {
             try {
@@ -2981,10 +2971,7 @@ private mixin template ResubmittingTasks() {
             assert(task.next is null);
             assert(task.prev is null);
 
-            if(first is null) {
-                first = cast(AbstractTask*) &task;
-                first.taskStatus = TaskStatus.inProgress;
-            } else if(head is null) {
+            if(head is null) {
                 head = tail = cast(AbstractTask*) &task;
             } else {
                 auto at = cast(AbstractTask*) &task;
@@ -2996,14 +2983,12 @@ private mixin template ResubmittingTasks() {
             if(emptyCheck()) {
                 doGroupSubmit();
                 atomicSetUbyte(doneSubmitting, 1);
-                doFirst();
                 return;
             }
         }
 
         doGroupSubmit();
         submitResubmittingTask(cast(AbstractTask*) &submitNextBatch);
-        doFirst();
     }
 
     void submitAndExecute() {

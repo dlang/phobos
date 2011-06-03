@@ -80,8 +80,8 @@ endif
 
 # Set CC and DMD
 ifeq ($(OS),win32wine)
-	CC = wine $(HOME)/dmc/bin/dmc.exe
-	DMD = wine $(HOME)/dmd2/windows/bin/dmd.exe
+	CC = wine dmc.exe
+	DMD = wine dmd.exe
 	RUN = wine
 else
 	ifeq ($(OS),win32remote)

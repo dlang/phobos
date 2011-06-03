@@ -892,14 +892,21 @@ unittest
 /**
    $(D enum) is formatted like its base value.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == enum))
 {
-    static if (is(T Original == enum))
-        formatValue(w, cast(Original) val, f);
-    else
-        static assert(0);
+    foreach (i, e; EnumMembers!T)
+    {
+        if (val == e) {
+            put(w, __traits(allMembers, T)[i]);
+            return;
+        }
+    }
+
+    // val is not a member of T, output cast(T)rawValue instead.
+    put(w, "cast(" ~ T.stringof ~ ")");
+    static assert(!is(OriginalType!T == T));
+    formatValue(w, cast(OriginalType!T)val, f);
 }
 
 /**
@@ -2038,9 +2045,11 @@ here:
     enum TestEnum
     {
         Value1, Value2
-            }
+    }
     stream.clear; formattedWrite(stream, "%s", TestEnum.Value2);
-    assert(stream.data == "1", stream.data);
+    assert(stream.data == "Value2", stream.data);
+    stream.clear; formattedWrite(stream, "%s", cast(TestEnum)5);
+    assert(stream.data == "cast(TestEnum)5", stream.data);
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     //stream.clear; formattedWrite(stream, "%s", aa.values);
