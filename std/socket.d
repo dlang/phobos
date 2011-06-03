@@ -40,6 +40,10 @@ module std.socket;
 import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv,
     std.traits;
 
+import core.time : dur, Duration;
+import std.algorithm : max;
+import std.exception : enforce;
+
 version(unittest)
 {
     private import std.c.stdio : printf;
@@ -1089,6 +1093,8 @@ enum SocketOption: int
         SNDBUF =               SO_SNDBUF,       /// send buffer size
         RCVBUF =               SO_RCVBUF,       /// receive buffer size
         DONTROUTE =            SO_DONTROUTE,    /// do not route
+        SNDTIMEO =             SO_SNDTIMEO,     /// send timeout
+        RCVTIMEO =             SO_RCVTIMEO,     /// receive timeout
 
         // SocketOptionLevel.TCP:
         TCP_NODELAY =          .TCP_NODELAY,    /// disable the Nagle algorithm for send coalescing
@@ -1114,6 +1120,12 @@ class Socket
 
         version(Win32)
             bool _blocking = false;     /// Property to get or set whether the socket is blocking or nonblocking.
+
+        // The WinSock timeouts seem to be effectively skewed by a constant
+        // offset of about half a second (value in milliseconds). This has
+        // been confirmed on updated (as of Jun 2011) Windows XP, Windows 7
+        // and Windows Server 2008 R2 boxes.
+        enum WINSOCK_TIMEOUT_SKEW = 500;
 
 
         // For use with accepting().
@@ -1562,6 +1574,31 @@ class Socket
                 return getOption(level, option, (&result)[0 .. 1]);
         }
 
+        /// Get a timeout (duration) option.
+        void getOption(SocketOptionLevel level, SocketOption option, out Duration result)
+        {
+                enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
+                        new SocketException("Not a valid timeout option: " ~ to!string(option)));
+                // WinSock returns the timeout values as a milliseconds DWORD,
+                // while Linux and BSD return a timeval struct.
+                version (Win32)
+                {
+                        int msecs;
+                        getOption(level, option, (&msecs)[0 .. 1]);
+                        if (option == SocketOption.RCVTIMEO) {
+                                msecs += WINSOCK_TIMEOUT_SKEW;
+                        }
+                        result = dur!"msecs"(msecs);
+                }
+                else version (BsdSockets)
+                {
+                        timeval tv;
+                        getOption(level, option, (&tv)[0..1]);
+                        result = dur!"seconds"(tv.seconds) + dur!"usecs"(tv.microseconds);
+                }
+                else static assert(false);
+        }
+
         // Set a socket option.
         void setOption(SocketOptionLevel level, SocketOption option, void[] value)
         {
@@ -1585,6 +1622,74 @@ class Socket
                 setOption(level, option, (&value)[0 .. 1]);
         }
 
+        /**
+         * Sets a timeout (duration) option, i.e. SocketOption.SNDTIMEO or
+         * RCVTIMEO. Zero indicates no timeout.
+         *
+         * In a typical application, you might also want to consider using
+         * a non-blocking socket instead of setting a timeout on a blocking one.
+         *
+         * Note: While the receive timeout setting is generally quite accurate
+         * on *nix systems even for smaller durations, there are two issues to
+         * be aware of on Windows: First, although undocumented, the effective
+         * timeout duration seems to be the one set on the socket plus half
+         * a second. setOption() tries to compensate for that, but still,
+         * timeouts under 500ms are not possible on Windows. Second, be aware
+         * that the actual amount of time spent until a blocking call returns
+         * randomly varies on the order of 10ms.
+         *
+         * Params:
+         *   value = The timeout duration to set. Must not be negative.
+         *
+         * Throws: SocketException if setting the options fails.
+         *
+         * Example:
+         * ---
+         * import std.datetime;
+         * auto pair = socketPair();
+         * scope(exit) foreach (s; pair) s.close();
+         *
+         * // Set a receive timeout, and then wait at one end of
+         * // the socket pair, knowing that no data will arrive.
+         * pair[0].setOption(SocketOptionLevel.SOCKET,
+         *     SocketOption.RCVTIMEO, dur!"seconds"(1));
+         *
+         * auto sw = StopWatch(AutoStart.yes);
+         * ubyte[1] buffer;
+         * pair[0].receive(buffer);
+         * writefln("Waited %s ms until the socket timed out.",
+         *     sw.peek.msecs);
+         * ---
+         */
+        void setOption(SocketOptionLevel level, SocketOption option, Duration value)
+        {
+                enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
+                        new SocketException("Not a valid timeout option: " ~ to!string(option)));
+
+                enforce(value >= dur!"hnsecs"(0), new SocketException(
+                        "Timeout duration must not be negative."));
+
+                version (Win32)
+                {
+                        auto msecs = cast(int)value.total!"msecs"();
+                        if (msecs == 0 || option != SocketOption.RCVTIMEO)
+                        {
+                                setOption(level, option, msecs);
+                        }
+                        else
+                        {
+                                setOption(level, option, cast(int)
+                                      max(1, msecs - WINSOCK_TIMEOUT_SKEW));
+                        }
+                }
+                else version (BsdSockets)
+                {
+                        timeval tv = { seconds: cast(int)value.total!"seconds"(),
+                                microseconds: value.fracSec.usecs };
+                        setOption(level, option, (&tv)[0 .. 1]);
+                }
+                else static assert(false);
+        }
 
         /**
          * Wait for a socket to change status. A wait timeout timeval or int microseconds may be specified; if a timeout is not specified or the timeval is null, the maximum timeout is used. The timeval timeout has an unspecified value when select returns. Returns the number of sockets with status changes, 0 on timeout, or -1 on interruption. If the return value is greater than 0, the SocketSets are updated to only contain the sockets having status changes. For a connecting socket, a write status change means the connection is established and it's able to send. For a listening socket, a read status change means there is an incoming connection request and it's able to accept.
