@@ -6292,30 +6292,31 @@ size_t getPivot(alias less, Range)(Range r)
                             ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
                             (cast(uint) (pred(r[mid], r[len - 1])));
 
-    assert(result != 2 && result != 5 && result < 8); // Cases 2, 5 can't happen.
     switch(result) {
-        case 1:  // 001
-        case 6:  // 110
-            return r.length - 1;
-        case 3:  // 011
-        case 4:  // 100
-            return 0;
-        case 0:  // 000
-        case 7:  // 111
-            return mid;
+        case 0b001:
+            swapAt(r, 0, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b110:
+            swapAt(r, mid, len - 1);
+            break;
+        case 0b011:
+            swapAt(r, 0, mid);
+            break;
+        case 0b100:
+            swapAt(r, mid, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b000:
+            swapAt(r, 0, len - 1);
+            break;
+        case 0b111:
+            break;
         default:
             assert(0);
     }
-    assert(0);
-}
 
-unittest {
-    assert(getPivot!("a < b")([1,2,3,4,5]) == 2);
-    assert(getPivot!("a < b")([1,2,5,4,3]) == 4);
-    assert(getPivot!("a < b")([3,2,1,4,5]) == 0);
-    assert(getPivot!("a < b")([5,2,3,4,1]) == 2);
-    assert(getPivot!("a < b")([5,2,1,4,3]) == 4);
-    assert(getPivot!("a < b")([3,2,5,4,1]) == 0);
+    return len / 2;
 }
 
 // @@@BUG1904
@@ -6376,9 +6377,8 @@ void swapAt(R)(R r, size_t i1, size_t i2)
 void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
-    enum uint optimisticInsertionSortGetsBetter = 25;
+    enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
-    alias binaryFun!(less) pred;
 
     while (r.length > optimisticInsertionSortGetsBetter)
     {
@@ -6388,6 +6388,8 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
         // partition
         static if (ss == SwapStrategy.unstable)
         {
+            alias binaryFun!(less) pred;
+
             // partition
             swapAt(r, pivotIdx, r.length - 1);
             size_t lessI = size_t.max, greaterI = r.length - 1;
