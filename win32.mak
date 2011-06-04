@@ -298,7 +298,7 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
