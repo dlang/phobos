@@ -360,7 +360,7 @@ Returns the number of parenthesized captures
                 {
                     auto dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
                     if (pc + *dest > place)
-                        *dest -= change; 
+                        *dest -= change;
                 }
                 pc += 1 + 2*uint.sizeof;
                 break;
@@ -374,10 +374,10 @@ Returns the number of parenthesized captures
                 }
                 pc += 1 + 3*uint.sizeof;
                 break;
-                    
+
             case REneglookahead://jump or call forward
             case RElookahead:
-            case REor: 
+            case REor:
             case REgoto:
                 if (pc < place)
                 {
@@ -387,10 +387,10 @@ Returns the number of parenthesized captures
                 }
                 pc += 1 + uint.sizeof;
                 break;
-                
+
             case REret:
             case REanychar:
-            case REanystarg: 
+            case REanystarg:
             case REanystar:
             case REbol:
             case REeol:
@@ -404,7 +404,7 @@ Returns the number of parenthesized captures
             case REnotword:
                 pc++;
                 break;
-                
+
             case REchar:
             case REichar:
             case REbackref:
@@ -471,7 +471,7 @@ Returns the number of parenthesized captures
                 {
                     prog[pc] = prog[offs+1] == REloop ? REanystar : REanystarg;
                     uint change = 2*(1 + uint.sizeof) + 1 + 3*uint.sizeof - 1;
-                    std.array.replaceInPlace(prog, pc + 1, 
+                    std.array.replaceInPlace(prog, pc + 1,
                                              pc + change + 1, cast(ubyte[])[]);
                     fixup(prog, pc, change);
                     pc++;
@@ -536,7 +536,7 @@ Returns the number of parenthesized captures
                 len = *cast(uint *)&prog[pc+1];
                 pc += 1 + uint.sizeof + len;
                 break;
-                
+
             case REneglookahead:
             case RElookahead:
             case REor:
@@ -1001,6 +1001,7 @@ Returns the number of parenthesized captures
                 {
                 case RS.dash:
                     r.setbit2('-');
+                    goto case;
                 case RS.rliteral:
                     r.setbit2(c);
                     break;
@@ -1059,7 +1060,8 @@ Returns the number of parenthesized captures
                     switch (rs)
                     {
                     case RS.dash:
-                            r.setbit2('-');
+                        r.setbit2('-');
+                        goto case;
                     case RS.rliteral:
                         r.setbit2(c);
                         break;
@@ -1096,7 +1098,8 @@ Returns the number of parenthesized captures
                 switch (rs)
                 {
                 case RS.rliteral:
-                        r.setbit2(c);
+                    r.setbit2(c);
+                    goto case;
                 case RS.start:
                     c = c2;
                     rs = RS.rliteral;
@@ -2545,7 +2548,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 auto so = pmatch[n + 1].startIdx;
                 auto eo = pmatch[n + 1].endIdx;
                 auto len = eo - so;
-				debug(std_regex) writefln("len \t%d", len);
+                                debug(std_regex) writefln("len \t%d", len);
                 if (src + len > input.length)
                     goto Lnomatch;
 
@@ -3588,9 +3591,9 @@ unittest
 
 //issue 6076
 //regression on .*
-unittest 
+unittest
 {
     auto re = regex("c.*|d");
     auto m = match("mm", re);
-    assert(m.empty);          
+    assert(m.empty);
 }

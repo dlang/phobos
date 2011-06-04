@@ -2463,22 +2463,22 @@ private
             int n = 0;
             switch(d)
             {
-                case 'F','f': ++n;
-                case 'E','e': ++n;
-                case 'D','d': ++n;
-                case 'C','c': ++n;
-                case 'B','b': ++n;
-                case 'A','a': ++n;
-                case '9': ++n;
-                case '8': ++n;
-                case '7': ++n;
-                case '6': ++n;
-                case '5': ++n;
-                case '4': ++n;
-                case '3': ++n;
-                case '2': ++n;
-                case '1': ++n;
-                case '0': break;
+                case 'F','f': ++n;      goto case;
+                case 'E','e': ++n;      goto case;
+                case 'D','d': ++n;      goto case;
+                case 'C','c': ++n;      goto case;
+                case 'B','b': ++n;      goto case;
+                case 'A','a': ++n;      goto case;
+                case '9':     ++n;      goto case;
+                case '8':     ++n;      goto case;
+                case '7':     ++n;      goto case;
+                case '6':     ++n;      goto case;
+                case '5':     ++n;      goto case;
+                case '4':     ++n;      goto case;
+                case '3':     ++n;      goto case;
+                case '2':     ++n;      goto case;
+                case '1':     ++n;      goto case;
+                case '0':     break;
                 default: n = 100; break;
             }
             if (n >= radix) break;

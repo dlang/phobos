@@ -1175,7 +1175,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
     enforce(f.spec == 's');
-    StringTypeOf!T val2 = val;		// for `alias this`
+    StringTypeOf!T val2 = val;          // for `alias this`
     auto s = val2[0 .. f.precision < $ ? f.precision : $];
     if (!f.flDash)
     {
@@ -3284,6 +3284,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     }
                     return;
                 }
+                assert(0);
 
             case Mangle.Ttypedef:
                 ti = (cast(TypeInfo_Typedef)ti).base;
@@ -3605,8 +3606,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     case '0':        flags |= FL0pad;        continue;
 
                     case '%':        if (flags == 0)
-                            goto Lputc;
-                    default:        break;
+                                          goto Lputc;
+                                     break;
+
+                    default:         break;
                     }
                     break;
                 }

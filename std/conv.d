@@ -1339,6 +1339,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             // 'inf'
             return sign ? -Target.infinity : Target.infinity;
         }
+        goto default;
     default: {}
     }
 
@@ -1435,9 +1436,11 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         {
             switch (p.front)
             {   case '-':    sexp++;
+                             goto case;
                 case '+':    p.popFront(); enforce(!p.empty,
-                        new ConvException("Error converting input"
+                                new ConvException("Error converting input"
                                 " to floating point"));
+                             break;
                 default: {}
             }
         }
@@ -1533,7 +1536,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
         {   case '-':    sexp++;
+                         goto case;
             case '+':    p.popFront();
+                         break;
             default: {}
         }
         bool sawDigits = 0;
@@ -1750,14 +1755,14 @@ if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
 unittest
 {
     int[] a = [1, 2, 3, 4, 5];
-	auto s = to!string(a);
+        auto s = to!string(a);
     assert(to!(int[])(s) == a);
 }
 
 unittest
 {
     int[][] a = [ [1, 2] , [3], [4, 5] ];
-	auto s = to!string(a);
+        auto s = to!string(a);
     //assert(to!(int[][])(s) == a);
 }
 
@@ -1765,10 +1770,10 @@ unittest
 {
     int[][][] ia = [ [[1,2],[3,4],[5]] , [[6],[],[7,8,9]] , [[]] ];
 
-	char[] s = to!(char[])(ia);
-	int[][][] ia2;
+        char[] s = to!(char[])(ia);
+        int[][][] ia2;
 
-	ia2 = to!(typeof(ia2))(s);
+        ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
 }
 

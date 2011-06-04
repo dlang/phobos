@@ -161,7 +161,7 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, char[] line; file) 
+   * foreach(ulong n, char[] line; file)
    * {
    *     writefln("line %d: %s", n, line);
    * }
@@ -487,6 +487,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case char.init:
         result.length = strlen;
@@ -529,6 +530,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case wchar.init:
         result.length = strlen;
