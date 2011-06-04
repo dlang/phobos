@@ -331,7 +331,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise,
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -357,7 +357,7 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, the given
+    If $(D !!value) is true, $(D value) is returned. Otherwise, the given
     delegate is called.
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
@@ -390,7 +390,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
    Example:
 --------------------
@@ -419,7 +419,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise,
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
     last operation set $(D errno) to an error code.
 
@@ -438,7 +438,7 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
     is thrown.
 
    Example:
@@ -736,11 +736,9 @@ bool pointsTo(S, T)(ref const S source, ref const T target) @trusted pure nothro
         }
         return false;
     }
-    else static if (isDynamicArray!(S))
+    else static if (isArray!(S))
     {
-        const p1 = cast(void*) source.ptr, p2 = p1 + source.length,
-              b = cast(void*) &target, e = b + target.sizeof;
-        return overlap(p1[0 .. p2 - p1], b[0 .. e - b]).length != 0;
+        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -784,6 +782,18 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
+    
+    int[] darr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(darr, darr[i]));
+    assert(pointsTo(darr[0..3], darr[2]));
+    assert(!pointsTo(darr[0..3], darr[3]));
+    
+    int[4] sarr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(sarr, sarr[i]));
+    assert(pointsTo(sarr[0..3], sarr[2]));
+    assert(!pointsTo(sarr[0..3], sarr[3]));
 }
 
 /*********************
