@@ -314,7 +314,7 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.exception,
+import std.array, std.container, std.conv, std.ctype, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.stdio;
 
@@ -2140,6 +2140,35 @@ unittest
             assert(equal(rangeSplit.front, [6,7,8,9,10]));
         }
     }
+}
+
+auto splitter(Range)(Range input)
+if (isSomeString!Range)
+{
+    return splitter!isspace(input);
+}
+
+unittest
+{
+    // TDPL example, page 8
+    uint[string] dictionary;
+    char[][3] lines;
+    lines[0] = "line one".dup;
+    lines[1] = "line \ttwo".dup;
+    lines[2] = "yah            last   line\ryah".dup;
+    foreach (line; lines) {
+       foreach (word; splitter(strip(line))) {
+            if (word in dictionary) continue; // Nothing to do
+            auto newID = dictionary.length;
+            dictionary[to!string(word)] = newID;
+        }
+    }
+    assert(dictionary.length == 5);
+    assert(dictionary["line"]== 0);
+    assert(dictionary["one"]== 1);
+    assert(dictionary["two"]== 2);
+    assert(dictionary["yah"]== 3);
+    assert(dictionary["last"]== 4);
 }
 
 // joiner
