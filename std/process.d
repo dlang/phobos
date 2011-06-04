@@ -495,16 +495,16 @@ alias Environment environment;
 
 abstract final class Environment
 {
-static:
     // initiaizes the value of environ for OSX
     version(OSX)
     {
-        private char** environ;
-        this()
+        static private char** environ;
+        static this()
         {
             environ = * _NSGetEnviron();
         }
     }
+static:
 
 private:
     // Return the length of an environment variable (in number of
