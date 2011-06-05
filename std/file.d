@@ -540,7 +540,8 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0, 
+            "Failed to remove file " ~ name);
 }
 
 /***************************************************
