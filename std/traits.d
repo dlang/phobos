@@ -2070,7 +2070,7 @@ unittest
     alias MemberFunctionsTuple!(C, "test") test;
     static assert(test.length == 2);
     static assert(is(FunctionTypeOf!(test[0]) == FunctionTypeOf!(C.test)));
-    static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(B.test)));
+    static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(K.test)));
     alias MemberFunctionsTuple!(C, "noexist") noexist;
     static assert(noexist.length == 0);
 
