@@ -1688,24 +1688,52 @@ version(Posix) void rmdir(in char[] pathname)
 
 version(Windows) string getcwd()
 {
-    // A bit odd API: calling GetCurrentDirectory(0, null) returns
-    // length including the \0, whereas calling with non-zero
-    // params returns length excluding the \0.
+    /* GetCurrentDirectory's return value:
+        1. function succeeds: the number of characters that are written to 
+    the buffer, not including the terminating null character.
+        2. function fails: zero
+        3. the buffer (lpBuffer) is not large enough: the required size of 
+    the buffer, in characters, including the null-terminating character.
+    */
+    ushort[4096] staticBuff = void; //enough for most common case
     if (useWfuncs)
     {
-        auto dir =
-            new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-        auto n = GetCurrentDirectoryW(dir.length, dir.ptr);
-        enforce(n && n < dir.length, "getcwd");
-        return std.conv.to!string(dir[0 .. n]);
+        auto buffW = cast(wchar[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryW(buffW.length, buffW.ptr), "getcwd");
+        // we can do it because toUTFX always produces a fresh string
+        if(n < buffW.length)
+        {
+            return toUTF8(buffW[0 .. n]);
+        }
+        else //staticBuff isn't enough
+        {
+            auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryW(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+            return toUTF8(ptr[0 .. n2]);
+        }
     }
     else
     {
-        auto dir =
-            new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        auto n = GetCurrentDirectoryA(dir.length, dir.ptr);
-        enforce(n && n < dir.length, "getcwd");
-        return fromMBSz(cast(immutable)dir.ptr);
+        auto buffA = cast(char[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryA(buffA.length, buffA.ptr), "getcwd");
+        // fromMBSz doesn't always produce a fresh string
+        if(n < buffA.length)
+        {
+            string res = fromMBSz(cast(immutable)buffA.ptr);
+            return res.ptr == buffA.ptr ? res.idup : res;
+        }
+        else //staticBuff isn't enough
+        {
+            auto ptr = cast(char*) malloc(char.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryA(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+            
+            string res = fromMBSz(cast(immutable)ptr);
+            return res.ptr == ptr ? res.idup : res;
+        }
     }
 }
 
