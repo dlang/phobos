@@ -2160,7 +2160,7 @@ unittest
        foreach (word; splitter(strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
-            dictionary[to!string(word)] = newID;
+            dictionary[to!string(word)] = cast(uint)newID;
         }
     }
     assert(dictionary.length == 5);
