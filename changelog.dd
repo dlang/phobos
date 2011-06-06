@@ -1,10 +1,13 @@
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-	$(LI Your news here)
+        $(LI Your news here)
     )
+
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 3457): rdmd fails silently in a particular setup where the compiler is not the expected)
         $(LI $(BUGZILLA 3479): writef/writefln: positional precision not working)
-	)
+        $(LI $(BUGZILLA 3564): Rdmd failing to link external C libraries)
+        $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
+    )
 )
