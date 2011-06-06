@@ -136,14 +136,16 @@ private C[] chompDirSeparators(C)(C[] path)  if (isSomeChar!C)
 
     Examples:
     ---
-    baseName("dir/file.ext")            -->  "file.ext"
-    baseName("dir/file.ext", ".ext")    -->  "file"
-    baseName("dir/filename", "name")    -->  "file"
-    baseName("dir/subdir/")             -->  "subdir"
+    assert (baseName("dir/file.ext")         == "file.ext");
+    assert (baseName("dir/file.ext", ".ext") == "file");
+    assert (baseName("dir/filename", "name") == "file");
+    assert (baseName("dir/subdir/")          == "subdir");
 
-    // Windows only:
-    baseName( "d:file.ext")             -->  "file.ext"
-    baseName(r"d:\dir\file.ext")        -->  "file.ext"
+    version (Windows)
+    {
+        assert (baseName( "d:file.ext")      == "file.ext");
+        assert (baseName(r"d:\dir\file.ext") == "file.ext");
+    }
     ---
 
     Note:
@@ -196,7 +198,7 @@ unittest
     assert (baseName("//"d.dup)                     == "/");
     assert (baseName("///")                         == "/");
 
-    version (Win32)
+    version (Windows)
     {
     assert (baseName("dir\\file.ext")               == "file.ext");
     assert (baseName("dir\\file.ext", ".ext")       == "file");
@@ -225,16 +227,18 @@ unittest
 
     Examples:
     ---
-    dirName("file")             -->  "."
-    dirName("dir/file")         -->  "dir"
-    dirName("/file")            -->  "/"
-    dirName("dir/subdir/")      -->  "dir"
+    assert (dirName("file")        == ".");
+    assert (dirName("dir/file")    == "dir");
+    assert (dirName("/file")       == "/");
+    assert (dirName("dir/subdir/") == "dir");
 
-    // Windows only:
-    dirName( "d:file")          -->  "d:"
-    dirName(r"d:\dir\file")     --> r"d:\dir"
-    dirName(r"d:\file")         --> r"d:\"
-    dirName(r"dir\subdir\")     -->  "dir"
+    version (Windows)
+    {
+        assert (dirName( "d:file")      ==  "d:");
+        assert (dirName(r"d:\dir\file") == r"d:\dir");
+        assert (dirName(r"d:\file")     == r"d:\");
+        assert (dirName(r"dir\subdir\") ==  "dir");
+    }
     ---
 */
 C[] dirName(C)(C[] path)  if (isSomeChar!C)
@@ -307,9 +311,12 @@ unittest
 
     Examples:
     ---
-    driveName( "d:file")    -->  "d:"
-    driveName(r"d:\file")   -->  "d:"
-    driveName(r"dir\file")  -->  ""
+    version (Windows)
+    {
+        assert (driveName( "d:file")   == "d:");
+        assert (driveName(r"d:\file")  == "d:");
+        assert (driveName(r"dir\file") == "");
+    }
     ---
 */
 C[] driveName(C)(C[] path)  if (isSomeChar!C)
@@ -342,7 +349,10 @@ unittest
 
     Example:
     ---
-    stripDrive(r"d:\dir\file")       -->  r"\dir\file"
+    version (Windows)
+    {
+        assert (stripDrive(r"d:\dir\file") == r"\dir\file");
+    }
     ---
 */
 C[] stripDrive(C)(C[] path)  if (isSomeChar!C)
@@ -383,11 +393,11 @@ private int extSeparatorPos(C)(in C[] path) if (isSomeChar!C)
 
     Examples:
     ---
-    extension("file")               -->  ""
-    extension("file.ext")           -->  "ext"
-    extension("file.ext1.ext2")     -->  "ext2"
-    extension(".file")              -->  ""
-    extension(".file.ext")          -->  "ext"
+    assert (extension("file")           == "");
+    assert (extension("file.ext")       == "ext");
+    assert (extension("file.ext1.ext2") == "ext2");
+    assert (extension(".file")          == "");
+    assert (extension(".file.ext")      == "ext");
     ---
 */
 C[] extension(C)(C[] path)  if (isSomeChar!C)
@@ -435,12 +445,12 @@ unittest
 
     Examples:
     ---
-    extension("file")               -->  "file"
-    extension("file.ext")           -->  "file"
-    extension("file.ext1.ext2")     -->  "file.ext1"
-    extension(".file")              -->  ".file"
-    extension(".file.ext")          -->  ".file"
-    extension("dir/file.ext")       -->  "dir/file"
+    assert (stripExtension("file")           == "file");
+    assert (stripExtension("file.ext")       == "file");
+    assert (stripExtension("file.ext1.ext2") == "file.ext1");
+    assert (stripExtension(".file")          == ".file");
+    assert (stripExtension(".file.ext")      == ".file");
+    assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
 C[] stripExtension(C)(C[] path)  if (isSomeChar!C)
@@ -493,8 +503,8 @@ unittest
 
     Examples:
     ---
-    setExtension("file", "ext")         -->  "file.ext"
-    setExtension("file.old", "new")     -->  "file.new"
+    assert (setExtension("file", "ext")     == "file.ext");
+    assert (setExtension("file.old", "new") == "file.new");
     ---
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
@@ -526,8 +536,8 @@ unittest
 
     Examples:
     ---
-    defaultExtension("file", "ext")         -->  "file.ext"
-    defaultExtension("file.old", "new")     -->  "file.old"
+    assert (defaultExtension("file", "ext")     == "file.ext");
+    assert (defaultExtension("file.old", "new") == "file.old");
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
@@ -591,14 +601,18 @@ version (unittest)
 
     Examples:
     ---
-    // On Windows:
-    joinPath(r"c:\foo", "bar")  -->  r"c:\foo\bar"
-    joinPath("foo", r"d:\bar")  -->  r"d:\bar"
-    joinPath("foo", r"\bar")    -->  r"\bar"
+    version (Posix)
+    {
+        assert (joinPath("/foo/", "bar") == "/foo/bar");
+        assert (joinPath("/foo", "/bar") == "/bar");
+    }
 
-    // On POSIX
-    joinPath("/foo/", "bar")    -->  "/foo/bar"
-    joinPath("/foo", "/bar")    -->  "/bar"
+    version (Windows)
+    {
+        assert (joinPath(r"c:\foo", "bar") == r"c:\foo\bar");
+        assert (joinPath("foo", r"d:\bar") == r"d:\bar");
+        assert (joinPath("foo", r"\bar")   == r"\bar");
+    }
     ---
 */
 immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
@@ -659,22 +673,28 @@ unittest
     On POSIX, this function returns true if and only if the path starts
     with a slash (/).
     ---
-    assert (isRooted("/"));
-    assert (isRooted("/foo"));
-    assert (!isRooted("foo"));
-    assert (!isRooted("../foo"));
+    version (Posix)
+    {
+        assert (isRooted("/"));
+        assert (isRooted("/foo"));
+        assert (!isRooted("foo"));
+        assert (!isRooted("../foo"));
+    }
     ---
 
     On Windows, this function returns true if the path starts at
     the root directory of the current drive, of some other drive,
     or of a network drive.
     ---
-    assert (isRooted(r"\"));
-    assert (isRooted(r"\foo"));
-    assert (isRooted(r"d:\foo"));
-    assert (isRooted(r"\\foo\bar"));
-    assert (!isRooted("foo"));
-    assert (!isRooted("d:foo"));
+    version (Windows)
+    {
+        assert (isRooted(r"\"));
+        assert (isRooted(r"\foo"));
+        assert (isRooted(r"d:\foo"));
+        assert (isRooted(r"\\foo\bar"));
+        assert (!isRooted("foo"));
+        assert (!isRooted("d:foo"));
+    }
     ---
 */
 bool isRooted(C)(in C[] path)  if (isSomeChar!C)
@@ -716,10 +736,13 @@ unittest
     On POSIX, an absolute path starts at the root directory.
     (In fact, $(D _isAbsolute) is just an alias for $(D isRooted).)
     ---
-    assert (isRelative("foo"));
-    assert (isRelative("../foo"));
-    assert (isAbsolute("/"));
-    assert (isAbsolute("/foo"));
+    version (Posix)
+    {
+        assert (isRelative("foo"));
+        assert (isRelative("../foo"));
+        assert (isAbsolute("/"));
+        assert (isAbsolute("/foo"));
+    }
     ---
 
     On Windows, an absolute path starts at the root directory of
@@ -727,12 +750,15 @@ unittest
     where d is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
-    assert (isRelative(r"\"));
-    assert (isRelative(r"\foo"));
-    assert (isRelative( "d:foo"));
-    assert (isAbsolute(r"d:\"));
-    assert (isAbsolute(r"d:\foo"));
-    assert (isAbsolute(r"\\foo\bar"));
+    version (Windows)
+    {
+        assert (isRelative(r"\"));
+        assert (isRelative(r"\foo"));
+        assert (isRelative( "d:foo"));
+        assert (isAbsolute(r"d:\"));
+        assert (isAbsolute(r"d:\foo"));
+        assert (isAbsolute(r"\\foo\bar"));
+    }
     ---
 */
 version (StdDdoc) bool isAbsolute(C)(in C[] path)  if (isSomeChar!C);
@@ -791,6 +817,25 @@ unittest
         $(LI Otherwise, append path to the current working
             directory and return the result.)
     )
+
+    Examples:
+    ---
+    version (Posix)
+    {
+        // Assuming the current working directory is /foo/bar
+        assert (toAbsolute("some/file")  == "/foo/bar/some/file");
+        assert (toAbsolute("../file")    == "/foo/bar/../file");
+        assert (toAbsolute("/some/file") == "/some/file");
+    }
+
+    version (Windows)
+    {
+        // Assuming the current working directory is c:\foo\bar
+        assert (toAbsolute(r"some\file")    == r"c:\foo\bar\some\file");
+        assert (toAbsolute(r"..\file")      == r"c:\foo\bar\..\file");
+        assert (toAbsolute(r"c:\some\file") == r"c:\some\file");
+    }
+    ---
 */
 string toAbsolute(string path)
 {
@@ -823,6 +868,25 @@ string toAbsolute(string path)
     Note that this function does not perform tilde expansion, as
     this may be a very expensive operation.  Use $(D expandTilde())
     for this.
+
+    Examples:
+    ---
+    version (Posix)
+    {
+        // Assuming the current working directory is /foo/bar
+        assert (toCanonical("some//file")  == "/foo/bar/some/file");
+        assert (toCanonical("../file")     == "/foo/file");
+        assert (toCanonical("/some/file/") == "/some/file");
+    }
+
+    version (Windows)
+    {
+        // Assuming the current working directory is c:\foo\bar
+        assert (toCanonical(r"some\\file")    == r"c:\foo\bar\some\file");
+        assert (toCanonical(r"..\file")       == r"c:\foo\file");
+        assert (toCanonical(r"c:\some\file\") == r"c:\some\file");
+    }
+    ---
 */
 string toCanonical(string path)
 {
