@@ -863,26 +863,6 @@ ref Random rndGen()
 }
 
 /**
-Given a 32-bit random number generator $(D rng), returns a 64-bit
-value obtained by juxtaposing two 32-bit random numbers. Also advances
-$(D rng) two steps.
- */
-ulong random32to64(Random)(ref Random rng)
-if (rng.min == 0 && rng.max == uint.max)
-{
-    ulong result = rng.front;
-    rng.popFront();
-    result |= (rng.front << 32);
-    rng.popFront();
-    return result;
-}
-
-unittest
-{
-    auto n = random32to64(rndGen);
-}
-
-/**
 Generates a number between $(D a) and $(D b). The $(D boundaries)
 parameter controls the shape of the interval (open vs. closed on
 either side). Valid values for $(D boundaries) are $(D "[]"), $(D
