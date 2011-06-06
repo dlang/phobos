@@ -60,8 +60,7 @@ module std.string;
 //debug=string;                 // uncomment to turn on debugging printf's
 
 import core.exception : onRangeError;
-import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string/*, std.algorithm*/,
+import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
     std.conv, std.ctype, std.encoding, std.exception, std.format,
     std.functional, std.metastrings, std.range, std.regex, std.stdio,
     std.traits, std.typetuple, std.uni, std.utf;
@@ -69,42 +68,132 @@ public import std.algorithm : startsWith, endsWith, cmp, count;
 public import std.array : join, split;
 
 version(Windows) extern (C)
-    {
-        size_t wcslen(in wchar *);
-        int wcscmp(in wchar *, in wchar *);
-    }
+{
+    size_t wcslen(in wchar *);
+    int wcscmp(in wchar *, in wchar *);
+}
 
 /* ************* Exceptions *************** */
 
-/// Thrown on errors in string functions.
-typedef Exception StringException;
+/++
+    Exception thrown on errors in std.string functions.
+  +/
+class StringException : Exception
+{
+    /++
+        Params:
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        super(msg, file, line, next);
+    }
+}
 
 /* ************* Constants *************** */
 
-immutable char[16] hexdigits = "0123456789ABCDEF";          /// 0..9A..F
-immutable char[10] digits    = "0123456789";                /// 0..9
-immutable char[8]  octdigits = "01234567";                  /// 0..7
-immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";/// a..z
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, hexDigits) instead.)
+
+    0..9A..F
+  +/
+immutable char[16] hexdigits = "0123456789ABCDEF";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, digits) instead.)
+
+    0..9
+  +/
+immutable char[10] digits    = "0123456789";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, octDigits) instead.)
+
+    0..7
+  +/
+immutable char[8]  octdigits = "01234567";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, lowercase) instead.)
+
+    a..z
+  +/
+immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, letters) instead.)
+
+    A..Za..z
+  +/
 immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";                           /// A..Za..z
-immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";/// A..Z
-immutable char[6] whitespace = " \t\v\r\n\f";               /// ASCII whitespace
+    "abcdefghijklmnopqrstuvwxyz";
 
-enum dchar LS = '\u2028';                                   /// UTF line separator
-enum dchar PS = '\u2029';                                   /// UTF paragraph separator
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, uppercase) instead.)
 
-                                                            /// Newline sequence for this system
-version (Windows)
-    immutable char[2] newline = "\r\n";
-else version (Posix)
-    immutable char[1] newline = "\n";
+    A..Z
+  +/
+immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, whitespace) instead.)
+
+    ASCII whitespace.
+  +/
+immutable char[6] whitespace = " \t\v\r\n\f";
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF uni, lineSep) instead.)
+
+    UTF line separator.
+  +/
+enum dchar LS = '\u2028';
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF uni, paraSep) instead.)
+
+    UTF paragraph separator.
+  +/
+enum dchar PS = '\u2029';
+
+/++
+    $(RED Scheduled for deprecation in December 2011.
+          Please use $(XREF ctype, newline) instead.)
+
+    Newline sequence for this system.
+  +/
+version(StdDDoc)immutable char[2] newline;
+else version(Windows)immutable char[2] newline = "\r\n";
+else version(Posix) immutable char[1] newline = "\n";
 
 /**********************************
- * Returns true if c is whitespace
+ * $(RED Scheduled for deprecation in December 2011.
+ *       Please use $(XREF ctype, isWhite) or $(XREF uni, isUniWhite) instead.)
+ *
+ * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
-
-bool iswhite(dchar c)
+version(StdDdoc) bool iswhite(dchar c);
+else bool iswhite(C)(C c)
+    if(is(Unqual!C : dchar))
 {
+    pragma(msg, softDeprec!("2.054", "December 2011", "isWhite",
+                            "std.ctype.isWhite or std.uni.isUniWhite"));
+
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
         : (c == PS || c == LS);
@@ -3426,7 +3515,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-    if (iswhite(c))
+    if (isUniWhite(c))
     {
         if (inword)
         {
@@ -3538,4 +3627,12 @@ deprecated size_t rfind(in char[] s, in char[] c)
 deprecated size_t irfind(in char[] s, in char[] c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
+}
+
+
+private template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.string.%s has been scheduled " ~
+                              "for deprecation in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
 }
