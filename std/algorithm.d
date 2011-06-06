@@ -314,7 +314,7 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.exception,
+import std.array, std.container, std.conv, std.ctype, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.stdio;
 
@@ -2142,6 +2142,35 @@ unittest
     }
 }
 
+auto splitter(Range)(Range input)
+if (isSomeString!Range)
+{
+    return splitter!isspace(input);
+}
+
+unittest
+{
+    // TDPL example, page 8
+    uint[string] dictionary;
+    char[][3] lines;
+    lines[0] = "line one".dup;
+    lines[1] = "line \ttwo".dup;
+    lines[2] = "yah            last   line\ryah".dup;
+    foreach (line; lines) {
+       foreach (word; splitter(strip(line))) {
+            if (word in dictionary) continue; // Nothing to do
+            auto newID = dictionary.length;
+            dictionary[to!string(word)] = cast(uint)newID;
+        }
+    }
+    assert(dictionary.length == 5);
+    assert(dictionary["line"]== 0);
+    assert(dictionary["one"]== 1);
+    assert(dictionary["two"]== 2);
+    assert(dictionary["yah"]== 3);
+    assert(dictionary["last"]== 4);
+}
+
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
@@ -3888,7 +3917,8 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -3896,7 +3926,8 @@ unittest
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(dchar[], string))
         {
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
@@ -4189,7 +4220,8 @@ unittest
         return Result(r);
     }
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -4197,7 +4229,8 @@ unittest
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(dchar[], string))
         {
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));

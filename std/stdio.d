@@ -904,9 +904,6 @@ Range that reads one line at a time. */
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
-            popFront; // prime the range
-            // @@@BUG@@@ line below should not exist
-            //if (file.p) ++file.p.refs;
         }
 
         /// Range primitive implementations.
@@ -918,6 +915,7 @@ Range that reads one line at a time. */
         /// Ditto
         Char[] front()
         {
+            if (line is null) popFront();
             return line;
         }
 
@@ -926,6 +924,7 @@ Range that reads one line at a time. */
         {
             enforce(file.isOpen);
             file.readln(line, terminator);
+            assert(line !is null, "Bug in File.readln");
             if (!line.length)
                 file.detach;
             else if (keepTerminator == KeepTerminator.no

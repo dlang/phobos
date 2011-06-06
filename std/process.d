@@ -52,8 +52,17 @@ version (Posix)
 // The following is needed for reading/writing environment variables.
 version(Posix)
 {
-    // Made available by the C runtime:
-    private extern(C) extern __gshared const char** environ;
+    version(OSX)
+    {
+        // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
+        private extern(C) extern __gshared char*** _NSGetEnviron();
+        // need to declare environ = *_NSGetEnviron() in static this()
+    }
+    else
+    {
+        // Made available by the C runtime:
+        private extern(C) extern __gshared const char** environ;
+    }
 }
 version(Windows)
 {
@@ -486,6 +495,15 @@ alias Environment environment;
 
 abstract final class Environment
 {
+    // initiaizes the value of environ for OSX
+    version(OSX)
+    {
+        static private char** environ;
+        static this()
+        {
+            environ = * _NSGetEnviron();
+        }
+    }
 static:
 
 private:

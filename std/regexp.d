@@ -4,7 +4,7 @@
 /**
  * $(RED This module has been deprecated. Use $(LINK2 std_regex.html,
  * std.regex) instead.)
- * 
+ *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
  * expressions) are a powerful method of string pattern matching.  The
  * regular expression language used in this library is the same as
@@ -2581,13 +2581,14 @@ private:
                 switch (rs)
                 {   case RS.dash:
                         r.setbit2('-');
-                case RS.rliteral:
-                    r.setbit2(c);
-                    break;
-                case RS.start:
-                    break;
-                default:
-                    assert(0);
+                        goto case;
+                    case RS.rliteral:
+                        r.setbit2(c);
+                        break;
+                    case RS.start:
+                        break;
+                    default:
+                        assert(0);
                 }
                 p++;
                 break;
@@ -2639,11 +2640,12 @@ private:
                     switch (rs)
                     {   case RS.dash:
                             r.setbit2('-');
-                    case RS.rliteral:
-                        r.setbit2(c);
-                        break;
-                    default:
-                        break;
+                            goto case;
+                        case RS.rliteral:
+                            r.setbit2(c);
+                            break;
+                        default:
+                            break;
                     }
                     rs = RS.start;
                     continue;
@@ -2675,10 +2677,11 @@ private:
                 switch (rs)
                 {   case RS.rliteral:
                         r.setbit2(c);
-                case RS.start:
-                    c = c2;
-                    rs = RS.rliteral;
-                    break;
+                        goto case;
+                    case RS.start:
+                        c = c2;
+                        rs = RS.rliteral;
+                        break;
 
                 case RS.dash:
                     if (c > c2)

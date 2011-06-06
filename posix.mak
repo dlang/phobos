@@ -166,10 +166,9 @@ STD_NET_MODULES = $(addprefix std/net/, isemail)
 
 # Other D modules that aren't under std/
 EXTRA_DOCUMENTABLES = $(addprefix etc/c/,curl zlib)
-EXTRA_MODULES := $(addprefix std/c/, stdarg stdio)			\
-	$(EXTRA_DOCUMENTABLES) $(addprefix std/internal/math/,	\
-	biguintcore biguintnoasm								\
-        biguintx86 gammafunction errorfunction)
+EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) \
+	$(EXTRA_DOCUMENTABLES) $(addprefix std/internal/math/, \
+	biguintcore biguintnoasm biguintx86 gammafunction errorfunction)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)

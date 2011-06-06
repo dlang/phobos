@@ -307,22 +307,14 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     foreach (i, arg; args)
     {
         funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
-
-        static if(hasAliasing!(typeof(arg)))
-        {
-            argsAddresses[i] = &arg;
-        }
-        else
-        {
-            // We can safely cast away shared because all data is either
-            // immutable or completely owned by this function.
-            argsAddresses[i] = cast(const(void*)) &arg;
-        }
+        // We can safely cast away shared because all data is either
+        // immutable or completely owned by this function.
+        argsAddresses[i] = cast(const(void*)) &arg;
     }
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
     auto spec = FormatSpec!Char(fmt);
-    for (;spec.writeUpToNextSpec(w);)
+    while (spec.writeUpToNextSpec(w))
     {
         if (currentArg == funs.length && !spec.indexStart)
         {
@@ -346,7 +338,8 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         {
             // means: get width as a positional parameter
             auto index = cast(uint) -spec.width;
-            auto width = to!(typeof(spec.width))(getNthInt(index, args));
+            assert(index > 0);
+            auto width = to!(typeof(spec.width))(getNthInt(index - 1, args));
             if (currentArg < index) currentArg = index;
             if (width < 0)
             {
@@ -368,8 +361,9 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         {
             // means: get precision as a positional parameter
             auto index = cast(uint) -spec.precision;
+            assert(index > 0);
             auto precision = to!(typeof(spec.precision))(
-                getNthInt(index, args));
+                getNthInt(index- 1, args));
             if (currentArg < index) currentArg = index;
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
@@ -658,145 +652,142 @@ struct FormatSpec(Char)
         {
             switch (trailing[i])
             {
-                case '(':
+            case '(':
+                // Embedded format specifier.
+                auto j = i + 1;
+                void check(bool condition)
                 {
-                    // Embedded format specifier.
-                    auto j = i + 1;
-                    void check(bool condition)
-                    {
-                        enforce(
-                            condition,
-                            text("Incorrect format specifier: %",
-                                    trailing[i .. $]));
-                    }
-                    // Get the matching balanced paren
-                    for (uint innerParens;; ++j)
-                    {
-                        check(j < trailing.length);
-                        if (trailing[j] != '%')
-                        {
-                            // skip, we're waiting for %( and %)
-                            continue;
-                        }
-                        if (trailing[++j] == ')')
-                        {
-                            if (innerParens-- == 0) break;
-                        }
-                        else if (trailing[j] == '(')
-                        {
-                            ++innerParens;
-                        }
-                    }
-                    nested = to!(typeof(nested))(trailing[i + 1 .. j - 1]);
-                    //this = FormatSpec(innerTrailingSpec);
-                    spec = '(';
-                    // We practically found the format specifier
-                    trailing = trailing[j + 1 .. $];
-                    return;
+                    enforce(
+                        condition,
+                        text("Incorrect format specifier: %",
+                                trailing[i .. $]));
                 }
-                case '-': flDash = true; ++i; break;
-                case '+': flPlus = true; ++i; break;
-                case '#': flHash = true; ++i; break;
-                case '0': flZero = true; ++i; break;
-                case ' ': flSpace = true; ++i; break;
-                case '*':
+                // Get the matching balanced paren
+                for (uint innerParens;; ++j)
+                {
+                    check(j < trailing.length);
+                    if (trailing[j] != '%')
+                    {
+                        // skip, we're waiting for %( and %)
+                        continue;
+                    }
+                    if (trailing[++j] == ')')
+                    {
+                        if (innerParens-- == 0) break;
+                    }
+                    else if (trailing[j] == '(')
+                    {
+                        ++innerParens;
+                    }
+                }
+                nested = to!(typeof(nested))(trailing[i + 1 .. j - 1]);
+                //this = FormatSpec(innerTrailingSpec);
+                spec = '(';
+                // We practically found the format specifier
+                trailing = trailing[j + 1 .. $];
+                return;
+            case '-': flDash = true; ++i; break;
+            case '+': flPlus = true; ++i; break;
+            case '#': flHash = true; ++i; break;
+            case '0': flZero = true; ++i; break;
+            case ' ': flSpace = true; ++i; break;
+            case '*':
+                if (isdigit(trailing[++i]))
+                {
+                    // a '*' followed by digits and '$' is a
+                    // positional format
+                    trailing = trailing[1 .. $];
+                    width = -.parse!(typeof(width))(trailing);
+                    i = 0;
+                    enforce(trailing[i++] == '$',
+                            new FormatError("$ expected"));
+                }
+                else
+                {
+                    // read result
+                    width = DYNAMIC;
+                }
+                break;
+            case '1': .. case '9':
+                auto tmp = trailing[i .. $];
+                const widthOrArgIndex = .parse!(uint)(tmp);
+                enforce(tmp.length,
+                        new FormatError(text("Incorrect format specifier %",
+                                        trailing[i .. $])));
+                i = tmp.ptr - trailing.ptr;
+                if (tmp.startsWith('$'))
+                {
+                    // index of the form %n$
+                    indexEnd = indexStart = to!ubyte(widthOrArgIndex);
+                    ++i;
+                }
+                else if (tmp.length && tmp[0] == ':')
+                {
+                    // two indexes of the form %m:n$, or one index of the form %m:$
+                    indexStart = to!ubyte(widthOrArgIndex);
+                    tmp = tmp[1 .. $];
+                    if (tmp.startsWith('$'))
+                    {
+                        indexEnd = indexEnd.max;
+                    }
+                    else
+                    {
+                        indexEnd = .parse!(typeof(indexEnd))(tmp);
+                    }
+                    i = tmp.ptr - trailing.ptr;
+                    enforce(trailing[i++] == '$', new FormatError("$ expected"));
+                }
+                else
+                {
+                    // width
+                    width = to!int(widthOrArgIndex);
+                }
+                break;
+            case '.':
+                // Precision
+                if (trailing[++i] == '*')
+                {
                     if (isdigit(trailing[++i]))
                     {
-                        // a '*' followed by digits and '$' is a
-                        // positional format
-                        trailing = trailing[1 .. $];
-                        width = -.parse!(typeof(width))(trailing);
+                        // a '.*' followed by digits and '$' is a
+                        // positional precision
+                        trailing = trailing[i .. $];
                         i = 0;
+                        precision = -.parse!int(trailing);
                         enforce(trailing[i++] == '$',
                                 new FormatError("$ expected"));
                     }
                     else
                     {
                         // read result
-                        width = DYNAMIC;
+                        precision = DYNAMIC;
                     }
-                    break;
-                case '1': .. case '9':
+                }
+                else if (trailing[i] == '-')
+                {
+                    // negative precision, as good as 0
+                    precision = 0;
                     auto tmp = trailing[i .. $];
-                    const widthOrArgIndex = .parse!(uint)(tmp);
-                    assert(tmp.length,
-                            text("Incorrect format specifier %",
-                                    trailing[i .. $]));
+                    .parse!(int)(tmp); // skip digits
                     i = tmp.ptr - trailing.ptr;
-                    if (tmp.length && tmp[0] == '$')
-                    {
-                        // index of the form %n$
-                        indexEnd = indexStart = to!(ubyte)(widthOrArgIndex);
-                        ++i;
-                    }
-                    else if (tmp.length && tmp[0] == ':')
-                    {
-                        // two indexes of the form %m:n$, or one index of the form %m:$
-                        indexStart = to!(ubyte)(widthOrArgIndex);
-                        tmp = tmp[1 .. $];
-                        if (tmp[0] == '$')
-                        {
-                            indexEnd = indexEnd.max;
-                        }
-                        else
-                        {
-                            indexEnd = .parse!(typeof(indexEnd))(tmp);
-                        }
-                        i = tmp.ptr - trailing.ptr;
-                        enforce(trailing[i++] == '$', new FormatError("$ expected"));
-                    }
-                    else
-                    {
-                        // width
-                        width = to!int(widthOrArgIndex);
-                    }
-                    break;
-                case '.':
-                    if (trailing[++i] == '*')
-                    {
-                        if (isdigit(trailing[++i]))
-                        {
-                            // a '.*' followed by digits and '$' is a
-                            // positional precision
-                            trailing = trailing[i .. $];
-                            i = 0;
-                            precision = -.parse!(int)(trailing);
-                            if (trailing[i++] != '$')
-                            {
-                                throw new FormatError("$ expected");
-                            }
-                        }
-                        else
-                        {
-                            // read result
-                            precision = DYNAMIC;
-                        }
-                    }
-                    else if (trailing[i] == '-')
-                    {
-                        // negative precision, as good as 0
-                        precision = 0;
-                        auto tmp = trailing[i .. $];
-                        .parse!(int)(tmp); // skip digits
-                        i = tmp.ptr - trailing.ptr;
-                    }
-                    else if (isdigit(trailing[i]))
-                    {
-                        auto tmp = trailing[i .. $];
-                        precision = .parse!int(tmp);
-                        i = tmp.ptr - trailing.ptr;
-                    }
-                    else
-                    {
-                        // "." was specified, but nothing after it
-                        precision = 0;
-                    }
-                    break;
-                default:
-                    // this is the format char
-                    spec = cast(char) trailing[i++];
-                    trailing = trailing[i .. $];
-                    return;
+                }
+                else if (isdigit(trailing[i]))
+                {
+                    auto tmp = trailing[i .. $];
+                    precision = .parse!int(tmp);
+                    i = tmp.ptr - trailing.ptr;
+                }
+                else
+                {
+                    // "." was specified, but nothing after it
+                    precision = 0;
+                }
+                break;
+            default:
+                // this is the format char
+                spec = cast(char) trailing[i++];
+                trailing = trailing[i .. $];
+                return;
             } // end switch
         } // end for
         enforce(false, text("Incorrect format specifier: ", trailing));
@@ -1175,7 +1166,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
     enforce(f.spec == 's');
-    StringTypeOf!T val2 = val;		// for `alias this`
+    StringTypeOf!T val2 = val;          // for `alias this`
     auto s = val2[0 .. f.precision < $ ? f.precision : $];
     if (!f.flDash)
     {
@@ -3284,6 +3275,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     }
                     return;
                 }
+                assert(0);
 
             case Mangle.Ttypedef:
                 ti = (cast(TypeInfo_Typedef)ti).base;
@@ -3605,8 +3597,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     case '0':        flags |= FL0pad;        continue;
 
                     case '%':        if (flags == 0)
-                            goto Lputc;
-                    default:        break;
+                                          goto Lputc;
+                                     break;
+
+                    default:         break;
                     }
                     break;
                 }
@@ -3972,4 +3966,12 @@ unittest
 
     assert(std.string.format("%8s", "bar") == "     bar");
     assert(std.string.format("%8s", "b\u00e9ll\u00f4") == "   b\u00e9ll\u00f4");
+}
+
+unittest
+{
+    // bugzilla 3479
+    auto stream = appender!(char[])();
+    formattedWrite(stream, "%2$.*1$d", 12, 10);
+    assert(stream.data == "000000000010", stream.data);
 }
