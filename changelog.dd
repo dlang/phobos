@@ -9,5 +9,6 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 3479): writef/writefln: positional precision not working)
         $(LI $(BUGZILLA 3564): Rdmd failing to link external C libraries)
         $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
+        $(LI $(BUGZILLA 6113): singletons in std.datetime are not created early enough)
     )
 )
