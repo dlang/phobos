@@ -1333,6 +1333,7 @@ unittest
     }
 }
 
+
 /********************************************
  *  $(RED Scheduled for deprecation in August 2011.
  *        Please use $(XREF array, replicate) instead.
@@ -1345,70 +1346,80 @@ S repeat(S)(S s, size_t n)
     return std.array.replicate(s, n);
 }
 
+
 /**************************************
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
  * The delimiter is not included in the line.
  */
-
 S[] splitlines(S)(S s)
 {
-    size_t istart;
-    auto result = appender!(S[])();
+    pragma(msg, softDeprec!("2.054", "December 2011", "splitlines", "std.string.splitLines"));
+    return splitLines!S(s);
+}
 
-    foreach (i; 0 .. s.length)
+/++
+    Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
+    The delimiter is not included in the strings returned.
+  +/
+S[] splitLines(S)(S s)
+    if(isSomeString!S)
+{
+    size_t iStart = 0;
+    size_t nextI = 0;
+    auto retval = appender!(S[])();
+
+    for(size_t i; i < s.length; i = nextI)
     {
-        immutable c = s[i];
-        if (c == '\r' || c == '\n')
+        immutable c = decode(s, nextI);
+
+        if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            result.put(s[istart .. i]);
-            istart = i + 1;
-            if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            retval.put(s[iStart .. i]);
+            iStart = nextI;
+
+            if(c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
             {
-                i++;
-                istart++;
+                ++nextI;
+                ++iStart;
             }
         }
     }
-    if (istart != s.length)
-    {
-        result.put(s[istart .. $]);
-    }
 
-    return result.data;
+    if(iStart != nextI)
+        retval.put(s[iStart .. $]);
+
+    return retval.data;
 }
 
 unittest
 {
-    debug(string) printf("string.splitlines\n");
+    debug(string) printf("string.splitLines.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        S s = "\rpeter\n\rpaul\r\njerry\n";
-        S[] lines;
-        int i;
+        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
 
-        lines = splitlines(s);
-        //printf("lines.length = %d\n", lines.length);
-        assert(lines.length == 5);
-        //printf("lines[0] = %llx, '%.*s'\n", lines[0], lines[0]);
-        assert(lines[0].length == 0);
-        i = cmp(lines[1], "peter");
-        assert(i == 0);
-        assert(lines[2].length == 0);
-        i = cmp(lines[3], "paul");
-        assert(i == 0);
-        i = cmp(lines[4], "jerry");
-        assert(i == 0);
+        auto lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[0] == "");
+        assert(lines[1] == "peter");
+        assert(lines[2] == "");
+        assert(lines[3] == "paul");
+        assert(lines[4] == "jerry");
+        assert(lines[5] == "ice");
+        assert(lines[6] == "cream");
+        assert(lines[7] == "");
+        assert(lines[8] == "sunday");
 
-        s = s[0 .. s.length - 1];   // lop off trailing \n
-        lines = splitlines(s);
-        //printf("lines.length = %d\n", lines.length);
-        assert(lines.length == 5);
-        i = cmp(lines[4], "jerry");
-        assert(i == 0);
+        s.popBack(); // Lop-off trailing \n
+        lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[8] == "sunday");
     }
 }
+
 
 /*****************************************
  * Strips leading or trailing whitespace, or both.
