@@ -1342,28 +1342,28 @@ unittest
     version (Posix)
     {
         // Retrieve the current home variable.
-        auto c_home = std.process.getenv("HOME");
+        auto c_home = environment.get("HOME");
 
         // Testing when there is no environment variable.
-        unsetenv("HOME");
+        environment.remove("HOME");
         assert(expandTilde("~/") == "~/");
         assert(expandTilde("~") == "~");
 
         // Testing when an environment variable is set.
-        std.process.setenv("HOME", "dmd/test\0", 1);
+        environment["HOME"] = "dmd/test\0";
         assert(expandTilde("~/") == "dmd/test/");
         assert(expandTilde("~") == "dmd/test");
 
         // The same, but with a variable ending in a slash.
-        std.process.setenv("HOME", "dmd/test/\0", 1);
+        environment["HOME"] = "dmd/test/\0";
         assert(expandTilde("~/") == "dmd/test/");
         assert(expandTilde("~") == "dmd/test");
 
         // Recover original HOME variable before continuing.
         if (c_home)
-            std.process.setenv("HOME", c_home, 1);
+            environment["HOME"] = c_home;
         else
-            unsetenv("HOME");
+            environment.remove("HOME");
 
         // Test user expansion for root. Are there unices without /root?
         version (OSX)
