@@ -1515,42 +1515,54 @@ unittest
 }
 
 
-/*******************************************
- * Returns s[] sans trailing delimiter[], if any.
- * If delimiter[] is null, removes trailing CR, LF, or CRLF, if any.
- */
-
-C[] chomp(C)(C[] s)
+/++
+    Returns $(D s) sans the trailing $(D delimiter), if any. If no $(D delimiter)
+    is given, then any trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
+    $(XREF uni, lineSep), or $(XREF uni, paraSep)s are removed.
+  +/
+S chomp(S)(S s)
+    if(isSomeString!S)
 {
-    auto len = s.length;
-    if (!len)
-    {
+    if(s.empty)
         return s;
-    }
-    auto c = s[len - 1];
-    if (c == '\r')          // if ends in CR
-        len--;
-    else if (c == '\n')         // if ends in LF
+
+    switch(s.back)
     {
-        len--;
-        if (len && s[len - 1] == '\r')
-            len--;          // remove CR-LF
+        case '\n':
+        {
+            s.popBack();
+
+            if(!s.empty && s.back == '\r')
+                s.popBack();
+
+            break;
+        }
+        case '\r':
+        case lineSep:
+        case paraSep:
+        {
+            s.popBack();
+            break;
+        }
+        default:
+            break;
     }
-    else
-    {
-        // no change
-        return s;
-    }
-    return s[0 .. len];
+
+    return s;
 }
 
 /// Ditto
-C[] chomp(C, C1)(C[] s, const(C1)[] delimiter)
+S chomp(S, C)(S s, const(C)[] delimiter)
+    if(isSomeString!S && isSomeString!(C[]))
 {
-    if (endsWith(s, delimiter))
+    if(endsWith(s, delimiter))
     {
-        return s[0 .. $ - delimiter.length];
+        static if(is(Unqual!(typeof(s[0])) == Unqual!C))
+            return s[0 .. $ - delimiter.length];
+        else
+            return s[0 .. $ - to!S(delimiter).length];
     }
+
     return s;
 }
 
@@ -1559,60 +1571,63 @@ unittest
     debug(string) printf("string.chomp.unittest\n");
     string s;
 
-//     s = chomp(null);
-//     assert(s is null);
-    s = chomp("hello");
-    assert(s == "hello");
-    s = chomp("hello\n");
-    assert(s == "hello");
-    s = chomp("hello\r");
-    assert(s == "hello");
-    s = chomp("hello\r\n");
-    assert(s == "hello");
-    s = chomp("hello\n\r");
-    assert(s == "hello\n");
-    s = chomp("hello\n\n");
-    assert(s == "hello\n");
-    s = chomp("hello\r\r");
-    assert(s == "hello\r");
-    s = chomp("hello\nxxx\n");
-    assert(s == "hello\nxxx");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        // @@@ BUG IN COMPILER, MUST INSERT CAST
+        assert(chomp(cast(S)null) is null);
+        assert(chomp(to!S("hello")) == "hello");
+        assert(chomp(to!S("hello\n")) == "hello");
+        assert(chomp(to!S("hello\r")) == "hello");
+        assert(chomp(to!S("hello\r\n")) == "hello");
+        assert(chomp(to!S("hello\n\r")) == "hello\n");
+        assert(chomp(to!S("hello\n\n")) == "hello\n");
+        assert(chomp(to!S("hello\r\r")) == "hello\r");
+        assert(chomp(to!S("hello\nxxx\n")) == "hello\nxxx");
+        assert(chomp(to!S("hello\u2028")) == "hello");
+        assert(chomp(to!S("hello\u2029")) == "hello");
+        assert(chomp(to!S("hello\u2028\u2028")) == "hello\u2028");
+        assert(chomp(to!S("hello\u2029\u2029")) == "hello\u2029");
 
-//     s = chomp(null, null);
-//     assert(s is null);
-    s = chomp("hello", "o");
-    assert(s == "hell");
-    s = chomp("hello", "p");
-    assert(s == "hello");
-    // @@@ BUG IN COMPILER, MUST INSERT CAST
-    s = chomp("hello", cast(string) null);
-    assert(s == "hello");
-    s = chomp("hello", "llo");
-    assert(s == "he");
+        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
+            // @@@ BUG IN COMPILER, MUST INSERT CAST
+            assert(chomp(cast(S)null, cast(T)null) is null);
+            assert(chomp(to!S("hello"), to!T("o")) == "hell");
+            assert(chomp(to!S("hello"), to!T("p")) == "hello");
+            // @@@ BUG IN COMPILER, MUST INSERT CAST
+            assert(chomp(to!S("hello"), cast(T) null) == "hello");
+            assert(chomp(to!S("hello"), to!T("llo")) == "he");
+            assert(chomp(to!S("\uFF28ello"), to!T("llo")) == "\uFF28e");
+            assert(chomp(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")) == "\uFF28e");
+        }
+    }
 }
 
-/**
- * If $(D_PARAM longer.startsWith(shorter)), returns $(D_PARAM
- * longer[shorter.length .. $]). Otherwise, returns $(D_PARAM longer).
- */
 
+/++
+    If $(D longer.startsWith(shorter)), returns $(D longer[shorter.length .. $]).
+    Otherwise, returns $(D longer).
+ +/
 C1[] chompPrefix(C1, C2)(C1[] longer, C2[] shorter)
+    if(isSomeString!(C1[]) && isSomeString!(C2[]))
 {
-    return startsWith(longer, shorter) ? longer[shorter.length .. $]
-        : longer;
+    return startsWith(longer, shorter) ? longer[shorter.length .. $] : longer;
 }
 
 unittest
 {
-    auto a = "abcde", b = "abcdefgh";
-    assert(chompPrefix(b, a) == "fgh");
-    assert(chompPrefix(a, b) == "abcde");
+    assert(chompPrefix("abcdefgh", "abcde") == "fgh");
+    assert(chompPrefix("abcde", "abcdefgh") == "abcde");
+    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el\uFF4co") == "");
+    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el") == "\uFF4co");
+    assert(chompPrefix("\uFF28el", "\uFF28el\uFF4co") == "\uFF28el");
 }
 
-/***********************************************
- * Returns s[] sans trailing character, if there is one.
- * If last two characters are CR-LF, then both are removed.
- */
+
+/++
+    Returns $(D s) sans its last character, if there is one.
+    If $(D s) ends in "\r\n", then both are removed.
+ +/
 S chop(S)(S s) if (isSomeString!S)
 {
     auto len = s.length;
@@ -1626,17 +1641,13 @@ S chop(S)(S s) if (isSomeString!S)
 unittest
 {
     debug(string) printf("string.chop.unittest\n");
-    string s;
 
-    s = chop(cast(string) null);
-    assert(s is null);
-    s = chop("hello");
-    assert(s == "hell");
-    s = chop("hello\r\n");
-    assert(s == "hello");
-    s = chop("hello\n\r");
-    assert(s == "hello\n");
+    assert(chop(cast(string) null) is null);
+    assert(chop("hello") == "hell");
+    assert(chop("hello\r\n") == "hello");
+    assert(chop("hello\n\r") == "hello\n");
 }
+
 
 /*******************************************
  * Left justify, right justify, or center string s[]
