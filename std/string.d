@@ -1186,49 +1186,49 @@ unittest
 }
 
 
-/********************************************
- * Capitalize first character of string s[], convert rest of string s[]
- * to lower case.
- */
-
-S capitalize(S)(S s) if (isSomeString!S)
+/++
+    Capitalize the first character of $(D s) and conver the rest of $(D s)
+    to lowercase.
+ +/
+S capitalize(S)(S s) @safe pure
+    if(isSomeString!S)
 {
-    Unqual!(typeof(s[0]))[] r;
-    bool changed = 0;
+    Unqual!(typeof(s[0]))[] retval;
+    bool changed = false;
 
-    foreach (size_t i, dchar c; s)
+    foreach(i, dchar c; s)
     {
         dchar c2;
 
-        if (i == 0)
+        if(i == 0)
         {
             c2 = std.uni.toUniUpper(c);
-            if (c != c2)
-            {
-                changed = 1;
-                r = null;
-            }
+            if(c != c2)
+                changed = true;
         }
         else
         {
             c2 = std.uni.toUniLower(c);
-            if (c != c2)
+            if(c != c2)
             {
-                if (!changed)
-                {   changed = 1;
-                    r = s[0 .. i].dup;
+                if(!changed)
+                {
+                    changed = true;
+                    retval = s[0 .. i].dup;
                 }
             }
         }
-        if (changed)
-            std.utf.encode(r, c2);
+
+        if(changed)
+            std.utf.encode(retval, c2);
     }
-    return changed ? cast(S) r : s;
+
+    return changed ? cast(S)retval : s;
 }
 
 unittest
 {
-    debug(string) printf("string.toupper.capitalize\n");
+    debug(string) printf("string.capitalize.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
@@ -1247,72 +1247,89 @@ unittest
         s2 = capitalize(s1);
         assert(cmp(s2, "Fol") == 0);
         assert(s2 !is s1);
+
+        s1 = to!S("\u0131 \u0130");
+        s2 = capitalize(s1);
+        assert(cmp(s2, "\u0049 \u0069") == 0);
+        assert(s2 !is s1);
+
+        s1 = to!S("\u017F \u0049");
+        s2 = capitalize(s1);
+        assert(cmp(s2, "\u0053 \u0069") == 0);
+        assert(s2 !is s1);
     }
 }
 
 
 /********************************************
+ *  $(RED Scheduled for deprecation in December 2011.
+ *        Please use $(D capWords) instead.)
+ *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
  * Replace all sequences of whitespace with a single space.
  */
-
 S capwords(S)(S s) if (isSomeString!S)
 {
-    Unqual!(typeof(s[0]))[] r;
-    bool inword = false;
-    size_t istart = 0;
-    size_t i;
-
-    for (i = 0; i < s.length; i++)
-    {
-        switch (s[i])
-        {
-        case ' ':
-        case '\t':
-        case '\f':
-        case '\r':
-        case '\n':
-        case '\v':
-            if (inword)
-            {
-                r ~= capitalize(s[istart .. i]);
-                inword = false;
-            }
-            break;
-
-        default:
-            if (!inword)
-            {
-                if (r.length)
-                    r ~= ' ';
-                istart = i;
-                inword = true;
-            }
-            break;
-        }
-    }
-    if (inword)
-    {
-        r ~= capitalize(s[istart .. i]);
-    }
-
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "December 2011", "capwords", "std.string.capWords"));
+    return capWords!S(s);
 }
 
+/++
+    Capitalizes al words in $(D s). It also removes all leading and trailing
+    whitespace and converts all sequences of whitespace to a single space.
+  +/
+S capWords(S)(S s)
+    if(isSomeString!S)
+{
+    alias typeof(s[0]) C;
+    auto retval = appender!(C[])();
+    bool inWord = false;
+    size_t wordStart = 0;
+
+    foreach(i, dchar c; s)
+    {
+        if(isUniWhite(s[i]))
+        {
+            if(inWord)
+            {
+                retval.put(capitalize(s[wordStart .. i]));
+                inWord = false;
+            }
+        }
+        else if(!inWord)
+        {
+            if(!retval.data.empty)
+                retval.put(' ');
+
+            wordStart = i;
+            inWord = true;
+        }
+    }
+
+    if(inWord)
+        retval.put(capitalize(s[wordStart .. $]));
+
+    return cast(S)retval.data;
+}
 
 unittest
 {
-    debug(string) printf("string.capwords.unittest\n");
+    debug(string) printf("string.capWords.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
         S s2;
 
-        s2 = capwords(s1);
-        //writefln("s2 = '%s'", s2);
+        s2 = capWords(s1);
         assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
+
+        s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
+                  "\u017F\u0053\u0131\u0130");
+        s2 = capWords(s1);
+        assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
+                       "\u0053\u0053\u0131\u0069"));
     }
 }
 
