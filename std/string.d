@@ -37,11 +37,9 @@ predicate.))
 $(TR $(TD $(D count)) $(TD Moved to $(XREF algorithm, count) and
 generalized to accept a custom predicate.))
 
-$(TR $(TD $(D replace)) $(TD Moved to $(XREF array, replace).))
-
 $(TR $(TD $(D ByCodeUnit)) $(TD Removed.))
 
-$(TR $(TD $(D insert)) $(TD Use $(XREF array, insert) instead.))
+$(TR $(TD $(D insert)) $(TD Use $(XREF array, insertInPlace) instead.))
 
 $(TR $(TD $(D join)) $(TD Use $(XREF array, join) instead.))
 
@@ -1208,33 +1206,15 @@ unittest
 }
 
 /********************************************
- * Repeat $(D s) for $(D n) times. This function is scheduled for
- * deprecation - use $(XREF array, replicate) instead.
+ *  $(RED Scheduled for deprecation in August 2011.
+ *        Please use $(XREF array, replicate) instead.
+ *
+ * Repeat $(D s) for $(D n) times.
  */
 S repeat(S)(S s, size_t n)
 {
+    pragma(msg, softDeprec!("2.052", "August 2011", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
-}
-
-unittest
-{
-    debug(string) printf("string.repeat.unittest\n");
-
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
-        S s;
-
-        s = repeat(to!S("1234"), 0);
-        assert(s is null);
-        s = repeat(to!S("1234"), 1);
-        assert(cmp(s, "1234") == 0);
-        s = repeat(to!S("1234"), 2);
-        assert(cmp(s, "12341234") == 0);
-        s = repeat(to!S("1"), 4);
-        assert(cmp(s, "1111") == 0);
-        s = repeat(cast(S) null, 4);
-        assert(s is null);
-    }
 }
 
 /**************************************
@@ -1634,10 +1614,11 @@ S zfill(S)(S s, int width) if (isSomeString!S)
 }
 
 /**********************************************
- * Insert sub[] into s[] at location index. Scheduled for deprecation
- * - use $(XREF array, _insert) instead.
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(XREF array, insertInPlace) instead.)
+ *
+ * Insert sub[] into s[] at location index.
  */
-
 S insert(S)(S s, size_t index, S sub)
 in
 {
@@ -1645,36 +1626,9 @@ in
 }
 body
 {
-    std.array.insert(s, index, sub);
+    pragma(msg, softDeprec!("2.052", "August 2011", "insert", "std.array.insertInPlace"));
+    std.array.insertInPlace(s, index, sub);
     return s;
-}
-
-unittest
-{
-    debug(string) printf("string.insert.unittest\n");
-
-    string r;
-    int i;
-
-    r = insert("abcd", 0, "e");
-    i = cmp(r, "eabcd");
-    assert(i == 0);
-
-    r = insert("abcd", 4, "e");
-    i = cmp(r, "abcde");
-    assert(i == 0);
-
-    r = insert("abcd", 2, "ef");
-    i = cmp(r, "abefcd");
-    assert(i == 0);
-
-    r = insert(cast(string) null, 0, "e");
-    i = cmp(r, "e");
-    assert(i == 0);
-
-    r = insert("abcd", 0, cast(string) null);
-    i = cmp(r, "abcd");
-    assert(i == 0);
 }
 
 /************************************************

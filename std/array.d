@@ -782,26 +782,18 @@ if (isInputRange!S && !isDynamicArray!S)
 
 unittest
 {
-    debug(std_array) printf("array.repeat.unittest\n");
+    debug(string) printf("array.replicate.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
 
-        s = replicate(to!S("1234"), 0);
-        assert(s is null);
-        s = replicate(to!S("1234"), 1);
-        assert(cmp(s, "1234") == 0);
-        s = replicate(to!S("1234"), 2);
-        assert(cmp(s, "12341234") == 0);
-        s = replicate(to!S("1"), 4);
-        assert(cmp(s, "1111") == 0);
-        s = replicate(cast(S) null, 4);
-        assert(s is null);
+        assert(replicate(to!S("1234"), 0) is null);
+        assert(replicate(to!S("1234"), 1) == "1234");
+        assert(replicate(to!S("1234"), 2) == "12341234");
+        assert(replicate(to!S("1"), 4) == "1111");
+        assert(replicate(cast(S) null, 4) is null);
     }
-
-    int[] a = [ 1, 2, 3 ];
-    assert(replicate(a, 3) == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
 }
 
 /**************************************
