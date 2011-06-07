@@ -1422,41 +1422,98 @@ unittest
 
 
 /*****************************************
- * Strips leading or trailing whitespace, or both.
+ *  $(RED Scheduled for deprecation in December 2011.
+ *        Please use $(D stripLeft) instead.
+ *
+ * Strips leading whitespace.
  */
-
 String stripl(String)(String s)
 {
-    uint i;
-    for (i = 0; i < s.length; i++)
+    pragma(msg, softDeprec!("2.054", "December 2011", "stripl", "std.string.stripLeft"));
+    return stripLeft!String(s);
+}
+
+/++
+    Strips leading whitespace.
+  +/
+S stripLeft(S)(S s) @safe pure
+    if(isSomeString!S)
+{
+    bool foundIt;
+    size_t nonWhite;
+    foreach(i, dchar c; s)
     {
-        if (!std.ctype.isspace(s[i]))
+        if(!isUniWhite(c))
+        {
+            foundIt = true;
+            nonWhite = i;
+            break;
+        }
+    }
+
+    if(foundIt)
+        return s[nonWhite .. $];
+
+    return s[0 .. 0]; //Empty string with correct type.
+}
+
+/*****************************************
+ *  $(RED Scheduled for deprecation in December 2011.
+ *        Please use $(D stripRight) instead.
+ *
+ * Strips trailing whitespace.
+ */
+String stripr(String)(String s)
+{
+    pragma(msg, softDeprec!("2.054", "December 2011", "stripr", "std.string.stripRight"));
+    return stripRight!String(s);
+}
+
+/++
+    Strips trailing whitespace.
+  +/
+S stripRight(S)(S s)
+    if(isSomeString!S)
+{
+    alias typeof(s[0]) C;
+    size_t codeLen;
+    foreach(dchar c; retro(s))
+    {
+        if(isUniWhite(c))
+            codeLen += codeLength!C(c);
+        else
             break;
     }
-    return s[i .. s.length];
+
+    return s[0 .. $ - codeLen];
 }
 
-String stripr(String)(String s) /// ditto
+/++
+    Strips both leading and trailing whitespace.
+  +/
+S strip(S)(S s)
+    if(isSomeString!S)
 {
-    for (auto i = s.length;;)
-    {
-        if (i == 0) return null;
-        --i;
-        if (!std.ctype.isspace(s[i]))
-            return s[0 .. i + 1];
-    }
-}
-
-String strip(String)(String s) /// ditto
-{
-    return stripr(stripl(s));
+    return stripRight(stripLeft(s));
 }
 
 unittest
 {
+    debug(string) printf("string.strip.unittest\n");
+
+    assert(stripLeft("  foo\t ") == "foo\t ");
+    assert(stripLeft("\u2008  foo\t \u2007") == "foo\t \u2007");
+    assert(stripLeft("1") == "1");
+
+    assert(stripRight("  foo\t ") == "  foo");
+    assert(stripRight("\u2008  foo\t \u2007") == "\u2008  foo");
+    assert(stripRight("1") == "1");
+
     assert(strip("  foo\t ") == "foo");
+    assert(strip("\u2008  foo\t \u2007") == "foo");
     assert(strip("1") == "1");
 }
+
 
 // Too slow for release mode
 debug unittest
