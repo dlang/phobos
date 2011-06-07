@@ -456,16 +456,16 @@ unittest
 */
 enum CaseSensitive { no, yes }
 
-/**
-   $(D indexOf): find first occurrence of c in string s.  $(D
-   lastIndexOf): find last occurrence of c in string s. $(D
-   CaseSensitive.yes) means the searches are case sensitive.
+/++
+    Returns the index of the first occurence of $(D c) in $(D s). If $(D c)
+    is not found, then $(D -1) is returned.
 
-   Returns: Index in $(D s) where $(D c) is found, -1 if not found.
-*/
-sizediff_t
-indexOf(Char)(in Char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
-if (isSomeChar!Char)
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t indexOf(Char)(in Char[] s,
+                         dchar c,
+                         CaseSensitive cs = CaseSensitive.yes) pure
+    if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
     {
@@ -518,31 +518,55 @@ if (isSomeChar!Char)
 
 unittest
 {
-    debug(string) printf("string.find.unittest\n");
-
-    sizediff_t i;
+    debug(string) printf("string.indexOf.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         S s = null;
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == -1);
+        assert(indexOf(s, cast(dchar)'a') == -1);
         s = "def";
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == -1);
+        assert(indexOf(s, cast(dchar)'a') == -1);
         s = "abba";
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == 0);
+        assert(indexOf(s, cast(dchar)'a') == 0);
         s = "def";
-        i = indexOf(s, cast(dchar)'f');
-        assert(i == 2);
+        assert(indexOf(s, cast(dchar)'f') == 2);
+
+        assert(indexOf(s, cast(dchar)'a', CaseSensitive.no) == -1);
+        assert(indexOf("def", cast(dchar)'a', CaseSensitive.no) == -1);
+        assert(indexOf("Abba", cast(dchar)'a', CaseSensitive.no) == 0);
+        assert(indexOf("def", cast(dchar)'F', CaseSensitive.no) == 2);
+
+        string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+        assert(indexOf("def", cast(char)'f', CaseSensitive.no) == 2);
+        assert(indexOf(sPlts, cast(char)'P', CaseSensitive.no) == 23);
+        assert(indexOf(sPlts, cast(char)'R', CaseSensitive.no) == 2);
     }
 }
 
+/++
+    Returns the index of the first occurence of $(D sub) in $(D s). If $(D sub)
+    is not found, then $(D -1) is returned.
 
-/******************************************
- * ditto
- */
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
+                                 const(Char2)[] sub,
+                                 CaseSensitive cs = CaseSensitive.yes)
+    if(isSomeChar!Char1 && isSomeChar!Char2)
+{
+    const(Char1)[] balance;
+    if (cs == CaseSensitive.yes)
+    {
+        balance = std.algorithm.find(s, sub);
+    }
+    else
+    {
+        balance = std.algorithm.find!
+            ((dchar a, dchar b){return toUniLower(a) == toUniLower(b);})
+            (s, sub);
+    }
+    return balance.empty ? -1 : balance.ptr - s.ptr;
+}
 
 unittest
 {
@@ -551,36 +575,49 @@ unittest
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         S s = null;
-        auto i = indexOf(s, cast(dchar)'a', CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("def", cast(dchar)'a', CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("Abba", cast(dchar)'a', CaseSensitive.no);
-        assert(i == 0);
-        i = indexOf("def", cast(dchar)'F', CaseSensitive.no);
-        assert(i == 2);
+        assert(indexOf(s, "a") == -1);
+        assert(indexOf("def", "a") == -1);
+        assert(indexOf("abba", "a") == 0);
+        assert(indexOf("def", "f") == 2);
+        assert(indexOf("dfefffg", "fff") == 3);
+        assert(indexOf("dfeffgfff", "fff") == 6);
 
-        string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-
-        i = indexOf("def", cast(char)'f', CaseSensitive.no);
-        assert(i == 2);
-
-        i = indexOf(sPlts, cast(char)'P', CaseSensitive.no);
-        assert(i == 23);
-        i = indexOf(sPlts, cast(char)'R', CaseSensitive.no);
-        assert(i == 2);
+        assert(indexOf(s, "a", CaseSensitive.no) == -1);
+        assert(indexOf("def", "a", CaseSensitive.no) == -1);
+        assert(indexOf("abba", "a", CaseSensitive.no) == 0);
+        assert(indexOf("def", "f", CaseSensitive.no) == 2);
+        assert(indexOf("dfefffg", "fff", CaseSensitive.no) == 3);
+        assert(indexOf("dfeffgfff", "fff", CaseSensitive.no) == 6);
     }
+
+    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    string sMars = "Who\'s \'My Favorite Maritian?\'";
+
+    assert(indexOf(sMars, "MY fAVe", CaseSensitive.no) == -1);
+    assert(indexOf(sMars, "mY fAVOriTe", CaseSensitive.no) == 7);
+    assert(indexOf(sPlts, "mArS:", CaseSensitive.no) == 0);
+    assert(indexOf(sPlts, "rOcK", CaseSensitive.no) == 17);
+    assert(indexOf(sPlts, "Un.", CaseSensitive.no) == 41);
+    assert(indexOf(sPlts, sPlts, CaseSensitive.no) == 0);
+
+    assert(indexOf("\u0100", "\u0100", CaseSensitive.no) == 0);
+
+    // Thanks to Carlos Santander B. and zwang
+    assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
+                   "page-break-before", CaseSensitive.no) == -1);
 }
 
-// @@@BUG@@@ This declaration shouldn't be needed
-//int lastIndexOf(in char[] s, in char[] c, CaseSensitive cs = CaseSensitive.yes);
 
-/******************************************
- * ditto
- */
+/++
+    Returns the index of the last occurence of $(D c) in $(D s). If $(D c)
+    is not found, then $(D -1) is returned.
 
-sizediff_t lastIndexOf(Char)(const(Char)[] s, dchar c,
-        CaseSensitive cs = CaseSensitive.yes)
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t lastIndexOf(Char)(const(Char)[] s,
+                             dchar c,
+                             CaseSensitive cs = CaseSensitive.yes)
+    if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
     {
@@ -632,193 +669,35 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s, dchar c,
 
 unittest
 {
-    debug(string) printf("string.rfind.unittest\n");
+    debug(string) printf("string.lastIndexOf.unittest\n");
 
-    sizediff_t i;
+    assert(lastIndexOf(cast(string) null, cast(dchar)'a') == -1);
+    assert(lastIndexOf("def", cast(dchar)'a') == -1);
+    assert(lastIndexOf("abba", cast(dchar)'a') == 3);
+    assert(lastIndexOf("def", cast(dchar)'f') == 2);
 
-    i = lastIndexOf(cast(string) null, cast(dchar)'a');
-    assert(i == -1);
-    i = lastIndexOf("def", cast(dchar)'a');
-    assert(i == -1);
-    i = lastIndexOf("abba", cast(dchar)'a');
-    assert(i == 3);
-    i = lastIndexOf("def", cast(dchar)'f');
-    assert(i == 2);
-}
-
-unittest
-{
-    debug(string) printf("string.irfind.unittest\n");
-
-    sizediff_t i;
-
-    i = lastIndexOf(cast(string) null, cast(dchar)'a', CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("def", cast(dchar)'a', CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("AbbA", cast(dchar)'a', CaseSensitive.no);
-    assert(i == 3);
-    i = lastIndexOf("def", cast(dchar)'F', CaseSensitive.no);
-    assert(i == 2);
+    assert(lastIndexOf(cast(string) null, cast(dchar)'a', CaseSensitive.no) == -1);
+    assert(lastIndexOf("def", cast(dchar)'a', CaseSensitive.no) == -1);
+    assert(lastIndexOf("AbbA", cast(dchar)'a', CaseSensitive.no) == 3);
+    assert(lastIndexOf("def", cast(dchar)'F', CaseSensitive.no) == 2);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
-    i = lastIndexOf("def", cast(char)'f', CaseSensitive.no);
-    assert(i == 2);
-
-    i = lastIndexOf(sPlts, cast(char)'M', CaseSensitive.no);
-    assert(i == 34);
-    i = lastIndexOf(sPlts, cast(char)'S', CaseSensitive.no);
-    assert(i == 40);
+    assert(lastIndexOf("def", cast(char)'f', CaseSensitive.no) == 2);
+    assert(lastIndexOf(sPlts, cast(char)'M', CaseSensitive.no) == 34);
+    assert(lastIndexOf(sPlts, cast(char)'S', CaseSensitive.no) == 40);
 }
 
-/**
- * Returns the representation type of a string, which is the same type
- * as the string except the character type is replaced by $(D ubyte),
- * $(D ushort), or $(D uint) depending on the character width.
- *
- * Example:
-----
-string s = "hello";
-static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
-----
- */
-/*private*/ auto representation(Char)(Char[] s) if (isSomeChar!Char)
-{
-    // Get representation type
-    static if (Char.sizeof == 1) enum t = "ubyte";
-    else static if (Char.sizeof == 2) enum t = "ushort";
-    else static if (Char.sizeof == 4) enum t = "uint";
-    else static assert(false); // can't happen due to isSomeChar!Char
+/++
+    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    is not found, then $(D -1) is returned.
 
-    // Get representation qualifier
-    static if (is(Char == immutable)) enum q = "immutable";
-    else static if (is(Char == const)) enum q = "const";
-    else static if (is(Char == shared)) enum q = "shared";
-    else enum q = "";
-
-    // Result type is qualifier(RepType)[]
-    static if (q.length)
-        return mixin("cast(" ~ q ~ "(" ~ t ~ ")[]) s");
-    else
-        return mixin("cast(" ~ t ~ "[]) s");
-}
-
-unittest
-{
-    string s = "hello";
-    static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
-}
-
-/**
-$(D indexOf) find first occurrence of $(D sub[]) in string $(D s[]).
-lastIndexOf find last occurrence of $(D sub[]) in string $(D s[]).
-
-$(D CaseSensitive cs) controls whether the comparisons are case
-sensitive or not.
-
-Returns:
-
-Index in $(D s) where $(D sub) is found, $(D -1) if not found.
- */
-
-sizediff_t
-indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        CaseSensitive cs = CaseSensitive.yes)
-if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    const(Char1)[] balance;
-    if (cs == CaseSensitive.yes)
-    {
-        balance = std.algorithm.find(s, sub);
-    }
-    else
-    {
-        balance = std.algorithm.find!
-            ((dchar a, dchar b){return toUniLower(a) == toUniLower(b);})
-            (s, sub);
-    }
-    return balance.empty ? -1 : balance.ptr - s.ptr;
-}
-
-unittest
-{
-    debug(string) printf("string.find.unittest\n");
-
-    sizediff_t i;
-
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = null;
-        i = indexOf(s, "a");
-        assert(i == -1);
-        i = indexOf("def", "a");
-        assert(i == -1);
-        i = indexOf("abba", "a");
-        assert(i == 0);
-        i = indexOf("def", "f");
-        assert(i == 2);
-        i = indexOf("dfefffg", "fff");
-        assert(i == 3);
-        i = indexOf("dfeffgfff", "fff");
-        assert(i == 6);
-    }
-}
-
-unittest
-{
-    debug(string) printf("string.ifind.unittest\n");
-
-    sizediff_t i;
-
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = null;
-        i = indexOf(s, "a", CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("def", "a", CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("abba", "a", CaseSensitive.no);
-        assert(i == 0, text(i));
-        i = indexOf("def", "f", CaseSensitive.no);
-        assert(i == 2);
-        i = indexOf("dfefffg", "fff", CaseSensitive.no);
-        assert(i == 3);
-        i = indexOf("dfeffgfff", "fff", CaseSensitive.no);
-        assert(i == 6);
-    }
-
-    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-    string sMars = "Who\'s \'My Favorite Maritian?\'";
-
-    i = indexOf(sMars, "MY fAVe", CaseSensitive.no);
-    assert(i == -1);
-    i = indexOf(sMars, "mY fAVOriTe", CaseSensitive.no);
-    assert(i == 7);
-    i = indexOf(sPlts, "mArS:", CaseSensitive.no);
-    assert(i == 0);
-    i = indexOf(sPlts, "rOcK", CaseSensitive.no);
-    assert(i == 17);
-    i = indexOf(sPlts, "Un.", CaseSensitive.no);
-    assert(i == 41);
-    i = indexOf(sPlts, sPlts, CaseSensitive.no);
-    assert(i == 0);
-
-    i = indexOf("\u0100", "\u0100", CaseSensitive.no);
-    assert(i == 0);
-
-    // Thanks to Carlos Santander B. and zwang
-    i = indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-            "page-break-before", CaseSensitive.no);
-    assert(i == -1);
-}
-
-/******************************************
- * ditto
- */
-
-sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
-        CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s,
+                                     in Char2[] sub,
+                                     CaseSensitive cs = CaseSensitive.yes) pure
+    if(isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (cs == CaseSensitive.yes)
     {
@@ -874,61 +753,97 @@ sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
 
 unittest
 {
-    sizediff_t i;
-
     debug(string) printf("string.lastIndexOf.unittest\n");
-    i = lastIndexOf("abcdefcdef", "c");
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "cd");
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "x");
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "xy");
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "");
-    assert(i == 10);
-}
 
+    assert(lastIndexOf("abcdefcdef", "c") == 6);
+    assert(lastIndexOf("abcdefcdef", "cd") == 6);
+    assert(lastIndexOf("abcdefcdef", "x") == -1);
+    assert(lastIndexOf("abcdefcdef", "xy") == -1);
+    assert(lastIndexOf("abcdefcdef", "") == 10);
 
-/******************************************
- * ditto
- */
-
-unittest
-{
-    sizediff_t i;
-
-    debug(string) printf("string.lastIndexOf.unittest\n");
-    i = lastIndexOf("abcdefCdef", "c", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefCdef", "cD", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "x", CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "xy", CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "", CaseSensitive.no);
-    assert(i == 10);
+    assert(lastIndexOf("abcdefCdef", "c", CaseSensitive.no) == 6);
+    assert(lastIndexOf("abcdefCdef", "cD", CaseSensitive.no) == 6);
+    assert(lastIndexOf("abcdefcdef", "x", CaseSensitive.no) == -1);
+    assert(lastIndexOf("abcdefcdef", "xy", CaseSensitive.no) == -1);
+    assert(lastIndexOf("abcdefcdef", "", CaseSensitive.no) == 10);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
     string sMars = "Who\'s \'My Favorite Maritian?\'";
 
-    i = lastIndexOf("abcdefcdef", "c", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "cd", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf( "abcdefcdef", "def", CaseSensitive.no);
-    assert(i == 7);
+    assert(lastIndexOf("abcdefcdef", "c", CaseSensitive.no) == 6);
+    assert(lastIndexOf("abcdefcdef", "cd", CaseSensitive.no) == 6);
+    assert(lastIndexOf( "abcdefcdef", "def", CaseSensitive.no) == 7);
 
-    i = lastIndexOf(sMars, "RiTE maR", CaseSensitive.no);
-    assert(i == 14);
-    i = lastIndexOf(sPlts, "FOuRTh", CaseSensitive.no);
-    assert(i == 10);
-    i = lastIndexOf(sMars, "whO\'s \'MY", CaseSensitive.no);
-    assert(i == 0);
-    i = lastIndexOf(sMars, sMars, CaseSensitive.no);
-    assert(i == 0);
+    assert(lastIndexOf(sMars, "RiTE maR", CaseSensitive.no) == 14);
+    assert(lastIndexOf(sPlts, "FOuRTh", CaseSensitive.no) == 10);
+    assert(lastIndexOf(sMars, "whO\'s \'MY", CaseSensitive.no) == 0);
+    assert(lastIndexOf(sMars, sMars, CaseSensitive.no) == 0);
 }
+
+
+/**
+ * Returns the representation type of a string, which is the same type
+ * as the string except the character type is replaced by $(D ubyte),
+ * $(D ushort), or $(D uint) depending on the character width.
+ *
+ * Example:
+----
+string s = "hello";
+static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+----
+ */
+auto representation(Char)(Char[] s) pure nothrow
+    if(isSomeChar!Char)
+{
+    // Get representation type
+    static if (Char.sizeof == 1) enum t = "ubyte";
+    else static if (Char.sizeof == 2) enum t = "ushort";
+    else static if (Char.sizeof == 4) enum t = "uint";
+    else static assert(false); // can't happen due to isSomeChar!Char
+
+    // Get representation qualifier
+    static if (is(Char == immutable)) enum q = "immutable";
+    else static if (is(Char == const)) enum q = "const";
+    else static if (is(Char == shared)) enum q = "shared";
+    else enum q = "";
+
+    // Result type is qualifier(RepType)[]
+    static if (q.length)
+        return mixin("cast(" ~ q ~ "(" ~ t ~ ")[]) s");
+    else
+        return mixin("cast(" ~ t ~ "[]) s");
+}
+
+unittest
+{
+    auto c = to!(char[])("hello");
+    static assert(is(typeof(representation(c)) == ubyte[]));
+
+    auto w = to!(wchar[])("hello");
+    static assert(is(typeof(representation(w)) == ushort[]));
+
+    auto d = to!(dchar[])("hello");
+    static assert(is(typeof(representation(d)) == uint[]));
+
+    const(char[]) cc = "hello";
+    static assert(is(typeof(representation(cc)) == const(ubyte)[]));
+
+    const(wchar[]) cw = "hello"w;
+    static assert(is(typeof(representation(cw)) == const(ushort)[]));
+
+    const(dchar[]) cd = "hello"d;
+    static assert(is(typeof(representation(cd)) == const(uint)[]));
+
+    string s = "hello";
+    static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
+
+    wstring iw = "hello"w;
+    static assert(is(typeof(representation(iw)) == immutable(ushort)[]));
+
+    dstring id = "hello"d;
+    static assert(is(typeof(representation(id)) == immutable(uint)[]));
+}
+
 
 
 /************************************
