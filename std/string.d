@@ -14,8 +14,9 @@ Copyright: Copyright Digital Mars 2007-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
-Andrei Alexandrescu)
+Authors: $(WEB digitalmars.com, Walter Bright),
+         $(WEB erdani.org, Andrei Alexandrescu),
+         and Jonathan M Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 
@@ -70,6 +71,8 @@ version(Windows) extern (C)
     size_t wcslen(in wchar *);
     int wcscmp(in wchar *, in wchar *);
 }
+
+version(unittest) import std.algorithm : filter;
 
 /* ************* Exceptions *************** */
 
@@ -197,96 +200,141 @@ else bool iswhite(C)(C c)
         : (c == PS || c == LS);
 }
 
-/**********************************
-Compare two ranges of characters lexicographically. $(D _cmp) is case
-sensitive, $(D icmp) is case insensitive. $(D cmp) is aliased from
-$(XREF algorithm, _cmp). $(D icmp) works like $(D cmp) but converts
-both characters to lowercase prior to applying $(D pred). Technically
-$(D icmp(r1, r2)) is equivalent to $(D cmp!"toUniLower(a) <
-toUniLower(b)"(r1, r2)).
 
-Returns (for $(D pred = "a < b")):
+/++
+    Compares two ranges of characters lexicographically. The comparison is
+    case insensitive. Use $(D XREF algorithm, cmp) for a case sensitive
+    comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
+    converts characters to lowercase prior to applying ($D pred). Technically,
+    $(D icmp(r1, r2)) is equivalent to
+    $(D cmp!"toUniLower(a) < toUniLower(b)"(r1, r2)).
 
-$(BOOKTABLE,
-$(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
-$(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
-$(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
-)
-
- */
-
+    $(BOOKTABLE,
+        $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
+        $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
+        $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
+     )
+  +/
 int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
-if (is(Unqual!(ElementType!S1) == dchar) && is(Unqual!(ElementType!S2) == dchar))
+    if(isSomeString!S1 && isSomeString!S2)
 {
     static if(is(typeof(pred) : string))
         enum isLessThan = pred == "a < b";
     else
         enum isLessThan = false;
 
-    foreach (e; zip(s1, s2))
+    size_t i, j;
+    while(i < s1.length && j < s2.length)
     {
-        dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
-        static if (isLessThan)
+        immutable c1 = toUniLower(decode(s1, i));
+        immutable c2 = toUniLower(decode(s2, j));
+
+        static if(isLessThan)
         {
-            if (c1 != c2) return cast(int) c1 - cast(int) c2;
+            if(c1 != c2)
+            {
+                if(c1 < c2) return -1;
+                if(c1 > c2) return 1;
+            }
         }
         else
         {
-            if (binaryFun!pred(c1, c2)) return -1;
-            if (binaryFun!pred(c2, c1)) return 1;
+            if(binaryFun!pred(c1, c2)) return -1;
+            if(binaryFun!pred(c2, c1)) return 1;
         }
     }
 
-    static if (s1.length.sizeof == int.sizeof)
-        return s1.length - s2.length;
+    if(i < s1.length) return 1;
+    if(j < s2.length) return -1;
+
+    return 0;
+}
+
+int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
+    if(!(isSomeString!S1 && isSomeString!S2) &&
+       isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar) &&
+       isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+{
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
     else
-        return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
+        enum isLessThan = false;
+
+    for(;; s1.popFront(), s2.popFront())
+    {
+        if(s1.empty) return s2.empty ? 0 : -1;
+        if(s2.empty) return 1;
+
+        immutable c1 = toUniLower(s1.front);
+        immutable c2 = toUniLower(s2.front);
+
+        static if(isLessThan)
+        {
+            if(c1 != c2)
+            {
+                if(c1 < c2) return -1;
+                if(c1 > c2) return 1;
+            }
+        }
+        else
+        {
+            if(binaryFun!pred(c1, c2)) return -1;
+            if(binaryFun!pred(c2, c1)) return 1;
+        }
+    }
 }
 
 unittest
 {
-    assert(icmp("Ü", "ü") == 0, "Über failure");
-
-    sizediff_t result;
-
     debug(string) printf("string.icmp.unittest\n");
-    result = icmp("abc", "abc");
-    assert(result == 0);
-    result = icmp("ABC", "abc");
-    assert(result == 0);
-    //    result = icmp(null, null);// Commented out since icmp()
-    //    assert(result == 0);      // has become templated.
-    result = icmp("", "");
-    assert(result == 0);
-    result = icmp("abc", "abcd");
-    assert(result < 0);
-    result = icmp("abcd", "abc");
-    assert(result > 0);
-    result = icmp("abc", "abd");
-    assert(result < 0);
-    result = icmp("bbc", "abc");
-    assert(result > 0);
-    result = icmp("abc", "abc"w);
-    assert (result == 0);
-    result = icmp("ABC"w, "abc");
-    assert (result == 0);
-    result = icmp("", ""w);
-    assert (result == 0);
-    result = icmp("abc"w, "abcd");
-    assert(result < 0);
-    result = icmp("abcd", "abc"w);
-    assert(result > 0);
-    result = icmp("abc", "abd");
-    assert(result < 0);
-    result = icmp("bbc"w, "abc");
-    assert(result > 0);
-    result = icmp("aaa", "aaaa"d);
-    assert(result < 0);
-    result = icmp("aaaa"w, "aaa"d);
-    assert(result > 0);
-    result = icmp("aaa"d, "aaa"w);
-    assert(result == 0);
+
+    assert(icmp("Ü", "ü") == 0, "Über failure");
+    assert(icmp("abc", "abc") == 0);
+    assert(icmp("ABC", "abc") == 0);
+    assert(icmp("abc"w, "abc") == 0);
+    assert(icmp("ABC", "abc"w) == 0);
+    assert(icmp("abc"d, "abc") == 0);
+    assert(icmp("ABC", "abc"d) == 0);
+    assert(icmp(cast(char[])"abc", "abc") == 0);
+    assert(icmp("ABC", cast(char[])"abc") == 0);
+    assert(icmp(cast(wchar[])"abc"w, "abc") == 0);
+    assert(icmp("ABC", cast(wchar[])"abc"w) == 0);
+    assert(icmp(cast(dchar[])"abc"d, "abc") == 0);
+    assert(icmp("ABC", cast(dchar[])"abc"d) == 0);
+    assert(icmp(cast(string)null, cast(string)null) == 0);
+    assert(icmp("", "") == 0);
+    assert(icmp("abc", "abcd") < 0);
+    assert(icmp("abcd", "abc") > 0);
+    assert(icmp("abc", "abd") < 0);
+    assert(icmp("bbc", "abc") > 0);
+    assert(icmp("abc", "abc"w) == 0);
+    assert(icmp("ABC"w, "abc") == 0);
+    assert(icmp("", ""w) == 0);
+    assert(icmp("abc"w, "abcd") < 0);
+    assert(icmp("abcd", "abc"w) > 0);
+    assert(icmp("abc", "abd") < 0);
+    assert(icmp("bbc"w, "abc") > 0);
+    assert(icmp("aaa", "aaaa"d) < 0);
+    assert(icmp("aaaa"w, "aaa"d) > 0);
+    assert(icmp("aaa"d, "aaa"w) == 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0430\u0411\u0543") == 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0431\u0410\u0544") < 0);
+    assert(icmp("\u0431\u0411\u0544"d, "\u0431\u0410\u0543") > 0);
+    assert(icmp("\u0430\u0410\u0543"d, "\u0430\u0410\u0544") < 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0430\u0411\u0543\u0237") < 0);
+    assert(icmp("\u0430\u0411\u0543\u0237"d, "\u0430\u0411\u0543") > 0);
+
+    assert(icmp("aaa", filter!"true"("aaa")) == 0);
+    assert(icmp(filter!"true"("aaa"), "aaa") == 0);
+    assert(icmp(filter!"true"("aaa"), filter!"true"("aaa")) == 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), "\u0430\u0411\u0543") == 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), "\u0431\u0410\u0544"w) < 0);
+    assert(icmp("\u0431\u0411\u0544"d, filter!"true"("\u0431\u0410\u0543"w)) > 0);
+    assert(icmp("\u0430\u0410\u0543"d, filter!"true"("\u0430\u0410\u0544")) < 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), filter!"true"("\u0430\u0411\u0543\u0237")) < 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543\u0237"d), filter!"true"("\u0430\u0411\u0543")) > 0);
 }
+
 
 /*********************************
  * Convert array of chars $(D s[]) to a C-style 0-terminated string.
