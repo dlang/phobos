@@ -19,14 +19,15 @@ module std.ctype;
 version(unittest) import std.range;
 
 
-immutable hexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
-immutable digits     = "0123456789";                 /// 0..9
-immutable octDigits  = "01234567";                   /// 0..7
-immutable lowercase  = "abcdefghijklmnopqrstuvwxyz"; /// a..z
-immutable letters    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
-                       "abcdefghijklmnopqrstuvwxyz"; /// A..Za..z
-immutable uppercase  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
-immutable whitespace = " \t\v\r\n\f";                /// ASCII whitespace
+immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
+immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
+immutable digits         = "0123456789";                 /// 0..9
+immutable octDigits      = "01234567";                   /// 0..7
+immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
+immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
+                           "abcdefghijklmnopqrstuvwxyz"; /// A..Za..z
+immutable uppercase      = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; /// A..Z
+immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
 
 version(Windows)
