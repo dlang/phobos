@@ -1838,31 +1838,47 @@ body
     return s;
 }
 
+
 /************************************************
+ * $(RED Scheduled for deprecation in December 2011.
+ *       Please use $(D expandTabs) instead.
+ *
  * Replace tabs with the appropriate number of spaces.
  * tabsize is the distance between tab stops.
  */
-
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
+    pragma(msg, softDeprec!("2.054", "December 2011", "expandtabs", "std.string.expandTabs"));
+    return expandTabs!S(str, tabsize);
+}
+
+/++
+    Replace each tab character in $(D s) with the number of spaces necessary
+    to align the following character at the next tab stop where $(D tabSize)
+    is the distance between tab stops.
+  +/
+S expandTabs(S)(S s, size_t tabSize = 8) if(isSomeString!S)
+{
+    assert(tabSize > 0);
+    alias Unqual!(typeof(s[0])) C;
     bool changes = false;
-    Unqual!(typeof(str[0]))[] result;
+    C[] result;
     int column;
     size_t nspaces;
 
-    foreach (size_t i, dchar c; str)
+    foreach (size_t i, dchar c; s)
     {
         switch (c)
         {
         case '\t':
-            nspaces = tabsize - (column % tabsize);
+            nspaces = tabSize - (column % tabSize);
             if (!changes)
             {
                 changes = true;
                 result = null;
-                result.length = str.length + nspaces - 1;
+                result.length = s.length + nspaces - 1;
                 result.length = i + nspaces;
-                result[0 .. i] = str[0 .. i];
+                result[0 .. i] = s[0 .. i];
                 result[i .. i + nspaces] = ' ';
             }
             else
@@ -1876,8 +1892,8 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             column = 0;
             goto L1;
 
@@ -1886,8 +1902,8 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
         L1:
             if (changes)
             {
-                if (c <= 0x7F)
-                    result ~= cast(char)c;
+                if (cast(dchar)(cast(C)c) == c)
+                    result ~= cast(C)c;
                 else
                     std.utf.encode(result, c);
             }
@@ -1895,48 +1911,44 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
         }
     }
 
-    return changes ? cast(S) result : str;
+    return changes ? cast(S) result : s;
 }
 
 unittest
 {
-    debug(string) printf("string.expandtabs.unittest\n");
+    debug(string) printf("string.expandTabs.unittest\n");
 
-    string s = "This \tis\t a fofof\tof list";
-    string r;
-    int i;
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        S s = to!S("This \tis\t a fofof\tof list");
+        assert(cmp(expandTabs(s), "This    is       a fofof        of list") == 0);
 
-    r = expandtabs(s, 8);
-    i = cmp(r, "This    is       a fofof        of list");
-    assert(i == 0);
-
-    r = expandtabs(cast(string) null);
-    assert(r == null);
-    r = expandtabs("");
-    assert(r.length == 0);
-    r = expandtabs("a");
-    assert(r == "a");
-    r = expandtabs("\t");
-    assert(r == "        ");
-    r = expandtabs(  "  ab\tasdf ");
-    //writefln("r = '%s'", r);
-    assert(r == "  ab    asdf ");
-    // TODO: need UTF test case
+        assert(expandTabs(cast(S)null) is null);
+        assert(expandTabs("").empty);
+        assert(expandTabs("a") == "a");
+        assert(expandTabs("\t") == "        ");
+        assert(expandTabs("\t", 3) == "   ");
+        assert(expandTabs("\t", 9) == "         ");
+        assert(expandTabs(  "  ab\t asdf ") == "  ab     asdf ");
+        assert(expandTabs(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
+    }
 }
 
 
-/*******************************************
- * Replace spaces in string s with the optimal number of tabs.
- * Trailing spaces or tabs in a line are removed.
- * Params:
- *  s = String to convert.
- *  tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
- */
+/++
+    Replaces spaces in $(D s) with the optimal number of tabs.
+    All spaces and tabs at the end of a line are removed.
 
-S entab(S)(S s, size_t tabsize = 8)
+    Params:
+        s       = String to convert.
+        tabSize = Tab columns are $(D tabSize) spaces apart.
+ +/
+S entab(S)(S s, size_t tabSize = 8)
+    if(isSomeString!S)
 {
     bool changes = false;
-    Unqual!(typeof(s[0]))[] result;
+    alias Unqual!(typeof(s[0])) C;
+    C[] result;
 
     int nspaces = 0;
     int nwhite = 0;
@@ -1964,13 +1976,13 @@ S entab(S)(S s, size_t tabsize = 8)
                     change();
 
                 sizediff_t j = result.length - nspaces;
-                auto ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+                auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;
                 nspaces = 0;
             }
-            column = (column + tabsize) / tabsize * tabsize;
+            column = (column + tabSize) / tabSize * tabSize;
             break;
 
         case '\r':
@@ -1987,13 +1999,13 @@ S entab(S)(S s, size_t tabsize = 8)
             break;
 
         default:
-            if (nspaces >= 2 && (column % tabsize) == 0)
+            if (nspaces >= 2 && (column % tabSize) == 0)
             {
                 if (!changes)
                     change();
 
                 auto j = result.length - nspaces;
-                auto ntabs = (nspaces + tabsize - 1) / tabsize;
+                auto ntabs = (nspaces + tabSize - 1) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;
@@ -2012,8 +2024,8 @@ S entab(S)(S s, size_t tabsize = 8)
         }
         if (changes)
         {
-            if (c <= 0x7F)
-                result ~= cast(char)c;
+            if (cast(dchar)(cast(C)c) == c)
+                result ~= cast(C)c;
             else
                 std.utf.encode(result, c);
         }
@@ -2036,43 +2048,37 @@ unittest
 
     string r;
 
-    r = entab(cast(string) null);
-    assert(r == null);
-    r = entab("");
-    assert(r.length == 0);
-    r = entab("a");
-    assert(r == "a");
-    r = entab("        ");
-    assert(r == "");
-    r = entab("        x");
-    assert(r == "\tx");
-    r = entab("  ab    asdf ");
-    assert(r == "  ab\tasdf");
-    r = entab("  ab     asdf ");
-    assert(r == "  ab\t asdf");
-    r = entab("  ab \t   asdf ");
-    assert(r == "  ab\t   asdf");
-    r = entab("1234567 \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567  \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567   \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567    \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567     \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567      \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567       \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567        \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567         \ta");
-    assert(r == "1234567\t\t\ta");
-    // TODO: need UTF test case
-}
+    assert(entab(cast(string) null) is null);
+    assert(entab("").empty);
+    assert(entab("a") == "a");
+    assert(entab("        ") == "");
+    assert(entab("        x") == "\tx");
+    assert(entab("  ab    asdf ") == "  ab\tasdf");
+    assert(entab("  ab     asdf ") == "  ab\t asdf");
+    assert(entab("  ab \t   asdf ") == "  ab\t   asdf");
+    assert(entab("1234567 \ta") == "1234567\t\ta");
+    assert(entab("1234567  \ta") == "1234567\t\ta");
+    assert(entab("1234567   \ta") == "1234567\t\ta");
+    assert(entab("1234567    \ta") == "1234567\t\ta");
+    assert(entab("1234567     \ta") == "1234567\t\ta");
+    assert(entab("1234567      \ta") == "1234567\t\ta");
+    assert(entab("1234567       \ta") == "1234567\t\ta");
+    assert(entab("1234567        \ta") == "1234567\t\ta");
+    assert(entab("1234567         \ta") == "1234567\t\t\ta");
 
+    assert(entab("a               ") == "a");
+    assert(entab("a\v") == "a\v");
+    assert(entab("a\f") == "a\f");
+    assert(entab("a\n") == "a\n");
+    assert(entab("a\n\r") == "a\n\r");
+    assert(entab("a\r\n") == "a\r\n");
+    assert(entab("a\u2028") == "a\u2028");
+    assert(entab("a\u2029") == "a\u2029");
+    assert(entab("a  ") == "a");
+    assert(entab("a\t") == "a");
+    assert(entab("\uFF28\uFF45\uFF4C\uFF4C567      \t\uFF4F \t") ==
+                 "\uFF28\uFF45\uFF4C\uFF4C567\t\t\uFF4F");
+}
 
 
 /************************************
