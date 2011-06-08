@@ -845,6 +845,22 @@ string toAbsolute(string path)
 }
 
 
+unittest
+{
+    version (Posix)
+    {
+        assert (toAbsolute("/foo/bar") == "/foo/bar");
+        assert (toAbsolute("/foo/.././/bar//") == "/foo/.././/bar//");
+    }
+
+    version (Windows)
+    {
+        assert (toAbsolute(r"c:\foo\bar") == r"c:\foo\bar");
+        assert (toAbsolute(r"c:\foo\..\.\\bar\\") == r"c:\foo\..\.\\bar\\");
+    }
+}
+
+
 
 
 /** Convert path to a canonical _path.
