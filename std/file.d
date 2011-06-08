@@ -255,7 +255,14 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 {
     if (!condition)
     {
-        throw new FileException(name, "", file, line);
+      version (Windows)
+      {
+        throw new FileException(name, .GetLastError(), file, line);
+      }
+      else version (Posix)
+      {
+        throw new FileException(name, .getErrno(), file, line);
+      }
     }
     return condition;
 }
@@ -540,7 +547,7 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringz(name)) == 0, 
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
             "Failed to remove file " ~ name);
 }
 
