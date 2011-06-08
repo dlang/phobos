@@ -165,10 +165,12 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES = $(addprefix etc/c/,curl zlib)
-EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) \
-	$(EXTRA_DOCUMENTABLES) $(addprefix std/internal/math/, \
-	biguintcore biguintnoasm biguintx86 gammafunction errorfunction)
+EXTRA_DOCUMENTABLES := $(addprefix etc/c/,curl zlib) $(addprefix		\
+std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
+time wcharh)
+EXTRA_MODULES := $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/math/, biguintcore biguintnoasm biguintx86	\
+	gammafunction errorfunction)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -177,9 +179,9 @@ EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
 ifeq (,$(findstring win,$(OS)))
-	EXTRA_MODULES+=$(EXTRA_MODULES_LINUX)
+	EXTRA_DOCUMENTABLES+=$(EXTRA_MODULES_LINUX)
 else
-	EXTRA_MODULES+=$(EXTRA_MODULES_WIN32)
+	EXTRA_DOCUMENTABLES+=$(EXTRA_MODULES_WIN32)
 endif
 
 # Aggregate all D modules relevant to this build
@@ -303,6 +305,9 @@ $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
