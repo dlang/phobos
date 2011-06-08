@@ -1412,7 +1412,7 @@ class Socket
         }
 
         /// Send or receive error code.
-        const int ERROR = _SOCKET_ERROR;
+        enum int ERROR = _SOCKET_ERROR;
 
         /**
          * Send data on the connection. Returns the number of bytes actually
