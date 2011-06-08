@@ -3301,7 +3301,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
         return to!T(cast(Unsigned!(S)) value);
     alias Unqual!(typeof(T.init[0])) Char;
 
-    // Cache read-only data only for const and immutable - mutable
+    // Cache read-only data only for const and immutable; mutable
     // data is supposed to use allocation in all cases
     static if (is(ElementType!T == const) || is(ElementType!T == immutable))
     {
@@ -4229,3 +4229,39 @@ unittest
     emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
 }
+
+// Undocumented for the time being
+void toTextRange(T, W)(T value, W writer)
+if (isIntegral!T && isOutputRange!(W, char))
+{
+    Unqual!(Unsigned!T) v = void;
+    if (value < 0)
+    {
+        put(writer, '-');
+        v = -value;
+    }
+    else
+    {
+        v = value;
+    }
+
+    if (v < 10 && v < hexdigits.length)
+    {
+        put(writer, hexdigits[cast(size_t) v]);
+        return;
+    }
+
+    char[v.sizeof * 4] buffer = void;
+    auto i = buffer.length;
+
+    do
+    {
+        auto c = cast(ubyte) (v % 10);
+        v = v / 10;
+        i--;
+        buffer[i] = cast(char) (c + '0');
+    } while (v);
+
+    put(writer, buffer[i .. $]);
+}
+
