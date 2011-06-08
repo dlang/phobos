@@ -3056,13 +3056,21 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     return true;
 }
 
-/// Allow any object as a parameter
+/++
+    $(RED Scheduled for deprecation in December 2011.)
+
+    Allow any object as a parameter
+  +/
 bool isNumeric(...)
 {
     return isNumeric(_arguments, _argptr);
 }
 
-/// Check only the first parameter, all others will be ignored.
+/++
+    $(RED Scheduled for deprecation in December 2011.)
+
+    Check only the first parameter, all others will be ignored.
+  +/
 bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     auto  s = ""c;
