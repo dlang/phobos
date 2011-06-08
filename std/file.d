@@ -1718,7 +1718,7 @@ unittest
         immutable basepath = deleteme ~ "_dir";
         version (Windows)
         {
-            immutable path = basepath ~ `\fake\here\`;
+            immutable path = basepath ~ "\\fake\\here\\";
         }
         else version (Posix)
         {
@@ -1757,37 +1757,65 @@ void rmdir(in char[] pathname)
  * Get current directory.
  * Throws: $(D FileException) on error.
  */
-string getcwd()
+version(Windows) string getcwd()
 {
-    version(Windows)
+    /* GetCurrentDirectory's return value:
+        1. function succeeds: the number of characters that are written to 
+    the buffer, not including the terminating null character.
+        2. function fails: zero
+        3. the buffer (lpBuffer) is not large enough: the required size of 
+    the buffer, in characters, including the null-terminating character.
+    */
+    ushort[4096] staticBuff = void; //enough for most common case
+    if (useWfuncs)
     {
-        // A bit odd API: calling GetCurrentDirectory(0, null) returns
-        // length including the \0, whereas calling with non-zero
-        // params returns length excluding the \0.
-        if (useWfuncs)
+        auto buffW = cast(wchar[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryW(buffW.length, buffW.ptr),
+                "getcwd");
+        // we can do it because toUTFX always produces a fresh string
+        if(n < buffW.length)
         {
-            auto dir =
-                new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-            dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-            cenforce(dir.length, "getcwd");
-            return to!string(dir);
+            return toUTF8(buffW[0 .. n]);
         }
-        else
+        else //staticBuff isn't enough
         {
-            auto dir =
-                new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-            dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-            cenforce(dir.length, "getcwd");
-            return assumeUnique(dir);
+            auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryW(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+            return toUTF8(ptr[0 .. n2]);
         }
     }
-    else version(Posix)
+    else
     {
-        auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
-                "cannot get cwd");
-        scope(exit) std.c.stdlib.free(p);
-        return p[0 .. std.c.string.strlen(p)].idup;
+        auto buffA = cast(char[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryA(buffA.length, buffA.ptr),
+                "getcwd");
+        // fromMBSz doesn't always produce a fresh string
+        if(n < buffA.length)
+        {
+            string res = fromMBSz(cast(immutable)buffA.ptr);
+            return res.ptr == buffA.ptr ? res.idup : res;
+        }
+        else //staticBuff isn't enough
+        {
+            auto ptr = cast(char*) malloc(char.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryA(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+            
+            string res = fromMBSz(cast(immutable)ptr);
+            return res.ptr == ptr ? res.idup : res;
+        }
     }
+}
+
+version (Posix) string getcwd()
+{
+    auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
+            "cannot get cwd");
+    scope(exit) std.c.stdlib.free(p);
+    return p[0 .. std.c.string.strlen(p)].idup;
 }
 
 unittest
