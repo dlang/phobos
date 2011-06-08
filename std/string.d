@@ -1650,88 +1650,175 @@ unittest
 
 
 /*******************************************
- * Left justify, right justify, or center string s[]
- * in field width chars wide.
+ *  $(RED Scheduled for deprecation in December 2011.
+ *        Please use $(D leftJustify) instead.)
+ *
+ * Left justify string s[] in field width chars wide.
  */
-
 S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0..s.length] = s;
-    r[s.length .. $] = ' ';
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "December 2011", "ljustify", "std.string.leftJustify"));
+    return leftJustify!S(s, width);
 }
 
-/// ditto
+/++
+    Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
+{
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        retval[0 .. s.length] = s[];
+        retval[s.length .. $] = cast(C)fillChar;
+        return cast(S)retval;
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        retval[0 .. dstr.length] = dstr[];
+        retval[dstr.length .. $] = fillChar;
+        return to!S(retval);
+    }
+}
+
+
+/*******************************************
+ *  $(RED Scheduled for deprecation in December 2011.
+ *        Please use $(D rightJustify) instead.)
+ *
+ * Left right string s[] in field width chars wide.
+ */
 S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0 .. $ - s.length] = ' ';
-    r[$ - s.length .. $] = s;
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "December 2011", "rjustify", "std.string.rightJustify"));
+    return rightJustify!S(s, width);
 }
 
-/// ditto
-S center(S)(S s, size_t width) if (isSomeString!S)
+/++
+    Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    immutable left = (r.length - s.length) / 2;
-    r[0 .. left] = ' ';
-    r[left .. left + s.length] = s;
-    r[left + s.length .. $] = ' ';
-    return cast(S) r;
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        retval[0 .. $ - s.length] = cast(C)fillChar;
+        retval[$ - s.length .. $] = s[];
+        return cast(S)retval;
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        retval[0 .. $ - dstr.length] = fillChar;
+        retval[$ - dstr.length .. $] = dstr[];
+        return to!S(retval);
+    }
+}
+
+
+/++
+    Center $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S center(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
+{
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        immutable left = (retval.length - s.length) / 2;
+        retval[0 .. left] = cast(C)fillChar;
+        retval[left .. left + s.length] = s[];
+        retval[left + s.length .. $] = cast(C)fillChar;
+        return to!S(retval);
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        immutable left = (retval.length - dstr.length) / 2;
+        retval[0 .. left] = fillChar;
+        retval[left .. left + dstr.length] = dstr[];
+        retval[left + dstr.length .. $] = fillChar;
+        return to!S(retval);
+    }
 }
 
 unittest
 {
     debug(string) printf("string.justify.unittest\n");
 
-    string s = "hello";
-    string r;
-    int i;
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        S s = to!S("hello");
 
-    r = ljustify(s, 8);
-    i = cmp(r, "hello   ");
-    assert(i == 0);
+        assert(leftJustify(s, 2) == "hello");
+        assert(rightJustify(s, 2) == "hello");
+        assert(center(s, 2) == "hello");
 
-    r = rjustify(s, 8);
-    i = cmp(r, "   hello");
-    assert(i == 0);
+        assert(leftJustify(s, 7) == "hello  ");
+        assert(rightJustify(s, 7) == "  hello");
+        assert(center(s, 7) == " hello ");
 
-    r = center(s, 8);
-    i = cmp(r, " hello  ");
-    assert(i == 0);
+        assert(leftJustify(s, 8) == "hello   ");
+        assert(rightJustify(s, 8) == "   hello");
+        assert(center(s, 8) == " hello  ");
 
-    r = zfill(s, 8);
-    i = cmp(r, "000hello");
-    assert(i == 0);
+        assert(leftJustify(s, 8, '\u0100') == "hello\u0100\u0100\u0100");
+        assert(rightJustify(s, 8, '\u0100') == "\u0100\u0100\u0100hello");
+        assert(center(s, 8, '\u0100') == "\u0100hello\u0100\u0100");
+    }
 }
 
 
 /*****************************************
+ * $(RED Scheduled for deprecation in December 2011.
+ *       Please use $(D rightJustify) with a fill character of '0' instead.)
+ *
  * Same as rjustify(), but fill with '0's.
  *
  */
-
 S zfill(S)(S s, int width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0 .. $ - s.length] = '0';
-    r[$ - s.length .. $] = s;
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "December 2011", "zfill",
+                            "std.string.rightJustify with a fillChar of '0'"));
+    return rightJustify!S(s, width, '0');
 }
+
 
 /**********************************************
  * $(RED Scheduled for deprecation in August 2011.
