@@ -294,11 +294,6 @@ public enum REG_VALUE_TYPE
 
 private extern (Windows)
 {
-    LONG    RegCreateKeyExA(in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in Reserved , in DWORD dwOptions
-                        ,   in REGSAM samDesired
-                        ,   in LPSECURITY_ATTRIBUTES lpsa
-                        ,   out HKEY hkeyResult, out DWORD disposition);
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
@@ -426,9 +421,9 @@ in
 }
 body
 {
-    return RegCreateKeyExA( hkey, toMBSz(subKey), RESERVED, RESERVED
-                        ,   dwOptions, samDesired, lpsa, hkeyResult
-                        ,   disposition);
+    return RegCreateKeyExA( hkey, toMBSz(subKey), 0, null
+                        ,   dwOptions, samDesired, cast(LPSECURITY_ATTRIBUTES) lpsa, &hkeyResult
+                        ,   &disposition);
 }
 
 private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey)
