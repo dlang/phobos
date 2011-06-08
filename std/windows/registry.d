@@ -49,12 +49,10 @@ pragma(lib, "advapi32.lib");
  * Imports
  */
 
-//import std.windows.error_codes;
-//import std.windows.types;
+private import core.bitop : bswap;
 private import std.string;
 private import std.c.windows.windows;
 import std.c.stdio;
-//private import std.windows.exceptions;
 import std.conv;
 
 //import synsoft.types;
@@ -342,27 +340,6 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 
         default:
             throw new RegistryException("Invalid Endian specified");
-    }
-}
-
-private uint swap(in uint i)
-{
-    version(X86)
-    {
-        asm
-        {    naked;
-             bswap EAX ;
-             ret ;
-        }
-    }
-    else
-    {
-        uint    v_swap  =   (i & 0xff) << 24
-                        |   (i & 0xff00) << 8
-                        |   (i >> 8) & 0xff00
-                        |   (i >> 24) & 0xff;
-
-        return v_swap;
     }
 }
 
@@ -677,13 +654,13 @@ version(LittleEndian)
                 value = to!string(u.dw);
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-                value = to!string(swap(u.dw));
+                value = to!string(bswap(u.dw));
                 break;
 }
 version(BigEndian)
 {
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-                value = to!string(swap(u.dw));
+                value = to!string(bswap(u.dw));
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 value = to!string(u.dw);
@@ -777,7 +754,7 @@ version(BigEndian)
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
 } // version(BigEndian)
-                value = swap(value);
+                value = bswap(value);
                 break;
         }
     }
