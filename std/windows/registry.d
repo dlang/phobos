@@ -297,9 +297,9 @@ private extern (Windows)
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
-    LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-                        ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
-                        ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
+//    LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
+//                        ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
+//                        ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
     LONG    RegEnumValueA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpValueName
                         ,   ref DWORD cchValueName, in Reserved
                         ,   in LPDWORD lpType, in void *lpData
@@ -511,7 +511,7 @@ body
     {
         cchName = name.length;
 
-        res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
+        res = RegEnumKeyExA(hkey, index, name.ptr, &cchName, null, null, null, null);
 
         if(ERROR_MORE_DATA != res)
         {
