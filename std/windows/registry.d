@@ -297,22 +297,6 @@ private extern (Windows)
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
-//    LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-//                        ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
-//                        ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
-    LONG    RegEnumValueA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpValueName
-                        ,   ref DWORD cchValueName, in Reserved
-                        ,   in LPDWORD lpType, in void *lpData
-                        ,   in LPDWORD lpcbData);
-    LONG    RegQueryInfoKeyA(   in HKEY hkey, in LPSTR lpClass
-                            ,   in LPDWORD lpcClass, in Reserved
-                            ,   in LPDWORD lpcSubKeys
-                            ,   in LPDWORD lpcMaxSubKeyLen
-                            ,   in LPDWORD lpcMaxClassLen, in LPDWORD lpcValues
-                            ,   in LPDWORD lpcMaxValueNameLen
-                            ,   in LPDWORD lpcMaxValueLen
-                            ,   in LPDWORD lpcbSecurityDescriptor
-                            ,   in FILETIME *lpftLastWriteTime);
     LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REG_VALUE_TYPE type, in LPCVOID lpData
                         ,   in DWORD cbData);
@@ -536,7 +520,7 @@ in
 }
 body
 {
-    return RegEnumValueA(hkey, dwIndex, lpName, cchName, RESERVED, null, null, null);
+    return RegEnumValueA(hkey, dwIndex, cast(LPSTR) lpName, &cchName, null, null, null, null);
 }
 
 private LONG Reg_GetNumSubKeys_(in HKEY hkey, out DWORD cSubKeys
@@ -547,7 +531,7 @@ in
 }
 body
 {
-    return RegQueryInfoKeyA(hkey, null, null, RESERVED, &cSubKeys
+    return RegQueryInfoKeyA(hkey, null, null, null, &cSubKeys
                         ,   &cchSubKeyMaxLen, null, null, null, null, null, null);
 }
 
@@ -559,7 +543,7 @@ in
 }
 body
 {
-    return RegQueryInfoKeyA(hkey, null, null, RESERVED, null, null, null
+    return RegQueryInfoKeyA(hkey, null, null, null, null, null, null
                         ,   &cValues, &cchValueMaxLen, null, null, null);
 }
 
