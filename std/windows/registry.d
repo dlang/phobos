@@ -53,7 +53,7 @@ private import core.bitop : bswap;
 private import std.string;
 private import std.c.windows.windows;
 private import std.windows.charset : toMBSz;
-import std.c.stdio;
+import std.c.stdio : printf;
 import std.conv;
 
 //import synsoft.types;
@@ -299,8 +299,6 @@ private extern (Windows)
                         ,   in REGSAM samDesired
                         ,   in LPSECURITY_ATTRIBUTES lpsa
                         ,   out HKEY hkeyResult, out DWORD disposition);
-    LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in REGSAM samDesired, out HKEY hkeyResult);
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
@@ -599,7 +597,7 @@ in
 }
 body
 {
-    return RegOpenKeyExA(hkey, toMBSz(subKey), RESERVED, samDesired, hkeyResult);
+    return RegOpenKeyExA(hkey, toMBSz(subKey), 0, samDesired, &hkeyResult);
 }
 
 private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
