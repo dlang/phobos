@@ -6470,51 +6470,63 @@ unittest
 /*private*/
 size_t getPivot(alias less, Range)(Range r)
 {
-    return r.length / 2;
+    // This algorithm sorts the first, middle and last elements of r,
+    // then returns the index of the middle element.  In effect, it uses the
+    // median-of-three heuristic.
+
+    alias binaryFun!(less) pred;
+    immutable len = r.length;
+    immutable size_t mid = len / 2;
+    immutable uint result = ((cast(uint) (pred(r[0], r[mid]))) << 2) |
+                            ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
+                            (cast(uint) (pred(r[mid], r[len - 1])));
+
+    switch(result) {
+        case 0b001:
+            swapAt(r, 0, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b110:
+            swapAt(r, mid, len - 1);
+            break;
+        case 0b011:
+            swapAt(r, 0, mid);
+            break;
+        case 0b100:
+            swapAt(r, mid, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b000:
+            swapAt(r, 0, len - 1);
+            break;
+        case 0b111:
+            break;
+        default:
+            assert(0);
+    }
+
+    return mid;
 }
 
 // @@@BUG1904
 /*private*/
 void optimisticInsertionSort(alias less, Range)(Range r)
 {
-    if (r.length <= 1) return;
-    for (auto i = 1; i != r.length; )
-    {
-        // move to the left to find the insertion point
-        auto p = i - 1;
-        for (;;)
-        {
-            if (!less(r[i], r[p]))
-            {
-                ++p;
-                break;
-            }
-            if (p == 0) break;
-            --p;
+    alias binaryFun!(less) pred;
+    if(r.length < 2) {
+        return ;
+    }
+
+    immutable maxJ = r.length - 1;
+    for(size_t i = r.length - 2; i != size_t.max; --i) {
+        size_t j = i;
+        auto temp = r[i];
+
+        for(; j < maxJ && pred(r[j + 1], temp); ++j) {
+            r[j] = r[j + 1];
         }
-        if (i == p)
-        {
-            // already in place
-            ++i;
-            continue;
-        }
-        assert(less(r[i], r[p]));
-        // move up to see how many we can insert
-        auto iOld = i, iPrev = i;
-        ++i;
-        // The code commented below has a darn bug in it.
-        // while (i != r.length && less(r[i], r[p]) && !less(r[i], r[iPrev]))
-        // {
-        //     ++i;
-        //     ++iPrev;
-        // }
-        // do the insertion
-        //assert(isSorted!(less)(r[0 .. iOld]));
-        //assert(isSorted!(less)(r[iOld .. i]));
-        //assert(less(r[i - 1], r[p]));
-        //assert(p == 0 || !less(r[i - 1], r[p - 1]));
-        bringToFront(r[p .. iOld], r[iOld .. i]);
-        //assert(isSorted!(less)(r[0 .. i]));
+
+        r[j] = temp;
     }
 }
 
@@ -6554,46 +6566,51 @@ void swapAt(R)(R r, size_t i1, size_t i2)
 void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
-    enum uint optimisticInsertionSortGetsBetter = 1;
+    enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
 
     while (r.length > optimisticInsertionSortGetsBetter)
     {
         const pivotIdx = getPivot!(less)(r);
+        auto pivot = r[pivotIdx];
+
         // partition
         static if (ss == SwapStrategy.unstable)
         {
+            alias binaryFun!(less) pred;
+
             // partition
             swapAt(r, pivotIdx, r.length - 1);
-            bool pred(ElementType!(Range) a)
+            size_t lessI = size_t.max, greaterI = r.length - 1;
+
+            while(true)
             {
-                return less(a, r.back);
-            }
-            auto right = partition!(pred, ss)(r);
-            swapAt(r, r.length - right.length, r.length - 1);
-            // done with partitioning
-            if (r.length == right.length)
-            {
-                // worst case: *b <= everything (also pivot <= everything)
-                // avoid quadratic behavior
-                do r.popFront; while (!r.empty && !less(right.front, r.front));
-            }
-            else
-            {
-                auto left = r[0 .. r.length - right.length];
-                right.popFront; // no need to consider right.front,
-                                // it's in the proper place already
-                if (right.length > left.length)
+                while(pred(r[++lessI], pivot)) {}
+                while(greaterI > 0 && pred(pivot, r[--greaterI])) {}
+
+                if(lessI < greaterI)
                 {
-                    swap(left, right);
+                    swapAt(r, lessI, greaterI);
                 }
-                .sortImpl!(less, ss, Range)(right);
-                r = left;
+                else
+                {
+                    break;
+                }
             }
+
+            swapAt(r, r.length - 1, lessI);
+            auto right = r[lessI + 1..r.length];
+
+            auto left = r[0..min(lessI, greaterI + 1)];
+            if (right.length > left.length)
+            {
+                swap(left, right);
+            }
+            .sortImpl!(less, ss, Range)(right);
+            r = left;
         }
         else // handle semistable and stable the same
         {
-            auto pivot = r[pivotIdx];
             static assert(ss != SwapStrategy.semistable);
             bool pred(Elem a) { return less(a, pivot); }
             auto right = partition!(pred, ss)(r);
