@@ -297,9 +297,6 @@ private extern (Windows)
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
-    LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in REG_VALUE_TYPE type, in LPCVOID lpData
-                        ,   in DWORD cbData);
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -815,8 +812,8 @@ in
 }
 body
 {
-    LONG    res =   RegSetValueExA( hkey, toMBSz(subKey), RESERVED, type
-                                ,   lpData, cbData);
+    LONG    res =   RegSetValueExA( hkey, toMBSz(subKey), 0, type
+                                ,   cast(BYTE*) lpData, cbData);
 
     if(ERROR_SUCCESS != res)
     {
