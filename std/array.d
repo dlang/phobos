@@ -592,17 +592,37 @@ unittest
 +/
 
 /++
-    Inserts $(D stuff) (which must be an input range or a single item) in
-    $(D array) at position $(D pos).
+    Inserts $(D stuff) (which must be an input range or any number of
+    implicitly convertible items) in $(D array) at position $(D pos).
 
 Example:
 ---
 int[] a = [ 1, 2, 3, 4 ];
 a.insertInPlace(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+a.insertInPlace(3, 10u, 11);
+assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
  +/
 void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    insertInPlaceImpl(array, pos, stuff);
+}
+
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(!isSomeString!(T[]) && isImplicitlyConvertible!(CommonType!(U),T))
+{
+    T[Tuple!(U).length] data = void;
+    foreach(i, v; stuff)
+        emplace!T(&data[i], v);
+    insertInPlaceImpl(array, pos, data[]);
+}
+
+void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
@@ -642,20 +662,15 @@ void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
     }
 }
 
-/++ Ditto +/
-void insertInPlace(T)(ref T[] array, size_t pos, T stuff)
-{
-    insertInPlace(array, pos, (&stuff)[0 .. 1]);
-}
 
 //Verify Example.
 unittest
 {
-    int[] a = ([1, 4, 5]).dup;
-    insertInPlace(a, 1u, [2, 3]);
-    assert(a == [1, 2, 3, 4, 5]);
-    insertInPlace(a, 1u, 99);
-    assert(a == [1, 99, 2, 3, 4, 5]);
+    int[] a = [ 1, 2, 3, 4 ];
+    a.insertInPlace(2, [ 1, 2 ]);
+    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+    a.insertInPlace(3, 10u, 11);
+    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 }
 
 unittest
@@ -715,6 +730,24 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
+
+    // variadic version
+    bool testVar(T, U...)(T orig, size_t pos, U args)
+    {
+        static if(is(T == typeof(T.dup)))
+            auto a = orig.dup;
+        else
+            auto a = orig.idup;
+        auto result = args[$-1];
+
+        a.insertInPlace(pos, args[0..$-1]);
+        if(!std.algorithm.equal(a, result))
+            return false;
+        return true;
+    }
+    assert(testVar([1, 2, 3, 4], 0, 6, 7u, [6, 7, 1, 2, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 2, 8, 9L, [1, 2, 8, 9, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 4, 10L, 11, [1, 2, 3, 4, 10, 11]));
 }
 
 /++
