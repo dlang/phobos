@@ -108,13 +108,6 @@ public enum Endian
 /+
  +/
 
-
-//import synsoft.win32.types;
-/+ + These are borrowed from synsoft.win32.types for the moment, but will not be
- + needed once I've convinced Walter to use strong typedefs for things like HKEY +
- +/
-private typedef uint Reserved;
-
 //import synsoft.text.token;
 /+ ++++++ This is borrowed from synsoft.text.token, until such time as something
  + similar is in Phobos ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -222,8 +215,6 @@ private const DWORD STANDARD_RIGHTS_ALL         =   0x001F0000L;
 
 private const DWORD SPECIFIC_RIGHTS_ALL         =   0x0000FFFFL;
 
-private const Reserved  RESERVED                =   cast(Reserved)0;
-
 private const DWORD REG_CREATED_NEW_KEY     =   0x00000001;
 private const DWORD REG_OPENED_EXISTING_KEY =   0x00000002;
 
@@ -294,7 +285,8 @@ public enum REG_VALUE_TYPE
 
 private extern (Windows)
 {
-    LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
+	// This function is missing in core.sys.windows.windows.
+    LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in LPDWORD lpReserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
 }
@@ -553,8 +545,8 @@ in
 body
 {
     DWORD   cbData  =   0;
-    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), RESERVED, type
-                                        ,   cast(byte*)0, cbData);
+    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), null, type
+                                        ,   null, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
@@ -593,14 +585,14 @@ body
     U       u;
     void    *data   =   &u.qw;
     DWORD   cbData  =   U.qw.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), RESERVED
+    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), null
                                         ,   type, data, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data = (new byte[cbData]).ptr;
 
-        res = RegQueryValueExA( hkey, toMBSz(name), RESERVED, type, data
+        res = RegQueryValueExA( hkey, toMBSz(name), null, type, data
                             ,   cbData);
     }
 
@@ -658,14 +650,14 @@ body
 {
     char[]  data    =   new char[256];
     DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA( hkey, toMBSz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA( hkey, toMBSz(name), null, type
                                         , data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toMBSz(name), RESERVED, type, data.ptr, cbData);
+        res = RegQueryValueExA(hkey, toMBSz(name), null, type, data.ptr, cbData);
     }
     else if(ERROR_SUCCESS == res)
     {
@@ -701,7 +693,7 @@ in
 body
 {
     DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), null, type
                                         ,   &value, cbData);
 
     if(ERROR_SUCCESS != res)
@@ -744,7 +736,7 @@ in
 body
 {
     DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), null, type
                                         ,   &value, cbData);
 
     if(ERROR_SUCCESS != res)
@@ -774,14 +766,14 @@ body
 {
     byte[]  data    =   new byte[100];
     DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toMBSz(name), null, type
                                         ,   data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toMBSz(name), RESERVED, type, data.ptr, cbData);
+        res = RegQueryValueExA(hkey, toMBSz(name), null, type, data.ptr, cbData);
     }
 
     if(ERROR_SUCCESS != res)
