@@ -91,8 +91,7 @@ version(Windows)
 
    Note: On Unix systems, the homonym C function (which is accessible
    to D programs as $(LINK2 std_c_process.html, std.c._system))
-   returns a code in the same format as
-   $(WEB www.scit.wlv.ac.uk/cgi-bin/mansec?2+waitpid, waitpid),
+   returns a code in the same format as $(LUCKY waitpid, waitpid),
    meaning that C programs must use the $(D WEXITSTATUS) macro to
    extract the actual exit code from the $(D system) call. D's $(D
    system) automatically extracts the exit status.

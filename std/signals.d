@@ -11,7 +11,7 @@
  * longer necessary to instrument the slots.
  *
  * References:
- *      $(LINK2 http://scottcollins.net/articles/a-deeper-look-at-_signals-and-slots.html, A Deeper Look at Signals and Slots)$(BR)
+ *      $(LUCKY A Deeper Look at Signals and Slots)$(BR)
  *      $(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
  *      $(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
  *      $(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
