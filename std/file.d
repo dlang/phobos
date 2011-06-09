@@ -22,8 +22,8 @@ import core.memory;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
-       std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
-       std.typetuple, std.utf;
+       std.range, std.regex, std.regexp, std.stdio, std.string, std.traits,
+       std.typecons, std.typetuple, std.utf;
 
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
@@ -540,7 +540,7 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringz(name)) == 0, 
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
             "Failed to remove file " ~ name);
 }
 
@@ -2523,10 +2523,7 @@ unittest
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
-{
-    _listDir(pathname, callback);
-}
+alias listDir listdir;
 
 
 /***************************************************
@@ -3290,8 +3287,11 @@ void main(string[] args)
 --------------------
  +/
 
-string[] listDir(in char[] pathname)
+string[] listDir(C)(in C[] pathname)
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+            "scheduled for deprecation in August 2011. Please use " ~
+            "dirEntries instead.");
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3305,11 +3305,6 @@ string[] listDir(in char[] pathname)
     return result.data;
 }
 
-/++
-    $(RED Scheduled for deprecation in August 2011. Please use $(D listDir) instead.)
- +/
-alias listDir listdir;
-
 unittest
 {
     assert(listDir(".").length > 0);
@@ -3317,6 +3312,8 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+       Please use $(D dirEntries) instead.)
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
 
@@ -3362,8 +3359,12 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = true)
+string[] listDir(C, U)(in C[] pathname, U pattern, bool followSymLinks = true)
+    if(is(C : char) && is(U : const(C[])))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "dirEntries instead.");
     auto result = appender!(string[])();
 
     bool callback(DirEntry* de)
@@ -3386,8 +3387,12 @@ string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = tr
 }
 
 /++ Ditto +/
-string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
+string[] listDir(C, U)(in C[] pathname, U r, bool followSymLinks = true)
+    if(is(C : char) && is(U == RegExp))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "dirEntries instead.");
     auto result = appender!(string[])();
 
     bool callback(DirEntry* de)
@@ -3408,7 +3413,6 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
 
     return result.data;
 }
-
 
 /******************************************************
  * $(RED Scheduled for deprecation in August 2011.
@@ -3447,8 +3451,12 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(string filename) callback)
+void listDir(C)(in C[] pathname, bool delegate(string filename) callback)
+    if(is(C : char))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "dirEntries instead.");
     _listDir(pathname, callback);
 }
 

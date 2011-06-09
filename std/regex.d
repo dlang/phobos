@@ -182,7 +182,10 @@ auto s = regex(r"p[1-5]\s*"w, "g");
 struct Regex(E) if (is(E == Unqual!E))
 {
 private:
-    alias Tuple!(size_t, "startIdx", size_t, "endIdx") regmatch_t;
+    struct regmatch_t
+    {
+        size_t startIdx, endIdx;
+    }
     enum REA
     {
         global          = 1,    // has the g attribute
