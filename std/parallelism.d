@@ -3382,39 +3382,26 @@ unittest {
     }
 
     auto arr = [1,2,3,4,5];
-    auto appNums = appender!(uint[])();
-    auto appNums2 = appender!(uint[])();
+    auto nums = new uint[5];
+    auto nums2 = new uint[5];
 
     foreach(i, ref elem; poolInstance.parallel(arr)) {
         elem++;
-        synchronized {
-            appNums.put(cast(uint) i + 2);
-            appNums2.put(elem);
-        }
+        nums[i] = i + 2;
+        nums2[i] = elem;
     }
 
-    uint[] nums = appNums.data, nums2 = appNums2.data;
-    sort!"a.at!0 < b.at!0"(zip(nums, nums2));
     assert(nums == [2,3,4,5,6], text(nums));
     assert(nums2 == nums, text(nums2));
     assert(arr == nums, text(arr));
 
     // Test parallel foreach with non-random access range.
-    appNums.clear();
-    appNums2.clear();
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
 
     foreach(i, elem; poolInstance.parallel(range)) {
-        synchronized {
-            appNums.put(cast(uint) i);
-            appNums2.put(cast(uint) i);
-        }
+        nums[i] = i;
     }
 
-    nums = appNums.data;
-    nums2 = appNums2.data;
-    sort!"a.at!0 < b.at!0"(zip(nums, nums2));
-    assert(nums == nums2);
     assert(nums == [0,1,2,3,4]);
 
     auto logs = new double[1_000_000];
@@ -3470,14 +3457,10 @@ unittest {
     // Test default pool stuff.
     assert(taskPool.size == totalCPUs - 1);
 
-    appNums.clear();
+    nums = new uint[1000];
     foreach(i; parallel(iota(1000))) {
-        synchronized {
-            appNums.put(i);
-        }
+        nums[i] = i;
     }
-    nums = appNums.data;
-    sort(nums);
     assert(equal(nums, iota(1000)));
 
     assert(equal(
