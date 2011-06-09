@@ -3387,7 +3387,7 @@ unittest {
 
     foreach(i, ref elem; poolInstance.parallel(arr)) {
         elem++;
-        nums[i] = i + 2;
+        nums[i] = cast(uint) i + 2;
         nums2[i] = elem;
     }
 
@@ -3399,7 +3399,7 @@ unittest {
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
 
     foreach(i, elem; poolInstance.parallel(range)) {
-        nums[i] = i;
+        nums[i] = cast(uint) i;
     }
 
     assert(nums == [0,1,2,3,4]);
@@ -3459,7 +3459,7 @@ unittest {
 
     nums = new uint[1000];
     foreach(i; parallel(iota(1000))) {
-        nums[i] = i;
+        nums[i] = cast(uint) i;
     }
     assert(equal(nums, iota(1000)));
 
