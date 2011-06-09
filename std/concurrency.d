@@ -1358,15 +1358,24 @@ version( unittest )
         prioritySend( tid, "done" );
     }
 
-
-    unittest
+    void runTest( Tid tid )
     {
-        auto tid = spawn( &testfn, thisTid );
-
         send( tid, 42, 86 );
         send( tid, tuple(42, 86) );
         send( tid, "hello", "there" );
         send( tid, "the quick brown fox" );
         receive( (string val) { assert(val == "done"); } );
+    }
+
+
+    unittest
+    {
+        auto tid = spawn( &testfn, thisTid );
+        runTest( tid );
+
+        // Run the test again with a limited mailbox size.
+        tid = spawn( &testfn, thisTid );
+        setMaxMailboxSize( tid, 2, OnCrowding.block );
+        runTest( tid );
     }
 }
