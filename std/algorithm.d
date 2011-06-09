@@ -6285,6 +6285,10 @@ unittest
 /*private*/
 size_t getPivot(alias less, Range)(Range r)
 {
+    // This algorithm sorts the first, middle and last elements of r,
+    // then returns the index of the middle element.  In effect, it uses the
+    // median-of-three heuristic.
+
     alias binaryFun!(less) pred;
     immutable len = r.length;
     immutable size_t mid = len / 2;
@@ -6316,7 +6320,7 @@ size_t getPivot(alias less, Range)(Range r)
             assert(0);
     }
 
-    return len / 2;
+    return mid;
 }
 
 // @@@BUG1904
