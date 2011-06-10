@@ -762,7 +762,7 @@ public:
 	auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
         Pipe p;
         p._read.p = new File.Impl(
-            errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+            errnoEnforce(fdopen(readfd, "a+"), "Cannot open read end of pipe"),
             1, null);
         p._write.p = new File.Impl(
             errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
