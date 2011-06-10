@@ -2615,3 +2615,73 @@ unittest
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
 }
+
+/**
+Defines a simple, self-documenting yes/no flag. This makes it easy for
+APIs to define functions accepting flags without resorting to $(D
+bool), which is opaque in calls, and without needing to define an
+enumerated type separately. Using $(D Flag!"Name") instead of $(D
+bool) makes the flag's meaning visible in calls. Each yes/no flag has
+its own type, which makes confusions and mix-ups impossible.
+
+Example:
+----
+// Before
+string getLine(bool keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine (usually far away from its definition) can't
+// be understood without looking at the documentation, even by users
+// familiar with the API. Assuming the reverse meaning
+// (i.e. "ignoreTerminator") and inserting the wrong code compiles and
+// runs with erroneous results.
+auto line = getLine(false);
+
+// After
+string getLine(Flag!"KeepTerminator" keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine can be easily read and understood even by
+// people not fluent with the API.
+auto line = getLine(Flag!"KeepTerminator".yes);
+----
+
+Passing categorical data by means of unstructured $(D bool)
+parameters is classified under "simple-data coupling" by Steve
+McConnell in the $(LUCKY Code Complete) book, along with three other
+kinds of coupling. The author argues citing several studies that
+coupling has a negative effect on code quality. $(D Flag) offers a
+simple structuring method for passing yes/no flags to APIs.
+
+As a perk, the flag's name may be any string and as such can include
+characters not normally allowed in identifiers, such as
+spaces and dashes.
+ */
+template Flag(string name) {
+    ///
+    enum Flag
+    {
+        /**
+         When creating a value of type $(D Flag!"Name"), use $(D
+         Flag!"Name".no) for the negative option. When using a value
+         of type $(D Flag!"Name"), compare it against $(D
+         Flag!"Name".no) or just $(D false) or $(D 0).  */
+        no,
+
+        /** When creating a value of type $(D Flag!"Name"), use $(D
+         Flag!"Name".yes) for the affirmative option. When using a
+         value of type $(D Flag!"Name"), compare it against $(D
+         Flag!"Name".yes).
+        */
+        yes
+    }
+}
+
