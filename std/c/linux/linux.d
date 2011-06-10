@@ -231,6 +231,7 @@ extern (C)
     int pipe(int[2]);
     pid_t wait(int*);
     int waitpid(pid_t, int*, int);
+    int raise(int);
 
     uint alarm(uint);
     char* basename(char*);
