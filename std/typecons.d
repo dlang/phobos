@@ -2685,10 +2685,20 @@ template Flag(string name) {
     }
 }
 
+/**
+Convenience names that allow using e.g. $(D yes!"encryption") instead of
+$(D Flag!"encryption".yes) and $(D no!"encryption") instead of $(D
+Flag!"encryption".no).
+*/
+template yes(string name) { enum Flag!name yes = Flag!name.yes; }
+/// Ditto
+template no(string name) { enum Flag!name no = Flag!name.no; }
+
 unittest
 {
     Flag!"abc" flag1;
     assert(flag1 == Flag!"abc".no);
+    assert(flag1 == no!"abc");
     assert(!flag1);
     if (flag1) assert(false);
     flag1 = Flag!"abc".yes;
