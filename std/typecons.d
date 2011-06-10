@@ -2667,21 +2667,33 @@ spaces and dashes.
  */
 template Flag(string name) {
     ///
-    enum Flag
+    enum Flag : bool
     {
         /**
          When creating a value of type $(D Flag!"Name"), use $(D
          Flag!"Name".no) for the negative option. When using a value
          of type $(D Flag!"Name"), compare it against $(D
          Flag!"Name".no) or just $(D false) or $(D 0).  */
-        no,
+        no = false,
 
         /** When creating a value of type $(D Flag!"Name"), use $(D
          Flag!"Name".yes) for the affirmative option. When using a
          value of type $(D Flag!"Name"), compare it against $(D
          Flag!"Name".yes).
         */
-        yes
+        yes = true
     }
+}
+
+unittest
+{
+    Flag!"abc" flag1;
+    assert(flag1 == Flag!"abc".no);
+    assert(!flag1);
+    if (flag1) assert(false);
+    flag1 = Flag!"abc".yes;
+    assert(flag1);
+    if (!flag1) assert(false);
+    if (flag1) {} else assert(false);
 }
 
