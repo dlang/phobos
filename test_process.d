@@ -39,7 +39,7 @@ void main(string[] args)
         ++i;
         writeln(i, " OK");
     }
-    
+
     void pok()
     {
         static int i = 0;
@@ -142,7 +142,7 @@ void main(string[] args)
         int main(string[] args)
         {
             stdout.write("hello world");
-            return args.length;
+            return cast(int) args.length;
         }
     });
     string out7;
