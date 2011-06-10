@@ -2690,20 +2690,32 @@ Convenience names that allow using e.g. $(D yes!"encryption") instead of
 $(D Flag!"encryption".yes) and $(D no!"encryption") instead of $(D
 Flag!"encryption".no).
 */
-template yes(string name) { enum Flag!name yes = Flag!name.yes; }
+struct Yes
+{
+    static auto @property opDispatch(string name)() { return
+    Flag!name.yes; }
+}
+//template yes(string name) { enum Flag!name yes = Flag!name.yes; }
+
 /// Ditto
-template no(string name) { enum Flag!name no = Flag!name.no; }
+struct No
+{
+    static auto @property opDispatch(string name)() { return
+    Flag!name.no; }
+}
+//template no(string name) { enum Flag!name no = Flag!name.no; }
 
 unittest
 {
     Flag!"abc" flag1;
     assert(flag1 == Flag!"abc".no);
-    assert(flag1 == no!"abc");
+    assert(flag1 == No.abc);
     assert(!flag1);
     if (flag1) assert(false);
-    flag1 = Flag!"abc".yes;
+    flag1 = Yes.abc;
     assert(flag1);
     if (!flag1) assert(false);
     if (flag1) {} else assert(false);
+    assert(flag1 == Yes.abc);
 }
 
