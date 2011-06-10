@@ -20,6 +20,7 @@
 //debug=1;
 
 import std.c.linux.linuxextern;
+import std.c.linux.linux;
 
 extern (C) int _d_isbaseof(ClassInfo oc, ClassInfo c);
 
@@ -363,4 +364,8 @@ extern (C) void _d_throwc(Object *h)
             }
         }
     }
+
+    // If we're here, it probably means that no_catch_exceptions was
+    // set with a debugger, so raise a signal
+    raise(SIGTRAP);
 }
