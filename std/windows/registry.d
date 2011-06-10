@@ -52,9 +52,10 @@ pragma(lib, "advapi32.lib");
 private import core.bitop : bswap;
 private import std.string;
 private import std.c.windows.windows;
-private import std.windows.charset : toMBSz;
+private import std.windows.charset : toMBSz, fromMBSz;
 import std.c.stdio : printf;
 import std.conv;
+import std.stdio;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
@@ -1622,7 +1623,7 @@ public:
             throw new RegistryException("Invalid key", res);
         }
 
-        return cast(string)sName[0 .. cchName];
+        return fromMBSz(cast(immutable) sName.ptr);
     }
 
     /// The name of the key at the given index
@@ -1663,7 +1664,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                string name = cast(string)sName[0 .. cchName];
+                string name = fromMBSz(cast(immutable) sName.ptr);
 
                 result = dg(name);
             }
@@ -1753,7 +1754,7 @@ public:
             throw new RegistryException("Invalid key", res);
         }
 
-        return m_key.getKey(cast(string)sName[0 .. cchName]);
+        return m_key.getKey(fromMBSz(cast(immutable) sName.ptr));
     }
 
     /// The key at the given index
@@ -1796,7 +1797,7 @@ public:
             {
                 try
                 {
-                    Key key =   m_key.getKey(sName[0 .. cchName].idup);
+                    Key key =   m_key.getKey(fromMBSz(cast(immutable) sName.ptr));
 
                     result = dg(key);
                 }
@@ -1895,7 +1896,7 @@ public:
             throw new RegistryException("Invalid value", res);
         }
 
-        return cast(string)sName[0 .. cchName];
+        return fromMBSz(cast(immutable) sName.ptr);
     }
 
     /// The name of the value at the given index
@@ -1933,7 +1934,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                string name = cast(string)sName[0 .. cchName];
+                string name = fromMBSz(cast(immutable) sName.ptr);
 
                 result = dg(name);
             }
@@ -2020,7 +2021,7 @@ public:
             throw new RegistryException("Invalid value", res);
         }
 
-        return m_key.getValue(cast(string)sName[0 .. cchName]);
+        return m_key.getValue(fromMBSz(cast(immutable) sName.ptr));
     }
 
     /// The value at the given index
@@ -2058,7 +2059,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                Value value = m_key.getValue(cast(string)sName[0 .. cchName]);
+                Value value = m_key.getValue(fromMBSz(cast(immutable) sName.ptr));
 
                 result = dg(value);
             }
@@ -2083,14 +2084,33 @@ unittest
     Key HKCR    =   Registry.classesRoot;
     Key CLSID   =   HKCR.getKey("CLSID");
 
-//  foreach(Key key; CLSID.keys) // Still cannot use a property as a freachable quantity without calling the prop function
-    foreach(Key key; CLSID.keys())
+    foreach(Key key; CLSID.keys)
     {
-//      foreach(Value val; key.Values) // Still cannot use a property as a freachable quantity without calling the prop function
-        foreach(Value val; key.values())
+        foreach(Value val; key.values)
         {
         }
     }
+}
+
+unittest
+{
+	  // Warning: This unit test writes to the registry.
+	  // The test can fail if you don't have sufficient rights
+    Key HKCU = Registry.currentUser;
+    assert(HKCU);
+    Key softwareKey = HKCU.getKey("Software");
+    assert(softwareKey);
+    Key anywhereKey = softwareKey.createKey("Überall"); // German for "anywhere"
+    assert(anywhereKey);
+    bool found = false;
+    foreach (Key key; softwareKey.keys)
+    {
+    	writefln("Key %1$s", key.name());
+    	if (key.name() == anywhereKey.name()) found = true;
+    }
+    assert(found);
+    
+    softwareKey.deleteKey("Überall");
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
