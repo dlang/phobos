@@ -68,6 +68,11 @@ version(Windows)
     import std.utf;
     import std.windows.syserror;
     import std.c.stdio;
+    version(DigitalMars)
+    {
+        // this helps on Wine
+        version = PIPE_USE_ALT_FDOPEN;
+    }
 }
 
 import std.algorithm;
@@ -760,13 +765,44 @@ public:
 	// Create file descriptors from the handles
 	auto readfd = _handleToFD(readHandle, FHND_DEVICE);
 	auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+
         Pipe p;
-        p._read.p = new File.Impl(
-            errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
-            1, null);
-        p._write.p = new File.Impl(
-            errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
-            1, null);
+        version(PIPE_USE_ALT_FDOPEN)
+        {
+            // This is a re-implementation of DMC's fdopen, but without the
+            // mucking with the file descriptor.  POSIX standard requires the
+            // new fdopen'd file to retain the given file descriptor's
+            // position.
+            FILE * local_fdopen(int fd, const(char)* mode)
+            {
+                auto fp = core.stdc.stdio.fopen("NUL", mode);
+                if(!fp)
+                    return null;
+                FLOCK(fp);
+                auto iob = cast(_iobuf*)fp;
+                .close(iob._file);
+                iob._file = fd;
+                iob._flag &= ~_IOTRAN;
+                FUNLOCK(fp);
+                return fp;
+            }
+
+            p._read.p = new File.Impl(
+                errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
+                1, null);
+            p._write.p = new File.Impl(
+                errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
+                1, null);
+        }
+        else
+        {
+            p._read.p = new File.Impl(
+                errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+                1, null);
+            p._write.p = new File.Impl(
+                errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
+                1, null);
+        }
 
         return p;
     }
@@ -1019,13 +1055,12 @@ ProcessResult execute(string command)
 
 /// ditto
 /*Tuple!(int, "status", string, "output")*/
-ProcessResult execute(string name, string[] args)
+ProcessResult execute(string name, string[] args...)
 {
     auto p = pipeProcess(name, args,
         Redirect.stdout | Redirect.stderrToStdout);
 
     Appender!(ubyte[]) a;
-    auto fd = _fileno(p.stdout.getFP);
     foreach (ubyte[] chunk; p.stdout.byChunk(4096))  a.put(chunk);
 
     typeof(return) r;
@@ -1070,7 +1105,11 @@ version(Windows) private string getShell()
 /*Tuple!(int, "status", string, "output")*/
 ProcessResult shell(string command)
 {
-    return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
+    version(Windows)
+        return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
+    else version(Posix)
+        return execute(getShell(), shellSwitch, command);
+    else assert(0);
 }
 
 
