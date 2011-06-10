@@ -15,7 +15,10 @@ void main(string[] args)
     immutable compiler = args.length == 1 ? "dmd" : args[1];
 
     immutable string src = "deleteme.d";
-    immutable string exe = "./deleteme";
+    version(Windows)
+        immutable string exe = "./deleteme.exe";
+    else
+        immutable string exe = "./deleteme";
 
     void compile(string code, string libs = null)
     {
@@ -183,9 +186,14 @@ version (Posix)
 
     
     // Clean up.
-    std.file.remove("deleteme");
-    std.file.remove("deleteme.d");
-    std.file.remove("deleteme.o");
+    std.file.remove(exe);
+    std.file.remove(src);
+    version(Posix) std.file.remove("deleteme.o");
+    version(Windows)
+    {
+        std.file.remove("deleteme.obj");
+        std.file.remove("deleteme.map");
+    }
 }
 
 

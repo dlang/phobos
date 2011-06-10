@@ -381,11 +381,9 @@ T toImpl(T, S)(S s) if (is(S == enum) && isSomeString!(T)
             return __traits(allMembers, S)[i];
     }
 
-    // Embed the actual value encountered into the error message.
+    // val is not a member of T, output cast(T)rawValue instead.
     static assert(!is(OriginalType!S == S));
-    OriginalType!S v = s;
-    throw new ConvException(
-        "value '" ~ to!string(v) ~ "' is not enumerated in " ~ S.stringof);
+    return to!T("cast(" ~ S.stringof ~ ")") ~ to!T(cast(OriginalType!S)s);
 }
 
 unittest
@@ -401,14 +399,11 @@ unittest
     assert(to!wstring(F.y) == "y"w);
     assert(to!dstring(F.z) == "z"d);
 
-    try
-    {
-        to!string(cast(E) (E.max + 1));
-        assert(0);
-    }
-    catch (ConvException e)
-    {
-    }
+    // Test an value not corresponding to an enum member.
+    auto o = cast(E)5;
+    assert(to! string(o) == "cast(E)5"c);
+    assert(to!wstring(o) == "cast(E)5"w);
+    assert(to!dstring(o) == "cast(E)5"d);
 }
 
 /**
@@ -1344,6 +1339,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             // 'inf'
             return sign ? -Target.infinity : Target.infinity;
         }
+        goto default;
     default: {}
     }
 
@@ -1440,9 +1436,11 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         {
             switch (p.front)
             {   case '-':    sexp++;
+                             goto case;
                 case '+':    p.popFront(); enforce(!p.empty,
-                        new ConvException("Error converting input"
+                                new ConvException("Error converting input"
                                 " to floating point"));
+                             break;
                 default: {}
             }
         }
@@ -1538,7 +1536,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
         {   case '-':    sexp++;
+                         goto case;
             case '+':    p.popFront();
+                         break;
             default: {}
         }
         bool sawDigits = 0;
@@ -1755,26 +1755,26 @@ if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
 unittest
 {
     int[] a = [1, 2, 3, 4, 5];
-	auto s = to!string(a);
+        auto s = to!string(a);
     assert(to!(int[])(s) == a);
 }
 
 unittest
 {
     int[][] a = [ [1, 2] , [3], [4, 5] ];
-	auto s = to!string(a);
+        auto s = to!string(a);
     //assert(to!(int[][])(s) == a);
 }
 
 unittest
 {
     int[][][] ia = [ [[1,2],[3,4],[5]] , [[6],[],[7,8,9]] , [[]] ];
-	
-	char[] s = to!(char[])(ia);
-	int[][][] ia2;
-	
-	ia2 = to!(typeof(ia2))(s);
-    assert( ia == ia2);  
+
+        char[] s = to!(char[])(ia);
+        int[][][] ia2;
+
+        ia2 = to!(typeof(ia2))(s);
+    assert( ia == ia2);
 }
 
 // Customizable integral parse
@@ -3048,7 +3048,6 @@ version (none)
         assert(to!string(cr) == to!string(creal.nan));
         assert(feq(cr, creal.nan));
     }
-
 }
 
 /* **************************************************************
@@ -3302,7 +3301,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
         return to!T(cast(Unsigned!(S)) value);
     alias Unqual!(typeof(T.init[0])) Char;
 
-    // Cache read-only data only for const and immutable - mutable
+    // Cache read-only data only for const and immutable; mutable
     // data is supposed to use allocation in all cases
     static if (is(ElementType!T == const) || is(ElementType!T == immutable))
     {
@@ -3956,7 +3955,8 @@ template octal(alias s) if (isIntegral!(typeof(s))) {
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
         // ensure that you get the right types, even with embedded underscores
         auto w = octal!"100_000_000_000";
         static assert(!is(typeof(w) == int));
@@ -4022,114 +4022,86 @@ T toImpl(T, S)(S src) if (is(T == struct) && is(typeof(T(src))))
 // Bugzilla 3961
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
     struct Int { int x; }
     Int i = to!Int(1);
 }
 
 // emplace
 /**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D Args). The $(D chunk) must be as least as large as $(D
-T) needs and should have an alignment multiple of $(D T)'s alignment.
+Given a pointer $(D chunk) to uninitialized memory (but already typed
+as $(D T)), constructs an object of non-$(D class) type $(D T) at that
+address.
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
 
-Returns: A pointer to the newly constructed object.
+Returns: A pointer to the newly constructed object (which is the same
+as $(D chunk)).
  */
-T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
+T* emplace(T)(T* chunk)
+if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof,
-            new ConvException("emplace: target size too small"));
-    auto a = cast(size_t) chunk.ptr;
-    version (OSX)       // for some reason, breaks on other platforms
-        enforce(a % T.alignof == 0, new ConvException("misalignment"));
-    auto result = cast(typeof(return)) chunk.ptr;
+    auto result = cast(typeof(return)) chunk;
+    static T i;
+    memcpy(result, &i, T.sizeof);
+    return result;
+}
+
+/**
+Given a pointer $(D chunk) to uninitialized memory (but already typed
+as a non-class type $(D T)), constructs an object of type $(D T) at
+that address from arguments $(D args).
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object (which is the same
+as $(D chunk)).
+ */
+T* emplace(T, Args...)(T* chunk, Args args)
+if (!is(T == class) && !is(T == struct) && Args.length == 1)
+{
+    *chunk = args[0];
+    return chunk;
+}
+
+// Specialization for struct
+T* emplace(T, Args...)(T* chunk, Args args)
+if (is(T == struct))
+{
+    auto result = cast(typeof(return)) chunk;
 
     void initialize()
     {
         static T i;
-        memcpy(chunk.ptr, &i, T.sizeof);
+        memcpy(chunk, &i, T.sizeof);
     }
 
-    static if (Args.length == 0)
+    static if (is(typeof(result.__ctor(args))))
     {
-        // Just initialize the thing
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
         initialize();
+        result.__ctor(args);
     }
-    else static if (is(T == struct))
+    else static if (is(typeof(T(args))))
     {
-        static if (is(typeof(result.__ctor(args))))
-        {
-            // T defines a genuine constructor accepting args
-            // Go the classic route: write .init first, then call ctor
-            initialize();
-            result.__ctor(args);
-        }
-        else static if (is(typeof(T(args))))
-        {
-            // Struct without constructor that has one matching field for
-            // each argument
-            initialize();
-            *result = T(args);
-        }
-        else static if (Args.length == 1 && is(Args[0] : T))
-        {
-            initialize();
-            *result = args[0];
-        }
+        // Struct without constructor that has one matching field for
+        // each argument
+        *result = T(args);
     }
-    else static if (Args.length == 1 && is(Args[0] : T))
+    else //static if (Args.length == 1 && is(Args[0] : T))
     {
-        // Primitive type. Assignment is fine for initialization.
+        static assert(Args.length == 1);
+        //static assert(0, T.stringof ~ " " ~ Args.stringof);
+        // initialize();
         *result = args[0];
-    }
-    else
-    {
-        static assert(false, "Don't know how to initialize an object of type "
-                ~ T.stringof ~ " with arguments " ~ Args.stringof);
     }
     return result;
 }
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a;
-    int b = 42;
-    assert(*emplace!int((cast(void*) &a)[0 .. int.sizeof], b) == 42);
-
-    struct S
-    {
-        double x = 5, y = 6;
-        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
-    }
-
-    auto s1 = new void[S.sizeof];
-    auto s2 = S(42, 43);
-    assert(*emplace!S(s1, s2) == s2);
-    assert(*emplace!S(s1, 44, 45) == S(44, 45));
-}
-
-// emplace
-/**
-Similar to $(D emplace) above, except it receives a pointer to an
-uninitialized object of type $(D T). This overload is useful for
-e.g. initializing member variables or stack variables defined with $(D
-T variable = void).
-
-Returns: A pointer to the newly constructed object.
- */
-T* emplace(T, Args...)(T* chunk, Args args) if (!is(T == class))
-{
-    // Since we're treating the memory pointed to by chunk as a raw memory
-    // block, we need to cast away any qualifiers.
-    return cast(T*) emplace!(Unqual!T)((cast(void*) chunk)[0 .. T.sizeof], args);
-}
-
-// emplace
 /**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
@@ -4170,6 +4142,60 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     return result;
 }
 
+/**
+Given a raw memory area $(D chunk), constructs an object of non-$(D
+class) type $(D T) at that address. The constructor is passed the
+arguments $(D args), if any. The $(D chunk) must be as least as large
+as $(D T) needs and should have an alignment multiple of $(D T)'s
+alignment.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(void[] chunk, Args args)
+if (!is(T == class))
+{
+    enforce(chunk.length >= T.sizeof,
+           new ConvException("emplace: chunk size too small"));
+    auto a = cast(size_t) chunk.ptr;
+    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
+    auto result = cast(typeof(return)) chunk.ptr;
+    return emplace(result, args);
+}
+
+unittest
+{
+    struct S { int a, b; }
+    auto p = new void[S.sizeof];
+    S s;
+    s.a = 42;
+    s.b = 43;
+    auto s1 = emplace!S(p, s);
+    assert(s1.a == 42 && s1.b == 43);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
+    int a;
+    int b = 42;
+    assert(*emplace!int(&a, b) == 42);
+
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(cast(S*) s1.ptr, s2) == s2);
+    assert(*emplace!S(cast(S*) s1, 44, 45) == S(44, 45));
+}
+
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -4200,7 +4226,42 @@ unittest
     }
 
     Foo foo;
-    auto voidArr = (cast(void*) &foo)[0..Foo.sizeof];
-    emplace!Foo(voidArr, 2U);
+    emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
 }
+
+// Undocumented for the time being
+void toTextRange(T, W)(T value, W writer)
+if (isIntegral!T && isOutputRange!(W, char))
+{
+    Unqual!(Unsigned!T) v = void;
+    if (value < 0)
+    {
+        put(writer, '-');
+        v = -value;
+    }
+    else
+    {
+        v = value;
+    }
+
+    if (v < 10 && v < hexdigits.length)
+    {
+        put(writer, hexdigits[cast(size_t) v]);
+        return;
+    }
+
+    char[v.sizeof * 4] buffer = void;
+    auto i = buffer.length;
+
+    do
+    {
+        auto c = cast(ubyte) (v % 10);
+        v = v / 10;
+        i--;
+        buffer[i] = cast(char) (c + '0');
+    } while (v);
+
+    put(writer, buffer[i .. $]);
+}
+

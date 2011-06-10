@@ -1754,3 +1754,56 @@ class UdpSocket: Socket
         }
 }
 
+/**
+ * Creates a pair of connected sockets.
+ *
+ * The two sockets are indistinguishable.
+ *
+ * Throws: SocketException if creation of the sockets fails.
+ */
+Socket[2] socketPair() {
+    version(BsdSockets) {
+        int[2] socks;
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1) {
+            throw new SocketException("Unable to create socket pair", _lasterr());
+        }
+
+        Socket toSocket(size_t id) {
+            Socket s = new Socket;
+            s.sock = cast(socket_t)socks[id];
+            s._family = AddressFamily.UNIX;
+            return s;
+        }
+        return [toSocket(0), toSocket(1)];
+    } else version(Win32) {
+        // We do not have socketpair() on Windows, just manually create a
+        // pair of sockets connected over some localhost port.
+        Socket[2] result;
+
+        auto listener = new TcpSocket();
+        listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        listener.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        auto addr = listener.localAddress();
+        listener.listen(1);
+
+        result[0] = new TcpSocket(addr);
+        result[1] = listener.accept();
+
+        listener.close();
+        return result;
+    } else static assert(false);
+}
+
+unittest {
+    ubyte[] data = [1, 2, 3, 4];
+    auto pair = socketPair();
+
+    pair[0].send(data);
+
+    ubyte[] buf = new ubyte[data.length];
+    pair[1].receive(buf);
+    assert(buf == data);
+
+    pair[0].close();
+    pair[1].close();
+}

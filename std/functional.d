@@ -78,8 +78,9 @@ template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
         }
         static if (byRef)
         {
-            Body!(ElementType).ReturnType result(ElementType)(ref ElementType a)
+            Body!(ElementType).ReturnType result(ElementType)(ref ElementType __a)
             {
+                mixin("alias __a "~parmName~";");
                 mixin(Body!(ElementType).code);
             }
         }
@@ -112,6 +113,9 @@ unittest
     assert(unaryFun!(f2)(41) == 42);
     assert(unaryFun!("a + 1")(41) == 42);
     //assert(unaryFun!("return a + 1;")(41) == 42);
+
+    int num = 41;
+    assert(unaryFun!("a + 1", true)(num) == 42);
 }
 
 /**
@@ -383,8 +387,7 @@ template adjoin(F...) if (F.length)
             Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
             foreach (i, Unused; result.Types)
             {
-                auto store = (cast(void*) &result[i])[0 .. result[i].sizeof];
-                emplace!(typeof(result[i]))(store, F[i](a));
+                emplace(&result[i], F[i](a));
             }
             return result;
         }
@@ -569,7 +572,7 @@ Technically the memoized function should be pure because $(D memoize) assumes it
 always return the same result for a given tuple of arguments. However, $(D memoize) does not
 enforce that because sometimes it
 is useful to memoize an impure function, too.
-  
+
 To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
 For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
 
@@ -584,7 +587,7 @@ ulong fib(ulong n)
 assert(fib(10) == 89);
 ----
 
-To improve the speed of the factorial function, 
+To improve the speed of the factorial function,
 
 Example:
 ----
@@ -646,7 +649,7 @@ unittest
     assert(y == msqrt(2.0));
     y = msqrt(4.0);
     assert(y == sqrt(4.0));
-    
+
     // alias memoize!rgb2cmyk mrgb2cmyk;
     // auto z = mrgb2cmyk([43, 56, 76]);
     // assert(z == mrgb2cmyk([43, 56, 76]));

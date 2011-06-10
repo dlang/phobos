@@ -1,0 +1,22 @@
+$(VERSION 054, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+        $(LI Your news here)
+    )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 2108): regexp.d: The greedy dotstar isn't so greedy)
+        $(LI $(BUGZILLA 3136): Incorrect and strange behavior of std.regexp.RegExp if using a pattern with optional prefix and suffix longer than 1 char)
+        $(LI $(BUGZILLA 3457): rdmd fails silently in a particular setup where the compiler is not the expected)
+        $(LI $(BUGZILLA 3479): writef/writefln: positional precision not working)
+        $(LI $(BUGZILLA 3564): Rdmd failing to link external C libraries)
+        $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
+        $(LI $(BUGZILLA 4367): std.regex: Captures is not a random access range)
+        $(LI $(BUGZILLA 4574): std.regex: breaks with empy string regex)
+        $(LI $(BUGZILLA 5019): In std.regex, empty capture at end of string causes error)
+        $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
+        $(LI $(BUGZILLA 5673): Add lookahead and forgetful matching support std.regex)
+        $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
+        $(LI $(BUGZILLA 6076): regression, std.regex: "c.*|d" matches "mm")
+    )
+)

@@ -67,6 +67,7 @@ version(Windows)
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
+    import std.c.stdio;
 }
 
 import std.algorithm;
@@ -81,8 +82,17 @@ import std.string;
 
 version(Posix)
 {
-    // Made available by the C runtime:
-    extern(C) extern __gshared const char** environ;
+    version(OSX)
+    {
+        // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
+        private extern(C) extern __gshared char*** _NSGetEnviron();
+        // need to declare environ = *_NSGetEnviron() in static this()
+    }
+    else
+    {
+        // Made available by the C runtime:
+        private extern(C) extern __gshared const char** environ;
+    }
 }
 else version(Windows)
 {
@@ -124,11 +134,24 @@ private:
     int _exitCode;
 
 
-    // Pids are only meant to be constructed inside this module, so
-    // we make the constructor private.
-    this(int id)
+    version(Windows)
     {
-        _processID = id;
+        HANDLE _handle;
+        this(int pid, HANDLE handle)
+        {
+            _processID = pid;
+            _handle = handle;
+        }
+
+    }
+    else
+    {
+        // Pids are only meant to be constructed inside this module, so
+        // we make the constructor private.
+        this(int id)
+        {
+            _processID = id;
+        }
     }
 
 
@@ -176,6 +199,34 @@ public:
         _processID = terminated;
         _exitCode = exitCode;
         return exitCode;
+    }
+    else version(Windows)
+    {
+        int wait()
+        {
+            if (_processID == terminated) return _exitCode;
+
+            if(_handle != INVALID_HANDLE_VALUE)
+            {
+                auto result = WaitForSingleObject(_handle, INFINITE);
+                enforce(result == WAIT_OBJECT_0, "Wait failed");
+                // the process has exited, get the return code
+                enforce(GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode));
+                CloseHandle(_handle);
+                _handle = INVALID_HANDLE_VALUE;
+                _processID = terminated;
+            }
+            return _exitCode;
+        }
+
+        ~this()
+        {
+            if(_handle != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(_handle);
+                _handle = INVALID_HANDLE_VALUE;
+            }
+        }
     }
 }
 
@@ -398,6 +449,125 @@ version(Posix) private Pid spawnProcessImpl
         return new Pid(id);
     }
 }
+else version(Windows) private Pid spawnProcessImpl
+    (string name, const string[] args, LPVOID envz,
+    File stdin_, File stdout_, File stderr_, Config config)
+{
+    // Create a process info structure.  Note that we don't care about wide
+    // characters yet.
+    STARTUPINFO startinfo;
+    startinfo.cb = startinfo.sizeof;
+
+    // Create a process information structure.
+    PROCESS_INFORMATION pi;
+
+    //
+    // Windows is a little strange when passing command line.  It requires the
+    // command-line to be one single command line, and the quoting processing
+    // is rather bizzare.  Through trial and error, here are the rules I've
+    // discovered that Windows uses to parse the command line WRT quotes:
+    //
+    // inside or outside quote mode:
+    // 1. if 2 or more backslashes are followed by a quote, the first
+    //    2 backslashes are reduced to 1 backslash which does not
+    //    affect anything after it.
+    // 2. one backslash followed by a quote is interpreted as a
+    //    literal quote, which cannot be used to close quote mode, and
+    //    does not affect anything after it.
+    //
+    // outside quote mode:
+    // 3. a quote enters quote mode
+    // 4. whitespace delineates an argument
+    //
+    // inside quote mode:
+    // 5. 2 quotes sequentially are interpreted as a literal quote and
+    //    an exit from quote mode.
+    // 6. a quote at the end of the string, or one that is followed by
+    //    anything other than a quote exits quote mode, but does not
+    //    affect the character after the quote.
+    // 7. end of line exits quote mode
+    //
+    // In our 'reverse' routine, we will only utilize the first 2 rules
+    // for escapes.
+    //
+    char[] cmdline;
+    uint minsize = 0;
+    foreach(s; args)
+        minsize += args.length;
+
+    // reserve enough space to hold the program and all the arguments, plus 3
+    // extra characters per arg for the quotes and the space, plus 5 extra
+    // chars for good measure (in case we have to add escaped quotes).
+    cmdline.reserve(minsize + name.length + 3 * args.length + 5);
+
+    // this could be written more optimized...
+    void addArg(string a)
+    {
+        if(cmdline.length)
+            cmdline ~= " ";
+        // first, determine if we need a quote
+        bool needquote = false;
+        foreach(dchar d; a)
+            if(d == ' ')
+            {
+                needquote = true;
+                break;
+            }
+        if(needquote)
+            cmdline ~= '"';
+        foreach(dchar d; a)
+        {
+            if(d == '"')
+                cmdline ~= '\\';
+            cmdline ~= d;
+        }
+        if(needquote)
+            cmdline ~= '"';
+    }
+
+    addArg(name);
+    foreach(a; args)
+        addArg(a);
+
+    cmdline ~= '\0';
+
+    // ok, the command line is ready.  Figure out the startup info
+    startinfo.dwFlags = STARTF_USESTDHANDLES;
+    // Get the file descriptors of the streams.
+    auto stdinFD  = _fileno(stdin_.getFP());
+    errnoEnforce(stdinFD != -1, "Invalid stdin stream");
+    auto stdoutFD = _fileno(stdout_.getFP());
+    errnoEnforce(stdoutFD != -1, "Invalid stdout stream");
+    auto stderrFD = _fileno(stderr_.getFP());
+    errnoEnforce(stderrFD != -1, "Invalid stderr stream");
+
+    // need to convert file descriptors to HANDLEs
+    startinfo.hStdInput = _fdToHandle(stdinFD);
+    startinfo.hStdOutput = _fdToHandle(stdoutFD);
+    startinfo.hStdError = _fdToHandle(stderrFD);
+
+    // TODO: need to fix this for unicode
+    if(!CreateProcessA(null, cmdline.ptr, null, null, true, (config & Config.gui) ? CREATE_NO_WINDOW : 0, envz, null, &startinfo, &pi))
+    {
+        throw new Exception("Error starting process: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
+    }
+
+    // figure out if we should close any of the streams
+    with (Config)
+    {
+        if (stdinFD  > STDERR_FILENO && !(config & noCloseStdin))
+            stdin_.close();
+        if (stdoutFD > STDERR_FILENO && !(config & noCloseStdout))
+            stdout_.close();
+        if (stderrFD > STDERR_FILENO && !(config & noCloseStderr))
+            stderr_.close();
+    }
+
+    // close the thread handle in the process info structure
+    CloseHandle(pi.hThread);
+
+    return new Pid(pi.dwProcessId, pi.hProcess);
+}
 
 // Search the PATH variable for the given executable file,
 // (checking that it is in fact executable).
@@ -446,6 +616,25 @@ version(Posix) private const(char)** toEnvz(const string[string] env)
     envz[$-1] = null;
     return envz.ptr;
 }
+else version(Windows) private LPVOID toEnvz(const string[string] env)
+{
+    uint len = 1; // reserve 1 byte for termination of environment block
+    foreach(k, v; env)
+    {
+        len += k.length + v.length + 2; // one for '=', one for null char
+    }
+
+    char [] envz;
+    envz.reserve(len);
+    foreach(k, v; env)
+    {
+        envz ~= k ~ '=' ~ v ~ '\0';
+    }
+
+    envz ~= '\0';
+    return envz.ptr;
+}
+
 
 // Check whether the file exists and can be executed by the
 // current user.
@@ -554,6 +743,34 @@ public:
 
         return p;
     }
+    else version(Windows) static Pipe create()
+    {
+        // use CreatePipe to create an anonymous pipe
+        HANDLE readHandle;
+        HANDLE writeHandle;
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sa.sizeof;
+        sa.lpSecurityDescriptor = null;
+        sa.bInheritHandle = true;
+        if(!CreatePipe(&readHandle, &writeHandle, &sa, 0))
+        {
+            throw new Exception("Error creating pipe: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
+        }
+
+	// Create file descriptors from the handles
+	auto readfd = _handleToFD(readHandle, FHND_DEVICE);
+	auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+        Pipe p;
+        p._read.p = new File.Impl(
+            errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+            1, null);
+        p._write.p = new File.Impl(
+            errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
+            1, null);
+
+        return p;
+    }
+
 
 
     /** Close both ends of the pipe.
@@ -808,6 +1025,7 @@ ProcessResult execute(string name, string[] args)
         Redirect.stdout | Redirect.stderrToStdout);
 
     Appender!(ubyte[]) a;
+    auto fd = _fileno(p.stdout.getFP);
     foreach (ubyte[] chunk; p.stdout.byChunk(4096))  a.put(chunk);
 
     typeof(return) r;
@@ -852,7 +1070,7 @@ version(Windows) private string getShell()
 /*Tuple!(int, "status", string, "output")*/
 ProcessResult shell(string command)
 {
-    return execute(getShell(), [shellSwitch, command]);
+    return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
 }
 
 
@@ -907,6 +1125,15 @@ alias Environment environment;
 
 abstract final class Environment
 {
+    // initiaizes the value of environ for OSX
+    version(OSX)
+    {
+        static private char** environ;
+        static this()
+        {
+            environ = * _NSGetEnviron();
+        }
+    }
 static:
 
 private:

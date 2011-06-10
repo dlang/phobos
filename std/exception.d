@@ -1,79 +1,354 @@
 // Written in the D programming language.
 
-/**
- * This module defines tools related to exceptions and general error
- * handling.
- *
- * Macros:
- *      WIKI = Phobos/StdException
- *
- * Synopsis:
- *
- * ----
- * string synopsis()
- * {
- *     FILE* f = enforce(fopen("some/file"));
- *     // f is not null from here on
- *     FILE* g = enforceEx!(WriteException)(fopen("some/other/file", "w"));
- *     // g is not null from here on
- *     Exception e = collectException(write(g, readln(f)));
- *     if (e)
- *     {
- *         ... an exception occurred...
- *     }
- *     char[] line;
- *     enforce(readln(f, line));
- *     return assumeUnique(line);
- * }
- * ----
- *
- * Copyright: Copyright Andrei Alexandrescu 2008-.
- * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
- * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
- * Source:    $(PHOBOSSRC std/_exception.d)
- */
+/++
+    This module defines functions related to exceptions and general error
+    handling. It also defines functions intended to aid in unit testing.
+
+    Synopsis of some of std.exception's functions:
+--------------------
+string synopsis()
+{
+   FILE* f = enforce(fopen("some/file"));
+   // f is not null from here on
+   FILE* g = enforceEx!(WriteException)(fopen("some/other/file", "w"));
+   // g is not null from here on
+
+   Exception e = collectException(write(g, readln(f)));
+   if (e)
+   {
+       ... an exception occurred...
+       ... We have the exception to play around with...
+   }
+
+   string msg = collectExceptionMsg(write(g, readln(f)));
+   if (msg)
+   {
+       ... an exception occurred...
+       ... We have the message from the exception but not the exception...
+   }
+
+   char[] line;
+   enforce(readln(f, line));
+   return assumeUnique(line);
+}
+--------------------
+
+    Macros:
+        WIKI = Phobos/StdException
+
+    Copyright: Copyright Andrei Alexandrescu 2008-, Jonathan M Davis 2011-.
+    License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
+    Source:    $(PHOBOSSRC std/_exception.d)
+
+ +/
 module std.exception;
 
 import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
-import core.stdc.errno;
+import core.exception, core.stdc.errno;
 version(unittest)
 {
+    import std.datetime;
     import std.stdio;
 }
 
-/*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
- *  Written by Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
+/++
+    Asserts that the given expression does $(I not) throw the given type
+    of $(D Throwable). If a $(D Throwable) of the given type is thrown,
+    it is caught and does not escape assertNotThrown. Rather, an
+    $(D AssertError) is thrown. However, any other $(D Throwable)s will escape.
 
-/**
- * If $(D_PARAM value) is nonzero, returns it. Otherwise, throws
- * $(D_PARAM new Exception(msg)).
- * Example:
- * ----
- * auto f = enforce(fopen("data.txt"));
- * auto line = readln(f);
- * enforce(line.length); // expect a non-empty line
- * ----
- */
+    Params:
+        T          = The $(D Throwable) to test for.
+        expression = The expression to test.
+        msg        = Optional message to output on test failure.
 
+    Throws:
+        $(D AssertError) if the given $(D Throwable) is thrown.
+
+    Examples:
+--------------------
+assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
+assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+
+assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
+                            std.datetime.TimeOfDay(12, 0, 60))) ==
+       `assertNotThrown failed: TimeException was thrown.`);
+--------------------
+  +/
+void assertNotThrown(T : Throwable = Exception, E)
+                    (lazy E expression,
+                     string msg = null,
+                     string file = __FILE__,
+                     size_t line = __LINE__)
+{
+    try
+        expression();
+    catch(T t)
+    {
+        immutable tail = msg.empty ? "." : ": " ~ msg;
+
+        throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
+                                     T.stringof,
+                                     tail),
+                              file,
+                              line,
+                              t);
+    }
+}
+
+//Verify Examples
+unittest
+{
+    assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
+    assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
+                                std.datetime.TimeOfDay(12, 0, 60))) ==
+           `assertNotThrown failed: TimeException was thrown.`);
+}
+
+unittest
+{
+    void throwEx(Throwable t) { throw t; }
+    void nothrowEx() { }
+
+    try
+        assertNotThrown!Exception(nothrowEx());
+    catch(AssertError)
+        assert(0);
+
+    try
+        assertNotThrown!Exception(nothrowEx(), "It's a message");
+    catch(AssertError)
+        assert(0);
+
+    try
+        assertNotThrown!AssertError(nothrowEx());
+    catch(AssertError)
+        assert(0);
+
+    try
+        assertNotThrown!AssertError(nothrowEx(), "It's a message");
+    catch(AssertError)
+        assert(0);
+
+    {
+        bool thrown = false;
+        try
+        {
+            assertNotThrown!Exception(
+                throwEx(new Exception("It's an Exception")));
+        }
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+        {
+            assertNotThrown!Exception(
+                throwEx(new Exception("It's an Exception")), "It's a message");
+        }
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+        {
+            assertNotThrown!AssertError(
+                throwEx(new AssertError("It's an AssertError",
+                                        __FILE__,
+                                        __LINE__)));
+        }
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+        {
+            assertNotThrown!AssertError(
+                throwEx(new AssertError("It's an AssertError",
+                                        __FILE__,
+                                        __LINE__)),
+                        "It's a message");
+        }
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+}
+
+/++
+    Asserts that the given expression throws the given type of $(D Throwable).
+    The $(D Throwable) is caught and does not escape assertThrown. However,
+    any other $(D Throwable)s $(I will) escape, and if no $(D Throwable)
+    of the given type is thrown, then an $(D AssertError) is thrown.
+
+    Params:
+        T          = The $(D Throwable) to test for.
+        expression = The expression to test.
+        msg        = Optional message to output on test failure.
+
+    Throws:
+        $(D AssertError) if the given $(D Throwable) is not thrown.
+
+    Examples:
+--------------------
+assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
+assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+
+assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
+                            std.datetime.TimeOfDay(12, 0, 0))) ==
+       `assertThrown failed: No AssertError was thrown.`);
+--------------------
+  +/
+void assertThrown(T : Throwable = Exception, E)
+                 (lazy E expression,
+                  string msg = null,
+                  string file = __FILE__,
+                  size_t line = __LINE__)
+{
+    bool thrown = false;
+
+    try
+        expression();
+    catch(T t)
+        thrown = true;
+
+    if(!thrown)
+    {
+        immutable tail = msg.empty ? "." : ": " ~ msg;
+
+        throw new AssertError(format("assertThrown failed: No %s was thrown%s",
+                                     T.stringof,
+                                     tail),
+                              file,
+                              line);
+    }
+}
+
+//Verify Examples
+unittest
+{
+    assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
+    assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+
+    assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
+                                std.datetime.TimeOfDay(12, 0, 0))) ==
+           `assertThrown failed: No AssertError was thrown.`);
+}
+
+unittest
+{
+    void throwEx(Throwable t) { throw t; }
+    void nothrowEx() { }
+
+    try
+        assertThrown!Exception(throwEx(new Exception("It's an Exception")));
+    catch(AssertError)
+        assert(0);
+
+    try
+    {
+        assertThrown!Exception(throwEx(new Exception("It's an Exception")),
+                               "It's a message");
+    }
+    catch(AssertError)
+        assert(0);
+
+    try
+    {
+        assertThrown!AssertError(throwEx(new AssertError("It's an AssertError",
+                                                         __FILE__,
+                                                         __LINE__)));
+    }
+    catch(AssertError)
+        assert(0);
+
+    try
+    {
+        assertThrown!AssertError(throwEx(new AssertError("It's an AssertError",
+                                                         __FILE__,
+                                                         __LINE__)),
+                                 "It's a message");
+    }
+    catch(AssertError)
+        assert(0);
+
+
+    {
+        bool thrown = false;
+        try
+            assertThrown!Exception(nothrowEx());
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+            assertThrown!Exception(nothrowEx(), "It's a message");
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+            assertThrown!AssertError(nothrowEx());
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+
+    {
+        bool thrown = false;
+        try
+            assertThrown!AssertError(nothrowEx(), "It's a message");
+        catch(AssertError)
+            thrown = true;
+
+        assert(thrown);
+    }
+}
+
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
+    $(D new Exception(msg)) is thrown.
+
+    Note:
+        $(D enforce) is used to throw exceptions and is therefore intended to
+        aid in error handling. It is $(I not) intended for verifying the logic
+        of your program. That is what $(D assert) is for. Also, do not use
+        $(D enforce) inside of contracts (i.e. inside of $(D in) and $(D out)
+        blocks and $(D invariant)s), because they will be compiled out when
+        compiling with $(I -release). Use $(D assert) in contracts.
+
+   Example:
+--------------------
+auto f = enforce(fopen("data.txt"));
+auto line = readln(f);
+enforce(line.length, "Expected a non-empty line."));
+--------------------
+ +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
     (T value, lazy const(char)[] msg = null)
 {
@@ -81,6 +356,10 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
     return value;
 }
 
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise, the given
+    delegate is called.
+ +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
 (T value, scope void delegate() dg)
 {
@@ -110,17 +389,16 @@ unittest
     }
 }
 
-/**
- * If $(D_PARAM value) is nonzero, returns it. Otherwise, throws
- * $(D_PARAM ex).
- * Example:
- * ----
- * auto f = enforce(fopen("data.txt"));
- * auto line = readln(f);
- * enforce(line.length, new IOException); // expect a non-empty line
- * ----
- */
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
+   Example:
+--------------------
+auto f = enforce(fopen("data.txt"));
+auto line = readln(f);
+enforce(line.length, new IOException); // expect a non-empty line
+--------------------
+ +/
 T enforce(T)(T value, lazy Throwable ex)
 {
     if (!value) throw ex();
@@ -140,20 +418,18 @@ unittest
     }
 }
 
-/**
-If $(D value) is nonzero, returns it. Otherwise, throws $(D new
-ErrnoException(msg)). The $(D ErrnoException) class assumes that the
-last operation has set $(D errno) to an error code.
- *
- * Example:
- *
- * ----
- * auto f = errnoEnforce(fopen("data.txt"));
- * auto line = readln(f);
- * enforce(line.length); // expect a non-empty line
- * ----
- */
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
+    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
+    last operation set $(D errno) to an error code.
 
+   Example:
+--------------------
+auto f = errnoEnforce(fopen("data.txt"));
+auto line = readln(f);
+enforce(line.length); // expect a non-empty line
+--------------------
+ +/
 T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
     (T value, lazy string msg = null)
 {
@@ -161,24 +437,21 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
     return value;
 }
 
-/**
- * If $(D_PARAM value) is nonzero, returns it. Otherwise, throws
- * $(D_PARAM new E(msg)).
- * Example:
- * ----
- * auto f = enforceEx!(FileMissingException)(fopen("data.txt"));
- * auto line = readln(f);
- * enforceEx!(DataCorruptionException)(line.length);
- * ----
- */
+/++
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
+    is thrown.
 
-template enforceEx(E)
+   Example:
+--------------------
+ auto f = enforceEx!FileMissingException(fopen("data.txt"));
+ auto line = readln(f);
+ enforceEx!DataCorruptionException(line.length);
+--------------------
+ +/
+T enforceEx(E, T)(T value, lazy string msg = "")
 {
-    T enforceEx(T)(T value, lazy string msg = "")
-    {
-        if (!value) throw new E(msg);
-        return value;
-    }
+    if (!value) throw new E(msg);
+    return value;
 }
 
 unittest
@@ -196,25 +469,37 @@ unittest
     }
 }
 
-/**
- * Evaluates $(D_PARAM expression). If evaluation throws an exception,
- * return that exception. Otherwise, deposit the resulting value in
- * $(D_PARAM target) and return $(D_PARAM null).
- * Example:
- * ----
- * int[] a = new int[3];
- * int b;
- * assert(collectException(a[4], b));
- * ----
- */
+/++
+    Catches and returns the exception thrown from the given expression.
+    If no exception is thrown, then null is returned and $(D result) is
+    set to the result of the expression.
 
-Exception collectException(T)(lazy T expression, ref T target)
+    Note that while $(D collectException) $(I can) be used to collect any
+    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
+    catch anything that is neither an $(D Exception) nor a type derived from
+    $(D Exception). So, do not use $(D collectException) to collect
+    non-$(D Exception)s unless you're sure that that's what you really want to
+    do.
+
+    Params:
+        T          = The type of exception to catch.
+        expression = The expression which may throw an exception.
+        result     = The result of the expression if no exception is thrown.
+
+    Example:
+--------------------
+int[] a = new int[3];
+int b;
+assert(collectException(a[4], b));
+--------------------
++/
+T collectException(T = Exception, E)(lazy E expression, ref E result)
 {
     try
     {
-        target = expression();
+        result = expression();
     }
-    catch (Exception e)
+    catch (T e)
     {
         return e;
     }
@@ -229,20 +514,31 @@ unittest
     assert(collectException(foo(), b));
 }
 
-/** Evaluates $(D_PARAM expression). If evaluation throws an
- * exception, return that exception. Otherwise, return $(D_PARAM
- * null). $(D_PARAM T) can be $(D_PARAM void).
- */
+/++
+    Catches and returns the exception thrown from the given expression.
+    If no exception is thrown, then null is returned. $(D E) can be
+    $(D void).
 
-Exception collectException(T)(lazy T expression)
+    Note that while $(D collectException) $(I can) be used to collect any
+    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
+    catch anything that is neither an $(D Exception) nor a type derived from
+    $(D Exception). So, do not use $(D collectException) to collect
+    non-$(D Exception)s unless you're sure that that's what you really want to
+    do.
+
+    Params:
+        T          = The type of exception to catch.
+        expression = The expression which may throw an exception.
++/
+T collectException(T : Throwable = Exception, E)(lazy E expression)
 {
     try
     {
         expression();
     }
-    catch (Exception e)
+    catch (T t)
     {
-        return e;
+        return t;
     }
     return null;
 }
@@ -253,20 +549,82 @@ unittest
     assert(collectException(foo()));
 }
 
+/++
+    Catches the exception thrown from the given expression and returns the
+    msg property of that exception. If no exception is thrown, then null is
+    returned. $(D E) can be $(D void).
+
+    If an exception is thrown but it has an empty message, then
+    $(D emptyExceptionMsg) is returned.
+
+    Note that while $(D collectExceptionMsg) $(I can) be used to collect any
+    $(D Throwable) and not just $(D Exception)s, it is generally ill-advised to
+    catch anything that is neither an $(D Exception) nor a type derived from
+    $(D Exception). So, do not use $(D collectExceptionMsg) to collect
+    non-$(D Exception)s unless you're sure that that's what you really want to
+    do.
+
+    Params:
+        T          = The type of exception to catch.
+        expression = The expression which may throw an exception.
+
+    Examples:
+--------------------
+void throwFunc() {throw new Exception("My Message.");}
+assert(collectExceptionMsg(throwFunc()) == "My Message.");
+
+void nothrowFunc() {}
+assert(collectExceptionMsg(nothrowFunc()) is null);
+
+void throwEmptyFunc() {throw new Exception("");}
+assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
+--------------------
++/
+string collectExceptionMsg(T = Exception, E)(lazy E expression)
+{
+    try
+    {
+        expression();
+
+        return cast(string)null;
+    }
+    catch(T e)
+        return e.msg.empty ? emptyExceptionMsg : e.msg;
+}
+
+//Verify Examples.
+unittest
+{
+    void throwFunc() {throw new Exception("My Message.");}
+    assert(collectExceptionMsg(throwFunc()) == "My Message.");
+
+    void nothrowFunc() {}
+    assert(collectExceptionMsg(nothrowFunc()) is null);
+
+    void throwEmptyFunc() {throw new Exception("");}
+    assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
+}
+
+/++
+    Value that collectExceptionMsg returns when it catches an exception
+    with an empty exception message.
+ +/
+enum emptyExceptionMsg = "<Empty Exception Message>";
+
 /**
  * Casts a mutable array to an immutable array in an idiomatic
- * manner. Technically, $(D_PARAM assumeUnique) just inserts a cast,
+ * manner. Technically, $(D assumeUnique) just inserts a cast,
  * but its name documents assumptions on the part of the
- * caller. $(D_PARAM assumeUnique(arr)) should only be called when
- * there are no more active mutable aliases to elements of $(D_PARAM
- * arr). To strenghten this assumption, $(D_PARAM assumeUnique(arr))
- * also clears $(D_PARAM arr) before returning. Essentially $(D_PARAM
+ * caller. $(D assumeUnique(arr)) should only be called when
+ * there are no more active mutable aliases to elements of $(D
+ * arr). To strenghten this assumption, $(D assumeUnique(arr))
+ * also clears $(D arr) before returning. Essentially $(D
  * assumeUnique(arr)) indicates commitment from the caller that there
- * is no more mutable access to any of $(D_PARAM arr)'s elements
+ * is no more mutable access to any of $(D arr)'s elements
  * (transitively), and that all future accesses will be done through
- * the immutable array returned by $(D_PARAM assumeUnique).
+ * the immutable array returned by $(D assumeUnique).
  *
- * Typically, $(D_PARAM assumeUnique) is used to return arrays from
+ * Typically, $(D assumeUnique) is used to return arrays from
  * functions that have allocated and built them.
  *
  * Example:
@@ -283,10 +641,10 @@ unittest
  * }
  * ----
  *
- * The use in the example above is correct because $(D_PARAM result)
- * was private to $(D_PARAM letters) and is unaccessible in writing
+ * The use in the example above is correct because $(D result)
+ * was private to $(D letters) and is unaccessible in writing
  * after the function returns. The following example shows an
- * incorrect use of $(D_PARAM assumeUnique).
+ * incorrect use of $(D assumeUnique).
  *
  * Bad:
  *
@@ -307,7 +665,7 @@ unittest
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
- * immutable array from the writable array $(D_PARAM buffer), replace
+ * immutable array from the writable array $(D buffer), replace
  * the last line with:
  * ----
  * return to!(string)(sneaky); // not that sneaky anymore
@@ -316,12 +674,12 @@ unittest
  * The call will duplicate the array appropriately.
  *
  * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in
+ * cases (see the $(D unique) and $(D lent) keywords in
  * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language), but complicates the language considerably. The downside
- * of $(D_PARAM assumeUnique)'s convention-based usage is that at this
+ * of $(D assumeUnique)'s convention-based usage is that at this
  * time there is no formal checking of the correctness of the
- * assumption; on the upside, the idiomatic use of $(D_PARAM
+ * assumption; on the upside, the idiomatic use of $(D
  * assumeUnique) is simple and rare enough to be tolerable.
  *
  */
@@ -378,11 +736,9 @@ bool pointsTo(S, T)(ref const S source, ref const T target) @trusted pure nothro
         }
         return false;
     }
-    else static if (isDynamicArray!(S))
+    else static if (isArray!(S))
     {
-        const p1 = cast(void*) source.ptr, p2 = p1 + source.length,
-              b = cast(void*) &target, e = b + target.sizeof;
-        return overlap(p1[0 .. p2 - p1], b[0 .. e - b]).length != 0;
+        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -426,10 +782,22 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
+    
+    int[] darr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(darr, darr[i]));
+    assert(pointsTo(darr[0..3], darr[2]));
+    assert(!pointsTo(darr[0..3], darr[3]));
+    
+    int[4] sarr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(sarr, sarr[i]));
+    assert(pointsTo(sarr[0..3], sarr[2]));
+    assert(!pointsTo(sarr[0..3], sarr[3]));
 }
 
 /*********************
- * Thrown if errors that set $(D errno) happen.
+ * Thrown if errors that set $(D errno) occur.
  */
 class ErrnoException : Exception
 {

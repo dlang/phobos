@@ -66,7 +66,7 @@ private
     {
         MsgType type;
         Variant data;
-        
+
         this(T...)( MsgType t, T vals )
             if( T.length < 1 )
         {
@@ -95,7 +95,7 @@ private
             else
                 return data.convertsTo!(Tuple!(T));
         }
-        
+
         auto get(T...)()
         {
             static if( T.length == 1 )
@@ -162,11 +162,14 @@ private
 }
 
 
-static this()
+shared static this()
 {
-    // NOTE: thisTid will construct a new MessageBox if one doesn't exist,
-    //       which should only be true of the main thread and threads created
-    //       via core.thread instead of spawn.
+    // NOTE: Normally, mbox is initialized by spawn() or thisTid().  This
+    //       doesn't support the simple case of calling only receive() in main
+    //       however.  To ensure that this works, initialize the main thread's
+    //       mbox field here (as shared static ctors are run once on startup
+    //       by the main thread).
+    mbox = new MessageBox;
 }
 
 
@@ -501,6 +504,11 @@ bool receiveTimeout(T...)( long ms, T ops )
     return mbox.get( ms * TICKS_PER_MILLI, ops );
 }
 
+/++ ditto +/
+bool receiveTimeout(T...)( Duration duration, T ops )
+{
+    return receiveTimeout(duration.total!"msecs"(), ops);
+}
 
 unittest
 {
@@ -519,6 +527,11 @@ unittest
                        {
                            receiveTimeout( 0, (int x) {}, (int x) {} );
                        } ) );
+
+    assert( __traits( compiles,
+                      {
+                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
+                      } ) );
 }
 
 
@@ -603,6 +616,115 @@ void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingD
 
 
 //////////////////////////////////////////////////////////////////////////////
+// Name Registration
+//////////////////////////////////////////////////////////////////////////////
+
+
+private
+{
+    __gshared Tid[string]   tidByName;
+    __gshared string[][Tid] namesByTid;
+    __gshared Mutex         registryLock;
+}
+
+
+shared static this()
+{
+    registryLock = new Mutex;
+}
+
+
+static ~this()
+{
+    auto me = thisTid;
+
+    synchronized( registryLock )
+    {
+        if( auto allNames = me in namesByTid )
+        {
+            foreach( name; *allNames )
+                tidByName.remove( name );
+            namesByTid.remove( me );
+        }
+    }
+}
+
+
+/**
+ * Associates name with tid in a process-local map.  When the thread
+ * represented by tid termiantes, any names associated with it will be
+ * automatically unregistered.
+ *
+ * Params:
+ *  name = The name to associate with tid.
+ *  tid  = The tid register by name.
+ *
+ * Returns:
+ *  true if the name is available and tid is not known to represent a
+ *  defunct thread.
+ */
+bool register( string name, Tid tid )
+{
+    synchronized( registryLock )
+    {
+        if( name in tidByName )
+            return false;
+        if( tid.mbox.isClosed )
+            return false;
+        namesByTid[tid] ~= name;
+        tidByName[name] = tid;
+        return true;
+    }
+}
+
+
+/**
+ * Removes the registered name associated with a tid.
+ *
+ * Params:
+ *  name = The name to unregister.
+ *
+ * Returns:
+ *  true if the name is registered, false if not.
+ */
+bool unregister( string name )
+{
+    synchronized( registryLock )
+    {
+        if( auto tid = name in tidByName )
+        {
+            auto allNames = *tid in namesByTid;
+            auto pos      = countUntil( *allNames, name );
+            remove!(SwapStrategy.unstable)( *allNames, pos );
+            tidByName.remove( name );
+            return true;
+        }
+        return false;
+    }
+}
+
+
+/**
+ * Gets the Tid associated with name.
+ *
+ * Params:
+ *  name = The name to locate within the registry.
+ *
+ * Returns:
+ *  The associated Tid or Tid.init if name is not registered.
+ */
+Tid locate( string name )
+{
+    synchronized( registryLock )
+    {
+        if( auto tid = name in tidByName )
+            return *tid;
+        return Tid.init;
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
 // MessageBox Implementation
 //////////////////////////////////////////////////////////////////////////////
 
@@ -624,6 +746,18 @@ private
             m_putMsg    = new Condition( m_lock );
             m_notFull   = new Condition( m_lock );
             m_closed    = false;
+        }
+
+
+        /*
+         *
+         */
+        final @property bool isClosed() const
+        {
+            synchronized( m_lock )
+            {
+                return m_closed;
+            }
         }
 
 
@@ -738,7 +872,7 @@ private
                 {
                     alias ParameterTypeTuple!(t) Args;
                     auto op = ops[i];
-                    
+
                     if( msg.convertsTo!(Args) )
                     {
                         static if( is( ReturnType!(t) == bool ) )
@@ -765,7 +899,7 @@ private
                     links.remove( tid );
                     // Give the owner relationship precedence.
                     if( *depends && tid != owner )
-                    {                        
+                    {
                         auto e = new LinkTerminated( tid );
                         if( onStandardMsg( Message( MsgType.standard, e ) ) )
                             return true;
@@ -818,7 +952,7 @@ private
                                 continue;
                             }
                             list.removeAt( range );
-                            return true;    
+                            return true;
                         }
                         range.popFront();
                         continue;
@@ -982,8 +1116,8 @@ private
         {
             return msg.type == MsgType.priority;
         }
-        
-        
+
+
         pure final bool isLinkDeadMsg( ref Message msg )
         {
             return msg.type == MsgType.linkDead;

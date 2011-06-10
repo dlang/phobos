@@ -8,8 +8,10 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 /* References:
+   "Modern Computer Arithmetic" (MCA) is the primary reference for all
+    algorithms used in this library.
   - R.P. Brent and P. Zimmermann, "Modern Computer Arithmetic",
-    Version 0.2, p. 26, (June 2009).
+    Version 0.5.9, (Oct 2010).
   - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
     Max-Planck Institute fuer Informatik, (Oct 1998).
   - G. Hanrot, M. Quercia, and P. Zimmermann, "The Middle Product Algorithm, I.",
@@ -59,48 +61,61 @@ immutable int FASTDIVLIMIT; // crossover to recursive division
 
 
 // These constants are used by shift operations
-static if (BigDigit.sizeof == int.sizeof) {
+static if (BigDigit.sizeof == int.sizeof)
+{
     enum { LG2BIGDIGITBITS = 5, BIGDIGITSHIFTMASK = 31 };
     alias ushort BIGHALFDIGIT;
-} else static if (BigDigit.sizeof == long.sizeof) {
+}
+else static if (BigDigit.sizeof == long.sizeof)
+{
     alias uint BIGHALFDIGIT;
     enum { LG2BIGDIGITBITS = 6, BIGDIGITSHIFTMASK = 63 };
-} else static assert(0, "Unsupported BigDigit size");
+}
+else static assert(0, "Unsupported BigDigit size");
 
-immutable BigDigit [] ZERO = [0];
-immutable BigDigit [] ONE = [1];
-immutable BigDigit [] TWO = [2];
-immutable BigDigit [] TEN = [10];
+enum BigDigit [] ZERO = [0];
+enum BigDigit [] ONE = [1];
+enum BigDigit [] TWO = [2];
+enum BigDigit [] TEN = [10];
 
 
 public:
 
 /// BigUint performs memory management and wraps the low-level calls.
-struct BigUint {
+struct BigUint
+{
 private:
-    invariant() {
+    invariant()
+    {
         assert( data.length == 1 || data[$-1] != 0 );
     }
     BigDigit [] data = ZERO;
-    this(BigDigit [] x) {
+    this(BigDigit [] x)
+    {
        data = x;
     }
 public:
     // Length in uints
     size_t uintLength() pure const
     {
-        static if (BigDigit.sizeof == uint.sizeof) {
+        static if (BigDigit.sizeof == uint.sizeof)
+        {
             return data.length;
-        } else static if (BigDigit.sizeof == ulong.sizeof) {
+        }
+        else static if (BigDigit.sizeof == ulong.sizeof)
+        {
             return data.length * 2 -
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
     size_t ulongLength() pure const
     {
-        static if (BigDigit.sizeof == uint.sizeof) {
+        static if (BigDigit.sizeof == uint.sizeof)
+        {
             return (data.length + 1) >> 1;
-        } else static if (BigDigit.sizeof == ulong.sizeof) {
+        }
+        else static if (BigDigit.sizeof == ulong.sizeof)
+        {
             return data.length;
         }
     }
@@ -108,22 +123,31 @@ public:
     // The value at (cast(ulong[])data)[n]
     ulong peekUlong(int n) pure const
     {
-        static if (BigDigit.sizeof == int.sizeof) {
+        static if (BigDigit.sizeof == int.sizeof)
+        {
             if (data.length == n*2 + 1) return data[n*2];
-            version(LittleEndian) {
+            version(LittleEndian)
+            {
                 return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
-            } else {
+            }
+            else
+            {
                 return data[n*2 + 1] + ((cast(ulong)data[n*2]) << 32 );
             }
-        } else static if (BigDigit.sizeof == long.sizeof) {
+        }
+        else static if (BigDigit.sizeof == long.sizeof)
+        {
             return data[n];
         }
     }
     uint peekUint(int n) pure const
     {
-        static if (BigDigit.sizeof == int.sizeof) {
+        static if (BigDigit.sizeof == int.sizeof)
+        {
             return data[n];
-        } else {
+        }
+        else
+        {
             ulong x = data[n >> 1];
             return (n & 1) ? cast(uint)(x >> 32) : cast(uint)x;
         }
@@ -169,11 +193,11 @@ public:
 ///
 int opCmp(Tdummy = void)(BigUint y)
 {
-    if (data.length != y.data.length) {
+    if (data.length != y.data.length)
         return (data.length > y.data.length) ?  1 : -1;
-    }
-    uint k = highestDifferentDigit(data, y.data);
-    if (data[k] == y.data[k]) return 0;
+    size_t k = highestDifferentDigit(data, y.data);
+    if (data[k] == y.data[k])
+        return 0;
     return data[k] > y.data[k] ? 1 : -1;
 }
 
@@ -184,10 +208,10 @@ int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
         return 1;
     uint ylo = cast(uint)(y & 0xFFFF_FFFF);
     uint yhi = cast(uint)(y >> 32);
-    if (data.length == 2 && data[1] != yhi) {
+    if (data.length == 2 && data[1] != yhi)
         return data[1] > yhi ? 1: -1;
-    }
-    if (data[0] == ylo) return 0;
+    if (data[0] == ylo)
+        return 0;
     return data[0] > ylo ? 1: -1;
 }
 
@@ -250,35 +274,46 @@ char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, c
 
     char [] buff = new char[lenBytes + extraPad + totalSeparatorBytes + frontExtraBytes];
     biguintToHex(buff[$ - lenBytes - mainSeparatorBytes .. $], data, separator);
-    if (extraPad > 0) {
-        if (separator) {
+    if (extraPad > 0)
+    {
+        if (separator)
+        {
             size_t start = frontExtraBytes; // first index to pad
-            if (extraPad &7) {
+            if (extraPad &7)
+            {
                 // Do 1 to 7 extra zeros.
                 buff[frontExtraBytes .. frontExtraBytes + (extraPad & 7)] = padChar;
                 buff[frontExtraBytes + (extraPad & 7)] = (padChar == ' ' ? ' ' : separator);
                 start += (extraPad & 7) + 1;
             }
-            for (int i=0; i< (extraPad >> 3); ++i) {
+            for (int i=0; i< (extraPad >> 3); ++i)
+            {
                 buff[start .. start + 8] = padChar;
                 buff[start + 8] = (padChar == ' ' ? ' ' : separator);
                 start += 9;
             }
-        } else {
+        }
+        else
+        {
             buff[frontExtraBytes .. frontExtraBytes + extraPad]=padChar;
         }
     }
     int z = frontExtraBytes;
-    if (lenBytes > minPadding) {
+    if (lenBytes > minPadding)
+    {
         // Strip leading zeros.
         ptrdiff_t maxStrip = lenBytes - minPadding;
-        while (z< buff.length-1 && (buff[z]=='0' || buff[z]==padChar) && maxStrip>0) {
-            ++z; --maxStrip;
+        while (z< buff.length-1 && (buff[z]=='0' || buff[z]==padChar) && maxStrip>0)
+        {
+            ++z;
+            --maxStrip;
         }
     }
-    if (padChar!='0') {
+    if (padChar!='0')
+    {
         // Convert leading zeros into padChars.
-        for (size_t k= z; k< buff.length-1 && (buff[k]=='0' || buff[k]==padChar); ++k) {
+        for (size_t k= z; k< buff.length-1 && (buff[k]=='0' || buff[k]==padChar); ++k)
+        {
             if (buff[k]=='0') buff[k]=padChar;
         }
     }
@@ -291,7 +326,8 @@ bool fromHexString(string s)
     //Strip leading zeros
     int firstNonZero = 0;
     while ((firstNonZero < s.length - 1) &&
-        (s[firstNonZero]=='0' || s[firstNonZero]=='_')) {
+        (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+    {
             ++firstNonZero;
     }
     auto len = (s.length - firstNonZero + 15)/4;
@@ -300,7 +336,8 @@ bool fromHexString(string s)
     uint sofar = 0;
     uint partcount = 0;
     assert(s.length>0);
-    for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i) {
+    for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
+    {
         assert(i>=0);
         char c = s[i];
         if (s[i]=='_') continue;
@@ -312,14 +349,16 @@ bool fromHexString(string s)
         part >>= 4;
         part |= (x<<(32-4));
         ++partcount;
-        if (partcount==8) {
+        if (partcount==8)
+        {
             data[sofar] = part;
             ++sofar;
             partcount = 0;
             part = 0;
         }
     }
-    if (part) {
+    if (part)
+    {
         for ( ; partcount != 8; ++partcount) part >>= 4;
         data[sofar] = part;
         ++sofar;
@@ -334,11 +373,13 @@ bool fromDecimalString(string s)
 {
     //Strip leading zeros
     int firstNonZero = 0;
-    while ((firstNonZero < s.length - 1) &&
-        (s[firstNonZero]=='0' || s[firstNonZero]=='_')) {
+    while ((firstNonZero < s.length) &&
+        (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+    {
             ++firstNonZero;
     }
-    if (firstNonZero == s.length - 1 && s.length > 1) {
+    if (firstNonZero == s.length && s.length >= 1)
+    {
         data = ZERO;
         return true;
     }
@@ -360,9 +401,12 @@ BigUint opShr(Tulong)(Tulong y) if (is (Tulong == ulong))
     uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
     if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
     uint words = cast(uint)(y >> LG2BIGDIGITBITS);
-    if (bits==0) {
+    if (bits==0)
+    {
         return BigUint(data[words..$]);
-    } else {
+    }
+    else
+    {
         uint [] result = new BigDigit[data.length - words];
         multibyteShr(result, data[words..$], bits);
         if (result.length>1 && result[$-1]==0) return BigUint(result[0..$-1]);
@@ -380,10 +424,13 @@ BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
     uint words = cast(uint)(y >> LG2BIGDIGITBITS);
     BigDigit [] result = new BigDigit[data.length + words+1];
     result[0..words] = 0;
-    if (bits==0) {
+    if (bits==0)
+    {
         result[words..words+data.length] = data[];
         return BigUint(result[0..words+data.length]);
-    } else {
+    }
+    else
+    {
         uint c = multibyteShl(result[words..words+data.length], data, bits);
         if (c==0) return BigUint(result[0..words+data.length]);
         result[$-1] = c;
@@ -397,21 +444,31 @@ static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref 
     if (is(Tulong == ulong))
 {
     BigUint r;
-    if (wantSub) { // perform a subtraction
-        if (x.data.length > 2) {
+    if (wantSub)
+    {   // perform a subtraction
+        if (x.data.length > 2)
+        {
             r.data = subInt(x.data, y);
-        } else { // could change sign!
+        }
+        else
+        {   // could change sign!
             ulong xx = x.data[0];
-            if (x.data.length > 1) xx+= (cast(ulong)x.data[1]) << 32;
+            if (x.data.length > 1)
+                xx += (cast(ulong)x.data[1]) << 32;
             ulong d;
-            if (xx <= y) {
+            if (xx <= y)
+            {
                 d = y - xx;
                 sign = !sign;
-            } else {
+            }
+            else
+            {
                 d = xx - y;
             }
-            if (d==0) {
+            if (d == 0)
+            {
                 r = 0UL;
+                sign = false;
                 return r;
             }
             r.data = new BigDigit[ d > uint.max ? 2: 1];
@@ -419,7 +476,9 @@ static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref 
             if (d > uint.max)
 				r.data[1] = cast(uint)(d>>32);
         }
-    } else {
+    }
+    else
+    {
         r.data = addInt(x.data, y);
     }
     return r;
@@ -427,16 +486,21 @@ static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref 
 
 // If wantSub is false, return x + y, leaving sign unchanged.
 // If wantSub is true, return abs(x - y), negating sign if x<y
-static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign) {
+static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
+{
     BigUint r;
-    if (wantSub) { // perform a subtraction
+    if (wantSub)
+    {   // perform a subtraction
         bool negative;
         r.data = sub(x.data, y.data, &negative);
         *sign ^= negative;
-        if (r.isZero()) {
+        if (r.isZero())
+        {
             *sign = false;
         }
-    } else {
+    }
+    else
+    {
         r.data = add(x.data, y.data);
     }
     return r;
@@ -452,7 +516,8 @@ static BigUint mulInt(T = ulong)(BigUint x, T y)
     uint lo = cast(uint)(y & 0xFFFF_FFFF);
     uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
     result[x.data.length] = multibyteMul(result[0..x.data.length], x.data, lo, 0);
-    if (hi!=0) {
+    if (hi!=0)
+    {
         result[x.data.length+1] = multibyteMulAdd!('+')(result[1..x.data.length+1],
             x.data, hi, 0);
     }
@@ -463,13 +528,16 @@ static BigUint mulInt(T = ulong)(BigUint x, T y)
  */
 static BigUint mul(BigUint x, BigUint y)
 {
-    if (y==0 || x == 0) return BigUint(ZERO);
-
+    if (y==0 || x == 0)
+        return BigUint(ZERO);
     auto len = x.data.length + y.data.length;
     BigDigit [] result = new BigDigit[len];
-    if (y.data.length > x.data.length) {
+    if (y.data.length > x.data.length)
+    {
         mulInternal(result, y.data, x.data);
-    } else {
+    }
+    else
+    {
         if (x.data[]==y.data[]) squareInternal(result, x.data);
         else mulInternal(result, x.data, y.data);
     }
@@ -479,17 +547,22 @@ static BigUint mul(BigUint x, BigUint y)
 }
 
 // return x / y
-static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) ){
+static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) )
+{
     uint [] result = new BigDigit[x.data.length];
-    if ((y&(-y))==y) {
+    if ((y&(-y))==y)
+    {
         assert(y!=0, "BigUint division by zero");
         // perfect power of 2
         uint b = 0;
-        for (;y!=1; y>>=1) {
+        for (;y!=1; y>>=1)
+        {
             ++b;
         }
         multibyteShr(result, x.data, b);
-    } else {
+    }
+    else
+    {
         result[] = x.data[];
         uint rem = multibyteDivAssign(result, y, 0);
     }
@@ -497,11 +570,15 @@ static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) ){
 }
 
 // return x % y
-static uint modInt(T)(BigUint x, T y) if ( is(T == uint) ){
+static uint modInt(T)(BigUint x, T y) if ( is(T == uint) )
+{
     assert(y!=0);
-    if ((y&(-y)) == y) { // perfect power of 2
+    if ((y&(-y)) == y)
+    {   // perfect power of 2
         return x.data[0] & (y-1);
-    } else {
+    }
+    else
+    {
         // horribly inefficient - malloc, copy, & store are unnecessary.
         uint [] wasteful = new BigDigit[x.data.length];
         wasteful[] = x.data[];
@@ -514,8 +591,10 @@ static uint modInt(T)(BigUint x, T y) if ( is(T == uint) ){
 // return x / y
 static BigUint div(BigUint x, BigUint y)
 {
-    if (y.data.length > x.data.length) return BigUint(ZERO);
-    if (y.data.length == 1) return divInt(x, y.data[0]);
+    if (y.data.length > x.data.length)
+        return BigUint(ZERO);
+    if (y.data.length == 1)
+        return divInt(x, y.data[0]);
     BigDigit [] result = new BigDigit[x.data.length - y.data.length + 1];
     divModInternal(result, null, x.data, y.data);
     return BigUint(removeLeadingZeros(result));
@@ -525,7 +604,8 @@ static BigUint div(BigUint x, BigUint y)
 static BigUint mod(BigUint x, BigUint y)
 {
     if (y.data.length > x.data.length) return x;
-    if (y.data.length == 1) {
+    if (y.data.length == 1)
+    {
         BigDigit [] result = new BigDigit[1];
         result[0] = modInt(x, y.data[0]);
         return BigUint(result);
@@ -562,12 +642,18 @@ static BigUint pow(BigUint x, ulong y)
     size_t xlength = x.data.length;
     ulong y0;
     uint evenbits = 0; // number of even bits in the bottom of x
-    while (!(x0 & 1)) { x0 >>= 1; ++evenbits; }
+    while (!(x0 & 1))
+    {
+        x0 >>= 1;
+        ++evenbits;
+    }
 
-    if ((x.data.length- firstnonzero == 2)) {
+    if ((x.data.length- firstnonzero == 2))
+    {
         // Check for a single digit straddling a digit boundary
         BigDigit x1 = x.data[firstnonzero+1];
-        if ((x1 >> evenbits) == 0) {
+        if ((x1 >> evenbits) == 0)
+        {
             x0 |= (x1 << (BigDigit.sizeof * 8 - evenbits));
             singledigit = true;
         }
@@ -578,19 +664,24 @@ static BigUint pow(BigUint x, ulong y)
 
     BigDigit finalMultiplier = 1UL;
 
-    if (singledigit) {
+    if (singledigit)
+    {
         // x fits into a single digit. Raise it to the highest power we can
         // that still fits into a single digit, then reduce the exponent accordingly.
         // We're quite likely to have a residual multiply at the end.
         // For example, 10^^100 = (((5^^13)^^7) * 5^^9) * 2^^100.
         // and 5^^13 still fits into a uint.
         evenshiftbits  = cast(uint)( (evenbits * y) & BIGDIGITSHIFTMASK);
-        if (x0 == 1) { // Perfect power of 2
-             result = 1UL;
-             return result << (evenbits + firstnonzero*BigDigit.sizeof)*y;
-        } else {
+        if (x0 == 1)
+        {   // Perfect power of 2
+            result = 1UL;
+            return result << (evenbits + firstnonzero*BigDigit.sizeof)*y;
+        }
+        else
+        {
             int p = highestPowerBelowUintMax(x0);
-            if (y <= p) { // Just do it with pow
+            if (y <= p)
+            {   // Just do it with pow
                 result = cast(ulong)intpow(x0, y);
                 if (evenbits + firstnonzero == 0)
                     return result;
@@ -619,18 +710,22 @@ static BigUint pow(BigUint x, ulong y)
     BigDigit [] t1 = resultBuffer[result_start..$];
     BigDigit [] r1;
 
-    if (singledigit) {
+    if (singledigit)
+    {
         r1 = t1[0..1];
         r1[0] = x0;
         y = y0;
-    } else {
+    }
+    else
+    {
         // It's not worth right shifting by evenbits unless we also shrink the length after each
         // multiply or squaring operation. That might still be worthwhile for large y.
         r1 = t1[0..x.data.length - firstnonzero];
         r1[0..$] = x.data[firstnonzero..$];
     }
 
-    if (y>1) {    // Set r1 = r1 ^^ y.
+    if (y>1)
+    {   // Set r1 = r1 ^^ y.
 
         // The secondary buffer only needs space for the multiplication results
         BigDigit [] secondaryBuffer = new BigDigit[resultBuffer.length - result_start];
@@ -638,30 +733,39 @@ static BigUint pow(BigUint x, ulong y)
         BigDigit [] r2;
 
         int shifts = 63; // num bits in a long
-        while(!(y & 0x8000_0000_0000_0000L)) {
+        while(!(y & 0x8000_0000_0000_0000L))
+        {
             y <<= 1;
             --shifts;
         }
         y <<=1;
 
-        while(y!=0) {
+        while(y!=0)
+        {
             r2 = t2[0 .. r1.length*2];
             squareInternal(r2, r1);
-            if (y & 0x8000_0000_0000_0000L) {
+            if (y & 0x8000_0000_0000_0000L)
+            {
                 r1 = t1[0 .. r2.length + xlength];
-                if (xlength == 1) {
+                if (xlength == 1)
+                {
                     r1[$-1] = multibyteMul(r1[0 .. $-1], r2, x0, 0);
-                } else {
+                }
+                else
+                {
                     mulInternal(r1, r2, x.data);
                 }
-            } else {
+            }
+            else
+            {
                 r1 = t1[0 .. r2.length];
                 r1[] = r2[];
             }
             y <<=1;
             shifts--;
         }
-        while (shifts>0) {
+        while (shifts>0)
+        {
             r2 = t2[0 .. r1.length * 2];
             squareInternal(r2, r1);
             r1 = t1[0 .. r2.length];
@@ -670,21 +774,26 @@ static BigUint pow(BigUint x, ulong y)
         }
     }
 
-    if (finalMultiplier!=1) {
+    if (finalMultiplier!=1)
+    {
         BigDigit carry = multibyteMul(r1, r1, finalMultiplier, 0);
-        if (carry) {
+        if (carry)
+        {
             r1 = t1[0 .. r1.length + 1];
             r1[$-1] = carry;
         }
     }
-    if (evenshiftbits) {
+    if (evenshiftbits)
+    {
         BigDigit carry = multibyteShl(r1, r1, evenshiftbits);
-        if (carry!=0) {
+        if (carry!=0)
+        {
             r1 = t1[0 .. r1.length + 1];
             r1[$ - 1] = carry;
         }
     }
-    while(r1[$ - 1]==0) {
+    while(r1[$ - 1]==0)
+    {
         r1=r1[0 .. $ - 1];
     }
     result.data = resultBuffer[0 .. result_start + r1.length];
@@ -702,7 +811,8 @@ BigDigit[] removeLeadingZeros(BigDigit [] x)
     return x[0 .. k];
 }
 
-unittest {
+unittest
+{
    BigUint r = BigUint([5]);
    BigUint t = BigUint([7]);
    BigUint s = BigUint.mod(r, t);
@@ -711,7 +821,8 @@ unittest {
 
 
 // Pow tests
-unittest {
+unittest
+{
     BigUint r, s;
     r.fromHexString("80000000_00000001");
     s = BigUint.pow(r, 5);
@@ -725,10 +836,17 @@ unittest {
     r.fromHexString("1_E1178E81_00000000");
     s = BigUint.pow(r, 15); // Regression test: this used to overflow array bounds
 
+    r.fromDecimalString("000_000_00");
+    assert(r == 0);
+    r.fromDecimalString("0007");
+    assert(r == 7);
+    r.fromDecimalString("0");
+    assert(r == 0);
 }
 
 // Radix conversion tests
-unittest {
+unittest
+{
     BigUint r;
     r.fromHexString("1_E1178E81_00000000");
     assert(r.toHexString(0, '_', 0) == "1_E1178E81_00000000");
@@ -833,7 +951,8 @@ int slowHighestPowerBelowUintMax(uint x)
      return pwr;
 }
 
-unittest {
+unittest
+{
   assert(highestPowerBelowUintMax(10)==9);
   for (int k=82; k<88; ++k) {assert(highestPowerBelowUintMax(k)== slowHighestPowerBelowUintMax(k)); }
 }
@@ -846,29 +965,37 @@ unittest {
  */
 BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
 {
-    if (x.length == y.length) {
+    if (x.length == y.length)
+    {
         // There's a possibility of cancellation, if x and y are almost equal.
         sizediff_t last = highestDifferentDigit(x, y);
         BigDigit [] result = new BigDigit[last+1];
-        if (x[last] < y[last]) { // we know result is negative
+        if (x[last] < y[last])
+        {   // we know result is negative
             multibyteSub(result[0..last+1], y[0..last+1], x[0..last+1], 0);
             *negative = true;
-        } else { // positive or zero result
+        }
+        else
+        {   // positive or zero result
             multibyteSub(result[0..last+1], x[0..last+1], y[0..last+1], 0);
             *negative = false;
         }
-    while (result.length > 1 && result[$-1] == 0) {
-        result = result[0..$-1];
-    }
+        while (result.length > 1 && result[$-1] == 0)
+        {
+            result = result[0..$-1];
+        }
 //        if (result.length >1 && result[$-1]==0) return result[0..$-1];
         return result;
     }
     // Lengths are different
     BigDigit [] large, small;
-    if (x.length < y.length) {
+    if (x.length < y.length)
+    {
         *negative = true;
         large = y; small = x;
-    } else {
+    }
+    else
+    {
         *negative = false;
         large = x; small = y;
     }
@@ -882,7 +1009,8 @@ BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
     {
         multibyteIncrementAssign!('-')(result[small.length..$], carry);
     }
-    while (result.length > 1 && result[$-1] == 0) {
+    while (result.length > 1 && result[$-1] == 0)
+    {
         result = result[0..$-1];
     }
     return result;
@@ -890,22 +1018,34 @@ BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
 
 
 // return a + b
-BigDigit [] add(BigDigit[] a, BigDigit [] b) {
+BigDigit [] add(BigDigit[] a, BigDigit [] b)
+{
     BigDigit [] x, y;
-    if (a.length<b.length) { x = b; y = a; } else { x = a; y = b; }
+    if (a.length < b.length)
+    {
+        x = b; y = a;
+    }
+    else
+    {
+        x = a; y = b;
+    }
     // now we know x.length > y.length
     // create result. add 1 in case it overflows
     BigDigit [] result = new BigDigit[x.length + 1];
 
     BigDigit carry = multibyteAdd(result[0..y.length], x[0..y.length], y, 0);
-    if (x.length != y.length){
+    if (x.length != y.length)
+    {
         result[y.length..$-1]= x[y.length..$];
         carry  = multibyteIncrementAssign!('+')(result[y.length..$-1], carry);
     }
-    if (carry) {
+    if (carry)
+    {
         result[$-1] = carry;
         return result;
-    } else return result[0..$-1];
+    }
+    else
+        return result[0..$-1];
 }
 
 /**  return x + y
@@ -921,10 +1061,13 @@ BigDigit [] addInt(const BigDigit[] x, ulong y)
     if (x.length < 2 && hi!=0) { result[1]=hi; hi=0; }
     uint carry = multibyteIncrementAssign!('+')(result[0..$-1], lo);
     if (hi!=0) carry += multibyteIncrementAssign!('+')(result[1..$-1], hi);
-    if (carry) {
+    if (carry)
+    {
         result[$-1] = carry;
         return result;
-    } else return result[0..$-1];
+    }
+    else
+        return result[0..$-1];
 }
 
 /** Return x - y.
@@ -937,9 +1080,12 @@ BigDigit [] subInt(const BigDigit[] x, ulong y)
     BigDigit [] result = new BigDigit[x.length];
     result[] = x[];
     multibyteIncrementAssign!('-')(result[], lo);
-    if (hi) multibyteIncrementAssign!('-')(result[1..$], hi);
-    if (result[$-1]==0) return result[0..$-1];
-    else return result;
+    if (hi)
+        multibyteIncrementAssign!('-')(result[1..$], hi);
+    if (result[$-1] == 0)
+        return result[0..$-1];
+    else
+        return result;
 }
 
 /**  General unsigned multiply routine for bigints.
@@ -956,28 +1102,37 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     assert( result.length == x.length + y.length );
     assert( y.length > 0 );
     assert( x.length >= y.length);
-    if (y.length <= KARATSUBALIMIT) {
+    if (y.length <= KARATSUBALIMIT)
+    {
         // Small multiplier, we'll just use the asm classic multiply.
-        if (y.length==1) { // Trivial case, no cache effects to worry about
+        if (y.length == 1)
+        {   // Trivial case, no cache effects to worry about
             result[x.length] = multibyteMul(result[0..x.length], x, y[0], 0);
             return;
         }
-        if (x.length + y.length < CACHELIMIT) return mulSimple(result, x, y);
+
+        if (x.length + y.length < CACHELIMIT)
+            return mulSimple(result, x, y);
 
         // If x is so big that it won't fit into the cache, we divide it into chunks
         // Every chunk must be greater than y.length.
         // We make the first chunk shorter, if necessary, to ensure this.
 
-        auto chunksize = CACHELIMIT/y.length;
+        auto chunksize = CACHELIMIT / y.length;
         auto residual  =  x.length % chunksize;
-        if (residual < y.length) { chunksize -= y.length; }
+        if (residual < y.length)
+        {
+            chunksize -= y.length;
+        }
+
         // Use schoolbook multiply.
         mulSimple(result[0 .. chunksize + y.length], x[0..chunksize], y);
         auto done = chunksize;
 
-        while (done < x.length) {
+        while (done < x.length)
+        {
             // result[done .. done+ylength] already has a value.
-            chunksize = (done + (CACHELIMIT/y.length) < x.length) ? (CACHELIMIT/y.length) :  x.length - done;
+            chunksize = (done + (CACHELIMIT / y.length) < x.length) ? (CACHELIMIT / y.length) :  x.length - done;
             BigDigit [KARATSUBALIMIT] partial;
             partial[0..y.length] = result[done..done+y.length];
             mulSimple(result[done..done+chunksize+y.length], x[done..done+chunksize], y);
@@ -988,7 +1143,8 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     }
 
     auto half = (x.length >> 1) + (x.length & 1);
-    if (2*y.length*y.length <= x.length*x.length) {
+    if (2*y.length*y.length <= x.length*x.length)
+    {
         // UNBALANCED MULTIPLY
         // Use school multiply to cut into quasi-squares of Karatsuba-size
         // or larger. The ratio of the two sides of the 'square' must be
@@ -1002,7 +1158,8 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
         auto extra =  x.length % y.length;
         auto maxchunk = chunksize + extra;
         bool paddingY; // true = we're padding Y, false = we're padding X.
-        if (extra * extra * 2 < y.length*y.length) {
+        if (extra * extra * 2 < y.length*y.length)
+        {
             // The leftover bit is small enough that it should be incorporated
             // in the existing chunks.
             // Make all the chunks a tiny bit bigger
@@ -1014,7 +1171,9 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             maxchunk = chunksize + 1;
             paddingY = true;
             assert(chunksize + extra + chunksize *(numchunks-1) == x.length );
-        } else  {
+        }
+        else
+        {
             // the extra bit is large enough that it's worth making a new chunk.
             // (This means we're padding x with zeros, when doing the first one).
             maxchunk = chunksize;
@@ -1027,19 +1186,23 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
         BigDigit [] partial = scratchbuff[$ - y.length .. $];
         size_t done; // how much of X have we done so far?
         double residual = 0;
-        if (paddingY) {
+        if (paddingY)
+        {
             // If the first chunk is bigger, do it first. We're padding y.
-          mulKaratsuba(result[0 .. y.length + chunksize + (extra > 0 ? 1 : 0 )],
-                        x[0 .. chunksize + (extra>0?1:0)], y, scratchbuff);
-          done = chunksize + (extra > 0 ? 1 : 0);
-          if (extra) --extra;
-        } else { // We're padding X. Begin with the extra bit.
+            mulKaratsuba(result[0 .. y.length + chunksize + (extra > 0 ? 1 : 0 )],
+                x[0 .. chunksize + (extra>0?1:0)], y, scratchbuff);
+            done = chunksize + (extra > 0 ? 1 : 0);
+            if (extra) --extra;
+        }
+        else
+        {   // We're padding X. Begin with the extra bit.
             mulKaratsuba(result[0 .. y.length + extra], y, x[0..extra], scratchbuff);
             done = extra;
             extra = 0;
         }
         auto basechunksize = chunksize;
-        while (done < x.length) {
+        while (done < x.length)
+        {
             chunksize = basechunksize + (extra > 0 ? 1 : 0);
             if (extra) --extra;
             partial[] = result[done .. done+y.length];
@@ -1049,7 +1212,9 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             done += chunksize;
         }
         delete scratchbuff;
-    } else {
+    }
+    else
+    {
         // Balanced. Use Karatsuba directly.
         BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(x.length)];
         mulKaratsuba(result, x, y, scratchbuff);
@@ -1064,10 +1229,11 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
  */
 void squareInternal(BigDigit[] result, BigDigit[] x)
 {
-  // TODO: Squaring is potentially half a multiply, plus add the squares of
+  // Squaring is potentially half a multiply, plus add the squares of
   // the diagonal elements.
   assert(result.length == 2*x.length);
-  if (x.length <= KARATSUBASQUARELIMIT) {
+  if (x.length <= KARATSUBASQUARELIMIT)
+  {
       if (x.length==1) {
          result[1] = multibyteMul(result[0..1], x, x[0], 0);
          return;
@@ -1087,7 +1253,7 @@ import core.bitop : bsr;
 void divModInternal(BigDigit [] quotient, BigDigit[] remainder, BigDigit [] u, BigDigit [] v)
 {
     assert(quotient.length == u.length - v.length + 1);
-    assert(remainder==null || remainder.length == v.length);
+    assert(remainder == null || remainder.length == v.length);
     assert(v.length > 1);
     assert(u.length >= v.length);
 
@@ -1099,22 +1265,29 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, BigDigit [] u, B
     BigDigit [] un = new BigDigit[u.length + 1];
     // How much to left shift v, so that its MSB is set.
     uint s = BIGDIGITSHIFTMASK - bsr(v[$-1]);
-    if (s!=0) {
+    if (s!=0)
+    {
         multibyteShl(vn, v, s);
         un[$-1] = multibyteShl(un[0..$-1], u, s);
-    } else {
+    }
+    else
+    {
         vn[] = v[];
         un[0..$-1] = u[];
         un[$-1] = 0;
     }
-    if (quotient.length<FASTDIVLIMIT) {
+    if (quotient.length<FASTDIVLIMIT)
+    {
         schoolbookDivMod(quotient, un, vn);
-    } else {
+    }
+    else
+    {
         blockDivMod(quotient, un, vn);
     }
 
     // Unnormalize remainder, if required.
-    if (remainder != null) {
+    if (remainder != null)
+    {
         if (s == 0) remainder[] = un[0..vn.length];
         else multibyteShr(remainder, un[0..vn.length+1], s);
     }
@@ -1122,7 +1295,8 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, BigDigit [] u, B
     delete vn;
 }
 
-unittest {
+unittest
+{
     uint [] u = [0, 0xFFFF_FFFE, 0x8000_0000];
     uint [] v = [0xFFFF_FFFF, 0x8000_0000];
     uint [] q = new uint[u.length - v.length + 1];
@@ -1146,10 +1320,12 @@ private:
 char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
 {
     int x=0;
-    for (ptrdiff_t i=data.length - 1; i>=0; --i) {
+    for (ptrdiff_t i=data.length - 1; i>=0; --i)
+    {
         toHexZeroPadded(buff[x..x+8], data[i]);
         x+=8;
-        if (separator) {
+        if (separator)
+        {
             if (i>0) buff[x] = separator;
             ++x;
         }
@@ -1169,23 +1345,27 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
  * Returns:
  *    the lowest index of buff which was used.
  */
-size_t biguintToDecimal(char [] buff, BigDigit [] data){
+size_t biguintToDecimal(char [] buff, BigDigit [] data)
+{
     ptrdiff_t sofar = buff.length;
     // Might be better to divide by (10^38/2^32) since that gives 38 digits for
     // the price of 3 divisions and a shr; this version only gives 27 digits
     // for 3 divisions.
-    while(data.length>1) {
+    while(data.length>1)
+    {
         uint rem = multibyteDivAssign(data, 10_0000_0000, 0);
         itoaZeroPadded(buff[sofar-9 .. sofar], rem);
         sofar -= 9;
-        if (data[$-1]==0 && data.length>1) {
+        if (data[$-1] == 0 && data.length > 1)
+        {
             data.length = data.length - 1;
         }
     }
     itoaZeroPadded(buff[sofar-10 .. sofar], data[0]);
     sofar -= 10;
     // and strip off the leading zeros
-    while(sofar!= buff.length-1 && buff[sofar] == '0') sofar++;
+    while(sofar!= buff.length-1 && buff[sofar] == '0')
+        sofar++;
     return sofar;
 }
 
@@ -1194,7 +1374,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data){
  * Params:
  *  data    The biguint to be receive the result. Must be large enough to
  *          store the result.
- *  s       The decimal string. May contain 0..9, or _. Will be preserved.
+ *  s       The decimal string. May contain _ or 0..9
  *
  * The required length for the destination buffer is slightly less than
  *  1 + s.length/log2(10) = 1 + s.length/3.3219.
@@ -1202,46 +1382,67 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data){
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(BigDigit [] data, string s) {
+int biguintFromDecimal(BigDigit [] data, string s)
+in
+{
+    assert((data.length >= 2) || (data.length == 1 && s.length == 1));
+}
+body
+{
     // Convert to base 1e19 = 10_000_000_000_000_000_000.
     // (this is the largest power of 10 that will fit into a long).
     // The length will be less than 1 + s.length/log2(10) = 1 + s.length/3.3219.
     // 485 bits will only just fit into 146 decimal digits.
-    uint lo = 0;
+    // As we convert the string, we record the number of digits we've seen in base 19:
+    // hi is the number of digits/19, lo is the extra digits (0 to 18).
+    // TODO: This is inefficient for very large strings (it is O(n^^2)).
+    // We should take advantage of fast multiplication once the numbers exceed
+    // Karatsuba size.
+    uint lo = 0; // number of powers of digits, 0..18
     uint x = 0;
     ulong y = 0;
-    uint hi = 0;
+    uint hi = 0; // number of base 1e19 digits
     data[0] = 0; // initially number is 0.
-    data[1] = 0;
+    if (data.length > 1)
+        data[1] = 0;
 
-    for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i) {
-        if (s[i] == '_') continue;
+    for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i)
+    {
+        if (s[i] == '_')
+            continue;
         x *= 10;
         x += s[i] - '0';
         ++lo;
-        if (lo==9) {
+        if (lo == 9)
+        {
             y = x;
             x = 0;
         }
-        if (lo==18) {
+        if (lo == 18)
+        {
             y *= 10_0000_0000;
             y += x;
             x = 0;
         }
-        if (lo==19) {
+        if (lo == 19)
+        {
             y *= 10;
             y += x;
             x = 0;
             // Multiply existing number by 10^19, then add y1.
-            if (hi>0) {
+            if (hi>0)
+            {
                 data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2, 0); // 5^13*2 = 0x9184_E72A
                 ++hi;
                 data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144, 0); // 5^6*2^18 = 0xF424_0000
                 ++hi;
-            } else hi = 2;
+            }
+            else
+                hi = 2;
             uint c = multibyteIncrementAssign!('+')(data[0..hi], cast(uint)(y&0xFFFF_FFFF));
             c += multibyteIncrementAssign!('+')(data[1..hi], cast(uint)(y>>32));
-            if (c!=0) {
+            if (c!=0)
+            {
                 data[hi]=c;
                 ++hi;
             }
@@ -1250,33 +1451,60 @@ int biguintFromDecimal(BigDigit [] data, string s) {
         }
     }
     // Now set y = all remaining digits.
-    if (lo>=18) {
-    } else if (lo>=9) {
+    if (lo>=18)
+    {
+    }
+    else if (lo>=9)
+    {
         for (int k=9; k<lo; ++k) y*=10;
         y+=x;
-    } else {
+    }
+    else
+    {
         for (int k=0; k<lo; ++k) y*=10;
         y+=x;
     }
-    if (lo!=0) {
-        if (hi==0)  {
-            *cast(ulong *)(&data[hi]) = y;
-            hi=2;
-        } else {
-            while (lo>0) {
+    if (lo != 0)
+    {
+        if (hi == 0)
+        {
+            if (data.length == 1)
+            {
+                data[0] = cast(uint)(y & 0xFFFF_FFFF);
+                hi = 1;
+            }
+            else
+            {
+                *cast(ulong *)(&data[hi]) = y;
+                hi=2;
+            }
+        }
+        else
+        {
+            while (lo>0)
+            {
                 uint c = multibyteMul(data[0..hi], data[0..hi], 10, 0);
-                if (c!=0) { data[hi]=c; ++hi; }
+                if (c!=0)
+                {
+                    data[hi]=c;
+                    ++hi;
+                }
                 --lo;
             }
             uint c = multibyteIncrementAssign!('+')(data[0..hi], cast(uint)(y&0xFFFF_FFFF));
-            if (y>0xFFFF_FFFFL) {
+            if (y > 0xFFFF_FFFFL)
+            {
                 c += multibyteIncrementAssign!('+')(data[1..hi], cast(uint)(y>>32));
             }
-            if (c!=0) { data[hi]=c; ++hi; }
-          //  hi+=2;
+            if (c!=0)
+            {
+                data[hi]=c;
+                ++hi;
+            }
         }
     }
-    if (hi>1 && data[hi-1]==0) --hi;
+    while (hi>1 && data[hi-1]==0)
+        --hi;
     return hi;
 }
 
@@ -1288,22 +1516,26 @@ private:
 
 // Classic 'schoolbook' multiplication.
 void mulSimple(BigDigit[] result, const(BigDigit) [] left, const(BigDigit)[] right)
-in {
+in
+{
     assert(result.length == left.length + right.length);
     assert(right.length>1);
 }
-body {
+body
+{
     result[left.length] = multibyteMul(result[0..left.length], left, right[0], 0);
     multibyteMultiplyAccumulate(result[1..$], left, right[1..$]);
 }
 
 // Classic 'schoolbook' squaring
 void squareSimple(BigDigit[] result, const(BigDigit) [] x)
-in {
+in
+{
     assert(result.length == 2*x.length);
     assert(x.length>1);
 }
-body {
+body
+{
     multibyteSquare(result, x);
 }
 
@@ -1312,15 +1544,18 @@ body {
 // as the larger length.
 // Returns carry (0 or 1).
 uint addSimple(BigDigit [] result, BigDigit [] left, BigDigit [] right)
-in {
+in
+{
     assert(result.length == left.length);
     assert(left.length >= right.length);
     assert(right.length>0);
 }
-body {
+body
+{
     uint carry = multibyteAdd(result[0..right.length],
             left[0..right.length], right, 0);
-    if (right.length < left.length) {
+    if (right.length < left.length)
+    {
         result[right.length..left.length] = left[right.length .. $];
         carry = multibyteIncrementAssign!('+')(result[right.length..$], carry);
     }
@@ -1330,15 +1565,18 @@ body {
 //  result = left - right
 // returns carry (0 or 1)
 BigDigit subSimple(BigDigit [] result,const(BigDigit) [] left, const(BigDigit) [] right)
-in {
+in
+{
     assert(result.length == left.length);
     assert(left.length >= right.length);
     assert(right.length>0);
 }
-body {
+body
+{
     BigDigit carry = multibyteSub(result[0..right.length],
             left[0..right.length], right, 0);
-    if (right.length < left.length) {
+    if (right.length < left.length)
+    {
         result[right.length..left.length] = left[right.length .. $];
         carry = multibyteIncrementAssign!('-')(result[right.length..$], carry);
     } //else if (result.length==left.length+1) { result[$-1] = carry; carry=0; }
@@ -1353,7 +1591,8 @@ BigDigit subAssignSimple(BigDigit [] result, const(BigDigit) [] right)
 {
     assert(result.length >= right.length);
     uint c = multibyteSub(result[0..right.length], result[0..right.length], right, 0);
-    if (c && result.length > right.length) c = multibyteIncrementAssign!('-')(result[right.length .. $], c);
+    if (c && result.length > right.length)
+        c = multibyteIncrementAssign!('-')(result[right.length .. $], c);
     return c;
 }
 
@@ -1363,9 +1602,8 @@ BigDigit addAssignSimple(BigDigit [] result, const(BigDigit) [] right)
 {
     assert(result.length >= right.length);
     uint c = multibyteAdd(result[0..right.length], result[0..right.length], right, 0);
-    if (c && result.length > right.length) {
+    if (c && result.length > right.length)
        c = multibyteIncrementAssign!('+')(result[right.length .. $], c);
-    }
     return c;
 }
 
@@ -1373,8 +1611,10 @@ BigDigit addAssignSimple(BigDigit [] result, const(BigDigit) [] right)
 */
 BigDigit addOrSubAssignSimple(BigDigit [] result, const(BigDigit) [] right, bool wantSub)
 {
-  if (wantSub) return subAssignSimple(result, right);
-  else return addAssignSimple(result, right);
+    if (wantSub)
+        return subAssignSimple(result, right);
+    else
+        return addAssignSimple(result, right);
 }
 
 
@@ -1383,9 +1623,12 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y)
 {
     assert(x.length >= y.length);
     auto k = x.length-1;
-    while(x[k]==0 && k>=y.length) --k;
-    if (k>=y.length) return false;
-    while (k>0 && x[k]==y[k]) --k;
+    while(x[k]==0 && k>=y.length)
+        --k;
+    if (k>=y.length)
+        return false;
+    while (k>0 && x[k]==y[k])
+        --k;
     return x[k] < y[k];
 }
 
@@ -1396,21 +1639,33 @@ bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
 
     size_t minlen;
     bool negative;
-    if (x.length >= y.length) {
+    if (x.length >= y.length)
+    {
         minlen = y.length;
         negative = less(x, y);
-    } else {
+    }
+    else
+    {
        minlen = x.length;
        negative = !less(y, x);
     }
     const (BigDigit)[] large, small;
-    if (negative) { large = y; small=x; } else { large=x; small=y; }
+    if (negative)
+    {
+        large = y; small = x;
+    }
+    else
+    {
+        large = x; small = y;
+    }
 
     BigDigit carry = multibyteSub(result[0..minlen], large[0..minlen], small[0..minlen], 0);
-    if (x.length != y.length) {
+    if (x.length != y.length)
+    {
         result[minlen..large.length]= large[minlen..$];
         result[large.length..$] = 0;
-        if (carry) multibyteIncrementAssign!('-')(result[minlen..$], carry);
+        if (carry)
+            multibyteIncrementAssign!('-')(result[minlen..$], carry);
     }
     return negative;
 }
@@ -1439,7 +1694,8 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, const(BigDigit)[] y,
     assert(x.length >= y.length);
           assert(result.length < uint.max, "Operands too large");
     assert(result.length == x.length + y.length);
-    if (x.length <= KARATSUBALIMIT) {
+    if (x.length <= KARATSUBALIMIT)
+    {
         return mulSimple(result, x, y);
     }
     // Must be almost square (otherwise, a schoolbook iteration is better)
@@ -1479,13 +1735,15 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, const(BigDigit)[] y,
 
     mulKaratsuba(resultLow, x0, y0, newscratchbuff);
 
-    if (2L * y1.length * y1.length < x1.length * x1.length) {
+    if (2L * y1.length * y1.length < x1.length * x1.length)
+    {
         // an asymmetric situation has been created.
         // Worst case is if x:y = 1.414 : 1, then x1:y1 = 2.41 : 1.
         // Applying one schoolbook multiply gives us two pieces each 1.2:1
-        if (y1.length <= KARATSUBALIMIT) {
+        if (y1.length <= KARATSUBALIMIT)
             mulSimple(resultHigh, x1, y1);
-        } else {
+        else
+        {
             // divide x1 in two, then use schoolbook multiply on the two pieces.
             auto quarter = (x1.length >> 1) + (x1.length & 1);
             bool ysmaller = (quarter >= y1.length);
@@ -1499,7 +1757,9 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, const(BigDigit)[] y,
 
             resultHigh[quarter..$].addAssignSimple(newscratchbuff[0..y1.length]);
         }
-    } else mulKaratsuba(resultHigh, x1, y1, newscratchbuff);
+    }
+    else
+        mulKaratsuba(resultHigh, x1, y1, newscratchbuff);
 
     /* We now have result = x0y0 + (N*N)*x1y1
        Before adding or subtracting mid, we must calculate
@@ -1524,8 +1784,10 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, const(BigDigit)[] y,
     BigDigit c1 = multibyteAdd(R2, R2, R1, 0); // c1:R2 = R2 + R1
     BigDigit c2 = multibyteAdd(R1, R2, result[0..half], 0); // c2:R1 = R2 + R1 + R0
     BigDigit c3 = addAssignSimple(R2, R3); // R2 = R2 + R1 + R3
-    if (c1+c2) multibyteIncrementAssign!('+')(result[half*2..$], c1+c2);
-    if (c1+c3) multibyteIncrementAssign!('+')(R3, c1+c3);
+    if (c1+c2)
+        multibyteIncrementAssign!('+')(result[half*2..$], c1+c2);
+    if (c1+c3)
+        multibyteIncrementAssign!('+')(R3, c1+c3);
 
     // And finally we subtract mid
     addOrSubAssignSimple(result[half..$], mid, !midNegative);
@@ -1535,9 +1797,10 @@ void squareKaratsuba(BigDigit [] result, BigDigit [] x, BigDigit [] scratchbuff)
 {
     // See mulKaratsuba for implementation comments.
     // Squaring is simpler, since it never gets asymmetric.
-          assert(result.length < uint.max, "Operands too large");
+    assert(result.length < uint.max, "Operands too large");
     assert(result.length == 2*x.length);
-    if (x.length <= KARATSUBASQUARELIMIT) {
+    if (x.length <= KARATSUBASQUARELIMIT)
+    {
         return squareSimple(result, x);
     }
     // half length, round up.
@@ -1597,19 +1860,25 @@ void schoolbookDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
     uint vhi = v[$-1];
     uint vlo = v[$-2];
 
-    for (ptrdiff_t j = u.length - v.length - 1; j >= 0; j--) {
+    for (ptrdiff_t j = u.length - v.length - 1; j >= 0; j--)
+    {
         // Compute estimate of quotient[j],
         // qhat = (three most significant words of u)/(two most sig words of v).
         uint qhat;
-        if (u[j + v.length] == vhi) {
+        if (u[j + v.length] == vhi)
+        {
             // uu/vhi could exceed uint.max (it will be 0x8000_0000 or 0x8000_0001)
             qhat = uint.max;
-        } else {
+        }
+        else
+        {
             uint ulo = u[j + v.length - 2];
-            version(D_InlineAsm_X86) {
+            version(D_InlineAsm_X86)
+            {
                 // Note: On DMD, this is only ~10% faster than the non-asm code.
                 uint *p = &u[j + v.length - 1];
-                asm {
+                asm
+                {
                     mov EAX, p;
                     mov EDX, [EAX+4];
                     mov EAX, [EAX];
@@ -1628,23 +1897,28 @@ div3by2correction:
                     jnc div3by2correction;
 div3by2done:    ;
                 }
-            } else { // version(InlineAsm)
+            }
+            else
+            { // version(InlineAsm)
                 ulong uu = (cast(ulong)(u[j + v.length]) << 32) | u[j + v.length - 1];
                 ulong bigqhat = uu / vhi;
                 ulong rhat =  uu - bigqhat * vhi;
                 qhat = cast(uint)bigqhat;
 again:
-                if (cast(ulong)qhat * vlo > ((rhat << 32) + ulo)) {
+                if (cast(ulong)qhat * vlo > ((rhat << 32) + ulo))
+                {
                     --qhat;
                     rhat += vhi;
-                    if (!(rhat & 0xFFFF_FFFF_0000_0000L)) goto again;
+                    if (!(rhat & 0xFFFF_FFFF_0000_0000L))
+                        goto again;
                 }
             } // version(InlineAsm)
         }
         // Multiply and subtract.
         uint carry = multibyteMulAdd!('-')(u[j..j + v.length], v, qhat, 0);
 
-        if (u[j+v.length] < carry) {
+        if (u[j+v.length] < carry)
+        {
             // If we subtracted too much, add back
             --qhat;
             carry -= multibyteAdd(u[j..j + v.length],u[j..j + v.length], v, 0);
@@ -1657,18 +1931,22 @@ again:
 private:
 
 // TODO: Replace with a library call
-void itoaZeroPadded(char[] output, uint value, int radix = 10) {
+void itoaZeroPadded(char[] output, uint value, int radix = 10)
+{
     ptrdiff_t x = output.length - 1;
-    for( ; x>=0; --x) {
+    for( ; x >= 0; --x)
+    {
         output[x]= cast(char)(value % radix + '0');
         value /= radix;
     }
 }
 
-void toHexZeroPadded(char[] output, uint value) {
+void toHexZeroPadded(char[] output, uint value)
+{
     ptrdiff_t x = output.length - 1;
     static immutable string hexDigits = "0123456789ABCDEF";
-    for( ; x>=0; --x) {
+    for( ; x>=0; --x)
+    {
         output[x] = hexDigits[value & 0xF];
         value >>= 4;
     }
@@ -1681,8 +1959,10 @@ private:
 size_t highestDifferentDigit(BigDigit [] left, BigDigit [] right)
 {
     assert(left.length == right.length);
-    for (ptrdiff_t i = left.length - 1; i>0; --i) {
-        if (left[i] != right[i]) return i;
+    for (ptrdiff_t i = left.length - 1; i>0; --i)
+    {
+        if (left[i] != right[i])
+            return i;
     }
     return 0;
 }
@@ -1691,48 +1971,122 @@ size_t highestDifferentDigit(BigDigit [] left, BigDigit [] right)
 int firstNonZeroDigit(BigDigit[] x)
 {
     int k = 0;
-    while (x[k]==0) {
+    while (x[k]==0)
+    {
         ++k;
         assert(k<x.length);
     }
     return k;
 }
+import core.stdc.stdio;
+/*
+    Calculate quotient and remainder of u / v using fast recursive division.
+    v must be normalised, and must be at least half as long as u.
+    Given u and v, v normalised, calculates  quotient  = u/v, u = u%v.
+    scratch is temporary storage space, length must be >= quotient + 1.
 
-/* Calculate quotient and remainder of u / v using fast recursive division.
-  v must be normalised, and must be at least half as long as u.
-  Given u and v, v normalised, calculates  quotient  = u/v, u = u%v.
-  Algorithm is described in
-  - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
-    Max-Planck Institute fuer Informatik, (Oct 1998).
-  - R.P. Brent and P. Zimmermann, "Modern Computer Arithmetic",
-    Version 0.2, p. 26, (June 2008).
 Returns:
     u[0..v.length] is the remainder. u[v.length..$] is corrupted.
-    scratch is temporary storage space, must be at least as long as quotient.
+
+    Implements algorithm 1.8 from MCA.
+    This algorithm has an annoying special case. After the first recursion, the
+    highest bit of the quotient may be set. This means that in the second
+    recursive call, the 'in' contract would be violated. (This happens only
+    when the top quarter of u is equal to the top half of v. A base 10
+    equivalent example of this situation is 5517/56; the first step gives
+    55/5 = 11). To maintain the in contract, we pad a zero to the top of both
+    u and the quotient. 'mayOverflow' indicates that that the special case
+    has occurred.
+    (In MCA, a different strategy is used: the in contract is weakened, and
+    schoolbookDivMod is more general: it allows the high bit of u to be set).
+    See also:
+    - C. Burkinel and J. Ziegler, "Fast Recursive Division", MPI-I-98-1-022,
+      Max-Planck Institute fuer Informatik, (Oct 1998).
 */
 void recursiveDivMod(BigDigit[] quotient, BigDigit[] u, const(BigDigit)[] v,
-                     BigDigit[] scratch)
+                     BigDigit[] scratch, bool mayOverflow = false)
+in
 {
-    assert(quotient.length == u.length - v.length);
-    // Use base-case division to make it symmetric
-    assert(u.length <= 2 * v.length, "Asymmetric division");
+    // v must be normalized
     assert(v.length > 1);
-    assert(u.length >= v.length);
     assert((v[$ - 1] & 0x8000_0000) != 0);
-    assert(scratch.length >= quotient.length);
+    assert(!(u[$ - 1] & 0x8000_0000));
+    assert(quotient.length == u.length - v.length);
+    if (mayOverflow)
+    {
+        assert(u[$-1] == 0);
+        assert(u[$-2] & 0x8000_0000);
+    }
 
-    if(quotient.length < FASTDIVLIMIT) {
+    // Must be symmetric. Use block schoolbook division if not.
+    assert((mayOverflow ? u.length-1 : u.length) <= 2 * v.length);
+    assert((mayOverflow ? u.length-1 : u.length) >= v.length);
+    assert(scratch.length >= quotient.length + (mayOverflow ? 0 : 1));
+}
+body
+{
+    if (quotient.length < FASTDIVLIMIT)
+    {
         return schoolbookDivMod(quotient, u, v);
     }
-    auto k = quotient.length >> 1;
-    auto h = k + v.length;
 
-    recursiveDivMod(quotient[k .. $], u[2 * k .. $], v[k .. $], scratch);
-    adjustRemainder(quotient[k .. $], u[k .. h], v, k,
-            scratch[0 .. quotient.length]);
-    recursiveDivMod(quotient[0 .. k], u[k .. h], v[k .. $], scratch);
-    adjustRemainder(quotient[0 .. k], u[0 .. v.length], v, k,
+    // Split quotient into two halves, but keep padding in the top half
+    auto k = (mayOverflow ?  quotient.length - 1 : quotient.length) >> 1;
+
+    // RECURSION 1: Calculate the high half of the quotient
+
+    // Note that if u and quotient were padded, they remain padded during
+    // this call, so in contract is satisfied.
+    recursiveDivMod(quotient[k .. $], u[2 * k .. $], v[k .. $],
+        scratch, mayOverflow);
+
+    // quotient[k..$] is our guess at the high quotient.
+    // u[2*k.. 2.*k + v.length - k = k + v.length] is the high part of the
+    // first remainder. u[0..2*k] is the low part.
+
+    // Calculate the full first remainder to be
+    //    remainder - highQuotient * lowDivisor
+    // reducing highQuotient until the remainder is positive.
+    // The low part of the remainder, u[0..k], cannot be altered by this.
+
+    adjustRemainder(quotient[k .. $], u[k .. k + v.length], v, k,
+            scratch[0 .. quotient.length], mayOverflow);
+
+    // RECURSION 2: Calculate the low half of the quotient
+    // The full first remainder is now in u[0..k + v.length].
+
+    if (u[k + v.length - 1] & 0x8000_0000)
+    {
+        // Special case. The high quotient is 0x1_00...000 or 0x1_00...001.
+        // This means we need an extra quotient word for the next recursion.
+        // We need to restore the invariant for the recursive calls.
+        // We do this by padding both u and quotient. Extending u is trivial,
+        // because the higher words will not be used again. But for the
+        // quotient, we're clobbering the low word of the high quotient,
+        // so we need save it, and add it back in after the recursive call.
+
+        auto clobberedQuotient = quotient[k];
+        u[k+v.length] = 0;
+
+        recursiveDivMod(quotient[0 .. k+1], u[k .. k + v.length+1],
+            v[k .. $], scratch, true);
+        adjustRemainder(quotient[0 .. k+1], u[0 .. v.length], v, k,
+            scratch[0 .. 2 * k+1], true);
+
+        // Now add the quotient word that got clobbered earlier.
+        multibyteIncrementAssign!('+')(quotient[k..$], clobberedQuotient);
+    }
+    else
+    {
+        // The special case has NOT happened.
+        recursiveDivMod(quotient[0 .. k], u[k .. k + v.length], v[k .. $],
+            scratch, false);
+
+        // high remainder is in u[k..k+(v.length-k)] == u[k .. v.length]
+
+        adjustRemainder(quotient[0 .. k], u[0 .. v.length], v, k,
             scratch[0 .. 2 * k]);
+    }
 }
 
 // rem -= quot * v[0..k].
@@ -1740,12 +2094,17 @@ void recursiveDivMod(BigDigit[] quotient, BigDigit[] u, const(BigDigit)[] v,
 // Needs (quot.length * k) scratch space to store the result of the multiply.
 void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         ptrdiff_t k,
-        BigDigit[] scratch)
+        BigDigit[] scratch, bool mayOverflow = false)
 {
     assert(rem.length == v.length);
     mulInternal(scratch, quot, v[0 .. k]);
-    uint carry = subAssignSimple(rem, scratch);
-    while(carry) {
+    uint carry = 0;
+    if (mayOverflow)
+        carry = scratch[$-1] + subAssignSimple(rem, scratch[0..$-1]);
+    else
+        carry = subAssignSimple(rem, scratch);
+    while(carry)
+    {
         multibyteIncrementAssign!('-')(quot, 1); // quot--
         carry -= multibyteAdd(rem, rem, v, 0);
     }
@@ -1758,13 +2117,27 @@ void blockDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
     assert(v.length > 1);
     assert(u.length >= v.length);
     assert((v[$-1] & 0x8000_0000)!=0);
-    BigDigit [] scratch = new BigDigit[v.length];
+    assert((u[$-1] & 0x8000_0000)==0);
+    BigDigit [] scratch = new BigDigit[v.length + 1];
 
     // Perform block schoolbook division, with 'v.length' blocks.
     auto m = u.length - v.length;
-    while (m > v.length) {
-        recursiveDivMod(quotient[m-v.length..m],
-            u[m - v.length..m + v.length], v, scratch);
+    while (m > v.length)
+    {
+        bool mayOverflow = (u[m + v.length -1 ] & 0x8000_0000)!=0;
+        BigDigit saveq;
+        if (mayOverflow)
+        {
+            u[m + v.length] = 0;
+            saveq = quotient[m];
+        }
+        recursiveDivMod(quotient[m-v.length..m + (mayOverflow? 1: 0)],
+            u[m - v.length..m + v.length + (mayOverflow? 1: 0)], v, scratch, mayOverflow);
+        if (mayOverflow)
+        {
+            assert(quotient[m] == 0);
+            quotient[m] = saveq;
+        }
         m -= v.length;
     }
     recursiveDivMod(quotient[0..m], u[0..m + v.length], v, scratch);
@@ -1776,7 +2149,8 @@ version(unittest)
     import std.c.stdio;
 }
 
-unittest{
+unittest
+{
 
     void printBiguint(uint [] data)
     {
@@ -1805,7 +2179,6 @@ unittest{
     uint [] q1 = q.dup;
     blockDivMod(q, b, a);
     r = b[0..a.length];
-    assert(r[]==r1[]);
-    assert(q[]==q1[]);
+    assert(r[] == r1[]);
+    assert(q[] == q1[]);
 }
-

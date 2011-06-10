@@ -28,7 +28,6 @@ public import std.demangle;
 public import std.file;
 public import std.format;
 public import std.getopt;
-public import std.intrinsic;
 public import std.loader;
 public import std.math;
 public import std.mathspecial;
@@ -36,6 +35,7 @@ public import std.md5;
 public import std.metastrings;
 public import std.mmfile;
 public import std.outbuffer;
+public import std.parallelism;
 public import std.path;
 public import std.perf;
 public import std.process;
@@ -85,6 +85,7 @@ version (all)
     isValidDchar(cast(dchar)0);			// utf
     std.uri.ascii2hex(0);			// uri
     std.zlib.adler32(0,null);			// D.zlib
+    auto t = task!cmp("foo", "bar");  // parallelism
 
     ubyte[16] buf;
     std.md5.sum(buf,"");

@@ -75,8 +75,8 @@ private {
   import std.conv;
   import std.format;
   import std.system;    // for Endian enumeration
-  import std.intrinsic; // for bswap
   import std.utf;
+  import core.bitop; // for bswap
   import core.vararg;
 }
 
@@ -161,8 +161,9 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, string line; file) {
-   *   stdout.writefln("line %d: %s",n,line);
+   * foreach(ulong n, char[] line; file)
+   * {
+   *     writefln("line %d: %s", n, line);
    * }
    * file.close();
    * ------------------------------------
@@ -486,6 +487,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case char.init:
         result.length = strlen;
@@ -528,6 +530,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case wchar.init:
         result.length = strlen;
@@ -793,7 +796,7 @@ class Stream : InputStream, OutputStream {
 
                 case 'o': {     // octal
                   while (isoctdigit(c) && width) {
-                    n = n * 010 + (c - '0');
+                    n = n * 8 + (c - '0');
                     width--;
                     c = getc();
                     count++;
@@ -1890,7 +1893,7 @@ class File: Stream {
       }
     }
     version (Posix) {
-      share = 0666;
+      share = octal!666;
       if (mode & FileMode.In) {
         access = O_RDONLY;
       }

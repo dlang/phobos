@@ -651,12 +651,26 @@ arguments in text format to the file. */
         auto w = lockingTextWriter();
         foreach (arg; args)
         {
-            static if (isSomeString!(typeof(arg)))
+            alias typeof(arg) A;
+            static if (isSomeString!A)
             {
-                w.put(arg);
+                put(w, arg);
+            }
+            else static if (isIntegral!A)
+            {
+                toTextRange(arg, w);
+            }
+            else static if (is(A : char))
+            {
+                put(w, arg);
+            }
+            else static if (isSomeChar!A)
+            {
+                put(w, arg);
             }
             else
             {
+                // Most general case
                 std.format.formattedWrite(w, "%s", arg);
             }
         }
@@ -681,7 +695,7 @@ arguments in text format to the file, followed by a newline. */
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, according to the format in the
 first argument. */
-    void writef(S...)(S args)// if (isSomeString!(S[0]))
+    void writef(S...)(S args) // if (isSomeString!(S[0]))
     {
         assert(p);
         assert(p.handle);
@@ -904,9 +918,6 @@ Range that reads one line at a time. */
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
-            popFront; // prime the range
-            // @@@BUG@@@ line below should not exist
-            //if (file.p) ++file.p.refs;
         }
 
         /// Range primitive implementations.
@@ -918,6 +929,7 @@ Range that reads one line at a time. */
         /// Ditto
         Char[] front()
         {
+            if (line is null) popFront();
             return line;
         }
 
@@ -926,6 +938,7 @@ Range that reads one line at a time. */
         {
             enforce(file.isOpen);
             file.readln(line, terminator);
+            assert(line !is null, "Bug in File.readln");
             if (!line.length)
                 file.detach;
             else if (keepTerminator == KeepTerminator.no
@@ -949,6 +962,8 @@ to this file. */
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         std.file.write("testingByLine", "asd\ndef\nasdf");
+        scope(success) std.file.remove("testingByLine");
+
         auto witness = [ "asd", "def", "asdf" ];
         uint i;
         auto f = File("testingByLine");
@@ -956,7 +971,6 @@ to this file. */
         {
             f.close;
             assert(!f.isOpen);
-            //std.file.remove("testingByLine");
         }
         foreach (line; f.byLine())
         {
@@ -1005,8 +1019,8 @@ to this file. */
       private:
         File    file_;
         ubyte[] chunk_;
- 
- 
+
+
       public:
         this(File file, size_t size)
         in
@@ -1017,10 +1031,10 @@ to this file. */
         {
             file_  = file;
             chunk_ = new ubyte[](size);
- 
+
             popFront();
         }
- 
+
 
         /// Range primitive operations.
         @property
@@ -1028,7 +1042,7 @@ to this file. */
         {
             return !file_.isOpen;
         }
- 
+
 
         /// Ditto
         @property
@@ -1036,13 +1050,13 @@ to this file. */
         {
             return chunk_;
         }
- 
+
 
         /// Ditto
         void popFront()
         {
             enforce(!empty, "Cannot call popFront on empty range");
- 
+
             chunk_ = file_.rawRead(chunk_);
             if (chunk_.length == 0)
                 file_.detach();
@@ -1473,7 +1487,7 @@ unittest
     if (false) writeln();
 }
 
-/// ditto
+// Specialization for strings - a very frequent case
 void writeln(T...)(T args)
 if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
 {
@@ -1486,7 +1500,7 @@ unittest
     if (false) writeln("wyda");
 }
 
-/// Ditto
+// Most general instance
 void writeln(T...)(T args)
 if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
 {

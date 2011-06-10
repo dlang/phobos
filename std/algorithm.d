@@ -1,13 +1,48 @@
 // Written in the D programming language.
 
 /**
+<script type="text/javascript">inhibitQuickIndex = 1</script>
+
+$(BOOKTABLE ,
+$(TR $(TH Category) $(TH Functions)
+)
+$(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
+boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
+$(MYREF endsWith) $(MYREF find) $(MYREF findAdjacent) $(MYREF
+findAmong) $(MYREF findSkip) $(MYREF findSplit) $(MYREF
+findSplitAfter) $(MYREF findSplitBefore) $(MYREF indexOf) $(MYREF
+minCount) $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF
+startsWith) $(MYREF until) )
+)
+$(TR $(TDNW Comparison) $(TD $(MYREF cmp) $(MYREF equal) $(MYREF
+levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
+$(MYREF min) $(MYREF mismatch) )
+)
+$(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
+$(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
+splitter) $(MYREF uniq) )
+)
+$(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
+$(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
+partition) $(MYREF schwartzSort) $(MYREF sort) $(MYREF topN) $(MYREF
+topNCopy) )
+)
+$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
+largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
+$(MYREF nWayUnion) $(MYREF setDifference) $(MYREF setIntersection) $(MYREF
+setSymmetricDifference) $(MYREF setUnion) )
+)
+$(TR $(TDNW Mutation) $(TD $(MYREF bringToFront) $(MYREF copy) $(MYREF
+fill) $(MYREF initializeAll) $(MYREF move) $(MYREF moveAll) $(MYREF
+moveSome) $(MYREF remove) $(MYREF reverse) $(MYREF swap) $(MYREF
+swapRanges) $(MYREF uninitializedFill) ))
+)
+
 Implements algorithms oriented mainly towards processing of
 sequences. Some functions are semantic equivalents or supersets of
 those found in the $(D $(LESS)_algorithm$(GREATER)) header in $(WEB
 sgi.com/tech/stl/, Alexander Stepanov's Standard Template Library) for
 C++.
-
-Note:
 
 Many functions in this module are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a
@@ -34,21 +69,252 @@ sort!("a > b")(a);  // predicate as string
 sort(a);            // no predicate, "a < b" is implicit
 ----
 
-Source: $(PHOBOSSRC std/_algorithm.d)
+$(BOOKTABLE Cheat Sheet,
+$(TR $(TH Function Name) $(TH Description)
+)
+$(LEADINGROW Searching
+)
+$(TR $(TDNW $(LREF balancedParens)) $(TD $(D
+balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
+has balanced parentheses.)
+)
+$(TR $(TDNW $(LREF boyerMooreFinder)) $(TD $(D find("hello
+world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY
+Boyer-Moore _algorithm).)
+)
+$(TR $(TDNW $(LREF canFind)) $(TD $(D canFind("hello world",
+"or")) returns $(D true).)
+)
+$(TR $(TDNW $(LREF count)) $(TD Counts elements that are equal
+to a specified value or satisfy a predicate. $(D count([1, 2, 1], 1))
+returns $(D 2) and $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+)
+$(TR $(TDNW $(LREF countUntil)) $(TD $(D countUntil(a, b))
+returns the number of steps taken in $(D a) to reach $(D b); for
+example, $(D countUntil("hello!", "o")) returns $(D 4).)
+)
+$(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
+returns $(D true).)
+)
+$(TR $(TD $(LREF find)) $(TD $(D find("hello world",
+"or")) returns $(D "orld") using linear search.)
+)
+$(TR $(TDNW $(LREF findAdjacent)) $(TD $(D findAdjacent([1, 2,
+3, 3, 4])) returns the subrange starting with two equal adjacent
+elements, i.e. $(D [3, 3, 4]).)
+)
+$(TR $(TDNW $(LREF findAmong)) $(TD $(D findAmong("abcd",
+"qcx")) returns $(D "cd") because $(D 'c') is among $(D "qcx").)
+)
+$(TR $(TDNW $(LREF findSkip)) $(TD If $(D a = "abcde"), then
+$(D findSkip(a, "x")) returns $(D false) and leaves $(D a) unchanged,
+whereas $(D findSkip(a, 'c')) advances $(D a) to $(D "cde") and
+returns $(D true).)
+)
+$(TR $(TDNW $(LREF findSplit)) $(TD $(D findSplit("abcdefg",
+"de")) returns the three ranges $(D "abc"), $(D "de"), and $(D
+"fg").)
+)
+$(TR $(TDNW $(LREF findSplitAfter)) $(TD $(D
+findSplitAfter("abcdefg", "de")) returns the two ranges $(D "abcde")
+and $(D "fg").)
+)
+$(TR $(TDNW $(LREF findSplitBefore)) $(TD $(D
+findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc") and
+$(D "defg").)
+)
+$(TR $(TDNW $(LREF minCount)) $(TD $(D minCount([2, 1, 1, 4,
+1])) returns $(D tuple(1, 3)).)
+)
+$(TR $(TDNW $(LREF minPos)) $(TD $(D minPos([2, 3, 1, 3, 4,
+1])) returns the subrange $(D [1, 3, 4, 1]), i.e., positions the range
+at the first occurrence of its minimal element.)
+)
+$(TR $(TDNW $(LREF skipOver)) $(TD Assume $(D a = "blah"). Then
+$(D skipOver(a, "bi")) leaves $(D a) unchanged and returns $(D false),
+whereas $(D skipOver(a, "bl")) advances $(D a) to refer to $(D "ah")
+and returns $(D true).)
+)
+$(TR $(TDNW $(LREF startsWith)) $(TD $(D startsWith("hello,
+world", "hello")) returns $(D true).)
+)
+$(TR $(TDNW $(LREF until)) $(TD Lazily iterates a range
+until a specific value is found.)
+)
+$(LEADINGROW Comparison
+)
+$(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
+-1), $(D cmp("abc", aba")) is $(D 1), and $(D cmp("abc", "abc")) is
+$(D 0).)
+)
+$(TR $(TDNW $(LREF equal)) $(TD Compares ranges for
+element-by-element equality, e.g. $(D equal([1, 2, 3], [1.0, 2.0,
+3.0])) returns $(D true).)
+)
+$(TR $(TDNW $(LREF levenshteinDistance)) $(TD $(D
+levenshteinDistance("kitten", "sitting")) returns $(D 3) by using the
+$(LUCKY Levenshtein distance _algorithm).)
+)
+$(TR $(TDNW $(LREF levenshteinDistanceAndPath)) $(TD $(D
+levenshteinDistanceAndPath("kitten", "sitting")) returns $(D tuple(3,
+"snnnsni")) by using the $(LUCKY Levenshtein distance _algorithm).)
+)
+$(TR $(TDNW $(LREF max)) $(TD $(D max(3, 4, 2)) returns $(D
+4).)
+)
+$(TR $(TDNW $(LREF min)) $(TD $(D min(3, 4, 2)) returns $(D
+2).)
+)
+$(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
+"ohayo")) returns $(D tuple(" hi", "ayo")).)
+)
+$(LEADINGROW Iteration
+)
+$(TR $(TDNW $(LREF filter)) $(TD $(D filter!"a > 0"([1, -1, 2,
+0, -3])) iterates over elements $(D 1), $(D 2), and $(D 0).)
+)
+$(TR $(TDNW $(LREF filterBidirectional)) $(TD Similar to $(D
+filter), but also provides $(D back) and $(D popBack) at a small
+increase in cost.)
+)
+$(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
+returns a range containing the tuples $(D tuple(5, 1)),
+$(D tuple(2, 2)), and $(D tuple(3, 2)).)
+)
+$(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
+"world!"], ";")) returns a range that iterates over the characters $(D
+"hello; world!"). No new string is created - the existing inputs are
+iterated.)
+)
+$(TR $(TDNW $(LREF map)) $(TD $(D map!"2 * a"([1, 2, 3]))
+lazily returns a range with the numbers $(D 2), $(D 4), $(D 6).)
+)
+$(TR $(TDNW $(LREF reduce)) $(TD $(D reduce!"a + b"([1, 2, 3,
+4])) returns $(D 10).)
+)
+$(TR $(TDNW $(LREF splitter)) $(TD Lazily splits a range by a
+separator.)
+)
+$(TR $(TDNW $(LREF uniq)) $(TD Iterates over the unique elements
+in a range, which is assumed sorted.)
+)
+$(LEADINGROW Sorting
+)
+$(TR $(TDNW $(LREF completeSort)) $(TD If $(D a = [10, 20, 30])
+and $(D b = [40, 6, 15]), then $(D completeSort(a, b)) leaves $(D a =
+[6, 10, 15]) and $(D b = [20, 30, 40]). The range $(D a) must be
+sorted prior to the call, and as a result the combination $(D $(XREF
+range,chain)(a, b)) is sorted.)
+)
+$(TR $(TDNW $(LREF isPartitioned)) $(TD $(D isPartitioned!"a <
+0"([-1, -2, 1, 0, 2])) returns $(D true) because the predicate is $(D
+true) for a portion of the range and $(D false) afterwards.)
+)
+$(TR $(TDNW $(LREF isSorted)) $(TD $(D isSorted([1, 1, 2, 3]))
+returns $(D true).)
+)
+$(TR $(TDNW $(LREF makeIndex)) $(TD Creates a separate index
+for a range.)
+)
+$(TR $(TDNW $(LREF partialSort)) $(TD If $(D a = [5, 4, 3, 2,
+1]), then $(D partialSort(a, 3)) leaves $(D a[0 .. 3] = [1, 2,
+3]). The other elements of $(D a) are left in an unspecified order.)
+)
+$(TR $(TDNW $(LREF partition)) $(TD Partitions a range
+according to a predicate.)
+)
+$(TR $(TDNW $(LREF schwartzSort)) $(TD Sorts with the help of
+the $(LUCKY Schwartzian transform).)
+)
+$(TR $(TDNW $(LREF sort)) $(TD Sorts.)
+)
+$(TR $(TDNW $(LREF topN)) $(TD Separates the top elements in a
+range.)
+)
+$(TR $(TDNW $(LREF topNCopy)) $(TD Copies out the top elements
+of a range.)
+)
+$(LEADINGROW Set operations
+)
+$(TR $(TDNW $(LREF largestPartialIntersection)) $(TD Copies out
+the values that occur most frequently in a range of ranges.)
+)
+$(TR $(TDNW $(LREF largestPartialIntersectionWeighted)) $(TD
+Copies out the values that occur most frequently (multiplied by
+per-value weights) in a range of ranges.)
+)
+$(TR $(TDNW $(LREF nWayUnion)) $(TD Computes the union of a set
+of sets implemented as a range of sorted ranges.)
+)
+$(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
+difference of two or more sorted ranges.)
+)
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
+set difference of two or more sorted ranges.)
+)
+$(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
+computes the symmetric set difference of two or more sorted ranges.)
+)
+$(TR $(TDNW $(LREF setUnion)) $(TD Lazily computes the set
+union of two or more sorted ranges.)
+)
+$(LEADINGROW Mutation
+)
+$(TR $(TDNW $(LREF bringToFront)) $(TD If $(D a = [1, 2, 3])
+and $(D b = [4, 5, 6, 7]), $(D bringToFront(a, b)) leaves $(D a = [4,
+5, 6]) and $(D b = [7, 1, 2, 3]).)
+)
+$(TR $(TDNW $(LREF copy)) $(TD Copies a range to another. If
+$(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
+leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+)
+$(TR $(TDNW $(LREF fill)) $(TD Fills a range with a pattern,
+e.g., if $(D a = new int[3]), then $(D fill(a, 4)) leaves $(D a = [4,
+4, 4]) and $(D fill(a, [3, 4])) leaves $(D a = [3, 4, 3]).)
+)
+$(TR $(TDNW $(LREF initializeAll)) $(TD If $(D a = [1.2, 3.4]),
+then $(D initializeAll(a)) leaves $(D a = [double.init,
+double.init]).)
+)
+$(TR $(TDNW $(LREF move)) $(TD $(D move(a, b)) moves $(D a)
+into $(D b). $(D move(a)) reads $(D a) destructively.)
+)
+$(TR $(TDNW $(LREF moveAll)) $(TD Moves all elements from one
+range to another.)
+)
+$(TR $(TDNW $(LREF moveSome)) $(TD Moves as many elements as
+possible from one range to another.)
+)
+$(TR $(TDNW $(LREF reverse)) $(TD If $(D a = [1, 2, 3]), $(D
+reverse(a)) changes it to $(D [3, 2, 1]).)
+)
+$(TR $(TDNW $(LREF swap)) $(TD Swaps two values.)
+)
+$(TR $(TDNW $(LREF swapRanges)) $(TD Swaps all elements of two
+ranges.)
+)
+$(TR $(TDNW $(LREF uninitializedFill)) $(TD Fills a range
+(assumed uninitialized) with a value.)
+)
+)
+
 Macros:
 WIKI = Phobos/StdAlgorithm
+MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
 
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(WEB erdani.com, Andrei Alexandrescu)
+
+Source: $(PHOBOSSRC std/_algorithm.d)
  */
 module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.exception,
+import std.array, std.container, std.conv, std.ctype, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.stdio;
 
@@ -96,104 +362,101 @@ separately:
 alias map!(to!string) stringize;
 assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 ----
- */
-template map(fun...)
+*/
+template map(fun...) if (fun.length >= 1)
 {
-    auto map(Range)(Range r)
+    auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
         static if (fun.length > 1)
         {
-            return Map!(adjoin!(staticMap!(unaryFun, fun)), Range)(r);
+            alias adjoin!(staticMap!(unaryFun, fun)) _fun;
         }
         else
         {
-            return Map!(unaryFun!fun, Range)(r);
+            alias unaryFun!fun _fun;
         }
-    }
-}
 
-struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
-{
-    alias Unqual!Range R;
-    alias fun _fun;
-    // Uncomment this to reveal a @@@BUG@@@ in the compiler
-    //alias typeof(fun(.ElementType!R.init)) ElementType;
-    alias typeof({ return fun(.ElementType!R.init); }()) ElementType;
-    R _input;
-
-    static if (isBidirectionalRange!(R))
-    {
-        @property ElementType back()
+        struct Result
         {
-            return _fun(_input.back);
+            alias Unqual!Range R;
+            alias typeof(_fun(.ElementType!R.init)) ElementType;
+            R _input;
+
+            static if (isBidirectionalRange!R)
+            {
+                @property auto ref back()
+                {
+                    return _fun(_input.back);
+                }
+
+                void popBack()
+                {
+                    _input.popBack();
+                }
+            }
+
+            this(R input)
+            {
+                _input = input;
+            }
+
+            static if (isInfinite!R)
+            {
+                // Propagate infinite-ness.
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty()
+                {
+                    return _input.empty;
+                }
+            }
+
+            void popFront()
+            {
+                _input.popFront();
+            }
+
+            @property auto ref front()
+            {
+                return _fun(_input.front);
+            }
+
+            static if (isRandomAccessRange!R)
+            {
+                auto ref opIndex(size_t index)
+                {
+                    return _fun(_input[index]);
+                }
+            }
+
+            static if (hasLength!R || isSomeString!R)
+            {
+                @property size_t length()
+                {
+                    return _input.length;
+                }
+            }
+
+            static if (hasSlicing!R)
+            {
+                auto opSlice(size_t lowerBound, size_t upperBound)
+                {
+                    return typeof(this)(_input[lowerBound..upperBound]);
+                }
+            }
+
+            static if (isForwardRange!R)
+                @property auto save()
+                {
+                    auto result = this;
+                    result._input = result._input.save;
+                    return result;
+                }
         }
 
-        void popBack()
-        {
-            _input.popBack();
-        }
-    }
-
-    this(R input)
-    {
-        _input = input;
-    }
-
-    static if (isInfinite!R)
-    {
-        // Propagate infinite-ness.
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _input.empty;
-        }
-    }
-
-    void popFront()
-    {
-        _input.popFront();
-    }
-
-    @property ElementType front()
-    {
-        return _fun(_input.front);
-    }
-
-    static if (isRandomAccessRange!R)
-    {
-        ElementType opIndex(size_t index)
-        {
-            return _fun(_input[index]);
-        }
-    }
-
-    // hasLength is busted, Bug 2873
-    static if (is(typeof(_input.length) : size_t)
-        || is(typeof(_input.length()) : size_t))
-    {
-        @property size_t length()
-        {
-            return _input.length;
-        }
-    }
-
-    static if (hasSlicing!(R))
-    {
-        typeof(this) opSlice(size_t lowerBound, size_t upperBound)
-        {
-            return typeof(this)(_input[lowerBound..upperBound]);
-        }
-    }
-
-    static if (isForwardRange!R)
-    @property Map save()
-    {
-        auto result = this;
-        result._input = result._input.save;
-        return result;
+        return Result(r);
     }
 }
 
@@ -272,10 +535,10 @@ unittest
 
     auto repeatMap = map!"a"(repeat(1));
     static assert(isInfinite!(typeof(repeatMap)));
-    
+
     auto intRange = map!"a"([1,2,3]);
     static assert(isRandomAccessRange!(typeof(intRange)));
-    
+
     foreach(DummyType; AllDummyRanges)
     {
         DummyType d;
@@ -360,7 +623,7 @@ auto stdev = sqrt(r[1] / a.length - avg * avg);
 ----
  */
 
-template reduce(fun...)
+template reduce(fun...) if (fun.length >= 1)
 {
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
@@ -395,7 +658,9 @@ template reduce(fun...)
                 alias args[0] r;
                 static if (fun.length == 1)
                 {
-                    return reduce(r.front, (r.popFront(), r));
+                    auto seed = r.front;
+                    r.popFront();
+                    return reduce(seed, r);
                 }
                 else
                 {
@@ -404,8 +669,7 @@ template reduce(fun...)
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        auto p = (cast(void*) &result[i])[0 .. result[i].sizeof];
-                        emplace!T(p, r.front);
+                        emplace(&result[i], r.front);
                     }
                     r.popFront();
                     return reduce(result, r);
@@ -467,9 +731,7 @@ template reduce(fun...)
 
                     foreach (i, T; result.Types)
                     {
-                        auto p = (cast(void*) &result[i])
-                            [0 .. result[i].sizeof];
-                        emplace!T(p, elem);
+                        emplace(&result[i], elem);
                     }
                 }
             }
@@ -638,7 +900,6 @@ fill(a, b);
 assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
-
 void fill(Range1, Range2)(Range1 range, Range2 filler)
 if (isForwardRange!Range1 && isForwardRange!Range2
         && is(typeof(Range1.init.front = Range2.init.front)))
@@ -685,7 +946,7 @@ if (isForwardRange!Range && is(typeof(range.front = filler)))
         // Must construct stuff by the book
         for (; !range.empty; range.popFront)
         {
-            emplace!T((cast(void*) &range.front)[0 .. T.sizeof], filler);
+            emplace(&range.front, filler);
         }
     }
     else
@@ -723,7 +984,7 @@ Example:
 ----
 struct S { ... }
 S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
-initialize(s);
+initializeAll(s);
 assert(s == [ 0, 0, 0, 0, 0 ]);
 ----
  */
@@ -804,58 +1065,58 @@ auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
 assert(equal(r1, [ 2.5 ]));
 ----
  */
-template filter(alias pred)
+template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
-    auto filter(Range)(Range rs)
+    auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
-        return Filter!(unaryFun!(pred), Range)(rs);
-    }
-}
-
-struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
-{
-    alias Unqual!Range R;
-    R _input;
-
-    this(R r)
-    {
-        _input = r;
-        while (!_input.empty && !pred(_input.front)) _input.popFront;
-    }
-
-    ref Filter opSlice()
-    {
-        return this;
-    }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
-
-    void popFront()
-    {
-        do
+        struct Result
         {
-            _input.popFront;
-        } while (!_input.empty && !pred(_input.front));
-    }
+            alias Unqual!Range R;
+            R _input;
 
-    @property auto ref front()
-    {
-        return _input.front;
-    }
+            this(R r)
+            {
+                _input = r;
+                while (!_input.empty && !unaryFun!pred(_input.front))
+                {
+                    _input.popFront();
+                }
+            }
 
-    static if(isForwardRange!R)
-    {
-        @property typeof(this) save()
-        {
-            return typeof(this)(_input);
+            auto opSlice() { return this; }
+
+            static if (isInfinite!Range)
+            {
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty() { return _input.empty; }
+            }
+
+            void popFront()
+            {
+                do
+                {
+                    _input.popFront;
+                } while (!_input.empty && !unaryFun!pred(_input.front));
+            }
+
+            @property auto ref front()
+            {
+                return _input.front;
+            }
+
+            static if(isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    return Result(_input);
+                }
+            }
         }
+
+        return Result(rs);
     }
 }
 
@@ -881,17 +1142,17 @@ unittest
     auto infinite = filter!"a > 2"(repeat(3));
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
-    
+
     foreach(DummyType; AllDummyRanges) {
         DummyType d;
         auto f = filter!"a & 1"(d);
         assert(equal(f, [1,3,5,7,9]));
-        
+
         static if (isForwardRange!DummyType) {
             static assert(isForwardRange!(typeof(f)));
         }
     }
-    
+
     // With delegates
     int x = 10;
     int overX(int a) { return a > x; }
@@ -901,11 +1162,11 @@ unittest
     }
     auto r1 = getFilter();
     assert(equal(r1, [22, 42]));
-    
+
     // With chain
     auto nums = [0,1,2,3,4];
     assert(equal(filter!overX(chain(a, nums)), [22, 42]));
-    
+
     // With copying of inner struct Filter to Map
     auto arr = [1,2,3,4,5];
     auto m = map!"a + 1"(filter!"a < 4"(arr));
@@ -921,7 +1182,8 @@ unittest
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
     assert(equal(under10, [1, 3, 5][]));
-    assert(under10.save == under10);
+    assert(equal(under10.save, [1, 3, 5][]));
+    assert(equal(under10.save, under10));
 
     // With copying of inner struct Filter to Map
     auto arr = [1,2,3,4,5];
@@ -969,56 +1231,58 @@ assert(r.back == 102);
  */
 template filterBidirectional(alias pred)
 {
-    FilterBidirectional!(unaryFun!(pred), Range)
-    filterBidirectional(Range)(Range rs)
+    auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        return typeof(return)(rs);
-    }
-}
-
-struct FilterBidirectional(alias pred, Range) if (isBidirectionalRange!(Unqual!Range))
-{
-    alias Unqual!Range R;
-    R _input;
-
-    this(R r)
-    {
-        _input = r;
-        while (!_input.empty && !pred(_input.front)) _input.popFront();
-        while (!_input.empty && !pred(_input.back)) _input.popBack();
-    }
-
-    @property bool empty() { return _input.empty; }
-
-    void popFront()
-    {
-        do
+        static struct Result
         {
-            _input.popFront;
-        } while (!_input.empty && !pred(_input.front));
-    }
+            alias Unqual!Range R;
+            alias unaryFun!pred predFun;
+            R _input;
 
-    @property auto ref front()
-    {
-        return _input.front;
-    }
+            this(R r)
+            {
+                _input = r;
+                while (!_input.empty && !predFun(_input.front)) _input.popFront();
+                while (!_input.empty && !predFun(_input.back)) _input.popBack();
+            }
 
-    void popBack()
-    {
-        do
-        {
-            _input.popBack;
-        } while (!_input.empty && !pred(_input.back));
-    }
+            @property bool empty() { return _input.empty; }
 
-    @property auto ref back()
-    {
-        return _input.back;
-    }
+            void popFront()
+            {
+                do
+                {
+                    _input.popFront;
+                } while (!_input.empty && !predFun(_input.front));
+            }
 
-    @property typeof(this) save()
-    {
-        return typeof(this)(_input);
+            @property auto ref front()
+            {
+                return _input.front;
+            }
+
+            void popBack()
+            {
+                do
+                {
+                    _input.popBack;
+                } while (!_input.empty && !predFun(_input.back));
+            }
+
+            @property auto ref back()
+            {
+                return _input.back;
+            }
+
+            @property auto save()
+            {
+                Result result;
+                result._input = _input.save;
+                return result;
+            }
+        }
+
+        return Result(r);
     }
 }
 
@@ -1057,11 +1321,11 @@ void move(T)(ref T source, ref T target)
     {
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
-        static if (is(typeof(target.__dtor()))) target.__dtor();
+        static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
         memcpy(&target, &source, T.sizeof);
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
-        static if (is(typeof(source.__dtor())) || is(typeof(source.__postblit())))
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
             memcpy(&source, &empty, T.sizeof);
@@ -1097,10 +1361,37 @@ unittest
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
     struct S2 { int a = 1; int * b; }
-    S2 s21 = { 10, new int };
+    S2 s21 = { 10, null };
+    s21.b = new int;
     S2 s22;
     move(s21, s22);
     assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    struct S3
+    {
+        struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31, s32;
+    s31.x.n = 1;
+    move(s31, s32);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    struct S4
+    {
+        struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41, s42;
+    s41.x.n = 1;
+    move(s41, s42);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
 }
 
 /// Ditto
@@ -1122,6 +1413,8 @@ Preconditions:
 $(D walkLength(src) >= walkLength(tgt))
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
+if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(move(src.front, tgt.front))))
 {
     for (; !src.empty; src.popFront, tgt.popFront)
     {
@@ -1150,6 +1443,8 @@ when either $(D src) or $(D tgt) have been exhausted. Returns the
 leftover portions of the two ranges.
  */
 Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
+if (isInputRange!Range1 && isInputRange!Range2
+        && is(typeof(move(src.front, tgt.front))))
 {
     for (; !src.empty && !tgt.empty; src.popFront, tgt.popFront)
     {
@@ -1315,151 +1610,145 @@ a = [ 0, 1 ];
 assert(equal(splitter(a, 0), [ [], [1] ]));
 ----
 */
-struct Splitter(Range, Separator)
-    if (is(typeof(ElementType!Range.init == Separator.init)) && hasSlicing!Range)
+auto splitter(Range, Separator)(Range r, Separator s)
+if (is(typeof(ElementType!Range.init == Separator.init))
+        && (hasSlicing!Range || isNarrowString!Range))
 {
-private:
-    Range _input;
-    Separator _separator;
-    enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
-    size_t _frontLength = _unComputed;
-    size_t _backLength = _unComputed;
-
-    static if(isBidirectionalRange!Range)
+    struct Result
     {
-        static sizediff_t lastIndexOf(Range haystack, Separator needle)
+    private:
+        Range _input;
+        Separator _separator;
+        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
+        size_t _frontLength = _unComputed;
+        size_t _backLength = _unComputed;
+
+        static if(isBidirectionalRange!Range)
         {
-            immutable index = countUntil(retro(haystack), needle);
-            return (index == -1) ? -1 : haystack.length - 1 - index;
+            static sizediff_t lastIndexOf(Range haystack, Separator needle)
+            {
+                immutable index = countUntil(retro(haystack), needle);
+                return (index == -1) ? -1 : haystack.length - 1 - index;
+            }
         }
-    }
 
-public:
-    this(Range input, Separator separator)
-    {
-        _input = input;
-        _separator = separator;
-        // computeFront();
-        // computeBack();
-    }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty()
+    public:
+        this(Range input, Separator separator)
         {
-            return _frontLength == _atEnd;
+            _input = input;
+            _separator = separator;
         }
-    }
 
-    @property Range front()
-    {
-        assert(!empty);
-        if (_frontLength == _unComputed)
+        static if (isInfinite!Range)
         {
-            _frontLength = countUntil(_input, _separator);
-            if (_frontLength == -1) _frontLength = _input.length;
-        }
-        return _input[0 .. _frontLength];
-    }
-
-    void popFront()
-    {
-        assert(!empty);
-        if (_frontLength == _unComputed)
-        {
-            front;
-        }
-        assert(_frontLength <= _input.length);
-        if (_frontLength == _input.length)
-        {
-            // no more input and need to fetch => done
-            _frontLength = _atEnd;
-
-            // Probably don't need this, but just for consistency:
-            _backLength = _atEnd;
+            enum bool empty = false;
         }
         else
         {
-            _input = _input[_frontLength .. _input.length];
-            skipOver(_input, _separator) || assert(false);
-            _frontLength = _unComputed;
+            @property bool empty()
+            {
+                return _frontLength == _atEnd;
+            }
         }
-    }
 
-    static if(isForwardRange!Range)
-    {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
-        }
-    }
-
-    static if(isBidirectionalRange!Range)
-    {
-        @property Range back()
+        @property Range front()
         {
             assert(!empty);
-            if (_backLength == _unComputed)
+            if (_frontLength == _unComputed)
             {
-                immutable lastIndex = lastIndexOf(_input, _separator);
-                if(lastIndex == -1)
-                {
-                    _backLength = _input.length;
-                }
-                else
-                {
-                    _backLength = _input.length - lastIndex - 1;
-                }
+                _frontLength = countUntil(_input, _separator);
+                if (_frontLength == -1) _frontLength = _input.length;
             }
-            return _input[_input.length - _backLength .. _input.length];
+            return _input[0 .. _frontLength];
         }
 
-        void popBack()
+        void popFront()
         {
             assert(!empty);
-            if (_backLength == _unComputed)
+            if (_frontLength == _unComputed)
             {
-                back;
+                front;
             }
-            assert(_backLength <= _input.length);
-            if (_backLength == _input.length)
+            assert(_frontLength <= _input.length);
+            if (_frontLength == _input.length)
             {
                 // no more input and need to fetch => done
                 _frontLength = _atEnd;
+
+                // Probably don't need this, but just for consistency:
                 _backLength = _atEnd;
             }
             else
             {
-                _input = _input[0 .. _input.length - _backLength];
-                if(!_input.empty && _input.back == _separator)
+                _input = _input[_frontLength .. _input.length];
+                skipOver(_input, _separator) || assert(false);
+                _frontLength = _unComputed;
+            }
+        }
+
+        static if(isForwardRange!Range)
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                return ret;
+            }
+        }
+
+        static if(isBidirectionalRange!Range)
+        {
+            @property Range back()
+            {
+                assert(!empty);
+                if (_backLength == _unComputed)
                 {
-                    _input.popBack();
+                    immutable lastIndex = lastIndexOf(_input, _separator);
+                    if(lastIndex == -1)
+                    {
+                        _backLength = _input.length;
+                    }
+                    else
+                    {
+                        _backLength = _input.length - lastIndex - 1;
+                    }
+                }
+                return _input[_input.length - _backLength .. _input.length];
+            }
+
+            void popBack()
+            {
+                assert(!empty);
+                if (_backLength == _unComputed)
+                {
+                    // evaluate back to make sure it's computed
+                    back;
+                }
+                assert(_backLength <= _input.length);
+                if (_backLength == _input.length)
+                {
+                    // no more input and need to fetch => done
+                    _frontLength = _atEnd;
+                    _backLength = _atEnd;
                 }
                 else
                 {
-                    assert(false);
+                    _input = _input[0 .. _input.length - _backLength];
+                    if (!_input.empty && _input.back == _separator)
+                    {
+                        _input.popBack();
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
+                    _backLength = _unComputed;
                 }
-                _backLength = _unComputed;
             }
         }
     }
-}
 
-/// Ditto
-Splitter!(Range, Separator)
-splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == ElementType!Separator.init))
-       ||
-    is(typeof(ElementType!Range.init == Separator.init))
-    )
-{
-    return typeof(return)(r, s);
+    return Result(r, s);
 }
 
 unittest
@@ -1528,142 +1817,147 @@ unittest
 Splits a range using another range as a separator. This can be used
 with any range type, but is most popular with string types.
  */
-struct Splitter(Range, Separator)
+auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool))
 {
-private:
-    Range _input;
-    Separator _separator;
-    // _frontLength == size_t.max means empty
-    size_t _frontLength = size_t.max;
-    static if (isBidirectionalRange!Range)
-        size_t _backLength = size_t.max;
-
-    size_t separatorLength() { return _separator.length; }
-
-    void ensureFrontLength()
+    struct Result
     {
-        if (_frontLength != _frontLength.max) return;
-        assert(!_input.empty);
-        // compute front length
-        _frontLength = _input.length - find(_input, _separator).length;
+    private:
+        Range _input;
+        Separator _separator;
+        // _frontLength == size_t.max means empty
+        size_t _frontLength = size_t.max;
         static if (isBidirectionalRange!Range)
-            if (_frontLength == _input.length) _backLength = _frontLength;
-    }
+            size_t _backLength = size_t.max;
 
-    void ensureBackLength()
-    {
-        static if (isBidirectionalRange!Range)
-            if (_backLength != _backLength.max) return;
-        assert(!_input.empty);
-        // compute back length
-        static if (isBidirectionalRange!Range)
+        size_t separatorLength() { return _separator.length; }
+
+        void ensureFrontLength()
         {
-            _backLength = _input.length -
-                find(retro(_input), retro(_separator)).length;
+            if (_frontLength != _frontLength.max) return;
+            assert(!_input.empty);
+            // compute front length
+            _frontLength = _input.length - find(_input, _separator).length;
+            static if (isBidirectionalRange!Range)
+                if (_frontLength == _input.length) _backLength = _frontLength;
         }
-    }
 
-public:
-    this(Range input, Separator separator)
-    {
-        _input = input;
-        _separator = separator;
-    }
-
-    @property Range front()
-    {
-        assert(!empty);
-        ensureFrontLength();
-        return _input[0 .. _frontLength];
-    }
-
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;  // Propagate infiniteness
-    }
-    else
-    {
-        @property bool empty()
+        void ensureBackLength()
         {
-            return _frontLength == size_t.max && _input.empty;
+            static if (isBidirectionalRange!Range)
+                if (_backLength != _backLength.max) return;
+            assert(!_input.empty);
+            // compute back length
+            static if (isBidirectionalRange!Range)
+            {
+                _backLength = _input.length -
+                    find(retro(_input), retro(_separator)).source.length;
+            }
         }
-    }
 
-    void popFront()
-    {
-        assert(!empty);
-        ensureFrontLength;
-        if (_frontLength == _input.length)
+    public:
+        this(Range input, Separator separator)
         {
-            // done, there's no separator in sight
-            _input = _input[_frontLength .. _frontLength];
+            _input = input;
+            _separator = separator;
+        }
+
+        @property Range front()
+        {
+            assert(!empty);
+            ensureFrontLength();
+            return _input[0 .. _frontLength];
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;  // Propagate infiniteness
+        }
+        else
+        {
+            @property bool empty()
+            {
+                return _frontLength == size_t.max && _input.empty;
+            }
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            ensureFrontLength;
+            if (_frontLength == _input.length)
+            {
+                // done, there's no separator in sight
+                _input = _input[_frontLength .. _frontLength];
+                _frontLength = _frontLength.max;
+                static if (isBidirectionalRange!Range)
+                    _backLength = _backLength.max;
+                return;
+            }
+            if (_frontLength + separatorLength == _input.length)
+            {
+                // Special case: popping the first-to-last item; there is
+                // an empty item right after this.
+                _input = _input[_input.length .. _input.length];
+                _frontLength = 0;
+                static if (isBidirectionalRange!Range)
+                    _backLength = 0;
+                return;
+            }
+            // Normal case, pop one item and the separator, get ready for
+            // reading the next item
+            _input = _input[_frontLength + separatorLength .. _input.length];
+            // mark _frontLength as uninitialized
             _frontLength = _frontLength.max;
-            static if (isBidirectionalRange!Range)
-                _backLength = _backLength.max;
-            return;
         }
-        if (_frontLength + separatorLength == _input.length)
-        {
-            // Special case: popping the first-to-last item; there is
-            // an empty item right after this.
-            _input = _input[_input.length .. _input.length];
-            _frontLength = 0;
-            static if (isBidirectionalRange!Range)
-                _backLength = 0;
-            return;
-        }
-        // Normal case, pop one item and the separator, get ready for
-        // reading the next item
-        _input = _input[_frontLength + separatorLength .. _input.length];
-        // mark _frontLength as uninitialized
-        _frontLength = _frontLength.max;
-    }
 
-    static if(isForwardRange!Range)
-    {
-        @property typeof(this) save()
+        static if(isForwardRange!Range)
         {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                return ret;
+            }
         }
-    }
 
 // Bidirectional functionality as suggested by Brad Roberts.
-    static if (isBidirectionalRange!Range)
-    {
-        @property Range back()
+        static if (isBidirectionalRange!Range)
         {
-            ensureBackLength;
-            return _input[_input.length - _backLength .. _input.length];
-        }
+            @property Range back()
+            {
+                ensureBackLength;
+                return _input[_input.length - _backLength .. _input.length];
+            }
 
-        void popBack()
-        {
-            ensureBackLength;
-            if (_backLength == _input.length)
+            void popBack()
             {
-                // done
-                _input = _input[0 .. 0];
-                _frontLength = _frontLength.max;
+                ensureBackLength;
+                if (_backLength == _input.length)
+                {
+                    // done
+                    _input = _input[0 .. 0];
+                    _frontLength = _frontLength.max;
+                    _backLength = _backLength.max;
+                    return;
+                }
+                if (_backLength + separatorLength == _input.length)
+                {
+                    // Special case: popping the first-to-first item; there is
+                    // an empty item right before this. Leave the separator in.
+                    _input = _input[0 .. 0];
+                    _frontLength = 0;
+                    _backLength = 0;
+                    return;
+                }
+                // Normal case
+                _input = _input[0 .. _input.length - _backLength - separatorLength];
                 _backLength = _backLength.max;
-                return;
             }
-            if (_backLength + separatorLength == _input.length)
-            {
-                // Special case: popping the first-to-first item; there is
-                // an empty item right before this. Leave the separator in.
-                _input = _input[0 .. 0];
-                _frontLength = 0;
-                _backLength = 0;
-                return;
-            }
-            // Normal case
-            _input = _input[0 .. _input.length - _backLength - separatorLength];
-            _backLength = _backLength.max;
         }
     }
+
+    return Result(r, s);
 }
 
 unittest
@@ -1718,102 +2012,97 @@ unittest
     assert(equal(sp6, ["", ""][]));
 }
 
-struct Splitter(alias isTerminator, Range,
-        Slice = Select!(is(typeof(Range.init[0 .. 1])),
-                Range,
-                ElementType!(Range)[]))
-if(!is(isTerminator))
+auto splitter(alias isTerminator, Range)(Range input)
+if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
 {
-    private Range _input;
-    private size_t _end;
-    private alias unaryFun!isTerminator _isTerminator;
-
-    this(Range input)
+    struct Result
     {
-        _input = input;
-        if (_input.empty)
+        private Range _input;
+        private size_t _end;
+        private alias unaryFun!isTerminator _isTerminator;
+
+        this(Range input)
         {
-            _end = _end.max;
+            _input = input;
+            if (_input.empty)
+            {
+                _end = _end.max;
+            }
+            else
+            {
+                // Chase first terminator
+                while (_end < _input.length && !_isTerminator(_input[_end]))
+                {
+                    ++_end;
+                }
+            }
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;  // Propagate infiniteness.
         }
         else
         {
-            // Chase first terminator
+            @property bool empty()
+            {
+                return _end == _end.max;
+            }
+        }
+
+        @property Range front()
+        {
+            assert(!empty);
+            return _input[0 .. _end];
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            if (_input.empty)
+            {
+                _end = _end.max;
+                return;
+            }
+            // Skip over existing word
+            _input = _input[_end .. _input.length];
+            // Skip terminator
+            for (;;)
+            {
+                if (_input.empty)
+                {
+                    // Nothing following the terminator - done
+                    _end = _end.max;
+                    return;
+                }
+                if (!_isTerminator(_input.front))
+                {
+                    // Found a legit next field
+                    break;
+                }
+                _input.popFront();
+            }
+            assert(!_input.empty && !_isTerminator(_input.front));
+            // Prepare _end
+            _end = 1;
             while (_end < _input.length && !_isTerminator(_input[_end]))
             {
                 ++_end;
             }
         }
-    }
 
-    static if (isInfinite!Range)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty()
+        static if(isForwardRange!Range)
         {
-            return _end == _end.max;
-        }
-    }
-
-    @property Range front()
-    {
-        assert(!empty);
-        return _input[0 .. _end];
-    }
-
-    void popFront()
-    {
-        assert(!empty);
-        if (_input.empty)
-        {
-            _end = _end.max;
-            return;
-        }
-        // Skip over existing word
-        _input = _input[_end .. _input.length];
-        // Skip terminator
-        for (;;)
-        {
-            if (_input.empty)
+            @property typeof(this) save()
             {
-                // Nothing following the terminator - done
-                _end = _end.max;
-                return;
+                auto ret = this;
+                ret._input = _input.save;
+                return ret;
             }
-            if (!_isTerminator(_input.front))
-            {
-                // Found a legit next field
-                break;
-            }
-            _input.popFront();
-        }
-        assert(!_input.empty && !_isTerminator(_input.front));
-        // Prepare _end
-        _end = 1;
-        while (_end < _input.length && !_isTerminator(_input[_end]))
-        {
-            ++_end;
         }
     }
 
-    static if(isForwardRange!Range)
-    {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret._input = _input.save;
-            return ret;
-        }
-    }
-}
-
-Splitter!(isTerminator, Range)
-splitter(alias isTerminator, Range)(Range input)
-if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
-{
-    return typeof(return)(input);
+    return Result(input);
 }
 
 unittest
@@ -1853,6 +2142,35 @@ unittest
     }
 }
 
+auto splitter(Range)(Range input)
+if (isSomeString!Range)
+{
+    return splitter!isspace(input);
+}
+
+unittest
+{
+    // TDPL example, page 8
+    uint[string] dictionary;
+    char[][3] lines;
+    lines[0] = "line one".dup;
+    lines[1] = "line \ttwo".dup;
+    lines[2] = "yah            last   line\ryah".dup;
+    foreach (line; lines) {
+       foreach (word; splitter(strip(line))) {
+            if (word in dictionary) continue; // Nothing to do
+            auto newID = dictionary.length;
+            dictionary[to!string(word)] = cast(uint)newID;
+        }
+    }
+    assert(dictionary.length == 5);
+    assert(dictionary["line"]== 0);
+    assert(dictionary["one"]== 1);
+    assert(dictionary["two"]== 2);
+    assert(dictionary["yah"]== 3);
+    assert(dictionary["last"]== 4);
+}
+
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
@@ -1870,7 +2188,7 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
-if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         && isForwardRange!Separator
         && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
@@ -1923,7 +2241,7 @@ if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
             // separator
             useSeparator();
         }
-        
+
         this(RoR items, Separator sep)
         {
             _items = items;
@@ -1942,14 +2260,14 @@ if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
         {
             return _current.empty && _currentSep.empty;
         }
-        
+
         @property ElementType!(ElementType!RoR) front()
         {
             if (!_currentSep.empty) return _currentSep.front;
             assert(!_current.empty);
             return _current.front;
         }
-        
+
         void popFront()
         {
             assert(!empty);
@@ -1998,6 +2316,13 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+}
+
+unittest
+{
+    // joiner() should work for non-forward ranges too.
+    InputRange!string r = inputRangeObject(["abc", "def"]);
+    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
 auto joiner(RoR)(RoR r)
@@ -2096,68 +2421,68 @@ int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
 assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 ----
 */
-struct Uniq(alias pred, R)
+auto uniq(alias pred = "a == b", Range)(Range r)
+if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 {
-    R _input;
-
-    this(R input)
+    struct Result
     {
-        _input = input;
-    }
+        Range _input;
 
-    ref Uniq opSlice()
-    {
-        return this;
-    }
-
-    void popFront()
-    {
-        auto last = _input.front;
-        do
+        this(Range input)
         {
-            _input.popFront;
+            _input = input;
         }
-        while (!_input.empty && binaryFun!(pred)(last, _input.front));
-    }
 
-    @property ElementType!(R) front() { return _input.front; }
-
-    static if (isBidirectionalRange!R)
-    {
-        void popBack()
+        auto opSlice()
         {
-            auto last = _input.back;
+            return this;
+        }
+
+        void popFront()
+        {
+            auto last = _input.front;
             do
             {
-                _input.popBack;
+                _input.popFront;
             }
-            while (!_input.empty && binaryFun!(pred)(last, _input.back));
+            while (!_input.empty && binaryFun!(pred)(last, _input.front));
         }
 
-        @property ElementType!(R) back() { return _input.back; }
-    }
+        @property ElementType!Range front() { return _input.front; }
 
-    static if (isInfinite!R)
-    {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
+        static if (isBidirectionalRange!Range)
+        {
+            void popBack()
+            {
+                auto last = _input.back;
+                do
+                {
+                    _input.popBack;
+                }
+                while (!_input.empty && binaryFun!pred(last, _input.back));
+            }
+
+            @property ElementType!Range back() { return _input.back; }
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;  // Propagate infiniteness.
+        }
+        else
+        {
+            @property bool empty() { return _input.empty; }
+        }
 
 
-    static if (isForwardRange!R) {
-        @property typeof(this) save() {
-            return typeof(this)(_input.save);
+        static if (isForwardRange!Range) {
+            @property typeof(this) save() {
+                return typeof(this)(_input.save);
+            }
         }
     }
-}
 
-/// Ditto
-Uniq!(pred, Range) uniq(alias pred = "a == b", Range)(Range r)
-{
-    return typeof(return)(r);
+    return Result(r);
 }
 
 unittest
@@ -2693,7 +3018,12 @@ Returns:
 A tuple containing $(D haystack) positioned to match one of the
 needles and also the 1-based index of the matching element in $(D
 needles) (0 if none of $(D needles) matched, 1 if $(D needles[0])
-matched, 2 if $(D needles[1]) matched...).
+matched, 2 if $(D needles[1]) matched...). The first needle to be found
+will be the one that matches. If multiple needles are found at the
+same spot in the range, then the shortest one is the one which matches
+(if multiple needles of the same length are found at the same spot (e.g
+$(D "a") and $(D 'a')), then the left-most of them in the argument list
+matches).
 
 The relationship between $(D haystack) and $(D needles) simply means
 that one can e.g. search for individual $(D int)s or arrays of $(D
@@ -3016,7 +3346,7 @@ ranges. $(D result[0]) is the portion of $(D haystack) before $(D
 needle), $(D result[1]) is the portion of $(D haystack) that matches
 $(D needle), and $(D result[2]) is the portion of $(D haystack) after
 the match.
- 
+
 $(D findSplitBefore) returns a tuple $(D result) containing two
 ranges. $(D result[0]) is the portion of $(D haystack) before $(D
 needle), and $(D result[1]) is the balance of $(D haystack) starting
@@ -3214,7 +3544,7 @@ unittest
     assert(equal(r[0],  a[0 .. 2]));
     assert(equal(r[1], a[2 .. 3]));
     assert(equal(r[2], a[3 .. $]));
-    
+
     auto r1 = findSplitBefore(fwd, [9, 1]);
     assert(equal(r1[0], a));
     assert(r1[1].empty);
@@ -3366,29 +3696,32 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         }
     }
 
-    static if (!is(Sentinel == void))
-        @property Until save()
-        {
-            Until result;
+    static if (isForwardRange!Range)
+    {
+        static if (!is(Sentinel == void))
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._sentinel  = _sentinel;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._sentinel  = _sentinel;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
-    else
-        @property Until save()
-        {
-            Until result;
+                return result;
+            }
+        else
+            @property Until save()
+            {
+                Until result;
 
-            result._input     = _input.save;
-            result._openRight = _openRight;
-            result._done      = _done;
+                result._input     = _input.save;
+                result._openRight = _openRight;
+                result._done      = _done;
 
-            return result;
-        }
+                return result;
+            }
+    }
 }
 
 /// Ditto
@@ -3426,7 +3759,11 @@ unittest
 If the range $(D doesThisStart) starts with $(I any) of the $(D
 withOneOfThese) ranges or elements, returns 1 if it starts with $(D
 withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
-on. If no match, returns 0.
+on. If none match, returns 0. In the case where $(D doesThisStart) starts
+with multiple of the ranges or elements in $(D withOneOfThese), then the
+shortest one matches (if there are two which match which are of the same
+length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
+list matches).
 
 Example:
 ----
@@ -3436,6 +3773,7 @@ assert(!startsWith("abc", "b"));
 assert(startsWith("abc", 'a', "b") == 1);
 assert(startsWith("abc", "b", "a") == 2);
 assert(startsWith("abc", "a", "a") == 1);
+assert(startsWith("abc", "ab", "a") == 2);
 assert(startsWith("abc", "x", "a", "b") == 2);
 assert(startsWith("abc", "x", "aa", "ab") == 3);
 assert(startsWith("abc", "x", "aaa", "sab") == 0);
@@ -3443,34 +3781,32 @@ assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
 uint startsWith(alias pred = "a == b", Range, Ranges...)
-(Range doesThisStart, Ranges withOneOfThese)
-if (Ranges.length > 1 && isInputRange!Range
-        && is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0]))
-                : bool)
-        && is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $]))
-                : uint))
+               (Range doesThisStart, Ranges withOneOfThese)
+if (isInputRange!Range && Ranges.length > 1 &&
+    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[0])) : bool ) &&
+    is(typeof(.startsWith!pred(doesThisStart, withOneOfThese[1 .. $])) : uint))
 {
-    alias doesThisStart lhs;
-    alias withOneOfThese rhs;
+    alias doesThisStart haystack;
+    alias withOneOfThese needles;
 
     // Make one pass looking for empty ranges
     foreach (i, Unused; Ranges)
     {
         // Empty range matches everything
-        static if (!is(typeof(binaryFun!pred(lhs.front, rhs[i])) : bool))
+        static if (!is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
         {
-            if (rhs[i].empty) return i + 1;
+            if (needles[i].empty) return i + 1;
         }
     }
 
-    for (; !lhs.empty; lhs.popFront())
+    for (; !haystack.empty; haystack.popFront())
     {
         foreach (i, Unused; Ranges)
         {
-            static if (is(typeof(binaryFun!pred(lhs.front, rhs[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Single-element
-                if (binaryFun!pred(lhs.front, rhs[i]))
+                if (binaryFun!pred(haystack.front, needles[i]))
                 {
                     // found, but continue to account for one-element
                     // range matches (consider startsWith("ab", "a",
@@ -3480,53 +3816,63 @@ if (Ranges.length > 1 && isInputRange!Range
             }
             else
             {
-                if (binaryFun!pred(lhs.front, rhs[i].front))
+                if (binaryFun!pred(haystack.front, needles[i].front))
                 {
                     continue;
                 }
             }
+
             // This code executed on failure to match
             // Out with this guy, check for the others
-            uint result = startsWith!pred(lhs, rhs[0 .. i], rhs[i + 1 .. $]);
+            uint result = startsWith!pred(haystack, needles[0 .. i], needles[i + 1 .. $]);
             if (result > i) ++result;
             return result;
         }
 
         // If execution reaches this point, then the front matches for all
-        // rhs ranges. What we need to do now is to lop off the front of
+        // needles ranges. What we need to do now is to lop off the front of
         // all ranges involved and recurse.
         foreach (i, Unused; Ranges)
         {
-            static if (is(typeof(binaryFun!pred(lhs.front, rhs[i])) : bool))
+            static if (is(typeof(binaryFun!pred(haystack.front, needles[i])) : bool))
             {
                 // Test has passed in the previous loop
                 return i + 1;
             }
             else
             {
-                rhs[i].popFront();
-                if (rhs[i].empty) return i + 1;
+                needles[i].popFront();
+                if (needles[i].empty) return i + 1;
             }
         }
     }
     return 0;
 }
 
-
 /// Ditto
 bool startsWith(alias pred = "a == b", R1, R2)
-(R1 doesThisStart, R2 withThis)
-if (isInputRange!R1 && isInputRange!R2
-        && is(typeof(binaryFun!pred(doesThisStart.front, withThis.front))
-                : bool))
+               (R1 doesThisStart, R2 withThis)
+if (isInputRange!R1 &&
+    isInputRange!R2 &&
+    is(typeof(binaryFun!pred(doesThisStart.front, withThis.front)) : bool))
 {
+    alias doesThisStart haystack;
+    alias withThis needle;
+
+    static if(is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
     // Special  case for two arrays
-    static if (isArray!R1 && isArray!R2)
+    static if (isArray!R1 && isArray!R2 &&
+               ((!isSomeString!R1 && !isSomeString!R2) ||
+                 (isSomeString!R1 && isSomeString!R2 &&
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
+                  isDefaultPred)))
     {
-        alias doesThisStart haystack;
-        alias withThis needle;
-        //writeln("Matching: ", haystack, " with ", needle);
-        if (haystack.length < needle.length) return 0;
+        if (haystack.length < needle.length) return false;
+
         foreach (j; 0 .. needle.length)
         {
             if (!binaryFun!pred(needle[j], haystack[j]))
@@ -3540,15 +3886,16 @@ if (isInputRange!R1 && isInputRange!R2
     {
         static if (hasLength!R1 && hasLength!R2)
         {
-            if (doesThisStart.length < withThis.length) return false;
+            if (haystack.length < needle.length) return false;
         }
-        if (withThis.empty) return true;
-        for (; !doesThisStart.empty; doesThisStart.popFront())
+
+        if (needle.empty) return true;
+
+        for (; !haystack.empty; haystack.popFront())
         {
-            if (!binaryFun!pred(doesThisStart.front, withThis.front))
-                break;
-            withThis.popFront();
-            if (withThis.empty) return true;
+            if (!binaryFun!pred(haystack.front, needle.front)) break;
+            needle.popFront();
+            if (needle.empty) return true;
         }
         return false;
     }
@@ -3556,9 +3903,9 @@ if (isInputRange!R1 && isInputRange!R2
 
 /// Ditto
 bool startsWith(alias pred = "a == b", R, E)
-(R doesThisStart, E withThis)
-if (isInputRange!R && is(typeof(binaryFun!pred(doesThisStart.front, withThis))
-                : bool))
+               (R doesThisStart, E withThis)
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
     return doesThisStart.empty
         ? false
@@ -3569,29 +3916,62 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    bool x = startsWith("ab", "a");
-    assert(startsWith("abc", ""));
-    assert(startsWith("abc", "a"));
-    assert(!startsWith("abc", "b"));
-    assert(!startsWith("abc", "b", "bc", "abcd", "xyz"));
-    assert(startsWith("abc", "a", "b") == 1);
-    assert(startsWith("abc", "b", "a") == 2);
-    assert(startsWith("abc", "a", 'a') == 1);
-    assert(startsWith("abc", 'a', "a") == 1);
-    assert(startsWith("abc", "x", "a", "b") == 2);
-    assert(startsWith("abc", "x", "aa", "ab") == 3);
-    assert(startsWith("abc", "x", "aaa", "sab") == 0);
-    assert(startsWith("abc", 'a'));
-    assert(!startsWith("abc", "sab"));
-    assert(startsWith("abc", 'x', "aaa", 'a', "sab") == 3);
-}
 
-unittest
-{
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(!startsWith("abc", 'x', 'n', 'b'));
-    assert(startsWith("abc", 'x', 'n', 'a') == 3);
+    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wstring))
+    {
+        assert(!startsWith(to!S("abc"), 'c'));
+        assert(startsWith(to!S("abc"), 'a', 'c') == 1);
+        assert(!startsWith(to!S("abc"), 'x', 'n', 'b'));
+        assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
+        assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
+
+        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(dchar[], string))
+        {
+            assert(startsWith(to!S("abc"), to!T("")));
+            assert(startsWith(to!S("ab"), to!T("a")));
+            assert(startsWith(to!S("abc"), to!T("a")));
+            assert(!startsWith(to!S("abc"), to!T("b")));
+            assert(!startsWith(to!S("abc"), to!T("b"), "bc", "abcd", "xyz"));
+            assert(startsWith(to!S("abc"), to!T("ab"), 'a') == 2);
+            assert(startsWith(to!S("abc"), to!T("a"), "b") == 1);
+            assert(startsWith(to!S("abc"), to!T("b"), "a") == 2);
+            assert(startsWith(to!S("abc"), to!T("a"), 'a') == 1);
+            assert(startsWith(to!S("abc"), 'a', to!T("a")) == 1);
+            assert(startsWith(to!S("abc"), to!T("x"), "a", "b") == 2);
+            assert(startsWith(to!S("abc"), to!T("x"), "aa", "ab") == 3);
+            assert(startsWith(to!S("abc"), to!T("x"), "aaa", "sab") == 0);
+            assert(startsWith(to!S("abc"), 'a'));
+            assert(!startsWith(to!S("abc"), to!T("sab")));
+            assert(startsWith(to!S("abc"), 'x', to!T("aaa"), 'a', "sab") == 3);
+            assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")));
+            assert(startsWith(to!S("\uFF28el\uFF4co"), to!T("Hel"), to!T("\uFF28el")) == 2);
+        }
+    }
+
+    assert(startsWith([0, 1, 2, 3, 4, 5], cast(int[])null));
+    assert(!startsWith([0, 1, 2, 3, 4, 5], 5));
+    assert(!startsWith([0, 1, 2, 3, 4, 5], 1));
+    assert(startsWith([0, 1, 2, 3, 4, 5], 0));
+    assert(startsWith([0, 1, 2, 3, 4, 5], 5, 0, 1) == 2);
+    assert(startsWith([0, 1, 2, 3, 4, 5], [0]));
+    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1]));
+    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1], 7) == 1);
+    assert(!startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7]));
+    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], [0, 1, 2]) == 2);
+
+    assert(!startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), 1));
+    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), 0));
+    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0]));
+    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1]));
+    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1], 7) == 1);
+    assert(!startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7]));
+    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7], [0, 1, 2]) == 2);
+    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1])));
+    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1]), 7) == 1);
+    assert(!startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1, 7])));
+    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
 }
 
 /**
@@ -3679,117 +4059,217 @@ assert(!endsWith("abc", "b"));
 assert(endsWith("abc", "a", 'c') == 2);
 assert(endsWith("abc", "c", "a") == 1);
 assert(endsWith("abc", "c", "c") == 1);
+assert(endsWith("abc", "bc", "c") == 2);
 assert(endsWith("abc", "x", "c", "b") == 2);
 assert(endsWith("abc", "x", "aa", "bc") == 3);
 assert(endsWith("abc", "x", "aaa", "sab") == 0);
 assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 ----
  */
-uint
-endsWith(alias pred = "a == b", Range, Ranges...)
-(Range doesThisEnd, Ranges withOneOfThese)
-if (isInputRange!(Range) && Ranges.length > 0
-        && is(typeof(binaryFun!pred(doesThisEnd.back, withOneOfThese[0].back))))
+uint endsWith(alias pred = "a == b", Range, Ranges...)
+             (Range doesThisEnd, Ranges withOneOfThese)
+if (isInputRange!Range && Ranges.length > 1 &&
+    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[0])) : bool) &&
+    is(typeof(.endsWith!pred(doesThisEnd, withOneOfThese[1 .. $])) : uint))
 {
-    alias doesThisEnd lhs;
-    alias withOneOfThese rhs;
-    // Special  case for two arrays
-    static if (Ranges.length == 1 && isArray!Range && isArray!(Ranges[0])
-            && is(typeof(binaryFun!(pred)(lhs[0], rhs[0][0]))))
+    alias doesThisEnd haystack;
+    alias withOneOfThese needles;
+
+    // Make one pass looking for empty ranges
+    foreach (i, Unused; Ranges)
     {
-        if (lhs.length < rhs[0].length) return 0;
-        auto k = lhs.length - rhs[0].length;
-        foreach (j; 0 .. rhs[0].length)
+        // Empty range matches everything
+        static if (!is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
         {
-            if (!binaryFun!(pred)(rhs[0][j], lhs[j + k]))
-                // not found
-                return 0u;
+            if (needles[i].empty) return i + 1;
         }
-        // found!
-        return 1u;
     }
-    else
+
+    for (; !haystack.empty; haystack.popBack())
     {
-        // Make one pass looking for empty ranges
         foreach (i, Unused; Ranges)
         {
-            // Empty range matches everything
-            if (rhs[i].empty) return i + 1;
-        }
-        bool mismatch[Ranges.length];
-        for (; !lhs.empty; lhs.popBack)
-        {
-            foreach (i, Unused; Ranges)
+            static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
             {
-                if (mismatch[i]) continue;
-                if (binaryFun!pred(lhs.back, rhs[i].back))
+                // Single-element
+                if (binaryFun!pred(haystack.back, needles[i]))
                 {
-                    // Stay in the game
-                    rhs[i].popBack();
-                    // Done with success if exhausted
-                    if (rhs[i].empty) return i + 1;
-                }
-                else
-                {
-                    // Out
-                    mismatch[i] = true;
+                    // found, but continue to account for one-element
+                    // range matches (consider endsWith("ab", "b",
+                    // 'b') should return 1, not 2).
+                    continue;
                 }
             }
+            else
+            {
+                if (binaryFun!pred(haystack.back, needles[i].back))
+                    continue;
+            }
+
+            // This code executed on failure to match
+            // Out with this guy, check for the others
+            uint result = endsWith!pred(haystack, needles[0 .. i], needles[i + 1 .. $]);
+            if (result > i) ++result;
+            return result;
         }
-        return 0;
-    }
-}
 
-unittest
-{
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(endsWith("abc", ""));
-    assert(!endsWith("abc", "a"));
-    assert(!endsWith("abc", 'a'));
-    assert(!endsWith("abc", "b"));
-    assert(endsWith("abc", "a", "c") == 2);
-    assert(endsWith("abc", 'a', 'c') == 2);
-    assert(endsWith("abc", "c", "a") == 1);
-    assert(endsWith("abc", "c", "c") == 1);
-    assert(endsWith("abc", "x", "c", "b") == 2);
-    assert(endsWith("abc", "x", "aa", "bc") == 3);
-    assert(endsWith("abc", "x", "aaa", "sab") == 0);
-    assert(endsWith("abc", "x", "aaa", "c", "sab") == 3);
-    // string a = "abc";
-    // immutable(char[1]) b = "c";
-    // assert(wyda(a, b));
-}
-
-/**
-Checks whether $(D doesThisEnd) starts with one of the individual
-elements $(D withOneOfThese) according to $(D pred).
-
-Example:
-----
-assert(endsWith("abc", 'x', 'c', 'a') == 2);
-----
- */
-uint endsWith(alias pred = "a == b", Range, Elements...)
-(Range doesThisEnd, Elements withOneOfThese)
-if (isInputRange!Range && Elements.length > 0
-        && is(typeof(binaryFun!pred(doesThisEnd.front, withOneOfThese[0]))))
-{
-    if (doesThisEnd.empty) return 0;
-    auto back = doesThisEnd.back;
-    foreach (i, Unused; Elements)
-    {
-        if (binaryFun!pred(back, withOneOfThese[i])) return i + 1;
+        // If execution reaches this point, then the back matches for all
+        // needles ranges. What we need to do now is to lop off the back of
+        // all ranges involved and recurse.
+        foreach (i, Unused; Ranges)
+        {
+            static if (is(typeof(binaryFun!pred(haystack.back, needles[i])) : bool))
+            {
+                // Test has passed in the previous loop
+                return i + 1;
+            }
+            else
+            {
+                needles[i].popBack();
+                if (needles[i].empty) return i + 1;
+            }
+        }
     }
     return 0;
 }
 
+/// Ditto
+bool endsWith(alias pred = "a == b", R1, R2)
+             (R1 doesThisEnd, R2 withThis)
+if (isInputRange!R1 &&
+    isInputRange!R2 &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
+{
+    alias doesThisEnd haystack;
+    alias withThis needle;
+
+    static if(is(typeof(pred) : string))
+        enum isDefaultPred = pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
+    // Special  case for two arrays
+    static if (isArray!R1 && isArray!R2 &&
+               ((!isSomeString!R1 && !isSomeString!R2) ||
+                 (isSomeString!R1 && isSomeString!R2 &&
+                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
+                  isDefaultPred)))
+    {
+        if (haystack.length < needle.length) return false;
+        immutable diff = haystack.length - needle.length;
+        foreach (j; 0 .. needle.length)
+        {
+            if (!binaryFun!(pred)(needle[j], haystack[j + diff]))
+                // not found
+                return false;
+        }
+        // found!
+        return true;
+    }
+    else
+    {
+        static if (hasLength!R1 && hasLength!R2)
+        {
+            if (haystack.length < needle.length) return false;
+        }
+
+        if (needle.empty) return true;
+        for (; !haystack.empty; haystack.popBack())
+        {
+            if (!binaryFun!pred(haystack.back, needle.back)) break;
+            needle.popBack();
+            if (needle.empty) return true;
+        }
+        return false;
+    }
+}
+
+/// Ditto
+bool endsWith(alias pred = "a == b", R, E)
+             (R doesThisEnd, E withThis)
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
+{
+    return doesThisEnd.empty
+        ? false
+        : binaryFun!pred(doesThisEnd.back, withThis);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(!startsWith("abc", 'x', 'n', 'b'));
-    assert(startsWith("abc", 'x', 'n', 'a') == 3);
+
+    //This is because we need to run some tests on ranges which _aren't_ arrays,
+    //and as far as I can tell, all of the functions which would wrap an array
+    //in a range (such as filter) don't return bidirectional ranges, so I'm
+    //creating one here.
+    auto static wrap(R)(R r)
+    if (isBidirectionalRange!R)
+    {
+        struct Result
+        {
+            @property auto ref front() {return _range.front;}
+            @property auto ref back() {return _range.back;}
+            @property bool empty() {return _range.empty;}
+            void popFront() {_range.popFront();}
+            void popBack() {_range.popBack();}
+            R _range;
+        }
+
+        return Result(r);
+    }
+
+    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wstring))
+    {
+        assert(!endsWith(to!S("abc"), 'a'));
+        assert(endsWith(to!S("abc"), 'a', 'c') == 2);
+        assert(!endsWith(to!S("abc"), 'x', 'n', 'b'));
+        assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
+        assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
+
+        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(dchar[], string))
+        {
+            assert(endsWith(to!S("abc"), to!T("")));
+            assert(!endsWith(to!S("abc"), to!T("a")));
+            assert(!endsWith(to!S("abc"), to!T("b")));
+            assert(endsWith(to!S("abc"), to!T("bc"), 'c') == 2);
+            assert(endsWith(to!S("abc"), to!T("a"), "c") == 2);
+            assert(endsWith(to!S("abc"), to!T("c"), "a") == 1);
+            assert(endsWith(to!S("abc"), to!T("c"), "c") == 1);
+            assert(endsWith(to!S("abc"), to!T("x"), 'c', "b") == 2);
+            assert(endsWith(to!S("abc"), 'x', to!T("aa"), "bc") == 3);
+            assert(endsWith(to!S("abc"), to!T("x"), "aaa", "sab") == 0);
+            assert(endsWith(to!S("abc"), to!T("x"), "aaa", "c", "sab") == 3);
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")));
+            assert(endsWith(to!S("\uFF28el\uFF4co"), to!T("lo"), to!T("l\uFF4co")) == 2);
+        }
+    }
+
+    assert(endsWith([0, 1, 2, 3, 4, 5], cast(int[])null));
+    assert(!endsWith([0, 1, 2, 3, 4, 5], 0));
+    assert(!endsWith([0, 1, 2, 3, 4, 5], 4));
+    assert(endsWith([0, 1, 2, 3, 4, 5], 5));
+    assert(endsWith([0, 1, 2, 3, 4, 5], 0, 4, 5) == 3);
+    assert(endsWith([0, 1, 2, 3, 4, 5], [5]));
+    assert(endsWith([0, 1, 2, 3, 4, 5], [4, 5]));
+    assert(endsWith([0, 1, 2, 3, 4, 5], [4, 5], 7) == 1);
+    assert(!endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5]));
+    assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], [3, 4, 5]) == 2);
+
+    assert(!endsWith(wrap([0, 1, 2, 3, 4, 5]), 4));
+    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), 5));
+    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [5]));
+    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [4, 5]));
+    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [4, 5], 7) == 1);
+    assert(!endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5]));
+    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5], [3, 4, 5]) == 2);
+    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5])));
+    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5]), 7) == 1);
+    assert(!endsWith([0, 1, 2, 3, 4, 5], wrap([2, 4, 5])));
+    assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], wrap([3, 4, 5])) == 2);
 }
 
 // findAdjacent
@@ -4039,7 +4519,7 @@ for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
 $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). See also
-$(WEB sgi.com/tech/stl/_equal.html, STL's equal).
+$(WEB sgi.com/tech/stl/_equal.html, STL's _equal).
 
 Example:
 ----
@@ -4061,11 +4541,10 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 if (isInputRange!(Range1) && isInputRange!(Range2)
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    foreach (e1; r1)
+    for (; !r1.empty; r1.popFront(), r2.popFront())
     {
         if (r2.empty) return false;
-        if (!binaryFun!(pred)(e1, r2.front)) return false;
-        r2.popFront;
+        if (!binaryFun!(pred)(r1.front, r2.front)) return false;
     }
     return r2.empty;
 }
@@ -4085,6 +4564,9 @@ unittest
     // predicated
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
+
+    // utf-8 strings
+    assert(equal("æøå", "æøå"));
 }
 
 // cmp
@@ -4120,7 +4602,11 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 // Specialization for strings (for speed purposes)
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
-    enum isLessThan = is(pred : string) && pred == "a < b";
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
+    else
+        enum isLessThan = false;
+
     // For speed only
     static int threeWay(size_t a, size_t b)
     {
@@ -4138,7 +4624,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
         else
             return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
     }
-    
+
     static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof && isLessThan)
     {
         static if (typeof(r1[0]).sizeof == 1)
@@ -4442,7 +4928,7 @@ stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
 evaluations of $(D pred). See also $(WEB
-sgi.com/tech/stl/_mismatch.html, STL's mismatch).
+sgi.com/tech/stl/_mismatch.html, STL's _mismatch).
 
 Example:
 ----
@@ -4704,7 +5190,7 @@ unittest
 /**
 Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target). See also $(WEB
-sgi.com/tech/stl/_copy.html, STL's copy). If a behavior similar to
+sgi.com/tech/stl/_copy.html, STL's _copy). If a behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward) is
 needed, use $(D copy(retro(source), retro(target))). See also $(XREF
 range, retro).
@@ -4819,7 +5305,7 @@ unittest
 // reverse
 /**
 Reverses $(D r) in-place.  Performs $(D r.length) evaluations of $(D
-swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's reverse).
+swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse).
 
 Example:
 ----
@@ -5377,7 +5863,7 @@ range that was moved.
 Example:
 ----
 int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-assert(a[0 .. $ - remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
+assert(a[0 .. remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
 ----
  */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
@@ -5511,7 +5997,7 @@ swap). The unstable version computes the minimum possible evaluations
 of $(D swap) (roughly half of those performed by the semistable
 version).
 
-See also STL's $(WEB sgi.com/tech/stl/_partition.html, partition) and
+See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
 $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
 
 Returns:
@@ -5883,7 +6369,7 @@ unittest
 Sorts a random-access range according to predicate $(D less). Performs
 $(BIGOH r.length * log(r.length)) (if unstable) or $(BIGOH r.length *
 log(r.length) * log(r.length)) (if stable) evaluations of $(D less)
-and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, sort)
+and $(D swap). See also STL's $(WEB sgi.com/tech/stl/_sort.html, _sort)
 and $(WEB sgi.com/tech/stl/stable_sort.html, stable_sort).
 
 Example:
@@ -5916,9 +6402,16 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     {
         sortImpl!(lessFun, ss)(r);
         static if(is(typeof(text(r))))
-            assert(isSorted!lessFun(r), text(Range.stringof, ": ", r));
+        {
+            enum maxLen = 8;
+            assert(isSorted!lessFun(r), text("Failed to sort range of type ",
+                            Range.stringof, ". Actual result is: ",
+                            r[0 .. r.length > maxLen ? maxLen : r.length ],
+                            r.length > maxLen ? "..." : ""));
+        }
         else
-            assert(isSorted!lessFun(r), text(Range.stringof, ": <unable to print elements>"));
+            assert(isSorted!lessFun(r), text("Unable to sort range of type ",
+                            Range.stringof, ": <unable to print elements>"));
     }
     else
     {
@@ -6169,7 +6662,7 @@ created.
 To check whether an array was sorted and benefit of the speedup of
 Schwartz sorting, a function $(D schwartzIsSorted) is not provided
 because the effect can be achieved by calling $(D
-isSorted!(less)(map!(transform)(r))).
+isSorted!less(map!transform(r))).
  */
 void schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)

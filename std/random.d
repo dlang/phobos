@@ -878,7 +878,7 @@ auto a = uniform(0, 1024, gen);
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
-version(D_Ddoc)
+version(StdDdoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
             T1, T2, UniformRandomNumberGenerator)
         (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
@@ -964,7 +964,7 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
 /**
 As above, but uses the default generator $(D rndGen).
  */
-version(D_Ddoc)
+version(StdDdoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
         (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
 else
@@ -1082,34 +1082,39 @@ auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
                            // and 2 10% of the time
 ----
 */
-size_t dice(R, Num)(ref R rnd, Num[] proportions...)
-if(isNumeric!Num) {
+size_t dice(Rng, Num)(ref Rng rnd, Num[] proportions...)
+if (isNumeric!Num && isForwardRange!Rng)
+{
     return diceImpl(rnd, proportions);
 }
 
 /// Ditto
 size_t dice(R, Range)(ref R rnd, Range proportions)
-if(isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range) {
+if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
+{
     return diceImpl(rnd, proportions);
 }
 
 /// Ditto
-size_t dice(Num)(Num[] proportions...)
-if(isNumeric!Num) {
+size_t dice(Range)(Range proportions)
+if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
+{
     return diceImpl(rndGen(), proportions);
 }
 
 /// Ditto
-size_t dice(Range)(Range proportions)
-if(isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range) {
+size_t dice(Num)(Num[] proportions...)
+if (isNumeric!Num)
+{
     return diceImpl(rndGen(), proportions);
 }
 
-private size_t diceImpl(R, Range)(ref R rnd, Range proportions)
-if(isForwardRange!Range && isNumeric!(ElementType!Range)) {
-    immutable sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions.save);
+private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
+if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
+{
+    double sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
-    immutable point = uniform(0.0, sum, rnd);
+    immutable point = uniform(0.0, sum, rng);
     assert(point < sum);
     auto mass = 0.0;
 
@@ -1123,8 +1128,6 @@ if(isForwardRange!Range && isNumeric!(ElementType!Range)) {
     assert(false);
 }
 
-
-
 unittest {
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
@@ -1132,13 +1135,7 @@ unittest {
     i = dice(rnd, 100.0, 0.0);
     assert(i == 0);
 
-    i = dice([100U, 0U]);
-    assert(i == 0);
-
-    i = dice(filter!"a >= 0"([100U, 0U]));
-    assert(i == 0);
-
-    i = dice(rnd, filter!"a >= 0"([100U, 0U]));
+    i = dice(100U, 0U);
     assert(i == 0);
 }
 

@@ -1,22 +1,22 @@
 // Written in the D programming language.
 /**
-Functions and types that manipulate built-in arrays.  
+Functions and types that manipulate built-in arrays.
 
-Copyright: Copyright Andrei Alexandrescu 2008-.
+Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Authors:   $(WEB erdani.org, Andrei Alexandrescu) and Jonathan M Davis
 
 Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import core.memory;
+import core.memory, core.bitop;
 import std.algorithm, std.conv, std.ctype, std.encoding, std.exception,
-    std.intrinsic, std.range, std.string, std.traits, std.typecons, std.utf;
+    std.range, std.string, std.traits, std.typecons, std.utf;
 import std.c.string : memcpy;
-version(unittest) import std.stdio, std.typetuple;
+version(unittest) import core.exception, std.stdio, std.typetuple;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -54,8 +54,7 @@ if (isIterable!Range && !isNarrowString!Range)
             static if (is(typeof(e.opAssign(e))))
             {
                 // this should be in-place construction
-                auto voidArr = (cast(void*) (result.ptr + i))[0..E.sizeof];
-                emplace!E(voidArr, e);
+                emplace!E(result.ptr + i, e);
             }
             else
             {
@@ -115,7 +114,7 @@ unittest
             return res;
         }
     }
-    
+
     auto a = array([1, 2, 3, 4, 5][]);
     //writeln(a);
     assert(a == [ 1, 2, 3, 4, 5 ]);
@@ -483,21 +482,135 @@ unittest
     assert(overlap(a, b.dup).empty);
 }
 
-/**
-Inserts $(D stuff) (which must be an input range or a single item) in
-$(D array) at position $(D pos).
+/+
+Commented out until the insert which is scheduled for deprecation is removed.
+I'd love to just remove it in favor of insertInPlace, but then code would then
+use this version of insert and silently break. So, it's here so that it can
+be used once insert has not only been deprecated but removed, but until then,
+it's commented out.
+
+/++
+    Creates a new array which is a copy of $(D array) with $(D stuff) (which
+    must be an input range or a single item) inserted at position $(D pos).
+
+    Examples:
+--------------------
+int[] a = [ 1, 2, 3, 4 ];
+auto b = a.insert(2, [ 1, 2 ]);
+assert(a == [ 1, 2, 3, 4 ]);
+assert(b == [ 1, 2, 1, 2, 3, 4 ]);
+--------------------
+ +/
+T[] insert(T, Range)(T[] array, size_t pos, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    static if(hasLength!Range && is(ElementEncodingType!Range : T))
+    {
+        auto retval = new Unqual!(T)[](array.length + stuff.length);
+        retval[0 .. pos] = array[0 .. pos];
+        copy(stuff, retval[pos .. pos + stuff.length]);
+        retval[pos + stuff.length .. $] = array[pos .. $];
+        return cast(T[])retval;
+    }
+    else
+    {
+        auto app = appender!(T[])();
+        app.put(array[0 .. pos]);
+        app.put(stuff);
+        app.put(array[pos .. $]);
+        return app.data;
+    }
+}
+
+/++ Ditto +/
+T[] insert(T)(T[] array, size_t pos, T stuff)
+{
+    auto retval = new T[](array.length + 1);
+    retval[0 .. pos] = array[0 .. pos];
+    retval[pos] = stuff;
+    retval[pos + 1 .. $] = array[pos .. $];
+    return retval;
+}
+
+//Verify Example.
+unittest
+{
+    int[] a = [ 1, 2, 3, 4 ];
+    auto b = a.insert(2, [ 1, 2 ]);
+    assert(a == [ 1, 2, 3, 4 ]);
+    assert(b == [ 1, 2, 1, 2, 3, 4 ]);
+}
+
+unittest
+{
+    auto a = [1, 2, 3, 4];
+    assert(a.insert(0, [6, 7]) == [6, 7, 1, 2, 3, 4]);
+    assert(a.insert(2, [6, 7]) == [1, 2, 6, 7, 3, 4]);
+    assert(a.insert(a.length, [6, 7]) == [1, 2, 3, 4, 6, 7]);
+
+    assert(a.insert(0, filter!"true"([6, 7])) == [6, 7, 1, 2, 3, 4]);
+    assert(a.insert(2, filter!"true"([6, 7])) == [1, 2, 6, 7, 3, 4]);
+    assert(a.insert(a.length, filter!"true"([6, 7])) == [1, 2, 3, 4, 6, 7]);
+
+    assert(a.insert(0, 22) == [22, 1, 2, 3, 4]);
+    assert(a.insert(2, 22) == [1, 2, 22, 3, 4]);
+    assert(a.insert(a.length, 22) == [1, 2, 3, 4, 22]);
+    assert(a == [1, 2, 3, 4]);
+
+    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    {
+
+        auto l = to!T("hello");
+        auto r = to!U(" world");
+
+        enforce(insert(l, 0, r) == " worldhello",
+                new AssertError("testStr failure 1", file, line));
+        enforce(insert(l, 3, r) == "hel worldlo",
+                new AssertError("testStr failure 2", file, line));
+        enforce(insert(l, l.length, r) == "hello world",
+                new AssertError("testStr failure 3", file, line));
+        enforce(insert(l, 0, filter!"true"(r)) == " worldhello",
+                new AssertError("testStr failure 4", file, line));
+        enforce(insert(l, 3, filter!"true"(r)) == "hel worldlo",
+                new AssertError("testStr failure 5", file, line));
+        enforce(insert(l, l.length, filter!"true"(r)) == "hello world",
+                new AssertError("testStr failure 6", file, line));
+    }
+
+    testStr!(string, string)();
+    testStr!(string, wstring)();
+    testStr!(string, dstring)();
+    testStr!(wstring, string)();
+    testStr!(wstring, wstring)();
+    testStr!(wstring, dstring)();
+    testStr!(dstring, string)();
+    testStr!(dstring, wstring)();
+    testStr!(dstring, dstring)();
+}
++/
+
+/++
+    Inserts $(D stuff) (which must be an input range or a single item) in
+    $(D array) at position $(D pos).
 
 Example:
 ---
 int[] a = [ 1, 2, 3, 4 ];
-a.insert(2, [ 1, 2 ]);    
+a.insertInPlace(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 1, 2, 3, 4 ]);
 ---
- */
-void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
-if (isInputRange!Range && is(ElementEncodingType!Range : T))
+ +/
+void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    static if (hasLength!Range)
+    static if(hasLength!Range &&
+              is(ElementEncodingType!Range : T) &&
+              !is(T == const T) &&
+              !is(T == immutable T))
     {
         immutable
             delta = stuff.length,
@@ -529,22 +642,107 @@ if (isInputRange!Range && is(ElementEncodingType!Range : T))
     }
 }
 
-/// Ditto
-void insert(T)(ref T[] array, size_t pos, T stuff)
+/++ Ditto +/
+void insertInPlace(T)(ref T[] array, size_t pos, T stuff)
 {
-    return insert(array, pos, (&stuff)[0 .. 1]);
+    insertInPlace(array, pos, (&stuff)[0 .. 1]);
+}
+
+//Verify Example.
+unittest
+{
+    int[] a = ([1, 4, 5]).dup;
+    insertInPlace(a, 1u, [2, 3]);
+    assert(a == [1, 2, 3, 4, 5]);
+    insertInPlace(a, 1u, 99);
+    assert(a == [1, 99, 2, 3, 4, 5]);
 }
 
 unittest
 {
-    int[] a = ([1, 4, 5]).dup;
-    insert(a, 1u, [2, 3]);
-    assert(a == [1, 2, 3, 4, 5]);
-    insert(a, 1u, 99);
-    assert(a == [1, 99, 2, 3, 4, 5]);
+    bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
+               string file = __FILE__, size_t line = __LINE__)
+    {
+        {
+            static if(is(T == typeof(T.dup)))
+                auto a = orig.dup;
+            else
+                auto a = orig.idup;
+
+            a.insertInPlace(pos, toInsert);
+            if(!std.algorithm.equal(a, result))
+                return false;
+        }
+
+        static if(isInputRange!U)
+        {
+            orig.insertInPlace(pos, filter!"true"(toInsert));
+            return std.algorithm.equal(orig, result);
+        }
+        else
+            return true;
+    }
+
+
+    assert(test([1, 2, 3, 4], 0, [6, 7], [6, 7, 1, 2, 3, 4]));
+    assert(test([1, 2, 3, 4], 2, [8, 9], [1, 2, 8, 9, 3, 4]));
+    assert(test([1, 2, 3, 4], 4, [10, 11], [1, 2, 3, 4, 10, 11]));
+
+    assert(test([1, 2, 3, 4], 0, 22, [22, 1, 2, 3, 4]));
+    assert(test([1, 2, 3, 4], 2, 23, [1, 2, 23, 3, 4]));
+    assert(test([1, 2, 3, 4], 4, 24, [1, 2, 3, 4, 24]));
+
+    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    {
+
+        auto l = to!T("hello");
+        auto r = to!U(" world");
+
+        enforce(test(l, 0, r, " worldhello"),
+                new AssertError("testStr failure 1", file, line));
+        enforce(test(l, 3, r, "hel worldlo"),
+                new AssertError("testStr failure 2", file, line));
+        enforce(test(l, l.length, r, "hello world"),
+                new AssertError("testStr failure 3", file, line));
+    }
+
+    testStr!(string, string)();
+    testStr!(string, wstring)();
+    testStr!(string, dstring)();
+    testStr!(wstring, string)();
+    testStr!(wstring, wstring)();
+    testStr!(wstring, dstring)();
+    testStr!(dstring, string)();
+    testStr!(dstring, wstring)();
+    testStr!(dstring, dstring)();
 }
 
-// @@@ TODO: document this
+/++
+    $(RED Scheduled for deprecation. Use $(XREF array, insertInPlace) instead.)
+
+    Same as $(XREF array, insertInPlace).
+  +/
+void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
+if (isInputRange!Range && is(ElementEncodingType!Range : T))
+{
+    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
+                "Use insertInPlace instead.");
+    insertInPlace(array, pos, stuff);
+}
+
+/// Ditto
+void insert(T)(ref T[] array, size_t pos, T stuff)
+{
+    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
+                "Use insertInPlace instead.");
+    insertInPlace(array, pos, stuff);
+}
+
+/++
+    Returns whether the $(D front)s of $(D lhs) and $(D rhs) both refer to the
+    same place in memory, making one of the arrays a slice of the other which
+    starts at index $(D 0).
+  +/
 pure bool sameHead(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr == rhs.ptr;
@@ -553,8 +751,7 @@ pure bool sameHead(T)(in T[] lhs, in T[] rhs)
 /********************************************
 Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
-returns a new array. For a lazy version, refer to $(XREF
-range,repeat).
+returns a new array. For a lazy version, refer to $(XREF range, repeat).
  */
 S replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
@@ -609,10 +806,8 @@ unittest
 
 /**************************************
 Split the string $(D s) into an array of words, using whitespace as
-delimiter. Runs of whitespace are merged together (no empty words are
-produced).
+delimiter. Runs of whitespace are merged together (no empty words are produced).
  */
-
 S[] split(S)(S s) if (isSomeString!S)
 {
     size_t istart;
@@ -659,7 +854,7 @@ Splits a string by whitespace.
 
 Example:
 
----- 
+----
 auto a = " a     bcd   ef gh ";
 assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 ----
@@ -824,58 +1019,10 @@ unittest
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
 }
 
-/**
-Replaces elements from $(D array) with indices ranging from $(D from)
-(inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands
-or shrinks the array as needed.
-
-Example:
----
-int[] a = [ 1, 2, 3, 4 ];
-a.replace(1, 3, [ 9, 9, 9 ]);
-assert(a == [ 1, 9, 9, 9, 4 ]);
----
- */
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-if (isDynamicArray!Range && is(ElementType!Range : T))
-{
-    if (overlap(array, stuff))
-    {
-        // use slower/conservative method
-        array = array[0 .. from] ~ stuff ~ array[to .. $];
-    }
-    else if (stuff.length <= to - from)
-    {
-        // replacement reduces length
-        // BUG 2128
-        //immutable stuffEnd = from + stuff.length;
-        auto stuffEnd = from + stuff.length;
-        array[from .. stuffEnd] = stuff;
-        array = remove(array, tuple(stuffEnd, to));
-    }
-    else
-    {
-        // replacement increases length
-        // @@@TODO@@@: optimize this
-        immutable replaceLen = to - from;
-        array[from .. to] = stuff[0 .. replaceLen];
-        insert(array, to, stuff[replaceLen .. $]);
-    }
-}
-
-unittest
-{
-    int[] a = [1, 4, 5];
-    replace(a, 1u, 2u, [2, 3, 4]);
-    assert(a == [1, 2, 3, 4, 5]);
-    replace(a, 1u, 2u, cast(int[])[]);
-    assert(a == [1, 3, 4, 5]);
-}
-
-/********************************************
-Replace occurrences of $(D from) with $(D to) in $(D a). Returns a new
-array without changing the contents of $(D subject).
- */
+/++
+    Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
+    array without changing the contents of $(D subject).
+ +/
 R1 replace(R1, R2, R3)(R1 subject, R2 from, R3 to)
 if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
         && (hasLength!R3 || isSomeString!R3))
@@ -914,11 +1061,11 @@ unittest
         auto into = to!S("silly");
         S r;
         int i;
-        
+
         r = replace(s, from, into);
         i = cmp(r, "This is a silly silly list");
         assert(i == 0);
-        
+
         r = replace(s, to!S(""), into);
         i = cmp(r, "This is a foo foo list");
         assert(i == 0);
@@ -927,10 +1074,263 @@ unittest
     }
 }
 
-/********************************************
-Replaces the first occurrence of $(D from) with $(D to) in $(D
-a). Returns a new array without changing the contents of $(D subject).
- */
+/+
+Commented out until the replace which is scheduled for deprecation is removed.
+I'd love to just remove it in favor of replaceInPlace, but then code would then
+use this version of replaceInPlace and silently break. So, it's here so that it
+can be used once replace has not only been deprecated but removed, but
+until then, it's commented out.
+
+/++
+    Replaces elements from $(D array) with indices ranging from $(D from)
+    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
+    array without changing the contents of $(D subject).
+
+Examples:
+--------------------
+auto a = [ 1, 2, 3, 4 ];
+auto b = a.replace(1, 3, [ 9, 9, 9 ]);
+assert(a == [ 1, 2, 3, 4 ]);
+assert(b == [ 1, 9, 9, 9, 4 ]);
+--------------------
+ +/
+T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    static if(hasLength!Range && is(ElementEncodingType!Range : T))
+    {
+        assert(from <= to);
+        immutable sliceLen = to - from;
+        auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
+        retval[0 .. from] = subject[0 .. from];
+
+        if(!stuff.empty)
+            copy(stuff, retval[from .. from + stuff.length]);
+
+        retval[from + stuff.length .. $] = subject[to .. $];
+        return cast(T[])retval;
+    }
+    else
+    {
+        auto app = appender!(T[])();
+        app.put(subject[0 .. from]);
+        app.put(stuff);
+        app.put(subject[to .. $]);
+        return app.data;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    auto a = [ 1, 2, 3, 4 ];
+    auto b = a.replace(1, 3, [ 9, 9, 9 ]);
+    assert(a == [ 1, 2, 3, 4 ]);
+    assert(b == [ 1, 9, 9, 9, 4 ]);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 4 ];
+    assert(replace(a, 0, 0, [5, 6, 7]) == [5, 6, 7, 1, 2, 3, 4]);
+    assert(replace(a, 0, 2, cast(int[])[]) == [3, 4]);
+    assert(replace(a, 0, 4, [5, 6, 7]) == [5, 6, 7]);
+    assert(replace(a, 0, 2, [5, 6, 7]) == [5, 6, 7, 3, 4]);
+    assert(replace(a, 2, 4, [5, 6, 7]) == [1, 2, 5, 6, 7]);
+
+    assert(replace(a, 0, 0, filter!"true"([5, 6, 7])) == [5, 6, 7, 1, 2, 3, 4]);
+    assert(replace(a, 0, 2, filter!"true"(cast(int[])[])) == [3, 4]);
+    assert(replace(a, 0, 4, filter!"true"([5, 6, 7])) == [5, 6, 7]);
+    assert(replace(a, 0, 2, filter!"true"([5, 6, 7])) == [5, 6, 7, 3, 4]);
+    assert(replace(a, 2, 4, filter!"true"([5, 6, 7])) == [1, 2, 5, 6, 7]);
+    assert(a == [ 1, 2, 3, 4 ]);
+
+    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    {
+
+        auto l = to!T("hello");
+        auto r = to!U(" world");
+
+        enforce(replace(l, 0, 0, r) == " worldhello",
+                new AssertError("testStr failure 1", file, line));
+        enforce(replace(l, 0, 3, r) == " worldlo",
+                new AssertError("testStr failure 2", file, line));
+        enforce(replace(l, 3, l.length, r) == "hel world",
+                new AssertError("testStr failure 3", file, line));
+        enforce(replace(l, 0, l.length, r) == " world",
+                new AssertError("testStr failure 4", file, line));
+        enforce(replace(l, l.length, l.length, r) == "hello world",
+                new AssertError("testStr failure 5", file, line));
+    }
+
+    testStr!(string, string)();
+    testStr!(string, wstring)();
+    testStr!(string, dstring)();
+    testStr!(wstring, string)();
+    testStr!(wstring, wstring)();
+    testStr!(wstring, dstring)();
+    testStr!(dstring, string)();
+    testStr!(dstring, wstring)();
+    testStr!(dstring, dstring)();
+}
++/
+
+/++
+    Replaces elements from $(D array) with indices ranging from $(D from)
+    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
+    shrinks the array as needed.
+
+Example:
+---
+int[] a = [ 1, 2, 3, 4 ];
+a.replaceInPlace(1, 3, [ 9, 9, 9 ]);
+assert(a == [ 1, 9, 9, 9, 4 ]);
+---
+ +/
+void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+    if(isDynamicArray!Range &&
+       is(ElementEncodingType!Range : T) &&
+       !is(T == const T) &&
+       !is(T == immutable T))
+{
+    if (overlap(array, stuff))
+    {
+        // use slower/conservative method
+        array = array[0 .. from] ~ stuff ~ array[to .. $];
+    }
+    else if (stuff.length <= to - from)
+    {
+        // replacement reduces length
+        // BUG 2128
+        //immutable stuffEnd = from + stuff.length;
+        auto stuffEnd = from + stuff.length;
+        array[from .. stuffEnd] = stuff;
+        array = remove(array, tuple(stuffEnd, to));
+    }
+    else
+    {
+        // replacement increases length
+        // @@@TODO@@@: optimize this
+        immutable replaceLen = to - from;
+        array[from .. to] = stuff[0 .. replaceLen];
+        insertInPlace(array, to, stuff[replaceLen .. $]);
+    }
+}
+
+void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+    if(isInputRange!Range &&
+       ((!isDynamicArray!Range && is(ElementType!Range : T)) ||
+        (isDynamicArray!Range && is(ElementType!Range : T) &&
+             (is(T == const T) || is(T == immutable T))) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    auto app = appender!(T[])();
+    app.put(array[0 .. from]);
+    app.put(stuff);
+    app.put(array[to .. $]);
+    array = app.data;
+
+    //This simplified version can be used once the old replace has been removed
+    //and the new one uncommented out.
+    //array = replace(array, from, to stuff);
+}
+
+//Verify Examples.
+unittest
+{
+    int[] a = [1, 4, 5];
+    replaceInPlace(a, 1u, 2u, [2, 3, 4]);
+    assert(a == [1, 2, 3, 4, 5]);
+    replaceInPlace(a, 1u, 2u, cast(int[])[]);
+    assert(a == [1, 3, 4, 5]);
+}
+
+unittest
+{
+    bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
+               string file = __FILE__, size_t line = __LINE__)
+    {
+        {
+            static if(is(T == typeof(T.dup)))
+                auto a = orig.dup;
+            else
+                auto a = orig.idup;
+
+            a.replaceInPlace(from, to, toReplace);
+            if(!std.algorithm.equal(a, result))
+                return false;
+        }
+
+        static if(isInputRange!U)
+        {
+            orig.replaceInPlace(from, to, filter!"true"(toReplace));
+            return std.algorithm.equal(orig, result);
+        }
+        else
+            return true;
+    }
+
+    assert(test([1, 2, 3, 4], 0, 0, [5, 6, 7], [5, 6, 7, 1, 2, 3, 4]));
+    assert(test([1, 2, 3, 4], 0, 2, cast(int[])[], [3, 4]));
+    assert(test([1, 2, 3, 4], 0, 4, [5, 6, 7], [5, 6, 7]));
+    assert(test([1, 2, 3, 4], 0, 2, [5, 6, 7], [5, 6, 7, 3, 4]));
+    assert(test([1, 2, 3, 4], 2, 4, [5, 6, 7], [1, 2, 5, 6, 7]));
+
+    assert(test([1, 2, 3, 4], 0, 0, filter!"true"([5, 6, 7]), [5, 6, 7, 1, 2, 3, 4]));
+    assert(test([1, 2, 3, 4], 0, 2, filter!"true"(cast(int[])[]), [3, 4]));
+    assert(test([1, 2, 3, 4], 0, 4, filter!"true"([5, 6, 7]), [5, 6, 7]));
+    assert(test([1, 2, 3, 4], 0, 2, filter!"true"([5, 6, 7]), [5, 6, 7, 3, 4]));
+    assert(test([1, 2, 3, 4], 2, 4, filter!"true"([5, 6, 7]), [1, 2, 5, 6, 7]));
+
+    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    {
+
+        auto l = to!T("hello");
+        auto r = to!U(" world");
+
+        enforce(test(l, 0, 0, r, " worldhello"),
+                new AssertError("testStr failure 1", file, line));
+        enforce(test(l, 0, 3, r, " worldlo"),
+                new AssertError("testStr failure 2", file, line));
+        enforce(test(l, 3, l.length, r, "hel world"),
+                new AssertError("testStr failure 3", file, line));
+        enforce(test(l, 0, l.length, r, " world"),
+                new AssertError("testStr failure 4", file, line));
+        enforce(test(l, l.length, l.length, r, "hello world"),
+                new AssertError("testStr failure 5", file, line));
+    }
+
+    testStr!(string, string)();
+    testStr!(string, wstring)();
+    testStr!(string, dstring)();
+    testStr!(wstring, string)();
+    testStr!(wstring, wstring)();
+    testStr!(wstring, dstring)();
+    testStr!(dstring, string)();
+    testStr!(dstring, wstring)();
+    testStr!(dstring, dstring)();
+}
+
+/++
+    $(RED Scheduled for deprecation. Use $(XREF array, replaceInPlace) instead.)
+
+    Same as $(XREF array, replaceInPlace).
+  +/
+void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+if (isDynamicArray!Range && is(ElementType!Range : T))
+{
+    pragma(msg, "std.array.replace(T, Range)(ref T[] array, size_t from, " ~
+                "size_t to, Range stuff) has been scheduled for deprecation. " ~
+                "Use replaceInPlace instead.");
+    replaceInPlace(array, from, to, stuff);
+}
+
+/++
+    Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
+    new array without changing the contents of $(D subject).
+ +/
 R1 replaceFirst(R1, R2, R3)(R1 subject, R2 from, R3 to)
 if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
 {
@@ -959,11 +1359,11 @@ unittest
         auto into = to!S("silly");
         S r;
         int i;
-        
+
         r = replace(s, from, into);
         i = cmp(r, "This is a silly silly list");
         assert(i == 0);
-        
+
         r = replace(s, to!S(""), into);
         i = cmp(r, "This is a foo foo list");
         assert(i == 0);
@@ -972,11 +1372,10 @@ unittest
     }
 }
 
-/*****************************
-Return an array that is $(D s) with $(D slice) replaced by $(D
-replacement[]).
- */
-
+/++
+    Returns an array that is $(D s) with $(D slice) replaced by
+    $(D replacement[]).
+ +/
 T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
 in
 {
@@ -992,7 +1391,7 @@ body
     result[so .. so + replacement.length] = replacement;
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
-    
+
     return cast(T[]) result;
 }
 
@@ -1028,7 +1427,6 @@ app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 ----
  */
-
 struct Appender(A : T[], T)
 {
     private struct Data
@@ -1099,7 +1497,7 @@ done.
 /**
 Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, capacity returns 0.
+appending will reallocate, $(D capacity) returns $(D 0).
  */
     @property size_t capacity()
     {
@@ -1284,7 +1682,8 @@ struct RefAppender(A : T[], T)
 /**
 Construct a ref appender with a given array reference.  This does not copy the
 data.  If the array has a larger capacity as determined by arr.capacity, it
-will be used by the appender.  $(D RefAppender) assumes that arr is a non-null value.
+will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
+value.
 
 Note, do not use builtin appending (i.e. ~=) on the original array passed in
 until you are done with the appender, because calls to the appender override
@@ -1306,7 +1705,7 @@ those appends.
 /**
 Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, capacity returns 0.
+appending will reallocate, $(D capacity) returns $(D 0).
  */
     @property size_t capacity()
     {
@@ -1322,10 +1721,10 @@ Returns the managed array.
     }
 }
 
-/**
-Convenience function that returns an $(D Appender!(A)) object
-initialized with $(D array).
- */
+/++
+    Convenience function that returns an $(D Appender!(A)) object initialized
+    with $(D array).
+ +/
 Appender!(E[]) appender(A : E[], E)(A array = null)
 {
     return Appender!(E[])(array);
@@ -1346,11 +1745,11 @@ unittest
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
-/**
-Convenience function that returns a $(D RefAppender!(A)) object
-initialized with $(D array).  Don't use null for the array pointer, use the
-other version of appender instead.
- */
+/++
+    Convenience function that returns a $(D RefAppender!(A)) object initialized
+    with $(D array).  Don't use null for the $(D array) pointer, use the other
+    version of $(D appender) instead.
+ +/
 RefAppender!(E[]) appender(A : E[]*, E)(A array)
 {
     return RefAppender!(E[])(array);
