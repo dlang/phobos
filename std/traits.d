@@ -3430,6 +3430,13 @@ unittest
     static assert(is(typeof(unsigned(1 + 1)) == uint));
 }
 
+auto unsigned(T)(T x) if (isSomeChar!T)
+{
+    // All characters are unsigned
+    static assert(T.min == 0);
+    return x;
+}
+
 /**
 Returns the most negative value of the numeric type T.
 */
