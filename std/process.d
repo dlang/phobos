@@ -1025,7 +1025,6 @@ ProcessResult execute(string name, string[] args)
         Redirect.stdout | Redirect.stderrToStdout);
 
     Appender!(ubyte[]) a;
-    auto fd = _fileno(p.stdout.getFP);
     foreach (ubyte[] chunk; p.stdout.byChunk(4096))  a.put(chunk);
 
     typeof(return) r;
@@ -1070,7 +1069,11 @@ version(Windows) private string getShell()
 /*Tuple!(int, "status", string, "output")*/
 ProcessResult shell(string command)
 {
-    return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
+    version(Windows)
+        return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
+    else version(Posix)
+        return execute(getShell(), [shellSwitch, command]);
+    else assert(0);
 }
 
 
