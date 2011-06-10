@@ -1019,7 +1019,7 @@ ProcessResult execute(string command)
 
 /// ditto
 /*Tuple!(int, "status", string, "output")*/
-ProcessResult execute(string name, string[] args)
+ProcessResult execute(string name, string[] args...)
 {
     auto p = pipeProcess(name, args,
         Redirect.stdout | Redirect.stderrToStdout);
@@ -1072,7 +1072,7 @@ ProcessResult shell(string command)
     version(Windows)
         return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
     else version(Posix)
-        return execute(getShell(), [shellSwitch, command]);
+        return execute(getShell(), shellSwitch, command);
     else assert(0);
 }
 
