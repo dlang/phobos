@@ -2117,7 +2117,6 @@ else version(Windows)
             return _attributes;
         }
 
-
     private:
 
         void _init(in char[] path)
@@ -2193,6 +2192,7 @@ else version(Windows)
 
 
         string _name; /// The file or directory represented by this DirEntry.
+
 
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
@@ -2751,7 +2751,6 @@ void rmdirRecurse(ref DirEntry de)
 version(Windows) unittest
 {
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
-
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
     enforce(!exists(deleteme ~ ".dir"));
@@ -2844,95 +2843,257 @@ enum SpanMode
     breadth,
 }
 
-struct DirIterator
+private struct DirIteratorImpl
 {
-    string pathname;
     SpanMode mode;
-
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
     bool followSymLinks;
-
-    private int doIt(D)(D dg, DirEntry* de)
+    DirEntry cur;
+    Appender!(DirHandle[]) _stack;
+    Appender!(DirEntry[]) _stashed; //unused in shallow
+    //stack helpers
+    void pushExtra(DirEntry de){ _stashed.put(de); }
+    //ditto
+    bool hasExtra(){ return !_stashed.data.empty; }
+    //ditto
+    DirEntry popExtra()
+    { 
+        DirEntry de;
+        de = _stashed.data[$-1];
+        _stashed.shrinkTo(_stashed.data.length - 1);
+        return de;
+            
+    }
+    version(Windows)
     {
-        alias ParameterTypeTuple!D Parms;
+        struct DirHandle
+        {
+            string dirpath;
+            HANDLE h;
+        }
+        bool stepIn(string directory)
+        {
+            string search_pattern = std.path.join(directory, "*.*");
+            //writeln("using search string of ",search_pattern);
+            if(useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
+                if(h == INVALID_HANDLE_VALUE)
+                    return false;
+                if(_stack.data.empty)
+                    _stack.put(DirHandle(directory, h));
+                else
+                    _stack.put(
+                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+                
+                return toNext!false(&findinfo);
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
+                if(h == INVALID_HANDLE_VALUE)
+                    return false;
+                if(_stack.data.empty)
+                    _stack.put(DirHandle(directory, h));
+                else
+                    _stack.put(
+                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
 
-        static if(is(Parms[0] : const(char)[]))
-        {
-            return dg(de.name[]);
+                return toNext!false(&findinfo);
+            }
         }
-        else static if(is(Parms[0] : DirEntry))
+        bool next()
         {
-            return dg(*de);
+            if(_stack.data.empty)
+                return false;
+            bool result;
+            if (useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                result = toNext!true(&findinfo);
+
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                result = toNext!true(&findinfo);
+            }
+            return result;
         }
-        else
+        bool toNext(bool fetch)(WIN32_FIND_DATAW* findinfo)
         {
-            static assert(0, "Dunno how to enumerate directory entries "
-                             "against type " ~ Parms[0].stringof);
+            static if(fetch)
+            {
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        bool toNext(bool fetch=false)(WIN32_FIND_DATA* findinfo)
+        {
+            static if(fetch)
+            {
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.c.string.strcmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.c.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        void popDirStack()
+        {
+            FindClose(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
+        void releaseDirStack()
+        {
+            foreach( d;  _stack.data)
+                FindClose(d.h);
+        }
+        
+    }
+    else version(Posix)
+    {
+        struct DirHandle
+        {
+            string dirpath;
+            DIR*   h;
+        }
+        void releaseDirStack()
+        {
+            
+            foreach( d;  _stack.data)
+                closedir(d.h);
+        } 
+    }
+    
+    this(string pathname, SpanMode _mode, bool _followSymLinks)
+    {
+        mode = _mode;
+        followSymLinks = _followSymLinks;
+        _stack = appender(cast(DirHandle[])[]);
+        if(mode != SpanMode.shallow)
+            _stashed = appender(cast(DirEntry[])[]);
+        stepIn(std.path.rel2abs(pathname));
+        switch(mode)
+        {
+        case SpanMode.depth:
+            while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+            {
+                auto thisDir = cur; 
+                if(stepIn(cur.name))
+                {
+                    pushExtra(thisDir);
+                }
+                else
+                    break;
+            }
+            break;
+        default:
+            //already at first file
+        }
+    }
+    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
+    @property DirEntry front(){ return cur; }
+    void popFront()
+    {
+        switch(mode)
+        {
+        case SpanMode.depth:       
+            if(next())
+            {
+                while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+                {
+                    auto thisDir = cur; 
+                    if(stepIn(cur.name))
+                    {
+                        pushExtra(thisDir);
+                    }
+                    else
+                        break;
+                }
+            }
+            else if(hasExtra())
+                cur = popExtra();
+            break;
+        case SpanMode.breadth:
+            if(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+            {
+                if(!stepIn(cur.name))
+                    while(!empty && !next()){}
+            }
+            else
+                while(!empty && !next()){}
+            break;
+        default:
+            next();
         }
     }
 
-    int opApply(D)(scope D dg)
+    ~this()
     {
-        int result = 0;
-        // worklist used only in breadth-first traversal
-        string[] worklist = [pathname];
-
-        bool callback(DirEntry* de)
-        {
-            switch(mode)
-            {
-                case SpanMode.shallow:
-                {
-                    result = doIt(dg, de);
-                    break;
-                }
-                case SpanMode.breadth:
-                {
-                    result = doIt(dg, de);
-
-                    if(!result && (followSymLinks ? de.isDir
-                                                  : isDir(de.linkAttributes)))
-                    {
-                        worklist ~= de.name;
-                    }
-
-                    break;
-                }
-                default:
-                {
-                    assert(mode == SpanMode.depth);
-
-                    if(followSymLinks ? de.isDir
-                                      : isDir(de.linkAttributes))
-                    {
-                        _listDir(de.name, &callback);
-                    }
-
-                    if(!result)
-                        result = doIt(dg, de);
-
-                    break;
-                }
-            }
-
-            return result == 0;
-        }
-
-        while(!worklist.empty)
-        {
-            auto listThis = worklist.back;
-            worklist.popBack();
-            _listDir(listThis, &callback);
-        }
-
-        return result;
+        releaseDirStack();
     }
 }
 
-
+struct DirIterator
+{
+private:
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    this(string pathname, SpanMode mode, bool followSymLinks)
+    {
+        impl = typeof(impl)(pathname, mode, followSymLinks);
+    }
+public:
+    @property bool empty(){ return impl.empty; }
+    @property DirEntry front(){ return impl.front; }
+    void popFront(){ impl.popFront(); }
+    int opApply(int delegate(ref string name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+        {
+            string s = v.name;
+            if(dg(s))
+                return 1;
+        }
+        return 0;
+    }
+    int opApply(int delegate(ref DirEntry name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+            if(dg(v))
+                return 1;
+        return 0;
+    }
+}
 /++
     Iterates a directory using foreach. The iteration variable can be
     of type $(D_PARAM string) if only the name is needed, or $(D_PARAM
@@ -2968,15 +3129,9 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 }
 --------------------
  +/
-DirIterator dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
 {
-    DirIterator result;
-
-    result.pathname = path;
-    result.mode = mode;
-    result.followSymLinks = followSymLinks;
-
-    return result;
+    return DirIterator(path, mode, followSymLinks);
 }
 
 unittest
