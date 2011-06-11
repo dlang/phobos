@@ -1189,7 +1189,7 @@ class Thread
             push R13  ;
             push R14  ;
             push R15  ;
-            push EAX ;   // 16 byte align the stack
+            push RAX ;   // 16 byte align the stack
         }
         else
             static assert(0, "Architecture not supported");
@@ -1224,7 +1224,7 @@ class Thread
         asm
         {
             // Not sure what goes here, popad is invalid in 64 bit code
-            pop EAX ;   // 16 byte align the stack
+            pop RAX ;   // 16 byte align the stack
             pop R15  ;
             pop R14  ;
             pop R13  ;
