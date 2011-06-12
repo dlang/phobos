@@ -11,12 +11,12 @@ immune of threading issues. The generators feature a number of
 well-known and well-documented methods of generating random
 numbers. An overall fast and reliable means to generate random numbers
 is the $(D_PARAM Mt19937) generator, which derives its name from
-"$(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
-Twister) with a period of 2 to the power of 19937". In
-memory-constrained situations, $(LUCKY linear congruential) generators
-such as $(D MinstdRand0) and $(D MinstdRand) might be useful. The
-standard library provides an alias $(D_PARAM Random) for whichever
-generator it considers the most fit for the target environment.
+"$(LUCKY Mersenne Twister) with a period of 2 to the power of
+19937". In memory-constrained situations, $(LUCKY linear congruential)
+generators such as $(D MinstdRand0) and $(D MinstdRand) might be
+useful. The standard library provides an alias $(D_PARAM Random) for
+whichever generator it considers the most fit for the target
+environment.
 
 Example:
 
@@ -372,8 +372,7 @@ unittest
 }
 
 /**
-The $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
-Twister) generator.
+The $(LUCKY Mersenne Twister) generator.
  */
 struct MersenneTwisterEngine(
     UIntType, size_t w, size_t n, size_t m, size_t r,
@@ -381,6 +380,7 @@ struct MersenneTwisterEngine(
     UIntType b, size_t t,
     UIntType c, size_t l)
 {
+    static assert(UIntType.min == 0);
 /**
 Parameter for the generator.
 */
@@ -866,7 +866,8 @@ Generates a number between $(D a) and $(D b). The $(D boundaries)
 parameter controls the shape of the interval (open vs. closed on
 either side). Valid values for $(D boundaries) are $(D "[]"), $(D
 "$(LPAREN)]"), $(D "[$(RPAREN)"), and $(D "()"). The default interval
-is closed to the left and open to the right.
+is closed to the left and open to the right. The version that does not
+take $(D urng) uses the default generator $(D rndGen).
 
 Example:
 
@@ -882,94 +883,14 @@ version(StdDdoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
             T1, T2, UniformRandomNumberGenerator)
         (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
-else
-    CommonType!(T1, T2) uniform(string boundaries = "[)",
-            T1, T2, UniformRandomNumberGenerator)
-(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
-if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
-        !is(CommonType!(T1, T2) == void))
-{
-    alias Unqual!(CommonType!(T1, T2)) NumberType;
-    NumberType _a, _b;
-    static if (boundaries[0] == '(')
-        {
-        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-                {
-            _a = a;
-                        _a++;
-        }
-                else {
-            _a = nextafter(a, a.infinity);
-                }
-    }
-        else
-        {
-        _a = a;
-        }
-    static if (boundaries[1] == ')')
-        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-        {
-                    _b = b;
-            static if (_b.min == 0)
-            {
-                if (b == 0)
-                {
-                    // writeln("Invalid distribution range: "
-                    //         ~ boundaries[0] ~ to!(string)(a)
-                    //         ~ ", " ~ to!(string)(b) ~ boundaries[1]);
-                    _b++;
-                }
-            }
-                        _b--;
-        }
-        else
-        {
-            static assert(isFloatingPoint!NumberType);
-            _b = nextafter(to!NumberType(b), -_b.infinity);
-        }
-    else
-        _b = b;
-    enforce(_a <= _b,
-            text("Invalid distribution range: ", boundaries[0], a,
-                    ", ", b, boundaries[1]));
-    static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-    {
-        auto myRange = _b - _a;
-        if (!myRange) return _a;
-        assert(urng.max - urng.min >= myRange,
-                "UniformIntGenerator.popFront not implemented"
-                " for large ranges");
-        Unsigned!(typeof((urng.max - urng.min + 1) / (myRange + 1)))
-            bucketSize = 1 + (urng.max - urng.min - myRange) / (myRange + 1);
-        //assert(bucketSize, to!(string)(myRange));
-        NumberType r;
-        do
-        {
-            r = cast(NumberType) ((urng.front - urng.min) / bucketSize);
-            urng.popFront;
-        }
-        while (r > myRange);
-        return cast(typeof(return)) (_a + r);
-    }
-    else
-    {
-        static assert(isFloatingPoint!NumberType);
-        auto result = _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
-            / (urng.max - urng.min);
-        urng.popFront;
-        return result;
-    }
-}
 
-/**
-As above, but uses the default generator $(D rndGen).
- */
+/** ditto */
 version(StdDdoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
         (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
-else
-CommonType!(T1, T2) uniform(string boundaries = "[)", T1, T2)
-(T1 a, T2 b)  if (is(CommonType!(T1, T2)))
+
+auto uniform(string boundaries = "[)", T1, T2)
+(T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
 }
@@ -981,13 +902,11 @@ unittest
     {
         auto x = uniform(0., 15., gen);
         assert(0 <= x && x < 15);
-        //writeln(x);
     }
     foreach (i; 0 .. 20)
     {
         auto x = uniform!"[]"('a', 'z', gen);
         assert('a' <= x && x <= 'z');
-        //writeln(x);
     }
 
         foreach (i; 0 .. 20)
@@ -1004,6 +923,93 @@ unittest
         }
 }
 
+// Implementation of uniform for floating-point types
+auto uniform(string boundaries = "[)",
+        T1, T2, UniformRandomNumberGenerator)
+(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+if (isFloatingPoint!(CommonType!(T1, T2)))
+{
+    alias Unqual!(CommonType!(T1, T2)) NumberType;
+    static if (boundaries[0] == '(')
+    {
+        NumberType _a = nextafter(cast(NumberType) a, NumberType.infinity);
+    }
+    else
+    {
+        NumberType _a = a;
+    }
+    static if (boundaries[1] == ')')
+    {
+        NumberType _b = nextafter(cast(NumberType) b, -NumberType.infinity);
+    }
+    else
+    {
+        NumberType _b = b;
+    }
+    enforce(_a <= _b,
+            text("std.random.uniform(): invalid bounding interval ",
+                    boundaries[0], a, ", ", b, boundaries[1]));
+    NumberType result =
+        _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
+        / (urng.max - urng.min);
+    urng.popFront();
+    return result;
+}
+
+// Implementation of uniform for integral types
+auto uniform(string boundaries = "[)",
+        T1, T2, UniformRandomNumberGenerator)
+(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
+{
+    alias Unqual!(CommonType!(T1, T2)) ResultType;
+    // We handle the case "[)' as the common case, and we adjust all
+    // other cases to fit it.
+    static if (boundaries[0] == '(')
+    {
+        enforce(cast(ResultType) a < ResultType.max,
+                text("std.random.uniform(): invalid left bound ", a));
+        ResultType min = cast(ResultType) a + 1;
+    }
+    else
+    {
+        ResultType min = a;
+    }
+    static if (boundaries[1] == ']')
+    {
+        enforce(min <= cast(ResultType) b,
+                text("std.random.uniform(): invalid bounding interval ",
+                        boundaries[0], a, ", ", b, boundaries[1]));
+        if (b == ResultType.max && min == ResultType.min)
+        {
+            // Special case - all bits are occupied
+            return .uniform!ResultType(urng);
+        }
+        auto count = unsigned(b - min) + 1u;
+        static assert(count.min == 0);
+    }
+    else
+    {
+        enforce(min < cast(ResultType) b,
+                text("std.random.uniform(): invalid bounding interval ",
+                        boundaries[0], a, ", ", b, boundaries[1]));
+        auto count = unsigned(b - min);
+        static assert(count.min == 0);
+    }
+    assert(count != 0);
+    if (count == 1) return min;
+    alias typeof(count) CountType;
+    static assert(CountType.min == 0);
+    auto bucketSize = 1u + (CountType.max - count + 1) / count;
+    CountType r;
+    do
+    {
+        r = cast(CountType) (uniform!CountType(urng) / bucketSize);
+    }
+    while (r >= count);
+    return cast(typeof(return)) (min + r);
+}
+
 unittest
 {
     auto gen = Mt19937(unpredictableSeed);
@@ -1015,6 +1021,52 @@ unittest
     assert(0 <= b && b < 1, to!string(b));
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
+}
+
+/**
+Generates a uniformly-distributed number in the range $(D [T.min,
+T.max]) for any integral type $(D T). If no random number generator is
+passed, uses the default $(D rndGen).
+ */
+auto uniform(T, UniformRandomNumberGenerator)
+(ref UniformRandomNumberGenerator urng)
+if (isIntegral!T || isSomeChar!T)
+{
+    auto r = urng.front;
+    urng.popFront();
+    static if (T.sizeof <= r.sizeof)
+    {
+        return cast(T) r;
+    }
+    else
+    {
+        static assert(T.sizeof == 8 && r.sizeof == 4);
+        T r1 = urng.front | (r << 32);
+        urng.popFront();
+        return r1;
+    }
+}
+
+/// Ditto
+auto uniform(T)()
+if (isIntegral!T || isSomeChar!T)
+{
+    return uniform!T(rndGen);
+}
+
+unittest
+{
+    {auto a = uniform!char(); }
+    {auto a = uniform!wchar();}
+    {auto a = uniform!dchar();}
+    {auto a = uniform!byte();}
+    {auto a = uniform!ubyte();}
+    {auto a = uniform!short();}
+    {auto a = uniform!ushort();}
+    {auto a = uniform!int();}
+    {auto a = uniform!uint();}
+    {auto a = uniform!long();}
+    {auto a = uniform!ulong();}
 }
 
 /**

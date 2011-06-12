@@ -161,8 +161,9 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, string line; file) {
-   *   stdout.writefln("line %d: %s",n,line);
+   * foreach(ulong n, char[] line; file)
+   * {
+   *     writefln("line %d: %s", n, line);
    * }
    * file.close();
    * ------------------------------------
@@ -486,6 +487,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case char.init:
         result.length = strlen;
@@ -528,6 +530,7 @@ class Stream : InputStream, OutputStream {
         } else {
           prevCr = true;
         }
+        goto case;
       case '\n':
       case wchar.init:
         result.length = strlen;
@@ -1487,7 +1490,7 @@ class BufferedStream : FilterStream {
     assert(bufferLen <= buffer.length);
   }
 
-  const size_t DefaultBufferSize = 8192;
+  enum size_t DefaultBufferSize = 8192;
 
   /***
    * Create a buffered stream for the stream source with the buffer size
@@ -2184,7 +2187,7 @@ enum BOM {
         UTF32BE,        /// UTF-32 Big Endian
 }
 
-private const int NBOMS = 5;
+private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
   Endian.LittleEndian, Endian.BigEndian,

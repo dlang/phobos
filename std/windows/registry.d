@@ -60,8 +60,6 @@ import std.conv;
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
  +/
-/// A strongly-typed Boolean
-public alias int        boolean;
 
 version(LittleEndian)
 {
@@ -122,7 +120,7 @@ private typedef uint Reserved;
 /+ ++++++ This is borrowed from synsoft.text.token, until such time as something
  + similar is in Phobos ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  +/
-string[] tokenise(string source, char delimiter, boolean bElideBlanks, boolean bZeroTerminate)
+string[] tokenise(string source, char delimiter, bool bElideBlanks, bool bZeroTerminate)
 {
     int         i;
     int         cDelimiters =   128;
@@ -295,25 +293,15 @@ public enum REG_VALUE_TYPE
  * External function declarations
  */
 
-extern (C)
-{
-    int wsprintfA(char *dest, char *fmt, ...);
-}
-
-extern (Windows)
+private extern (Windows)
 {
     LONG    RegCreateKeyExA(in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in Reserved , in DWORD dwOptions
                         ,   in REGSAM samDesired
                         ,   in LPSECURITY_ATTRIBUTES lpsa
                         ,   out HKEY hkeyResult, out DWORD disposition);
-    LONG    RegDeleteKeyA(in HKEY hkey, in LPCSTR lpSubKey);
-    LONG    RegDeleteValueA(in HKEY hkey, in LPCSTR lpValueName);
-    LONG    RegOpenKeyA(in HKEY hkey, in LPCSTR lpSubKey, out HKEY hkeyResult);
     LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REGSAM samDesired, out HKEY hkeyResult);
-    LONG    RegCloseKey(in HKEY hkey);
-    LONG    RegFlushKey(in HKEY hkey);
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
@@ -336,9 +324,6 @@ extern (Windows)
     LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REG_VALUE_TYPE type, in LPCVOID lpData
                         ,   in DWORD cbData);
-
-    DWORD   ExpandEnvironmentStringsA(in LPCSTR src, in LPSTR dest, in DWORD cchDest);
-    int     GetLastError();
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -521,7 +506,7 @@ body
     }
 
     HKEY    hkeyDup;
-    LONG    lRes = RegOpenKeyA(hkey, null, hkeyDup);
+    LONG    lRes = RegOpenKeyA(hkey, null, &hkeyDup);
 
     debug
     {
@@ -971,7 +956,7 @@ public class Key
 /// \name Construction
 //@{
 private:
-    this(HKEY hkey, string name, boolean created)
+    this(HKEY hkey, string name, bool created)
     in
     {
         assert(!(null is hkey));
@@ -1003,7 +988,7 @@ public:
     }
 
 /*  /// Indicates whether this key was created, rather than opened, by the client
-    boolean Created()
+    bool Created()
     {
         return m_created;
     }
@@ -1279,7 +1264,7 @@ public:
     /// \param value The string value to set
     /// \param asEXPAND_SZ If true, the value will be stored as an expandable environment string, otherwise as a normal string
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
-    void setValue(string name, string value, boolean asEXPAND_SZ)
+    void setValue(string name, string value, bool asEXPAND_SZ)
     {
         Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
@@ -1365,7 +1350,7 @@ public:
 private:
     HKEY    m_hkey;
     string m_name;
-    boolean m_created;
+    bool m_created;
 //@}
 }
 
@@ -1867,7 +1852,7 @@ public:
             {
                 try
                 {
-                    Key key =   m_key.getKey(cast(string)sName[0 .. cchName]);
+                    Key key =   m_key.getKey(sName[0 .. cchName].idup);
 
                     result = dg(key);
                 }

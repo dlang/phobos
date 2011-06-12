@@ -52,8 +52,17 @@ version (Posix)
 // The following is needed for reading/writing environment variables.
 version(Posix)
 {
-    // Made available by the C runtime:
-    private extern(C) extern __gshared const char** environ;
+    version(OSX)
+    {
+        // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
+        private extern(C) extern __gshared char*** _NSGetEnviron();
+        // need to declare environ = *_NSGetEnviron() in static this()
+    }
+    else
+    {
+        // Made available by the C runtime:
+        private extern(C) extern __gshared const char** environ;
+    }
 }
 version(Windows)
 {
@@ -82,8 +91,7 @@ version(Windows)
 
    Note: On Unix systems, the homonym C function (which is accessible
    to D programs as $(LINK2 std_c_process.html, std.c._system))
-   returns a code in the same format as
-   $(WEB www.scit.wlv.ac.uk/cgi-bin/mansec?2+waitpid, waitpid),
+   returns a code in the same format as $(LUCKY waitpid, waitpid),
    meaning that C programs must use the $(D WEXITSTATUS) macro to
    extract the actual exit code from the $(D system) call. D's $(D
    system) automatically extracts the exit status.
@@ -486,6 +494,15 @@ alias Environment environment;
 
 abstract final class Environment
 {
+    // initiaizes the value of environ for OSX
+    version(OSX)
+    {
+        static private char** environ;
+        static this()
+        {
+            environ = * _NSGetEnviron();
+        }
+    }
 static:
 
 private:
