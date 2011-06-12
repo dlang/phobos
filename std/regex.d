@@ -833,7 +833,7 @@ Returns the number of parenthesized captures
                 if (isAlpha(c))
                 {
                     op = REichar;
-                    c = cast(char)std.ctype.toupper(c);
+                    c = cast(char)std.ctype.toUpper(c);
                 }
             }
             if (op == REchar && c <= 0xFF)
@@ -2114,7 +2114,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (c1 != c2)
                 {
                     if (isLower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                        c2 = std.ctype.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2145,7 +2145,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (c1 != c2)
                 {
                     if (isLower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                        c2 = std.ctype.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2916,7 +2916,7 @@ Capitalize the letters 'a' and 'r':
 ---
 string baz(RegexMatch!(string) m)
 {
-    return std.string.toupper(m.hit);
+    return std.string.toUpper(m.hit);
 }
 auto s = replace!(baz)("Strap a rocket engine on a chicken.",
         regex("[ar]", "g"));
@@ -2991,7 +2991,7 @@ unittest
 
     string baz(RegexMatch!(string) m)
     {
-        return std.string.toupper(m.hit);
+        return std.string.toUpper(m.hit);
     }
     auto s = replace!(baz)("Strap a rocket engine on a chicken.",
             regex("[ar]", "g"));

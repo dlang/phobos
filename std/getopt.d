@@ -599,7 +599,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     foreach (v ; variants)
     {
         //writeln("Trying variant: ", v, " against ", arg);
-        if (arg == v || !cfg.caseSensitive && toupper(arg) == toupper(v))
+        if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
                 && std.string.indexOf(arg, v) >= 0)

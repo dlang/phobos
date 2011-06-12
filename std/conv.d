@@ -1481,11 +1481,11 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     }
     else // not hex
     {
-        if (toupper(p.front) == 'N' && !startsWithZero)
+        if (toUpper(p.front) == 'N' && !startsWithZero)
         {
             // nan
-            enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
-                    && (p.popFront(), !p.empty && toupper(p.front) == 'N'),
+            enforce((p.popFront(), !p.empty && toUpper(p.front) == 'A')
+                    && (p.popFront(), !p.empty && toUpper(p.front) == 'N'),
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
