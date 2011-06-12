@@ -129,7 +129,6 @@ real erfc(real a)
     z = expx2(a, -1);
     real y = 1.0/x;
 
-    real p, q;
 
     if( x < 8.0 ) y = z * rationalPoly(y, P, Q);
     else          y = z * y * rationalPoly(y * y, R, S);
@@ -155,8 +154,6 @@ private {
 
 real erfce(real x)
 {
-    real p, q;
-
     real y = 1.0/x;
 
     if (x < 8.0) {
