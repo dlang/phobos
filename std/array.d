@@ -242,7 +242,17 @@ unittest
     s2.popFront();
     assert(s2 == "hello");
     string s3 = "\u20AC100";
-    //write(s3, '\n');
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        S str = "hello\U00010143\u0100\U00010143";
+        foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
+        {
+            assert(str.front == c);
+            str.popFront();
+        }
+        assert(str.empty);
+    }
 
     static assert(!__traits(compiles, popFront!(immutable string)));
 }
@@ -281,68 +291,37 @@ unittest
 
 // Specialization for arrays of char
 @trusted void popBack(A)(ref A a)
-if (is(A : const(char)[]) && isMutable!A)
+    if((is(A : const(char)[]) || is(A : const(wchar)[])) &&
+       isMutable!A)
 {
-    immutable n = a.length;
-    const p = a.ptr + n;
-    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 1];
-    }
-    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 2];
-    }
-    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 3];
-    }
-    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 4];
-    }
-    else
-    {
-        throw new UtfException("Invalid UTF character at end of string");
-    }
+    assert(a.length, "Attempting to popBack() past the front of an array of " ~
+                     typeof(a[0]).stringof);
+    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
 }
 
 unittest
 {
-    string s = "hello\xE2\x89\xA0";
-    s.popBack();
-    assert(s == "hello", s);
-    string s3 = "\xE2\x89\xA0";
-    auto c = s3.back;
-    assert(c == cast(dchar)'\u2260');
-    s3.popBack();
-    assert(s3 == "");
-
-    static assert(!__traits(compiles, popBack!(immutable char[])));
-}
-
-// Specialization for arrays of wchar
-@trusted void popBack(A)(ref A a)
-if (is(A : const(wchar)[]) && isMutable!A)
-{
-    assert(a.length);
-    if (a.length <= 1) // this is technically == but costs nothing and is safer
+    foreach(S; TypeTuple!(string, wstring, dstring))
     {
-        a = a[0 .. 0];
-        return;
+        S s = "hello\xE2\x89\xA0";
+        s.popBack();
+        assert(s == "hello");
+        S s3 = "\xE2\x89\xA0";
+        auto c = s3.back;
+        assert(c == cast(dchar)'\u2260');
+        s3.popBack();
+        assert(s3 == "");
+
+        S str = "\U00010143\u0100\U00010143hello";
+        foreach(dchar c; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
+        {
+            assert(str.back == c);
+            str.popBack();
+        }
+        assert(str.empty);
+
+        static assert(!__traits(compiles, popBack!(immutable S)));
     }
-    // We can go commando from here on, we're safe; length is > 1
-    immutable c = a.ptr[a.length - 2];
-    a = a.ptr[0 .. a.length - 1 - (c >= 0xD800 && c <= 0xDBFF)];
-}
-
-unittest
-{
-    wstring s = "hello\xE2\x89\xA0";
-    s.popBack();
-    assert(s == "hello");
-
-    static assert(!__traits(compiles, popBack!(immutable wchar[])));
 }
 
 /**
@@ -363,13 +342,15 @@ assert(a.front == 1);
 ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to fetch the front of an empty array");
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~
+                     typeof(a[0]).stringof);
     return a[0];
 }
 
 dchar front(A)(A a) if (isNarrowString!A)
 {
-    assert(a.length, "Attempting to fetch the front of an empty array");
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~
+                     typeof(a[0]).stringof);
     size_t i = 0;
     return decode(a, i);
 }
@@ -398,7 +379,8 @@ assert(a.back == 3);
 */
 ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array");
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~
+                     typeof(a[0]).stringof);
     return a[$ - 1];
 }
 
@@ -412,33 +394,12 @@ unittest
 
 // Specialization for strings
 dchar back(A)(A a)
-if (isDynamicArray!A && isNarrowString!A)
+    if(isDynamicArray!A && isNarrowString!A)
 {
-    auto n = a.length;
-    const p = a.ptr + n;
-    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-    {
-        --n;
-    }
-    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 2;
-    }
-    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 3;
-    }
-    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 4;
-    }
-    else
-    {
-        throw new UtfException(a.length
-                ? "Invalid UTF character at end of string"
-                : "Attempting to fetch the back of an empty array");
-    }
-    return decode(a, n);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~
+                     typeof(a[0]).stringof);
+    size_t i = a.length - std.utf.strideBack(a, a.length);
+    return decode(a, i);
 }
 
 // overlap

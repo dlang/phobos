@@ -174,7 +174,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow nothrow
 
 unittest
 {
-    foreach(c; chain(digits, octDigits, hexDigits, letters, lowercase, uppercase))
+    foreach(c; chain(digits, octDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
     foreach(c; whitespace)
@@ -287,7 +287,7 @@ bool isHexDigit(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; hexDigits)
+    foreach(c; fullHexDigits)
         assert(isHexDigit(c));
 
     foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
