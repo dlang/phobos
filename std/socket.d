@@ -42,7 +42,7 @@ import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv,
 
 import core.time : dur, Duration;
 import std.algorithm : max;
-import std.exception : enforce;
+import std.exception : assumeUnique, enforce;
 
 version(unittest)
 {
@@ -180,6 +180,8 @@ class SocketException: Exception
 }
 
 
+private __gshared typeof(&getnameinfo) getnameinfoPointer;
+
 shared static this()
 {
         version(Win32)
@@ -192,6 +194,19 @@ shared static this()
                 val = WSAStartup(0x2020, &wd);
                 if(val) // Request Winsock 2.2 for IPv6.
                         throw new SocketException("Unable to initialize socket library", val);
+
+                // See the comment in InternetAddress.toHostNameString() for
+                // details on the getnameinfo() issue.
+                auto ws2Lib = GetModuleHandleA("ws2_32.dll");
+                if (ws2Lib)
+                {
+                        getnameinfoPointer = cast(typeof(getnameinfoPointer))
+                                GetProcAddress(ws2Lib, "getnameinfo");
+                }
+        }
+        else version(Posix)
+        {
+                getnameinfoPointer = &getnameinfo;
         }
 }
 
@@ -568,6 +583,9 @@ class InternetHost
 
         /**
          * Resolve IPv4 address number. Returns false if unable to resolve.
+         *
+         * Params:
+         *   addr = The IPv4 address to resolve, in network byte order.
          */
         bool getHostByAddr(uint addr)
         {
@@ -830,6 +848,35 @@ class InternetAddress: Address
         string toPortString()
         {
                 return std.conv.to!string(port());
+        }
+
+        /*
+         * Returns the host name as a fully qualified domain name, if
+         * available, or the IP address in dotted-decimal notation otherwise.
+         */
+        string toHostNameString()
+        {
+                // getnameinfo() is the recommended way to perform a reverse (name)
+                // lookup on both Posix and Windows. However, it is only available
+                // on Windows XP and above, and not included with the WinSock import
+                // libraries shipped with DMD. Thus, we check for getnameinfo at
+                // runtime in the shared module constructor, and fall back to the
+                // deprecated getHostByAddr() if it could not be found. See also:
+                // http://technet.microsoft.com/en-us/library/aa450403.aspx
+                if (getnameinfoPointer is null)
+                {
+                        auto host = new InternetHost();
+                        enforce(host.getHostByAddr(sin.sin_addr.s_addr),
+                                new SocketException("Could not get host name."));
+                        return host.name;
+                }
+
+                auto buf = new char[NI_MAXHOST];
+                auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
+                        buf.ptr, buf.length, null, 0, 0);
+                enforce(rc == 0, new SocketException(
+                        "Could not get host name", _lasterr()));
+                return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
         /// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
