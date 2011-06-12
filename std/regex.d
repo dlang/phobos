@@ -830,7 +830,7 @@ Returns the number of parenthesized captures
             op = REchar;
             if (attributes & REA.ignoreCase)
             {
-                if (isalpha(c))
+                if (isAlpha(c))
                 {
                     op = REichar;
                     c = cast(char)std.ctype.toupper(c);
@@ -1271,7 +1271,7 @@ Returns the number of parenthesized captures
     }
 
 // BUG: should this include '$'?
-    private int isword(dchar c) { return isalnum(c) || c == '_'; }
+    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
 
     void printProgram(const(ubyte)[] prog = null)
     {
@@ -1912,7 +1912,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         if (engine.program[0] == engine.REchar)
         {
             firstc = engine.program[1];
-            if (engine.attributes & engine.REA.ignoreCase && isalpha(firstc))
+            if (engine.attributes & engine.REA.ignoreCase && isAlpha(firstc))
                 firstc = 0;
         }
         ubyte* pmemory = cast(ubyte *)alloca(stackSize);

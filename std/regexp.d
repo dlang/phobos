@@ -879,7 +879,7 @@ private:
             };
 
 // BUG: should this include '$'?
-    private int isword(dchar c) { return isalnum(c) || c == '_'; }
+    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
 
     private uint inf = ~0u;
 
@@ -1315,7 +1315,7 @@ public bool test(string s)
         if (program[0] == REchar)
         {
             firstc = program[1];
-            if (attributes & REA.ignoreCase && isalpha(firstc))
+            if (attributes & REA.ignoreCase && isAlpha(firstc))
                 firstc = 0;
         }
 
@@ -2413,7 +2413,7 @@ public bool test(string s)
                 op = REchar;
                 if (attributes & REA.ignoreCase)
                 {
-                    if (isalpha(c))
+                    if (isAlpha(c))
                     {
                         op = REichar;
                         c = cast(char)std.ctype.toupper(c);

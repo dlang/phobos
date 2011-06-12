@@ -2659,7 +2659,7 @@ unittest
 
 S succ(S)(S s) if (isSomeString!S)
 {
-    if (s.length && isalnum(s[$ - 1]))
+    if (s.length && std.ctype.isAlphaNum(s[$ - 1]))
     {
         auto r = s.dup;
         size_t i = r.length - 1;
@@ -2692,7 +2692,7 @@ S succ(S)(S s) if (isSomeString!S)
                 break;
 
             default:
-                if (std.ctype.isalnum(c))
+                if (std.ctype.isAlphaNum(c))
                     r[i]++;
                 return cast(S) r;
             }

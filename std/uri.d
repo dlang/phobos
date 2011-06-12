@@ -407,7 +407,7 @@ size_t uriLength(string s)
     for (; i < s.length; i++)
     {
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_' || c == '?' ||
         c == '=' || c == '%' || c == '&' ||
@@ -442,7 +442,7 @@ Lno:
 size_t emailLength(string s)
 {   size_t i;
 
-    if (!isalpha(s[0]))
+    if (!isAlpha(s[0]))
     goto Lno;
 
     for (i = 1; 1; i++)
@@ -450,7 +450,7 @@ size_t emailLength(string s)
     if (i == s.length)
         goto Lno;
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_' || c == '.')
         continue;
@@ -467,7 +467,7 @@ size_t emailLength(string s)
     for (; i < s.length; i++)
     {
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_')
         continue;

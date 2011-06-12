@@ -49,7 +49,7 @@ else
  *
  * Returns !=0 if c is a letter in the range (0..9, a..z, A..Z).
  */
-pure int isalnum(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG) : 0; }
+?/pure int isalnum(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG) : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use $(D isAlpha) instead.)
