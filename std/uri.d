@@ -259,7 +259,7 @@ private dstring URI_Decode(string string, uint reservedSet)
     start = k;
     if (k + 2 >= len)
         goto LthrowURIerror;
-    if (!isxdigit(s[k + 1]) || !isxdigit(s[k + 2]))
+    if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
         goto LthrowURIerror;
     B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
     k += 2;
@@ -292,7 +292,7 @@ private dstring URI_Decode(string string, uint reservedSet)
         k++;
         if (s[k] != '%')
             goto LthrowURIerror;
-        if (!isxdigit(s[k + 1]) || !isxdigit(s[k + 2]))
+        if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
             goto LthrowURIerror;
         B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
         if ((B & 0xC0) != 0x80)

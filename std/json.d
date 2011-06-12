@@ -156,7 +156,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                 dchar val = 0;
                                 foreach_reverse(i; 0 .. 4) {
                                         auto hex = toupper(getChar());
-                                        if(!isxdigit(hex)) error("Expecting hex character");
+                                        if(!isHexDigit(hex)) error("Expecting hex character");
                                         val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                                 }
                                 char[4] buf = void;

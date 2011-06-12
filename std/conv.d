@@ -1373,7 +1373,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         while (!p.empty)
         {
             int i = p.front;
-            while (isxdigit(i))
+            while (isHexDigit(i))
             {
                 anydigits = 1;
                 i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
