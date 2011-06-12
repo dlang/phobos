@@ -816,7 +816,7 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(islower(trailing[1]) || trailing[1] == '*',
+                    enforce(isLower(trailing[1]) || trailing[1] == '*',
                             text("'%", trailing[1],
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];

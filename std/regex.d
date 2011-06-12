@@ -2113,7 +2113,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
+                    if (isLower(cast(E) c2))
                         c2 = std.ctype.toupper(cast(E) c2);
                     else
                         goto Lnomatch;
@@ -2144,7 +2144,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
+                    if (isLower(cast(E) c2))
                         c2 = std.ctype.toupper(cast(E) c2);
                     else
                         goto Lnomatch;

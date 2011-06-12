@@ -137,14 +137,9 @@ pure int isascii(dchar c)  { return c <= 0x7F; }
  * return the lower case equivalent, otherwise return c.
  */
 pure dchar tolower(dchar c)
-    out (result)
-    {
-        assert(!isupper(result));
-    }
-    body
-    {
-        return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
-    }
+{
+    return toLower(c);
+}
 
 
 /**
@@ -154,14 +149,9 @@ pure dchar tolower(dchar c)
  * return the upper case equivalent, otherwise return c.
  */
 pure dchar toupper(dchar c)
-    out (result)
-    {
-        assert(!islower(result));
-    }
-    body
-    {
-        return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
-    }
+{
+    return toUpper(c);
+}
 
 
 /++
