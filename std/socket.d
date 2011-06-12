@@ -78,9 +78,7 @@ else version(BsdSockets)
         version(linux)
             import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                 IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-                protoent, servent, hostent, SD_RECEIVE, SD_SEND, SD_BOTH,
-                MSG_NOSIGNAL, INADDR_NONE, getprotobyname, getprotobynumber,
-                getservbyname, getservbyport, gethostbyname, gethostbyaddr;
+                SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE;
         else version(OSX)
             private import std.c.osx.socket;
         else version(FreeBSD)
@@ -94,6 +92,8 @@ else version(BsdSockets)
         }
         else
             static assert(false);
+
+        import core.sys.posix.netdb;
         private import core.sys.posix.fcntl;
         private import core.sys.posix.unistd;
         private import core.sys.posix.arpa.inet;
