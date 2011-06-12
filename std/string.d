@@ -116,7 +116,7 @@ immutable char[16] hexdigits = "0123456789ABCDEF";
 
     0..9
   +/
-immutable char[10] digits    = "0123456789";
+alias std.ctype.digits digits;
 
 /++
     $(RED Scheduled for deprecation in December 2011.
@@ -157,7 +157,7 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     ASCII whitespace.
   +/
-immutable char[6] whitespace = " \t\v\r\n\f";
+alias std.ctype.whitespace whitespace;
 
 /++
     $(RED Scheduled for deprecation in December 2011.
@@ -181,9 +181,7 @@ enum dchar PS = '\u2029';
 
     Newline sequence for this system.
   +/
-version(StdDDoc)immutable char[2] newline;
-else version(Windows)immutable char[2] newline = "\r\n";
-else version(Posix) immutable char[1] newline = "\n";
+alias std.ctype.newline newline;
 
 /**********************************
  * $(RED Scheduled for deprecation in December 2011.
@@ -200,7 +198,7 @@ else bool iswhite(C)(C c)
 
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
-        : (c == PS || c == LS);
+        : (c == paraSep || c == lineSep);
 }
 
 
@@ -2030,8 +2028,8 @@ S entab(S)(S s, size_t tabSize = 8)
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             // Truncate any trailing spaces or tabs
             if (nwhite)
             {
@@ -3510,8 +3508,8 @@ size_t column(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             column = 0;
             break;
 

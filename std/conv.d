@@ -3469,8 +3469,8 @@ body
     char[value.sizeof * 8] buffer;
     uint i = buffer.length;
 
-    if (value < radix && value < hexdigits.length)
-        return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
+    if (value < radix && value < hexDigits.length)
+        return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
 
     do
     {
@@ -4246,9 +4246,9 @@ if (isIntegral!T && isOutputRange!(W, char))
         v = value;
     }
 
-    if (v < 10 && v < hexdigits.length)
+    if (v < 10 && v < hexDigits.length)
     {
-        put(writer, hexdigits[cast(size_t) v]);
+        put(writer, hexDigits[cast(size_t) v]);
         return;
     }
 
