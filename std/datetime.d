@@ -32653,7 +32653,7 @@ unittest
   +/
 Month monthFromString(string monthStr)
 {
-    switch(tolower(monthStr))
+    switch(toLower(monthStr))
     {
         case "january":
         case "jan":

@@ -2959,7 +2959,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
-    auto sx = std.string.tolower(s);
+    auto sx = std.string.toLower(s);
     int    j  = 0;
     char   c;
 

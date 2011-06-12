@@ -2723,7 +2723,7 @@ assert(!find(a, 2).empty);      // found
 
 // Case-insensitive find of a string
 string[] s = [ "Hello", "world", "!" ];
-assert(!find!("tolower(a) == b")(s, "hello").empty);
+assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
  */
 R find(alias pred = "a == b", R, E)(R haystack, E needle)
@@ -6462,7 +6462,7 @@ unittest
     sort(a);
     assert(isSorted(a));
     auto b = rndstuff!(string);
-    sort!("tolower(a) < tolower(b)")(b);
+    sort!("toLower(a) < toLower(b)")(b);
     assert(isSorted!("toupper(a) < toupper(b)")(b));
 }
 

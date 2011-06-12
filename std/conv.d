@@ -1324,7 +1324,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     case '-':
         sign++;
         p.popFront();
-        if (tolower(p.front) == 'i') goto case 'i';
+        if (toLower(p.front) == 'i') goto case 'i';
         enforce(!p.empty, bailOut());
         break;
     case '+':
@@ -1333,8 +1333,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         break;
     case 'i': case 'I':
         p.popFront();
-        if (tolower(p.front) == 'n' &&
-                (p.popFront(), tolower(p.front) == 'f') &&
+        if (toLower(p.front) == 'n' &&
+                (p.popFront(), toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'

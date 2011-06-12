@@ -2047,10 +2047,10 @@ sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
             return std.string.lastIndexOf(s, c, cs);
         if (c <= 0x7F)
         {
-            c = std.ctype.tolower(c);
+            c = std.ctype.toLower(c);
             for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
-                if (std.ctype.tolower(s[i]) == c)
+                if (std.ctype.toLower(s[i]) == c)
                 {
                     if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
                         return i;

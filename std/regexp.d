@@ -2956,7 +2956,7 @@ private:
                 c = prog[i + 1];
                 if (c <= 0x7F)
                 {   r.setbit2(c);
-                    r.setbit2(std.ctype.tolower(cast(rchar)c));
+                    r.setbit2(std.ctype.toLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -2983,7 +2983,7 @@ private:
                 debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
                 if (c <= 0x7F)
                 {   r.setbit2(std.ctype.toupper(cast(rchar)c));
-                    r.setbit2(std.ctype.tolower(cast(rchar)c));
+                    r.setbit2(std.ctype.toLower(cast(rchar)c));
                 }
                 return 1;
 
