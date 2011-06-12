@@ -166,14 +166,6 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
-# Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES := $(addprefix etc/c/,curl zlib) $(addprefix		\
-std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
-time wcharh)
-EXTRA_MODULES := $(EXTRA_DOCUMENTABLES) $(addprefix			\
-	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction)
-
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
@@ -181,10 +173,18 @@ EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
 ifeq (,$(findstring win,$(OS)))
-	EXTRA_DOCUMENTABLES+=$(EXTRA_MODULES_LINUX)
+	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
 else
-	EXTRA_DOCUMENTABLES+=$(EXTRA_MODULES_WIN32)
+	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_WIN32)
 endif
+
+# Other D modules that aren't under std/
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
+std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
+time wcharh)
+EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/math/, biguintcore biguintnoasm biguintx86	\
+	gammafunction errorfunction)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
