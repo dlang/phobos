@@ -2062,7 +2062,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isspace(input[src]))
+                if (!isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2072,7 +2072,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREnotspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isspace(input[src]))
+                if (isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2614,13 +2614,13 @@ private:
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isspace(i))
+                        if (isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isspace(i))
+                        if (!isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -3072,14 +3072,14 @@ private:
             case REspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (isspace(c))
+                    if (isWhite(c))
                         r.bits[c] = 1;
                 return 1;
 
             case REnotspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (!isspace(c))
+                    if (!isWhite(c))
                         r.bits[c] = 1;
                 return 1;
 

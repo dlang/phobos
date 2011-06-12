@@ -316,7 +316,7 @@ module std.algorithm;
 import std.c.string;
 import std.array, std.container, std.conv, std.ctype, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.stdio;
+    std.traits, std.typecons, std.typetuple, std.stdio, std.uni;
 
 version(unittest)
 {
@@ -2145,7 +2145,7 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
-    return splitter!isspace(input);
+    return splitter!(std.uni.isUniWhite)(input);
 }
 
 unittest

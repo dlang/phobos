@@ -1034,13 +1034,13 @@ Returns the number of parenthesized captures
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isspace(i))
+                        if (isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isspace(i))
+                        if (!isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -2504,7 +2504,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isspace(input[src]))
+                if (!isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2514,7 +2514,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isspace(input[src]))
+                if (isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;

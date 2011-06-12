@@ -83,7 +83,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         }
 
         void skipWhitespace() {
-                while(isspace(peekChar())) next = 0;
+                while(isWhite(peekChar())) next = 0;
         }
 
         dchar getChar(bool SkipWhitespace = false)() {

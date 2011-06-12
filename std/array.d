@@ -14,7 +14,7 @@ module std.array;
 
 import core.memory, core.bitop;
 import std.algorithm, std.conv, std.ctype, std.encoding, std.exception,
-    std.range, std.string, std.traits, std.typecons, std.utf;
+    std.range, std.string, std.traits, std.typecons, std.uni, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio, std.typetuple;
 
@@ -814,7 +814,7 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
  */
 auto splitter(String)(String s) if (isSomeString!String)
 {
-    return std.algorithm.splitter!isspace(s);
+    return std.algorithm.splitter!(std.uni.isUniWhite)(s);
 }
 
 unittest

@@ -20,7 +20,8 @@ import core.stdc.math : ldexpl;
 import core.memory, core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
 import std.algorithm, std.array, std.ctype, std.exception, std.math, std.range,
-    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.utf;
+    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.utf;
 import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
@@ -1314,7 +1315,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     for (;;)
     {
         enforce(!p.empty, bailOut());
-        if (!isspace(p.front)) break;
+        if (!std.uni.isUniWhite(p.front)) break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */
