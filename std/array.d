@@ -614,15 +614,24 @@ void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
 
 /++ Ditto +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[]) && isImplicitlyConvertible!(CommonType!(U),T))
+    if((!isSomeString!(T[]) && isImplicitlyConvertible!(CommonType!(U),T)))
 {
-    T[Tuple!(U).length] data = void;
+    T[staticLength!(U)] data = void;
     foreach(i, v; stuff)
         emplace!T(&data[i], v);
     insertInPlaceImpl(array, pos, data[]);
 }
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(isSomeString!(T[]) && is(CommonType!(U) : dchar))
+{
+    dchar[staticLength!(U)] data = void;
+    foreach(i, v; stuff)
+        data[i] =  v;
+    insertInPlaceImpl(array, pos, data[]);
+}
 
-void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
+private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
@@ -748,6 +757,10 @@ unittest
     assert(testVar([1, 2, 3, 4], 0, 6, 7u, [6, 7, 1, 2, 3, 4]));
     assert(testVar([1L, 2, 3, 4], 2, 8, 9L, [1, 2, 8, 9, 3, 4]));
     assert(testVar([1L, 2, 3, 4], 4, 10L, 11, [1, 2, 3, 4, 10, 11]));
+    assert(testVar("t".idup, 1, cast(dchar)'e', cast(wchar)'s', 't', "test"));
+    assert(testVar("t"w.idup, 1, cast(wchar)'e', cast(dchar)'s', 't', "test"));
+    assert(testVar("t"d.idup, 0, 't', cast(dchar)'e', cast(wchar)'s', "test"));
+
 }
 
 /++
