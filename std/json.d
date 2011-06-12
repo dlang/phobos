@@ -157,7 +157,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                 foreach_reverse(i; 0 .. 4) {
                                         auto hex = toupper(getChar());
                                         if(!isxdigit(hex)) error("Expecting hex character");
-                                        val += (isdigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
+                                        val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                                 }
                                 char[4] buf = void;
                                 str.put(toUTF8(buf, val));
@@ -229,11 +229,11 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                         bool isFloat;
 
                         void readInteger() {
-                                if(!isdigit(c)) error("Digit expected");
+                                if(!isDigit(c)) error("Digit expected");
 
                                 Next: number.put(c);
 
-                                if(isdigit(peekChar())) {
+                                if(isDigit(peekChar())) {
                                         c = getChar();
                                         goto Next;
                                 }

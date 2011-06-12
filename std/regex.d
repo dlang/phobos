@@ -628,7 +628,7 @@ Returns the number of parenthesized captures
         case '{':       // {n} {n,} {n,m}
             p++;
 
-            if (p == plength || !isdigit(pattern[p]))
+            if (p == plength || !isDigit(pattern[p]))
                 error("badly formed {n,m}");
             auto src = pattern[p..$];
             n = parse!uint(src);
@@ -648,7 +648,7 @@ Returns the number of parenthesized captures
                 m = inf;
                 break;
             }
-            if (!isdigit(pattern[p]))
+            if (!isDigit(pattern[p]))
                 error("badly formed {n,m}");
             src = pattern[p..$];
             m = parse!uint(src);
@@ -2484,7 +2484,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isdigit(input[src]))
+                if (!isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2494,7 +2494,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isdigit(input[src]))
+                if (isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -3380,7 +3380,7 @@ unittest
                 {
                     case '\\':
                         fmt.popFront();
-                        if (!isdigit(fmt.front) )
+                        if (!isDigit(fmt.front) )
                         {
                             result ~= fmt.front;
                             fmt.popFront();

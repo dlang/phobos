@@ -2042,7 +2042,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREdigit\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isdigit(input[src]))
+                if (!isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2052,7 +2052,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREnotdigit\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isdigit(input[src]))
+                if (isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2226,7 +2226,7 @@ public bool test(string s)
 
         case '{':   // {n} {n,} {n,m}
             p++;
-            if (p == plength || !isdigit(pattern[p]))
+            if (p == plength || !isDigit(pattern[p]))
                 goto Lerr;
             n = 0;
             do
@@ -2236,7 +2236,7 @@ public bool test(string s)
                 p++;
                 if (p == plength)
                     goto Lerr;
-            } while (isdigit(pattern[p]));
+            } while (isDigit(pattern[p]));
             if (pattern[p] == '}')      // {n}
             {   m = n;
                 goto Lnm;
@@ -2250,7 +2250,7 @@ public bool test(string s)
             {   m = inf;
                 goto Lnm;
             }
-            if (!isdigit(pattern[p]))
+            if (!isDigit(pattern[p]))
                 goto Lerr;
             m = 0;          // {n,m}
             do
@@ -2260,7 +2260,7 @@ public bool test(string s)
                 p++;
                 if (p == plength)
                     goto Lerr;
-            } while (isdigit(pattern[p]));
+            } while (isDigit(pattern[p]));
             if (pattern[p] != /*{*/ '}')
                 goto Lerr;
             goto Lnm;

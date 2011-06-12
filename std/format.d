@@ -692,7 +692,7 @@ struct FormatSpec(Char)
             case '0': flZero = true; ++i; break;
             case ' ': flSpace = true; ++i; break;
             case '*':
-                if (isdigit(trailing[++i]))
+                if (isDigit(trailing[++i]))
                 {
                     // a '*' followed by digits and '$' is a
                     // positional format
@@ -747,7 +747,7 @@ struct FormatSpec(Char)
                 // Precision
                 if (trailing[++i] == '*')
                 {
-                    if (isdigit(trailing[++i]))
+                    if (isDigit(trailing[++i]))
                     {
                         // a '.*' followed by digits and '$' is a
                         // positional precision
@@ -771,7 +771,7 @@ struct FormatSpec(Char)
                     .parse!(int)(tmp); // skip digits
                     i = tmp.ptr - trailing.ptr;
                 }
-                else if (isdigit(trailing[i]))
+                else if (isDigit(trailing[i]))
                 {
                     auto tmp = trailing[i .. $];
                     precision = .parse!int(tmp);
@@ -2256,7 +2256,7 @@ private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
             if (input.front == '+' || input.front == '-') input.popFront();
             goto case 'u';
         case 'u':
-            while (!input.empty && isdigit(input.front)) input.popFront;
+            while (!input.empty && isDigit(input.front)) input.popFront;
             break;
         default:
             assert(false,

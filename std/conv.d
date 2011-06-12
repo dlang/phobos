@@ -1447,7 +1447,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
         ndigits = 0;
         e = 0;
-        while (!p.empty && isdigit(p.front))
+        while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
             {
@@ -1497,7 +1497,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         while (!p.empty)
         {
             int i = p.front;
-            while (isdigit(i))
+            while (isDigit(i))
             {
                 sawDigits = true;        /* must have at least 1 digit   */
                 if (msdec < (0x7FFFFFFFFFFFL-10)/10)
@@ -1544,7 +1544,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
         bool sawDigits = 0;
         e = 0;
-        while (!p.empty && isdigit(p.front))
+        while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
             {
