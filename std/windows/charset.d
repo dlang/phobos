@@ -65,7 +65,7 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
             return result.ptr;
         }
     }
-    return std.string.toStringz(s);
+    return std.string.toStringZ(s);
 }
 
 

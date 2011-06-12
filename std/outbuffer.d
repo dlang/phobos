@@ -259,7 +259,7 @@ class OutBuffer
         char[128] buffer;
         int count;
 
-        auto f = toStringz(format);
+        auto f = toStringZ(format);
         auto p = buffer.ptr;
         auto psize = buffer.length;
         for (;;)

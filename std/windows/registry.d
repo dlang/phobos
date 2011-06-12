@@ -374,7 +374,7 @@ in
 }
 body
 {
-    LPCSTR  lpSrc       =   toStringz(value);
+    LPCSTR  lpSrc       =   toStringZ(value);
     DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
     char[]  newValue    =   new char[cchRequired];
 
@@ -450,7 +450,7 @@ in
 }
 body
 {
-    return RegCreateKeyExA( hkey, toStringz(subKey), RESERVED, RESERVED
+    return RegCreateKeyExA( hkey, toStringZ(subKey), RESERVED, RESERVED
                         ,   dwOptions, samDesired, lpsa, hkeyResult
                         ,   disposition);
 }
@@ -463,7 +463,7 @@ in
 }
 body
 {
-    return RegDeleteKeyA(hkey, toStringz(subKey));
+    return RegDeleteKeyA(hkey, toStringZ(subKey));
 }
 
 private LONG Reg_DeleteValueA_(in HKEY hkey, in string valueName)
@@ -474,7 +474,7 @@ in
 }
 body
 {
-    return RegDeleteValueA(hkey, toStringz(valueName));
+    return RegDeleteValueA(hkey, toStringZ(valueName));
 }
 
 private HKEY Reg_Dup_(HKEY hkey)
@@ -601,7 +601,7 @@ in
 body
 {
     DWORD   cbData  =   0;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toStringZ(name), RESERVED, type
                                         ,   cast(byte*)0, cbData);
 
     if(ERROR_MORE_DATA == res)
@@ -621,7 +621,7 @@ in
 }
 body
 {
-    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, samDesired, hkeyResult);
+    return RegOpenKeyExA(hkey, toStringZ(subKey), RESERVED, samDesired, hkeyResult);
 }
 
 private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
@@ -641,14 +641,14 @@ body
     U       u;
     void    *data   =   &u.qw;
     DWORD   cbData  =   U.qw.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED
+    LONG    res     =   RegQueryValueExA(   hkey, toStringZ(name), RESERVED
                                         ,   type, data, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data = (new byte[cbData]).ptr;
 
-        res = RegQueryValueExA( hkey, toStringz(name), RESERVED, type, data
+        res = RegQueryValueExA( hkey, toStringZ(name), RESERVED, type, data
                             ,   cbData);
     }
 
@@ -706,14 +706,14 @@ body
 {
     char[]  data    =   new char[256];
     DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA( hkey, toStringz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA( hkey, toStringZ(name), RESERVED, type
                                         , data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
+        res = RegQueryValueExA(hkey, toStringZ(name), RESERVED, type, data.ptr, cbData);
     }
     else if(ERROR_SUCCESS == res)
     {
@@ -749,7 +749,7 @@ in
 body
 {
     DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toStringZ(name), RESERVED, type
                                         ,   &value, cbData);
 
     if(ERROR_SUCCESS != res)
@@ -792,7 +792,7 @@ in
 body
 {
     DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toStringZ(name), RESERVED, type
                                         ,   &value, cbData);
 
     if(ERROR_SUCCESS != res)
@@ -822,14 +822,14 @@ body
 {
     byte[]  data    =   new byte[100];
     DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
+    LONG    res     =   RegQueryValueExA(   hkey, toStringZ(name), RESERVED, type
                                         ,   data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
+        res = RegQueryValueExA(hkey, toStringZ(name), RESERVED, type, data.ptr, cbData);
     }
 
     if(ERROR_SUCCESS != res)
@@ -860,7 +860,7 @@ in
 }
 body
 {
-    LONG    res =   RegSetValueExA( hkey, toStringz(subKey), RESERVED, type
+    LONG    res =   RegSetValueExA( hkey, toStringZ(subKey), RESERVED, type
                                 ,   lpData, cbData);
 
     if(ERROR_SUCCESS != res)
@@ -1434,7 +1434,7 @@ public:
  +/
         // ExpandEnvironemntStrings():
         //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
-        LPCSTR  lpSrc       =   toStringz(value);
+        LPCSTR  lpSrc       =   toStringZ(value);
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
 

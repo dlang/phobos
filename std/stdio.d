@@ -1709,7 +1709,7 @@ size_t readln(ref char[] buf, dchar terminator = '\n')
  */
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    const namez = toStringz(name), modez = toStringz(mode);
+    const namez = toStringZ(name), modez = toStringZ(mode);
     return fopen64(namez, modez);
 }
 
@@ -1723,7 +1723,7 @@ version (Posix)
  */
     FILE* popen(in char[] name, in char[] mode = "r")
     {
-        return popen(toStringz(name), toStringz(mode));
+        return popen(toStringZ(name), toStringZ(mode));
     }
 }
 
@@ -2527,7 +2527,7 @@ version(linux) {
     static import sock = std.c.linux.socket;
 
     File openNetwork(string host, ushort port) {
-        auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
+        auto h = enforce( sock.gethostbyname(std.string.toStringZ(host)),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);

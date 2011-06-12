@@ -2451,7 +2451,7 @@ unittest
 // F parseFloating(S : S[], F)(ref S[] s)
 // {
 //     //writefln("toFloat('%s')", s);
-//     auto sz = toStringz(to!(const char[])(s));
+//     auto sz = toStringZ(to!(const char[])(s));
 //     if (std.ctype.isspace(*sz))
 //      goto Lerr;
 
