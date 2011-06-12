@@ -394,11 +394,11 @@ string toJSON(in JSONValue* root) {
 private void appendJSONChar(Appender!string* dst, dchar c,
         scope void delegate(string) error)
 {
-    if(iscntrl(c)) error("Illegal control character.");
+    if(isControl(c)) error("Illegal control character.");
     dst.put(c);
 //      int stride = UTFStride((&c)[0 .. 1], 0);
 //      if(stride == 1) {
-//              if(iscntrl(c)) error("Illegal control character.");
+//              if(isControl(c)) error("Illegal control character.");
 //              dst.put(c);
 //      }
 //      else {
@@ -406,7 +406,7 @@ private void appendJSONChar(Appender!string* dst, dchar c,
 //              utf[0] = c;
 //              foreach(i; 1 .. stride) utf[i] = next;
 //              size_t index = 0;
-//              if(iscntrl(toUnicode(utf[0 .. stride], index)))
+//              if(isControl(toUnicode(utf[0 .. stride], index)))
 //                      error("Illegal control character");
 //              dst.put(utf[0 .. stride]);
 //      }
