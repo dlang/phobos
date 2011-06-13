@@ -43,7 +43,7 @@ import std.traits;
     assert (z.im == 3.14L);
     ---
 */
-auto complex(T)(T re)  if (is(T : double))
+auto complex(T)(T re)  @safe pure nothrow  if (is(T : double))
 {
     static if (isFloatingPoint!T)
         return Complex!T(re, 0);
@@ -52,7 +52,8 @@ auto complex(T)(T re)  if (is(T : double))
 }
 
 /// ditto
-auto complex(R, I)(R re, I im)  if (is(R : double) && is(I : double))
+auto complex(R, I)(R re, I im)  @safe pure nothrow
+    if (is(R : double) && is(I : double))
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
         return Complex!(CommonType!(R, I))(re, im);
