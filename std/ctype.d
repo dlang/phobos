@@ -157,7 +157,7 @@ pure dchar toupper(dchar c)
 /++
     Returns whether $(D c) is a letter or a number (0..9, a..z, A..Z).
   +/
-bool isAlphaNum(dchar c) @safe pure nothrow nothrow
+bool isAlphaNum(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG)) : false;
 }
