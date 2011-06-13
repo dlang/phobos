@@ -193,7 +193,7 @@ version(StdDdoc) bool iswhite(dchar c);
 else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "isWhite",
+    pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
                             "std.ctype.isWhite or std.uni.isUniWhite"));
 
     return c <= 0x7F
