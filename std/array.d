@@ -291,8 +291,7 @@ unittest
 
 // Specialization for arrays of char
 @trusted void popBack(A)(ref A a)
-    if((is(A : const(char)[]) || is(A : const(wchar)[])) &&
-       isMutable!A)
+    if(isNarrowString!A && isMutable!A)
 {
     assert(a.length, "Attempting to popBack() past the front of an array of " ~
                      typeof(a[0]).stringof);
