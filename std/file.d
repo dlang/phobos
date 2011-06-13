@@ -2853,19 +2853,19 @@ private struct DirIteratorImpl
     bool followSymLinks;
     DirEntry cur;
     Appender!(DirHandle[]) _stack;
-    Appender!(DirEntry[]) _stashed; //unused in shallow
+    Appender!(DirEntry[]) _stashed; //used in depth first mode
     //stack helpers
     void pushExtra(DirEntry de){ _stashed.put(de); }
     //ditto
     bool hasExtra(){ return !_stashed.data.empty; }
     //ditto
     DirEntry popExtra()
-    { 
+    {
         DirEntry de;
         de = _stashed.data[$-1];
         _stashed.shrinkTo(_stashed.data.length - 1);
         return de;
-            
+
     }
     version(Windows)
     {
@@ -2877,27 +2877,24 @@ private struct DirIteratorImpl
         bool stepIn(string directory)
         {
             string search_pattern = std.path.join(directory, "*.*");
-            //writeln("using search string of ",search_pattern);
             if(useWfuncs)
             {
                 WIN32_FIND_DATAW findinfo;
                 HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
-                if(h == INVALID_HANDLE_VALUE)
-                    return false;
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
                 if(_stack.data.empty)
                     _stack.put(DirHandle(directory, h));
                 else
                     _stack.put(
                         DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
-                
+
                 return toNext!false(&findinfo);
             }
             else
             {
                 WIN32_FIND_DATA findinfo;
                 HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
-                if(h == INVALID_HANDLE_VALUE)
-                    return false;
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
                 if(_stack.data.empty)
                     _stack.put(DirHandle(directory, h));
                 else
@@ -2978,7 +2975,7 @@ private struct DirIteratorImpl
             foreach( d;  _stack.data)
                 FindClose(d.h);
         }
-        
+
     }
     else version(Posix)
     {
@@ -2987,39 +2984,77 @@ private struct DirIteratorImpl
             string dirpath;
             DIR*   h;
         }
+
+        bool stepIn(string directory)
+        {
+            auto h = cenforce(opendir(toStringz(directory)), directory);
+            if(_stack.data.empty)
+                _stack.put(DirHandle(directory, h));
+            else
+                _stack.put(
+                    DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+            return next();
+        }
+
+        bool next()
+        {
+            if(_stack.data.empty)
+                return false;
+            for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+            {
+                // Skip "." and ".."
+                if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
+                   std.c.string.strcmp(fdata.d_name.ptr, "..") )
+                {
+                    cur._init(_stack.data[$-1].dirpath, fdata);
+                    return true;
+                }
+            }
+            popDirStack();
+            return false;
+        }
+
+        void popDirStack()
+        {
+            closedir(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
         void releaseDirStack()
         {
-            
+
             foreach( d;  _stack.data)
                 closedir(d.h);
-        } 
+        }
     }
-    
+
     this(string pathname, SpanMode _mode, bool _followSymLinks)
     {
         mode = _mode;
         followSymLinks = _followSymLinks;
         _stack = appender(cast(DirHandle[])[]);
-        if(mode != SpanMode.shallow)
+        if(mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
-        stepIn(std.path.rel2abs(pathname));
-        switch(mode)
+        if(stepIn(std.path.rel2abs(pathname)))
         {
-        case SpanMode.depth:
-            while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
-            {
-                auto thisDir = cur; 
-                if(stepIn(cur.name))
-                {
-                    pushExtra(thisDir);
-                }
-                else
-                    break;
-            }
-            break;
-        default:
-            //already at first file
-        }
+		    switch(mode)
+		    {
+		    case SpanMode.depth:
+		        while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+		        {
+		            auto thisDir = cur;
+		            if(stepIn(cur.name))
+		            {
+		                pushExtra(thisDir);
+		            }
+		            else
+		                break;
+		        }
+		        break;
+		    default:
+		        //already at first file
+		    }
+	    }
     }
     @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
     @property DirEntry front(){ return cur; }
@@ -3027,12 +3062,12 @@ private struct DirIteratorImpl
     {
         switch(mode)
         {
-        case SpanMode.depth:       
+        case SpanMode.depth:
             if(next())
             {
                 while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
                 {
-                    auto thisDir = cur; 
+                    auto thisDir = cur;
                     if(stepIn(cur.name))
                     {
                         pushExtra(thisDir);
