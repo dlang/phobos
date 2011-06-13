@@ -28,8 +28,19 @@ import std.traits;
 
     Examples:
     ---
-    auto w = complex(2.0);
+    auto c = complex(2.0);
+    static assert (is(typeof(c) == Complex!double));
+    assert (c.re == 2.0);
+    assert (c.im == 0.0);
+
+    auto w = complex(2);
+    static assert (is(typeof(w) == Complex!double));
+    assert (w == c);
+
     auto z = complex(1, 3.14L);
+    static assert (is(typeof(z) == Complex!real));
+    assert (z.re == 1.0L);
+    assert (z.im == 3.14L);
     ---
 */
 auto complex(T)(T re)  if (is(T : double))
