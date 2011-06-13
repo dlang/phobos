@@ -2012,39 +2012,6 @@ else version(Windows)
     {
     public:
 
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATA* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATAW* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
-
         @property string name() const
         {
             return _name;
@@ -2207,28 +2174,6 @@ else version(Posix)
     struct DirEntry
     {
     public:
-
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, core.sys.posix.dirent.dirent* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
 
         @property string name() const
         {
@@ -3037,9 +2982,7 @@ private struct DirIteratorImpl
             _stashed = appender(cast(DirEntry[])[]);
         if(stepIn(std.path.rel2abs(pathname)))
         {
-		    switch(mode)
-		    {
-		    case SpanMode.depth:
+		    if(mode == SpanMode.depth)
 		        while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
 		        {
 		            auto thisDir = cur;
@@ -3050,10 +2993,6 @@ private struct DirIteratorImpl
 		            else
 		                break;
 		        }
-		        break;
-		    default:
-		        //already at first file
-		    }
 	    }
     }
     @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
@@ -3130,14 +3069,15 @@ public:
     }
 }
 /++
-    Iterates a directory using foreach. The iteration variable can be
-    of type $(D_PARAM string) if only the name is needed, or $(D_PARAM
-    DirEntry) if additional details are needed. The span mode dictates
-    the how the directory is traversed. The name of the directory entry
-    includes the $(D_PARAM path) prefix.
+    Returns an input range of DirEntry that lazily iterates a given directory,
+    also provides two ways of foreach iteration. The iteration variable can be of
+    type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
+    if additional details are needed. The span mode dictates the how the
+    directory is traversed. The name of the each directory entry iterated
+    contains the absolute path.
 
     Params:
-        path = The directory to iterato over.
+        path = The directory to iterate over.
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -3162,7 +3102,13 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
+//Iterate over all *.d files in current directory and all it's subdirectories
+auto dFiles = filter!((de){ return !match(de.name, `^.*d$`).empty; })
+                    (dirEntries(".",SpanMode.depth));
+foreach(d; dFiles)
+    writeln(d.name);
 --------------------
+//
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
 {
