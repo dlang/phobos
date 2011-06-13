@@ -61,8 +61,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string/*, std.algorithm*/,
-    std.conv, std.ctype, std.encoding, std.exception, std.format,
+    core.stdc.string, std.conv, std.ctype, std.exception, std.format,
     std.functional, std.metastrings, std.range, std.regex, std.stdio,
     std.traits, std.typetuple, std.uni, std.utf;
 public import std.algorithm : startsWith, endsWith, cmp, count;
