@@ -1,11 +1,6 @@
 // Written in the D programming language.
 
 /**
-Authors:
-
-$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
-Alexandrescu)
-
 Macros:
 
 WIKI=Phobos/StdProcess
@@ -311,6 +306,15 @@ else
 } // version
 }
 
+/**
+ * Returns the process ID of the calling process, which is guaranteed to be
+ * unique on the system. This call is always successful.
+ *
+ * Example:
+ * ---
+ * writefln("Current process id: %s", getpid());
+ * ---
+ */
 version(Posix)
 {
     alias core.sys.posix.unistd.getpid getpid;
