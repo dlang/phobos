@@ -313,8 +313,7 @@ else
 
 version(Posix)
 {
-    //alias std.c.process.getpid getpid;
-    import core.sys.posix.unistd : getpid;
+    alias core.sys.posix.unistd.getpid getpid;
 }
 else version (Windows)
 {
