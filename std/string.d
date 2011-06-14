@@ -1124,7 +1124,7 @@ unittest
 
 /**
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(D capWords) instead.)
+          Please use $(D toUpperInPlace) instead.)
 
    Converts $(D s) to uppercase in place.
  */
@@ -1303,8 +1303,7 @@ unittest
 
 
 /********************************************
- *  $(RED Scheduled for deprecation in December 2011.
- *        Please use $(D capWords) instead.)
+ *  $(RED Scheduled for deprecation in December 2011.)
  *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
@@ -1312,17 +1311,9 @@ unittest
  */
 S capwords(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "capwords", "std.string.capWords"));
-    return capWords!S(s);
-}
+    pragma(msg, "Warning: As of Phobos 2.054, std.string.capwords has been " ~
+                "scheduled for deprecation in December 2011.");
 
-/++
-    Capitalizes al words in $(D s). It also removes all leading and trailing
-    whitespace and converts all sequences of whitespace to a single space.
-  +/
-S capWords(S)(S s)
-    if(isSomeString!S)
-{
     alias typeof(s[0]) C;
     auto retval = appender!(C[])();
     bool inWord = false;
@@ -1356,19 +1347,19 @@ S capWords(S)(S s)
 
 unittest
 {
-    debug(string) printf("string.capWords.unittest\n");
+    debug(string) printf("string.capwords.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
         S s2;
 
-        s2 = capWords(s1);
+        s2 = capwords(s1);
         assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
 
         s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
                   "\u017F\u0053\u0131\u0130");
-        s2 = capWords(s1);
+        s2 = capwords(s1);
         assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
                        "\u0053\u0053\u0131\u0069"));
     }
