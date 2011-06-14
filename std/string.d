@@ -1314,6 +1314,13 @@ S capwords(S)(S s) if (isSomeString!S)
     pragma(msg, "Warning: As of Phobos 2.054, std.string.capwords has been " ~
                 "scheduled for deprecation in December 2011.");
 
+    return _capWords!S(s);
+}
+
+// This is purely so that capwords can be unit tested without spitting
+// out the deprecation message.
+private S _capWords(S)(S s) if (isSomeString!S)
+{
     alias typeof(s[0]) C;
     auto retval = appender!(C[])();
     bool inWord = false;
@@ -1354,12 +1361,12 @@ unittest
         auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
         S s2;
 
-        s2 = capwords(s1);
+        s2 = _capWords(s1);
         assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
 
         s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
                   "\u017F\u0053\u0131\u0130");
-        s2 = capwords(s1);
+        s2 = _capWords(s1);
         assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
                        "\u0053\u0053\u0131\u0069"));
     }

@@ -22,6 +22,10 @@ module std.ctype;
 import std.ascii;
 
 
+pragma(msg, "Warning: As of Phobos 2.054, std.ctype has been scheduled for " ~
+            "deprecation in December 2011. Please use std.ascii instead.");
+
+
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
  *       $(D std.ascii.isAlphaNum) instead.)

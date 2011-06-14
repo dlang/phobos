@@ -139,11 +139,6 @@ unittest
   +/
 bool isOctDigit(dchar c) @safe pure nothrow
 {
-    //I'd edit _ctype to have a flag for octal except that something calling
-    //the int versions of the other functions might actually rely on the exact
-    //integer value returned for some reason, and so messing with _ctype
-    //and its flags could break that. _ctype can be edited appropriately after
-    //the int versions have been removed.
     return c >= '0' && c <= '7';
 }
 
