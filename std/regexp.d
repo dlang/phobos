@@ -134,7 +134,7 @@ private
     import std.array;
     import std.stdio;
     import std.string;
-    import std.ctype;
+    import std.ascii;
     import std.outbuffer;
     import std.bitmanip;
     import std.utf;
@@ -1653,7 +1653,7 @@ public bool test(string s)
                 if (c1 != c2)
                 {
                     if (isLower(cast(rchar)c2))
-                        c2 = std.ctype.toUpper(cast(rchar)c2);
+                        c2 = std.ascii.toUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -1682,7 +1682,7 @@ public bool test(string s)
                 if (c1 != c2)
                 {
                     if (isLower(cast(rchar)c2))
-                        c2 = std.ctype.toUpper(cast(rchar)c2);
+                        c2 = std.ascii.toUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2416,7 +2416,7 @@ public bool test(string s)
                     if (isAlpha(c))
                     {
                         op = REichar;
-                        c = cast(char)std.ctype.toUpper(c);
+                        c = cast(char)std.ascii.toUpper(c);
                     }
                 }
                 if (op == REchar && c <= 0xFF)
@@ -2956,7 +2956,7 @@ private:
                 c = prog[i + 1];
                 if (c <= 0x7F)
                 {   r.setbit2(c);
-                    r.setbit2(std.ctype.toLower(cast(rchar)c));
+                    r.setbit2(std.ascii.toLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -2982,8 +2982,8 @@ private:
                 c = *cast(rchar *)&prog[i + 1 + size_t.sizeof];
                 debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
                 if (c <= 0x7F)
-                {   r.setbit2(std.ctype.toUpper(cast(rchar)c));
-                    r.setbit2(std.ctype.toLower(cast(rchar)c));
+                {   r.setbit2(std.ascii.toUpper(cast(rchar)c));
+                    r.setbit2(std.ascii.toLower(cast(rchar)c));
                 }
                 return 1;
 

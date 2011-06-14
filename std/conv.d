@@ -19,7 +19,7 @@ module std.conv;
 import core.stdc.math : ldexpl;
 import core.memory, core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
-import std.algorithm, std.array, std.ctype, std.exception, std.math, std.range,
+import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.metastrings;
@@ -2452,7 +2452,7 @@ unittest
 // {
 //     //writefln("toFloat('%s')", s);
 //     auto sz = toStringZ(to!(const char[])(s));
-//     if (std.ctype.isspace(*sz))
+//     if (std.ascii.isspace(*sz))
 //      goto Lerr;
 
 //     // issue 1589

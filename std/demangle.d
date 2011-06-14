@@ -40,7 +40,7 @@ private class MangleException : Exception
  *        pretty-printing any found D mangled names.
 -------------------
 import std.stdio;
-import std.ctype;
+import std.ascii;
 import std.demangle;
 
 int main()

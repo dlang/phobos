@@ -60,7 +60,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
-    std.conv, std.ctype, std.exception, std.format, std.functional,
+    std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
 
@@ -104,7 +104,7 @@ class StringException : Exception
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, hexDigits) instead.)
+          Please use $(XREF ascii, hexDigits) instead.)
 
     0..9A..F
   +/
@@ -112,15 +112,15 @@ immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, digits) instead.)
+          Please use $(XREF ascii, digits) instead.)
 
     0..9
   +/
-alias std.ctype.digits digits;
+alias std.ascii.digits digits;
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, octDigits) instead.)
+          Please use $(XREF ascii, octDigits) instead.)
 
     0..7
   +/
@@ -128,7 +128,7 @@ immutable char[8]  octdigits = "01234567";
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, lowercase) instead.)
+          Please use $(XREF ascii, lowercase) instead.)
 
     a..z
   +/
@@ -136,7 +136,7 @@ immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, letters) instead.)
+          Please use $(XREF ascii, letters) instead.)
 
     A..Za..z
   +/
@@ -145,7 +145,7 @@ immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, uppercase) instead.)
+          Please use $(XREF ascii, uppercase) instead.)
 
     A..Z
   +/
@@ -153,11 +153,11 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, whitespace) instead.)
+          Please use $(XREF ascii, whitespace) instead.)
 
     ASCII whitespace.
   +/
-alias std.ctype.whitespace whitespace;
+alias std.ascii.whitespace whitespace;
 
 /++
     $(RED Scheduled for deprecation in December 2011.
@@ -177,15 +177,15 @@ enum dchar PS = '\u2029';
 
 /++
     $(RED Scheduled for deprecation in December 2011.
-          Please use $(XREF ctype, newline) instead.)
+          Please use $(XREF ascii, newline) instead.)
 
     Newline sequence for this system.
   +/
-alias std.ctype.newline newline;
+alias std.ascii.newline newline;
 
 /**********************************
  * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(XREF ctype, isWhite) or $(XREF uni, isUniWhite) instead.)
+ *       Please use $(XREF ascii, isWhite) or $(XREF uni, isUniWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
@@ -194,7 +194,7 @@ else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
     pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
-                            "std.ctype.isWhite or std.uni.isUniWhite"));
+                            "std.ascii.isWhite or std.uni.isUniWhite"));
 
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -472,7 +472,7 @@ sizediff_t indexOf(Char)(in Char[] s,
     {
         static if (Char.sizeof == 1)
         {
-            if (std.ctype.isASCII(c))
+            if (std.ascii.isASCII(c))
             {                                               // Plain old ASCII
                 auto p = cast(char*)memchr(s.ptr, c, s.length);
                 if (p)
@@ -491,13 +491,13 @@ sizediff_t indexOf(Char)(in Char[] s,
     }
     else
     {
-        if (std.ctype.isASCII(c))
+        if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ctype.toLower(c);
+            auto c1 = cast(char) std.ascii.toLower(c);
 
             foreach (sizediff_t i, c2; s)
             {
-                auto c3 = std.ctype.toLower(c2);
+                auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
                     return i;
             }
@@ -656,13 +656,13 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
     }
     else
     {
-        if(std.ctype.isASCII(c))
+        if(std.ascii.isASCII(c))
         {
-            immutable c1 = std.ctype.toLower(c);
+            immutable c1 = std.ascii.toLower(c);
 
             for(auto i = s.length; i-- != 0;)
             {
-                immutable c2 = std.ctype.toLower(s[i]);
+                immutable c2 = std.ascii.toLower(s[i]);
                 if(c1 == c2)
                     return cast(sizediff_t)i;
             }
@@ -969,11 +969,11 @@ void toLowerInPlace(C)(ref C[] s)
     for (size_t i = 0; i < s.length; )
     {
         immutable c = s[i];
-        if (std.ctype.isUpper(c))
+        if (std.ascii.isUpper(c))
         {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
         }
-        else if (!std.ctype.isASCII(c))
+        else if (!std.ascii.isASCII(c))
         {
             // wide character
             size_t j = i;
@@ -1149,7 +1149,7 @@ void toUpperInPlace(C)(ref C[] s)
         {
             s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
         }
-        else if (!std.ctype.isASCII(c))
+        else if (!std.ascii.isASCII(c))
         {
             // wide character
             size_t j = i;
@@ -2124,9 +2124,9 @@ in
     assert(from.length == to.length);
     assert(from.length <= 128);
     foreach (char c; from)
-        assert(std.ctype.isASCII(c));
+        assert(std.ascii.isASCII(c));
     foreach (char c; to)
-        assert(std.ctype.isASCII(c));
+        assert(std.ascii.isASCII(c));
 }
 body
 {
@@ -2223,7 +2223,7 @@ char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
 
     void putc(dchar c)
     {
-    if(std.ctype.isASCII(c))
+    if(std.ascii.isASCII(c))
     {
         if (i >= s.length)
             onRangeError("std.string.sformat", 0);
@@ -2280,7 +2280,7 @@ char[] sformat(char[] s, ...)
 
     void putc(dchar c)
     {
-    if(std.ctype.isASCII(c))
+    if(std.ascii.isASCII(c))
     {
         if (i >= s.length)
             onRangeError("std.string.sformat", 0);
@@ -2648,7 +2648,7 @@ unittest
 
 S succ(S)(S s) if (isSomeString!S)
 {
-    if (s.length && std.ctype.isAlphaNum(s[$ - 1]))
+    if (s.length && std.ascii.isAlphaNum(s[$ - 1]))
     {
         auto r = s.dup;
         size_t i = r.length - 1;
@@ -2681,7 +2681,7 @@ S succ(S)(S s) if (isSomeString!S)
                 break;
 
             default:
-                if (std.ctype.isAlphaNum(c))
+                if (std.ascii.isAlphaNum(c))
                     r[i]++;
                 return cast(S) r;
             }

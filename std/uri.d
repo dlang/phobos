@@ -30,7 +30,7 @@ module std.uri;
 
 /* ====================== URI Functions ================ */
 
-private import std.ctype;
+private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
 private import std.stdio;

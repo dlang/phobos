@@ -73,7 +73,7 @@ enum SeekPos {
 
 private {
   import std.conv;
-  import std.ctype;
+  import std.ascii;
   import std.format;
   import std.system;    // for Endian enumeration
   import std.utf;

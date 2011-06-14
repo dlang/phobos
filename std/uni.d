@@ -2,7 +2,7 @@
 
 /**
  * Simple Unicode character classification functions.
- * For ASCII classification, see $(LINK2 std_ctype.html, std.ctype).
+ * For ASCII classification, see $(LINK2 std_ascii.html, std.ascii).
  * Macros:
  *  WIKI=Phobos/StdUni
  * References:
@@ -19,7 +19,7 @@
  */
 module std.uni;
 
-static import std.ctype;
+static import std.ascii;
 
 enum dchar lineSep = '\u2028'; /// UTF line separator
 enum dchar paraSep = '\u2029'; /// UTF paragraph separator
@@ -29,7 +29,7 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
   +/
 bool isUniWhite(dchar c) @safe pure nothrow
 {
-    return std.ctype.isWhite(c) ||
+    return std.ascii.isWhite(c) ||
            c == lineSep || c == paraSep ||
            c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
            (c >= '\u2000' && c <= '\u200A') ||
@@ -41,8 +41,8 @@ bool isUniWhite(dchar c) @safe pure nothrow
   +/
 bool isUniLower(dchar c) @safe pure nothrow
 {
-    if(std.ctype.isASCII(c))
-        return std.ctype.isLower(c);
+    if(std.ascii.isASCII(c))
+        return std.ascii.isLower(c);
 
     return isUniAlpha(c) && c == toUniLower(c);
 }
@@ -52,8 +52,8 @@ bool isUniLower(dchar c) @safe pure nothrow
   +/
 bool isUniUpper(dchar c) @safe pure nothrow
 {
-    if(std.ctype.isASCII(c))
-        return std.ctype.isUpper(c);
+    if(std.ascii.isASCII(c))
+        return std.ascii.isUpper(c);
 
     return isUniAlpha(c) && c == toUniUpper(c);
 }
@@ -64,7 +64,7 @@ bool isUniUpper(dchar c) @safe pure nothrow
   +/
 dchar toUniLower(dchar c) @safe pure nothrow
 {
-    if(std.ctype.isUpper(c))
+    if(std.ascii.isUpper(c))
         c += 32;
     else if(c >= 0x00C0)
     {
@@ -123,7 +123,7 @@ dchar toUniLower(dchar c) @safe pure nothrow
   +/
 dchar toUniUpper(dchar c) @safe pure nothrow
 {
-    if(std.ctype.isLower(c))
+    if(std.ascii.isLower(c))
         c -= 32;
     else if(c >= 0x00E0)
     {

@@ -124,7 +124,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.xml;
 
 import std.array;
-import std.ctype;
+import std.ascii;
 import std.string;
 import std.encoding;
 

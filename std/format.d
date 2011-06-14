@@ -21,8 +21,8 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.array, std.bitmanip, std.conv,
-    std.ctype, std.exception, std.functional, std.math, std.range,
+import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
+    std.exception, std.functional, std.math, std.range,
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
@@ -828,8 +828,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && std.ctype.isWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(std.ctype.isWhite))(r);
+                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
                 }
                 else
                 {
