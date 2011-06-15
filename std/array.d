@@ -13,7 +13,7 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.conv, std.ctype, std.encoding, std.exception,
+import std.algorithm, std.conv, std.ctype, std.exception,
     std.range, std.string, std.traits, std.typecons, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio, std.typetuple;
@@ -1594,8 +1594,10 @@ Appends an entire range to the managed array.
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
         static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
-                     !is(Range == Unqual!(T)[])) &&
-                   is(typeof(items.length) == size_t))
+                     !is(Range == Unqual!T[]) &&
+                     !is(Range == const(T)[]) &&
+                     !is(Range == immutable(T)[])) &&
+                    is(typeof(items.length) == size_t))
         {
             // optimization -- if this type is something other than a string,
             // and we are adding exactly one element, call the version for one
@@ -1743,6 +1745,21 @@ unittest
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+
+    // Issue 5663 tests
+    {
+        Appender!(char[]) app5663i;
+        assertNotThrown(app5663i.put("\xE3"));
+        assert(app5663i.data == "\xE3");
+
+        Appender!(char[]) app5663c;
+        assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
+        assert(app5663c.data == "\xE3");
+
+        Appender!(char[]) app5663m;
+        assertNotThrown(app5663m.put(cast(char[])"\xE3"));
+        assert(app5663m.data == "\xE3");
+    }
 }
 
 /++

@@ -350,7 +350,7 @@ enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
+    (T value, lazy const(char)[] msg = null) @safe
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -367,7 +367,7 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg)
+private void bailOut(string file, int line, in char[] msg) @safe
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -399,7 +399,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex)
+T enforce(T)(T value, lazy Throwable ex) @safe
 {
     if (!value) throw ex();
     return value;
@@ -431,7 +431,7 @@ enforce(line.length); // expect a non-empty line
 --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null)
+    (T value, lazy string msg = null) @safe
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
@@ -448,7 +448,7 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "")
+T enforceEx(E, T)(T value, lazy string msg = "") @safe
 {
     if (!value) throw new E(msg);
     return value;

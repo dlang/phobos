@@ -28347,7 +28347,7 @@ private:
     static immutable LocalTime _localTime;
 
 
-    static this()
+    shared static this()
     {
         tzset();
 
@@ -28471,7 +28471,7 @@ private:
     static immutable UTC _utc;
 
 
-    static this()
+    shared static this()
     {
         _utc = new immutable(UTC)();
     }
