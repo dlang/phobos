@@ -53,11 +53,11 @@ version(Windows)
     
     static assert(sep.length == 1 && altsep.length == 1);
     private bool isSep(dchar ch) {
-        return (ch == sep[0]) | (ch == altsep[0]);
+        return ch == sep[0] || ch == altsep[0];
     }
     
     private bool isSepOrDriveSep(dchar ch) {
-        return isSep(ch) | (ch == ':');
+        return isSep(ch) || ch == ':';
     }
 }
 version(Posix)
