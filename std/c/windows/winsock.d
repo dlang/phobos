@@ -38,6 +38,8 @@ const int IOCPARM_MASK =  0x7F;
 const int IOC_IN =        cast(int)0x80000000;
 const int FIONBIO =       cast(int)(IOC_IN | ((UINT.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 
+enum NI_MAXHOST = 1025;
+enum NI_MAXSERV = 32;
 
 int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
