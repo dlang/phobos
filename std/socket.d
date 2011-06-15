@@ -40,6 +40,7 @@ module std.socket;
 import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv,
     std.traits;
 
+import core.stdc.config;
 import core.time : dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce;
@@ -873,7 +874,7 @@ class InternetAddress: Address
 
                 auto buf = new char[NI_MAXHOST];
                 auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
-                        buf.ptr, buf.length, null, 0, 0);
+                        buf.ptr, cast(uint)buf.length, null, 0, 0);
                 enforce(rc == 0, new SocketException(
                         "Could not get host name", _lasterr()));
                 return assumeUnique(buf[0 .. strlen(buf.ptr)]);
@@ -947,8 +948,8 @@ enum SocketFlags: int
 extern(C) struct timeval
 {
         // D interface
-        int seconds;            /// Number of seconds.
-        int microseconds;       /// Number of additional microseconds.
+        c_long seconds;            /// Number of seconds.
+        c_long microseconds;       /// Number of additional microseconds.
 
         // C interface
         deprecated
