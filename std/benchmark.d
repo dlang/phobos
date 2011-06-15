@@ -665,47 +665,50 @@ void benchmarkModule(string mod)(File target = stdout)
     }
 }
 
-void benchmark_fileWrite()
+version(StdRunBenchmarks)
 {
-    std.file.write("/tmp/deleteme", "hello, world!");
-}
-
-void benchmark_fileRead()
-{
-    std.file.read("/tmp/deleteme");
-}
-
-void benchmark_append_builtin(uint n)
-{
-    string a;
-    foreach (i; 0 .. n)
+    private void benchmark_fileWrite()
     {
-        a ~= 'x';
+        std.file.write("/tmp/deleteme", "hello, world!");
     }
-}
 
-void benchmark_append_appender(uint n)
-{
-    import std.range;
-    auto a = appender!string();
-    foreach (i; 0 .. n)
+    private void benchmark_fileRead()
     {
-        put(a, 'x');
+        std.file.read("/tmp/deleteme");
     }
-}
 
-void benchmark_append_concat(uint n)
-{
-    string a;
-    foreach (i; 0 .. n)
+    private void benchmark_append_builtin(uint n)
     {
-        a = a ~ 'x';
+        string a;
+        foreach (i; 0 .. n)
+        {
+            a ~= 'x';
+        }
     }
-}
 
-unittest
-{
-    version(StdRunBenchmarks) benchmarkModule!"std.benchmark"();
+    private void benchmark_append_appender(uint n)
+    {
+        import std.range;
+        auto a = appender!string();
+        foreach (i; 0 .. n)
+        {
+            put(a, 'x');
+        }
+    }
+
+    private void benchmark_append_concat(uint n)
+    {
+        string a;
+        foreach (i; 0 .. n)
+        {
+            a = a ~ 'x';
+        }
+    }
+
+    unittest
+    {
+        benchmarkModule!"std.benchmark"();
+    }
 }
 
 // One benchmark stopwatch
