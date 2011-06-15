@@ -873,7 +873,7 @@ class InternetAddress: Address
 
                 auto buf = new char[NI_MAXHOST];
                 auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
-                        buf.ptr, buf.length, null, 0, 0);
+                        buf.ptr, cast(uint)buf.length, null, 0, 0);
                 enforce(rc == 0, new SocketException(
                         "Could not get host name", _lasterr()));
                 return assumeUnique(buf[0 .. strlen(buf.ptr)]);
