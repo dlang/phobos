@@ -14,9 +14,9 @@ module std.array;
 
 import core.memory, core.bitop;
 import std.algorithm, std.conv, std.ctype, std.encoding, std.exception,
-    std.range, std.string, std.traits, std.typecons, std.utf;
+    std.range, std.string, std.traits, std.typecons, std.utf, std.typetuple;
 import std.c.string : memcpy;
-version(unittest) import core.exception, std.stdio, std.typetuple;
+version(unittest) import core.exception, std.stdio;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -592,17 +592,123 @@ unittest
 +/
 
 /++
-    Inserts $(D stuff) (which must be an input range or a single item) in
-    $(D array) at position $(D pos).
+    Inserts $(D stuff) that must consist of input ranges or a implicitly
+	convertible items in $(D array) at position $(D pos).
 
 Example:
 ---
 int[] a = [ 1, 2, 3, 4 ];
 a.insertInPlace(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+a.insertInPlace(3, 10u, 11);
+assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
  +/
 void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    insertInPlaceImpl(array, pos, stuff);
+}
+
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(isSomeString!(T[]) && allSatisfy!(isCharOrString, U))
+{
+    dchar[staticConvertible!(dchar, U)] stackSpace = void;
+    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+    insertInPlaceImpl(array, pos, range);
+}
+
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(!isSomeString!(T[]) && allSatisfy!(isInputRangeOrConvertible!T, U))
+{
+    T[staticConvertible!(T, U)] stackSpace = void;
+    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+    insertInPlaceImpl(array, pos, range);
+}
+
+private template staticFrontConvertible(E, U...)
+{
+    static if(U.length == 0)
+    {
+        enum staticFrontConvertible = 0;
+    }
+    else static if(isImplicitlyConvertible!(U[0],E))
+    {
+        enum staticFrontConvertible = 1 + staticFrontConvertible!(E, U[1..$]);
+    }
+    else
+    {
+        enum staticFrontConvertible = 0;
+    }
+}
+
+private template staticConvertible(E, U...)
+{
+    static if (U.length == 0)
+    {
+        enum staticConvertible = 0;
+    }
+    else static if(isImplicitlyConvertible!(U[0], E))
+    {
+        enum staticConvertible = 1 + staticConvertible!(E, U[1..$]);
+    }
+    else
+    {
+        enum staticConvertible = staticConvertible!(E, U[1..$]);
+    }
+}
+
+private template isCharOrString(T)
+{
+    enum isCharOrString = isSomeString!T || isSomeChar!T;
+}
+
+private template isInputRangeOrConvertible(E)
+{
+	template isInputRangeOrConvertible(R)
+	{
+        enum isInputRangeOrConvertible =
+            (isInputRange!R && is(ElementType!R : E))  || is(R : E);
+	}
+}
+
+//packs individual convertible elements into provided slack array,
+//and chains them with the rest into a tuple
+private auto makeRangeTuple(E, U...)(E[] place, U stuff)
+	if(U.length > 0 && is(U[0] : E) )
+{
+    enum toPack = staticFrontConvertible!(E, U);
+    foreach(i, v; stuff[0..toPack])
+        emplace!E(&place[i], v);
+    assert(place.length >= toPack);
+    static if(U.length != staticFrontConvertible!(E,U))
+    {
+        return tuple(place[0..toPack],
+                makeRangeTuple(place[toPack..$], stuff[toPack..$]).expand);
+    }
+    else
+        return tuple(place[0..toPack]);
+}
+//ditto
+private auto makeRangeTuple(E, U...)(E[] place, U stuff)
+	if(isInputRange!(U[0]) && is(ElementType!(U[0]) : E))
+{
+    static if(U.length == 1)
+    {
+        return tuple(stuff[0]);
+    }
+    else
+    {
+        return tuple(stuff[0],makeRangeTuple(place, stuff[1..$]).expand);
+    }
+}
+
+
+private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
@@ -642,20 +748,15 @@ void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
     }
 }
 
-/++ Ditto +/
-void insertInPlace(T)(ref T[] array, size_t pos, T stuff)
-{
-    insertInPlace(array, pos, (&stuff)[0 .. 1]);
-}
 
 //Verify Example.
 unittest
 {
-    int[] a = ([1, 4, 5]).dup;
-    insertInPlace(a, 1u, [2, 3]);
-    assert(a == [1, 2, 3, 4, 5]);
-    insertInPlace(a, 1u, 99);
-    assert(a == [1, 99, 2, 3, 4, 5]);
+    int[] a = [ 1, 2, 3, 4 ];
+    a.insertInPlace(2, [ 1, 2 ]);
+    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+    a.insertInPlace(3, 10u, 11);
+    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 }
 
 unittest
@@ -715,6 +816,34 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
+
+    // variadic version
+    bool testVar(T, U...)(T orig, size_t pos, U args)
+    {
+        static if(is(T == typeof(T.dup)))
+            auto a = orig.dup;
+        else
+            auto a = orig.idup;
+        auto result = args[$-1];
+
+        a.insertInPlace(pos, args[0..$-1]);
+        if(!std.algorithm.equal(a, result))
+            return false;
+        return true;
+    }
+    assert(testVar([1, 2, 3, 4], 0, 6, 7u, [6, 7, 1, 2, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 2, 8, 9L, [1, 2, 8, 9, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 4, 10L, 11, [1, 2, 3, 4, 10, 11]));
+    assert(testVar([1L, 2, 3, 4], 4, [10, 11], 40L, 42L,
+                    [1, 2, 3, 4, 10, 11, 40, 42]));
+    assert(testVar([1L, 2, 3, 4], 4, 10, 11, [40L, 42],
+                    [1, 2, 3, 4, 10, 11, 40, 42]));
+    assert(testVar("t".idup, 1, 'e', 's', 't', "test"));
+    assert(testVar("!!"w.idup, 1, "\u00e9ll\u00f4", 'x', "TTT"w, 'y',
+                    "!\u00e9ll\u00f4xTTTy!"));
+    assert(testVar("flipflop"d.idup, 4, '_',
+                    "xyz"w, '\U00010143', '_', "abc"d, "__",
+                    "flip_xyz\U00010143_abc__flop"));
 }
 
 /++
