@@ -50,6 +50,15 @@ version(Windows)
     enum string linesep = "\r\n";   /// String used to separate lines.
     enum string curdir = ".";       /// String representing the current directory.
     enum string pardir = "..";      /// String representing the parent directory.
+    
+    static assert(sep.length == 1 && altsep.length == 1);
+    private bool isSep(dchar ch) {
+        return (ch == sep[0]) | (ch == altsep[0]);
+    }
+    
+    private bool isSepOrDriveSep(dchar ch) {
+        return isSep(ch) | (ch == ':');
+    }
 }
 version(Posix)
 {
@@ -67,6 +76,11 @@ version(Posix)
     enum string linesep = "\n";
     enum string curdir = ".";       /// String representing the current directory.
     enum string pardir = "..";      /// String representing the parent directory.
+    
+    static assert(sep.length == 1 && altsep.length == 0);
+    private bool isSep(dchar ch) {
+        return ch == sep[0];
+    }
 }
 
 /*****************************
@@ -119,16 +133,16 @@ string getExt(string fullname)
     while (i > 0)
     {
         if (fullname[i - 1] == '.')
-            return fullname[i .. fullname.length];
+            return fullname[i .. $];
         i--;
         version(Windows)
         {
-            if (fullname[i] == ':' || fullname[i] == '\\')
+            if (isSepOrDriveSep(fullname[i]))
                 break;
         }
         else version(Posix)
         {
-            if (fullname[i] == '/')
+            if (isSep(fullname[i]))
                 break;
         }
         else
@@ -218,12 +232,12 @@ string getName(string fullname)
         i--;
         version(Windows)
         {
-            if (fullname[i] == ':' || fullname[i] == '\\')
+            if (isSepOrDriveSep(fullname[i]))
                 break;
         }
         else version(Posix)
         {
-            if (fullname[i] == '/')
+            if (isSep(fullname[i]))
                 break;
         }
         else
@@ -297,12 +311,12 @@ body
     {
         version(Windows)
         {
-            if (fullname[i - 1] == ':' || fullname[i - 1] == '\\' || fullname[i - 1] == '/')
+            if (isSepOrDriveSep(fullname[i - 1]))
                 break;
         }
         else version(Posix)
         {
-            if (fullname[i - 1] == '/')
+            if (isSep(fullname[i - 1]))
                 break;
         }
         else
@@ -310,7 +324,7 @@ body
             static assert(0);
         }
     }
-    return chomp(fullname[i .. fullname.length],
+    return chomp(fullname[i .. $],
             extension.length ? extension : "");
 }
 
@@ -661,7 +675,7 @@ string defaultExt(string filename, string ext)
     if (existing.length == 0)
     {
         // Check for filename ending in '.'
-        if (filename.length && filename[filename.length - 1] == '.')
+        if (filename.length && filename[$ - 1] == '.')
             filename ~= ext;
         else
             filename = filename ~ "." ~ ext;
@@ -701,7 +715,7 @@ string addExt(string filename, string ext)
     if (existing.length == 0)
     {
         // Check for filename ending in '.'
-        if (filename.length && filename[filename.length - 1] == '.')
+        if (filename.length && filename[$ - 1] == '.')
             filename ~= ext;
         else
             filename = filename ~ "." ~ ext;
@@ -744,12 +758,11 @@ bool isabs(in char[] path)
     auto d = getDrive(path);
     version (Windows)
     {
-        return d.length < path.length &&
-            (path[d.length] == sep[0] || path[d.length] == altsep[0]);
+        return d.length < path.length && isSep(path[d.length]);
     }
     else version (Posix)
     {
-        return d.length < path.length && path[d.length] == sep[0];
+        return d.length < path.length && isSep(path[d.length]);
     }
     else
     {
@@ -784,17 +797,17 @@ string rel2abs(string path)
         return path;
     }
     auto myDir = getcwd;
-    if (path.startsWith(curdir[]))
+    if (path.startsWith(curdir))
     {
         auto p = path[curdir.length .. $];
-        if (p.startsWith(sep[]))
+        if (p.startsWith(sep))
             path = p[sep.length .. $];
-        else if (altsep.length && p.startsWith(altsep[]))
+        else if (altsep.length && p.startsWith(altsep))
             path = p[altsep.length .. $];
         else if (!p.length)
             path = null;
     }
-    return myDir.endsWith(sep[]) || path.length
+    return myDir.endsWith(sep) || path.length
         ? join(myDir, path)
         : myDir;
 }
@@ -857,7 +870,7 @@ string join(const(char)[] p1, const(char)[] p2, const(char)[][] more...)
     version (Posix)
     {
         if (isabs(p2)) return p2.idup;
-        if (p1.endsWith(sep[]) || altsep.length && p1.endsWith(altsep[]))
+        if (p1.endsWith(sep) || altsep.length && p1.endsWith(altsep))
         {
             return cast(string) (p1 ~ p2);
         }
@@ -879,16 +892,16 @@ string join(const(char)[] p1, const(char)[] p2, const(char)[][] more...)
             {
                 p = cast(string) (p1 ~ p2);
             }
-            else if (p2[0] == '\\')
+            else if (isSep(p2[0]))
             {
                 if (d1.length == 0)
                     p = p2.idup;
-                else if (p1[p1.length - 1] == '\\')
-                    p = cast(string) (p1 ~ p2[1 .. p2.length]);
+                else if (isSep(p1[$ - 1]))
+                    p = cast(string) (p1 ~ p2[1 .. $]);
                 else
                     p = cast(string) (p1 ~ p2);
             }
-            else if (p1[p1.length - 1] == '\\')
+            else if (isSep(p1[$ - 1]))
             {
                 p = cast(string) (p1 ~ p2);
             }
@@ -1095,20 +1108,20 @@ in
 }
 body
 {
-	size_t ni; // current character in filename
+        size_t ni; // current character in filename
 
-	foreach (pi; 0 .. pattern.length)
-	{
-	    char pc = pattern[pi];
-	    switch (pc)
-	    {
+        foreach (pi; 0 .. pattern.length)
+        {
+            char pc = pattern[pi];
+            switch (pc)
+            {
             case '*':
                 if (pi + 1 == pattern.length)
                     return true;
                 foreach (j; ni .. filename.length)
                 {
-                    if (fnmatch(filename[j .. filename.length],
-                                    pattern[pi + 1 .. pattern.length]))
+                    if (fnmatch(filename[j .. $],
+                                    pattern[pi + 1 .. $]))
                         return true;
                 }
                 return false;
@@ -1198,10 +1211,10 @@ body
                     return false;
                 ni++;
                 break;
-	    }
-	}
+            }
+        }
     assert(ni >= filename.length);
-	return ni == filename.length;
+        return ni == filename.length;
 }
 
 unittest
@@ -1211,7 +1224,7 @@ unittest
     version (Win32)
         assert(fnmatch("foo", "Foo"));
     version (linux)
-	assert(!fnmatch("foo", "Foo"));
+        assert(!fnmatch("foo", "Foo"));
     assert(fnmatch("foo", "*"));
     assert(fnmatch("foo.bar", "*"));
     assert(fnmatch("foo.bar", "*.*"));
