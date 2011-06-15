@@ -3310,10 +3310,10 @@ unittest
  * Example:
 ----
 string s = "abcdef";
-assert(findSkip("abcdef", "cd") && s == "ef");
+assert(findSkip(s, "cd") && s == "ef");
 s = "abcdef";
-assert(!findSkip("abcdef", "cxd") && s == "abcdef");
-assert(findSkip("abcdef", "def") && s.empty);
+assert(!findSkip(s, "cxd") && s == "abcdef");
+assert(findSkip(s, "def") && s.empty);
 ----
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
