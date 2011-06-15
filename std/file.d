@@ -3102,11 +3102,17 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
-//Iterate over all *.d files in current directory and all it's subdirectories
-auto dFiles = filter!((de){ return !match(de.name, `^.*d$`).empty; })
-                    (dirEntries(".",SpanMode.depth));
+// Iterate over all *.d files in current directory and all it's subdirectories
+auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
 foreach(d; dFiles)
     writeln(d.name);
+// Hook it up with std.parallelism to compile them all in parallel:
+foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
+{
+    string cmd = "dmd -c "  ~ d.name;
+    writeln(cmd);
+    std.process.system(cmd);
+}
 --------------------
 //
  +/
