@@ -22,7 +22,7 @@ import core.memory;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
-       std.range, std.regex, std.regexp, std.stdio, std.string, std.traits,
+       std.range, std.stdio, std.string, std.traits,
        std.typecons, std.typetuple, std.utf;
 
 import std.metastrings; //For generating deprecation messages only. Remove once
@@ -2819,6 +2819,7 @@ private struct DirIteratorImpl
             string dirpath;
             HANDLE h;
         }
+        
         bool stepIn(string directory)
         {
             string search_pattern = std.path.join(directory, "*.*");
@@ -2833,7 +2834,7 @@ private struct DirIteratorImpl
                     _stack.put(
                         DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
 
-                return toNext!false(&findinfo);
+                return toNext(false, &findinfo);
             }
             else
             {
@@ -2846,9 +2847,10 @@ private struct DirIteratorImpl
                     _stack.put(
                         DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
 
-                return toNext!false(&findinfo);
+                return toNext(false, &findinfo);
             }
         }
+        
         bool next()
         {
             if(_stack.data.empty)
@@ -2857,19 +2859,20 @@ private struct DirIteratorImpl
             if (useWfuncs)
             {
                 WIN32_FIND_DATAW findinfo;
-                result = toNext!true(&findinfo);
+                result = toNext(true, &findinfo);
 
             }
             else
             {
                 WIN32_FIND_DATA findinfo;
-                result = toNext!true(&findinfo);
+                result = toNext(true, &findinfo);
             }
             return result;
         }
-        bool toNext(bool fetch)(WIN32_FIND_DATAW* findinfo)
+        
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
         {
-            static if(fetch)
+            if(fetch)
             {
                 if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
                 {
@@ -2888,9 +2891,9 @@ private struct DirIteratorImpl
             return true;
         }
 
-        bool toNext(bool fetch=false)(WIN32_FIND_DATA* findinfo)
+        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
         {
-            static if(fetch)
+            if(fetch)
             {
                 if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
                 {
@@ -3501,53 +3504,36 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(C, U)(in C[] pathname, U pattern, bool followSymLinks = true)
-    if(is(C : char) && is(U : const(C[])))
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
+    if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
                 "scheduled for deprecation in August 2011. Please use " ~
                 "dirEntries instead.");
-    auto result = appender!(string[])();
-
+    import std.regexp;    
+    auto result = appender!(string[])();           
     bool callback(DirEntry* de)
     {
         if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else if(std.path.fnmatch(de.name, pattern))
+        else 
         {
-            result.put(de.name);
+            static if(is(U : const(C[])))
+            {//pattern version
+                if(std.path.fnmatch(de.name, filter))
+                    result.put(de.name);
+            }
+            else static if(is(U : RegExp))
+            {//RegExp version
+
+                if(filter.test(de.name))
+                    result.put(de.name);
+            }
+            else
+                static assert(0,"There is no version of listDir that takes " ~ U.stringof);
         }
-
-        return true; // continue
-    }
-
-    _listDir(pathname, &callback);
-
-    return result.data;
-}
-
-/++ Ditto +/
-string[] listDir(C, U)(in C[] pathname, U r, bool followSymLinks = true)
-    if(is(C : char) && is(U == RegExp))
-{
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "dirEntries instead.");
-    auto result = appender!(string[])();
-
-    bool callback(DirEntry* de)
-    {
-        if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
-        {
-            _listDir(de.name, &callback);
-        }
-        else if(r.test(de.name))
-        {
-            result.put(de.name);
-        }
-
         return true; // continue
     }
 
@@ -3593,8 +3579,8 @@ string[] listDir(C, U)(in C[] pathname, U r, bool followSymLinks = true)
  * }
  * ----
  */
-void listDir(C)(in C[] pathname, bool delegate(string filename) callback)
-    if(is(C : char))
+void listDir(C, U)(in C[] pathname, U callback)
+    if(is(C : char) && is(U: bool delegate(string filename)))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
                 "scheduled for deprecation in August 2011. Please use " ~
