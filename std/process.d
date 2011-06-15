@@ -1,39 +1,37 @@
 // Written in the D programming language.
 
-/** This is a proposal for a replacement for the
-    $(LINK2 http://www.digitalmars.com/d/2.0/phobos/std_process.html,std._process)
-    Phobos module.
+/** This is a proposal for a replacement for the $(D std._process) module.
 
     This is a summary of the functions in this module:
     $(UL $(LI
-        spawnProcess() spawns a new _process, optionally assigning it an
+        $(D spawnProcess()) spawns a new _process, optionally assigning it an
         arbitrary set of standard input, output, and error streams.
         It returns immediately, leaving the child _process to execute in
-        parallel with its parent.  All the other _process-spawning
-        functions in this module build on spawnProcess().)
+        parallel with its parent.  All other functions in this module that
+        spawn processes are built around $(D spawnProcess()).)
     $(LI
-        wait() makes the parent _process wait for a child _process to
+        $(D wait()) makes the parent _process wait for a child _process to
         terminate.  In general one should always do this, to avoid
-        child _processes becoming 'zombies' when the parent _process exits.
-        Scope guards are perfect for this – see the spawnProcess()
+        child _processes becoming "zombies" when the parent _process exits.
+        Scope guards are perfect for this – see the $(D spawnProcess())
         documentation for examples.)
     $(LI
-        pipeProcess() and pipeShell() also spawn a child _process which
+        $(D pipeProcess()) and $(D pipeShell()) also spawn a child _process which
         runs in parallel with its parent.  However, instead of taking
         arbitrary streams, they automatically create a set of
         pipes that allow the parent to communicate with the child
         through the child's standard input, output, and/or error streams.
-        These functions correspond roughly to C's popen() function.)
+        These functions correspond roughly to C's $(D popen()) function.)
     $(LI
-        execute() and shell() start a new _process and wait for it
+        $(D execute()) and $(D shell()) start a new _process and wait for it
         to complete before returning.  Additionally, they capture
         the _process' standard output and return it as a string.
-        These correspond roughly to C's system() function.
+        These correspond roughly to C's $(D system()) function.
     ))
     The functions that have names containing "shell" run the given command
     through the user's default command interpreter.  On Windows, this is
     the $(I cmd.exe) program, on POSIX it is determined by the SHELL environment
-    variable (defaulting to '/bin/sh' if it cannot be determined).  The
+    variable (defaulting to $(I /bin/sh) if it cannot be determined).  The
     command is specified as a single string which is sent directly to the
     shell.
 
@@ -42,10 +40,10 @@
     by spaces, and one where the arguments are specified as an array of
     strings.  Use the latter whenever the program name or any of the arguments
     contain spaces.
-    
+
     Unless the program name contains a directory, all functions will
-    search the directories specified in the PATH environment variable
-    for the executable.
+    search for the executable in the directories specified in the PATH
+    environment variable.
 
     Macros:
     WIKI=Phobos/StdProcess
@@ -139,6 +137,8 @@ private:
     int _exitCode;
 
 
+    // Pids are only meant to be constructed inside this module, so
+    // we make the constructor private.
     version(Windows)
     {
         HANDLE _handle;
@@ -147,12 +147,9 @@ private:
             _processID = pid;
             _handle = handle;
         }
-
     }
     else
     {
-        // Pids are only meant to be constructed inside this module, so
-        // we make the constructor private.
         this(int id)
         {
             _processID = id;
@@ -243,7 +240,7 @@ public:
     This function returns immediately, and the child process
     executes in parallel with its parent.
 
-    Unless a directory is specified in the command (or name)
+    Unless a directory is specified in the $(D _command) (or $(D name))
     parameter, this function will search the directories in the
     PATH environment variable for the program.
 
@@ -260,17 +257,17 @@ public:
             same environment as the parent process.
 
         stdin_ = The standard input stream of the child process.
-            This can be any UnbufferedFile that is opened for reading.
+            This can be any $(D File) that is opened for reading.
             By default the child process inherits the parent's input
             stream.
 
         stdout_ = The standard output stream of the child process.
-            This can be any UnbufferedFile that is opened for writing.
+            This can be any $(D File) that is opened for writing.
             By default the child process inherits the parent's output
             stream.
 
         stderr_ = The standard error stream of the child process.
-            This can be any UnbufferedFile that is opened for writing.
+            This can be any $(D File) that is opened for writing.
             By default the child process inherits the parent's error
             stream.
 
@@ -283,19 +280,19 @@ public:
             zeroth argument, this is done automatically.)
 
     Note:
-    If you pass a UnbufferedFile object that is $(I not) one of the standard
+    If you pass a $(D File) object that is $(I not) one of the standard
     input/output/error streams of the parent process, that stream
     will by default be closed in the parent process when this
-    function returns.  See the Config documentation below for information
+    function returns.  See the $(D Config) documentation below for information
     about how to disable this behaviour.
 
     Examples:
     Open Firefox on the D homepage and wait for it to complete:
     ---
-    auto pid = spawnProcess("firefox http://www.digitalmars.com/d/2.0");
+    auto pid = spawnProcess("firefox http://www.d-programming-language.org");
     wait(pid);
     ---
-    Use the "ls" command to retrieve a list of files:
+    Use the $(I ls) _command to retrieve a list of files:
     ---
     string[] files;
     auto pipe = Pipe.create();
@@ -305,8 +302,8 @@ public:
 
     foreach (f; pipe.readEnd.byLine())  files ~= f.idup;
     ---
-    Use the "ls -l" command to get a list of files, pipe the output
-    to "grep" and let it filter out all files except D source files,
+    Use the $(I ls -l) _command to get a list of files, pipe the output
+    to $(I grep) and let it filter out all files except D source files,
     and write the output to the file "dfiles.txt":
     ---
     // Let's emulate the command "ls -l | grep \.d > dfiles.txt"
@@ -315,7 +312,7 @@ public:
 
     auto lsPid = spawnProcess("ls -l", stdin, pipe.writeEnd);
     scope(exit) wait(lsPid);
-    
+
     auto grPid = spawnProcess("grep \\.d", pipe.readEnd, file);
     scope(exit) wait(grPid);
     ---
@@ -596,7 +593,7 @@ version(Posix) private const(char)** toArgz(string prog, const string[] args)
 {
     alias const(char)* stringz_t;
     auto argz = new stringz_t[](args.length+2);
-    
+
     argz[0] = toStringz(prog);
     foreach (i; 0 .. args.length)
     {
@@ -651,7 +648,26 @@ version(Posix) private bool isExecutable(string path)
 
 
 
-/** Options that control the behaviour of spawnProcess(). */
+/** Flags that control the behaviour of $(D spawnProcess()).
+    Use bitwise OR to combine flags.
+
+    Example:
+    ---
+    auto logFile = File("myapp_error.log", "w");
+
+    // Start program in a console window (Windows only), redirect
+    // its error stream to logFile, and leave logFile open in the
+    // parent process as well.
+    auto pid = spawnProcess("myapp", stdin, stdout, logFile,
+        Config.noCloseStderr | Config.gui);
+    scope(exit)
+    {
+        auto exitCode = wait(pid);
+        logFile.writeln("myapp exited with code ", exitCode);
+        logFile.close();
+    }
+    ---
+*/
 enum Config
 {
     none = 0,
@@ -659,7 +675,7 @@ enum Config
     /** Unless the child process inherits the standard
         input/output/error streams of its parent, one almost
         always wants the streams closed in the parent when
-        spawnProcess() returns.  Therefore, by default, this
+        $(D spawnProcess()) returns.  Therefore, by default, this
         is done.  If this is not desirable, pass any of these
         options to spawnProcess.
     */
@@ -677,12 +693,12 @@ enum Config
 
 
 /** Wait for a specific spawned process to terminate and return
-    its exit status.  See the spawnProcess() documentation above
+    its exit status.  See the $(D spawnProcess()) documentation above
     for examples of usage.
-    
-    In general one should always wait for child processes to terminate
+
+    In general one should always _wait for child processes to terminate
     before exiting the parent process.  Otherwise, they may become
-    'zombies' – processes that are defunct, yet still occupy a slot
+    "zombies" – processes that are defunct, yet still occupy a slot
     in the OS process table.
 
     Note:
@@ -710,7 +726,7 @@ int wait(Pid pid)
     Pipes can, for example, be used for interprocess communication
     by spawning a new process and passing one end of the pipe to
     the child, while the parent uses the other end.  See the
-    spawnProcess() documentation for examples of this.
+    $(D spawnProcess()) documentation for examples of this.
 */
 struct Pipe
 {
@@ -762,9 +778,9 @@ public:
             throw new Exception("Error creating pipe: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
         }
 
-	// Create file descriptors from the handles
-	auto readfd = _handleToFD(readHandle, FHND_DEVICE);
-	auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+        // Create file descriptors from the handles
+        auto readfd = _handleToFD(readHandle, FHND_DEVICE);
+        auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
 
         Pipe p;
         version(PIPE_USE_ALT_FDOPEN)
@@ -810,8 +826,8 @@ public:
 
 
     /** Close both ends of the pipe.
-    
-        Normally it is not necessary to do this manually, as File
+
+        Normally it is not necessary to do this manually, as $(D File)
         objects are automatically closed when there are no more references
         to them.
 
@@ -842,8 +858,8 @@ unittest
     input, output and/or error streams.  This function returns
     immediately, leaving the child process to execute in parallel
     with the parent.
-    
-    pipeShell() invokes the user's _command interpreter
+
+    $(D pipeShell()) invokes the user's _command interpreter
     to execute the given program or _command.
 
     Example:
@@ -948,8 +964,9 @@ ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
 
 
 
-/** Options to determine which of the child process' standard streams
-    are redirected.
+/** Flags that can be passed to $(D pipeProcess()) and $(D pipeShell())
+    to specify which of the child process' standard streams are redirected.
+    Use bitwise OR to combine flags.
 */
 enum Redirect
 {
@@ -964,14 +981,14 @@ enum Redirect
     /** Redirect the standard error stream into the standard output
         stream, and vice versa.
     */
-    stderrToStdout = 8, 
+    stderrToStdout = 8,
     stdoutToStderr = 16,                    /// ditto
 }
 
 
 
 
-/** Object containing File handles that allow communication with
+/** Object containing $(D File) handles that allow communication with
     a child process through its standard streams.
 */
 struct ProcessPipes
@@ -982,7 +999,7 @@ private:
     File _stdin, _stdout, _stderr;
 
 public:
-    /** Return the Pid of the child process. */
+    /** Return the $(D Pid) of the child process. */
     @property Pid pid()
     {
         enforce (_pid !is null);
@@ -990,7 +1007,7 @@ public:
     }
 
 
-    /** Return a File that allows writing to the child process'
+    /** Return a $(D File) that allows writing to the child process'
         standard input stream.
     */
     @property File stdin()
@@ -1001,7 +1018,7 @@ public:
     }
 
 
-    /** Return a File that allows reading from the child process'
+    /** Return a $(D File) that allows reading from the child process'
         standard output/error stream.
     */
     @property File stdout()
@@ -1010,7 +1027,7 @@ public:
             "Child process' standard output stream hasn't been redirected.");
         return _stdout;
     }
-    
+
     /// ditto
     @property File stderr()
     {
@@ -1029,6 +1046,7 @@ public:
 struct ProcessResult { int status; string output; }
 
 /** Execute the given program.
+
     This function blocks until the program returns, and returns
     its exit code and output (what it writes to its
     standard output $(I and) error streams).
@@ -1093,7 +1111,7 @@ version(Windows) private string getShell()
 
 
 
-/** Execute command in the user's default _shell.
+/** Execute $(D _command) in the user's default _shell.
     This function blocks until the _command returns, and returns
     its exit code and output (what the process writes to its
     standard output $(I and) error streams).
