@@ -750,9 +750,9 @@ class InternetAddress: Address
 
 
         public:
-        const uint ADDR_ANY = INADDR_ANY;       /// Any IPv4 address number.
-        const uint ADDR_NONE = INADDR_NONE;     /// An invalid IPv4 address number.
-        const ushort PORT_ANY = 0;              /// Any IPv4 port number.
+        enum uint ADDR_ANY = INADDR_ANY;       /// Any IPv4 address number.
+        enum uint ADDR_NONE = INADDR_NONE;     /// An invalid IPv4 address number.
+        enum ushort PORT_ANY = 0;              /// Any IPv4 port number.
 
         /// Overridden to return AddressFamily.INET.
         override AddressFamily addressFamily()
@@ -1412,7 +1412,7 @@ class Socket
         }
 
         /// Send or receive error code.
-        const int ERROR = _SOCKET_ERROR;
+        enum int ERROR = _SOCKET_ERROR;
 
         /**
          * Send data on the connection. Returns the number of bytes actually

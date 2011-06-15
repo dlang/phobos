@@ -1490,7 +1490,7 @@ class BufferedStream : FilterStream {
     assert(bufferLen <= buffer.length);
   }
 
-  const size_t DefaultBufferSize = 8192;
+  enum size_t DefaultBufferSize = 8192;
 
   /***
    * Create a buffered stream for the stream source with the buffer size
@@ -2187,7 +2187,7 @@ enum BOM {
         UTF32BE,        /// UTF-32 Big Endian
 }
 
-private const int NBOMS = 5;
+private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
   Endian.LittleEndian, Endian.BigEndian,

@@ -34,6 +34,7 @@ module etc.c.curl;
 pragma(lib, "curl");
 
 import core.stdc.time;
+import core.stdc.config;
 import std.socket;
 
 // linux
@@ -121,22 +122,22 @@ extern (C) struct curl_httppost
 {
     curl_httppost *next;        /** next entry in the list */
     char *name;                 /** pointer to allocated name */
-    int namelength;             /** length of name length */
+    c_long namelength;          /** length of name length */
     char *contents;             /** pointer to allocated data contents */
-    int contentslength;         /** length of contents field */
+    c_long contentslength;      /** length of contents field */
     char *buffer;               /** pointer to allocated buffer contents */
-    int bufferlength;           /** length of buffer field */
+    c_long bufferlength;        /** length of buffer field */
     char *contenttype;          /** Content-Type */
     curl_slist *contentheader;  /** list of extra headers for this form */
     curl_httppost *more;        /** if one field name has more than one
-                                   file, this link should link to following
-                                   files */
-    int flags;                  /** as defined below */
+                                    file, this link should link to following
+                                    files */
+    c_long flags;               /** as defined below */
     char *showfilename;         /** The file name to show. If not set, the
-                                   actual file name will be used (if this
-                                   is a file part) */
+                                    actual file name will be used (if this
+                                    is a file part) */
     void *userp;                /** custom pointer used for
-                                   HTTPPOST_CALLBACK posts */
+                                    HTTPPOST_CALLBACK posts */
 }
 
 enum HTTPPOST_FILENAME    = 1;  /** specified content is a file name */
@@ -233,7 +234,7 @@ extern (C) struct curl_fileinfo
     int uid;                    ///
     int gid;                    ///
     curl_off_t size;            ///
-    int hardlinks;              ///
+    c_long hardlinks;           ///
     _N2 strings;                ///
     uint flags;                 ///
     char *b_data;               ///
@@ -251,7 +252,7 @@ enum CurlChunkBgnFunc {
 /** if splitting of data transfer is enabled, this callback is called before
    download of an individual chunk started. Note that parameter "remains" works
    only for FTP wildcard downloading (for now), otherwise is not used */
-alias int  function(void *transfer_info, void *ptr, int remains)curl_chunk_bgn_callback;
+alias c_long function(void *transfer_info, void *ptr, int remains)curl_chunk_bgn_callback;
 
 /** return codes for CURLOPT_CHUNK_END_FUNCTION */
 enum CurlChunkEndFunc {
@@ -264,7 +265,7 @@ enum CurlChunkEndFunc {
    Even if downloading of this chunk was skipped in CHUNK_BGN_FUNC.
    This is the reason why we don't need "transfer_info" parameter in this
    callback and we are not interested in "remains" parameter too. */
-alias int  function(void *ptr)curl_chunk_end_callback;
+alias c_long function(void *ptr)curl_chunk_end_callback;
 
 /** return codes for FNMATCHFUNCTION */
 enum CurlFnMAtchFunc {
@@ -1530,7 +1531,7 @@ void  curl_free(void *p);
  *
  * This function is not thread-safe!
  */
-CURLcode  curl_global_init(int flags);
+CURLcode  curl_global_init(c_long flags);
 
 /**
  * Name: curl_global_init_mem()
@@ -1545,7 +1546,7 @@ CURLcode  curl_global_init(int flags);
  * callback routines with be invoked by this library instead of the system
  * memory management routines like malloc, free etc.
  */
-CURLcode  curl_global_init_mem(int flags, curl_malloc_callback m, curl_free_callback f, curl_realloc_callback r, curl_strdup_callback s, curl_calloc_callback c);
+CURLcode  curl_global_init_mem(c_long flags, curl_malloc_callback m, curl_free_callback f, curl_realloc_callback r, curl_strdup_callback s, curl_calloc_callback c);
 
 /**
  * Name: curl_global_cleanup()
@@ -1807,8 +1808,8 @@ extern (C) struct _N28
   char *host;          /** OS/host/cpu/machine when configured */
   int features;        /** bitmask, see defines below */
   char *ssl_version;   /** human readable string */
-  int ssl_version_num; /** not used anymore, always 0 */
-  char *libz_version;  /** human readable string */
+  c_long ssl_version_num; /** not used anymore, always 0 */
+  char *libz_version;     /** human readable string */
   /** protocols is terminated by an entry with a NULL protoname */
   char **protocols;
   /** The fields below this were added in CURLVERSION_SECOND */
@@ -2244,7 +2245,7 @@ extern (C) {
 
 extern (C) {
   alias int function(CURLM *multi,    /** multi handle */
-                     int timeout_ms,  /** see above */
+                     c_long timeout_ms,  /** see above */
                      void *userp) curl_multi_timer_callback;  /** private callback pointer */
   /// ditto
   CURLMcode  curl_multi_socket(CURLM *multi_handle, curl_socket_t s, int *running_handles);
@@ -2267,7 +2268,7 @@ extern (C) {
  *
  * Returns: CURLM error code.
  */
-extern (C) CURLMcode  curl_multi_timeout(CURLM *multi_handle, int *milliseconds);
+extern (C) CURLMcode  curl_multi_timeout(CURLM *multi_handle, c_long *milliseconds);
 
 ///
 enum CurlMOption {

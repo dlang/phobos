@@ -18,5 +18,6 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 5673): Add lookahead and forgetful matching support std.regex)
         $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
         $(LI $(BUGZILLA 6076): regression, std.regex: "c.*|d" matches "mm")
+        $(LI $(BUGZILLA 6113): singletons in std.datetime are not created early enough)
     )
 )
