@@ -40,6 +40,7 @@ module std.socket;
 import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv,
     std.traits;
 
+import core.stdc.config;
 import core.time : dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce;
@@ -947,8 +948,8 @@ enum SocketFlags: int
 extern(C) struct timeval
 {
         // D interface
-        int seconds;            /// Number of seconds.
-        int microseconds;       /// Number of additional microseconds.
+        c_long seconds;            /// Number of seconds.
+        c_long microseconds;       /// Number of additional microseconds.
 
         // C interface
         deprecated
