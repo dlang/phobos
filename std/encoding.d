@@ -51,6 +51,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.encoding;
 
+import std.encodingbase;
 import std.string;
 import std.traits;
 import std.range;
@@ -2379,11 +2380,6 @@ abstract class EncodingScheme
  */
 class EncodingSchemeASCII : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeASCII");
-    }
-
     const
     {
         override string[] names()
@@ -2449,6 +2445,12 @@ class EncodingSchemeASCII : EncodingScheme
     }
 }
 
+extern(C) void std_encoding_EncodingSchemeASCII_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeASCII");
+}
+
+
 /**
  EncodingScheme to handle Latin-1
 
@@ -2465,11 +2467,6 @@ class EncodingSchemeASCII : EncodingScheme
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
-    }
-
     const
     {
         override string[] names()
@@ -2533,6 +2530,11 @@ class EncodingSchemeLatin1 : EncodingScheme
     }
 }
 
+extern(C) void std_encoding_EncodingSchemeLatin1_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
+}
+
 /**
  EncodingScheme to handle Windows-1252
 
@@ -2541,11 +2543,6 @@ class EncodingSchemeLatin1 : EncodingScheme
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
-    }
-
     const
     {
         override string[] names()
@@ -2601,6 +2598,11 @@ class EncodingSchemeWindows1252 : EncodingScheme
     }
 }
 
+extern(C) void std_encoding_EncodingSchemeWindows1252_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
+}
+
 /**
  EncodingScheme to handle UTF-8
 
@@ -2609,11 +2611,6 @@ class EncodingSchemeWindows1252 : EncodingScheme
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
-    }
-
     const
     {
         override string[] names()
@@ -2669,6 +2666,11 @@ class EncodingSchemeUtf8 : EncodingScheme
     }
 }
 
+extern(C) void std_encoding_EncodingSchemeUtf8_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
+}
+
 /**
  EncodingScheme to handle UTF-16 in native byte order
 
@@ -2678,11 +2680,6 @@ class EncodingSchemeUtf8 : EncodingScheme
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
-    }
-
     const
     {
         version(LittleEndian) { enum string NAME = "UTF-16LE"; }
@@ -2747,6 +2744,11 @@ class EncodingSchemeUtf16Native : EncodingScheme
     }
 }
 
+extern(C) void std_encoding_EncodingSchemeUtf16Native_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
+}
+
 /**
  EncodingScheme to handle UTF-32 in native byte order
 
@@ -2756,11 +2758,6 @@ class EncodingSchemeUtf16Native : EncodingScheme
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
-    shared static this()
-    {
-        EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
-    }
-
     const
     {
         version(LittleEndian) { enum string NAME = "UTF-32LE"; }
@@ -2823,6 +2820,11 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return cast(immutable(ubyte)[])"\uFFFD"d;
         }
     }
+}
+
+extern(C) void std_encoding_EncodingSchemeUtf32Native_static_this()
+{
+    EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
 }
 
 //=============================================================================
