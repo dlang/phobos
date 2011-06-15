@@ -157,10 +157,10 @@ MAIN = $(ROOT)/emptymain.d
 STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
         compiler complex concurrency container contracts conv cpuid		\
         cstream ctype date datetime datebase dateparse demangle			\
-        encoding encodingbase exception file format functional getopt 	\
-        gregorian json loader math mathspecial md5 metastrings mmfile 	\
-        numeric outbuffer parallelism path perf process random range 	\
-        regex regexp signals socket socketstream stdint stdio stdiobase	\
+        encoding exception file format functional getopt gregorian		\
+        json loader math mathspecial md5 metastrings mmfile numeric		\
+        outbuffer parallelism path perf process random range regex		\
+        regexp signals socket socketstream stdint stdio stdiobase		\
         stream string syserror system traits typecons typetuple uni		\
         uri utf variant xml zip zlib)
 
