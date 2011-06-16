@@ -2655,7 +2655,7 @@ terminating the main thread.
     __gshared static TaskPool pool;
 
     if(!initialized) {
-        synchronized {
+        synchronized(TaskPool.classinfo) {
             if(!pool) {
                 pool = new TaskPool(defaultPoolThreads);
                 pool.isDaemon = true;
