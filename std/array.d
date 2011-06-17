@@ -194,6 +194,46 @@ assert(matrix[0].length == 31);
 auto uninitializedArray(T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
 {
+    return arrayAllocImpl!(false, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = uninitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = uninitializedArray!(double[][])(42, 31);
+    assert(matrix.length == 42);
+    assert(matrix[0].length == 31);
+}
+
+/**
+Returns a new array of type $(D T) allocated on the garbage collected heap.
+Initialization is guaranteed only for pointers, references and slices,
+for preservation of memory safety.
+*/
+auto minimallyInitializedArray(T, I...)(I sizes) @trusted
+if(allSatisfy!(isIntegral, I))
+{
+    return arrayAllocImpl!(true, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = minimallyInitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = minimallyInitializedArray!(double[][])(42);
+    assert(matrix.length == 42);
+    foreach(elem; matrix)
+    {
+        assert(elem.ptr is null);
+    }
+}
+
+private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
+if(allSatisfy!(isIntegral, I))
+{
     static assert(sizes.length >= 1,
         "Cannot allocate an array without the size of at least the first " ~
         " dimension.");
@@ -213,18 +253,12 @@ if(allSatisfy!(isIntegral, I))
             elem = uninitializedArray!(E)(sizes[1..$]);
         }
     }
+    else static if(minimallyInitialized && hasIndirections!E)
+    {
+        ret[] = E.init;
+    }
 
     return ret;
-}
-
-unittest
-{
-    double[] arr = uninitializedArray!(double[])(100);
-    assert(arr.length == 100);
-
-    double[][] matrix = uninitializedArray!(double[][])(42, 31);
-    assert(matrix.length == 42);
-    assert(matrix[0].length == 31);
 }
 
 /**
