@@ -1006,14 +1006,14 @@ public class Value
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 private:
     this(Key key, string name, REG_VALUE_TYPE type)
     in
     {
-        assert(!(key is null));
+        assert(key !is null);
     }
     body
     {
@@ -1267,7 +1267,7 @@ public class KeyNameSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1368,7 +1368,7 @@ public class KeySequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1485,7 +1485,7 @@ public class ValueNameSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1587,7 +1587,7 @@ public class ValueSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
