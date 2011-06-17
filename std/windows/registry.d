@@ -776,7 +776,7 @@ public:
         else
         {
             DWORD disposition;
-            HKey hkey = m_hkey.createKey(name, 0, REGSAM.KEY_ALL_ACCESS, null, disposition);
+            HKey hkey = m_hkey.createKey(name, 0, access, null, disposition);
 
             // Potential resource leak here!!
             //
@@ -824,7 +824,7 @@ public:
         }
         else
         {
-            HKey hkey = m_hkey.openKey(name, REGSAM.KEY_ALL_ACCESS);
+            HKey hkey = m_hkey.openKey(name, access);
 
             // Potential resource leak here!!
             //
