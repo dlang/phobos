@@ -410,18 +410,17 @@ private struct HKey {
         // See bugzilla 961 on this
         static union U
         {
-            uint    dw;
-            ulong   qw;
+            uint dw;
+            ulong qw;
         };
-        U       u;
-        void    *data   =   &u.qw;
-        DWORD   cbData  =   u.qw.sizeof;
-        LONG    res     =   RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
+        U u;
+        void *data = &u.qw;
+        DWORD cbData = u.qw.sizeof;
+        LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
 
         if (res == ERROR_MORE_DATA)
         {
             data = (new byte[cbData]).ptr;
-
             res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
         }
 
@@ -429,35 +428,35 @@ private struct HKey {
         switch (type)
         {
             default:
-            case    REG_VALUE_TYPE.REG_BINARY:
-            case    REG_VALUE_TYPE.REG_MULTI_SZ:
+            case REG_VALUE_TYPE.REG_BINARY:
+            case REG_VALUE_TYPE.REG_MULTI_SZ:
                 throw new RegistryException("Cannot read the given value as a string");
 
-            case    REG_VALUE_TYPE.REG_SZ:
-            case    REG_VALUE_TYPE.REG_EXPAND_SZ:
+            case REG_VALUE_TYPE.REG_SZ:
+            case REG_VALUE_TYPE.REG_EXPAND_SZ:
                 value = to!string(cast(char*)data);
                 if (value.ptr == cast(char*)&u.qw)
                     value = value.idup;         // don't point into the stack
                 break;
 version(LittleEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
                 value = to!string(u.dw);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 value = to!string(bswap(u.dw));
                 break;
 }
 version(BigEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
                 value = to!string(bswap(u.dw));
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 value = to!string(u.dw);
                 break;
 }
-            case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
                 value = to!string(u.qw);
                 break;
         }
@@ -513,17 +512,17 @@ version(BigEndian)
 
 version(LittleEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
                 assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
 } // version(LittleEndian)
 version(BigEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
 } // version(BigEndian)
                 value = bswap(value);
                 break;
@@ -540,7 +539,7 @@ version(BigEndian)
             default:
                 throw new RegistryException("Cannot read the given value as a 64-bit integer");
 
-            case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
                 break;
         }
     }
@@ -564,7 +563,7 @@ version(BigEndian)
             default:
                 throw new RegistryException("Cannot read the given value as a string");
 
-            case    REG_VALUE_TYPE.REG_BINARY:
+            case REG_VALUE_TYPE.REG_BINARY:
                 data.length = cbData;
                 value = data;
                 break;
@@ -639,9 +638,9 @@ unittest
     // (i) Test that we can throw and catch one by its own type
     try
     {
-        string  message =   "Test 1";
-        int     code    =   3;
-        string  string  =   "Test 1 (3)";
+        string message = "Test 1";
+        int code = 3;
+        string string = "Test 1 (3)";
 
         try
         {
@@ -683,9 +682,9 @@ public class Key
 private:
     this(HKey hkey, string name, bool created)
     {
-        m_hkey      =   hkey;
-        m_name      =   name;
-        m_created   =   created;
+        m_hkey = hkey;
+        m_name = name;
+        m_created = created;
     }
 
     ~this()
@@ -717,8 +716,8 @@ public:
     /// The number of sub keys
     uint keyCount()
     {
-        uint    cSubKeys;
-        uint    cchSubKeyMaxLen;
+        uint cSubKeys;
+        uint cchSubKeyMaxLen;
         m_hkey.getNumSubKeys(cSubKeys, cchSubKeyMaxLen);
 
         return cSubKeys;
@@ -739,8 +738,8 @@ public:
     /// The number of values
     uint valueCount()
     {
-        uint    cValues;
-        uint    cchValueMaxLen;
+        uint cValues;
+        uint cchValueMaxLen;
         m_hkey.getNumValues(cValues, cchValueMaxLen);
 
         return cValues;
@@ -769,8 +768,7 @@ public:
     /// \note If the key cannot be created, a RegistryException is thrown.
     Key createKey(string name, REGSAM access)
     {
-        if ( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
             throw new RegistryException("Key name is invalid");
         }
@@ -786,10 +784,8 @@ public:
             // the HKEY there. If the creation of
             try
             {
-                Key key =   new Key(hkey, name, disposition == REG_CREATED_NEW_KEY);
-
+                Key key = new Key(hkey, name, disposition == REG_CREATED_NEW_KEY);
                 hkey.hkey = null;
-
                 return key;
             }
             finally
@@ -821,8 +817,7 @@ public:
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     Key getKey(string name, REGSAM access)
     {
-        if ( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
             return new Key(m_hkey.dup(), m_name, false);
         }
@@ -837,10 +832,8 @@ public:
             // the HKEY there. If the creation of
             try
             {
-                Key key =   new Key(hkey, name, false);
-
+                Key key = new Key(hkey, name, false);
                 hkey.hkey = null;
-
                 return key;
             }
             finally
@@ -869,8 +862,7 @@ public:
     /// \param name The name of the key to delete. May not be null
     void deleteKey(string name)
     {
-        if ( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
             throw new RegistryException("Key name is invalid");
         }
@@ -886,8 +878,8 @@ public:
     /// \return This function never returns null. If a value corresponding to the requested name is not found, a RegistryException is thrown
     Value getValue(string name)
     {
-        REG_VALUE_TYPE  type;
-        LONG            res =   m_hkey.getValueType(name, type);
+        REG_VALUE_TYPE type;
+        LONG res = m_hkey.getValueType(name, type);
 
         if (res == ERROR_SUCCESS)
         {
@@ -917,10 +909,10 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, uint value, Endian endian)
     {
-        REG_VALUE_TYPE  type    =   _RVT_from_Endian(endian);
+        REG_VALUE_TYPE type = _RVT_from_Endian(endian);
 
-        assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
-                type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
+        assert(type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
+               type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
 
         m_hkey.setValue(name, type, &value, value.sizeof);
     }
@@ -997,7 +989,7 @@ public:
 /// \name Members
 //@{
 private:
-    HKey    m_hkey;
+    HKey m_hkey;
     string m_name;
     bool m_created;
 //@}
@@ -1025,9 +1017,9 @@ private:
     }
     body
     {
-        m_key   =   key;
-        m_type  =   type;
-        m_name  =   name;
+        m_key = key;
+        m_type = type;
+        m_name = name;
     }
 
 /// \name Attributes
@@ -1054,8 +1046,8 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_SZ, REG_EXPAND_SZ, REG_DWORD(_*) or REG_QWORD(_*):
     string value_SZ()
     {
-        REG_VALUE_TYPE  type;
-        string          value;
+        REG_VALUE_TYPE type;
+        string value;
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
@@ -1074,12 +1066,10 @@ public:
     /// \note This function works with the same value-types as Value_SZ().
     string value_EXPAND_SZ()
     {
-        string  value   =   value_SZ;
-        // ExpandEnvironemntStrings():
-        //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
-        LPCWSTR  lpSrc       =   toUTF16z(value);
-        DWORD   cchRequired =   ExpandEnvironmentStringsW(lpSrc, null, 0);
-        wchar[]  newValue    =   new wchar[cchRequired];
+        string value = value_SZ;
+        LPCWSTR lpSrc = toUTF16z(value);
+        DWORD cchRequired = ExpandEnvironmentStringsW(lpSrc, null, 0);
+        wchar[] newValue = new wchar[cchRequired];
 
         if (!ExpandEnvironmentStringsW(lpSrc, newValue.ptr, newValue.length))
         {
@@ -1095,8 +1085,8 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_MULTI_SZ
     string[] value_MULTI_SZ()
     {
-        REG_VALUE_TYPE  type;
-        string[]        value;
+        REG_VALUE_TYPE type;
+        string[] value;
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
@@ -1114,8 +1104,8 @@ public:
     /// \note An exception is thrown for all types other than REG_DWORD, REG_DWORD_LITTLE_ENDIAN and REG_DWORD_BIG_ENDIAN.
     uint value_DWORD()
     {
-        REG_VALUE_TYPE  type;
-        uint            value;
+        REG_VALUE_TYPE type;
+        uint value;
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
@@ -1143,8 +1133,8 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_QWORD
     ulong value_QWORD()
     {
-        REG_VALUE_TYPE  type;
-        ulong           value;
+        REG_VALUE_TYPE type;
+        ulong value;
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
@@ -1165,10 +1155,10 @@ public:
     ///
     /// \return The contents of the value
     /// \note Throws a RegistryException if the type of the value is not REG_BINARY
-    byte[]  value_BINARY()
+    byte[] value_BINARY()
     {
-        REG_VALUE_TYPE  type;
-        byte[]          value;
+        REG_VALUE_TYPE type;
+        byte[] value;
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
@@ -1184,9 +1174,9 @@ public:
 /// \name Members
 //@{
 private:
-    Key             m_key;
-    REG_VALUE_TYPE  m_type;
-    string         m_name;
+    Key m_key;
+    REG_VALUE_TYPE m_type;
+    string m_name;
 //@}
 }
 
@@ -1438,7 +1428,7 @@ public:
             {
                 try
                 {
-                    Key key =   m_key.getKey(name);
+                    Key key = m_key.getKey(name);
                     result = dg(key);
                 }
                 catch(RegistryException x)
@@ -1623,7 +1613,7 @@ public:
     /// \note Throws a RegistryException if no corresponding value is retrieved
     Value getValue(uint index)
     {
-        HKey    hkey    =   m_key.m_hkey;
+        HKey hkey = m_key.m_hkey;
 		string name;
         if (!hkey.enumValueName(index, name))
         {
@@ -1678,8 +1668,8 @@ private:
 
 unittest
 {
-    Key HKCR    =   Registry.classesRoot;
-    Key CLSID   =   HKCR.getKey("CLSID");
+    Key HKCR = Registry.classesRoot;
+    Key CLSID = HKCR.getKey("CLSID");
 
     foreach (Key key; CLSID.keys)
     {
