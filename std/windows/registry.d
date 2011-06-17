@@ -587,7 +587,7 @@ version(BigEndian)
     		else 
     			s = "\0";
     	}
-    	wstring all = join!(wstring[],wstring)(value, "\0"w);
+    	auto all = join!(wstring[],wstring)(value, "\0"w);
 
         sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) all.ptr, all.length * wchar.sizeof));
     }
