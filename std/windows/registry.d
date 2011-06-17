@@ -55,6 +55,7 @@ private import std.string;
 private import std.windows.syserror;
 private import std.c.windows.windows;
 private import std.utf : toUTF16z;
+private import std.system;
 import std.c.stdio : printf;
 import std.conv;
 import std.stdio;
@@ -62,15 +63,6 @@ import std.stdio;
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
  +/
-
-version(LittleEndian)
-{
-    private const int Endian_Ambient =   1;
-}
-version(BigEndian)
-{
-    private const int Endian_Ambient =   2;
-}
 
 class Win32Exception : Exception
 {
@@ -87,29 +79,6 @@ class Win32Exception : Exception
         error = errnum;
     }
 }
-
-/// An enumeration representing byte-ordering (Endian) strategies
-public enum Endian
-{
-        Unknown =   0                   //!< Unknown endian-ness. Indicates an error
-    ,   Little  =   1                   //!< Little endian architecture
-    ,   Big     =   2                   //!< Big endian architecture
-    ,   Middle  =   3                   //!< Middle endian architecture
-    ,   ByteSex =   4
-    ,   Ambient =   Endian_Ambient      //!< The ambient architecture, e.g. equivalent to Big on big-endian architectures.
-/+ ++++ The compiler does not support this, due to deficiencies in the version() mechanism +++
-  version(LittleEndian)
-  {
-    ,   Ambient =   Little
-  }
-  version(BigEndian)
-  {
-    ,   Ambient =   Big
-  }
-+/
-}
-/+
- +/
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
@@ -218,10 +187,10 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
     switch(endian)
     {
-        case    Endian.Big:
+        case    Endian.BigEndian:
             return REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN;
 
-        case    Endian.Little:
+        case    Endian.LittleEndian:
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
 
         default:
@@ -938,7 +907,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, uint value)
     {
-        setValue(name, value, Endian.Ambient);
+        setValue(name, value, endian);
     }
 
     /// Sets the named value with the given 32-bit unsigned integer value, according to the desired byte-ordering
