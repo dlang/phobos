@@ -34,7 +34,6 @@
  * ////////////////////////////////////////////////////////////////////////// */
 
 
-
 /** \file std/windows/registry.d This file contains
  * the \c std.windows.registry.* classes
  */
@@ -185,12 +184,12 @@ private uint sysEnforce(uint errcode)
 
 private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
-    switch(endian)
+    switch (endian)
     {
-        case    Endian.BigEndian:
+        case Endian.BigEndian:
             return REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN;
 
-        case    Endian.LittleEndian:
+        case Endian.LittleEndian:
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
 
         default:
@@ -211,19 +210,19 @@ private struct HKey {
 	
 	private bool isStandardHiveKey()
 	{
-        if(cast(uint)hkey & 0x80000000)
+        if (cast(uint)hkey & 0x8000_0000)
         {
-            switch(cast(uint)hkey)
+            switch (cast(uint)hkey)
             {
-                case    HKEY_CLASSES_ROOT:
-                case    HKEY_CURRENT_USER:
-                case    HKEY_LOCAL_MACHINE:
-                case    HKEY_USERS:
-                case    HKEY_PERFORMANCE_DATA:
-                case    HKEY_PERFORMANCE_TEXT:
-                case    HKEY_PERFORMANCE_NLSTEXT:
-                case    HKEY_CURRENT_CONFIG:
-                case    HKEY_DYN_DATA:
+                case HKEY_CLASSES_ROOT:
+                case HKEY_CURRENT_USER:
+                case HKEY_LOCAL_MACHINE:
+                case HKEY_USERS:
+                case HKEY_PERFORMANCE_DATA:
+                case HKEY_PERFORMANCE_TEXT:
+                case HKEY_PERFORMANCE_NLSTEXT:
+                case HKEY_CURRENT_CONFIG:
+                case HKEY_DYN_DATA:
                     return true;
                 default:
                     /* Do nothing */
@@ -240,7 +239,7 @@ private struct HKey {
          * these hive keys is ignored, we'd rather not trust the Win32
          * API.
          */
-        if(isStandardHiveKey())
+        if (isStandardHiveKey())
         {
             return ;
         }
@@ -257,7 +256,7 @@ private struct HKey {
     private HKey createKey(in string subKey, in DWORD dwOptions, in REGSAM samDesired, in LPSECURITY_ATTRIBUTES lpsa, out DWORD disposition)
     in
     {
-        assert(subKey != null);
+        assert(subKey !is null);
     }
     body
     {
@@ -269,7 +268,7 @@ private struct HKey {
     private void deleteKey(in string subKey)
     in
     {
-        assert(subKey != null);
+        assert(subKey !is null);
     }
     body
     {
@@ -279,7 +278,7 @@ private struct HKey {
     private void deleteValue(in string valueName)
     in
     {
-        assert(valueName != null);
+        assert(valueName !is null);
     }
     body
     {
@@ -289,7 +288,7 @@ private struct HKey {
     private HKey dup()
     {
         /* Can't duplicate standard keys, but don't need to, so can just return */
-        if(isStandardHiveKey())
+        if (isStandardHiveKey())
         {
             return this.dup;
         }
@@ -302,7 +301,7 @@ private struct HKey {
     private bool enumKeyName(in DWORD index, out string name)
     out(result)
     {
-        assert(!result || name != null);
+        assert(!result || name !is null);
     }
     body
     {
@@ -313,7 +312,7 @@ private struct HKey {
         // The Registry API lies about the lengths of a very few sub-key lengths
         // so we have to test to see if it whinges about more data, and provide
         // more if it does.
-        for(;;)
+        for (;;)
         {
         	cchName = buf.length;
             res = RegEnumKeyExW(hkey, index, buf.ptr, &cchName, null, null, null, null);
@@ -338,7 +337,7 @@ private struct HKey {
     private bool enumValueName(in DWORD dwIndex, out string name)
     out(result)
     {
-        //assert(!result || name != null);
+        //assert(!result || name !is null);
     }
     body
     {
@@ -349,11 +348,11 @@ private struct HKey {
         // The Registry API lies about the lengths of a very few sub-key lengths
         // so we have to test to see if it whinges about more data, and provide
         // more if it does.
-        for(;;)
+        for (;;)
         {
             cchName = buf.length;
-            res = RegEnumValueW(hkey, dwIndex, buf.ptr, &cchName, null, null, null, null);;
-    
+            res = RegEnumValueW(hkey, dwIndex, buf.ptr, &cchName, null, null, null, null);
+
             if (ERROR_MORE_DATA != res)
             {
                 break;
@@ -386,7 +385,7 @@ private struct HKey {
         DWORD cbData = 0;
         LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, null, &cbData);
     
-        if(ERROR_MORE_DATA == res)
+        if (ERROR_MORE_DATA == res)
         {
             res = ERROR_SUCCESS;
         }
@@ -397,7 +396,7 @@ private struct HKey {
     private HKey openKey(in string subKey, in REGSAM samDesired)
     in
     {
-        assert(subKey != null);
+        assert(subKey !is null);
     }
     body
     {
@@ -419,7 +418,7 @@ private struct HKey {
         DWORD   cbData  =   u.qw.sizeof;
         LONG    res     =   RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
 
-        if(ERROR_MORE_DATA == res)
+        if (ERROR_MORE_DATA == res)
         {
             data = (new byte[cbData]).ptr;
 
@@ -427,7 +426,7 @@ private struct HKey {
         }
 
     	sysEnforce(res);
-        switch(type)
+        switch (type)
         {
             default:
             case    REG_VALUE_TYPE.REG_BINARY:
@@ -482,7 +481,7 @@ version(BigEndian)
         
         sysEnforce(res);
     
-        switch(type)
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
@@ -507,7 +506,7 @@ version(BigEndian)
         DWORD cbData = value.sizeof;
         LONG res = sysEnforce(RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, &value, &cbData));
     
-        switch(type)
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 32-bit integer");
@@ -536,7 +535,7 @@ version(BigEndian)
         DWORD cbData = value.sizeof;
         LONG res = sysEnforce(RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, &value, &cbData));
     
-        switch(type)
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 64-bit integer");
@@ -552,7 +551,7 @@ version(BigEndian)
         DWORD cbData = data.sizeof;
         LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
     
-        if(ERROR_MORE_DATA == res)
+        if (ERROR_MORE_DATA == res)
         {
             data.length = cbData;    
             res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
@@ -560,7 +559,7 @@ version(BigEndian)
 
 		sysEnforce(res);
 
-        switch(type)
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
@@ -652,7 +651,7 @@ unittest
         {
             assert(x.error == code);
 /+
-            if(string != x.toString())
+            if (string != x.toString())
             {
                 printf( "UnitTest failure for RegistryException:\n"
                         "  x.message [%d;\"%.*s\"] does not equal [%d;\"%.*s\"]\n"
@@ -770,7 +769,7 @@ public:
     /// \note If the key cannot be created, a RegistryException is thrown.
     Key createKey(string name, REGSAM access)
     {
-        if( null is name ||
+        if ( null is name ||
             0 == name.length)
         {
             throw new RegistryException("Key name is invalid");
@@ -795,7 +794,7 @@ public:
             }
             finally
             {
-                if(hkey.hkey != null)
+                if (hkey.hkey !is null)
                 {
                     hkey.closeKey();
                 }
@@ -822,7 +821,7 @@ public:
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     Key getKey(string name, REGSAM access)
     {
-        if( null is name ||
+        if ( null is name ||
             0 == name.length)
         {
             return new Key(m_hkey.dup(), m_name, false);
@@ -846,7 +845,7 @@ public:
             }
             finally
             {
-                if(hkey.hkey != null)
+                if (hkey.hkey !is null)
                 {
                     hkey.closeKey();
                 }
@@ -870,7 +869,7 @@ public:
     /// \param name The name of the key to delete. May not be null
     void deleteKey(string name)
     {
-        if( null is name ||
+        if ( null is name ||
             0 == name.length)
         {
             throw new RegistryException("Key name is invalid");
@@ -890,7 +889,7 @@ public:
         REG_VALUE_TYPE  type;
         LONG            res =   m_hkey.getValueType(name, type);
 
-        if(ERROR_SUCCESS == res)
+        if (ERROR_SUCCESS == res)
         {
             return new Value(this, name, type);
         }
@@ -1060,7 +1059,7 @@ public:
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1082,7 +1081,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsW(lpSrc, null, 0);
         wchar[]  newValue    =   new wchar[cchRequired];
 
-        if(!ExpandEnvironmentStringsW(lpSrc, newValue.ptr, newValue.length))
+        if (!ExpandEnvironmentStringsW(lpSrc, newValue.ptr, newValue.length))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }
@@ -1101,7 +1100,7 @@ public:
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1120,7 +1119,7 @@ public:
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1149,7 +1148,7 @@ public:
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1173,7 +1172,7 @@ public:
 
         m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1262,7 +1261,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] kName; key.SubKeys)</code>
+/// <code>&nbsp;&nbsp;foreach (char[] kName; key.SubKeys)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1329,7 +1328,7 @@ public:
         int result = 0;
         HKey hkey = m_key.m_hkey;
 
-        for(DWORD index = 0; result == 0; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
             string name;
             if (hkey.enumKeyName(index, name))
@@ -1363,7 +1362,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(Key k; key.SubKeys)</code>
+/// <code>&nbsp;&nbsp;foreach (Key k; key.SubKeys)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1432,7 +1431,7 @@ public:
         int result = 0;
         HKey hkey = m_key.m_hkey;
 
-        for(DWORD index = 0; result == 0; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
             string name;
             if (hkey.enumKeyName(index, name))
@@ -1446,7 +1445,7 @@ public:
                 {
                     // Skip inaccessible keys; they are
                     // accessible via the KeyNameSequence
-                    if(x.error == ERROR_ACCESS_DENIED)
+                    if (x.error == ERROR_ACCESS_DENIED)
                     {
                         continue;
                     }
@@ -1480,7 +1479,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] vName; key.Values)</code>
+/// <code>&nbsp;&nbsp;foreach (char[] vName; key.Values)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1549,7 +1548,7 @@ public:
         int result = 0;
         HKey hkey = m_key.m_hkey;
 
-        for(DWORD index = 0; result == 0; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
 			string name;
             if (hkey.enumValueName(index, name))
@@ -1582,7 +1581,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(Value v; key.Values)</code>
+/// <code>&nbsp;&nbsp;foreach (Value v; key.Values)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1651,7 +1650,7 @@ public:
         int result = 0;
         HKey hkey = m_key.m_hkey;
 
-        for(DWORD index = 0; result == 0; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
 			string name;
             if (hkey.enumValueName(index, name))
@@ -1682,9 +1681,9 @@ unittest
     Key HKCR    =   Registry.classesRoot;
     Key CLSID   =   HKCR.getKey("CLSID");
 
-    foreach(Key key; CLSID.keys)
+    foreach (Key key; CLSID.keys)
     {
-        foreach(Value val; key.values)
+        foreach (Value val; key.values)
         {
         }
     }
