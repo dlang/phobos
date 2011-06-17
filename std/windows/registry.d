@@ -317,7 +317,7 @@ private struct HKey {
         	cchName = buf.length;
             res = RegEnumKeyExW(hkey, index, buf.ptr, &cchName, null, null, null, null);
     
-            if (ERROR_MORE_DATA != res)
+            if (res != ERROR_MORE_DATA)
             {
                 break;
             }
@@ -353,7 +353,7 @@ private struct HKey {
             cchName = buf.length;
             res = RegEnumValueW(hkey, dwIndex, buf.ptr, &cchName, null, null, null, null);
 
-            if (ERROR_MORE_DATA != res)
+            if (res != ERROR_MORE_DATA)
             {
                 break;
             }
@@ -385,7 +385,7 @@ private struct HKey {
         DWORD cbData = 0;
         LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, null, &cbData);
     
-        if (ERROR_MORE_DATA == res)
+        if (res == ERROR_MORE_DATA)
         {
             res = ERROR_SUCCESS;
         }
@@ -418,7 +418,7 @@ private struct HKey {
         DWORD   cbData  =   u.qw.sizeof;
         LONG    res     =   RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
 
-        if (ERROR_MORE_DATA == res)
+        if (res == ERROR_MORE_DATA)
         {
             data = (new byte[cbData]).ptr;
 
@@ -551,7 +551,7 @@ version(BigEndian)
         DWORD cbData = data.sizeof;
         LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
     
-        if (ERROR_MORE_DATA == res)
+        if (res == ERROR_MORE_DATA)
         {
             data.length = cbData;    
             res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
@@ -889,7 +889,7 @@ public:
         REG_VALUE_TYPE  type;
         LONG            res =   m_hkey.getValueType(name, type);
 
-        if (ERROR_SUCCESS == res)
+        if (res == ERROR_SUCCESS)
         {
             return new Value(this, name, type);
         }
