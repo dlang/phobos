@@ -434,7 +434,8 @@ private struct HKey {
 
             case REG_VALUE_TYPE.REG_SZ:
             case REG_VALUE_TYPE.REG_EXPAND_SZ:
-                value = to!string(cast(char*)data);
+            	assert(cbData%2 == 0);
+                value = to!string((cast(wchar*)data)[0 .. cbData/2-1]);
                 if (value.ptr == cast(char*)&u.qw)
                     value = value.idup;         // don't point into the stack
                 break;
@@ -1700,11 +1701,31 @@ unittest
     assert(unittestKey);
     Key cityKey = unittestKey.createKey("CityCollection using foreign names with umlauts and accents: öäüÖÄÜàáâß");
     cityKey.setValue("Köln", "Germany");
-    cityKey.setValue("Минск", "Belorussia");
+    cityKey.setValue("Минск", "Belarus");
+    cityKey.setValue("北京", "China");
+    bool foundCologne, foundMinsk, foundBeijing;
     foreach (Value v; cityKey.values)
     {
-    	//writefln("Name %1$s", v.name());
+    	//writefln("(name,value) = (%1$s,%2$s)", v.name(), v.value_SZ());
+    	if (v.name() == "Köln")
+    	{
+    		foundCologne = true;
+    		assert(v.value_SZ() == "Germany");
+    	}
+    	if (v.name() == "Минск")
+    	{
+    		foundMinsk = true;
+    		assert(v.value_SZ() == "Belarus");
+    	}
+    	if (v.name() == "北京")
+    	{
+    		foundBeijing = true;
+    		assert(v.value_SZ() == "China");
+    	}
     }
+    assert(foundCologne);
+    assert(foundMinsk);
+    assert(foundBeijing);
     Key stateKey = unittestKey.createKey("StateCollection");
     stateKey.setValue("Germany", ["Düsseldorf", "Köln", "Hamburg"]);
     Value v = stateKey.getValue("Germany");
@@ -1713,6 +1734,12 @@ unittest
     assert(actual[0] == "Düsseldorf");
     assert(actual[1] == "Köln");
     assert(actual[2] == "Hamburg");
+
+    Key numberKey = unittestKey.createKey("Number");
+    numberKey.setValue("One", 1);
+    Value one = numberKey.getValue("One");
+    assert(one.value_SZ() == "1");
+    assert(one.value_DWORD() == 1);
     
     //HKCU.deleteKey(unittestKeyName);
 }
