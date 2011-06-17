@@ -202,29 +202,6 @@ public enum REG_VALUE_TYPE
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
- * External function declarations
- */
-
-private extern (Windows)
-{
-	// These functions are missing in core.sys.windows.windows.
-	DWORD ExpandEnvironmentStringsW(LPCWSTR lpSrc, LPWSTR lpDst, DWORD nSize);
-    LONG RegDeleteKeyW(HKEY hKey, LPCWSTR lpSubKey);
-	LONG RegDeleteValueW(HKEY hKey, LPCWSTR lpValueName);
-	LONG RegEnumKeyExW(HKEY hKey, DWORD dwIndex, LPWSTR lpName, LPDWORD lpcbName, LPDWORD lpReserved, LPWSTR lpClass, LPDWORD lpcbClass, FILETIME* lpftLastWriteTime);
-	LONG RegEnumValueW(HKEY hKey, DWORD dwIndex, LPWSTR lpValueName, LPDWORD lpcbValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
-	LONG RegOpenKeyW(HKEY hKey, LPCWSTR lpSubKey, PHKEY phkResult);
-	LONG RegOpenKeyExW(HKEY hKey, LPCWSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult);
-	LONG RegCreateKeyExW(HKEY hKey, LPCWSTR lpSubKey, DWORD Reserved, LPWSTR lpClass, DWORD dwOptions, REGSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes,
-	                     PHKEY phkResult, LPDWORD lpdwDisposition);
-	LONG RegQueryInfoKeyW(HKEY hKey, LPWSTR lpClass, LPDWORD lpcbClass, LPDWORD lpReserved, LPDWORD lpcSubKeys, LPDWORD lpcbMaxSubKeyLen, LPDWORD lpcbMaxClassLen,
-                          LPDWORD lpcValues, LPDWORD lpcbMaxValueNameLen, LPDWORD lpcbMaxValueLen, LPDWORD lpcbSecurityDescriptor, PFILETIME lpftLastWriteTime);
-	LONG RegQueryValueW(HKEY hKey, LPCWSTR lpSubKey, LPWSTR lpValue, LPLONG lpcbValue);
-	LONG RegQueryValueExW(HKEY hKey, LPCWSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPVOID lpData, LPDWORD lpcbData);
-	LONG RegSetValueExW(HKEY hKey, LPCWSTR lpValueName, DWORD Reserved, DWORD dwType, LPVOID lpData, DWORD cbData);
-}
-
-/* /////////////////////////////////////////////////////////////////////////////
  * Private utility functions
  */
 
@@ -630,7 +607,7 @@ version(BigEndian)
     {
     	const wchar *lpData = toUTF16z(data);
     	DWORD cbData = wcslen(lpData)*wchar.sizeof;
-        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPVOID) lpData, cbData));
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) lpData, cbData));
     }
 
     private void setValue(in string subKey, in REG_VALUE_TYPE type, in string[] data)
@@ -645,12 +622,12 @@ version(BigEndian)
     	}
     	wstring all = join!(wstring[],wstring)(value, "\0"w);
 
-        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPVOID) all.ptr, all.length * wchar.sizeof));
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) all.ptr, all.length * wchar.sizeof));
     }
 
     private void setValue(in string subKey, in REG_VALUE_TYPE type, in LPCVOID lpData, in DWORD cbData)
     {
-        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPVOID) lpData, cbData));
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) lpData, cbData));
     }
 }
 
