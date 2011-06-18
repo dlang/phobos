@@ -285,7 +285,7 @@ class Protocol
         bool getProtocolByName(string name)
         {
                 protoent* proto;
-                proto = getprotobyname(toStringZ(name));
+                proto = getprotobyname(toStringz(name));
                 if(!proto)
                         return false;
                 populate(proto);
@@ -376,7 +376,7 @@ class Service
         bool getServiceByName(string name, string protocolName)
         {
                 servent* serv;
-                serv = getservbyname(toStringZ(name), toStringZ(protocolName));
+                serv = getservbyname(toStringz(name), toStringz(protocolName));
                 if(!serv)
                         return false;
                 populate(serv);
@@ -389,7 +389,7 @@ class Service
         bool getServiceByName(string name)
         {
                 servent* serv;
-                serv = getservbyname(toStringZ(name), null);
+                serv = getservbyname(toStringz(name), null);
                 if(!serv)
                         return false;
                 populate(serv);
@@ -401,7 +401,7 @@ class Service
         bool getServiceByPort(ushort port, string protocolName)
         {
                 servent* serv;
-                serv = getservbyport(port, toStringZ(protocolName));
+                serv = getservbyport(port, toStringz(protocolName));
                 if(!serv)
                         return false;
                 populate(serv);
@@ -539,7 +539,7 @@ class InternetHost
                 version(Windows)
                 {
                     // TODO gethostbyname is deprecated in windows, use getaddrinfo
-                    auto he = gethostbyname(toStringZ(name));
+                    auto he = gethostbyname(toStringz(name));
                     if(!he)
                         return false;
                     validHostent(he);
@@ -551,7 +551,7 @@ class InternetHost
                     // must synchronize across all threads
                     synchronized(this.classinfo)
                     {
-                        auto he = gethostbyname(toStringZ(name));
+                        auto he = gethostbyname(toStringz(name));
                         if(!he)
                             return false;
                         validHostent(he);
@@ -601,7 +601,7 @@ class InternetHost
          */
         bool getHostByAddr(string addr)
         {
-                uint x = inet_addr(std.string.toStringZ(addr));
+                uint x = inet_addr(std.string.toStringz(addr));
                 version(Windows)
                 {
                     // TODO gethostbyaddr is deprecated in windows, use getnameinfo
@@ -842,7 +842,7 @@ class InternetAddress: Address
          */
         static uint parse(string addr)
         {
-                return ntohl(inet_addr(std.string.toStringZ(addr)));
+                return ntohl(inet_addr(std.string.toStringz(addr)));
         }
 }
 
@@ -1151,7 +1151,7 @@ class Socket
         this(AddressFamily af, SocketType type, string protocolName)
         {
                 protoent* proto;
-                proto = getprotobyname(toStringZ(protocolName));
+                proto = getprotobyname(toStringz(protocolName));
                 if(!proto)
                         throw new SocketException("Unable to find the protocol", _lasterr());
                 this(af, type, cast(ProtocolType)proto.p_proto);

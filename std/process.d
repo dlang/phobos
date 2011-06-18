@@ -101,7 +101,7 @@ version(Windows)
 int system(string command)
 {
     if (!command) return std.c.process.system(null);
-    const commandz = toStringZ(command);
+    const commandz = toStringz(command);
     immutable status = std.c.process.system(commandz);
     if (status == -1) return status;
     version (Posix)
@@ -114,7 +114,7 @@ private void toAStringz(in string[] a, const(char)**az)
 {
     foreach(string s; a)
     {
-        *az++ = toStringZ(s);
+        *az++ = toStringz(s);
     }
     *az = null;
 }
@@ -130,7 +130,7 @@ private void toAStringz(in string[] a, const(char)**az)
 //
 //      toAStringz(argv, argv_);
 //
-//      return std.c.process.spawnvp(mode, toStringZ(pathname), argv_);
+//      return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
 //    }
 //}
 
@@ -147,11 +147,11 @@ int spawnvp(int mode, string pathname, string[] argv)
 
     version (Posix)
     {
-        return _spawnvp(mode, toStringZ(pathname), argv_);
+        return _spawnvp(mode, toStringz(pathname), argv_);
     }
     else
     {
-        return std.c.process.spawnvp(mode, toStringZ(pathname), argv_);
+        return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
     }
 }
 
@@ -234,7 +234,7 @@ int execv(in string pathname, in string[] argv)
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execv(toStringZ(pathname), argv_);
+    return std.c.process.execv(toStringz(pathname), argv_);
 }
 
 /** ditto */
@@ -246,7 +246,7 @@ int execve(in string pathname, in string[] argv, in string[] envp)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execve(toStringZ(pathname), argv_, envp_);
+    return std.c.process.execve(toStringz(pathname), argv_, envp_);
 }
 
 /** ditto */
@@ -256,7 +256,7 @@ int execvp(in string pathname, in string[] argv)
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execvp(toStringZ(pathname), argv_);
+    return std.c.process.execvp(toStringz(pathname), argv_);
 }
 
 /** ditto */
@@ -303,7 +303,7 @@ else version(Windows)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execvpe(toStringZ(pathname), argv_, envp_);
+    return std.c.process.execvpe(toStringz(pathname), argv_, envp_);
 }
 else
 {
@@ -384,7 +384,7 @@ string getenv(in char[] name)
 {
     // Cache the last call's result
     static string lastResult;
-    auto p = std.c.stdlib.getenv(toStringZ(name));
+    auto p = std.c.stdlib.getenv(toStringz(name));
     if (!p) return null;
     auto value = p[0 .. strlen(p)];
     if (value == lastResult) return lastResult;
@@ -401,7 +401,7 @@ std.c.stdlib._setenv) internally. */
 version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
-        std.c.stdlib.setenv(toStringZ(name), toStringZ(value), overwrite) == 0);
+        std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
 }
 
 /**
@@ -410,7 +410,7 @@ std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally. */
 
 version(Posix) void unsetenv(in char[] name)
 {
-    errnoEnforce(std.c.stdlib.unsetenv(toStringZ(name)) == 0);
+    errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
 
 version (Posix) unittest
@@ -520,7 +520,7 @@ private:
     {
         version(Posix)
         {
-            const vz = core.sys.posix.stdlib.getenv(toStringZ(name));
+            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
             if (vz == null) return false;
             auto v = vz[0 .. strlen(vz)];
 
@@ -566,8 +566,8 @@ public:
     {
         version(Posix)
         {
-            if (core.sys.posix.stdlib.setenv(toStringZ(name),
-                toStringZ(value), 1) != -1)
+            if (core.sys.posix.stdlib.setenv(toStringz(name),
+                toStringz(value), 1) != -1)
             {
                 return value;
             }
@@ -601,7 +601,7 @@ public:
     {
         version(Posix)
         {
-            core.sys.posix.stdlib.unsetenv(toStringZ(name));
+            core.sys.posix.stdlib.unsetenv(toStringz(name));
         }
 
         else version(Windows)

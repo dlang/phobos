@@ -1132,7 +1132,7 @@ class Stream : InputStream, OutputStream {
     // by Walter's permission
     char[1024] buffer;
     char* p = buffer.ptr;
-    auto f = toStringZ(format);
+    auto f = toStringz(format);
     size_t psize = buffer.length;
     size_t count;
     while (true) {
@@ -1865,7 +1865,7 @@ class File: Stream {
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
     version (Posix) {
-      hFile = core.sys.posix.fcntl.open(toStringZ(filename), access | createMode, share);
+      hFile = core.sys.posix.fcntl.open(toStringz(filename), access | createMode, share);
       isopen = hFile != -1;
     }
     if (!isopen)

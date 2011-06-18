@@ -328,7 +328,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
             maxSlackMemoryAllowed = 1024;
         // }
 
-        immutable fd = core.sys.posix.fcntl.open(toStringZ(name),
+        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
                 core.sys.posix.fcntl.O_RDONLY);
         cenforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
@@ -501,7 +501,7 @@ void append(in char[] name, in void[] buffer)
 version(Posix) private void writeImpl(in char[] name,
         in void[] buffer, in uint mode)
 {
-    immutable fd = core.sys.posix.fcntl.open(toStringZ(name),
+    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, octal!666);
     cenforce(fd != -1, name);
     {
@@ -530,7 +530,7 @@ void rename(in char[] from, in char[] to)
                             to)));
     }
     else version(Posix)
-        cenforce(std.c.stdio.rename(toStringZ(from), toStringZ(to)) == 0, to);
+        cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
 /***************************************************
@@ -547,7 +547,7 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringZ(name)) == 0,
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
             "Failed to remove file " ~ name);
 }
 
@@ -592,7 +592,7 @@ ulong getSize(in char[] name)
     else version(Posix)
     {
         struct_stat64 statbuf = void;
-        cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -665,7 +665,7 @@ else version(Posix) void getTimes(C)(in C[] name,
                 "getTimesWin (Windows-Only) instead.");
 
     struct_stat64 statbuf = void;
-    cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
     ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
     fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
     ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
@@ -722,7 +722,7 @@ else void getTimes(C)(in C[] name,
     {
         struct_stat64 statbuf = void;
 
-        cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
 
         fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -925,7 +925,7 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
 
     struct_stat64 statbuf = void;
 
-    cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
 
     fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
     fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
@@ -952,7 +952,7 @@ else d_time lastModified(C)(in C[] name)
     else version(Posix)
     {
         struct_stat64 statbuf = void;
-        cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
         return cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
 }
@@ -978,7 +978,7 @@ else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
     else version(Posix)
     {
         struct_stat64 statbuf = void;
-        return stat64(toStringZ(name), &statbuf) != 0
+        return stat64(toStringz(name), &statbuf) != 0
             ? returnIfMissing
             : cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
@@ -1016,7 +1016,7 @@ SysTime timeLastModified(in char[] name)
     {
         struct_stat64 statbuf = void;
 
-        cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -1071,7 +1071,7 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
     {
         struct_stat64 statbuf = void;
 
-        return stat64(toStringZ(name), &statbuf) != 0 ?
+        return stat64(toStringz(name), &statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -1113,7 +1113,7 @@ unittest
     }
     else version(Posix)
     {
-        return access(toStringZ(name), 0) == 0;
+        return access(toStringz(name), 0) == 0;
     }
 }
 
@@ -1161,7 +1161,7 @@ uint getAttributes(in char[] name)
     {
         struct_stat64 statbuf = void;
 
-        cenforce(stat64(toStringZ(name), &statbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
@@ -1193,14 +1193,14 @@ uint getLinkAttributes(in char[] name)
     else version(OSX)
     {
         struct_stat64 lstatbuf = void;
-        cenforce(stat64(toStringZ(name), &lstatbuf) == 0, name);
+        cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
     else version(Posix)
     {
         struct_stat64 lstatbuf = void;
 
-        cenforce(lstat64(toStringZ(name), &lstatbuf) == 0, name);
+        cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
 
         return lstatbuf.st_mode;
     }
@@ -1668,7 +1668,7 @@ void chdir(in char[] pathname)
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.chdir(toStringZ(pathname)) == 0,
+        cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
                 pathname);
     }
 }
@@ -1689,7 +1689,7 @@ void mkdir(in char[] pathname)
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.sys.stat.mkdir(toStringZ(pathname), octal!777) == 0,
+        cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
                  pathname);
     }
 }
@@ -1755,7 +1755,7 @@ void rmdir(in char[] pathname)
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(toStringZ(pathname)) == 0,
+        cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
                 pathname);
     }
 }
@@ -2419,7 +2419,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            enforce(stat64(toStringZ(_name), &_statBuf) == 0,
+            enforce(stat64(toStringz(_name), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2438,12 +2438,12 @@ else version(Posix)
 
             version (OSX)
             {
-                enforce(stat64(toStringZ(_name), &statbuf) == 0,
+                enforce(stat64(toStringz(_name), &statbuf) == 0,
                         "Failed to stat file `" ~ _name ~ "'");
             }
             else
             {
-                enforce(lstat64(toStringZ(_name), &statbuf) == 0,
+                enforce(lstat64(toStringz(_name), &statbuf) == 0,
                         "Failed to stat file `" ~ _name ~ "'");
             }
 
@@ -2579,7 +2579,7 @@ void copy(in char[] from, in char[] to)
     }
     else version(Posix)
     {
-        immutable fd = core.sys.posix.fcntl.open(toStringZ(from), O_RDONLY);
+        immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
@@ -2587,7 +2587,7 @@ void copy(in char[] from, in char[] to)
         cenforce(fstat64(fd, &statbuf) == 0, from);
         //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
-        auto toz = toStringZ(to);
+        auto toz = toStringz(to);
         immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
         cenforce(fdw != -1, from);
@@ -2670,7 +2670,7 @@ else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
         t[1].tv_usec = cast(int)
             (cast(long) ((cast(double) ftm / ticksPerSecond)
                     * 1_000_000) % 1_000_000);
-        enforce(utimes(toStringZ(name), t) == 0);
+        enforce(utimes(toStringz(name), t) == 0);
     }
 }
 
@@ -2721,7 +2721,7 @@ else void setTimes(C)(in C[] name,
         t[0] = fileAccessTime.toTimeVal();
         t[1] = fileModificationTime.toTimeVal();
 
-        enforce(utimes(toStringZ(name), t) == 0);
+        enforce(utimes(toStringz(name), t) == 0);
     }
 }
 
@@ -3571,7 +3571,7 @@ else version(Posix)
 {
     void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
-        auto h = cenforce(opendir(toStringZ(pathname)), pathname);
+        auto h = cenforce(opendir(toStringz(pathname)), pathname);
         scope(exit) closedir(h);
 
         DirEntry de;

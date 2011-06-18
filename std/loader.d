@@ -188,7 +188,7 @@ version(Windows)
     }
     body
     {
-        HXModule hmod = cast(HXModule)LoadLibraryA(toStringZ(moduleName));
+        HXModule hmod = cast(HXModule)LoadLibraryA(toStringz(moduleName));
 
         if(null is hmod)
         {
@@ -229,7 +229,7 @@ version(Windows)
     }
     body
     {
-        void    *symbol = GetProcAddress(cast(HModule_)hModule, toStringZ(symbolName));
+        void    *symbol = GetProcAddress(cast(HModule_)hModule, toStringz(symbolName));
 
         if(null is symbol)
         {
@@ -319,7 +319,7 @@ else version(Posix)
         }
         else
         {
-            HModule_    hmod = dlopen(toStringZ(moduleName), RTLD_NOW);
+            HModule_    hmod = dlopen(toStringz(moduleName), RTLD_NOW);
 
             if(null is hmod)
             {
@@ -413,7 +413,7 @@ else version(Posix)
     body
     {
         ExeModuleInfo   mi      =   cast(ExeModuleInfo)hModule;
-        void *symbol = dlsym(mi.m_hmod, toStringZ(symbolName));
+        void *symbol = dlsym(mi.m_hmod, toStringz(symbolName));
 
         if(null == symbol)
         {
@@ -505,7 +505,7 @@ public:
         version (Windows)
         {
         string path = Path();
-        m_hModule = cast(HXModule)LoadLibraryA(toStringZ(path));
+        m_hModule = cast(HXModule)LoadLibraryA(toStringz(path));
         if (m_hModule == null)
             throw new ExeModuleException(GetLastError());
         }
@@ -527,7 +527,7 @@ public:
     {
     version (Windows)
     {
-        m_hModule = cast(HXModule)LoadLibraryA(toStringZ(moduleName));
+        m_hModule = cast(HXModule)LoadLibraryA(toStringz(moduleName));
         if (null is m_hModule)
         throw new ExeModuleException(GetLastError());
     }
@@ -586,7 +586,7 @@ public:
     {
     version (Windows)
     {
-        void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringZ(symbolName));
+        void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringz(symbolName));
         if(null is symbol)
         {
         throw new ExeModuleException(GetLastError());

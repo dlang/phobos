@@ -337,36 +337,13 @@ unittest
 }
 
 
-/*********************************
- * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(D toStringZ instead.)
- *
- * Convert array of chars $(D s[]) to a C-style 0-terminated string.
- * $(D s[]) must not contain embedded 0's. If $(D s) is $(D null) or
- * empty, a string containing only $(D '\0') is returned.
- */
-version(StdDdoc) immutable(char)* toStringz(const(char)[] s);
-else immutable(char)* toStringz(C)(const(C)[] s) if(is(Unqual!C == char))
-{
-    pragma(msg, softDeprec!("2.054", "December 2011", "toStringz", "std.string.toStringZ"));
-    return toStringZ(s);
-}
-
-/++ Ditto +/
-version(StdDdoc) immutable(char)* toStringz(string s);
-else immutable(char)* toStringz(S)(S s) if(is(S == string))
-{
-    pragma(msg, softDeprec!("2.054", "December 2011", "toStringz", "std.string.toStringZ"));
-    return toStringZ(s);
-}
-
 /++
     Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
     contain embedded $(D 0)'s as any C functions will treat the first $(D 0)
     that it sees a the end of the string. I $(D s) is $(D null) or empty, then
     a string containing only $(D '\0') is returned.
   +/
-immutable(char)* toStringZ(const(char)[] s) pure nothrow
+immutable(char)* toStringz(const(char)[] s) pure nothrow
 in
 {
     // The assert below contradicts the unittests!
@@ -409,7 +386,7 @@ body
 }
 
 /++ Ditto +/
-immutable(char)* toStringZ(string s) pure nothrow
+immutable(char)* toStringz(string s) pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -425,29 +402,29 @@ immutable(char)* toStringZ(string s) pure nothrow
     // memory.
     if ((cast(size_t) p & 3) && *p == 0)
         return s.ptr;
-    return toStringZ(cast(const char[]) s);
+    return toStringz(cast(const char[]) s);
 }
 
 unittest
 {
-    debug(string) printf("string.toStringZ.unittest\n");
+    debug(string) printf("string.toStringz.unittest\n");
 
-    auto p = toStringZ("foo");
+    auto p = toStringz("foo");
     assert(strlen(p) == 3);
     const(char) foo[] = "abbzxyzzy";
-    p = toStringZ(foo[3..5]);
+    p = toStringz(foo[3..5]);
     assert(strlen(p) == 2);
 
     string test = "";
-    p = toStringZ(test);
+    p = toStringz(test);
     assert(*p == 0);
 
     test = "\0";
-    p = toStringZ(test);
+    p = toStringz(test);
     assert(*p == 0);
 
     test = "foo\0";
-    p = toStringZ(test);
+    p = toStringz(test);
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
 }
 
