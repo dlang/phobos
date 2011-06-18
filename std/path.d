@@ -990,6 +990,159 @@ unittest
 
 
 
+/** Returns a forward range that iterates over the elements of a path.
+
+    Examples:
+    ---
+    assert (equal(pathSplitter("/"), ["/"]));
+    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
+    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
+    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+
+    version (Windows)
+    {
+        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter("c:"), ["c:"]));
+        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
+        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+    }
+    ---
+*/
+auto pathSplitter(C)(const(C)[] path)
+{
+    struct PathSplitter
+    {
+        @property empty() { return _empty; }
+
+        @property front()
+        {
+            assert (!empty, "PathSplitter: called front() on empty range");
+            return _front;
+        }
+
+        void popFront()
+        {
+            assert (!empty, "PathSplitter: called popFront() on empty range");
+            if (_path.length == 0)
+            {
+                _empty = true;
+            }
+            else
+            {
+                int i = 0;
+                while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                _front = _path[0 .. i];
+                while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                _path = _path[i .. $];
+            }
+        }
+
+        auto save() { return this; }
+
+
+    private:
+        typeof(path) _path;
+        typeof(path) _front;
+        bool _empty;
+
+        this(typeof(path) p)
+        {
+            if (p.length == 0)
+            {
+                _empty = true;
+                return;
+            }
+            _path = p;
+
+            // If path is rooted, first element is special
+            if (isDirSeparator(_path[0]))
+            {
+                if (_path.length > 2 && isDirSeparator(_path[1])
+                    && !isDirSeparator(_path[2]))
+                {
+                    // Network mount
+                    int i = 3;
+                    while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                    _front = _path[0 .. i];
+                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                    _path = _path[i .. $];
+                }
+                else
+                {
+                    _front = _path[0 .. 1];
+                    int i = 1;
+                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                    _path = _path[i .. $];
+                }
+            }
+            else
+            {
+                version (Posix)
+                {
+                    popFront();
+                }
+                else version (Windows)
+                {
+                    if (_path.length > 2 && isDriveSeparator(_path[1])
+                        && isDirSeparator(_path[2]))
+                    {
+                        _front = _path[0 .. 3];
+                        int i = 3;
+                        while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                        _path = _path[i .. $];
+                    }
+                    else popFront();
+                }
+                else static assert (false);
+            }
+        }
+    }
+
+    return PathSplitter(path);
+}
+
+
+unittest
+{
+    assert (pathSplitter("").empty);
+
+    // Root directories
+    assert (equal(pathSplitter("/"), ["/"]));
+    assert (equal(pathSplitter("//"), ["/"]));
+    assert (equal(pathSplitter("///"), ["/"]));
+    assert (equal(pathSplitter("//foo"), ["//foo"]));
+
+    // Absolute paths
+    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
+    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
+
+    // General
+    assert (equal(pathSplitter("foo/bar"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo//bar"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo/bar//"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+
+    // save()
+    auto ps1 = pathSplitter("foo/bar/baz");
+    auto ps2 = ps1.save();
+    ps1.popFront;
+    assert (equal(ps1, ["bar", "baz"]));
+    assert (equal(ps2, ["foo", "bar", "baz"]));
+
+    // Windows-specific
+    version (Windows)
+    {
+        assert (equal(pathSplitter(r"\"), [r"\"]));
+        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter("c:"), ["c:"]));
+        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
+        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+    }
+}
+
+
+
+
 /** Compare file names.
 
     Returns (for $(D pred = "a < b")):
