@@ -2,45 +2,13 @@
 
 /*
   TODO:
-
-  Round 1 reviews:
-  $(LREF...) bugs
-  DONE: rethink byLine/... to not return string in order to prevent allocations
-          they should return char[]/ubyte[]
-  DONE: 80 chars 
-  DONE: Http.Result etc.
-  DONE: gramma for http.postData
-  DONE: len -> length
-  DONE: perform http request -> perform a http ...
-  DONE: authMethod to property
-  DONE: curltimecond alias into module
-  DONE: followlocatil to maxredirs
-  DONE: http not class
-  DONE: timecondition use std.datetime
-  DONE: timeouts use core.duration
-  DONE: Spelling "callbacks is not supported"
-  DONE: refer to HTTP RFC describing the methods
-  DONE: login/password example
-  DONE: chuncked -> chunked
-  DONE: max redirs; use uint.max and not -1
-  DONE: isRunning returining short
-  DONE: 4 chars tabs in examples.
-  DONE: no space in examples.
   
-  
-  Disable FTP for now
-  FTP byline/bychunk
-
-  POST InputRange
-  Receive OutputRange?
-  
-  NO: Should send/recv use special structs in order not to mess with other spawned communications?
-
   Future improvements:
 
+  POST OutputRange?
   Progress may be deprecated in the future
   Typed http headers - Johannes Pfau
-      (waiting for std.protocol.http to be accepted)
+      (waiting for std.protocol.http to be accepted?)
 */
 
 /**
@@ -64,7 +32,7 @@ writeln( Http.get("http://www.google.com").toString() ); // .headers for headers
 Http http = Http("http://www.google.com");
 http.onReceiveHeader = 
     (const(char)[] key, const(char)[] value) { writeln(key ~ ": " ~ value); };
-http.onReceive = (ubyte[] data) { /+ drop +/ };
+http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
 http.perform;
 
 // GET using an asynchronous range
@@ -92,7 +60,7 @@ http.perform;
 http.method = Http.Method.get;
 http.url = "http://upload.wikimedia.org/wikipedia/commons/" 
            "5/53/Wikipedia-logo-en-big.png";
-http.onReceive = (ubyte[]) { };
+http.onReceive = (ubyte[] data) { return data.length; };
 http.onProgress = (double dltotal, double dlnow, 
                    double ultotal, double ulnow) {
     writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
@@ -105,7 +73,7 @@ Source: $(PHOBOSSRC etc/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
 License:  <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:  $(WEB steamwinter.com, Jonas Drewsen)
+Authors:  Jonas Drewsen
 Credits:  The functionally is based on $(WEB _curl.haxx.se, libcurl). 
           LibCurl is licensed under a MIT/X derivate license.
 */
@@ -132,20 +100,17 @@ import std.traits;
 import core.thread;
 
 version(unittest) {
+    // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to 
+    // allow net traffic
     import std.stdio;
     import std.c.stdlib;
     import std.range;
-    //  const string testUrl1 = "http://www.fileformat.info/info/unicode/block/latin_supplement/utf8test.htm";
     const string testUrl1 = "http://d-programming-language.appspot.com/testUrl1";
     const string testUrl2 = "http://d-programming-language.appspot.com/testUrl2";
 }
 version(StdDdoc) import std.stdio;
 
 pragma(lib, "curl");
-
-extern (C) {
-    void exit(int c);
-}
 
 /*
   Wrapper class to provide a better interface to libcurl than using
@@ -171,7 +136,7 @@ private struct Curl {
     // A handle should not be used bu two thread simultanously
     private CURL* handle;
     private size_t delegate(outdata) _onSend; // May also return CURL_READFUNC_ABORT or CURL_READFUNC_PAUSE
-    private void delegate(indata) _onReceive;
+    private size_t delegate(indata) _onReceive;
     private void delegate(const(char)[]) _onReceiveHeader;
     private CurlSeek delegate(long,CurlSeekPos) _onSeek;
     private int delegate(curl_socket_t,CurlSockType) _onSocketOption;
@@ -195,7 +160,7 @@ private struct Curl {
 
     private void _check(CURLcode code) {
         if (code != CurlError.ok) {
-            throw new Exception(to!string(curl_easy_strerror(code)));
+            throw new CurlException(to!string(curl_easy_strerror(code)));
         }
     }
 
@@ -206,6 +171,7 @@ private struct Curl {
     
     /** 
         Stop and invalidate this curl instance.
+        Do not call this from inside a callback handler e.g. onReceive.
     */
     void cleanup() {
         throwOnStopped();
@@ -284,14 +250,14 @@ private struct Curl {
        a slice.
        Example:
        ----
-curl.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); };
+curl.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); return data.length;};
        ----
     */
-    @property ref Curl onReceive(void delegate(indata) callback) {
+    @property ref Curl onReceive(size_t delegate(indata) callback) {
         _onReceive = (indata id) { 
             if (stopped)
                 throw new CurlException("Receive callback called on cleaned up Curl instance");
-            callback(id);
+            return callback(id);
         };
         set(CurlOption.file, cast(void*) &this);
         set(CurlOption.writefunction, cast(void*) &Curl._receiveCallback);
@@ -445,7 +411,7 @@ writeln("Progress: uploaded ", uln, " of ", ul);
     extern (C) private static size_t _receiveCallback(const char* str, size_t size, size_t nmemb, void* ptr) {
         Curl* b = cast(Curl*) ptr;
         if (b._onReceive != null)
-            b._onReceive(cast(indata)(str[0..size*nmemb]));
+            return b._onReceive(cast(indata)(str[0..size*nmemb]));
         return size*nmemb;
     }
 
@@ -499,7 +465,6 @@ writeln("Progress: uploaded ", uln, " of ", ul);
     }
 
 }
-
 
 /**
   Mixin template for all supported curl protocols. 
@@ -562,11 +527,19 @@ theprotocol.netInterface = "192.168.1.32";
        Set the local outgoing port to use.
        Params:
        port = the first outgoing port number to try and use
+    */
+    @property void localPort(int port) {
+        curl.set(CurlOption.localport, cast(long)port);
+    }
+
+    /**
+       Set the local outgoing port range to use.
+       This can be used together with the localPort property.
+       Params:
        range = if the first port is occupied then try this many 
        port number forwards
     */
-    void setLocalPortRange(int port, int range) {
-        curl.set(CurlOption.localport, cast(long)port);
+    @property void localPortRange(int range) {
         curl.set(CurlOption.localportrange, cast(long)range);
     }
 
@@ -588,7 +561,7 @@ theprotocol.netInterface = "192.168.1.32";
        password = the password
        domain = used for NTLM authentication only and is set to the NTLM domain name
     */
-    void setUsernameAndPassword(const(char)[] username, const(char)[] password, const(char)[] domain = "") {
+    void setAuthentication(const(char)[] username, const(char)[] password, const(char)[] domain = "") {
         if (domain != "")
             username = domain ~ "/" ~ username;
         curl.set(CurlOption.userpwd, cast(char*)(username ~ ":" ~ password));
@@ -598,16 +571,24 @@ theprotocol.netInterface = "192.168.1.32";
         if (!netAllowed) return;
         Http http = Http("http://www.protected.com");
         http.onReceiveHeader = 
-            (const(char)[] key, const(char)[] value) { writeln(key ~ ": " ~ value); };
-        http.onReceive = (ubyte[] data) { /+ drop +/ };
-        http.setUsernameAndPassword("myuser", "mypassword");
+            (const(char)[] key, const(char)[] value) { /* writeln(key ~ ": " ~ value); */ };
+        http.onReceive = (ubyte[] data) { return data.length; };
+        http.setAuthentication("myuser", "mypassword");
         http.perform;
+    }
+
+    /**
+       See $(LREF Curl.onSend)
+    */
+    @property void onSend(size_t delegate(void[]) callback) {
+        curl.clear(CurlOption.postfields); // cannot specify data when using callback
+        curl.onSend(callback);
     }
 
     /**
        See $(XREF curl, Curl.onReceive)
     */
-    @property void onReceive(void delegate(ubyte[]) callback) {
+    @property void onReceive(size_t delegate(ubyte[]) callback) {
         curl.onReceive(callback);
     }
 
@@ -617,7 +598,389 @@ theprotocol.netInterface = "192.168.1.32";
     @property void onProgress(int delegate(double dltotal, double dlnow, double ultotal, double ulnow) callback) {
         curl.onProgress(callback);
     }
+
+    private void _assignProtocolParams(RParams)(ref const(RParams) requestParams) {
+
+        Duration nodur = dur!"nsecs"(0);
+        if (requestParams.dataTimeout != nodur) {
+            dataTimeout = requestParams.dataTimeout;
+        }
+        if (requestParams.connectTimeout != nodur) {
+            connectTimeout = requestParams.connectTimeout;
+        }
+        if (requestParams.dnsTimeout != nodur) {
+            dnsTimeout = requestParams.dnsTimeout;
+        }
+        if (requestParams.netInterface) {
+            netInterface = requestParams.netInterface;
+        }
+        if (requestParams.port) {
+            localPort = requestParams.port;
+        }
+        if (requestParams.range) {
+            localPort = requestParams.range;
+        }
+        if (requestParams.tcpNoDelay) {
+            tcpNoDelay = requestParams.tcpNoDelay;
+        }
+        if (requestParams.username) {
+            setAuthentication(requestParams.username,
+                              requestParams.password,
+                              requestParams.domain);
+        }
+    }
 }
+
+// Mixin properties to set parameters. 
+// This is done using functions and not by allowing access to 
+// the parameters member variables themselves since it allows for
+// a nicer calling format: Http.get("...").dataTimeout(100).byLine()
+// Only parameters that makes sense to expose is exposed here.
+private mixin template ProtocolRequestParamsSetters(OWNER, T) {
+
+    @property ref OWNER dataTimeout(Duration v) { 
+        _requestParams.dataTimeout = v; 
+        return this;
+    }
+    @property ref OWNER connectTimeout(Duration v) { 
+        _requestParams.connectTimeout = v; 
+        return this;
+    }
+    @property ref OWNER dnsTimeout(Duration v) { 
+        _requestParams.dnsTimeout = v; 
+        return this;
+    }
+    @property ref OWNER netInterface(T.STR v) { 
+        _requestParams.netInterface = v; 
+        return this;
+    }
+    @property ref OWNER localPort(int v) { 
+        _requestParams.port= v; 
+        return this;
+    }
+    @property ref OWNER localPortRange(int v) { 
+        _requestParams.range = v;
+        return this;
+    }
+    @property ref OWNER tcpNoDelay(bool v) { 
+        _requestParams.tcpNoDelay = v; 
+        return this;
+    }
+    ref OWNER authentication(T.STR u, T.STR p, T.STR d = "") { 
+        _requestParams.username = u; 
+        _requestParams.password = p; 
+        _requestParams.domain = d; 
+        return this;
+    }
+}
+
+private mixin template ByChunkSync(alias _bytes) {
+
+    auto byChunk(size_t chunkSize) {
+
+        static struct SyncChunkInputRange {
+
+            alias ubyte[] ChunkType;
+            private size_t chunkSize;
+            private ChunkType _bytes;
+            private size_t len;
+            private size_t offset;
+
+            this(ubyte[] bytes, size_t chunkSize) {
+                this._bytes = bytes;
+                this.len = _bytes.length;
+                this.chunkSize = chunkSize;
+            }
+
+            @property auto empty() {
+                return offset == len;
+            }
+                
+            @property ChunkType front() {
+                size_t nextOffset = offset + chunkSize;
+                if (nextOffset > len) nextOffset = len;
+                return _bytes[offset..nextOffset];
+            }
+                
+            void popFront() {
+                offset = offset + chunkSize;
+                if (offset > len) offset = len;
+            }
+        }
+        execute();
+        return SyncChunkInputRange(_bytes, chunkSize);
+    }
+}
+
+private mixin template ByLineSync(alias _bytes) {
+
+    auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
+                                                Terminator terminator = '\x0a') {
+            
+        // This range is using algorithm splitter and could be
+        // optimized by not using that. 
+        static struct SyncLineInputRange {
+
+            private Char[] lines;
+            private Char[] current;
+            private bool currentValid;
+            private bool keepTerminator;
+            private Terminator terminator;
+                
+            this(Char[] lines, bool kt, Terminator terminator) {
+                this.lines = lines;
+                this.keepTerminator = kt;
+                this.terminator = terminator;
+                currentValid = true;
+                popFront();
+            }
+
+            @property bool empty() {
+                return !currentValid;
+            }
+                
+            @property Char[] front() {
+                enforce(currentValid, "Cannot call front() on empty range");
+                return current;
+            }
+                
+            void popFront() {
+                enforce(currentValid, "Cannot call popFront() on empty range");
+                if (lines.empty) {
+                    currentValid = false;
+                    return;
+                }
+
+                if (keepTerminator) {
+                    auto r = findSplitAfter(lines, [ terminator ]);
+                    if (r[0].empty) {
+                        current = r[1];
+                        lines = r[0];
+                    } else {
+                        current = r[0];
+                        lines = r[1];
+                    }
+                } else {
+                    auto r = findSplit(lines, [ terminator ]);
+                    current = r[0];
+                    lines = r[2];
+                }
+            }
+        }
+        execute();
+        return SyncLineInputRange(toString!Char()[0..$], keepTerminator, terminator);
+    }
+
+}
+
+private mixin template ByChunkAsync(Proto, alias _requestParams) {
+
+    auto byChunk(size_t chunkSize, size_t transmitBuffers = 5) {
+        static struct AsyncChunkInputRange {
+
+            private AsyncResult * parent;
+            private Tid workerTid;
+            private ubyte[] chunk;
+    
+            this(AsyncResult * parent, Tid tid, size_t chunkSize, size_t transmitBuffers) {
+                this.parent = parent;
+                this.parent._running = RunState.running;
+                workerTid = tid;
+                state = State.needUnits;
+                    
+                // Send buffers to other thread for it to use.
+                // Since no mechanism is in place for moving ownership
+                // we simply cast to immutable here and cast it back
+                // to mutable in the receiving end.
+                foreach (i ; 0..transmitBuffers) {
+                    ubyte[] arr;
+                    arr.length = chunkSize;
+                    workerTid.send(cast(immutable(ubyte)[])arr);
+                }
+            }
+
+            mixin WorkerThreadProtocol!(ubyte, chunk, Proto);
+        }
+
+        // 50 is just an arbitrary number for now
+        // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
+        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, ubyte)));
+        tid.send(thisTid);
+        tid.send(_requestParams);
+        return AsyncChunkInputRange(&this, tid, chunkSize, transmitBuffers);
+    }
+}
+
+private mixin template ByLineAsync(Proto, alias _requestParams) {
+
+    auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
+                                                Terminator terminator = '\x0a',
+                                                size_t transmitBuffers = 5) {            
+        static struct AsyncLineInputRange {
+
+            private AsyncResult * parent;
+            private Tid workerTid;
+            private bool keepTerminator;
+            private Terminator terminator;
+            private Char[] line;
+
+            this(AsyncResult * parent, Tid tid, size_t transmitBuffers) {
+                this.parent = parent;
+                this.parent._running = RunState.running;
+                workerTid = tid;
+                state = State.needUnits;
+
+                // Send buffers to other thread for it to use.
+                // Since no mechanism is in place for moving ownership
+                // we simply cast to immutable here and cast it back
+                // to mutable in the receiving end.
+                foreach (i ; 0..transmitBuffers) {
+                    Char[] arr;
+                    arr.length = parent._defaultStringBufferSize;
+                    workerTid.send(cast(immutable(Char)[])arr);
+                }
+            }
+
+            mixin WorkerThreadProtocol!(Char, line, Proto);
+        }
+
+        // 50 is just an arbitrary number for now
+        // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
+        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, Char, Terminator)));
+        tid.send(thisTid);
+        tid.send(_requestParams);
+        tid.send(terminator);
+        tid.send(keepTerminator);
+        static if ( is(Proto == Ftp) ) {
+            tid.send(encodingName().idup);
+        }
+        return AsyncLineInputRange(&this, tid, transmitBuffers);
+    }
+}
+
+private mixin template TryEnsureUnit(Proto) if ( is(Proto == Http) ) {
+
+    void tryEnsureUnits() {
+        while (true) {
+            switch (state) {
+            case State.needUnits:
+                if (parent._running == RunState.done) {
+                    state = State.done;
+                    break;
+                }
+                receive(
+                        (Tid origin, Message!(immutable(Unit)[]) _data) { 
+                            if (origin != workerTid)
+                                return false;
+                            units = cast(Unit[]) _data.data;
+                            state = State.gotUnits;
+                            return true;
+                        },
+                        (Tid origin, Message!(Tuple!(string,string)) header) {
+                            if (origin != workerTid)
+                                return false;
+                            parent._headers[header.data[0]] = header.data[1];
+                            return true;
+                        },
+                        (Tid origin, Message!(Http.StatusLine) l) {
+                            if (origin != workerTid)
+                                return false;
+                            parent._running = RunState.statusReady;
+                            parent._statusLine = l.data;
+                            return true;
+                        },
+                        (Tid origin, Message!bool f) { 
+                            if (origin != workerTid)
+                                return false;
+                            state = state.done; 
+                            parent._running = RunState.done; 
+                            return true;
+                        }
+                        );
+                break;
+            case State.gotUnits: return;
+            case State.done:
+                return;
+            }
+        }
+    }
+}
+
+private mixin template TryEnsureUnit(Proto) if ( is(Proto == Ftp) ) {
+
+    void tryEnsureUnits() {
+        while (true) {
+            switch (state) {
+            case State.needUnits:
+                if (parent._running == RunState.done) {
+                    state = State.done;
+                    break;
+                }
+                receive(
+                        (Tid origin, Message!(immutable(Unit)[]) _data) { 
+                            if (origin != workerTid)
+                                return false;
+                            units = cast(Unit[]) _data.data;
+                            state = State.gotUnits;
+                            return true;
+                        },
+                        (Tid origin, Message!bool f) { 
+                            if (origin != workerTid)
+                                return false;
+                            state = state.done; 
+                            parent._running = RunState.done; 
+                            return true;
+                        }
+                        );
+                break;
+            case State.gotUnits: return;
+            case State.done:
+                return;
+            }
+        }
+    }
+}
+
+/*
+  Main thread part of the message passing protocol used for all async
+  curl protocols.
+ */
+template WorkerThreadProtocol(Unit, alias units, Proto) {
+
+    ~this() {
+        workerTid.send(true);
+    }
+
+    @property auto empty() {
+        tryEnsureUnits();
+        return state == State.done;
+    }
+                
+    @property Unit[] front() {
+        tryEnsureUnits();
+        assert(state == State.gotUnits, "Expected " ~ to!string(State.gotUnits) ~ " but got " ~ to!string(state));
+        return units;
+    }
+                
+    void popFront() {
+        tryEnsureUnits();
+        assert(state == State.gotUnits, "Expected " ~ to!string(State.gotUnits) ~ " but got " ~ to!string(state));
+        state = State.needUnits;
+        // Send to worker thread for buffer reuse
+        workerTid.send(cast(immutable(Unit)[]) units);
+        units = null;
+    }
+
+    enum State {
+        needUnits,
+            gotUnits,
+            done
+            }
+    State state;
+
+    mixin TryEnsureUnit!Proto;
+}
+
 
 /*
   Decode ubyte[] array using the provided EncodingScheme up to maxChars
@@ -676,9 +1039,17 @@ private bool decodeLineInto(Terminator, Char = char)(ref ubyte[] basesrc,
     }
 
     while (src.length) {
+        typeof(src) lsrc = src[];
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE) {
-            return false;
+            if (src.empty) {
+                // The invalid sequence was in the end of the src.
+                // Maybe there just need to be more bytes available so
+                // we put these last bytes back to src for later use.
+                src = lsrc;
+                return false;
+            }
+            dc = '?';
         }
         dst ~= dc;
         
@@ -767,7 +1138,7 @@ struct Http {
        cond:  CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod}
        secsSinceEpoch: The time value
     */
-    void setTimeCondition(CurlTimeCond cond, DateTime timestamp) {
+    void setTimeCondition(Http.TimeCond cond, DateTime timestamp) {
         curl.set(CurlOption.timecondition, cond);
         long secsSinceEpoch = (timestamp - DateTime(1970, 1, 1)).total!"seconds";
         curl.set(CurlOption.timevalue, secsSinceEpoch);
@@ -787,12 +1158,9 @@ writeln(res.headers["Content-Length"]);
     */
     static Result head(in const(char)[] url) {
         Result res;
-        auto client = Http(url);
-        client.method = Method.head;
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._executed = false;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.head;
         return res;
     }
 
@@ -845,12 +1213,9 @@ writeln(res.toString());
     */
     static Result get(in const(char)[] url) {
         Result res;
-        auto client = Http(url);
-        client.onReceive = (ubyte[] data) { res._bytes ~= data; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._executed = false;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.get;
         return res;
     }
 
@@ -907,19 +1272,11 @@ writeln(res.toString());
     static Result post(in const(char)[] url, const(void)[] postData, const(char)[] contentType = "application/octet-stream") {
         auto client = Http(url);
         Result res;
-        client.onSend = delegate size_t(void[] buf) {
-            size_t minlen = min(buf.length, postData.length);
-            buf[0..minlen] = postData[0..minlen];
-            postData = postData[minlen..$];
-            return minlen;
-        };
-        client.addHeader("Content-Type: " ~ contentType);
-        client.contentLength = postData.length;
-        client.onReceive = (ubyte[] idata) { res._bytes ~= idata; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._executed = false;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.post;
+        res._requestParams.headers ~= "Content-Type: " ~ contentType;
+        res._requestParams.postData = postData;
         return res;
     }
 
@@ -962,257 +1319,7 @@ writeln(res.toString());
         auto res = Http.post(testUrl2, fields);
         assert(res.toString()[0..11] == "Hello=World", "post() returns unexpected text"); 
     }
-
-    struct Pool(DATA) {
-    private:
-        struct Entry {
-            DATA data;
-            Entry * next;
-        };
-        Entry * root;
-	Entry * freeList;
-    public:
-	bool empty() {
-            return root == null;
-	}
-	void push(DATA d) {
-            if (freeList == null) {
-                // Allocate new Entry since there is no one 
-                // available in tht freeList
-                freeList = new Entry;
-            }
-            freeList.data = d;
-            Entry * oldroot = root;
-            root = freeList;
-            freeList = freeList.next;
-            root.next = oldroot;
-	}
-	DATA pop() {
-            DATA d = root.data;
-            Entry * n = root.next;
-            root.next = freeList;
-            freeList = root;
-            root = n;
-            return d;
-	}
-    };
      
-    // Internal messages send between threads. 
-    // The data is wrapped in this struct in order to ensure that 
-    // other std.concurrency.receive calls does not pick up our messages
-    // by accident.
-    private struct Message(T) {
-        public T data;
-    }
-
-    private static Message!T message(T)(T data) {
-        return Message!T(data);
-    }
-
-    // Spawn a thread for handling the reading of incoming data in the
-    // background while the delegate is executing.  This will optimize
-    // throughput by allowing simultanous input (this struct) and
-    // output (AsyncHttpLineOutputRange).
-    private static void _spawnAsyncRequest(Unit,Terminator = void)(string _url, immutable(void)[] _data, 
-								   string _contentType, Method method) {
-
-        auto client = Http(_url);
-        Result res;
-        Tid fromTid = receiveOnly!(Tid);
-
-	// Get buffer to read into
-        Pool!(Unit[]) freeBuffers;  // Free list of buffer objects
-	
-        // Number of bytes filled into active buffer
-        Unit[] buffer;
-	bool bufferValid = false;
-
-        static if ( !is(Terminator == void)) {
-            // Only lines reading will receive a terminator
-            Terminator terminator = receiveOnly!Terminator;
-            bool keepTerminator = receiveOnly!bool;
-            EncodingScheme encodingScheme;
-            // max number of bytes to carry over from an onReceive
-            // callback. This is 4 because it is the max code units to
-            // decode a code point in the supported encodings.
-	    ubyte[] leftOverBytes =  new ubyte[4];
-            leftOverBytes.length = 0;
-         } else {
-            Unit[] outdata;
-        }
-
-        client.onReceive = (ubyte[] data) { 
-
-            // Make sure the last received statusLine is sent to main
-            // thread before receiving. 
-            if (res.statusLine.majorVersion != 0) {
-                fromTid.send(thisTid(), message(res.statusLine));
-                foreach (key; res.headers.byKey()) {
-                    fromTid.send(thisTid(), message(Tuple!(string,string)(key,res.headers[key])));
-                }
-                res.statusLine.majorVersion = 0;
-            }
-
-            // If no terminator is specified the chunk size is fixed.
-            static if ( is(Terminator == void) ) {
-
-                // Copy data to fill active buffer
-                while (data.length != 0) {
-                    
-                    // Make sure we have a buffer
-                    while ( outdata.length == 0 && freeBuffers.empty) {
-                        // Active buffer is invalid and there are no
-                        // available buffers in the pool. Wait for buffers
-                        // to return from main thread in order to reuse
-                        // them.
-                        receive((immutable(Unit)[] buf) {
-                                buffer = cast(Unit[])buf;
-                                outdata = buffer[];
-                            },
-                            (bool flag) { client.cleanup(); }
-                            );
-                        if (client.isStopped) return;
-                    }
-                    if (outdata.length == 0) {
-                        buffer = freeBuffers.pop();
-                        outdata = buffer[];
-                    }
-                    
-                    // Copy data
-                    size_t copyBytes = outdata.length < data.length ? outdata.length : data.length;
-
-                    outdata[0..copyBytes] = data[0..copyBytes];
-                    outdata = outdata[copyBytes..$];
-                    data = data[copyBytes..$];
-
-                    if (outdata.length == 0) {
-                        fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer));
-                    }
-                }
-            } else {
-                // Terminator is specified and buffers should be
-                // resized as determined by the terminator
-                
-                // Copy data to active buffer until terminator is
-                // found.
-                if (encodingScheme is null)
-                    encodingScheme = res.encodingScheme;
-
-		// Decode as many lines as possible
-                while (true) {
-
-                    // Make sure we have a buffer
-                    while (!bufferValid && freeBuffers.empty) {
-                        // Active buffer is invalid and there are no
-                        // available buffers in the pool. Wait for buffers
-                        // to return from main thread in order to reuse
-                        // them.
-                        receive((immutable(Unit)[] buf) {
-                                buffer = cast(Unit[])buf;
-                                buffer.length = 0;
-                                bufferValid = true;
-                            },
-                            (bool flag) { client.cleanup(); }
-                            );
-                        if (client.isStopped) return;
-                    }
-                    if (!bufferValid) {
-                        buffer = freeBuffers.pop();
-                        bufferValid = true;
-                    }
-
-                    // Try to read a line from left over bytes from
-                    // last onReceive plus the newly received bytes. 
-                    try { 
-                        if (decodeLineInto(leftOverBytes, data, buffer,
-                                           encodingScheme, terminator)) {
-                            if (keepTerminator) {
-                                fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer));
-                            } else {
-                                static if (isArray!Terminator)
-                                    fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$-terminator.length]));
-                                else
-                                    fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$-1]));
-                            }
-                            bufferValid = false;
-                        } else {
-                            // Could not decode an entire line. Save
-                            // bytes left in data for next call to
-                            // onReceive. Can be up to a max of 4 bytes.
-                            enforce(data.length <= 4, new CurlException("Too many bytes left not decoded"));
-                            leftOverBytes ~= data;
-			    break;
-			}
-                    } catch (CurlException) {
-                        // Encoding is wrong. abort.
-                        client.cleanup();
-                        return;
-                    }
-		}
-            }
-        };
-
-        client.method = method;
-
-        if (method == Method.post || method == Method.put) {
-            client.onSend = delegate size_t(void[] buf) {
-                receiveTimeout(0, (bool x) { client.cleanup(); });
-                if (client.isStopped) return CurlReadFunc.abort;
-                size_t minlen = min(buf.length, _data.length);
-                buf[0..minlen] = _data[0..minlen];
-                _data = _data[minlen..$];
-                return minlen;
-            };
-            client.addHeader("Content-Type: " ~ _contentType);
-            client.contentLength = _data.length;
-        }
-
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { 
-            receiveTimeout(0, (bool x) { client.cleanup(); });
-            if (client.isStopped) return;
-            res.addHeader(key, value); 
-        };
-
-        client.onReceiveStatusLine = (StatusLine l) { 
-            receiveTimeout(0, (bool x) { client.cleanup(); });
-            if (client.isStopped) return;
-            res.reset(); 
-            res.statusLine = l;
-        };
-
-        client.maxRedirects = Http.defaultMaxRedirects;
-	
-        // Start the request
-        client.perform;
-
-        if (client.isStopped) return;
-
-        // Send the status line and headers if they haven't been so
-        if (res.statusLine.majorVersion != 0) {
-            fromTid.send(thisTid(), message(res.statusLine));
-            foreach (key; res.headers.byKey()) {
-                fromTid.send(thisTid(), message(Tuple!(string,string)(key,res.headers[key])));
-            }
-            res.statusLine.majorVersion = 0;
-        }
-
-        // Send remaining data that is not a full chunk size
-        static if ( is(Terminator == void) ) {
-            //            if (bufferValid && bufferUsed > 0) {
-            if (outdata.length != 0) {
-                // Resize the last buffer
-                buffer.length = buffer.length - outdata.length;
-                fromTid.send(thisTid(), message(cast(immutable(ubyte)[])buffer));
-            }
-        } else {
-            if (bufferValid && buffer.length != 0) {
-                fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$]));
-            }
-        }
-
-        fromTid.send(thisTid(), message(true)); // signal done
-    }
-
     /** Async HTTP POST to the specified URL. 
         Callbacks are not supported when using this method (e.g. onReceive).
 
@@ -1302,21 +1409,10 @@ writeln(res.code);
     static Result put(in const(char)[] url, const(void)[] putData, const(char)[] contentType = "application/octet-stream") {
         auto client = Http(url);
         Result res;
-        client.method = Method.put;
-        client.onSend = delegate size_t(void[] buf) {
-            size_t minlen = min(buf.length, putData.length);
-            buf[0..minlen] = putData[0..minlen];
-            putData = putData[minlen..$];
-            return minlen;
-        };
-
-        client.addHeader("Content-Type: " ~ contentType);
-        client.contentLength = putData.length;
-        client.onReceive = (ubyte[] idata) { res._bytes ~= idata; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.put;
+        res._requestParams.headers ~= "Content-Type: " ~ contentType;
+        res._requestParams.postData = putData;
         return res;
     }
 
@@ -1399,12 +1495,8 @@ writeln(res.toString());
     static Result del(in const(char)[] url) {
         auto client = Http(url);
         Result res;
-        client.method = Method.del;
-        client.onReceive = (ubyte[] data) { res._bytes ~= data; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.del;
         return res;
     }
 
@@ -1440,12 +1532,8 @@ writeln(res.toString());
     static Result options(in const(char)[] url) {
         auto client = Http(url);
         Result res;
-        client.method = Method.options;
-        client.onReceive = (ubyte[] data) { res._bytes ~= data; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.options;
         return res;
     }
 
@@ -1481,12 +1569,8 @@ writeln(res.toString());
     static Result trace(in const(char)[] url) {
         auto client = Http(url);
         Result res;
-        client.method = Method.trace;
-        client.onReceive = (ubyte[] data) { res._bytes ~= data; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.trace;
         return res;
     }
 
@@ -1525,12 +1609,8 @@ writeln(res.toString());
     static Result connect(in const(char)[] url) {
         auto client = Http(url);
         Result res;
-        client.method = Method.connect;
-        client.onReceive = (ubyte[] data) { res._bytes ~= data; };
-        client.onReceiveHeader = (const(char)[] key,const(char)[] value) { res.addHeader(key, value); };
-        client.onReceiveStatusLine = (StatusLine l) { res.reset(); res.statusLine = l; };
-        client.maxRedirects = Http.defaultMaxRedirects;
-        client.perform;
+        res._requestParams.url = url;
+        res._requestParams.method = Method.connect;
         return res;
     }
 
@@ -1549,7 +1629,7 @@ writeln(res.toString());
         Example:
         ----
 Http http = Http("http://www.mydomain.com");
-http.onReceive = (ubyte[] data) { writeln(data); };
+http.onReceive = (ubyte[] data) { writeln(data); return data.length; };
 http.postData = [1,2,3,4,5];
 http.perform;
         ----
@@ -1571,7 +1651,7 @@ http.perform;
         Example:
         ----
 Http http = Http("http://www.mydomain.com");
-http.onReceive = (ubyte[] data) { writeln(data); };
+http.onReceive = (ubyte[] data) { writeln(data); return data.length; };
 http.postData = "The quick....";
 http.perform;
         ----
@@ -1594,7 +1674,7 @@ http.perform;
        Example:
        ----
 Http http = Http("http://www.google.com");
-http.onReceive = (ubyte[] data) { writeln(data); };
+http.onReceive = (ubyte[] data) { writeln(data); return data.length; };
 http.onReceiveHeader = (const(char)[] key, const(char[]) value) { writeln(key, " = ", value); };
 http.perform;
        ----
@@ -1643,15 +1723,6 @@ http.perform;
      */
     @property ref Http onReceiveStatusLine(void delegate(StatusLine) callback) {
         _onReceiveStatusLine = callback;
-        return this;
-    }
-
-    /**
-       See $(LREF Curl.onSend)
-    */
-    @property ref Http onSend(size_t delegate(void[]) callback) {
-        curl.clear(CurlOption.postfields); // cannot specify data when using callback
-        curl.onSend(callback);
         return this;
     }
 
@@ -1744,18 +1815,18 @@ http.perform;
         }
     }
 
-    /** The standard HTTP methods 
-     *  See_Also: http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1
+    /** The standard HTTP methods :
+     *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
      */
     enum Method {
-        head, /// ditto
-        get,  /// ditto
-        post, /// ditto
-        put,  /// ditto
-        del,  /// ditto
-        options, /// ditto
-        trace,   /// ditto
-        connect  /// ditto
+        head, /// 
+        get,  /// 
+        post, /// 
+        put,  /// 
+        del,  /// 
+        options, /// 
+        trace,   /// 
+        connect  /// 
     }
 
     /**
@@ -1778,26 +1849,191 @@ http.perform;
             reason = "";
         }
     }
+
+    // This structure is used to keep paramters when using static
+    // request methods on the Http class.
+    // It enables the e.g. Http.get("...").dataTimeout(100).byLine()
+    struct RequestParams(T) {
+        alias T[] STR;
+        static if ( is(T == const(char))) {
+            alias const(void)[] POSTDATA;
+            alias const(STR)[] HEADERS;
+        } else {
+            alias immutable(void)[] POSTDATA;
+            alias immutable(STR)[] HEADERS;
+        }
+        // This protocol params
+        Method method;
+        STR url;
+        POSTDATA postData;
+        HEADERS headers;
+        STR cookieJar;
+        Http.TimeCond timeCond;
+        DateTime timeCondTimestamp;
         
+        // Base Protocol params
+        Duration dataTimeout;
+        Duration connectTimeout;
+        Duration dnsTimeout;
+        STR netInterface;
+        int port;
+        int range;
+        bool tcpNoDelay;
+        STR username;
+        STR password;
+        STR domain; // NTLM authentication only
+    };
+
+        
+    private mixin template RequestParamsSetters(OWNER, T) {
+        @property ref OWNER headers(T.HEADERS v) { 
+            foreach(h; v)
+                _requestParams.headers ~= v;
+            return this;
+        }
+        ref OWNER authentication(T.STR u, T.STR p, T.STR d = "") { 
+            _requestParams.username = u; 
+            _requestParams.password = p; 
+            _requestParams.domain = d; 
+            return this;
+        }
+    }
+
+
+    // Used by spawnAsyncRequest
+    static void _preAsyncOnReceive(Result)(ref Result res, Tid fromTid) {
+        // Make sure the last received statusLine is sent to main
+        // thread before receiving. 
+        if (res._statusLine.majorVersion != 0) {
+            fromTid.send(thisTid(), message(res._statusLine));
+            foreach (key; res._headers.byKey()) {
+                fromTid.send(thisTid(), message(Tuple!(string,string)(key,res._headers[key])));
+            }
+            res._statusLine.majorVersion = 0;
+        }
+    }
+
+    private void _preAsyncPerform(RParams)(ref Result res, ref RParams requestParams) {
+
+        this.onReceiveHeader = (const(char)[] key,const(char)[] value) { 
+            receiveTimeout(0, (bool x) { this.cleanup(); });
+            if (this.isStopped) return;
+            res.addHeader(key, value); 
+        };
+        
+        this.onReceiveStatusLine = (StatusLine l) { 
+            receiveTimeout(0, (bool x) { this.cleanup(); });
+            if (this.isStopped) return;
+            res.reset(); 
+            res._statusLine = l;
+        };
+        
+        if (requestParams.method == Method.post || requestParams.method == Method.put) {
+            this.onSend = delegate size_t(void[] buf) {
+                receiveTimeout(0, (bool x) { this.cleanup(); });
+                if (this.isStopped) return CurlReadFunc.abort;
+                size_t minlen = min(buf.length, requestParams.postData.length);
+                buf[0..minlen] = requestParams.postData[0..minlen];
+                requestParams.postData = requestParams.postData[minlen..$];
+                return minlen;
+            };
+            this.contentLength = requestParams.postData.length;
+        }
+
+        this.maxRedirects = Http.defaultMaxRedirects;
+    }
+
+    // Used by spawnAsyncRequest to finalize a Http request
+    private void _finalizeProtocol(ref Result res, Tid fromTid) {
+        // Send the status line and headers if they haven't been so
+        if (res._statusLine.majorVersion != 0) {
+            fromTid.send(thisTid(), message(res._statusLine));
+            foreach (key; res._headers.byKey()) {
+                fromTid.send(thisTid(), message(Tuple!(string,string)(key,res._headers[key])));
+            }
+            res._statusLine.majorVersion = 0;
+        }
+    }
+
+    private void _assignParams(RParams)(ref const(RParams) requestParams) {
+        
+        this.method = requestParams.method;
+        
+        if (!requestParams.headers.length != 0) {
+            foreach (h ; requestParams.headers)
+                this.addHeader(h);
+        }
+        if (requestParams.cookieJar) {
+            this.setCookieJar(requestParams.cookieJar);
+        }
+        if (requestParams.timeCond != Http.TimeCond.none) {
+            this.setTimeCondition(requestParams.timeCond, 
+                                  requestParams.timeCondTimestamp); 
+        }
+    }
+
     /**
        The http result of a synchronous request.
     */
     struct Result {
             
-        StatusLine statusLine;  /// The http status line
-        private ubyte[] _bytes; /// The received http content as raw ubyte[]
+        StatusLine _statusLine;  /// The http status line
         private string[string] _headers; /// The received http headers
-        
+
+        private ubyte[] _bytes; /// The received http content as raw ubyte[]
+        bool _executed;
+        alias RequestParams!(const(char)) RParams;
+
+        RParams _requestParams;
+
+        mixin ProtocolRequestParamsSetters!(Result, RParams);
+        mixin RequestParamsSetters!(Result, RParams);
+
         private void reset() {
-            statusLine.reset();
+            _statusLine.reset();
             _bytes.length = 0;
             foreach(k; _headers.keys) _headers.remove(k);
         }
         
+        //
+        private void execute() {
+            if (_executed) 
+                return;
+            _executed = true;
+            auto client = Http(_requestParams.url);
+            client._assignProtocolParams(_requestParams);
+            client._assignParams(_requestParams);
+
+            if (_requestParams.method != Method.head)
+                client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
+
+            if (_requestParams.method == Method.post || _requestParams.method == Method.put) {
+                client.onSend = delegate size_t(void[] buf) {
+                    size_t minlen = min(buf.length, _requestParams.postData.length);
+                    buf[0..minlen] = _requestParams.postData[0..minlen];
+                    _requestParams.postData = _requestParams.postData[minlen..$];
+                    return minlen;
+                };
+                client.contentLength = _requestParams.postData.length;
+            }
+            client.onReceiveHeader = (const(char)[] key,const(char)[] value) { addHeader(key, value); };
+            client.onReceiveStatusLine = (StatusLine l) { reset(); _statusLine = l; };
+            client.maxRedirects = Http.defaultMaxRedirects;
+            client.perform;
+        }
+
+        /**
+           The status line
+        */
+        @property StatusLine statusLine() {
+            execute();
+            return _statusLine;
+        }
         /**
            The received headers. 
         */
         @property string[string] headers() {
+            execute();
             return _headers;
         }
 
@@ -1805,6 +2041,7 @@ http.perform;
 	   Received content.
         */
         @property ubyte[] bytes() {
+            execute();
             return _bytes;
         }
         
@@ -1830,10 +2067,14 @@ http.perform;
         /**
            The encoding scheme name.
         */
-        @property const(char)[] encodingSchemeName() {
+        @property const(char)[] encodingName() {
+            execute();
+            /// XXX : FIX
+            return "UTF-8"; // seems like an error has been introduced into the regex module?!?
             string * v = ("content-type" in headers);
             char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
             if (v) {
+                
                 auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
                 if (!m.empty && m.captures.length > 1) {
                     charset = m.captures[1];
@@ -1846,11 +2087,11 @@ http.perform;
            The encoding scheme.
         */
         @property EncodingScheme encodingScheme() {
-            return EncodingScheme.create(to!string(encodingSchemeName));
+            return EncodingScheme.create(to!string(encodingName));
         }
       
-        void addHeader(const(char)[] key, const(char)[] value) {
-            string * v = (key in headers);
+        private void addHeader(const(char)[] key, const(char)[] value) {
+            string * v = (key in _headers);
             if (v) {
                 (*v) ~= value;
             } else {
@@ -1861,7 +2102,7 @@ http.perform;
         /**
            Returns a range that will synchronously read the incoming
            http data by chunks of a given size.
-    
+           
            Example:
            ---
 foreach (chunk; Http.get("http://www.google.com").byChunk(100)) 
@@ -1870,48 +2111,15 @@ foreach (chunk; Http.get("http://www.google.com").byChunk(100))
 
            Params:
            chunkSize = The size of each chunk to be read. The last one is allowed to be smaller.
-
+           
            Returns:
-           An HttpChunkInputRange
+           An SyncChunkInputRange
         */
-        auto byChunk(size_t chunkSize) {
-
-
-            static struct HttpChunkInputRange {
-
-                alias ubyte[] ChunkType;
-                private size_t chunkSize;
-                private ChunkType _bytes;
-                private size_t len;
-                private size_t offset;
-
-                this(ubyte[] bytes, size_t chunkSize) {
-                    this._bytes = bytes;
-                    this.len = _bytes.length;
-                    this.chunkSize = chunkSize;
-                }
-
-                @property auto empty() {
-                    return offset == len;
-                }
-                
-                @property ChunkType front() {
-                    size_t nextOffset = offset + chunkSize;
-                    if (nextOffset > len) nextOffset = len;
-                    return _bytes[offset..nextOffset];
-                }
-                
-                void popFront() {
-                    offset = offset + chunkSize;
-                    if (offset > len) offset = len;
-                }
-            }
-            return HttpChunkInputRange(_bytes, chunkSize);
-        }
+        mixin ByChunkSync!_bytes;
 
         /**
            Returns a range that will synchronously read the incoming http data by line.
-    
+           
            Example:
            ---
 // Read string
@@ -1922,65 +2130,11 @@ foreach (l; Http.get("http://www.google.com").byLine())
            Params:
            keepTerminator = If the terminator for the lines should be included in the line returned
            terminator     = The terminating char for a line
-
+           
            Returns:
            An HttpLineInputRange
         */
-        auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
-                                                    Terminator terminator = '\x0a') {
-            
-            // This range is using algorithm splitter and could be
-            // optimized by not using that. 
-            static struct HttpLineInputRange {
-
-                private Char[] lines;
-                private Char[] current;
-                private bool currentValid;
-                private bool keepTerminator;
-                private Terminator terminator;
-                
-                this(Char[] lines, bool kt, Terminator terminator) {
-                    this.lines = lines;
-                    this.keepTerminator = kt;
-                    this.terminator = terminator;
-                    currentValid = true;
-                    popFront();
-                }
-
-                @property bool empty() {
-                    return !currentValid;
-                }
-                
-                @property Char[] front() {
-                    enforce(currentValid, "Cannot call front() on empty range");
-                    return current;
-                }
-                
-                void popFront() {
-                    enforce(currentValid, "Cannot call popFront() on empty range");
-                    if (lines.empty) {
-                        currentValid = false;
-                        return;
-                    }
-
-                    if (keepTerminator) {
-                        auto r = findSplitAfter(lines, [ terminator ]);
-                        if (r[0].empty) {
-                            current = r[1];
-                            lines = r[0];
-                        } else {
-                            current = r[0];
-                            lines = r[1];
-                        }
-                    } else {
-                        auto r = findSplit(lines, [ terminator ]);
-                        current = r[0];
-                        lines = r[2];
-                    }
-                }
-            }
-            return HttpLineInputRange(toString!Char()[0..$], keepTerminator, terminator);
-        }
+        mixin ByLineSync!_bytes;
     }
 
     /// Result struct used for asyncronous results
@@ -1993,21 +2147,26 @@ foreach (l; Http.get("http://www.google.com").byLine())
             done
         }
         private RunState _running; 
+
         private Http.StatusLine _statusLine;
         private string[string] _headers;     // The received http headers
         private size_t _defaultStringBufferSize; 
 
-        string _url;
+        alias RequestParams!(immutable(char)) RParams;
+        RParams _requestParams;
+        mixin ProtocolRequestParamsSetters!(AsyncResult, RParams);
+        mixin RequestParamsSetters!(AsyncResult, RParams);
+
         immutable(void)[] _postData;
         string _contentType;
         Method _httpMethod;
 
         this(string url, immutable(void)[] postData, 
              string contentType, Method httpMethod) {
-            _url = url;
-            _postData = postData;
-            _contentType = contentType;
-            _httpMethod = httpMethod;
+            _requestParams.url = url;
+            _requestParams.postData = postData;
+            _requestParams.headers ~= contentType;
+            _requestParams.method = httpMethod;
             _running = RunState.init;
 	    // A guess on how long a normal line is
 	    _defaultStringBufferSize = 100;
@@ -2040,9 +2199,9 @@ foreach (l; Http.get("http://www.google.com").byLine())
            The encoding scheme name.
            This property is only valid after calling either byChunk or byLine           
         */
-        @property const(char)[] encodingSchemeName() {
+        @property const(char)[] encodingName() {
             enforce(_running == RunState.statusReady || _running == RunState.done, 
-                    "Cannot get encodingSchemeName before a call to either byChunk or byLine on a Http.AsyncResult");
+                    "Cannot get encoding before a call to either byChunk or byLine on a Http.AsyncResult");
             string * v = ("content-type" in headers);
             char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
             if (v) {
@@ -2059,12 +2218,12 @@ foreach (l; Http.get("http://www.google.com").byLine())
            This property is only valid after calling either byChunk or byLine           
         */
         @property EncodingScheme encodingScheme() {
-            return EncodingScheme.create(to!string(encodingSchemeName));
+            return EncodingScheme.create(to!string(encodingName));
         }
-
+        
         /**
            Returns a range that will asyncronously read the incoming http data by chunks of a given size.
-    
+           
            Example:
            ---
 // Read ubyte[] in chunks of 1000
@@ -2075,186 +2234,38 @@ writeln("asyncChunk: ", l);
            Params:
            chunkSize = The size of each chunk to be read. The last one is allowed to be smaller.
            transmitBuffers = number of buffers filled asynchronously 
-
+           
            Returns:
-           An AsyncHttpChunkInputRange
+           An AsyncChunkInputRange
         */
-        auto byChunk(size_t chunkSize, size_t transmitBuffers = 5) {
-            static struct AsyncHttpChunkInputRange {
-
-                private AsyncResult * parent;
-                private Tid workerTid;
-                private ubyte[] chunk;
-    
-                this(AsyncResult * parent, Tid tid, size_t chunkSize, size_t transmitBuffers) {
-                    this.parent = parent;
-                    this.parent._running = RunState.running;
-                    workerTid = tid;
-                    state = State.needUnits;
-                    
-                    // Send buffers to other thread for it to use.
-                    // Since no mechanism is in place for moving ownership
-                    // we simply cast to immutable here and cast it back
-                    // to mutable in the receiving end.
-                    foreach (i ; 0..transmitBuffers) {
-                        ubyte[] arr;
-                        arr.length = chunkSize;
-                        workerTid.send(cast(immutable(ubyte)[])arr);
-                    }
-                }
-
-                mixin WorkerThreadProtocol!(ubyte, chunk);
-            }
-
-            // 50 is just an arbitrary number for now
-            // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-            Tid tid = spawn(&(_spawnAsyncRequest!ubyte), _url, _postData, _contentType, _httpMethod);
-            tid.send(thisTid);
-            return AsyncHttpChunkInputRange(&this, tid, chunkSize, transmitBuffers);
-        }
+        mixin ByChunkAsync!(Http, _requestParams);
 
         /**
            Returns a range that will asyncronously read the incoming http data by line.
-    
+           
            Example:
            ---
 // Read char[] lines
 foreach (l; Http.getAsync("http://www.google.com").byLine()) 
 writeln("asyncLine: ", l);
            ---
-
+       
            Params:
            keepTerminator = If the terminator for the lines should be included in the line returned
            terminator = The terminating char for a line
            transmitBuffers = number of buffers filled asynchronously 
-
+           
            Returns:
-           An AsyncHttpLineInputRange
+           An AsyncLineInputRange
         */
-	  auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
-						      Terminator terminator = '\x0a',
-                                                      size_t transmitBuffers = 5) {            
-            static struct AsyncHttpLineInputRange {
-
-                private AsyncResult * parent;
-                private Tid workerTid;
-                private bool keepTerminator;
-                private Terminator terminator;
-                private Char[] line;
-
-                this(AsyncResult * parent, Tid tid, size_t transmitBuffers) {
-                    this.parent = parent;
-                    this.parent._running = RunState.running;
-                    workerTid = tid;
-                    state = State.needUnits;
-
-                    // Send buffers to other thread for it to use.
-                    // Since no mechanism is in place for moving ownership
-                    // we simply cast to immutable here and cast it back
-                    // to mutable in the receiving end.
-                    foreach (i ; 0..transmitBuffers) {
-                        Char[] arr;
-                        arr.length = parent._defaultStringBufferSize;
-                        workerTid.send(cast(immutable(Char)[])arr);
-                    }
-                }
-
-                mixin WorkerThreadProtocol!(Char, line);
-            }
-
-            // 50 is just an arbitrary number for now
-            // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-            Tid tid = spawn(&_spawnAsyncRequest!(Char, Terminator),_url, _postData, _contentType, _httpMethod);
-            tid.send(thisTid);
-            tid.send(terminator);
-            tid.send(keepTerminator);
-            return AsyncHttpLineInputRange(&this, tid, transmitBuffers);
-        }
-
-        template WorkerThreadProtocol(Unit, alias units) {
-
-            ~this() {
-                workerTid.send(true);
-            }
-
-            @property auto empty() {
-                tryEnsureUnits();
-                return state == State.done;
-            }
-                
-            @property Unit[] front() {
-                tryEnsureUnits();
-                assert(state == State.gotUnits, "Expected " ~ to!string(State.gotUnits) ~ " but got " ~ to!string(state));
-                return units;
-            }
-                
-            void popFront() {
-                tryEnsureUnits();
-                assert(state == State.gotUnits, "Expected " ~ to!string(State.gotUnits) ~ " but got " ~ to!string(state));
-                state = State.needUnits;
-                // Send to worker thread for buffer reuse
-                workerTid.send(cast(immutable(Unit)[]) units);
-                units = null;
-            }
-
-            enum State {
-                needUnits,
-                gotUnits,
-                done
-            }
-            State state;
-
-            private void tryEnsureUnits() {
-                while (true) {
-                    switch (state) {
-                    case State.needUnits:
-                        if (parent._running == RunState.done) {
-                            state = State.done;
-                            break;
-                        }
-                        receive(
-                                (Tid origin, Message!(immutable(Unit)[]) _data) { 
-                                    if (origin != workerTid)
-                                        return false;
-                                    units = cast(Unit[]) _data.data;
-                                    state = State.gotUnits;
-                                    return true;
-                                },
-                                (Tid origin, Message!(Tuple!(string,string)) header) {
-                                    if (origin != workerTid)
-                                        return false;
-                                    parent._headers[header.data[0]] = header.data[1];
-                                    return true;
-                                },
-                                (Tid origin, Message!(Http.StatusLine) l) {
-                                    if (origin != workerTid)
-                                        return false;
-                                    parent._running = RunState.statusReady;
-                                    parent._statusLine = l.data;
-                                    return true;
-                                },
-                                (Tid origin, Message!bool f) { 
-                                    if (origin != workerTid)
-                                        return false;
-				    state = state.done; 
-				    parent._running = RunState.done; 
-                                    return true;
-				}
-                                );
-                        break;
-                    case State.gotUnits: return;
-                    case State.done:
-                        return;
-                    }
-                }
-            }
-
-        } // WorkerThreadProtocol
+        mixin ByLineAsync!(Http, _requestParams);
+        
     } // AsyncResult
+
 } // Http
 
  
-/*
+/**
    Ftp client functionality
 */
 struct Ftp {
@@ -2277,16 +2288,55 @@ struct Ftp {
         ----
 Ftp.get("ftp://ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-file");
         ----
-
-        Params:
-        url = The URL of the FTP
     */
     static void get(in const(char)[] url, in string saveToPath) {
         auto client = new Ftp(url);
         auto f = new std.stream.File(saveToPath, FileMode.OutNew);
-        client.onReceive = (ubyte[] data) { f.write(data); };
+        client.onReceive = (ubyte[] data) { f.write(data); return data.length; };
         client.perform;
         f.close;
+    }
+
+    /** Convenience function that simply does a FTP GET on the
+        specified URL.
+     
+        Example:
+        ----
+auto res = Ftp.get("ftp://ftp.digitalmars.com/sieve.ds");
+writeln(res.toString());
+        ----
+
+        Returns:
+        A $(XREF _curl, Result) object.
+    */
+    static Result get(in const(char)[] url) {
+        Result res;
+        res._executed = false;
+        res._requestParams.url = url;
+        return res;
+    }
+
+    unittest {
+        if (!netAllowed) return;
+        auto res = Http.get(testUrl1);
+        assert(res.bytes[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], "get() returns unexpected content " ~ to!string(res.bytes[0..11]));
+        assert(res.toString()[0..11] == "Hello world", "get() returns unexpected text "); 
+    }
+
+    /** Asynchronous FTP GET to the specified URL. 
+        Callbacks are not supported when using this method (e.g. onReceive).
+
+        Example:
+        ----
+auto res = Ftp.getAsync("ftp://ftp.digitalmars.com/sieve.ds");
+writeln(res.byChunk(100).front);
+        ----
+
+        Returns:
+        A $(XREF _curl, AsyncResult) object.
+    */
+    static AsyncResult getAsync(string url) {
+        return AsyncResult(url, "");
     }
 
     /**
@@ -2296,12 +2346,583 @@ Ftp.get("ftp://ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-file");
         curl.perform;
     }
 
+    /**
+       The content length in bytes when using request that has content e.g. POST/PUT
+       and not using chunked transfer. Is set as the "Content-Length" header.
+    */
+    @property void contentLength(size_t len) {
+        curl.set(CurlOption.infilesize_large, len);      
+    }
+
+    // This structure is used to keep paramters when using static
+    // request methods on the Http class.
+    // It enables the e.g. Http.get("...").dataTimeout(100).byLine()
+    struct RequestParams(T) {
+        alias T[] STR;
+        static if ( is(T == const(char))) {
+            alias const(void)[] POSTDATA;
+            alias const(STR)[] HEADERS;
+        } else {
+            alias immutable(void)[] POSTDATA;
+            alias immutable(STR)[] HEADERS;
+        }
+        // This protocol params
+        STR url;
+        POSTDATA postData;
+        
+        // Base Protocol params
+        Duration dataTimeout;
+        Duration connectTimeout;
+        Duration dnsTimeout;
+        STR netInterface;
+        int port;
+        int range;
+        bool tcpNoDelay;
+        STR username;
+        STR password;
+        STR domain; // NTLM authentication only
+    };
+        
+    private mixin template RequestParamsSetters(OWNER, T) {
+        ref OWNER authentication(T.STR u, T.STR p, T.STR d = "") { 
+            _requestParams.username = u; 
+            _requestParams.password = p; 
+            _requestParams.domain = d; 
+            return this;
+        }
+    }
+
+
+    // Used by spawnAsyncRequest
+    static void _preAsyncOnReceive(Result)(ref Result res, Tid fromTid) {
+        // void
+    }
+
+    private void _preAsyncPerform(RParams)(ref Result res, ref RParams requestParams) {
+        if (requestParams.postData.length != 0) {
+            this.onSend = delegate size_t(void[] buf) {
+                receiveTimeout(0, (bool x) { this.cleanup(); });
+                if (this.isStopped) return CurlReadFunc.abort;
+                size_t minlen = min(buf.length, requestParams.postData.length);
+                buf[0..minlen] = requestParams.postData[0..minlen];
+                requestParams.postData = requestParams.postData[minlen..$];
+                return minlen;
+            };
+            this.contentLength = requestParams.postData.length;
+        }
+    }
+
+    // Used by spawnAsyncRequest to finalize a Http request
+    private void _finalizeProtocol(ref Result res, Tid fromTid) {
+        // void
+    }
+
+    private void _assignParams(RParams)(ref const(RParams) requestParams) {
+        // void
+    }
+
+    /**
+       The http result of a synchronous request.
+    */
+    struct Result {
+            
+        private ubyte[] _bytes; /// The received http content as raw ubyte[]
+        bool _executed;
+        alias RequestParams!(const(char)) RParams;
+
+        RParams _requestParams;
+
+        mixin ProtocolRequestParamsSetters!(Result, RParams);
+        mixin RequestParamsSetters!(Result, RParams);
+
+        const(char)[] _encodingSchemeName;
+
+        private void reset() {
+            _bytes.length = 0;
+        }
+        
+        //
+        void execute() {
+            if (_executed) 
+                return;
+            _executed = true;
+            auto client = Ftp(_requestParams.url);
+            client._assignProtocolParams(_requestParams);
+            client._assignParams(_requestParams);
+
+            client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
+
+            if (_requestParams.postData.length != 0) {
+                client.onSend = delegate size_t(void[] buf) {
+                    size_t minlen = min(buf.length, _requestParams.postData.length);
+                    buf[0..minlen] = _requestParams.postData[0..minlen];
+                    _requestParams.postData = _requestParams.postData[minlen..$];
+                    return minlen;
+                };
+                client.contentLength = _requestParams.postData.length;
+            }
+            client.perform;
+        }
+
+        /**
+	   Received content.
+        */
+        @property ubyte[] bytes() {
+            execute();
+            return _bytes;
+        }
+        
+        /**
+           The received http content decoded from content-type charset into text.
+        */
+        @property Char[] toString(Char = char)() {
+            auto scheme = encodingScheme;
+            if (!scheme) {
+                return null;
+            }
+
+            static if (is (Char == char))
+                // Special case where encoding is utf8 since that is what
+                // this method returns
+                if (scheme.toString() == "UTF-8")
+                    return cast(char[])(_bytes);
+
+            auto r = decodeString!Char(_bytes, scheme);
+            return r[1];
+        }
+
+        /**
+           The encoding scheme name.
+        */
+        @property const(char)[] encodingName() {
+            if (_encodingSchemeName is null)
+                return "UTF-8";
+            return _encodingSchemeName;
+        }
+
+        /**
+           The encoding scheme name.
+        */
+        ref Result encoding(const(char)[] schemeName) {
+            _encodingSchemeName = schemeName;
+            return this;
+        }
+
+        /**
+           The encoding scheme.
+        */
+        @property EncodingScheme encodingScheme() {
+            return EncodingScheme.create(to!string(encodingName));
+        }
+
+        /**
+           Returns a range that will synchronously read the incoming
+           ftp data by chunks of a given size.
+           
+           Example:
+           ---
+foreach (chunk; Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byChunk(100)) 
+    writeln("syncChunk: ", chunk);
+           ---
+
+           Params:
+           chunkSize = The size of each chunk to be read. The last one is allowed to be smaller.
+           
+           Returns:
+           An SyncChunkInputRange
+        */
+        mixin ByChunkSync!_bytes;
+
+        /**
+           Returns a range that will synchronously read the incoming ftp data by line.
+           
+           Example:
+           ---
+// Read string
+foreach (l; Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byLine()) 
+    writeln("syncLine: ", l);
+           ---
+
+           Params:
+           keepTerminator  = If the terminator for the lines should be included in the line returned
+           terminator      = The terminating char for a line
+
+           Returns:
+           An SyncLineInputRange
+        */
+        mixin ByLineSync!_bytes;
+    }
+
+    /// Result struct used for asyncronous results
+    struct AsyncResult {
+
+        private enum RunState {
+            init,
+            running,
+            statusReady,
+            done
+        }
+        private RunState _running; 
+        private size_t _defaultStringBufferSize; 
+
+        alias RequestParams!(immutable(char)) RParams;
+        RParams _requestParams;
+        mixin ProtocolRequestParamsSetters!(AsyncResult, RParams);
+        mixin RequestParamsSetters!(AsyncResult, RParams);
+
+        immutable(void)[] _postData;
+        const(char)[] _encodingSchemeName;
+
+        this(string url, immutable(void)[] postData) {
+            _requestParams.url = url;
+            _requestParams.postData = postData;
+            _running = RunState.init;
+	    // A guess on how long a normal line is
+	    _defaultStringBufferSize = 100;
+        }
+        
+        /** The running state. */
+        @property pure bool isRunning() {
+            return _running == RunState.running || _running == RunState.statusReady;
+        }
+        
+        /**
+           The encoding scheme name.
+           This property is only valid after calling either byChunk or byLine           
+        */
+        @property const(char)[] encodingName() {
+            return _encodingSchemeName;
+        }
+
+        /**
+           The encoding scheme name.
+           This property is only valid after calling either byChunk or byLine           
+        */
+        ref AsyncResult encoding(const(char)[] schemeName) {
+            enforce(_running != RunState.statusReady && _running != RunState.done, 
+                    "Cannot set encodingSchemeName after a call to either byChunk or byLine on a Http.AsyncResult");
+            _encodingSchemeName = schemeName;
+            return this;
+        }
+
+        /**
+           The encoding scheme.
+           This property is only valid after calling either byChunk or byLine           
+        */
+        @property EncodingScheme encodingScheme() {
+            return EncodingScheme.create(to!string(_encodingSchemeName));
+        }
+
+
+        /**
+           Returns a range that will asyncronously read the incoming ftp data by chunks of a given size.
+           
+           Example:
+           ---
+// Read ubyte[] in chunks of 1000
+foreach (l; Ftp.getAsync("ftp://ftp.digitalmars.com/sieve.ds").byChunk(1000)) 
+writeln("asyncChunk: ", l);
+           ---
+           
+           Params:
+           chunkSize = The size of each chunk to be read. The last one is allowed to be smaller.
+           transmitBuffers = number of buffers filled asynchronously 
+           
+           Returns:
+           An AsyncChunkInputRange
+        */
+        mixin ByChunkAsync!(Ftp, _requestParams);
+
+        /**
+           Returns a range that will asynchronously read the incoming ftp data by line.
+           
+           Example:
+           ---
+// Read string
+foreach (l; Ftp.getAsync("ftp://ftp.digitalmars.com/sieve.ds").byLine()) 
+    writeln("syncLine: ", l);
+           ---
+
+           Params:
+           keepTerminator  = If the terminator for the lines should be included in the line returned
+           terminator      = The terminating char for a line
+           transmitBuffers = The number of buffer used for asynchronous data read 
+
+           Returns:
+           An AsyncLineInputRange
+        */
+        mixin ByLineAsync!(Ftp, _requestParams);
+    }
 }
 
 /// An exception class for curl
-class CurlException: Exception {
+class CurlException : Exception {
     /// Construct a CurlException with given error message.
     this(string msg) { super(msg); }
+}
+
+// Internal messages send between threads. 
+// The data is wrapped in this struct in order to ensure that 
+// other std.concurrency.receive calls does not pick up our messages
+// by accident.
+private struct Message(T) {
+    public T data;
+}
+
+private static Message!T message(T)(T data) {
+    return Message!T(data);
+}
+
+// Pool of to be used for reusing buffers
+private struct Pool(DATA) {
+private:
+    struct Entry {
+        DATA data;
+        Entry * next;
+    };
+    Entry * root;
+    Entry * freeList;
+public:
+    bool empty() {
+        return root == null;
+    }
+    void push(DATA d) {
+        if (freeList == null) {
+            // Allocate new Entry since there is no one 
+            // available in tht freeList
+            freeList = new Entry;
+        }
+        freeList.data = d;
+        Entry * oldroot = root;
+        root = freeList;
+        freeList = freeList.next;
+        root.next = oldroot;
+    }
+    DATA pop() {
+        DATA d = root.data;
+        Entry * n = root.next;
+        root.next = freeList;
+        freeList = root;
+        root = n;
+        return d;
+    }
+};
+
+// Shared function for reading incoming chunks of data and 
+// sending the to a parent thread
+private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata, 
+                                          Pool!(ubyte[]) freeBuffers, 
+                                          ref ubyte[] buffer, Tid fromTid) {
+    size_t datalen = data.length;
+
+    // Copy data to fill active buffer
+    while (data.length != 0) {
+                    
+        // Make sure we have a buffer
+        while ( outdata.length == 0 && freeBuffers.empty) {
+            // Active buffer is invalid and there are no
+            // available buffers in the pool. Wait for buffers
+            // to return from main thread in order to reuse
+            // them.
+            bool stop = false;
+            receive((immutable(ubyte)[] buf) {
+                    buffer = cast(ubyte[])buf;
+                    outdata = buffer[];
+                },
+                (bool flag) { stop = true; }
+                );
+            if (stop) return cast(size_t)0;
+        }
+        if (outdata.length == 0) {
+            buffer = freeBuffers.pop();
+            outdata = buffer[];
+        }
+                    
+        // Copy data
+        size_t copyBytes = outdata.length < data.length ? outdata.length : data.length;
+
+        outdata[0..copyBytes] = data[0..copyBytes];
+        outdata = outdata[copyBytes..$];
+        data = data[copyBytes..$];
+
+        if (outdata.length == 0) {
+            fromTid.send(thisTid(), message(cast(immutable(ubyte)[])buffer));
+        }
+    }
+
+    return datalen;
+}
+
+// ditto
+private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer, 
+                                         Tid fromTid) {
+    if (outdata.length != 0) {
+        // Resize the last buffer
+        buffer.length = buffer.length - outdata.length;
+        fromTid.send(thisTid(), message(cast(immutable(ubyte)[])buffer));
+    }
+}
+
+
+// Shared function for reading incoming lines of data and 
+// sending the to a parent thread
+private static size_t _receiveAsyncLines(Result, Terminator, Unit)
+    (ubyte[] data, ref Result res, ref EncodingScheme encodingScheme,
+     bool keepTerminator, Terminator terminator, 
+     ref ubyte[] leftOverBytes, ref bool bufferValid,
+     ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
+     Tid fromTid) {
+    
+    size_t datalen = data.length;
+
+    // Terminator is specified and buffers should be
+    // resized as determined by the terminator
+                
+    // Copy data to active buffer until terminator is
+    // found.
+    if (encodingScheme is null)
+        encodingScheme = res.encodingScheme;
+
+    // Decode as many lines as possible
+    while (true) {
+
+        // Make sure we have a buffer
+        while (!bufferValid && freeBuffers.empty) {
+            // Active buffer is invalid and there are no
+            // available buffers in the pool. Wait for buffers
+            // to return from main thread in order to reuse
+            // them.
+            bool stop = false;
+            receive((immutable(Unit)[] buf) {
+                    buffer = cast(Unit[])buf;
+                    buffer.length = 0;
+                    bufferValid = true;
+                },
+                (bool flag) { stop = true; }
+                );
+            if (stop) return cast(size_t)0;
+        }
+        if (!bufferValid) {
+            buffer = freeBuffers.pop();
+            bufferValid = true;
+        }
+
+        // Try to read a line from left over bytes from
+        // last onReceive plus the newly received bytes. 
+        try { 
+            if (decodeLineInto(leftOverBytes, data, buffer,
+                               encodingScheme, terminator)) {
+                if (keepTerminator) {
+                    fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer));
+                } else {
+                    static if (isArray!Terminator)
+                        fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$-terminator.length]));
+                    else
+                        fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$-1]));
+                }
+                bufferValid = false;
+            } else {
+                // Could not decode an entire line. Save
+                // bytes left in data for next call to
+                // onReceive. Can be up to a max of 4 bytes.
+                enforce(data.length <= 4, new CurlException("Too many bytes left not decoded " ~ to!string(data.length) ~ 
+                                                            " > 4. Maybe the charset specified in headers does not match "
+                                                            "the actual content downloaded?"));
+                leftOverBytes ~= data;
+                break;
+            }
+        } catch (CurlException ex) {
+            prioritySend(fromTid, cast(immutable(CurlException))ex);
+            return cast(size_t)0;
+        }
+    }
+    return datalen;
+}
+
+// ditto
+private static void _finalizeAsyncLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid) {
+    if (bufferValid && buffer.length != 0) {
+        fromTid.send(thisTid(), message(cast(immutable(Unit)[])buffer[0..$]));
+    }
+}
+
+            
+// Spawn a thread for handling the reading of incoming data in the
+// background while the delegate is executing.  This will optimize
+// throughput by allowing simultanous input (this struct) and
+// output (e.g. AsyncHttpLineOutputRange).
+private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
+
+    Tid fromTid = receiveOnly!(Tid);
+    Proto.AsyncResult.RParams requestParams = receiveOnly!(Proto.AsyncResult.RParams);
+
+    auto client = Proto(requestParams.url);
+    Proto.Result res;
+    res._executed = true;
+
+    client._assignProtocolParams(requestParams);
+    client._assignParams(requestParams);
+
+    // Get buffer to read into
+    Pool!(Unit[]) freeBuffers;  // Free list of buffer objects
+	
+    // Number of bytes filled into active buffer
+    Unit[] buffer;
+
+    static if ( !is(Terminator == void)) {
+        // Only lines reading will receive a terminator
+        Terminator terminator = receiveOnly!Terminator;
+        bool keepTerminator = receiveOnly!bool;
+        EncodingScheme encodingScheme;
+        static if ( is(Proto == Ftp) ) {
+            res.encoding(receiveOnly!string);
+        }
+        // max number of bytes to carry over from an onReceive
+        // callback. This is 4 because it is the max code units to
+        // decode a code point in the supported encodings.
+        ubyte[] leftOverBytes =  new ubyte[4];
+        leftOverBytes.length = 0;
+        bool bufferValid = false;
+    } else {
+        Unit[] outdata;
+    }
+
+
+    client.onReceive = (ubyte[] data) { 
+        Proto._preAsyncOnReceive(res, fromTid);
+        // If no terminator is specified the chunk size is fixed.
+        static if ( is(Terminator == void) ) {
+            return _receiveAsyncChunks(data, outdata, freeBuffers, buffer, fromTid);
+        } else {
+            return _receiveAsyncLines(data, res, encodingScheme, 
+                                      keepTerminator, terminator, leftOverBytes, 
+                                      bufferValid, freeBuffers, buffer, fromTid);
+        }
+    };
+
+    client._preAsyncPerform(res, requestParams);
+    
+    // Start the request
+    try {
+        client.perform;
+    } catch (CurlException ex) {
+        prioritySend(fromTid, cast(immutable(CurlException))ex);
+        return;
+    }
+
+    client._finalizeProtocol(res, fromTid);
+
+    // Send remaining data that is not a full chunk size
+    static if ( is(Terminator == void) ) {
+        _finalizeAsyncChunks(outdata, buffer, fromTid);
+    } else {
+        _finalizeAsyncLines(bufferValid, buffer, fromTid);
+    }
+
+    if (!client.isStopped) 
+        client.cleanup();
+
+    fromTid.send(thisTid(), message(true)); // signal done
 }
 
 unittest {
@@ -2311,12 +2932,12 @@ unittest {
     // GET with custom data receivers 
     Http http = Http("http://www.google.com");
     http.onReceiveHeader = (const(char)[] key, const(char)[] value) { writeln(key ~ ": " ~ value); };
-    http.onReceive = (ubyte[] data) { /* drop */ };
+    http.onReceive = (ubyte[] data) { /* drop */ return data.length; };
     http.perform;
     
     // POST with timouts
     http.url("http://d-programming-language.appspot.com/testUrl2");
-    http.onReceive = (ubyte[] data) { writeln(data); };
+    http.onReceive = (ubyte[] data) { writeln(data); return data.length; };
     http.connectTimeout(dur!"seconds"(10));
     http.dataTimeout(dur!"seconds"(10));  
     http.dnsTimeout(dur!"seconds"(10));
@@ -2343,7 +2964,7 @@ unittest {
     
     http.method = Http.Method.get;
     http.url = "http://upload.wikimedia.org/wikipedia/commons/5/53/Wikipedia-logo-en-big.png";
-    http.onReceive = delegate(ubyte[]) { };
+    http.onReceive = delegate(ubyte[] data) { return data.length; };
     http.onProgress = (double dltotal, double dlnow, double ultotal, double ulnow) {
         writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
         return 0;
@@ -2353,14 +2974,6 @@ unittest {
     foreach (chunk; Http.getAsync("http://www.google.com").byChunk(100)) {
         stdout.rawWrite(chunk);
     }
-    /*
-    foreach (chunk; Http.get("http://www.google.com").async.byChunk(100)) {
-        stdout.rawWrite(chunk);
-    }
-    foreach (chunk; Http.get("http://www.google.com").auth("login", "pw").timeout(100).async.byChunk(100)) {
-        stdout.rawWrite(chunk);
-    }    
-    */
 }
 
 version (unittest) {
