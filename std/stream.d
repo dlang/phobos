@@ -796,7 +796,7 @@ class Stream : InputStream, OutputStream {
                 } break;
 
                 case 'o': {     // octal
-                  while (isOctDigit(c) && width) {
+                  while (isOctalDigit(c) && width) {
                     n = n * 8 + (c - '0');
                     width--;
                     c = getc();

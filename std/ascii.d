@@ -22,7 +22,7 @@ version(unittest) import std.range;
 immutable hexDigits      = "0123456789ABCDEF";           /// 0..9A..F
 immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
 immutable digits         = "0123456789";                 /// 0..9
-immutable octDigits      = "01234567";                   /// 0..7
+immutable octalDigits    = "01234567";                   /// 0..7
 immutable lowercase      = "abcdefghijklmnopqrstuvwxyz"; /// a..z
 immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ~
                            "abcdefghijklmnopqrstuvwxyz"; /// A..Za..z
@@ -54,7 +54,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; chain(digits, octDigits, fullHexDigits, letters, lowercase, uppercase))
+    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
     foreach(c; whitespace)
@@ -75,7 +75,7 @@ unittest
     foreach(c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
-    foreach(c; chain(digits, octDigits, whitespace))
+    foreach(c; chain(digits, octalDigits, whitespace))
         assert(!isAlpha(c));
 }
 
@@ -137,18 +137,18 @@ unittest
 /++
     Returns whether $(D c) is a digit in base 8 (0..7).
   +/
-bool isOctDigit(dchar c) @safe pure nothrow
+bool isOctalDigit(dchar c) @safe pure nothrow
 {
     return c >= '0' && c <= '7';
 }
 
 unittest
 {
-    foreach(c; octDigits)
-        assert(isOctDigit(c));
+    foreach(c; octalDigits)
+        assert(isOctalDigit(c));
 
     foreach(c; chain(letters, ['8', '9'], whitespace))
-        assert(!isOctDigit(c));
+        assert(!isOctalDigit(c));
 }
 
 
