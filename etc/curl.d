@@ -25,8 +25,8 @@ vdata before all data has been received.
 
 Example:
 ---
-// Simple GET with default timeout etc.
-writeln( Http.get("http://www.google.com").toString() ); // .headers for headers etc.
+// Simple GET with connect timeout of 10 seconds 
+Http.get("http://www.google.com").connectTimeout(dur!"seconds"(10)).toString(); 
 
 // GET with custom data receivers 
 Http http = Http("http://www.google.com");
