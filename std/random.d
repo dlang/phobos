@@ -1041,7 +1041,7 @@ if (isIntegral!T || isSomeChar!T)
     else
     {
         static assert(T.sizeof == 8 && r.sizeof == 4);
-        T r1 = urng.front | (r << 32);
+        T r1 = urng.front | (cast(T)r << 32);
         urng.popFront();
         return r1;
     }
