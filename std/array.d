@@ -592,8 +592,8 @@ unittest
 +/
 
 /++
-    Inserts $(D stuff) that must consist of input ranges or a implicitly
-	convertible items in $(D array) at position $(D pos).
+    Inserts $(D stuff) (which must be an input range or any number of
+    implicitly convertible items) in $(D array) at position $(D pos).
 
 Example:
 ---
@@ -630,36 +630,26 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     insertInPlaceImpl(array, pos, range);
 }
 
+// returns number of consecutive elements at front of U that are convertible to E
 private template staticFrontConvertible(E, U...)
 {
     static if(U.length == 0)
-    {
         enum staticFrontConvertible = 0;
-    }
     else static if(isImplicitlyConvertible!(U[0],E))
-    {
         enum staticFrontConvertible = 1 + staticFrontConvertible!(E, U[1..$]);
-    }
     else
-    {
         enum staticFrontConvertible = 0;
-    }
 }
 
+// returns total number of elements in U that are convertible to E
 private template staticConvertible(E, U...)
 {
     static if (U.length == 0)
-    {
         enum staticConvertible = 0;
-    }
     else static if(isImplicitlyConvertible!(U[0], E))
-    {
         enum staticConvertible = 1 + staticConvertible!(E, U[1..$]);
-    }
     else
-    {
         enum staticConvertible = staticConvertible!(E, U[1..$]);
-    }
 }
 
 private template isCharOrString(T)
@@ -669,42 +659,36 @@ private template isCharOrString(T)
 
 private template isInputRangeOrConvertible(E)
 {
-	template isInputRangeOrConvertible(R)
-	{
+    template isInputRangeOrConvertible(R)
+    {
         enum isInputRangeOrConvertible =
             (isInputRange!R && is(ElementType!R : E))  || is(R : E);
-	}
+    }
 }
 
 //packs individual convertible elements into provided slack array,
 //and chains them with the rest into a tuple
 private auto makeRangeTuple(E, U...)(E[] place, U stuff)
-	if(U.length > 0 && is(U[0] : E) )
+    if(U.length > 0 && is(U[0] : E) )
 {
     enum toPack = staticFrontConvertible!(E, U);
     foreach(i, v; stuff[0..toPack])
         emplace!E(&place[i], v);
     assert(place.length >= toPack);
     static if(U.length != staticFrontConvertible!(E,U))
-    {
         return tuple(place[0..toPack],
                 makeRangeTuple(place[toPack..$], stuff[toPack..$]).expand);
-    }
     else
         return tuple(place[0..toPack]);
 }
 //ditto
 private auto makeRangeTuple(E, U...)(E[] place, U stuff)
-	if(isInputRange!(U[0]) && is(ElementType!(U[0]) : E))
+    if(U.length > 0 && isInputRange!(U[0]) && is(ElementType!(U[0]) : E))
 {
     static if(U.length == 1)
-    {
         return tuple(stuff[0]);
-    }
     else
-    {
         return tuple(stuff[0],makeRangeTuple(place, stuff[1..$]).expand);
-    }
 }
 
 
