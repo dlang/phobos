@@ -60,7 +60,7 @@ pure int isdigit(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_DIG)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isLower) instead.)
+ * $(D std.ascii.isAsciiLower) instead.)
  *
  * Returns !=0 if c is lower case ascii letter.
  */
@@ -76,7 +76,7 @@ pure int ispunct(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_PNC)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isWhite) instead.)
+ * $(D std.ascii.isAsciiWhite) instead.)
  *
  * Returns !=0 if c is a space, tab, vertical tab, form feed,
  * carriage return, or linefeed.
@@ -85,7 +85,7 @@ pure int isspace(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_SPC)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isUpper) instead.)
+ * $(D std.ascii.isAsciiUpper) instead.)
  *
  * Returns !=0 if c is an upper case ascii character.
  */
@@ -126,27 +126,27 @@ pure int isascii(dchar c)  { return c <= 0x7F; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.toLower) instead.)
+ * $(D std.ascii.toAsciiLower) instead.)
  *
  * If c is an upper case ascii character,
  * return the lower case equivalent, otherwise return c.
  */
 pure dchar tolower(dchar c)
 {
-    return std.ascii.toLower(c);
+    return std.ascii.toAsciiLower(c);
 }
 
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.toUpper) instead.)
+ * $(D std.ascii.toAsciiUpper) instead.)
  *
  * If c is a lower case ascii character,
  * return the upper case equivalent, otherwise return c.
  */
 pure dchar toupper(dchar c)
 {
-    return std.ascii.toUpper(c);
+    return std.ascii.toAsciiUpper(c);
 }
 
 

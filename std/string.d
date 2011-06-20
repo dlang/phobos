@@ -185,7 +185,7 @@ alias std.ascii.newline newline;
 
 /**********************************
  * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(XREF ascii, isWhite) or $(XREF uni, isUniWhite) instead.)
+ *       Please use $(XREF ascii, isAsciiWhite) or $(XREF uni, isUniWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
@@ -194,7 +194,7 @@ else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
     pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
-                            "std.ascii.isWhite or std.uni.isUniWhite"));
+                            "std.ascii.isAsciiWhite or std.uni.isUniWhite"));
 
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -475,11 +475,11 @@ sizediff_t indexOf(Char)(in Char[] s,
     {
         if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ascii.toLower(c);
+            auto c1 = cast(char) std.ascii.toAsciiLower(c);
 
             foreach (sizediff_t i, c2; s)
             {
-                auto c3 = std.ascii.toLower(c2);
+                auto c3 = std.ascii.toAsciiLower(c2);
                 if (c1 == c3)
                     return i;
             }
@@ -640,11 +640,11 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
     {
         if(std.ascii.isASCII(c))
         {
-            immutable c1 = std.ascii.toLower(c);
+            immutable c1 = std.ascii.toAsciiLower(c);
 
             for(auto i = s.length; i-- != 0;)
             {
-                immutable c2 = std.ascii.toLower(s[i]);
+                immutable c2 = std.ascii.toAsciiLower(s[i]);
                 if(c1 == c2)
                     return cast(sizediff_t)i;
             }
@@ -951,7 +951,7 @@ void toLowerInPlace(C)(ref C[] s)
     for (size_t i = 0; i < s.length; )
     {
         immutable c = s[i];
-        if (std.ascii.isUpper(c))
+        if (std.ascii.isAsciiUpper(c))
         {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
         }

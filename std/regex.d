@@ -833,7 +833,7 @@ Returns the number of parenthesized captures
                 if (isAlpha(c))
                 {
                     op = REichar;
-                    c = cast(char)std.ascii.toUpper(c);
+                    c = cast(char)std.ascii.toAsciiUpper(c);
                 }
             }
             if (op == REchar && c <= 0xFF)
@@ -1034,13 +1034,13 @@ Returns the number of parenthesized captures
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isWhite(i))
+                        if (isAsciiWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isWhite(i))
+                        if (!isAsciiWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -2113,8 +2113,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isLower(cast(E) c2))
-                        c2 = std.ascii.toUpper(cast(E) c2);
+                    if (isAsciiLower(cast(E) c2))
+                        c2 = std.ascii.toAsciiUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2144,8 +2144,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isLower(cast(E) c2))
-                        c2 = std.ascii.toUpper(cast(E) c2);
+                    if (isAsciiLower(cast(E) c2))
+                        c2 = std.ascii.toAsciiUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2504,7 +2504,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isWhite(input[src]))
+                if (!isAsciiWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2514,7 +2514,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isWhite(input[src]))
+                if (isAsciiWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;

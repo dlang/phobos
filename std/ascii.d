@@ -83,7 +83,7 @@ unittest
 /++
     Returns whether $(D c) is a lowercase ASCII letter (a..z).
   +/
-bool isLower(dchar c) @safe pure nothrow
+bool isAsciiLower(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _LC) : false;
 }
@@ -91,17 +91,17 @@ bool isLower(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; lowercase)
-        assert(isLower(c));
+        assert(isAsciiLower(c));
 
     foreach(c; chain(digits, uppercase, whitespace))
-        assert(!isLower(c));
+        assert(!isAsciiLower(c));
 }
 
 
 /++
     Returns whether $(D c) is an uppercase ASCII letter (A..Z).
   +/
-bool isUpper(dchar c) @safe pure nothrow
+bool isAsciiUpper(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _UC) : false;
 }
@@ -109,10 +109,10 @@ bool isUpper(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; uppercase)
-        assert(isUpper(c));
+        assert(isAsciiUpper(c));
 
     foreach(c; chain(digits, lowercase, whitespace))
-        assert(!isUpper(c));
+        assert(!isAsciiUpper(c));
 }
 
 
@@ -174,7 +174,7 @@ unittest
     Whether or not $(D c) is a whitespace character. That includes the space,
     tab, vertical tab, form feed, carriage return, and linefeed characters.
   +/
-bool isWhite(dchar c) @safe pure nothrow
+bool isAsciiWhite(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
 }
@@ -182,10 +182,10 @@ bool isWhite(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; whitespace)
-        assert(isWhite(c));
+        assert(isAsciiWhite(c));
 
     foreach(c; chain(digits, letters))
-        assert(!isWhite(c));
+        assert(!isAsciiWhite(c));
 }
 
 
@@ -292,25 +292,25 @@ unittest
     If $(D c) is an uppercase ASCII character, then its corresponding lowercase
     letter is returned. Otherwise, $(D c) is returned.
   +/
-dchar toLower(dchar c) @safe pure nothrow
+dchar toAsciiLower(dchar c) @safe pure nothrow
 out(result)
 {
-    assert(!isUpper(result));
+    assert(!isAsciiUpper(result));
 }
 body
 {
-    return isUpper(c) ? c + cast(dchar)('a' - 'A') : c;
+    return isAsciiUpper(c) ? c + cast(dchar)('a' - 'A') : c;
 }
 
 unittest
 {
     foreach(i, c; uppercase)
-        assert(toLower(c) == lowercase[i]);
+        assert(toAsciiLower(c) == lowercase[i]);
 
     foreach(dchar c; iota(0, 128))
     {
         if(c < 'A' || c > 'Z')
-            assert(toLower(c) == c);
+            assert(toAsciiLower(c) == c);
     }
 }
 
@@ -319,25 +319,25 @@ unittest
     If $(D c) is a lowercase ASCII character, then its corresponding uppercase
     letter is returned. Otherwise, $(D c) is returned.
   +/
-dchar toUpper(dchar c) @safe pure nothrow
+dchar toAsciiUpper(dchar c) @safe pure nothrow
 out(result)
 {
-    assert(!isLower(result));
+    assert(!isAsciiLower(result));
 }
 body
 {
-    return isLower(c) ? c - cast(dchar)('a' - 'A') : c;
+    return isAsciiLower(c) ? c - cast(dchar)('a' - 'A') : c;
 }
 
 unittest
 {
     foreach(i, c; lowercase)
-        assert(toUpper(c) == uppercase[i]);
+        assert(toAsciiUpper(c) == uppercase[i]);
 
     foreach(dchar c; iota(0, 128))
     {
         if(c < 'a' || c > 'z')
-            assert(toUpper(c) == c);
+            assert(toAsciiUpper(c) == c);
     }
 }
 

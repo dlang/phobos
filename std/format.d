@@ -816,7 +816,7 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(isLower(trailing[1]) || trailing[1] == '*',
+                    enforce(isAsciiLower(trailing[1]) || trailing[1] == '*',
                             text("'%", trailing[1],
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
@@ -828,8 +828,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
+                    while (!r.empty && std.ascii.isAsciiWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(std.ascii.isAsciiWhite))(r);
                 }
                 else
                 {

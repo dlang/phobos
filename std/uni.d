@@ -29,7 +29,7 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
   +/
 bool isUniWhite(dchar c) @safe pure nothrow
 {
-    return std.ascii.isWhite(c) ||
+    return std.ascii.isAsciiWhite(c) ||
            c == lineSep || c == paraSep ||
            c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
            (c >= '\u2000' && c <= '\u200A') ||
@@ -42,7 +42,7 @@ bool isUniWhite(dchar c) @safe pure nothrow
 bool isUniLower(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
-        return std.ascii.isLower(c);
+        return std.ascii.isAsciiLower(c);
 
     return isUniAlpha(c) && c == toUniLower(c);
 }
@@ -53,7 +53,7 @@ bool isUniLower(dchar c) @safe pure nothrow
 bool isUniUpper(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
-        return std.ascii.isUpper(c);
+        return std.ascii.isAsciiUpper(c);
 
     return isUniAlpha(c) && c == toUniUpper(c);
 }
@@ -64,7 +64,7 @@ bool isUniUpper(dchar c) @safe pure nothrow
   +/
 dchar toUniLower(dchar c) @safe pure nothrow
 {
-    if(std.ascii.isUpper(c))
+    if(std.ascii.isAsciiUpper(c))
         c += 32;
     else if(c >= 0x00C0)
     {
@@ -123,7 +123,7 @@ dchar toUniLower(dchar c) @safe pure nothrow
   +/
 dchar toUniUpper(dchar c) @safe pure nothrow
 {
-    if(std.ascii.isLower(c))
+    if(std.ascii.isAsciiLower(c))
         c -= 32;
     else if(c >= 0x00E0)
     {

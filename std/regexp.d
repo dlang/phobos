@@ -233,7 +233,7 @@ unittest
  * sub(s, "[ar]",
  *    delegate char[] (RegExp m)
  *    {
- *         return toUpper(m[0]);
+ *         return toAsciiUpper(m[0]);
  *    },
  *    "g");    // result: StRAp A Rocket engine on A chicken.
  * ---
@@ -1652,8 +1652,8 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isLower(cast(rchar)c2))
-                        c2 = std.ascii.toUpper(cast(rchar)c2);
+                    if (isAsciiLower(cast(rchar)c2))
+                        c2 = std.ascii.toAsciiUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -1681,8 +1681,8 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isLower(cast(rchar)c2))
-                        c2 = std.ascii.toUpper(cast(rchar)c2);
+                    if (isAsciiLower(cast(rchar)c2))
+                        c2 = std.ascii.toAsciiUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2062,7 +2062,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isWhite(input[src]))
+                if (!isAsciiWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2072,7 +2072,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREnotspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isWhite(input[src]))
+                if (isAsciiWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2416,7 +2416,7 @@ public bool test(string s)
                     if (isAlpha(c))
                     {
                         op = REichar;
-                        c = cast(char)std.ascii.toUpper(c);
+                        c = cast(char)std.ascii.toAsciiUpper(c);
                     }
                 }
                 if (op == REchar && c <= 0xFF)
@@ -2614,13 +2614,13 @@ private:
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isWhite(i))
+                        if (isAsciiWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isWhite(i))
+                        if (!isAsciiWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -2956,7 +2956,7 @@ private:
                 c = prog[i + 1];
                 if (c <= 0x7F)
                 {   r.setbit2(c);
-                    r.setbit2(std.ascii.toLower(cast(rchar)c));
+                    r.setbit2(std.ascii.toAsciiLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -2982,8 +2982,8 @@ private:
                 c = *cast(rchar *)&prog[i + 1 + size_t.sizeof];
                 debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
                 if (c <= 0x7F)
-                {   r.setbit2(std.ascii.toUpper(cast(rchar)c));
-                    r.setbit2(std.ascii.toLower(cast(rchar)c));
+                {   r.setbit2(std.ascii.toAsciiUpper(cast(rchar)c));
+                    r.setbit2(std.ascii.toAsciiLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -3072,14 +3072,14 @@ private:
             case REspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (isWhite(c))
+                    if (isAsciiWhite(c))
                         r.bits[c] = 1;
                 return 1;
 
             case REnotspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (!isWhite(c))
+                    if (!isAsciiWhite(c))
                         r.bits[c] = 1;
                 return 1;
 

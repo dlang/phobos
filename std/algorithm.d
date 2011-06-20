@@ -5135,7 +5135,7 @@ assert(levenshteinDistance("cat", "rat") == 1);
 assert(levenshteinDistance("parks", "spark") == 2);
 assert(levenshteinDistance("kitten", "sitting") == 3);
 // ignore case
-assert(levenshteinDistance!("toUpper(a) == toUpper(b)")
+assert(levenshteinDistance!("std.uni.toUniUpper(a) == std.uni.toUniUpper(b)")
     ("parks", "SPARK") == 2);
 ----
 */
@@ -5145,6 +5145,16 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 {
     Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
     return lev.distance(s, t);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(levenshteinDistance("cat", "rat") == 1);
+    assert(levenshteinDistance("parks", "spark") == 2);
+    assert(levenshteinDistance("kitten", "sitting") == 3);
+    assert(levenshteinDistance!("std.uni.toUniUpper(a) == std.uni.toUniUpper(b)")
+        ("parks", "SPARK") == 2);
 }
 
 /**
@@ -7247,14 +7257,14 @@ unittest
     // random data
     auto b = rndstuff!(string);
     auto index = new string*[b.length];
-    partialIndex!("toUpper(a) < toUpper(b)")(b, index);
-    assert(isSorted!("toUpper(*a) < toUpper(*b)")(index));
+    partialIndex!("toUniUpper(a) < toUniUpper(b)")(b, index);
+    assert(isSorted!("toUniUpper(*a) < toUniUpper(*b)")(index));
 
     // random data with indexes
     auto index1 = new size_t[b.length];
-    bool cmp(string x, string y) { return toUpper(x) < toUpper(y); }
+    bool cmp(string x, string y) { return toUniUpper(x) < toUniUpper(y); }
     partialIndex!(cmp)(b, index1);
-    bool check(size_t x, size_t y) { return toUpper(b[x]) < toUpper(b[y]); }
+    bool check(size_t x, size_t y) { return toUniUpper(b[x]) < toUniUpper(b[y]); }
     assert(isSorted!(check)(index1));
 }
 
