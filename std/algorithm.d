@@ -1479,7 +1479,7 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T)
     {
-      if (lhs !is rhs) {
+      if (&lhs != &rhs) {
         // For structs with non-trivial assignment, move memory directly
         // First check for undue aliasing
         assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
