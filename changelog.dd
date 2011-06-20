@@ -1,7 +1,11 @@
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-        $(LI Your news here)
+        $(LI Various functions in std.string were renamed to match Phobos'
+             naming conventions and be properly camelcased. The old names
+             have been scheduled for deprecation.)
+        $(LI std.ctype has been scheduled for deprecation. std.ascii has been
+             added to replace it.)
     )
 
     $(LIBBUGSFIXED
@@ -13,6 +17,7 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
         $(LI $(BUGZILLA 4367): std.regex: Captures is not a random access range)
         $(LI $(BUGZILLA 4574): std.regex: breaks with empy string regex)
+        $(LI $(BUGZILLA 4608): std.string.chomp documentation mismatch implementation)
         $(LI $(BUGZILLA 5019): In std.regex, empty capture at end of string causes error)
         $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
         $(LI $(BUGZILLA 5673): Add lookahead and forgetful matching support std.regex)

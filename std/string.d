@@ -1576,7 +1576,9 @@ S chomp(S)(S s)
 S chomp(S, C)(S s, const(C)[] delimiter)
     if(isSomeString!S && isSomeString!(C[]))
 {
-    if(endsWith(s, delimiter))
+    if(delimiter.empty)
+        return chomp(s);
+    else if(endsWith(s, delimiter))
     {
         static if(is(Unqual!(typeof(s[0])) == Unqual!C))
             return s[0 .. $ - delimiter.length];
