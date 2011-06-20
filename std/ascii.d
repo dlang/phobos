@@ -212,7 +212,7 @@ unittest
     Whether or not $(D c) is a punctuation character. That includes all ASCII
     characters which are not control characters, letters, digits, or whitespace.
   +/
-bool isPunct(dchar c) @safe pure nothrow
+bool isPunctuation(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _PNC) : false;
 }
@@ -222,9 +222,9 @@ unittest
     foreach(dchar c; iota(0, 128))
     {
         if(isControl(c) || isAlphaNum(c) || c == ' ')
-            assert(!isPunct(c));
+            assert(!isPunctuation(c));
         else
-            assert(isPunct(c));
+            assert(isPunctuation(c));
     }
 }
 
@@ -233,7 +233,7 @@ unittest
     Whether or not $(D c) is a printable character other than the space
     character.
   +/
-bool isGraph(dchar c) @safe pure nothrow
+bool isGraphical(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC)) : false;
 }
@@ -243,9 +243,9 @@ unittest
     foreach(dchar c; iota(0, 128))
     {
         if(isControl(c) || c == ' ')
-            assert(!isGraph(c));
+            assert(!isGraphical(c));
         else
-            assert(isGraph(c));
+            assert(isGraphical(c));
     }
 }
 
@@ -253,7 +253,7 @@ unittest
     Whether or not $(D c) is a printable character - including the space
     character.
   +/
-bool isPrint(dchar c) @safe pure nothrow
+bool isPrintable(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & (_ALP|_DIG|_PNC|_BLK)) : false;
 }
@@ -263,9 +263,9 @@ unittest
     foreach(dchar c; iota(0, 128))
     {
         if(isControl(c))
-            assert(!isPrint(c));
+            assert(!isPrintable(c));
         else
-            assert(isPrint(c));
+            assert(isPrintable(c));
     }
 }
 

@@ -68,7 +68,7 @@ pure int islower(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_LC)       : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isPunct) instead.)
+ * $(D std.ascii.isPunctuation) instead.)
  *
  * Returns !=0 if c is a punctuation character.
  */
@@ -101,7 +101,7 @@ pure int isxdigit(dchar c) { return (c <= 0x7F) ? _ctype[c] & (_HEX)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isGraph) instead.)
+ * $(D std.ascii.isGraphical) instead.)
  *
  * Returns !=0 if c is a printing character except for the space character.
  */
@@ -109,7 +109,7 @@ pure int isgraph(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC) :
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isPrint) instead.)
+ * $(D std.ascii.isPrintable) instead.)
  *
  * Returns !=0 if c is a printing character including the space character.
  */
