@@ -57,7 +57,6 @@ private import std.utf : toUTF16z;
 private import std.system;
 import std.c.stdio : printf;
 import std.conv;
-import std.stdio;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
@@ -89,24 +88,24 @@ class Win32Exception : Exception
  * Private constants
  */
 
-private const DWORD DELETE                      =   0x00010000L;
-private const DWORD READ_CONTROL                =   0x00020000L;
-private const DWORD WRITE_DAC                   =   0x00040000L;
-private const DWORD WRITE_OWNER                 =   0x00080000L;
-private const DWORD SYNCHRONIZE                 =   0x00100000L;
+private const DWORD DELETE                      =   0x0001_0000L;
+private const DWORD READ_CONTROL                =   0x0002_0000L;
+private const DWORD WRITE_DAC                   =   0x0004_0000L;
+private const DWORD WRITE_OWNER                 =   0x0008_0000L;
+private const DWORD SYNCHRONIZE                 =   0x0010_0000L;
 
-private const DWORD STANDARD_RIGHTS_REQUIRED    =   0x000F0000L;
+private const DWORD STANDARD_RIGHTS_REQUIRED    =   0x000F_0000L;
 
-private const DWORD STANDARD_RIGHTS_READ        =   0x00020000L/* READ_CONTROL */;
-private const DWORD STANDARD_RIGHTS_WRITE       =   0x00020000L/* READ_CONTROL */;
-private const DWORD STANDARD_RIGHTS_EXECUTE     =   0x00020000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_READ        =   0x0002_0000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_WRITE       =   0x0002_0000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_EXECUTE     =   0x0002_0000L/* READ_CONTROL */;
 
-private const DWORD STANDARD_RIGHTS_ALL         =   0x001F0000L;
+private const DWORD STANDARD_RIGHTS_ALL         =   0x001F_0000L;
 
-private const DWORD SPECIFIC_RIGHTS_ALL         =   0x0000FFFFL;
+private const DWORD SPECIFIC_RIGHTS_ALL         =   0x0000_FFFFL;
 
-private const DWORD REG_CREATED_NEW_KEY     =   0x00000001;
-private const DWORD REG_OPENED_EXISTING_KEY =   0x00000002;
+private const DWORD REG_CREATED_NEW_KEY     =   0x0000_0001;
+private const DWORD REG_OPENED_EXISTING_KEY =   0x0000_0002;
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Public enumerations
@@ -309,9 +308,8 @@ private struct HKey {
     
         LONG res;
         DWORD cchName;
-        // The Registry API lies about the lengths of a very few sub-key lengths
-        // so we have to test to see if it whinges about more data, and provide
-        // more if it does.
+        // The buffer should be large enough to hold the key.
+        // But the registry limit may change in future, so be prepared.
         for (;;)
         {
         	cchName = buf.length;
@@ -345,9 +343,8 @@ private struct HKey {
     
         LONG res;
         DWORD cchName;
-        // The Registry API lies about the lengths of a very few sub-key lengths
-        // so we have to test to see if it whinges about more data, and provide
-        // more if it does.
+        // A value name may have up to 16,384 characters. In general,
+        // much shorter names are used.
         for (;;)
         {
             cchName = buf.length;
@@ -1741,7 +1738,17 @@ unittest
     assert(one.value_SZ() == "1");
     assert(one.value_DWORD() == 1);
     
-    //HKCU.deleteKey(unittestKeyName);
+    Key pathKey = unittestKey.createKey("Path");
+    string path = "%windir%\\test";
+    pathKey.setValue("myfile", path, true);
+    assert(pathKey.getValue("myfile").value_EXPAND_SZ() != path);
+
+    // Cleanup
+    unittestKey.deleteKey(pathKey.name());
+    unittestKey.deleteKey(numberKey.name());
+    unittestKey.deleteKey(stateKey.name());
+    unittestKey.deleteKey(cityKey.name());
+    HKCU.deleteKey(unittestKeyName);
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
