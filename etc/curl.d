@@ -98,6 +98,7 @@ import std.exception;
 import std.datetime;
 import std.traits;
 import core.thread;
+import core.stdc.string; // strlen
 
 version(unittest) {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to 
@@ -119,16 +120,17 @@ pragma(lib, "curl");
 */
 private struct Curl {
 
-    static this() {
+    shared static this() {
         // initialize early to prevent thread races
         if (curl_global_init(CurlGlobal.all))
             throw new CurlException("Couldn't initialize libcurl");
     }
  
-    static ~this() {
+    shared static ~this() {
         curl_global_cleanup();
     }
 
+    private uint * _refCount;
     alias void[] outdata;
     alias ubyte[] indata;
     bool stopped;
@@ -141,21 +143,36 @@ private struct Curl {
     private CurlSeek delegate(long,CurlSeekPos) _onSeek;
     private int delegate(curl_socket_t,CurlSockType) _onSocketOption;
     private int delegate(double dltotal, double dlnow, double ultotal, double ulnow) _onProgress;
+    
 
     /**
-       Default constructor. Remember to set at least the $(D url)
-       property before calling $(D perform())
+       Construct a default curl object. Remember to set at least the
+       $(D url) property before calling $(D perform())
     */
-    this(bool dummy) {
-        handle = curl_easy_init();
-        stopped = false;
-        CURL* curl = curl_easy_init();
-        set(CurlOption.verbose, 1L); 
+    private static Curl opCall() {
+        Curl curl;
+        curl.handle = curl_easy_init();
+        curl.stopped = false;
+        curl._refCount = new uint;
+        (*curl._refCount) = 1;
+        return curl;
     }
 
     ~this() {
-        if (!stopped)
+        if (!_refCount) {
+            return;
+        }
+        if (*_refCount == 1 && !stopped) {
             curl_easy_cleanup(this.handle);
+        }
+        (*_refCount)--;
+    }
+
+    this(this) {
+        if (!_refCount) {
+            return;
+        }
+        (*_refCount)++;
     }
 
     private void _check(CURLcode code) {
@@ -488,6 +505,11 @@ private mixin template Protocol() {
         curl.cleanup();
     }
 
+    /// Set verbose
+    @property void verbose(bool on) {
+        curl.set(CurlOption.verbose, on ? 1L : 0L);
+    }
+
     /// Connection settings
 
     /// Set timeout for activity on connection
@@ -568,6 +590,7 @@ theprotocol.netInterface = "192.168.1.32";
     }
 
     unittest {
+        writeln("UT1");        
         if (!netAllowed) return;
         Http http = Http("http://www.protected.com");
         http.onReceiveHeader = 
@@ -601,6 +624,9 @@ theprotocol.netInterface = "192.168.1.32";
 
     private void _assignProtocolParams(RParams)(ref const(RParams) requestParams) {
 
+        if (requestParams.url) {
+            url = requestParams.url;
+        }
         Duration nodur = dur!"nsecs"(0);
         if (requestParams.dataTimeout != nodur) {
             dataTimeout = requestParams.dataTimeout;
@@ -638,6 +664,10 @@ theprotocol.netInterface = "192.168.1.32";
 // Only parameters that makes sense to expose is exposed here.
 private mixin template ProtocolRequestParamsSetters(OWNER, T) {
 
+    @property ref OWNER url(T.STR v) { 
+        _requestParams.url = v; 
+        return this;
+    }
     @property ref OWNER dataTimeout(Duration v) { 
         _requestParams.dataTimeout = v; 
         return this;
@@ -1068,7 +1098,7 @@ struct Http {
 
     static private uint defaultMaxRedirects = 10;
 
-    private curl_slist * headerChunk = null; // outgoing http headers
+    string[string] _headers;
 
     /// The status line of the final subrequest in a request
     StatusLine status;
@@ -1090,19 +1120,21 @@ struct Http {
        Constructor taking the url as parameter.
     */
     this(in const(char)[] url) {
-        curl = Curl(true);
-        curl_slist_free_all(headerChunk);
+        curl = Curl();
         curl.set(CurlOption.url, url);
+        verbose(true);
+    }
+
+    private static Http opCall() {
+        Http http;
+        http.curl = Curl();
+        http.verbose(true);
+        return http;
     }
 
     /// Add a header string e.g. "X-CustomField: Something is fishy"
-    void addHeader(in const(char)[] key, in const(char)[] value) {
-        headerChunk = curl_slist_append(headerChunk, cast(char*) toStringz(key ~ ": " ~ value)); 
-    }
-
-    /// Add a header string e.g. "X-CustomField: Something is fishy"
-    private void addHeader(in const(char)[] header) {
-        headerChunk = curl_slist_append(headerChunk, cast(char*) toStringz(header)); 
+    void addHeader(in const(char)[] key, in const(char)[] value, bool overwrite = true) {
+        _headers[key.idup] = value.idup;
     }
 
     // Set the active cookie string e.g. "name1=value1;name2=value2"
@@ -1158,13 +1190,14 @@ writeln(res.headers["Content-Length"]);
     */
     static Result head(in const(char)[] url) {
         Result res;
-        res._executed = false;
+        res._state = Result.State.uninitialized;
         res._requestParams.url = url;
         res._requestParams.method = Method.head;
         return res;
     }
 
     unittest {
+        writeln("UT2");
         if (!netAllowed) return;
         auto res = Http.head(testUrl1);
         auto sl = res.statusLine;
@@ -1190,6 +1223,7 @@ writeln(res.byChunk(100).front);
     }
 
     unittest {
+        writeln("UT3");
         if (!netAllowed) return;
         auto res = Http.headAsync(testUrl1);
         res.byChunk(1).empty;
@@ -1213,13 +1247,14 @@ writeln(res.toString());
     */
     static Result get(in const(char)[] url) {
         Result res;
-        res._executed = false;
+        res._state = Result.State.uninitialized;
         res._requestParams.url = url;
         res._requestParams.method = Method.get;
         return res;
     }
 
     unittest {
+        writeln("UT4");
         if (!netAllowed) return;
         auto res = Http.get(testUrl1);
         assert(res.bytes[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], "get() returns unexpected content " ~ to!string(res.bytes[0..11]));
@@ -1243,6 +1278,7 @@ writeln(res.byChunk(100).front);
     }
 
     unittest {
+        writeln("UT5a");
         if (!netAllowed) return;
         auto res = Http.getAsync(testUrl1);
         auto byline = res.byLine(true);
@@ -1250,6 +1286,7 @@ writeln(res.byChunk(100).front);
         auto wlen = walkLength(byline);
         assert(wlen == 1, "Did not read 1 lines getAsync().byLine() but " ~ to!string(wlen));
         
+        writeln("UT5b");
         res = Http.getAsync(testUrl1);
         auto bychunk = res.byChunk(100);
         assert(bychunk.front[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], 
@@ -1270,17 +1307,18 @@ writeln(res.toString());
         A $(XREF _curl, Result) object.
     */
     static Result post(in const(char)[] url, const(void)[] postData, const(char)[] contentType = "application/octet-stream") {
-        auto client = Http(url);
         Result res;
-        res._executed = false;
+        res._state = Result.State.uninitialized;
         res._requestParams.url = url;
         res._requestParams.method = Method.post;
-        res._requestParams.headers ~= "Content-Type: " ~ contentType;
+        const(char)[] k = "Content-Type";
+        res._requestParams.headers ~= tuple(k, contentType);
         res._requestParams.postData = postData;
         return res;
     }
 
     unittest {
+        writeln("UT6");
         if (!netAllowed) return;
         auto res = Http.post(testUrl2, [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
         assert(res.bytes[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], 
@@ -1293,6 +1331,7 @@ writeln(res.toString());
     }
 
     unittest {
+        writeln("UT7");
         if (!netAllowed) return;
         auto res = Http.post(testUrl2, "Hello world");
         assert(res.toString()[0..11] == "Hello world", "post() returns unexpected text "); 
@@ -1313,6 +1352,7 @@ writeln(res.toString());
     }
 
     unittest {
+        writeln("UT8");
         if (!netAllowed) return;
         string[string] fields;
         fields["Hello"] = "World";
@@ -1338,14 +1378,16 @@ writeln(res.byChunk(100).front);
     }
 
     unittest {
+        writeln("UT9a");
         if (!netAllowed) return;
         auto res = Http.postAsync(testUrl2, [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
         auto byline = res.byLine();
 	auto line = byline.front;
-        assert(line[0..11] == "Hello world", "postAsync() returns unexpected text");
+        assert(line[0..11] == "Hello world", "postAsync() returns unexpected text " ~ line);
         auto wlen = walkLength(byline);
         assert(wlen == 1, "Did not read 1 lines postAsync().byLine() but " ~ to!string(wlen));
 
+        writeln("UT9b");
         res = Http.postAsync(testUrl2, [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
         auto bychunk = res.byChunk(100);
         assert(bychunk.front[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], 
@@ -1359,6 +1401,7 @@ writeln(res.byChunk(100).front);
     }
 
     unittest {
+        writeln("UT10");
         if (!netAllowed) return;
         auto res = Http.postAsync(testUrl2, "Hello world");
         auto byline = res.byLine();
@@ -1407,11 +1450,11 @@ writeln(res.code);
         A $(XREF _curl, Result) object.
     */
     static Result put(in const(char)[] url, const(void)[] putData, const(char)[] contentType = "application/octet-stream") {
-        auto client = Http(url);
         Result res;
         res._requestParams.url = url;
         res._requestParams.method = Method.put;
-        res._requestParams.headers ~= "Content-Type: " ~ contentType;
+        const(char)[] k = "Content-Type";
+        res._requestParams.headers ~= tuple(k, contentType);
         res._requestParams.postData = putData;
         return res;
     }
@@ -1493,7 +1536,6 @@ writeln(res.toString());
         A $(XREF _curl, Result) object.
     */
     static Result del(in const(char)[] url) {
-        auto client = Http(url);
         Result res;
         res._requestParams.url = url;
         res._requestParams.method = Method.del;
@@ -1530,7 +1572,6 @@ writeln(res.toString());
         A $(XREF _curl, Result) object.
     */
     static Result options(in const(char)[] url) {
-        auto client = Http(url);
         Result res;
         res._requestParams.url = url;
         res._requestParams.method = Method.options;
@@ -1567,7 +1608,6 @@ writeln(res.toString());
         A $(XREF _curl, Result) object.
     */
     static Result trace(in const(char)[] url) {
-        auto client = Http(url);
         Result res;
         res._requestParams.url = url;
         res._requestParams.method = Method.trace;
@@ -1607,7 +1647,6 @@ writeln(res.toString());
         A $(XREF _curl, Result) object.
     */
     static Result connect(in const(char)[] url) {
-        auto client = Http(url);
         Result res;
         res._requestParams.url = url;
         res._requestParams.method = Method.connect;
@@ -1637,7 +1676,7 @@ http.perform;
     @property ref Http postData(in const(void)[] data) {
         // cannot use callback when specifying data directly so we disable it here.
         curl.clear(CurlOption.readfunction); 
-        addHeader("Content-Type: application/octet-stream");
+        addHeader("Content-Type", "application/octet-stream");
         curl.set(CurlOption.postfields, cast(void*)data.ptr);
         return this;
     }
@@ -1729,6 +1768,7 @@ http.perform;
     /**
        The content length in bytes when using request that has content e.g. POST/PUT
        and not using chunked transfer. Is set as the "Content-Length" header.
+       Set to size_t.max to reset to chunked transfer
     */
     @property void contentLength(size_t len) {
 
@@ -1745,12 +1785,12 @@ http.perform;
             lenOpt = CurlOption.postfieldsize_large;
         }
 
-        if (len == 0) {
+        if (len == size_t.max) {
             // HTTP 1.1 supports requests with no length header set.
-            addHeader("Transfer-Encoding: chunked");
-            addHeader("Expect: 100-continue");
+            addHeader("Transfer-Encoding", "chunked");
+            addHeader("Expect", "100-continue");
         } else {
-            curl.set(lenOpt, len);      
+            curl.set(lenOpt, len);
         }
     }
 
@@ -1761,7 +1801,11 @@ http.perform;
 
         status.reset;
 
-        if (headerChunk != null)
+        curl_slist * headerChunk;
+        foreach (k ; _headers.byKey())
+            headerChunk = curl_slist_append(headerChunk, cast(char*) toStringz(k ~ ": " ~ _headers[k])); 
+
+        if (headerChunk !is null)
             curl.set(CurlOption.httpheader, headerChunk);
 
         switch (method) {
@@ -1792,6 +1836,7 @@ http.perform;
         }
 
         curl.perform;
+        curl_slist_free_all(headerChunk);
     }
 
     /**
@@ -1857,14 +1902,13 @@ http.perform;
         alias T[] STR;
         static if ( is(T == const(char))) {
             alias const(void)[] POSTDATA;
-            alias const(STR)[] HEADERS;
+            alias Tuple!(STR,STR)[] HEADERS;
         } else {
             alias immutable(void)[] POSTDATA;
-            alias immutable(STR)[] HEADERS;
+            alias immutable(Tuple!(STR,STR))[] HEADERS;
         }
         // This protocol params
         Method method;
-        STR url;
         POSTDATA postData;
         HEADERS headers;
         STR cookieJar;
@@ -1872,6 +1916,7 @@ http.perform;
         DateTime timeCondTimestamp;
         
         // Base Protocol params
+        STR url;
         Duration dataTimeout;
         Duration connectTimeout;
         Duration dnsTimeout;
@@ -1886,22 +1931,45 @@ http.perform;
 
         
     private mixin template RequestParamsSetters(OWNER, T) {
-        @property ref OWNER headers(T.HEADERS v) { 
-            foreach(h; v)
-                _requestParams.headers ~= v;
+        @property ref OWNER method(Method m) { 
+            _requestParams.method = m;
             return this;
         }
-        ref OWNER authentication(T.STR u, T.STR p, T.STR d = "") { 
-            _requestParams.username = u; 
-            _requestParams.password = p; 
-            _requestParams.domain = d; 
+        @property ref OWNER postData(T.POSTDATA d) { 
+            _requestParams.postData = d;
+            return this;
+        }
+        @property ref OWNER headers(T.HEADERS v) { 
+            foreach(k; v)
+                _requestParams.headers ~= k;
+            return this;
+        }
+        ref OWNER header(T.STR k, T.STR v = null) { 
+            // remove any existing existing keys matching k
+            T.HEADERS next;
+            foreach (h; _requestParams.headers) {
+                if (h[0] != k)
+                    next ~= h;
+            }
+            if (v !is null)
+                next ~= tuple(k,v);;
+            _requestParams.headers = next; 
+            return this;
+        }
+        @property ref OWNER cookieJar(T.STR j) { 
+            _requestParams.cookieJar = j;
+            return this;
+        }
+        ref OWNER timeCondition(Http.TimeCond c, DateTime t) { 
+            _requestParams.timeCond = c;
+            _requestParams.timeCondTimestamp = t;
             return this;
         }
     }
 
 
     // Used by spawnAsyncRequest
-    static void _preAsyncOnReceive(Result)(ref Result res, Tid fromTid) {
+    static void _preAsyncOnReceive(Result)(ref Result res, ref EncodingScheme scheme, Tid fromTid) {
         // Make sure the last received statusLine is sent to main
         // thread before receiving. 
         if (res._statusLine.majorVersion != 0) {
@@ -1911,20 +1979,35 @@ http.perform;
             }
             res._statusLine.majorVersion = 0;
         }
+        
+        scheme = EncodingScheme.create("UTF-8"); // seems like an error has been introduced into the regex module?!?
+        return;
+        static if (false) {
+            string * v = ("content-type" in _headers);
+            char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
+            if (v) {
+                
+                auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
+                if (!m.empty && m.captures.length > 1) {
+                    charset = m.captures[1];
+                }
+            }
+        scheme = EncodingScheme.create(charset);
+        }
     }
 
-    private void _preAsyncPerform(RParams)(ref Result res, ref RParams requestParams) {
+    private void _preAsyncPerform(Res, RParams)(ref Res res, ref RParams requestParams) {
 
         this.onReceiveHeader = (const(char)[] key,const(char)[] value) { 
             receiveTimeout(0, (bool x) { this.cleanup(); });
             if (this.isStopped) return;
-            res.addHeader(key, value); 
+            res._headers[key] = value.idup;
         };
         
         this.onReceiveStatusLine = (StatusLine l) { 
             receiveTimeout(0, (bool x) { this.cleanup(); });
             if (this.isStopped) return;
-            res.reset(); 
+            foreach(k; res._headers.keys) res._headers.remove(k);
             res._statusLine = l;
         };
         
@@ -1944,7 +2027,7 @@ http.perform;
     }
 
     // Used by spawnAsyncRequest to finalize a Http request
-    private void _finalizeProtocol(ref Result res, Tid fromTid) {
+    private void _finalizeProtocol(Res)(ref Res res, Tid fromTid) {
         // Send the status line and headers if they haven't been so
         if (res._statusLine.majorVersion != 0) {
             fromTid.send(thisTid(), message(res._statusLine));
@@ -1958,11 +2041,10 @@ http.perform;
     private void _assignParams(RParams)(ref const(RParams) requestParams) {
         
         this.method = requestParams.method;
-        
-        if (!requestParams.headers.length != 0) {
-            foreach (h ; requestParams.headers)
-                this.addHeader(h);
-        }
+
+        foreach (k ; requestParams.headers)
+            this.addHeader(k[0], k[1]);
+
         if (requestParams.cookieJar) {
             this.setCookieJar(requestParams.cookieJar);
         }
@@ -1977,49 +2059,62 @@ http.perform;
     */
     struct Result {
             
+        private enum State {
+            uninitialized,
+            ready,
+            done
+        };
+        private State _state;
         StatusLine _statusLine;  /// The http status line
         private string[string] _headers; /// The received http headers
 
         private ubyte[] _bytes; /// The received http content as raw ubyte[]
-        bool _executed;
         alias RequestParams!(const(char)) RParams;
 
         RParams _requestParams;
+        Http _client; // need to keep a client object to support keep-alive
 
         mixin ProtocolRequestParamsSetters!(Result, RParams);
         mixin RequestParamsSetters!(Result, RParams);
 
-        private void reset() {
+        void reset() {
             _statusLine.reset();
             _bytes.length = 0;
+            _state = State.ready;
             foreach(k; _headers.keys) _headers.remove(k);
         }
-        
+
         //
         private void execute() {
-            if (_executed) 
+            switch (_state) {
+            case State.uninitialized:
+                _client = Http();
+                _state = State.ready;
+            case State.ready:
+                break;
+            case State.done:
                 return;
-            _executed = true;
-            auto client = Http(_requestParams.url);
-            client._assignProtocolParams(_requestParams);
-            client._assignParams(_requestParams);
-
+            }
+            _client._assignProtocolParams(_requestParams);
+            _client._assignParams(_requestParams);
+            
             if (_requestParams.method != Method.head)
-                client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
-
+                _client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
+            
             if (_requestParams.method == Method.post || _requestParams.method == Method.put) {
-                client.onSend = delegate size_t(void[] buf) {
+                _client.onSend = delegate size_t(void[] buf) {
                     size_t minlen = min(buf.length, _requestParams.postData.length);
                     buf[0..minlen] = _requestParams.postData[0..minlen];
                     _requestParams.postData = _requestParams.postData[minlen..$];
                     return minlen;
                 };
-                client.contentLength = _requestParams.postData.length;
+                _client.contentLength = _requestParams.postData.length;
             }
-            client.onReceiveHeader = (const(char)[] key,const(char)[] value) { addHeader(key, value); };
-            client.onReceiveStatusLine = (StatusLine l) { reset(); _statusLine = l; };
-            client.maxRedirects = Http.defaultMaxRedirects;
-            client.perform;
+            _client.onReceiveHeader = (const(char)[] key,const(char)[] value) { addHeader(key, value); };
+            _client.onReceiveStatusLine = (StatusLine l) { reset(); _statusLine = l; };
+            _client.maxRedirects = Http.defaultMaxRedirects;
+            _client.perform;
+            _state = State.done;
         }
 
         /**
@@ -2165,7 +2260,7 @@ foreach (l; Http.get("http://www.google.com").byLine())
              string contentType, Method httpMethod) {
             _requestParams.url = url;
             _requestParams.postData = postData;
-            _requestParams.headers ~= contentType;
+            _requestParams.headers ~= tuple("Content-Type", contentType);
             _requestParams.method = httpMethod;
             _running = RunState.init;
 	    // A guess on how long a normal line is
@@ -2276,8 +2371,19 @@ struct Ftp {
        Ftp access to the specified url
     */
     this(in const(char)[] url) {
-        curl = Curl(true);
+        curl = Curl();
         curl.set(CurlOption.url, url);
+        verbose(true);
+    }
+
+    ~this() {
+    }
+
+    private static Ftp opCall() {
+        Ftp ftp;
+        ftp.curl = Curl();
+        ftp.verbose(true);
+        return ftp;
     }
 
     /** Convenience function that simply does a FTP GET on specified
@@ -2311,7 +2417,7 @@ writeln(res.toString());
     */
     static Result get(in const(char)[] url) {
         Result res;
-        res._executed = false;
+        res._state = Result.State.uninitialized;
         res._requestParams.url = url;
         return res;
     }
@@ -2367,10 +2473,10 @@ writeln(res.byChunk(100).front);
             alias immutable(STR)[] HEADERS;
         }
         // This protocol params
-        STR url;
         POSTDATA postData;
         
         // Base Protocol params
+        STR url;
         Duration dataTimeout;
         Duration connectTimeout;
         Duration dnsTimeout;
@@ -2384,21 +2490,14 @@ writeln(res.byChunk(100).front);
     };
         
     private mixin template RequestParamsSetters(OWNER, T) {
-        ref OWNER authentication(T.STR u, T.STR p, T.STR d = "") { 
-            _requestParams.username = u; 
-            _requestParams.password = p; 
-            _requestParams.domain = d; 
+        @property ref OWNER postData(T.POSTDATA d) { 
+            _requestParams.postData = d;
             return this;
         }
     }
 
-
     // Used by spawnAsyncRequest
-    static void _preAsyncOnReceive(Result)(ref Result res, Tid fromTid) {
-        // void
-    }
-
-    private void _preAsyncPerform(RParams)(ref Result res, ref RParams requestParams) {
+    private void _preAsyncPerform(RParams)(ref RParams requestParams) {
         if (requestParams.postData.length != 0) {
             this.onSend = delegate size_t(void[] buf) {
                 receiveTimeout(0, (bool x) { this.cleanup(); });
@@ -2412,25 +2511,26 @@ writeln(res.byChunk(100).front);
         }
     }
 
-    // Used by spawnAsyncRequest to finalize a Http request
-    private void _finalizeProtocol(ref Result res, Tid fromTid) {
-        // void
-    }
-
     private void _assignParams(RParams)(ref const(RParams) requestParams) {
         // void
     }
 
     /**
-       The http result of a synchronous request.
+       The ftp result of a synchronous request.
     */
     struct Result {
             
+        private enum State {
+            uninitialized,
+            ready,
+            done
+        };
+        private State _state;
         private ubyte[] _bytes; /// The received http content as raw ubyte[]
-        bool _executed;
         alias RequestParams!(const(char)) RParams;
 
         RParams _requestParams;
+        Ftp _client; // need to keep a client object to support keep-alive
 
         mixin ProtocolRequestParamsSetters!(Result, RParams);
         mixin RequestParamsSetters!(Result, RParams);
@@ -2439,29 +2539,36 @@ writeln(res.byChunk(100).front);
 
         private void reset() {
             _bytes.length = 0;
+            _state = State.ready;
         }
         
         //
         void execute() {
-            if (_executed) 
+            switch (_state) {
+            case State.uninitialized:
+                _client = Ftp();
+                _state = State.ready;
+            case State.ready:
+                break;
+            case State.done:
                 return;
-            _executed = true;
-            auto client = Ftp(_requestParams.url);
-            client._assignProtocolParams(_requestParams);
-            client._assignParams(_requestParams);
+            }
+            _client._assignProtocolParams(_requestParams);
+            _client._assignParams(_requestParams);
 
-            client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
+            _client.onReceive = (ubyte[] data) { _bytes ~= data; return data.length; };
 
             if (_requestParams.postData.length != 0) {
-                client.onSend = delegate size_t(void[] buf) {
+                _client.onSend = delegate size_t(void[] buf) {
                     size_t minlen = min(buf.length, _requestParams.postData.length);
                     buf[0..minlen] = _requestParams.postData[0..minlen];
                     _requestParams.postData = _requestParams.postData[minlen..$];
                     return minlen;
                 };
-                client.contentLength = _requestParams.postData.length;
+                _client.contentLength = _requestParams.postData.length;
             }
-            client.perform;
+            _client.perform;
+            _state = State.done;
         }
 
         /**
@@ -2766,8 +2873,8 @@ private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
 
 // Shared function for reading incoming lines of data and 
 // sending the to a parent thread
-private static size_t _receiveAsyncLines(Result, Terminator, Unit)
-    (ubyte[] data, ref Result res, ref EncodingScheme encodingScheme,
+private static size_t _receiveAsyncLines(Terminator, Unit)
+    (ubyte[] data, ref EncodingScheme encodingScheme,
      bool keepTerminator, Terminator terminator, 
      ref ubyte[] leftOverBytes, ref bool bufferValid,
      ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
@@ -2777,11 +2884,9 @@ private static size_t _receiveAsyncLines(Result, Terminator, Unit)
 
     // Terminator is specified and buffers should be
     // resized as determined by the terminator
-                
+
     // Copy data to active buffer until terminator is
     // found.
-    if (encodingScheme is null)
-        encodingScheme = res.encodingScheme;
 
     // Decode as many lines as possible
     while (true) {
@@ -2856,10 +2961,7 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
     Tid fromTid = receiveOnly!(Tid);
     Proto.AsyncResult.RParams requestParams = receiveOnly!(Proto.AsyncResult.RParams);
 
-    auto client = Proto(requestParams.url);
-    Proto.Result res;
-    res._executed = true;
-
+    auto client = Proto();
     client._assignProtocolParams(requestParams);
     client._assignParams(requestParams);
 
@@ -2869,13 +2971,13 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
     // Number of bytes filled into active buffer
     Unit[] buffer;
 
+    EncodingScheme encodingScheme;
     static if ( !is(Terminator == void)) {
         // Only lines reading will receive a terminator
         Terminator terminator = receiveOnly!Terminator;
         bool keepTerminator = receiveOnly!bool;
-        EncodingScheme encodingScheme;
         static if ( is(Proto == Ftp) ) {
-            res.encoding(receiveOnly!string);
+            encodingScheme = EncodingScheme.create(receiveOnly!string);
         }
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
@@ -2887,21 +2989,32 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
         Unit[] outdata;
     }
 
+    static if ( is(Proto == Http) ) {
+        struct _Result {
+            Http.StatusLine _statusLine;
+            string[string] _headers; 
+        };
+        _Result res;
+    }
 
     client.onReceive = (ubyte[] data) { 
-        Proto._preAsyncOnReceive(res, fromTid);
+        static if ( is(Proto == Http) ) 
+            Proto._preAsyncOnReceive(res, encodingScheme, fromTid);
         // If no terminator is specified the chunk size is fixed.
         static if ( is(Terminator == void) ) {
             return _receiveAsyncChunks(data, outdata, freeBuffers, buffer, fromTid);
         } else {
-            return _receiveAsyncLines(data, res, encodingScheme, 
+            return _receiveAsyncLines(data, encodingScheme, 
                                       keepTerminator, terminator, leftOverBytes, 
                                       bufferValid, freeBuffers, buffer, fromTid);
         }
     };
 
-    client._preAsyncPerform(res, requestParams);
-    
+    static if ( is(Proto == Http) ) 
+        client._preAsyncPerform(res, requestParams);
+    else
+        client._preAsyncPerform(requestParams);
+
     // Start the request
     try {
         client.perform;
@@ -2910,7 +3023,8 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
         return;
     }
 
-    client._finalizeProtocol(res, fromTid);
+    static if ( is(Proto == Http) ) 
+        client._finalizeProtocol(res, fromTid);
 
     // Send remaining data that is not a full chunk size
     static if ( is(Terminator == void) ) {
