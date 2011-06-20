@@ -342,6 +342,11 @@ unittest
     contain embedded $(D 0)'s as any C functions will treat the first $(D 0)
     that it sees a the end of the string. I $(D s) is $(D null) or empty, then
     a string containing only $(D '\0') is returned.
+
+    $(RED Important Note:) When passing a $(D char*) to a C function, and the C
+    function keeps it around for any reason, make sure that you keep a reference
+    to it in your D code. Otherwise, it may go away during a garbage collection
+    cycle and cause a nasty bug when the C code tries to use it.
   +/
 immutable(char)* toStringz(const(char)[] s) pure nothrow
 in
