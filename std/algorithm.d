@@ -1479,6 +1479,7 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T)
     {
+      if (lhs !is rhs) {
         // For structs with non-trivial assignment, move memory directly
         // First check for undue aliasing
         assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
@@ -1490,6 +1491,7 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         t[] = a[];
         a[] = b[];
         b[] = t[];
+      }
     }
     else
     {
@@ -1553,6 +1555,10 @@ unittest
     swap(nc1, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
+    swap(nc1, nc1);
+    swap(nc2, nc2);
+    assert(nc1.n == 513 && nc1.s == "uvwxyz");
+    assert(nc2.n == 127 && nc2.s == "abc");
 
     struct NoCopyHolder
     {
@@ -1562,6 +1568,10 @@ unittest
     h1.noCopy.n = 31; h1.noCopy.s = "abc";
     h2.noCopy.n = 65; h2.noCopy.s = null;
     swap(h1, h2);
+    assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
+    assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
+    swap(h1, h1);
+    swap(h2, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
 
