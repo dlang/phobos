@@ -2790,13 +2790,13 @@ enum SpanMode
 
 private struct DirIteratorImpl
 {
-    SpanMode mode;
+    SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
-    bool followSymLinks;
-    DirEntry cur;
+    bool _followSymLinks;
+    DirEntry _cur;
     Appender!(DirHandle[]) _stack;
     Appender!(DirEntry[]) _stashed; //used in depth first mode
     //stack helpers
@@ -2887,7 +2887,7 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
             return true;
         }
 
@@ -2908,12 +2908,13 @@ private struct DirIteratorImpl
                     popDirStack();
                     return false;
                 }
-            cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
             return true;
         }
 
         void popDirStack()
         {
+            assert(!_stack.data.empty);
             FindClose(_stack.data[$-1].h);
             _stack.shrinkTo(_stack.data.length-1);
         }
@@ -2954,7 +2955,7 @@ private struct DirIteratorImpl
                 if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
                    std.c.string.strcmp(fdata.d_name.ptr, "..") )
                 {
-                    cur._init(_stack.data[$-1].dirpath, fdata);
+                    _cur._init(_stack.data[$-1].dirpath, fdata);
                     return true;
                 }
             }
@@ -2964,6 +2965,7 @@ private struct DirIteratorImpl
 
         void popDirStack()
         {
+            assert(!_stack.data.empty);
             closedir(_stack.data[$-1].h);
             _stack.shrinkTo(_stack.data.length-1);
         }
@@ -2976,41 +2978,41 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode _mode, bool _followSymLinks)
+    this(string pathname, SpanMode mode, bool _followSymLinks)
     {
-        mode = _mode;
-        followSymLinks = _followSymLinks;
+        _mode = mode;
+        _followSymLinks = _followSymLinks;
         _stack = appender(cast(DirHandle[])[]);
-        if(mode == SpanMode.depth)
+        if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
         if(stepIn(std.path.rel2abs(pathname)))
         {
-		    if(mode == SpanMode.depth)
-		        while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
-		        {
-		            auto thisDir = cur;
-		            if(stepIn(cur.name))
-		            {
-		                pushExtra(thisDir);
-		            }
-		            else
-		                break;
-		        }
-	    }
+            if(_mode == SpanMode.depth)
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+                {
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
+                    {
+                        pushExtra(thisDir);
+                    }
+                    else
+                        break;
+                }
+        }
     }
     @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
-    @property DirEntry front(){ return cur; }
+    @property DirEntry front(){ return _cur; }
     void popFront()
     {
-        switch(mode)
+        switch(_mode)
         {
         case SpanMode.depth:
             if(next())
             {
-                while(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
                 {
-                    auto thisDir = cur;
-                    if(stepIn(cur.name))
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
                     {
                         pushExtra(thisDir);
                     }
@@ -3019,12 +3021,12 @@ private struct DirIteratorImpl
                 }
             }
             else if(hasExtra())
-                cur = popExtra();
+                _cur = popExtra();
             break;
         case SpanMode.breadth:
-            if(followSymLinks ? cur.isDir : isDir(cur.linkAttributes))
+            if(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
             {
-                if(!stepIn(cur.name))
+                if(!stepIn(_cur.name))
                     while(!empty && !next()){}
             }
             else
