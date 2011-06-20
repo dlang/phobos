@@ -19,5 +19,6 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
         $(LI $(BUGZILLA 6076): regression, std.regex: "c.*|d" matches "mm")
         $(LI $(BUGZILLA 6113): singletons in std.datetime are not created early enough)
+        $(LI $(BUGZILLA 5705): Swapping identical struct with hasElaborateAssign causes "overlapping array copy" exception)
     )
 )
