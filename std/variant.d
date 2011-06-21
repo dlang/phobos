@@ -330,6 +330,11 @@ private:
                     // type doesn't support ordering comparisons
                     return int.min;
                 }
+            } else if (rhsType == typeid(void))
+            {
+                // No support for ordering comparisons with
+                // uninitialized vars
+                return int.min;
             }
             VariantN temp;
             // Do I convert to rhs?
