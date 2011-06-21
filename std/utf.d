@@ -893,7 +893,7 @@ unittest
  * as a code point. The code is returned in character count, not in bytes.
  */
 @safe
-pure nothrow ubyte codeLength(C)(dchar c)
+pure nothrow ubyte codeLength(C)(C c) if (isSomeChar!C)
 {
     static if (C.sizeof == 1)
     {
