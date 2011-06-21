@@ -2335,13 +2335,13 @@ public:
         setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
     }
     //// Change the floating-point hardware rounding mode
-    void rounding(RoundingMode newMode)
+    @property void rounding(RoundingMode newMode)
     {
         ushort old = getControlState();
         setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
     //// Change the floating-point hardware precision mode
-    void precision(PrecisionMode newMode)
+    @property void precision(PrecisionMode newMode)
     {
         ushort old = getControlState();
         setControlState((old & ~PRECISION_MASK) | (newMode & PRECISION_MASK));
@@ -2352,12 +2352,12 @@ public:
         return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
     }
     /// Return the currently active rounding mode
-    static RoundingMode rounding()
+    @property static RoundingMode rounding()
     {
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
     /// Return the currently active precision mode
-    static PrecisionMode precision()
+    @property static PrecisionMode precision()
     {
         return cast(PrecisionMode)(getControlState() & PRECISION_MASK);
     }
@@ -2455,7 +2455,7 @@ unittest
     assert(FloatingPointControl.rounding
        == FloatingPointControl.roundToNearest);
     assert(FloatingPointControl.enabledExceptions() ==0);
-    assert(FloatingPointControl.precision()
+    assert(FloatingPointControl.precision
        == FloatingPointControl.realPrecision);
 }
 
