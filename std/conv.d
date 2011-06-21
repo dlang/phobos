@@ -4235,33 +4235,170 @@ void toTextRange(T, W)(T value, W writer)
 if (isIntegral!T && isOutputRange!(W, char))
 {
     Unqual!(Unsigned!T) v = void;
-    if (value < 0)
+    static if (T.min < 0)
     {
-        put(writer, '-');
-        v = -value;
+        if (value < 0)
+        {
+            put(writer, '-');
+            v = -value;
+        }
+        else
+        {
+            v = value;
+        }
     }
     else
     {
         v = value;
     }
 
-    if (v < 10 && v < hexdigits.length)
-    {
-        put(writer, hexdigits[cast(size_t) v]);
-        return;
-    }
-
     char[v.sizeof * 4] buffer = void;
     auto i = buffer.length;
+    static immutable char[100]
+        digit1 = "00000000001111111111222222222233333333334444444444"
+        "55555555556666666666777777777788888888889999999999",
+        digit2 = "01234567890123456789012345678901234567890123456789"
+        "01234567890123456789012345678901234567890123456789";
 
-    do
+    for (;;)
     {
-        auto c = cast(ubyte) (v % 10);
-        v = v / 10;
-        i--;
-        buffer[i] = cast(char) (c + '0');
-    } while (v);
+        if (v < 100)
+        {
+            auto r = cast(size_t) v;
+            buffer[--i] = digit2[r];
+            if (r >= 10) buffer[--i] = digit1[r];
+            break;
+        }
+        auto t = v;
+        v /= 100;
+        auto r = cast(size_t) (t - v * 100);
+        i -= 2;
+        buffer[i] = digit1[r];
+        buffer[i + 1] = digit2[r];
+    }
 
     put(writer, buffer[i .. $]);
 }
 
+unittest
+{
+    auto a = appender!(char[])();
+
+    toTextRange(0, a); assert(a.data == "0"); a.clear();
+    toTextRange(0u, a); assert(a.data == "0"); a.clear();
+    toTextRange(int.min, a); assert(a.data == "-2147483648"); a.clear();
+    toTextRange(int.max, a); assert(a.data == "2147483647"); a.clear();
+    toTextRange(uint.max, a); assert(a.data == "4294967295", a.data); a.clear();
+    toTextRange(long.max, a); assert(a.data == "9223372036854775807", a.data); a.clear();
+    toTextRange(long.min, a); assert(a.data == "-9223372036854775808", a.data); a.clear();
+    toTextRange(7, a); assert(a.data == "7"); a.clear();
+    toTextRange(-7, a); assert(a.data == "-7"); a.clear();
+    toTextRange(347, a); assert(a.data == "347"); a.clear();
+    toTextRange(-457, a); assert(a.data == "-457"); a.clear();
+}
+
+version(StdRunBenchmarks) void benchmark_modp_itoa10(uint n)
+{
+    static void modp_itoa10(int value, char* str)
+    {
+        char* wstr=str;
+        // Take care of sign
+        uint uvalue = (value < 0) ? -value : value;
+        // Conversion. Number is reversed.
+        do *wstr++ = cast(char)(48 + (uvalue % 10)); while(uvalue /= 10);
+        if (value < 0) *wstr++ = '-';
+        *wstr='\0';
+
+        static void strreverse(char* begin, char* end)
+        {
+            char aux;
+            while (end > begin)
+                aux = *end, *end-- = *begin, *begin++ = aux;
+        }
+
+        // Reverse string
+        strreverse(str,wstr-1);
+    }
+
+    char buf[60];
+    int x = 14657;
+    foreach (i; 0 .. n)
+    {
+        modp_itoa10(x, buf.ptr);
+    }
+}
+
+version(StdRunBenchmarks)
+    void benchmark_toTextRangeBaseline(uint n)
+    {
+        static void toTextRange(T, W)(T value, W writer)
+        if (isIntegral!T && isOutputRange!(W, char))
+        {
+            Unqual!(Unsigned!T) v = void;
+            static if (T.min < 0)
+            {
+                if (value < 0)
+                {
+                    put(writer, '-');
+                    v = -value;
+                }
+                else
+                {
+                    v = value;
+                }
+            }
+            else
+            {
+                v = value;
+            }
+
+            char[v.sizeof * 4] buffer = void;
+            auto i = buffer.length - 1;
+
+            for (;;)
+            {
+                if (v < 10)
+                {
+                    buffer[i] = cast(char) (v + '0');
+                    break;
+                }
+                auto c = cast(ubyte) (v % 10);
+                v = v / 10;
+                buffer[i--] = cast(char) (c + '0');
+            }
+
+            put(writer, buffer[i .. $]);
+        }
+
+        auto a = appender!(char[]);
+        int x = 14657;
+        foreach (i; 0 .. n)
+        {
+            a.clear();
+            toTextRange(x, a);
+        }
+    }
+
+version(StdRunBenchmarks)
+    void benchmark_toTextRange(uint n)
+    {
+        //Appender!(char[]) a;
+        auto a = appender!(char[]);
+        int x = 14657;
+        foreach (i; 0 .. n)
+        {
+            a.clear();
+            toTextRange(x, a);
+        }
+    }
+
+// Every module that wants to get benchmarked needs to include this
+// code
+version(StdRunBenchmarks)
+{
+    import std.datetime;
+    unittest
+    {
+        benchmarkModule!("std.conv")();
+    }
+}
