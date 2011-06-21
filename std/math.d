@@ -2456,7 +2456,7 @@ unittest
        == FloatingPointControl.roundToNearest);
     assert(FloatingPointControl.enabledExceptions() ==0);
     assert(FloatingPointControl.precision()
-       == FloatingPointControl.realPrecision));
+       == FloatingPointControl.realPrecision);
 }
 
 
