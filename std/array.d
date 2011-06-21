@@ -206,7 +206,7 @@ assert(a == [ 2, 3 ]);
 ----
 */
 
-void popFront(A)(ref A a)
+void popFront(A)(ref A a) @safe pure nothrow
 if (!isNarrowString!A && isDynamicArray!A && isMutable!A && !is(A == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -225,7 +225,7 @@ unittest
 
 // Specialization for narrow strings. The necessity of
 // !isStaticArray!A suggests a compiler @@@BUG@@@.
-void popFront(A)(ref A a)
+void popFront(A)(ref A a) @safe pure
 if (isNarrowString!A && isMutable!A && !isStaticArray!A)
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -243,6 +243,8 @@ unittest
     assert(s2 == "hello");
     string s3 = "\u20AC100";
     //write(s3, '\n');
+    string sInvalid = "\xff\xff\xff\xff"; 
+    assertThrown!UtfException(sInvalid.popFront());
 
     static assert(!__traits(compiles, popFront!(immutable string)));
 }
@@ -263,7 +265,7 @@ assert(a == [ 1, 2 ]);
 ----
 */
 
-void popBack(A)(ref A a)
+void popBack(A)(ref A a) @safe pure nothrow
 if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
 {
     assert(a.length);
@@ -280,7 +282,7 @@ unittest
 }
 
 // Specialization for arrays of char
-@trusted void popBack(A)(ref A a)
+@safe void popBack(A)(ref A a) pure
 if (is(A : const(char)[]) && isMutable!A)
 {
     immutable n = a.length;
@@ -322,7 +324,7 @@ unittest
 }
 
 // Specialization for arrays of wchar
-@trusted void popBack(A)(ref A a)
+@safe void popBack(A)(ref A a) pure
 if (is(A : const(wchar)[]) && isMutable!A)
 {
     assert(a.length);
@@ -360,14 +362,14 @@ int[] a = [ 1, 2, 3 ];
 assert(a.front == 1);
 ----
 */
-ref T front(T)(T[] a)
+ref T front(T)(T[] a) @safe pure nothrow
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array");
     return a[0];
 }
 
-dchar front(A)(A a) if (isNarrowString!A)
+dchar front(A)(A a) @safe pure if (isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the front of an empty array");
     size_t i = 0;
@@ -396,7 +398,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.back == 3);
 ----
 */
-ref T back(T)(T[] a) if (!isNarrowString!(T[]))
+ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array");
     return a[$ - 1];
@@ -411,7 +413,7 @@ unittest
 }
 
 // Specialization for strings
-dchar back(A)(A a)
+dchar back(A)(A a) @safe pure
 if (isDynamicArray!A && isNarrowString!A)
 {
     auto n = a.length;

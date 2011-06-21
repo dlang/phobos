@@ -341,7 +341,42 @@ nothrow size_t toUTFindex(in dchar[] s, size_t n)
 
 /* =================== Decode ======================= */
 
-@trusted  // I think those functions should be @safe and pure.
+// delete this when 'text()' can be made 'pure nothrow @safe/@trusted' reasonably.
+private @safe pure
+void throwInvalidUTFSequenceException(R, string errorHeader)
+                                     (in R[] sequence, in size_t index)
+{
+    static @trusted pure nothrow
+    const(char)[] toInt(N)(N number, sizediff_t minLen, in int base)
+    {
+        auto buf = new char[number.sizeof * 3];
+        auto index = buf.length - 1;
+        while (number > 0 || minLen > 0)
+        {
+            auto digit = number % base;
+            buf[index] = cast(char)(digit < 10 ? '0'+digit : 'a'+digit-10);
+            number /= base;
+            -- index;
+            -- minLen;
+        }
+        return buf[index+1 .. $];
+    }
+
+    string message = errorHeader ~ ` "`;
+    foreach (code; sequence)
+    {
+        static if (is(R == ubyte))
+            message ~= `\x` ~ toInt!R(code, 2, 16);
+        else if (is(R == ushort))
+            message ~= `\u` ~ toInt!R(code, 4, 16);
+        else
+            message ~= `\U` ~ toInt!R(code, 8, 16);
+    }
+    message ~= `" around index ` ~ toInt!size_t(index, 0, 10);
+    throw new UtfException(message);
+}
+
+@safe pure
 {
 
 /***************
@@ -356,7 +391,9 @@ out (result)
 }
 body
 {
-    enforce(idx < s.length, "Attempted to decode past the end of a string");
+    // Note: enforce() is not @safe.
+    if (idx >= s.length) 
+        throw new UtfException("Attempted to decode past the end of a string");
 
     size_t len = s.length;
     dchar V;
@@ -431,9 +468,15 @@ body
   Lerr:
     //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n"
     //"'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
+    /*
     throw new UtfException(text("dchar decode(in char[], ref size_t): "
                     "Invalid UTF-8 sequence ", cast(const ubyte[])s,
                     " around index ", i));
+    */
+    throwInvalidUTFSequenceException!
+        (ubyte, "dchar decode(in char[], ref size_t): Invalid UTF-8 sequence")
+        (cast(const(ubyte[]))s, i);
+    assert(0);
 }
 
 unittest
@@ -515,7 +558,8 @@ out (result)
 }
 body
 {
-    enforce(idx < s.length, "Attempted to decode past the end of a string");
+    if (idx >= s.length)
+        throw new UtfException("Attempted to decode past the end of a string");
 
     string msg;
     dchar V;
@@ -576,7 +620,8 @@ unittest
 /// ditto
 dchar decode(in dchar[] s, ref size_t idx)
 {
-    enforce(idx < s.length, "Attempted to decode past the end of a string");
+    if (idx >= s.length)
+        throw new UtfException("Attempted to decode past the end of a string");
 
     size_t i = idx;
     dchar c = s[i];
@@ -923,7 +968,7 @@ pure nothrow ubyte codeLength(C)(C c) if (isSomeChar!C)
  * of $(D char), $(D wchar), or $(D dchar). Throws a $(D UtfException)
  * if it is not. Use to check all untrusted input for correctness.
  */
-@safe
+@safe pure
 void validate(S)(in S s) if (isSomeString!S)
 {
     immutable len = s.length;
@@ -936,7 +981,7 @@ void validate(S)(in S s) if (isSomeString!S)
 
 /* =================== Conversion to UTF8 ======================= */
 
-@trusted
+@trusted pure
 {
 
 char[] toUTF8(out char[4] buf, dchar c)
