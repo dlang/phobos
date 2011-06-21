@@ -860,3 +860,61 @@ unittest {
     assert(inputFile == "in", to!(string)(inputFile));
     assert(outputFile == "out", to!(string)(inputFile));
 }
+
+
+private template GetoptExcludeHelp(TList...)
+{
+    static if (TList.length)
+    {
+        static if (is(typeof(TList[0]) : config))
+        {
+            // it's a configuration flag, lets move on
+            alias TypeTuple!(TList[0],GetoptExcludeHelp!(TList[1 .. $])) GetoptExcludeHelp;
+        }
+        else
+        {
+            // it's an option string, eat help string
+            alias TypeTuple!(TList[0],TList[2],GetoptExcludeHelp!(TList[3 .. $]))
+                GetoptExcludeHelp;
+        }
+    }
+    else
+    {
+        alias TList GetoptExcludeHelp;
+    }
+}
+
+private template magic(TList...)
+{
+	alias TypeTuple!(GetoptHelp!(TList), GetoptExcludeHelp(TList)) magic;
+}
+
+import std.typecons;
+
+unittest {
+    string inputFile, outputFile;
+
+    string[] args = ["program.name",
+                     "--input", "in", "--output", "out"];
+
+	string headerMsg = "Test program to demonstrate getoptEx\n"~
+                       "written by Igor Lesik on Feb 2010\n"~
+                       "Usage: test1 { --switch }\n";
+	string helpMsg;
+
+	auto programFlags = tuple(
+            std.getopt.config.caseInsensitive,
+            "input", "input file name must be html file", &inputFile,
+            "output", "output file name", &outputFile,
+            "author", "print name of the author", delegate() {writeln("Igor Lesik");},
+            "version", "produce version message", delegate(lazy string versionMsg) {writeln(versionMsg);},
+            "help", "produce help message", delegate(lazy string helpMsg) {writeln(helpMsg);},
+	);
+
+    //auto programFlags2 = magic(programFlags);
+
+    getopt(args, GetoptEx!(programFlags.expand));
+
+    assert(inputFile == "in", to!(string)(inputFile));
+    assert(outputFile == "out", to!(string)(inputFile));
+}
