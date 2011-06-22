@@ -888,10 +888,21 @@ unittest
 }  // Encode functions are @safe and pure
 
 
-/**
- * Returns the code length of $(D_PARAM c) in the encoding using $(D_PARAM C)
- * as a code point. The code is returned in character count, not in bytes.
- */
+/++
+    Returns the number of code units that are required to encode the code point
+    $(D c) when $(D C) is the character type used to encode it.
+
+Examples:
+------
+assert(codeLength!char('a') == 1);
+assert(codeLength!wchar('a') == 1);
+assert(codeLength!dchar('a') == 1);
+
+assert(codeLength!char('\U0010FFFF') == 4);
+assert(codeLength!wchar('\U0010FFFF') == 2);
+assert(codeLength!dchar('\U0010FFFF') == 1);
+------
+  +/
 @safe
 pure nothrow ubyte codeLength(C)(dchar c)
 {
@@ -913,6 +924,18 @@ pure nothrow ubyte codeLength(C)(dchar c)
         static assert(C.sizeof == 4);
         return 1;
     }
+}
+
+//Verify Examples.
+unittest
+{
+    assert(codeLength!char('a') == 1);
+    assert(codeLength!wchar('a') == 1);
+    assert(codeLength!dchar('a') == 1);
+
+    assert(codeLength!char('\U0010FFFF') == 4);
+    assert(codeLength!wchar('\U0010FFFF') == 2);
+    assert(codeLength!dchar('\U0010FFFF') == 1);
 }
 
 
