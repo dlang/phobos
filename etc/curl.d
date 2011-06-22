@@ -67,6 +67,14 @@ http.onProgress = (double dltotal, double dlnow,
     return 0;
 };
 http.perform;
+
+// Send an email with SMTPS
+SMTP smtp = SMTP("smtps://smtp.gmail.com");
+smtp.setAuthentication("from.addr@gmail.com", "password");
+smtp.mailTo = ["<to.addr@gmail.com"];
+smtp.mailFrom = "<from.addr@gmail.com>";
+smtp.message = "Example Message";
+smtp.perform;
 ---
 
 Source: $(PHOBOSSRC etc/_curl.d)
@@ -2759,6 +2767,85 @@ foreach (l; Ftp.getAsync("ftp://ftp.digitalmars.com/sieve.ds").byLine())
            An AsyncLineInputRange
         */
         mixin ByLineAsync!(Ftp, _requestParams);
+    }
+}
+
+/**
+    Basic SMTP protocol support    
+*/
+struct SMTP {
+
+    mixin Protocol;
+    
+    private bool ssl = false;
+    private string _message;
+    
+    /**
+        Sets to the url of the SMTP server
+    */
+    this(string url) {
+        curl = Curl();
+        
+        if (url.startsWith("smtps://"))
+            ssl = true;
+        else
+            enforce(url.startsWith("smtp://"), "The url must be for the smtp protocol.");
+        
+        curl.set(CurlOption.url, url);
+        
+        if (ssl) {
+            curl.set(CurlOption.use_ssl, CurlUseSSL.all);
+            curl.set(CurlOption.ssl_verifypeer, false);
+            curl.set(CurlOption.ssl_verifyhost, 2);
+        }
+    }
+
+    /**
+        Setter for the sender's email address
+    */
+    @property void mailFrom(string sender) {
+        // The sender address should be encapsulated with < and >
+        if (!(sender[0] == '<' && sender[$ - 1] == '>'))
+            sender = '<' ~ sender ~ '>';
+        curl.set(CurlOption.mail_from, sender);
+    }
+    
+    /**
+        Setter for the recipient email addresses
+    */
+    @property void mailTo(string[] recipients) {
+        curl_slist* recipients_list = null;
+        foreach(recipient; recipients) {
+            if (!(recipient[0] == '<' && recipient[$-1] == '>'))
+                recipient = '<' ~ recipient ~ '>';
+            recipients_list = curl_slist_append(recipients_list, cast(char*)toStringz(recipient));
+        }
+        curl.set(CurlOption.mail_rcpt, cast(void*)recipients_list);
+    }
+    
+    /**
+        Sets the message body text
+    */
+    @property void message(string msg) {
+        _message = msg;
+        /**
+            This delegate reads the message text and copies it.
+        */
+        curl.onSend = delegate size_t(void[] data) {
+            if (!msg.length) return 0;
+            auto m = cast(void[])msg;
+            size_t to_copy = min(data.length, _message.length);
+            data[0..to_copy] = _message[0..to_copy];
+            _message = _message[to_copy..$];
+            return to_copy;
+        };
+    }
+    
+    /**
+        Performs the request as configured
+    */
+    void perform() {
+        curl.perform;
     }
 }
 
