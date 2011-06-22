@@ -1871,7 +1871,9 @@ Appends an entire range to the managed array.
     static if(!is(T == immutable) && !is(T == const))
     {
 /**
-Clears the managed array.
+Clears the managed array.  This allows the elements of the array to be reused for appending.
+
+Note that clear is disabled for immutable or const element types, due to the possibility that $(D Appender) might overwrite immutable data.
 */
         void clear()
         {
