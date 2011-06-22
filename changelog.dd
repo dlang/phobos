@@ -1,7 +1,7 @@
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-        $(LI Your news here)
+        $(LI std.aray.insertInPlace supports inserting of multiple ranges/elements in one go)
     )
 
     $(LIBBUGSFIXED
