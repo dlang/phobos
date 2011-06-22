@@ -3897,7 +3897,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             ret.pastLast -= (this.length - upper) * step;
             return ret;
         }
-        @property size_t length() const
+        //@@@BUG4040@@@ Can't use 'auto' return when 'const' is on the right.
+        @property typeof(unsigned((pastLast - current) / step)) length() const
         {
             return unsigned((pastLast - current) / step);
         }
@@ -4133,6 +4134,11 @@ unittest
     // iota of longs
     auto rl = iota(5_000_000L);
     assert(rl.length == 5_000_000L);
+
+    // iota of longs with steps
+    auto iota_of_longs_with_steps = iota(50L, 101L, 10);
+    assert(iota_of_longs_with_steps.length == 6);
+    assert(equal(iota_of_longs_with_steps, [50L, 60L, 70L, 80L, 90L, 100L]));
 }
 
 unittest
