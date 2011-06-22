@@ -144,6 +144,123 @@ unittest
     assert(array("ABC".dup) == "ABC"d.dup);
 }
 
+private template blockAttribute(T)
+{
+    static if (hasIndirections!(T))
+    {
+        enum blockAttribute = 0;
+    }
+    else
+    {
+        enum blockAttribute = GC.BlkAttr.NO_SCAN;
+    }
+}
+
+// Returns the number of dimensions in an array T.
+private template nDimensions(T)
+{
+    static if(isArray!T)
+    {
+        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
+    }
+    else
+    {
+        enum nDimensions = 0;
+    }
+}
+
+unittest {
+    static assert(nDimensions!(uint[]) == 1);
+    static assert(nDimensions!(float[][]) == 2);
+}
+
+/**
+Returns a new array of type $(D T) allocated on the garbage collected heap
+without initializing its elements.  This can be a useful optimization if every
+element will be immediately initialized.  $(D T) may be a multidimensional
+array.  In this case sizes may be specified for any number of dimensions from 1
+to the number in $(D T).
+
+Examples:
+---
+double[] arr = uninitializedArray!(double[])(100);
+assert(arr.length == 100);
+
+double[][] matrix = uninitializedArray!(double[][])(42, 31);
+assert(matrix.length == 42);
+assert(matrix[0].length == 31);
+---
+*/
+auto uninitializedArray(T, I...)(I sizes)
+if(allSatisfy!(isIntegral, I))
+{
+    return arrayAllocImpl!(false, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = uninitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = uninitializedArray!(double[][])(42, 31);
+    assert(matrix.length == 42);
+    assert(matrix[0].length == 31);
+}
+
+/**
+Returns a new array of type $(D T) allocated on the garbage collected heap.
+Initialization is guaranteed only for pointers, references and slices,
+for preservation of memory safety.
+*/
+auto minimallyInitializedArray(T, I...)(I sizes) @trusted
+if(allSatisfy!(isIntegral, I))
+{
+    return arrayAllocImpl!(true, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = minimallyInitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = minimallyInitializedArray!(double[][])(42);
+    assert(matrix.length == 42);
+    foreach(elem; matrix)
+    {
+        assert(elem.ptr is null);
+    }
+}
+
+private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
+if(allSatisfy!(isIntegral, I))
+{
+    static assert(sizes.length >= 1,
+        "Cannot allocate an array without the size of at least the first " ~
+        " dimension.");
+    static assert(sizes.length <= nDimensions!T,
+        to!string(sizes.length) ~ " dimensions specified for a " ~
+        to!string(nDimensions!T) ~ " dimensional array.");
+
+    alias typeof(T.init[0]) E;
+
+    auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
+    auto ret = ptr[0..sizes[0]];
+
+    static if(sizes.length > 1)
+    {
+        foreach(ref elem; ret)
+        {
+            elem = uninitializedArray!(E)(sizes[1..$]);
+        }
+    }
+    else static if(minimallyInitialized && hasIndirections!E)
+    {
+        ret[] = E.init;
+    }
+
+    return ret;
+}
+
 /**
 Implements the range interface primitive $(D empty) for built-in
 arrays. Due to the fact that nonmember functions can be called with
