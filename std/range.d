@@ -3897,6 +3897,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             ret.pastLast -= (this.length - upper) * step;
             return ret;
         }
+        //@@@BUG4040@@@ Can't use 'auto' return when 'const' is on the right.
         @property typeof(unsigned((pastLast - current) / step)) length() const
         {
             return unsigned((pastLast - current) / step);
