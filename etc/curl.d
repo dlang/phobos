@@ -2777,27 +2777,21 @@ struct SMTP {
 
     mixin Protocol;
     
-    private bool ssl = false;
-    private string _message;
-    
     /**
         Sets to the url of the SMTP server
     */
     this(string url) {
         curl = Curl();
         
-        if (url.startsWith("smtps://"))
-            ssl = true;
-        else
-            enforce(url.startsWith("smtp://"), "The url must be for the smtp protocol.");
-        
-        curl.set(CurlOption.url, url);
-        
-        if (ssl) {
+        if (url.startsWith("smtps://")) {
             curl.set(CurlOption.use_ssl, CurlUseSSL.all);
             curl.set(CurlOption.ssl_verifypeer, false);
             curl.set(CurlOption.ssl_verifyhost, 2);
         }
+        else
+            enforce(url.startsWith("smtp://"), "The url must be for the smtp protocol.");
+        
+        curl.set(CurlOption.url, url);
     }
 
     /**
@@ -2820,14 +2814,14 @@ struct SMTP {
                 recipient = '<' ~ recipient ~ '>';
             recipients_list = curl_slist_append(recipients_list, cast(char*)toStringz(recipient));
         }
-        curl.set(CurlOption.mail_rcpt, cast(void*)recipients_list);
+        curl.set(CurlOption.mail_rcpt, recipients_list);
     }
     
     /**
         Sets the message body text
     */
     @property void message(string msg) {
-        _message = msg;
+        string _message = msg;
         /**
             This delegate reads the message text and copies it.
         */
