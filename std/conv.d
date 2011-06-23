@@ -653,29 +653,7 @@ unittest
     }
 }
 
-/**
-Object-_to-non-object conversions look for a method "to" of the source
-object.
-
-Example:
-----
-class Date
-{
-    T to(T)() if(is(T == long))
-    {
-        return timestamp;
-    }
-    ...
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    auto d = new Date;
-    auto ts = to!long(d); // same as d.to!long()
-}
-----
- */
+// Conversion using S.opCast!T
 T toImpl(T, S)(S value)
     if (is(typeof(S.init.opCast!T()) : T) &&
         !isSomeString!T)
