@@ -813,7 +813,7 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
  */
 auto splitter(String)(String s) if (isSomeString!String)
 {
-    return std.algorithm.splitter!(std.uni.isUniWhite)(s);
+    return std.algorithm.splitter!(std.uni.isWhite)(s);
 }
 
 unittest

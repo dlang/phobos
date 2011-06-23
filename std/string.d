@@ -185,7 +185,7 @@ alias std.ascii.newline newline;
 
 /**********************************
  * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(XREF ascii, isWhite) or $(XREF uni, isUniWhite) instead.)
+ *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
@@ -194,7 +194,7 @@ else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
     pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
-                            "std.ascii.isWhite or std.uni.isUniWhite"));
+                            "std.ascii.isWhite or std.uni.isWhite"));
 
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
@@ -1310,7 +1310,7 @@ private S _capWords(S)(S s) if (isSomeString!S)
 
     foreach(i, dchar c; s)
     {
-        if(isUniWhite(s[i]))
+        if(std.uni.isWhite(s[i]))
         {
             if(inWord)
             {
@@ -1464,7 +1464,7 @@ S stripLeft(S)(S s) @safe pure
     size_t nonWhite;
     foreach(i, dchar c; s)
     {
-        if(!isUniWhite(c))
+        if(!std.uni.isWhite(c))
         {
             foundIt = true;
             nonWhite = i;
@@ -1500,7 +1500,7 @@ S stripRight(S)(S s)
     size_t codeLen;
     foreach(dchar c; retro(s))
     {
-        if(isUniWhite(c))
+        if(std.uni.isWhite(c))
             codeLen += codeLength!C(c);
         else
             break;
@@ -3548,7 +3548,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-    if (isUniWhite(c))
+    if (std.uni.isWhite(c))
     {
         if (inword)
         {

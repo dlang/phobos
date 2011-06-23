@@ -2155,7 +2155,7 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
-    return splitter!(std.uni.isUniWhite)(input);
+    return splitter!(std.uni.isWhite)(input);
 }
 
 unittest

@@ -1315,7 +1315,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     for (;;)
     {
         enforce(!p.empty, bailOut());
-        if (!std.uni.isUniWhite(p.front)) break;
+        if (!std.uni.isWhite(p.front)) break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */

@@ -27,7 +27,7 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
 /++
     Whether or not $(D c) is a unicode whitespace character.
   +/
-bool isUniWhite(dchar c) @safe pure nothrow
+bool isWhite(dchar c) @safe pure nothrow
 {
     return std.ascii.isWhite(c) ||
            c == lineSep || c == paraSep ||
