@@ -284,9 +284,9 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = 
     foreach (k, v; s) {
         if (!first) result.put(separator);
         else first = false;
-        result.put(to!(T)(k));
+        result.put(to!T(k));
         result.put(keyval);
-        result.put(to!(T)(v));
+        result.put(to!T(v));
     }
     result.put(rightBracket);
     return cast(T) result.data;
@@ -301,7 +301,7 @@ T toImpl(T, S)(S s, in T nullstr = "null")
         isSomeString!T)
 {
     if (!s) return nullstr;
-    return to!(T)(s.toString);
+    return to!T(s.toString);
 }
 
 unittest
@@ -340,7 +340,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T righ
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
-    Tuple!(FieldTypeTuple!(S)) * t = void;
+    Tuple!(FieldTypeTuple!S) * t = void;
     static if ((*t).sizeof == S.sizeof)
     {
         // ok, attempt to forge the tuple
@@ -350,8 +350,8 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T righ
         app.put(left);
         foreach (i, e; t.field)
         {
-            if (i > 0) app.put(to!(T)(separator));
-            app.put(to!(T)(e));
+            if (i > 0) app.put(to!T(separator));
+            app.put(to!T(e));
         }
         app.put(right);
         return cast(T) app.data;
@@ -419,7 +419,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
 {
     static if (is(S Original == typedef)) {
         // typedef
-        return left ~ to!(T)(cast(Original) s) ~ right;
+        return left ~ to!T(cast(Original) s) ~ right;
     }
 }
 
@@ -606,7 +606,7 @@ T toImpl(T, S)(S value)
         !isSomeString!T)
 {
     // todo: improve performance
-    return parseString!(T)(toUTF8(value));
+    return parseString!T(toUTF8(value));
 }
 
 /**
@@ -616,7 +616,7 @@ T toImpl(T, S)(S value)
     if (isDynamicArray!S && is(S : const(char)[]) &&
         !isSomeString!T)
 {
-    return parseString!(T)(value);
+    return parseString!T(value);
 }
 
 unittest
@@ -715,8 +715,8 @@ T toImpl(T, S)(S value)
         (isNumeric!S || isSomeChar!S) &&
         (isNumeric!T || isSomeChar!T))
 {
-    enum sSmallest = mostNegative!(S);
-    enum tSmallest = mostNegative!(T);
+    enum sSmallest = mostNegative!S;
+    enum tSmallest = mostNegative!T;
     static if (sSmallest < 0) {
         // possible underflow converting from a signed
         static if (tSmallest == 0) {
@@ -766,7 +766,7 @@ private T parseString(T)(const(char)[] v)
             convError!(const(char)[], T)(v);
         }
     }
-    return parse!(T)(v);
+    return parse!T(v);
 }
 
 /**
@@ -928,7 +928,7 @@ unittest
     {
         foreach (T; AllNumerics) {
             T a = 42;
-            auto b = to!(T)(a);
+            auto b = to!T(a);
             assert(is(typeof(a) == typeof(b)) && a == b);
         }
     }
@@ -972,19 +972,19 @@ unittest
     {
         foreach (T; AllNumerics) {
             // from type immutable(char)[2]
-            auto a = to!(T)("42");
+            auto a = to!T("42");
             assert(a == 42);
             // from type char[]
             char[] s1 = "42".dup;
-            a = to!(T)(s1);
+            a = to!T(s1);
             assert(a == 42);
             // from type char[2]
             char[2] s2;
             s2[] = "42";
-            a = to!(T)(s2);
+            a = to!T(s2);
             assert(a == 42);
             // from type immutable(wchar)[2]
-            a = to!(T)("42"w);
+            a = to!T("42"w);
             assert(a == 42);
         }
     }
@@ -1004,7 +1004,7 @@ unittest
     }
     // test array to string conversion
     foreach (T ; AllNumerics) {
-        auto a = [to!(T)(1), 2, 3];
+        auto a = [to!T(1), 2, 3];
         assert(to!string(a) == "[1, 2, 3]");
     }
     // test enum to int conversion
@@ -3318,7 +3318,7 @@ T toImpl(T, S)(S value)
         isSomeString!T)
 {
     if (value >= 0)
-        return to!T(cast(Unsigned!(S)) value);
+        return to!T(cast(Unsigned!S) value);
     alias Unqual!(typeof(T.init[0])) Char;
 
     // Cache read-only data only for const and immutable; mutable
