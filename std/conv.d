@@ -76,20 +76,6 @@ class ConvOverflowException : ConvException
 
 deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 
-private template implicitlyConverts(S, T)
-{
-    enum bool implicitlyConverts = T.sizeof >= S.sizeof
-        && is(typeof({S s; T t = s;}()));
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
-    assert(!implicitlyConverts!(const(char)[], string));
-    assert(implicitlyConverts!(string, const(char)[]));
-}
-
 /**
    Entry point that dispatches to the appropriate conversion
    primitive. Client code normally calls $(D _to!TargetType(value))
@@ -113,7 +99,7 @@ assert(b == "abc"w);
 ----
  */
 T toImpl(T, S)(S s)
-    if (!implicitlyConverts!(S, T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
         isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
         isSomeString!T)
 {
@@ -375,7 +361,7 @@ unittest
 Enumerated types are converted to strings as their symbolic names.
  */
 T toImpl(T, S)(S s)
-    if (!implicitlyConverts!(S, T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
         is(S == enum) &&
         isSomeString!T)
 {
@@ -564,7 +550,7 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (implicitlyConverts!(S, T))
+    if (isImplicitlyConvertible!(S, T))
 {
     return value;
 }
@@ -711,7 +697,7 @@ Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
 T toImpl(T, S)(S value)
-    if (!implicitlyConverts!(S, T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
         (isNumeric!S || isSomeChar!S) &&
         (isNumeric!T || isSomeChar!T))
 {
@@ -774,7 +760,7 @@ Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
 T toImpl(T, S)(S src)
-    if (!implicitlyConverts!(S, T) &&
+    if (!isImplicitlyConvertible!(S, T) &&
         !isSomeString!S && isDynamicArray!S &&
         !isSomeString!T && isArray!T)
 {

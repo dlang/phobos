@@ -2254,6 +2254,10 @@ unittest
     static assert(!isImplicitlyConvertible!(const(ushort), ubyte));
     static assert(!isImplicitlyConvertible!(const(uint), ubyte));
     static assert(!isImplicitlyConvertible!(const(ulong), ubyte));
+
+    // from std.conv.implicitlyConverts
+    assert(!isImplicitlyConvertible!(const(char)[], string));
+    assert(isImplicitlyConvertible!(string, const(char)[]));
 }
 
 /**
