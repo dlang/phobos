@@ -1514,7 +1514,7 @@ unittest
     Throws:
         FileException if the given file does not exist.
   +/
-@property bool isSymLink(in char[] name)
+@property bool isSymlink(in char[] name)
 {
     version(Windows)
     {
@@ -1526,21 +1526,27 @@ unittest
     }
 }
 
+/++
+    $(RED Scheduled for deprecation in October 2011.
+          Please use $(D isSymlink) instead.)
+  +/
+alias isSymlink isSymLink;
+
 unittest
 {
     version(Windows)
     {
         if("C:\\Program Files\\".exists)
-            assert(!"C:\\Program Files\\".isSymLink);
+            assert(!"C:\\Program Files\\".isSymlink);
 
         enum fakeSymFile = "C:\\Windows\\system.ini";
         if(fakeSymFile.exists)
         {
-            assert(!fakeSymFile.isSymLink);
+            assert(!fakeSymFile.isSymlink);
 
-            assert(!fakeSymFile.isSymLink);
-            assert(!isSymLink(getAttributes(fakeSymFile)));
-            assert(!isSymLink(getLinkAttributes(fakeSymFile)));
+            assert(!fakeSymFile.isSymlink);
+            assert(!isSymlink(getAttributes(fakeSymFile)));
+            assert(!isSymlink(getLinkAttributes(fakeSymFile)));
 
             assert(isFile(getAttributes(fakeSymFile)));
             assert(isFile(getLinkAttributes(fakeSymFile)));
@@ -1557,16 +1563,16 @@ unittest
     {
         if("/usr/include".exists)
         {
-            assert(!"/usr/include".isSymLink);
+            assert(!"/usr/include".isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
             core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
 
-            assert(symfile.isSymLink);
-            assert(!isSymLink(getAttributes(symfile)));
-            assert(isSymLink(getLinkAttributes(symfile)));
+            assert(symfile.isSymlink);
+            assert(!isSymlink(getAttributes(symfile)));
+            assert(isSymlink(getLinkAttributes(symfile)));
 
             assert(isDir(getAttributes(symfile)));
             assert(!isDir(getLinkAttributes(symfile)));
@@ -1577,16 +1583,16 @@ unittest
 
         if("/usr/include/assert.h".exists)
         {
-            assert(!"/usr/include/assert.h".isSymLink);
+            assert(!"/usr/include/assert.h".isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
             core.sys.posix.unistd.symlink("/usr/include/assert.h", symfile.ptr);
 
-            assert(symfile.isSymLink);
-            assert(!isSymLink(getAttributes(symfile)));
-            assert(isSymLink(getLinkAttributes(symfile)));
+            assert(symfile.isSymlink);
+            assert(!isSymlink(getAttributes(symfile)));
+            assert(isSymlink(getLinkAttributes(symfile)));
 
             assert(!isDir(getAttributes(symfile)));
             assert(!isDir(getLinkAttributes(symfile)));
@@ -1600,7 +1606,7 @@ unittest
 
 /++
     $(RED Scheduled for deprecation in October 2011.
-          Please use $(D attrIsSymLink) instead.)
+          Please use $(D attrIsSymlink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
 
@@ -1610,7 +1616,7 @@ unittest
     Params:
         attributes = The file attributes.
   +/
-@property bool isSymLink(uint attributes) nothrow
+@property bool isSymlink(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1636,11 +1642,11 @@ Examples:
 --------------------
 core.sys.posix.unistd.symlink("/etc/fonts/fonts.conf", "/tmp/alink");
 
-assert(!getAttributes("/tmp/alink").isSymLink);
-assert(getLinkAttributes("/tmp/alink").isSymLink);
+assert(!getAttributes("/tmp/alink").isSymlink);
+assert(getLinkAttributes("/tmp/alink").isSymlink);
 --------------------
   +/
-bool attrIsSymLink(uint attributes) nothrow
+bool attrIsSymlink(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1767,10 +1773,10 @@ void rmdir(in char[] pathname)
 version(Windows) string getcwd()
 {
     /* GetCurrentDirectory's return value:
-        1. function succeeds: the number of characters that are written to 
+        1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
         2. function fails: zero
-        3. the buffer (lpBuffer) is not large enough: the required size of 
+        3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
     ushort[4096] staticBuff = void; //enough for most common case
@@ -1810,7 +1816,7 @@ version(Windows) string getcwd()
             scope(exit) free(ptr);
             immutable n2 = GetCurrentDirectoryA(n, ptr);
             cenforce(n2 && n2 < n, "getcwd");
-            
+
             string res = fromMBSz(cast(immutable)ptr);
             return res.ptr == ptr ? res.idup : res;
         }
@@ -1921,7 +1927,13 @@ assert(!de2.isFile);
             Always return false on Windows. It exists on Windows so that you don't
             have to special-case code for Windows when dealing with symbolic links.
           +/
-        @property bool isSymLink();
+        @property bool isSymlink();
+
+        /++
+            $(RED Scheduled for deprecation in October 2011.
+                  Please use $(D isSymlink) instead.)
+          +/
+        alias isSymlink isSymLink;
 
         /++
             Returns the size of the the file represented by this $(D DirEntry)
@@ -2069,10 +2081,12 @@ else version(Windows)
 
         alias isFile isfile;
 
-        @property bool isSymLink() const
+        @property bool isSymlink() const
         {
             return false;
         }
+
+        alias isSymlink isSymLink;
 
         @property ulong size() const
         {
@@ -2233,12 +2247,14 @@ else version(Posix)
 
         alias isFile isfile;
 
-        @property bool isSymLink()
+        @property bool isSymlink()
         {
             _ensureLStatDone();
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
+
+        alias isSymlink isSymLink;
 
         // This property was not documented before, and it's almost
         // worthless, since the odds are high that it will be DT_UNKNOWN,
@@ -2420,7 +2436,7 @@ unittest
             auto de = dirEntry("C:\\Program Files\\");
             assert(!de.isFile);
             assert(de.isDir);
-            assert(!de.isSymLink);
+            assert(!de.isSymlink);
         }
 
         if("C:\\Windows\\system.ini".exists)
@@ -2428,7 +2444,7 @@ unittest
             auto de = dirEntry("C:\\Windows\\system.ini");
             assert(de.isFile);
             assert(!de.isDir);
-            assert(!de.isSymLink);
+            assert(!de.isSymlink);
         }
     }
     else version(OSX)
@@ -2442,7 +2458,7 @@ unittest
                 auto de = dirEntry("/usr/include");
                 assert(!de.isFile);
                 assert(de.isDir);
-                assert(!de.isSymLink);
+                assert(!de.isSymlink);
             }
 
             immutable symfile = deleteme ~ "_slink\0";
@@ -2454,7 +2470,7 @@ unittest
                 auto de = dirEntry(symfile);
                 assert(!de.isFile);
                 assert(de.isDir);
-                assert(de.isSymLink);
+                assert(de.isSymlink);
             }
         }
 
@@ -2463,7 +2479,7 @@ unittest
             auto de = dirEntry("/usr/include/assert.h");
             assert(de.isFile);
             assert(!de.isDir);
-            assert(!de.isSymLink);
+            assert(!de.isSymlink);
         }
     }
 }
@@ -2713,7 +2729,7 @@ void rmdirRecurse(ref DirEntry de)
     if(!de.isDir)
         throw new FileException(text("File ", de.name, " is not a directory"));
 
-    if(de.isSymLink())
+    if(de.isSymlink())
         remove(de.name);
     else
     {
@@ -2830,7 +2846,7 @@ private struct DirIteratorImpl
     // It also indicates whether we should avoid functions which call
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
-    bool _followSymLinks;
+    bool _followSymlink;
     DirEntry _cur;
     Appender!(DirHandle[]) _stack;
     Appender!(DirEntry[]) _stashed; //used in depth first mode
@@ -2854,7 +2870,7 @@ private struct DirIteratorImpl
             string dirpath;
             HANDLE h;
         }
-        
+
         bool stepIn(string directory)
         {
             string search_pattern = std.path.join(directory, "*.*");
@@ -2885,7 +2901,7 @@ private struct DirIteratorImpl
                 return toNext(false, &findinfo);
             }
         }
-        
+
         bool next()
         {
             if(_stack.data.empty)
@@ -2904,7 +2920,7 @@ private struct DirIteratorImpl
             }
             return result;
         }
-        
+
         bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
         {
             if(fetch)
@@ -3013,17 +3029,17 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool _followSymLinks)
+    this(string pathname, SpanMode mode, bool _followSymlink)
     {
         _mode = mode;
-        _followSymLinks = _followSymLinks;
+        _followSymlink = _followSymlink;
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
         if(stepIn(std.path.rel2abs(pathname)))
         {
             if(_mode == SpanMode.depth)
-                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3044,7 +3060,7 @@ private struct DirIteratorImpl
         case SpanMode.depth:
             if(next())
             {
-                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3059,7 +3075,7 @@ private struct DirIteratorImpl
                 _cur = popExtra();
             break;
         case SpanMode.breadth:
-            if(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+            if(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
             {
                 if(!stepIn(_cur.name))
                     while(!empty && !next()){}
@@ -3082,9 +3098,9 @@ struct DirIterator
 {
 private:
     RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
-    this(string pathname, SpanMode mode, bool followSymLinks)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
-        impl = typeof(impl)(pathname, mode, followSymLinks);
+        impl = typeof(impl)(pathname, mode, followSymlink);
     }
 public:
     @property bool empty(){ return impl.empty; }
@@ -3121,7 +3137,7 @@ public:
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
-        followSymLinks = Whether symbolic links which point to directories
+        followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
                          iterated over. Ignored on Windows.
 
@@ -3156,9 +3172,9 @@ foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
 --------------------
 //
  +/
-auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
-    return DirIterator(path, mode, followSymLinks);
+    return DirIterator(path, mode, followSymlink);
 }
 
 unittest
@@ -3229,11 +3245,11 @@ unittest
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
-    assert(!de.isSymLink);
+    assert(!de.isSymlink);
 
     assert(de.isDir == path.isDir);
     assert(de.isFile == path.isFile);
-    assert(de.isSymLink == path.isSymLink);
+    assert(de.isSymlink == path.isSymlink);
     assert(de.size == path.getSize());
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
@@ -3248,8 +3264,8 @@ unittest
     assert(isDir(de.linkAttributes));
     assert(!isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(!isSymLink(de.linkAttributes));
+    assert(!isSymlink(de.attributes));
+    assert(!isSymlink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3278,11 +3294,11 @@ unittest
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
-    assert(!de.isSymLink);
+    assert(!de.isSymlink);
 
     assert(de.isDir == path.isDir);
     assert(de.isFile == path.isFile);
-    assert(de.isSymLink == path.isSymLink);
+    assert(de.isSymlink == path.isSymlink);
     assert(de.size == path.getSize());
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
@@ -3297,8 +3313,8 @@ unittest
     assert(!isDir(de.linkAttributes));
     assert(isFile(de.attributes));
     assert(isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(!isSymLink(de.linkAttributes));
+    assert(!isSymlink(de.attributes));
+    assert(!isSymlink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3330,11 +3346,11 @@ version(linux) unittest
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
-    assert(de.isSymLink);
+    assert(de.isSymlink);
 
     assert(de.isDir == path.isDir);
     assert(de.isFile == path.isFile);
-    assert(de.isSymLink == path.isSymLink);
+    assert(de.isSymlink == path.isSymlink);
     assert(de.size == path.getSize());
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
@@ -3349,8 +3365,8 @@ version(linux) unittest
     assert(!isDir(de.linkAttributes));
     assert(!isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(isSymLink(de.linkAttributes));
+    assert(!isSymlink(de.attributes));
+    assert(isSymlink(de.linkAttributes));
 
     assert(de.timeStatusChanged > before);
     assert(de.timeStatusChanged < now);
@@ -3374,11 +3390,11 @@ version(linux) unittest
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
-    assert(de.isSymLink);
+    assert(de.isSymlink);
 
     assert(de.isDir == path.isDir);
     assert(de.isFile == path.isFile);
-    assert(de.isSymLink == path.isSymLink);
+    assert(de.isSymlink == path.isSymlink);
     assert(de.size == path.getSize());
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
@@ -3393,8 +3409,8 @@ version(linux) unittest
     assert(!isDir(de.linkAttributes));
     assert(isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(isSymLink(de.linkAttributes));
+    assert(!isSymlink(de.attributes));
+    assert(isSymlink(de.linkAttributes));
 
     assert(de.timeStatusChanged > before);
     assert(de.timeStatusChanged < now);
@@ -3505,7 +3521,7 @@ unittest
                    wildcard strings are described under fnmatch() in
                    $(LINK2 std_path.html, std.path).
         r        = Regular expression, for more powerful pattern matching.
-        followSymLinks = Whether symbolic links which point to directories
+        followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
                          iterated over. Ignored on Windows.
 
@@ -3541,21 +3557,21 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
                 "scheduled for deprecation in August 2011. Please use " ~
                 "dirEntries instead.");
-    import std.regexp;    
-    auto result = appender!(string[])();           
+    import std.regexp;
+    auto result = appender!(string[])();
     bool callback(DirEntry* de)
     {
-        if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
+        if(followSymlink ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else 
+        else
         {
             static if(is(U : const(C[])))
             {//pattern version
