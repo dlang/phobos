@@ -621,7 +621,7 @@ Object-to-object conversions throw exception when the source is
 non-null and the target is null.
  */
 T toImpl(T, S)(S value)
-    if (is(S : Object) &&
+    if (is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
         is(T : Object))
 {
     auto result = cast(T) value;
@@ -677,19 +677,23 @@ unittest
 ----
  */
 T toImpl(T, S)(S value)
-    if (is(typeof(S.init.to!(T)()) : T) &&
-        is(S : Object) &&
-        !is(T : Object) && !isSomeString!T)
+    if (is(typeof(S.init.opCast!T()) : T) &&
+        !isSomeString!T)
 {
-    return value.to!T();
+    return value.opCast!T();
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B { T to(T)() { return 43; } }
+    class B { T opCast(T)() { return 43; } }
     auto b = new B;
     assert(to!int(b) == 43);
+
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S { T opCast(T)() { return 43; } }
+    auto s = S();
+    assert(to!int(s) == 43);
 }
 
 /**
@@ -4043,7 +4047,8 @@ unittest
 }
 
 T toImpl(T, S)(S src)
-    if (is(T == struct) && is(typeof(T(src))))
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(T == struct) && is(typeof(T(src))))
 {
     return T(src);
 }
@@ -4055,6 +4060,12 @@ unittest
             " succeeded.");
     struct Int { int x; }
     Int i = to!Int(1);
+
+    static struct Int2 { int x; this(int x){ this.x = x; } }
+    Int2 i2 = to!Int2(1);
+
+    static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
+    Int3 i3 = to!Int3(1);
 }
 
 // emplace
