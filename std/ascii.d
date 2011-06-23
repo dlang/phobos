@@ -292,7 +292,7 @@ unittest
     If $(D c) is an uppercase ASCII character, then its corresponding lowercase
     letter is returned. Otherwise, $(D c) is returned.
   +/
-dchar toAsciiLower(dchar c) @safe pure nothrow
+dchar toLower(dchar c) @safe pure nothrow
 out(result)
 {
     assert(!isUpper(result));
@@ -305,12 +305,12 @@ body
 unittest
 {
     foreach(i, c; uppercase)
-        assert(toAsciiLower(c) == lowercase[i]);
+        assert(toLower(c) == lowercase[i]);
 
     foreach(dchar c; iota(0, 128))
     {
         if(c < 'A' || c > 'Z')
-            assert(toAsciiLower(c) == c);
+            assert(toLower(c) == c);
     }
 }
 
@@ -319,7 +319,7 @@ unittest
     If $(D c) is a lowercase ASCII character, then its corresponding uppercase
     letter is returned. Otherwise, $(D c) is returned.
   +/
-dchar toAsciiUpper(dchar c) @safe pure nothrow
+dchar toUpper(dchar c) @safe pure nothrow
 out(result)
 {
     assert(!isLower(result));
@@ -332,12 +332,12 @@ body
 unittest
 {
     foreach(i, c; lowercase)
-        assert(toAsciiUpper(c) == uppercase[i]);
+        assert(toUpper(c) == uppercase[i]);
 
     foreach(dchar c; iota(0, 128))
     {
         if(c < 'a' || c > 'z')
-            assert(toAsciiUpper(c) == c);
+            assert(toUpper(c) == c);
     }
 }
 

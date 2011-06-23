@@ -1324,7 +1324,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     case '-':
         sign++;
         p.popFront();
-        if (toAsciiLower(p.front) == 'i') goto case 'i';
+        if (toLower(p.front) == 'i') goto case 'i';
         enforce(!p.empty, bailOut());
         break;
     case '+':
@@ -1333,8 +1333,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         break;
     case 'i': case 'I':
         p.popFront();
-        if (toAsciiLower(p.front) == 'n' &&
-                (p.popFront(), toAsciiLower(p.front) == 'f') &&
+        if (toLower(p.front) == 'n' &&
+                (p.popFront(), toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'
@@ -1481,11 +1481,11 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     }
     else // not hex
     {
-        if (toAsciiUpper(p.front) == 'N' && !startsWithZero)
+        if (toUpper(p.front) == 'N' && !startsWithZero)
         {
             // nan
-            enforce((p.popFront(), !p.empty && toAsciiUpper(p.front) == 'A')
-                    && (p.popFront(), !p.empty && toAsciiUpper(p.front) == 'N'),
+            enforce((p.popFront(), !p.empty && toUpper(p.front) == 'A')
+                    && (p.popFront(), !p.empty && toUpper(p.front) == 'N'),
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();

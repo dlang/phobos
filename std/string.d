@@ -475,11 +475,11 @@ sizediff_t indexOf(Char)(in Char[] s,
     {
         if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ascii.toAsciiLower(c);
+            auto c1 = cast(char) std.ascii.toLower(c);
 
             foreach (sizediff_t i, c2; s)
             {
-                auto c3 = std.ascii.toAsciiLower(c2);
+                auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
                     return i;
             }
@@ -640,11 +640,11 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
     {
         if(std.ascii.isASCII(c))
         {
-            immutable c1 = std.ascii.toAsciiLower(c);
+            immutable c1 = std.ascii.toLower(c);
 
             for(auto i = s.length; i-- != 0;)
             {
-                immutable c2 = std.ascii.toAsciiLower(s[i]);
+                immutable c2 = std.ascii.toLower(s[i]);
                 if(c1 == c2)
                     return cast(sizediff_t)i;
             }

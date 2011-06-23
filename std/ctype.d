@@ -126,27 +126,27 @@ pure int isascii(dchar c)  { return c <= 0x7F; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.toAsciiLower) instead.)
+ * $(D std.ascii.toLower) instead.)
  *
  * If c is an upper case ascii character,
  * return the lower case equivalent, otherwise return c.
  */
 pure dchar tolower(dchar c)
 {
-    return std.ascii.toAsciiLower(c);
+    return std.ascii.toLower(c);
 }
 
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.toAsciiUpper) instead.)
+ * $(D std.ascii.toUpper) instead.)
  *
  * If c is a lower case ascii character,
  * return the upper case equivalent, otherwise return c.
  */
 pure dchar toupper(dchar c)
 {
-    return std.ascii.toAsciiUpper(c);
+    return std.ascii.toUpper(c);
 }
 
 

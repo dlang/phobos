@@ -114,7 +114,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c) {
                 static if(SkipWhitespace) skipWhitespace();
                 auto c2 = getChar();
-                static if(!CaseSensitive) c2 = toAsciiLower(c2);
+                static if(!CaseSensitive) c2 = toLower(c2);
 
                 if(c2 != c) error(text("Found '", c2, "' when expecting '", c, "'."));
         }
@@ -123,7 +123,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
     {
                 static if(SkipWhitespace) skipWhitespace();
                 auto c2 = peekChar();
-                static if (!CaseSensitive) c2 = toAsciiLower(c2);
+                static if (!CaseSensitive) c2 = toLower(c2);
 
                 if(c2 != c) return false;
 
@@ -155,7 +155,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                         case 'u':
                                 dchar val = 0;
                                 foreach_reverse(i; 0 .. 4) {
-                                        auto hex = toAsciiUpper(getChar());
+                                        auto hex = toUpper(getChar());
                                         if(!isHexDigit(hex)) error("Expecting hex character");
                                         val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                                 }

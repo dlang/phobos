@@ -833,7 +833,7 @@ Returns the number of parenthesized captures
                 if (isAlpha(c))
                 {
                     op = REichar;
-                    c = cast(char)std.ascii.toAsciiUpper(c);
+                    c = cast(char)std.ascii.toUpper(c);
                 }
             }
             if (op == REchar && c <= 0xFF)
@@ -2114,7 +2114,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (c1 != c2)
                 {
                     if (isLower(cast(E) c2))
-                        c2 = std.ascii.toAsciiUpper(cast(E) c2);
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2145,7 +2145,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (c1 != c2)
                 {
                     if (isLower(cast(E) c2))
-                        c2 = std.ascii.toAsciiUpper(cast(E) c2);
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
