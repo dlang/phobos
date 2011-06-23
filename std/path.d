@@ -33,9 +33,11 @@ module std.path;
 
 
 import std.algorithm;
+import std.array;
 import std.conv;
 import std.ctype;
 import std.file;
+import std.range;
 import std.string;
 import std.traits;
 
@@ -1108,7 +1110,6 @@ unittest
 
     // Root directories
     assert (equal(pathSplitter("/"), ["/"]));
-    assert (equal(pathSplitter("//"), ["/"]));
     assert (equal(pathSplitter("///"), ["/"]));
     assert (equal(pathSplitter("//foo"), ["//foo"]));
 
@@ -1138,6 +1139,219 @@ unittest
         assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
         assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
     }
+}
+
+
+
+
+/** Resolve current/parent directory symbols (. and ..) and remove
+    superfluous directory separators.  Replace slashes with
+    backslashes on Windows.
+
+    Note that this function does not resolve symbolic links.
+
+    Examples:
+    ---
+    version (Posix)
+    {
+        assert (normalize("/foo/./bar/..//baz/") == "/foo/baz");
+        assert (normalize("../foo/.") == "../foo");
+    }
+    version (Windows)
+    {
+        assert (normalize(r"c:\foo\.\bar/..\\baz\") == r"c:\foo\baz");
+        assert (normalize(r"..\foo\.") == "..\foo");
+    }
+    ---
+*/
+immutable(Unqual!C)[] normalize(C)(in C[] path)  if (isSomeChar!C)
+{
+    version (Windows)    enum Unqual!C dirSep = '\\';
+    else version (Posix) enum Unqual!C dirSep = '/';
+
+    auto segments = pathSplitter(path);
+    if (segments.empty) return null;
+
+    auto first = segments.front;
+    immutable hasRoot = isRooted(first);
+    version (Windows)
+    {
+        immutable firstSpecial = hasRoot
+            || (first.length >= 2 && isDriveSeparator(first[1]));
+    }
+    else alias hasRoot firstSpecial;
+    if (firstSpecial) segments.popFront();
+
+    auto stack = new typeof(first)[(path.length+1)/2];
+    size_t stackIndex = 0;
+
+    bool hasParents = false;
+    foreach (s; segments)
+    {
+        if (s == "..")
+        {
+            if (hasParents)
+            {
+                assert (stackIndex > 0 && stack[stackIndex-1] != "..");
+                --stackIndex;
+                hasParents = (stackIndex > 0);
+            }
+            else if (!hasRoot)
+            {
+                stack[stackIndex] = s;
+                ++stackIndex;
+            }
+        }
+        else if (s != ".")
+        {
+            stack[stackIndex] = s;
+            ++stackIndex;
+            hasParents = true;
+        }
+    }
+
+    // 'normalized' holds the normalized path. 'buffer' is taken
+    // as an output range over normalized.
+    auto normalized = new Unqual!(C)[path.length];
+    auto buffer = normalized;
+
+    // std.range.put doesn't work with narrow strings
+    void putc(Unqual!C c) { buffer[0] = c; buffer = buffer[1 .. $]; }
+    void puts(const Unqual!(C)[] s) { buffer[0 .. s.length] = s[]; buffer = buffer[s.length .. $]; }
+
+    if (firstSpecial)
+    {
+        version (Windows)
+        {
+            foreach (c; first)
+            {
+                if (c == '/') putc(dirSep);
+                else putc(c);
+            }
+        }
+        else
+        {
+            puts(first);
+        }
+        if (!isDirSeparator(first[$-1]) && stackIndex > 0) putc(dirSep);
+    }
+    if (stackIndex > 0)
+    {
+        foreach (s; stack[0 .. stackIndex-1])
+        {
+            puts(s);
+            putc(dirSep);
+        }
+        puts(stack[stackIndex-1]);
+    }
+
+    return cast(typeof(return)) normalized[0 .. $-buffer.length];
+}
+
+
+unittest
+{
+    version (Posix)
+    {
+        // Trivial
+        assert (normalize("") == "");
+        assert (normalize("foo/bar") == "foo/bar");
+
+        // Correct handling of leading slashes
+        assert (normalize("/") == "/");
+        assert (normalize("///") == "/");
+        assert (normalize("////") == "/");
+        assert (normalize("/foo/bar") == "/foo/bar");
+        assert (normalize("//foo/bar") == "//foo/bar");
+        assert (normalize("//foo") == "//foo");
+        assert (normalize("//foo///") == "//foo");
+        assert (normalize("///foo/bar") == "/foo/bar");
+        assert (normalize("////foo/bar") == "/foo/bar");
+
+        // Correct handling of single-dot symbol (current directory)
+        assert (normalize("/./foo") == "/foo");
+        assert (normalize("/foo/./bar") == "/foo/bar");
+
+        assert (normalize("./foo") == "foo");
+        assert (normalize("././foo") == "foo");
+        assert (normalize("foo/././bar") == "foo/bar");
+
+        // Correct handling of double-dot symbol (previous directory)
+        assert (normalize("/foo/../bar") == "/bar");
+        assert (normalize("/foo/../../bar") == "/bar");
+        assert (normalize("/../foo") == "/foo");
+        assert (normalize("/../../foo") == "/foo");
+        assert (normalize("/foo/..") == "/");
+        assert (normalize("/foo/../..") == "/");
+
+        assert (normalize("foo/../bar") == "bar");
+        assert (normalize("foo/../../bar") == "../bar");
+        assert (normalize("../foo") == "../foo");
+        assert (normalize("../../foo") == "../../foo");
+        assert (normalize("../foo/../bar") == "../bar");
+        assert (normalize(".././../foo") == "../../foo");
+        assert (normalize("foo/bar/..") == "foo");
+        assert (normalize("/foo/../..") == "/");
+
+        // The ultimate path
+        assert (normalize("/foo/../bar//./../...///baz//") == "/.../baz");
+    }
+    else version (Windows)
+    {
+        // Trivial
+        assert (normalize("") == "");
+        assert (normalize(r"foo\bar") == r"foo\bar");
+        assert (normalize("foo/bar") == r"foo\bar");
+
+        // Correct handling of absolute paths
+        assert (normalize("/") == r"\");
+        assert (normalize(r"\") == r"\");
+        assert (normalize(r"\\\") == r"\");
+        assert (normalize(r"\\\\") == r"\");
+        assert (normalize(r"\foo\bar") == r"\foo\bar");
+        assert (normalize(r"\\foo") == r"\\foo");
+        assert (normalize(r"\\foo\\") == r"\\foo");
+        assert (normalize(r"\\foo/bar") == r"\\foo\bar");
+        assert (normalize(r"\\\foo\bar") == r"\foo\bar");
+        assert (normalize(r"\\\\foo\bar") == r"\foo\bar");
+        assert (normalize(r"c:\") == r"c:\");
+        assert (normalize(r"c:\foo\bar") == r"c:\foo\bar");
+        assert (normalize(r"c:\\foo\bar") == r"c:\foo\bar");
+
+        // Correct handling of single-dot symbol (current directory)
+        assert (normalize(r"\./foo") == r"\foo");
+        assert (normalize(r"\foo/.\bar") == r"\foo\bar");
+
+        assert (normalize(r".\foo") == r"foo");
+        assert (normalize(r"./.\foo") == r"foo");
+        assert (normalize(r"foo\.\./bar") == r"foo\bar");
+
+        // Correct handling of double-dot symbol (previous directory)
+        assert (normalize(r"\foo\..\bar") == r"\bar");
+        assert (normalize(r"\foo\../..\bar") == r"\bar");
+        assert (normalize(r"\..\foo") == r"\foo");
+        assert (normalize(r"\..\..\foo") == r"\foo");
+        assert (normalize(r"\foo\..") == r"\");
+        assert (normalize(r"\foo\../..") == r"\");
+
+        assert (normalize(r"foo\..\bar") == r"bar");
+        assert (normalize(r"foo\..\../bar") == r"..\bar");
+        assert (normalize(r"..\foo") == r"..\foo");
+        assert (normalize(r"..\..\foo") == r"..\..\foo");
+        assert (normalize(r"..\foo\..\bar") == r"..\bar");
+        assert (normalize(r"..\.\..\foo") == r"..\..\foo");
+        assert (normalize(r"foo\bar\..") == r"foo");
+        assert (normalize(r"\foo\..\..") == r"\");
+        assert (normalize(r"c:\foo\..\..") == r"c:\");
+
+        // Correct handling of non-root path with drive specifier
+        assert (normalize(r"c:foo") == r"c:foo");
+        assert (normalize(r"c:..\foo\.\..\bar") == r"c:..\bar");
+
+        // The ultimate path
+        assert (normalize(r"c:\foo\..\bar\\.\..\...\\\baz\\") == r"c:\...\baz");
+    }
+    else static assert (false);
 }
 
 
