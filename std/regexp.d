@@ -1652,7 +1652,7 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isAsciiLower(cast(rchar)c2))
+                    if (isLower(cast(rchar)c2))
                         c2 = std.ascii.toAsciiUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
@@ -1681,7 +1681,7 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (isAsciiLower(cast(rchar)c2))
+                    if (isLower(cast(rchar)c2))
                         c2 = std.ascii.toAsciiUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;

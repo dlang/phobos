@@ -60,7 +60,7 @@ pure int isdigit(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_DIG)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isAsciiLower) instead.)
+ * $(D std.ascii.isLower) instead.)
  *
  * Returns !=0 if c is lower case ascii letter.
  */
@@ -85,7 +85,7 @@ pure int isspace(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_SPC)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isAsciiUpper) instead.)
+ * $(D std.ascii.isUpper) instead.)
  *
  * Returns !=0 if c is an upper case ascii character.
  */

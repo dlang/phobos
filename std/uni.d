@@ -42,7 +42,7 @@ bool isUniWhite(dchar c) @safe pure nothrow
 bool isUniLower(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
-        return std.ascii.isAsciiLower(c);
+        return std.ascii.isLower(c);
 
     return isUniAlpha(c) && c == toUniLower(c);
 }
@@ -53,7 +53,7 @@ bool isUniLower(dchar c) @safe pure nothrow
 bool isUniUpper(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
-        return std.ascii.isAsciiUpper(c);
+        return std.ascii.isUpper(c);
 
     return isUniAlpha(c) && c == toUniUpper(c);
 }
@@ -64,7 +64,7 @@ bool isUniUpper(dchar c) @safe pure nothrow
   +/
 dchar toUniLower(dchar c) @safe pure nothrow
 {
-    if(std.ascii.isAsciiUpper(c))
+    if(std.ascii.isUpper(c))
         c += 32;
     else if(c >= 0x00C0)
     {
@@ -123,7 +123,7 @@ dchar toUniLower(dchar c) @safe pure nothrow
   +/
 dchar toUniUpper(dchar c) @safe pure nothrow
 {
-    if(std.ascii.isAsciiLower(c))
+    if(std.ascii.isLower(c))
         c -= 32;
     else if(c >= 0x00E0)
     {

@@ -83,7 +83,7 @@ unittest
 /++
     Returns whether $(D c) is a lowercase ASCII letter (a..z).
   +/
-bool isAsciiLower(dchar c) @safe pure nothrow
+bool isLower(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _LC) : false;
 }
@@ -91,17 +91,17 @@ bool isAsciiLower(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; lowercase)
-        assert(isAsciiLower(c));
+        assert(isLower(c));
 
     foreach(c; chain(digits, uppercase, whitespace))
-        assert(!isAsciiLower(c));
+        assert(!isLower(c));
 }
 
 
 /++
     Returns whether $(D c) is an uppercase ASCII letter (A..Z).
   +/
-bool isAsciiUpper(dchar c) @safe pure nothrow
+bool isUpper(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _UC) : false;
 }
@@ -109,10 +109,10 @@ bool isAsciiUpper(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; uppercase)
-        assert(isAsciiUpper(c));
+        assert(isUpper(c));
 
     foreach(c; chain(digits, lowercase, whitespace))
-        assert(!isAsciiUpper(c));
+        assert(!isUpper(c));
 }
 
 
@@ -295,11 +295,11 @@ unittest
 dchar toAsciiLower(dchar c) @safe pure nothrow
 out(result)
 {
-    assert(!isAsciiUpper(result));
+    assert(!isUpper(result));
 }
 body
 {
-    return isAsciiUpper(c) ? c + cast(dchar)('a' - 'A') : c;
+    return isUpper(c) ? c + cast(dchar)('a' - 'A') : c;
 }
 
 unittest
@@ -322,11 +322,11 @@ unittest
 dchar toAsciiUpper(dchar c) @safe pure nothrow
 out(result)
 {
-    assert(!isAsciiLower(result));
+    assert(!isLower(result));
 }
 body
 {
-    return isAsciiLower(c) ? c - cast(dchar)('a' - 'A') : c;
+    return isLower(c) ? c - cast(dchar)('a' - 'A') : c;
 }
 
 unittest

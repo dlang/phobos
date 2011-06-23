@@ -951,7 +951,7 @@ void toLowerInPlace(C)(ref C[] s)
     for (size_t i = 0; i < s.length; )
     {
         immutable c = s[i];
-        if (std.ascii.isAsciiUpper(c))
+        if (std.ascii.isUpper(c))
         {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
         }
