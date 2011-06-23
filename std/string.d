@@ -208,7 +208,7 @@ else bool iswhite(C)(C c)
     comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
     converts characters to lowercase prior to applying ($D pred). Technically,
     $(D icmp(r1, r2)) is equivalent to
-    $(D cmp!"toUniLower(a) < toUniLower(b)"(r1, r2)).
+    $(D cmp!"std.uni.toLower(a) < std.uni.toLower(b)"(r1, r2)).
 
     $(BOOKTABLE,
         $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
@@ -227,8 +227,8 @@ int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
     size_t i, j;
     while(i < s1.length && j < s2.length)
     {
-        immutable c1 = toUniLower(decode(s1, i));
-        immutable c2 = toUniLower(decode(s2, j));
+        immutable c1 = std.uni.toLower(decode(s1, i));
+        immutable c2 = std.uni.toLower(decode(s2, j));
 
         static if(isLessThan)
         {
@@ -266,8 +266,8 @@ int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
         if(s1.empty) return s2.empty ? 0 : -1;
         if(s2.empty) return 1;
 
-        immutable c1 = toUniLower(s1.front);
-        immutable c2 = toUniLower(s2.front);
+        immutable c1 = std.uni.toLower(s1.front);
+        immutable c2 = std.uni.toLower(s2.front);
 
         static if(isLessThan)
         {
@@ -486,11 +486,11 @@ sizediff_t indexOf(Char)(in Char[] s,
         }
         else
         {                                                   // c is a universal character
-            auto c1 = std.uni.toUniLower(c);
+            auto c1 = std.uni.toLower(c);
 
             foreach (sizediff_t i, dchar c2; s)
             {
-                auto c3 = std.uni.toUniLower(c2);
+                auto c3 = std.uni.toLower(c2);
                 if (c1 == c3)
                     return i;
             }
@@ -548,7 +548,7 @@ sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
     else
     {
         balance = std.algorithm.find!
-            ((dchar a, dchar b){return toUniLower(a) == toUniLower(b);})
+            ((dchar a, dchar b){return std.uni.toLower(a) == std.uni.toLower(b);})
             (s, sub);
     }
     return balance.empty ? -1 : balance.ptr - s.ptr;
@@ -651,11 +651,11 @@ sizediff_t lastIndexOf(Char)(const(Char)[] s,
         }
         else
         {
-            immutable c1 = std.uni.toUniLower(c);
+            immutable c1 = std.uni.toLower(c);
 
             for(size_t i = s.length; !s.empty;)
             {
-                if(toUniLower(s.back) == c1)
+                if(std.uni.toLower(s.back) == c1)
                     return cast(sizediff_t)i - codeLength!Char(c);
 
                 i -= strideBack(s, i);
@@ -743,8 +743,11 @@ sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
     {
         for(size_t i = s.length; !s.empty;)
         {
-            if(endsWith!((dchar a, dchar b){return toUniLower(a) == toUniLower(b);})(s, sub))
+            if(endsWith!((dchar a, dchar b) {return std.uni.toLower(a) == std.uni.toLower(b);})
+                        (s, sub))
+            {
                 return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+            }
 
             i -= strideBack(s, i);
             s = s[0 .. i];
@@ -898,7 +901,7 @@ S toLower(S)(S s) @safe pure
         {
             if (std.uni.isUpper(c))
             {
-                c = std.uni.toUniLower(c);
+                c = std.uni.toLower(c);
             }
             result ~= c;
         }
@@ -966,7 +969,7 @@ void toLowerInPlace(C)(ref C[] s)
                 i = j;
                 continue;
             }
-            auto toAdd = to!(C[])(std.uni.toUniLower(dc));
+            auto toAdd = to!(C[])(std.uni.toLower(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
         }
@@ -983,7 +986,7 @@ void toLowerInPlace(C)(ref C[] s) @safe pure nothrow
     foreach(ref c; s)
     {
         if(std.uni.isUpper(c))
-            c = std.uni.toUniLower(c);
+            c = std.uni.toLower(c);
     }
 }
 
@@ -1073,7 +1076,7 @@ S toUpper(S)(S s) @safe pure
         {
             if (std.uni.isLower(c))
             {
-                c = std.uni.toUniUpper(c);
+                c = std.uni.toUpper(c);
             }
             result ~= c;
         }
@@ -1142,7 +1145,7 @@ void toUpperInPlace(C)(ref C[] s)
                 i = j;
                 continue;
             }
-            auto toAdd = to!(C[])(std.uni.toUniUpper(dc));
+            auto toAdd = to!(C[])(std.uni.toUpper(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
         }
@@ -1159,7 +1162,7 @@ void toUpperInPlace(C)(ref C[] s) @safe pure nothrow
     foreach(ref c; s)
     {
         if(std.uni.isLower(c))
-            c = std.uni.toUniUpper(c);
+            c = std.uni.toUpper(c);
     }
 }
 
@@ -1225,13 +1228,13 @@ S capitalize(S)(S s) @safe pure
 
         if(i == 0)
         {
-            c2 = std.uni.toUniUpper(c);
+            c2 = std.uni.toUpper(c);
             if(c != c2)
                 changed = true;
         }
         else
         {
-            c2 = std.uni.toUniLower(c);
+            c2 = std.uni.toLower(c);
             if(c != c2)
             {
                 if(!changed)

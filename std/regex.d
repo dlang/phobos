@@ -1995,8 +1995,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
             {
                 if (j == b.length) return i != a.length;
                 if (i == a.length) return -1;
-                immutable x = std.uni.toUniLower(a[i]),
-                    y = std.uni.toUniLower(b[j]);
+                immutable x = std.uni.toLower(a[i]),
+                    y = std.uni.toLower(b[j]);
                 if (x == y) continue;
                 return x - y;
             }

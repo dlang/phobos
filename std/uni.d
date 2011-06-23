@@ -36,6 +36,7 @@ bool isWhite(dchar c) @safe pure nothrow
            c == '\u202F' || c == '\u205F' || c == '\u3000';
 }
 
+
 /++
    $(RED Scheduled for deprecation in December 2011. Please use
    $(D isLower) instead.)
@@ -52,8 +53,9 @@ bool isLower(dchar c) @safe pure nothrow
     if(std.ascii.isASCII(c))
         return std.ascii.isLower(c);
 
-    return isUniAlpha(c) && c == toUniLower(c);
+    return isUniAlpha(c) && c == toLower(c);
 }
+
 
 /++
    $(RED Scheduled for deprecation in December 2011. Please use
@@ -71,14 +73,24 @@ bool isUpper(dchar c) @safe pure nothrow
     if(std.ascii.isASCII(c))
         return std.ascii.isUpper(c);
 
-    return isUniAlpha(c) && c == toUniUpper(c);
+    return isUniAlpha(c) && c == toUpper(c);
 }
+
+
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D toLower) instead.)
+
+    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+alias toLower toUniLower;
 
 /++
     If $(D c) is a unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
-dchar toUniLower(dchar c) @safe pure nothrow
+dchar toLower(dchar c) @safe pure nothrow
 {
     if(std.ascii.isUpper(c))
         c += 32;
@@ -133,11 +145,21 @@ dchar toUniLower(dchar c) @safe pure nothrow
     return c;
 }
 
+
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D toUpper) instead.)
+
+    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+alias toUpper toUniUpper;
+
 /++
     If $(D c) is a unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
-dchar toUniUpper(dchar c) @safe pure nothrow
+dchar toUpper(dchar c) @safe pure nothrow
 {
     if(std.ascii.isLower(c))
         c -= 32;
