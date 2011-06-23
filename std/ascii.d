@@ -1,11 +1,19 @@
 // Written in the D programming language.
 
 /++
-    Simple ASCII character classification functions.
-    For Unicode classification, see $(LINK2 std_uni.html, std.uni).
+    Functions which operate on ASCII characters.
+
+    All of the functions in std.ascii accept unicode characters but effectively
+    ignore them. All $(D isX) functions return $(D false) for unicode
+    characters, and all $(D toX) functions do nothing to unicode characters.
+
+    For functions which operate on unicode characters, see
+    $(LINK2 std_uni.html, std.uni).
+
     References:
         $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
-        $(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
+        $(WEB en.wikipedia.org/wiki/Ascii, Wikipedia)
+
     Macros:
         WIKI=Phobos/StdASCII
 

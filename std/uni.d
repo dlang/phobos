@@ -1,22 +1,27 @@
 // Written in the D programming language.
 
-/**
- * Simple Unicode character classification functions.
- * For ASCII classification, see $(LINK2 std_ascii.html, std.ascii).
- * Macros:
- *  WIKI=Phobos/StdUni
- * References:
- *  $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
- *  $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia),
- *  $(LINK2 http://www.unicode.org, The Unicode Consortium)
- * Trademarks:
- *  Unicode(tm) is a trademark of Unicode, Inc.
- *
- * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
- * Source:    $(PHOBOSSRC std/_uni.d)
- */
+/++
+    Functions which operate on unicode characters.
+
+    For functions which operate on ASCII characters and ignore unicode
+    characters, see $(LINK2 std_ascii.html, std.ascii).
+
+    References:
+        $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
+        $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
+        $(WEB www.unicode.org, The Unicode Consortium)
+
+    Trademarks:
+        Unicode(tm) is a trademark of Unicode, Inc.
+
+    Macros:
+        WIKI=Phobos/StdUni
+
+    Copyright: Copyright 2000 -
+    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+    Source:    $(PHOBOSSRC std/_uni.d)
+  +/
 module std.uni;
 
 static import std.ascii;
