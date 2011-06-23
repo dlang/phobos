@@ -37,9 +37,17 @@ bool isWhite(dchar c) @safe pure nothrow
 }
 
 /++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isLower) instead.)
+
     Return whether $(D c) is a unicode lowercase character.
   +/
-bool isUniLower(dchar c) @safe pure nothrow
+alias isLower isUniLower;
+
+/++
+    Return whether $(D c) is a unicode lowercase character.
+  +/
+bool isLower(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
         return std.ascii.isLower(c);
@@ -48,9 +56,17 @@ bool isUniLower(dchar c) @safe pure nothrow
 }
 
 /++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isUpper) instead.)
+
     Return whether $(D c) is a unicode uppercase character.
   +/
-bool isUniUpper(dchar c) @safe pure nothrow
+alias isUpper isUniUpper;
+
+/++
+    Return whether $(D c) is a unicode uppercase character.
+  +/
+bool isUpper(dchar c) @safe pure nothrow
 {
     if(std.ascii.isASCII(c))
         return std.ascii.isUpper(c);

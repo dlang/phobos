@@ -892,11 +892,11 @@ S toLower(S)(S s) @safe pure
 {
     foreach (i, dchar cOuter; s)
     {
-        if (!std.uni.isUniUpper(cOuter)) continue;
+        if (!std.uni.isUpper(cOuter)) continue;
         auto result = s[0.. i].dup;
         foreach (dchar c; s[i .. $])
         {
-            if (std.uni.isUniUpper(c))
+            if (std.uni.isUpper(c))
             {
                 c = std.uni.toUniLower(c);
             }
@@ -961,7 +961,7 @@ void toLowerInPlace(C)(ref C[] s)
             size_t j = i;
             dchar dc = decode(s, j);
             assert(j > i);
-            if (!std.uni.isUniUpper(dc))
+            if (!std.uni.isUpper(dc))
             {
                 i = j;
                 continue;
@@ -982,7 +982,7 @@ void toLowerInPlace(C)(ref C[] s) @safe pure nothrow
 {
     foreach(ref c; s)
     {
-        if(std.uni.isUniUpper(c))
+        if(std.uni.isUpper(c))
             c = std.uni.toUniLower(c);
     }
 }
@@ -1067,11 +1067,11 @@ S toUpper(S)(S s) @safe pure
 {
     foreach (i, dchar cOuter; s)
     {
-        if (!std.uni.isUniLower(cOuter)) continue;
+        if (!std.uni.isLower(cOuter)) continue;
         auto result = s[0.. i].dup;
         foreach (dchar c; s[i .. $])
         {
-            if (std.uni.isUniLower(c))
+            if (std.uni.isLower(c))
             {
                 c = std.uni.toUniUpper(c);
             }
@@ -1137,7 +1137,7 @@ void toUpperInPlace(C)(ref C[] s)
             size_t j = i;
             dchar dc = decode(s, j);
             assert(j > i);
-            if (!std.uni.isUniLower(dc))
+            if (!std.uni.isLower(dc))
             {
                 i = j;
                 continue;
@@ -1158,7 +1158,7 @@ void toUpperInPlace(C)(ref C[] s) @safe pure nothrow
 {
     foreach(ref c; s)
     {
-        if(std.uni.isUniLower(c))
+        if(std.uni.isLower(c))
             c = std.uni.toUniUpper(c);
     }
 }
