@@ -53,7 +53,7 @@ bool isLower(dchar c) @safe pure nothrow
     if(std.ascii.isASCII(c))
         return std.ascii.isLower(c);
 
-    return isUniAlpha(c) && c == toLower(c);
+    return isAlpha(c) && c == toLower(c);
 }
 
 
@@ -73,7 +73,7 @@ bool isUpper(dchar c) @safe pure nothrow
     if(std.ascii.isASCII(c))
         return std.ascii.isUpper(c);
 
-    return isUniAlpha(c) && c == toUpper(c);
+    return isAlpha(c) && c == toUpper(c);
 }
 
 
@@ -216,12 +216,23 @@ dchar toUpper(dchar c) @safe pure nothrow
 
 
 /++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isAlpha) instead.)
+
     Returns whether $(D c) is a unicode alpha character (general unicode
     category: Lu, L1, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
   +/
-bool isUniAlpha(dchar c) @safe pure nothrow
+alias isAlpha isUniAlpha;
+
+/++
+    Returns whether $(D c) is a unicode alpha character (general unicode
+    category: Lu, L1, Lt, Lm, and Lo).
+
+    Standards: Unicode 5.0.0.
+  +/
+bool isAlpha(dchar c) @safe pure nothrow
 {
     static immutable dchar table[][2] =
     [
@@ -655,10 +666,10 @@ unittest
     for(dchar c = 0; c < 0x80; ++c)
     {
         if(c >= 'A' && c <= 'Z')
-            assert(isUniAlpha(c));
+            assert(isAlpha(c));
         else if(c >= 'a' && c <= 'z')
-            assert(isUniAlpha(c));
+            assert(isAlpha(c));
         else
-            assert(!isUniAlpha(c));
+            assert(!isAlpha(c));
     }
 }

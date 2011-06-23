@@ -1376,7 +1376,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             while (isHexDigit(i))
             {
                 anydigits = 1;
-                i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                i = std.ascii.isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
                 if (ndigits < 16)
                 {
                     msdec = msdec * 16 + i;
