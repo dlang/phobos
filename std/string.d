@@ -1868,15 +1868,15 @@ body
 
 /************************************************
  * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(D expandTabs) instead.
+ *       Please use $(D detab) instead.
  *
  * Replace tabs with the appropriate number of spaces.
  * tabsize is the distance between tab stops.
  */
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "expandtabs", "std.string.expandTabs"));
-    return expandTabs!S(str, tabsize);
+    pragma(msg, softDeprec!("2.054", "December 2011", "expandtabs", "std.string.detab"));
+    return detab!S(str, tabsize);
 }
 
 /++
@@ -1884,7 +1884,7 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
     to align the following character at the next tab stop where $(D tabSize)
     is the distance between tab stops.
   +/
-S expandTabs(S)(S s, size_t tabSize = 8) if(isSomeString!S)
+S detab(S)(S s, size_t tabSize = 8) if(isSomeString!S)
 {
     assert(tabSize > 0);
     alias Unqual!(typeof(s[0])) C;
@@ -1943,21 +1943,21 @@ S expandTabs(S)(S s, size_t tabSize = 8) if(isSomeString!S)
 
 unittest
 {
-    debug(string) printf("string.expandTabs.unittest\n");
+    debug(string) printf("string.detab.unittest\n");
 
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         S s = to!S("This \tis\t a fofof\tof list");
-        assert(cmp(expandTabs(s), "This    is       a fofof        of list") == 0);
+        assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
 
-        assert(expandTabs(cast(S)null) is null);
-        assert(expandTabs("").empty);
-        assert(expandTabs("a") == "a");
-        assert(expandTabs("\t") == "        ");
-        assert(expandTabs("\t", 3) == "   ");
-        assert(expandTabs("\t", 9) == "         ");
-        assert(expandTabs(  "  ab\t asdf ") == "  ab     asdf ");
-        assert(expandTabs(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
+        assert(detab(cast(S)null) is null);
+        assert(detab("").empty);
+        assert(detab("a") == "a");
+        assert(detab("\t") == "        ");
+        assert(detab("\t", 3) == "   ");
+        assert(detab("\t", 9) == "         ");
+        assert(detab(  "  ab\t asdf ") == "  ab     asdf ");
+        assert(detab(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
     }
 }
 
