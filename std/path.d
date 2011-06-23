@@ -670,6 +670,158 @@ unittest
 
 
 
+/** Returns a forward range that iterates over the elements of a path.
+
+    Examples:
+    ---
+    assert (equal(pathSplitter("/"), ["/"]));
+    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
+    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
+    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+
+    version (Windows)
+    {
+        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter("c:"), ["c:"]));
+        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
+        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+    }
+    ---
+*/
+auto pathSplitter(C)(const(C)[] path)
+{
+    struct PathSplitter
+    {
+        @property empty() { return _empty; }
+
+        @property front()
+        {
+            assert (!empty, "PathSplitter: called front() on empty range");
+            return _front;
+        }
+
+        void popFront()
+        {
+            assert (!empty, "PathSplitter: called popFront() on empty range");
+            if (_path.length == 0)
+            {
+                _empty = true;
+            }
+            else
+            {
+                int i = 0;
+                while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                _front = _path[0 .. i];
+                while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                _path = _path[i .. $];
+            }
+        }
+
+        auto save() { return this; }
+
+
+    private:
+        typeof(path) _path;
+        typeof(path) _front;
+        bool _empty;
+
+        this(typeof(path) p)
+        {
+            if (p.length == 0)
+            {
+                _empty = true;
+                return;
+            }
+            _path = p;
+
+            // If path is rooted, first element is special
+            if (isDirSeparator(_path[0]))
+            {
+                if (_path.length > 2 && isDirSeparator(_path[1])
+                    && !isDirSeparator(_path[2]))
+                {
+                    // Network mount
+                    int i = 3;
+                    while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                    _front = _path[0 .. i];
+                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                    _path = _path[i .. $];
+                }
+                else
+                {
+                    _front = _path[0 .. 1];
+                    int i = 1;
+                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                    _path = _path[i .. $];
+                }
+            }
+            else
+            {
+                version (Posix)
+                {
+                    popFront();
+                }
+                else version (Windows)
+                {
+                    if (_path.length > 2 && isDriveSeparator(_path[1])
+                        && isDirSeparator(_path[2]))
+                    {
+                        _front = _path[0 .. 3];
+                        int i = 3;
+                        while (i < _path.length && isDirSeparator(_path[i])) ++i;
+                        _path = _path[i .. $];
+                    }
+                    else popFront();
+                }
+                else static assert (false);
+            }
+        }
+    }
+
+    return PathSplitter(path);
+}
+
+
+unittest
+{
+    assert (pathSplitter("").empty);
+
+    // Root directories
+    assert (equal(pathSplitter("/"), ["/"]));
+    assert (equal(pathSplitter("///"), ["/"]));
+    assert (equal(pathSplitter("//foo"), ["//foo"]));
+
+    // Absolute paths
+    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
+    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
+
+    // General
+    assert (equal(pathSplitter("foo/bar"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo//bar"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo/bar//"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+
+    // save()
+    auto ps1 = pathSplitter("foo/bar/baz");
+    auto ps2 = ps1.save();
+    ps1.popFront;
+    assert (equal(ps1, ["bar", "baz"]));
+    assert (equal(ps2, ["foo", "bar", "baz"]));
+
+    // Windows-specific
+    version (Windows)
+    {
+        assert (equal(pathSplitter(r"\"), [r"\"]));
+        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter("c:"), ["c:"]));
+        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
+        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+    }
+}
+
+
+
+
 /** Determines whether a path starts at a root directory.
 
     On POSIX, this function returns true if and only if the path starts
@@ -825,21 +977,21 @@ unittest
     version (Posix)
     {
         // Assuming the current working directory is /foo/bar
-        assert (toAbsolute("some/file")  == "/foo/bar/some/file");
-        assert (toAbsolute("../file")    == "/foo/bar/../file");
-        assert (toAbsolute("/some/file") == "/some/file");
+        assert (absolutePath("some/file")  == "/foo/bar/some/file");
+        assert (absolutePath("../file")    == "/foo/bar/../file");
+        assert (absolutePath("/some/file") == "/some/file");
     }
 
     version (Windows)
     {
         // Assuming the current working directory is c:\foo\bar
-        assert (toAbsolute(r"some\file")    == r"c:\foo\bar\some\file");
-        assert (toAbsolute(r"..\file")      == r"c:\foo\bar\..\file");
-        assert (toAbsolute(r"c:\some\file") == r"c:\some\file");
+        assert (absolutePath(r"some\file")    == r"c:\foo\bar\some\file");
+        assert (absolutePath(r"..\file")      == r"c:\foo\bar\..\file");
+        assert (absolutePath(r"c:\some\file") == r"c:\some\file");
     }
     ---
 */
-string toAbsolute(string path)
+string absolutePath(string path)
 {
     if (path.length == 0)  return null;
     if (isAbsolute(path))  return path;
@@ -851,293 +1003,14 @@ unittest
 {
     version (Posix)
     {
-        assert (toAbsolute("/foo/bar") == "/foo/bar");
-        assert (toAbsolute("/foo/.././/bar//") == "/foo/.././/bar//");
+        assert (absolutePath("/foo/bar") == "/foo/bar");
+        assert (absolutePath("/foo/.././/bar//") == "/foo/.././/bar//");
     }
 
     version (Windows)
     {
-        assert (toAbsolute(r"c:\foo\bar") == r"c:\foo\bar");
-        assert (toAbsolute(r"c:\foo\..\.\\bar\\") == r"c:\foo\..\.\\bar\\");
-    }
-}
-
-
-
-
-/** Convert path to a canonical _path.
-
-    In addition to performing the same operations as toAbsolute(),
-    this function does the following:
-
-    On POSIX,
-    $(UL
-        $(LI trailing slashes are removed)
-        $(LI multiple consecutive slashes are reduced to just one)
-        $(LI ./ and ../ are resolved)
-    )
-    On Windows,
-    $(UL
-        $(LI slashes are replaced with backslashes)
-        $(LI trailing backslashes are removed)
-        $(LI multiple consecutive backslashes are reduced to just one)
-        $(LI .\ and ..\ are resolved)
-    )
-    Note that this function does not perform tilde expansion, as
-    this may be a very expensive operation.  Use $(D expandTilde())
-    for this.
-
-    Examples:
-    ---
-    version (Posix)
-    {
-        // Assuming the current working directory is /foo/bar
-        assert (toCanonical("some//file")  == "/foo/bar/some/file");
-        assert (toCanonical("../file")     == "/foo/file");
-        assert (toCanonical("/some/file/") == "/some/file");
-    }
-
-    version (Windows)
-    {
-        // Assuming the current working directory is c:\foo\bar
-        assert (toCanonical(r"some\\file")    == r"c:\foo\bar\some\file");
-        assert (toCanonical(r"..\file")       == r"c:\foo\file");
-        assert (toCanonical(r"c:\some\file\") == r"c:\some\file");
-    }
-    ---
-*/
-string toCanonical(string path)
-{
-    if (path.length == 0) return null;
-
-    // Get absolute path, and duplicate it to make sure we can
-    // safely change it below.
-    auto p1 = toAbsolute(path).dup;
-
-    // On Windows, skip drive designation.
-    version (Windows)  auto p2 = p1[2 .. $];
-    else auto p2 = p1;
-
-    enum { singleDot, doubleDot, dirSep, other }
-    int prev = other;
-
-    // i is the position in the absolute path,
-    // j is the position in the canonical path.
-    int j = 0;
-    for (int i=0; i<=p2.length; ++i, ++j)
-    {
-        // At directory separator or end of path?
-        if (i == p2.length || isDirSeparator(p2[i]))
-        {
-            if (prev == singleDot || prev == doubleDot)
-            {
-                // Backtrack to last dir separator
-                while (!isDirSeparator(p2[--j])) { }
-            }
-            if (prev == doubleDot && j>0)
-            {
-                // Backtrack once again
-                while (!isDirSeparator(p2[--j])) { }
-            }
-            if (prev == dirSep)  --j;
-            prev = dirSep;
-        }
-
-        // At dot?
-        else if (p2[i] == '.')
-        {
-            if (prev == dirSep)         prev = singleDot;
-            else if (prev == singleDot) prev = doubleDot;
-            else                        prev = other;
-        }
-
-        // At anything else
-        else prev = other;
-
-        if (i < p2.length) p2[j] = p2[i];
-    }
-
-    // If the directory turns out to be root, we do want a trailing slash.
-    if (j == 1)  j = 2;
-
-    // On Windows, make a final pass through the path and replace slashes
-    // with backslashes and include drive designation again.
-    // Note that we can safely cast the result to string, since we dup-ed
-    // the string we got from toAbsolute() earlier.
-    version (Windows)
-    {
-        foreach (ref c; p2) if (c == '/') c = '\\';
-        return cast(string) p1[0 .. j+1];
-    }
-    else version (Posix) return cast(string) p2[0 .. j-1];
-}
-
-
-unittest
-{
-    version (Posix)
-    {
-        string p1 = "foo/bar/baz";
-        string p2 = "foo/boo/../bar/../../foo///bar/baz/";
-        assert (toCanonical(p2) == toAbsolute(p1));
-    }
-    version (Windows)
-    {
-        string p1 = "foo\\bar\\baz";
-        string p2 = "foo\\boo\\../bar\\..\\../foo\\/\\bar\\baz/";
-        assert (toCanonical(p2) == toAbsolute(p1));
-    }
-}
-
-
-
-
-/** Returns a forward range that iterates over the elements of a path.
-
-    Examples:
-    ---
-    assert (equal(pathSplitter("/"), ["/"]));
-    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
-    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
-    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
-
-    version (Windows)
-    {
-        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
-        assert (equal(pathSplitter("c:"), ["c:"]));
-        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
-        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
-    }
-    ---
-*/
-auto pathSplitter(C)(const(C)[] path)
-{
-    struct PathSplitter
-    {
-        @property empty() { return _empty; }
-
-        @property front()
-        {
-            assert (!empty, "PathSplitter: called front() on empty range");
-            return _front;
-        }
-
-        void popFront()
-        {
-            assert (!empty, "PathSplitter: called popFront() on empty range");
-            if (_path.length == 0)
-            {
-                _empty = true;
-            }
-            else
-            {
-                int i = 0;
-                while (i < _path.length && !isDirSeparator(_path[i])) ++i;
-                _front = _path[0 .. i];
-                while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                _path = _path[i .. $];
-            }
-        }
-
-        auto save() { return this; }
-
-
-    private:
-        typeof(path) _path;
-        typeof(path) _front;
-        bool _empty;
-
-        this(typeof(path) p)
-        {
-            if (p.length == 0)
-            {
-                _empty = true;
-                return;
-            }
-            _path = p;
-
-            // If path is rooted, first element is special
-            if (isDirSeparator(_path[0]))
-            {
-                if (_path.length > 2 && isDirSeparator(_path[1])
-                    && !isDirSeparator(_path[2]))
-                {
-                    // Network mount
-                    int i = 3;
-                    while (i < _path.length && !isDirSeparator(_path[i])) ++i;
-                    _front = _path[0 .. i];
-                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                    _path = _path[i .. $];
-                }
-                else
-                {
-                    _front = _path[0 .. 1];
-                    int i = 1;
-                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                    _path = _path[i .. $];
-                }
-            }
-            else
-            {
-                version (Posix)
-                {
-                    popFront();
-                }
-                else version (Windows)
-                {
-                    if (_path.length > 2 && isDriveSeparator(_path[1])
-                        && isDirSeparator(_path[2]))
-                    {
-                        _front = _path[0 .. 3];
-                        int i = 3;
-                        while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                        _path = _path[i .. $];
-                    }
-                    else popFront();
-                }
-                else static assert (false);
-            }
-        }
-    }
-
-    return PathSplitter(path);
-}
-
-
-unittest
-{
-    assert (pathSplitter("").empty);
-
-    // Root directories
-    assert (equal(pathSplitter("/"), ["/"]));
-    assert (equal(pathSplitter("///"), ["/"]));
-    assert (equal(pathSplitter("//foo"), ["//foo"]));
-
-    // Absolute paths
-    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
-    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
-
-    // General
-    assert (equal(pathSplitter("foo/bar"), ["foo", "bar"]));
-    assert (equal(pathSplitter("foo//bar"), ["foo", "bar"]));
-    assert (equal(pathSplitter("foo/bar//"), ["foo", "bar"]));
-    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
-
-    // save()
-    auto ps1 = pathSplitter("foo/bar/baz");
-    auto ps2 = ps1.save();
-    ps1.popFront;
-    assert (equal(ps1, ["bar", "baz"]));
-    assert (equal(ps2, ["foo", "bar", "baz"]));
-
-    // Windows-specific
-    version (Windows)
-    {
-        assert (equal(pathSplitter(r"\"), [r"\"]));
-        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
-        assert (equal(pathSplitter("c:"), ["c:"]));
-        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
-        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+        assert (absolutePath(r"c:\foo\bar") == r"c:\foo\bar");
+        assert (absolutePath(r"c:\foo\..\.\\bar\\") == r"c:\foo\..\.\\bar\\");
     }
 }
 
@@ -1895,7 +1768,7 @@ alias driveName getDrive;
 alias defaultExtension defaultExt;
 alias setExtension addExt;
 alias isAbsolute isabs;
-alias toAbsolute rel2abs;
+alias absolutePath rel2abs;
 alias joinPath join;
 alias pathCharMatch fncharmatch;
 alias glob fnmatch;
