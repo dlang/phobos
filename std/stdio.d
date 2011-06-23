@@ -660,6 +660,10 @@ arguments in text format to the file. */
             {
                 toTextRange(arg, w);
             }
+            else static if (is(Unqual!A == bool))
+            {
+                put(w, arg ? "true" : "false");
+            }
             else static if (is(A : char))
             {
                 put(w, arg);

@@ -13,10 +13,10 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception,
-    std.range, std.string, std.traits, std.typecons, std.uni, std.utf;
+import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
+       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 import std.c.string : memcpy;
-version(unittest) import core.exception, std.stdio, std.typetuple;
+version(unittest) import core.exception, std.stdio;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -142,6 +142,123 @@ unittest
     assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
     assert(array("ABC") == "ABC"d);
     assert(array("ABC".dup) == "ABC"d.dup);
+}
+
+private template blockAttribute(T)
+{
+    static if (hasIndirections!(T))
+    {
+        enum blockAttribute = 0;
+    }
+    else
+    {
+        enum blockAttribute = GC.BlkAttr.NO_SCAN;
+    }
+}
+
+// Returns the number of dimensions in an array T.
+private template nDimensions(T)
+{
+    static if(isArray!T)
+    {
+        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
+    }
+    else
+    {
+        enum nDimensions = 0;
+    }
+}
+
+unittest {
+    static assert(nDimensions!(uint[]) == 1);
+    static assert(nDimensions!(float[][]) == 2);
+}
+
+/**
+Returns a new array of type $(D T) allocated on the garbage collected heap
+without initializing its elements.  This can be a useful optimization if every
+element will be immediately initialized.  $(D T) may be a multidimensional
+array.  In this case sizes may be specified for any number of dimensions from 1
+to the number in $(D T).
+
+Examples:
+---
+double[] arr = uninitializedArray!(double[])(100);
+assert(arr.length == 100);
+
+double[][] matrix = uninitializedArray!(double[][])(42, 31);
+assert(matrix.length == 42);
+assert(matrix[0].length == 31);
+---
+*/
+auto uninitializedArray(T, I...)(I sizes)
+if(allSatisfy!(isIntegral, I))
+{
+    return arrayAllocImpl!(false, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = uninitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = uninitializedArray!(double[][])(42, 31);
+    assert(matrix.length == 42);
+    assert(matrix[0].length == 31);
+}
+
+/**
+Returns a new array of type $(D T) allocated on the garbage collected heap.
+Initialization is guaranteed only for pointers, references and slices,
+for preservation of memory safety.
+*/
+auto minimallyInitializedArray(T, I...)(I sizes) @trusted
+if(allSatisfy!(isIntegral, I))
+{
+    return arrayAllocImpl!(true, T, I)(sizes);
+}
+
+unittest
+{
+    double[] arr = minimallyInitializedArray!(double[])(100);
+    assert(arr.length == 100);
+
+    double[][] matrix = minimallyInitializedArray!(double[][])(42);
+    assert(matrix.length == 42);
+    foreach(elem; matrix)
+    {
+        assert(elem.ptr is null);
+    }
+}
+
+private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
+if(allSatisfy!(isIntegral, I))
+{
+    static assert(sizes.length >= 1,
+        "Cannot allocate an array without the size of at least the first " ~
+        " dimension.");
+    static assert(sizes.length <= nDimensions!T,
+        to!string(sizes.length) ~ " dimensions specified for a " ~
+        to!string(nDimensions!T) ~ " dimensional array.");
+
+    alias typeof(T.init[0]) E;
+
+    auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
+    auto ret = ptr[0..sizes[0]];
+
+    static if(sizes.length > 1)
+    {
+        foreach(ref elem; ret)
+        {
+            elem = uninitializedArray!(E)(sizes[1..$]);
+        }
+    }
+    else static if(minimallyInitialized && hasIndirections!E)
+    {
+        ret[] = E.init;
+    }
+
+    return ret;
 }
 
 /**
@@ -552,17 +669,107 @@ unittest
 +/
 
 /++
-    Inserts $(D stuff) (which must be an input range or a single item) in
-    $(D array) at position $(D pos).
+    Inserts $(D stuff) (which must be an input range or any number of
+    implicitly convertible items) in $(D array) at position $(D pos).
 
 Example:
 ---
 int[] a = [ 1, 2, 3, 4 ];
 a.insertInPlace(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+a.insertInPlace(3, 10u, 11);
+assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
  +/
 void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
+    if(isInputRange!Range &&
+       (is(ElementType!Range : T) ||
+        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+{
+    insertInPlaceImpl(array, pos, stuff);
+}
+
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(isSomeString!(T[]) && allSatisfy!(isCharOrString, U))
+{
+    dchar[staticConvertible!(dchar, U)] stackSpace = void;
+    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+    insertInPlaceImpl(array, pos, range);
+}
+
+/++ Ditto +/
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if(!isSomeString!(T[]) && allSatisfy!(isInputRangeOrConvertible!T, U))
+{
+    T[staticConvertible!(T, U)] stackSpace = void;
+    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+    insertInPlaceImpl(array, pos, range);
+}
+
+// returns number of consecutive elements at front of U that are convertible to E
+private template staticFrontConvertible(E, U...)
+{
+    static if(U.length == 0)
+        enum staticFrontConvertible = 0;
+    else static if(isImplicitlyConvertible!(U[0],E))
+        enum staticFrontConvertible = 1 + staticFrontConvertible!(E, U[1..$]);
+    else
+        enum staticFrontConvertible = 0;
+}
+
+// returns total number of elements in U that are convertible to E
+private template staticConvertible(E, U...)
+{
+    static if (U.length == 0)
+        enum staticConvertible = 0;
+    else static if(isImplicitlyConvertible!(U[0], E))
+        enum staticConvertible = 1 + staticConvertible!(E, U[1..$]);
+    else
+        enum staticConvertible = staticConvertible!(E, U[1..$]);
+}
+
+private template isCharOrString(T)
+{
+    enum isCharOrString = isSomeString!T || isSomeChar!T;
+}
+
+private template isInputRangeOrConvertible(E)
+{
+    template isInputRangeOrConvertible(R)
+    {
+        enum isInputRangeOrConvertible =
+            (isInputRange!R && is(ElementType!R : E))  || is(R : E);
+    }
+}
+
+//packs individual convertible elements into provided slack array,
+//and chains them with the rest into a tuple
+private auto makeRangeTuple(E, U...)(E[] place, U stuff)
+    if(U.length > 0 && is(U[0] : E) )
+{
+    enum toPack = staticFrontConvertible!(E, U);
+    foreach(i, v; stuff[0..toPack])
+        emplace!E(&place[i], v);
+    assert(place.length >= toPack);
+    static if(U.length != staticFrontConvertible!(E,U))
+        return tuple(place[0..toPack],
+                makeRangeTuple(place[toPack..$], stuff[toPack..$]).expand);
+    else
+        return tuple(place[0..toPack]);
+}
+//ditto
+private auto makeRangeTuple(E, U...)(E[] place, U stuff)
+    if(U.length > 0 && isInputRange!(U[0]) && is(ElementType!(U[0]) : E))
+{
+    static if(U.length == 1)
+        return tuple(stuff[0]);
+    else
+        return tuple(stuff[0],makeRangeTuple(place, stuff[1..$]).expand);
+}
+
+
+private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
@@ -602,20 +809,15 @@ void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
     }
 }
 
-/++ Ditto +/
-void insertInPlace(T)(ref T[] array, size_t pos, T stuff)
-{
-    insertInPlace(array, pos, (&stuff)[0 .. 1]);
-}
 
 //Verify Example.
 unittest
 {
-    int[] a = ([1, 4, 5]).dup;
-    insertInPlace(a, 1u, [2, 3]);
-    assert(a == [1, 2, 3, 4, 5]);
-    insertInPlace(a, 1u, 99);
-    assert(a == [1, 99, 2, 3, 4, 5]);
+    int[] a = [ 1, 2, 3, 4 ];
+    a.insertInPlace(2, [ 1, 2 ]);
+    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+    a.insertInPlace(3, 10u, 11);
+    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 }
 
 unittest
@@ -675,6 +877,34 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
+
+    // variadic version
+    bool testVar(T, U...)(T orig, size_t pos, U args)
+    {
+        static if(is(T == typeof(T.dup)))
+            auto a = orig.dup;
+        else
+            auto a = orig.idup;
+        auto result = args[$-1];
+
+        a.insertInPlace(pos, args[0..$-1]);
+        if(!std.algorithm.equal(a, result))
+            return false;
+        return true;
+    }
+    assert(testVar([1, 2, 3, 4], 0, 6, 7u, [6, 7, 1, 2, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 2, 8, 9L, [1, 2, 8, 9, 3, 4]));
+    assert(testVar([1L, 2, 3, 4], 4, 10L, 11, [1, 2, 3, 4, 10, 11]));
+    assert(testVar([1L, 2, 3, 4], 4, [10, 11], 40L, 42L,
+                    [1, 2, 3, 4, 10, 11, 40, 42]));
+    assert(testVar([1L, 2, 3, 4], 4, 10, 11, [40L, 42],
+                    [1, 2, 3, 4, 10, 11, 40, 42]));
+    assert(testVar("t".idup, 1, 'e', 's', 't', "test"));
+    assert(testVar("!!"w.idup, 1, "\u00e9ll\u00f4", 'x', "TTT"w, 'y',
+                    "!\u00e9ll\u00f4xTTTy!"));
+    assert(testVar("flipflop"d.idup, 4, '_',
+                    "xyz"w, '\U00010143', '_', "abc"d, "__",
+                    "flip_xyz\U00010143_abc__flop"));
 }
 
 /++
@@ -742,7 +972,7 @@ if (isInputRange!S && !isDynamicArray!S)
 
 unittest
 {
-    debug(string) printf("array.replicate.unittest\n");
+    debug(std_array) printf("array.replicate.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
@@ -795,7 +1025,7 @@ unittest
 {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
-        debug(string) printf("string.split1\n");
+        debug(std_array) printf("array.split1\n");
         S s = " \t\npeter paul\tjerry \n";
         assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
@@ -1001,7 +1231,7 @@ if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
 
 unittest
 {
-    debug(string) printf("array.replace.unittest\n");
+    debug(std_array) printf("array.replace.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -1299,7 +1529,7 @@ if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
 
 unittest
 {
-    debug(string) printf("array.replaceFirst.unittest\n");
+    debug(std_array) printf("array.replaceFirst.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -1593,7 +1823,11 @@ Appends an entire range to the managed array.
     static if(!is(T == immutable) && !is(T == const))
     {
 /**
-Clears the managed array.
+Clears the managed array.  This allows the elements of the array to be reused
+for appending.
+
+Note that clear is disabled for immutable or const element types, due to the
+possibility that $(D Appender) might overwrite immutable data.
 */
         void clear()
         {

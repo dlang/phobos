@@ -22,8 +22,8 @@ import core.memory;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
-       std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
-       std.typetuple, std.utf;
+       std.range, std.stdio, std.string, std.traits,
+       std.typecons, std.typetuple, std.utf;
 
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
@@ -2047,39 +2047,6 @@ else version(Windows)
     {
     public:
 
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATA* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATAW* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
-
         @property string name() const
         {
             return _name;
@@ -2151,7 +2118,6 @@ else version(Windows)
         {
             return _attributes;
         }
-
 
     private:
 
@@ -2229,6 +2195,7 @@ else version(Windows)
 
         string _name; /// The file or directory represented by this DirEntry.
 
+
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
         SysTime _timeLastModified; /// The time when the file was last modified.
@@ -2242,28 +2209,6 @@ else version(Posix)
     struct DirEntry
     {
     public:
-
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, core.sys.posix.dirent.dirent* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "Warning: As of Phobos 2.052, std.file.DirEntry.init " ~
-                        "has been scheduled for deprecation in August 2011. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
 
         @property string name() const
         {
@@ -2558,10 +2503,7 @@ unittest
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
-{
-    _listDir(pathname, callback);
-}
+alias listDir listdir;
 
 
 /***************************************************
@@ -2789,7 +2731,6 @@ void rmdirRecurse(ref DirEntry de)
 version(Windows) unittest
 {
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
-
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
     enforce(!exists(deleteme ~ ".dir"));
@@ -2882,104 +2823,301 @@ enum SpanMode
     breadth,
 }
 
-struct DirIterator
+private struct DirIteratorImpl
 {
-    string pathname;
-    SpanMode mode;
-
+    SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
-    bool followSymLinks;
-
-    private int doIt(D)(D dg, DirEntry* de)
+    bool _followSymLinks;
+    DirEntry _cur;
+    Appender!(DirHandle[]) _stack;
+    Appender!(DirEntry[]) _stashed; //used in depth first mode
+    //stack helpers
+    void pushExtra(DirEntry de){ _stashed.put(de); }
+    //ditto
+    bool hasExtra(){ return !_stashed.data.empty; }
+    //ditto
+    DirEntry popExtra()
     {
-        alias ParameterTypeTuple!D Parms;
+        DirEntry de;
+        de = _stashed.data[$-1];
+        _stashed.shrinkTo(_stashed.data.length - 1);
+        return de;
 
-        static if(is(Parms[0] : const(char)[]))
+    }
+    version(Windows)
+    {
+        struct DirHandle
         {
-            return dg(de.name[]);
+            string dirpath;
+            HANDLE h;
         }
-        else static if(is(Parms[0] : DirEntry))
+        
+        bool stepIn(string directory)
         {
-            return dg(*de);
+            string search_pattern = std.path.join(directory, "*.*");
+            if(useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
+                if(_stack.data.empty)
+                    _stack.put(DirHandle(directory, h));
+                else
+                    _stack.put(
+                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+
+                return toNext(false, &findinfo);
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
+                if(_stack.data.empty)
+                    _stack.put(DirHandle(directory, h));
+                else
+                    _stack.put(
+                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+
+                return toNext(false, &findinfo);
+            }
         }
-        else
+        
+        bool next()
         {
-            static assert(0, "Dunno how to enumerate directory entries "
-                             "against type " ~ Parms[0].stringof);
+            if(_stack.data.empty)
+                return false;
+            bool result;
+            if (useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                result = toNext(true, &findinfo);
+
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                result = toNext(true, &findinfo);
+            }
+            return result;
+        }
+        
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
+        {
+            if(fetch)
+            {
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
+        {
+            if(fetch)
+            {
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.c.string.strcmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.c.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        void popDirStack()
+        {
+            assert(!_stack.data.empty);
+            FindClose(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
+        void releaseDirStack()
+        {
+            foreach( d;  _stack.data)
+                FindClose(d.h);
+        }
+
+    }
+    else version(Posix)
+    {
+        struct DirHandle
+        {
+            string dirpath;
+            DIR*   h;
+        }
+
+        bool stepIn(string directory)
+        {
+            auto h = cenforce(opendir(toStringz(directory)), directory);
+            if(_stack.data.empty)
+                _stack.put(DirHandle(directory, h));
+            else
+                _stack.put(
+                    DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+            return next();
+        }
+
+        bool next()
+        {
+            if(_stack.data.empty)
+                return false;
+            for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+            {
+                // Skip "." and ".."
+                if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
+                   std.c.string.strcmp(fdata.d_name.ptr, "..") )
+                {
+                    _cur._init(_stack.data[$-1].dirpath, fdata);
+                    return true;
+                }
+            }
+            popDirStack();
+            return false;
+        }
+
+        void popDirStack()
+        {
+            assert(!_stack.data.empty);
+            closedir(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
+        void releaseDirStack()
+        {
+
+            foreach( d;  _stack.data)
+                closedir(d.h);
         }
     }
 
-    int opApply(D)(scope D dg)
+    this(string pathname, SpanMode mode, bool _followSymLinks)
     {
-        int result = 0;
-        // worklist used only in breadth-first traversal
-        string[] worklist = [pathname];
-
-        bool callback(DirEntry* de)
+        _mode = mode;
+        _followSymLinks = _followSymLinks;
+        _stack = appender(cast(DirHandle[])[]);
+        if(_mode == SpanMode.depth)
+            _stashed = appender(cast(DirEntry[])[]);
+        if(stepIn(std.path.rel2abs(pathname)))
         {
-            switch(mode)
+            if(_mode == SpanMode.depth)
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+                {
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
+                    {
+                        pushExtra(thisDir);
+                    }
+                    else
+                        break;
+                }
+        }
+    }
+    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
+    @property DirEntry front(){ return _cur; }
+    void popFront()
+    {
+        switch(_mode)
+        {
+        case SpanMode.depth:
+            if(next())
             {
-                case SpanMode.shallow:
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
                 {
-                    result = doIt(dg, de);
-                    break;
-                }
-                case SpanMode.breadth:
-                {
-                    result = doIt(dg, de);
-
-                    if(!result && (followSymLinks ? de.isDir
-                                                  : isDir(de.linkAttributes)))
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
                     {
-                        worklist ~= de.name;
+                        pushExtra(thisDir);
                     }
-
-                    break;
-                }
-                default:
-                {
-                    assert(mode == SpanMode.depth);
-
-                    if(followSymLinks ? de.isDir
-                                      : isDir(de.linkAttributes))
-                    {
-                        _listDir(de.name, &callback);
-                    }
-
-                    if(!result)
-                        result = doIt(dg, de);
-
-                    break;
+                    else
+                        break;
                 }
             }
-
-            return result == 0;
+            else if(hasExtra())
+                _cur = popExtra();
+            break;
+        case SpanMode.breadth:
+            if(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+            {
+                if(!stepIn(_cur.name))
+                    while(!empty && !next()){}
+            }
+            else
+                while(!empty && !next()){}
+            break;
+        default:
+            next();
         }
+    }
 
-        while(!worklist.empty)
-        {
-            auto listThis = worklist.back;
-            worklist.popBack();
-            _listDir(listThis, &callback);
-        }
-
-        return result;
+    ~this()
+    {
+        releaseDirStack();
     }
 }
 
-
+struct DirIterator
+{
+private:
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    this(string pathname, SpanMode mode, bool followSymLinks)
+    {
+        impl = typeof(impl)(pathname, mode, followSymLinks);
+    }
+public:
+    @property bool empty(){ return impl.empty; }
+    @property DirEntry front(){ return impl.front; }
+    void popFront(){ impl.popFront(); }
+    int opApply(int delegate(ref string name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+        {
+            string s = v.name;
+            if(dg(s))
+                return 1;
+        }
+        return 0;
+    }
+    int opApply(int delegate(ref DirEntry name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+            if(dg(v))
+                return 1;
+        return 0;
+    }
+}
 /++
-    Iterates a directory using foreach. The iteration variable can be
-    of type $(D_PARAM string) if only the name is needed, or $(D_PARAM
-    DirEntry) if additional details are needed. The span mode dictates
-    the how the directory is traversed. The name of the directory entry
-    includes the $(D_PARAM path) prefix.
+    Returns an input range of DirEntry that lazily iterates a given directory,
+    also provides two ways of foreach iteration. The iteration variable can be of
+    type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
+    if additional details are needed. The span mode dictates the how the
+    directory is traversed. The name of the each directory entry iterated
+    contains the absolute path.
 
     Params:
-        path = The directory to iterato over.
+        path = The directory to iterate over.
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -3004,17 +3142,23 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
---------------------
- +/
-DirIterator dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+// Iterate over all *.d files in current directory and all it's subdirectories
+auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+foreach(d; dFiles)
+    writeln(d.name);
+// Hook it up with std.parallelism to compile them all in parallel:
+foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
-    DirIterator result;
-
-    result.pathname = path;
-    result.mode = mode;
-    result.followSymLinks = followSymLinks;
-
-    return result;
+    string cmd = "dmd -c "  ~ d.name;
+    writeln(cmd);
+    std.process.system(cmd);
+}
+--------------------
+//
+ +/
+auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+{
+    return DirIterator(path, mode, followSymLinks);
 }
 
 unittest
@@ -3325,8 +3469,11 @@ void main(string[] args)
 --------------------
  +/
 
-string[] listDir(in char[] pathname)
+string[] listDir(C)(in C[] pathname)
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+            "scheduled for deprecation in August 2011. Please use " ~
+            "dirEntries instead.");
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3340,11 +3487,6 @@ string[] listDir(in char[] pathname)
     return result.data;
 }
 
-/++
-    $(RED Scheduled for deprecation in August 2011. Please use $(D listDir) instead.)
- +/
-alias listDir listdir;
-
 unittest
 {
     assert(listDir(".").length > 0);
@@ -3352,6 +3494,8 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+       Please use $(D dirEntries) instead.)
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
 
@@ -3397,21 +3541,36 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = true)
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
+    if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    auto result = appender!(string[])();
-
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "dirEntries instead.");
+    import std.regexp;    
+    auto result = appender!(string[])();           
     bool callback(DirEntry* de)
     {
         if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else if(std.path.fnmatch(de.name, pattern))
+        else 
         {
-            result.put(de.name);
-        }
+            static if(is(U : const(C[])))
+            {//pattern version
+                if(std.path.fnmatch(de.name, filter))
+                    result.put(de.name);
+            }
+            else static if(is(U : RegExp))
+            {//RegExp version
 
+                if(filter.test(de.name))
+                    result.put(de.name);
+            }
+            else
+                static assert(0,"There is no version of listDir that takes " ~ U.stringof);
+        }
         return true; // continue
     }
 
@@ -3419,31 +3578,6 @@ string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = tr
 
     return result.data;
 }
-
-/++ Ditto +/
-string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
-{
-    auto result = appender!(string[])();
-
-    bool callback(DirEntry* de)
-    {
-        if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
-        {
-            _listDir(de.name, &callback);
-        }
-        else if(r.test(de.name))
-        {
-            result.put(de.name);
-        }
-
-        return true; // continue
-    }
-
-    _listDir(pathname, &callback);
-
-    return result.data;
-}
-
 
 /******************************************************
  * $(RED Scheduled for deprecation in August 2011.
@@ -3482,8 +3616,12 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(string filename) callback)
+void listDir(C, U)(in C[] pathname, U callback)
+    if(is(C : char) && is(U: bool delegate(string filename)))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "dirEntries instead.");
     _listDir(pathname, callback);
 }
 
