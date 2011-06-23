@@ -1766,6 +1766,108 @@ void rmdir(in char[] pathname)
     }
 }
 
+/++
+    $(BLUE This function is Posix-Only.)
+
+    Creates a symlink.
+
+    Params:
+        original = The file to link from.
+        link     = The symlink to create.
+
+    Throws:
+        $(D FileException) on error (which includes if the symlink already
+        exists).
+  +/
+version(StdDdoc) void symlink(in char[] original, in char[] link);
+else version(Posix) void symlink(in char[] original, in char[] link)
+{
+    cenforce(core.sys.posix.unistd.symlink(toStringz(original), toStringz(link)) == 0,
+             link);
+}
+
+version(Posix) unittest
+{
+    if("/usr/include".exists)
+    {
+        immutable symfile = deleteme ~ "_slink\0";
+        scope(exit) if(symfile.exists) symfile.remove();
+
+        symlink("/usr/include", symfile);
+
+        assert(symfile.exists);
+        assert(symfile.isSymlink);
+        assert(!isSymlink(getAttributes(symfile)));
+        assert(isSymlink(getLinkAttributes(symfile)));
+
+        assert(isDir(getAttributes(symfile)));
+        assert(!isDir(getLinkAttributes(symfile)));
+
+        assert(!isFile(getAttributes(symfile)));
+        assert(!isFile(getLinkAttributes(symfile)));
+    }
+
+    if("/usr/include/assert.h".exists)
+    {
+        assert(!"/usr/include/assert.h".isSymlink);
+
+        immutable symfile = deleteme ~ "_slink\0";
+        scope(exit) if(symfile.exists) symfile.remove();
+
+        symlink("/usr/include/assert.h", symfile);
+
+        assert(symfile.exists);
+        assert(symfile.isSymlink);
+        assert(!isSymlink(getAttributes(symfile)));
+        assert(isSymlink(getLinkAttributes(symfile)));
+
+        assert(!isDir(getAttributes(symfile)));
+        assert(!isDir(getLinkAttributes(symfile)));
+
+        assert(isFile(getAttributes(symfile)));
+        assert(!isFile(getLinkAttributes(symfile)));
+    }
+}
+
+
+/++
+    $(BLUE This function is Posix-Only.)
+
+    Returns the path to the file pointed to by a symlink. Note that the
+    path could be either relative or absolute depending on the symlink.
+    If the path is relative, it's relative to the symlink, not the current
+    working directory.
+
+    Throws:
+        $(D FileException) on error.
+  +/
+version(StdDdoc) string readLink(in char[] link);
+else version(Posix) string readLink(in char[] link)
+{
+    char[2048] buffer;
+    auto size = cenforce(core.sys.posix.unistd.readlink(toStringz(link), buffer, buffer.length),
+                         link);
+
+    return to!string(buffer[0 .. (size >= buffer.length ? $ - 1 : size)]);
+}
+
+version(Posix) unittest
+{
+    foreach(file; ["/usr/include", "/usr/include/assert.h"])
+    {
+        if(file.exists)
+        {
+            immutable symfile = deleteme ~ "_slink\0";
+            scope(exit) if(symfile.exists) symfile.remove();
+            scope(failure) std.stdio.stderr.writefln("Failed file: %s", file);
+
+            symlink(file, symfile);
+
+            assert(readLink(symfile) == file);
+        }
+    }
+}
+
 /****************************************************
  * Get current directory.
  * Throws: $(D FileException) on error.
