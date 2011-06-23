@@ -29,7 +29,7 @@ enum dchar paraSep = '\u2029'; /// UTF paragraph separator
   +/
 bool isUniWhite(dchar c) @safe pure nothrow
 {
-    return std.ascii.isAsciiWhite(c) ||
+    return std.ascii.isWhite(c) ||
            c == lineSep || c == paraSep ||
            c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
            (c >= '\u2000' && c <= '\u200A') ||

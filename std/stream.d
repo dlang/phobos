@@ -753,7 +753,7 @@ class Stream : InputStream, OutputStream {
         case 'i':
         case 'I':
           {
-            while (isAsciiWhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -858,7 +858,7 @@ class Stream : InputStream, OutputStream {
         case 'g':
         case 'G':
           {
-            while (isAsciiWhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -941,7 +941,7 @@ class Stream : InputStream, OutputStream {
           } break;
 
         case 's': {     // string
-          while (isAsciiWhite(c)) {
+          while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -952,7 +952,7 @@ class Stream : InputStream, OutputStream {
             p = va_arg!(char[]*)(args);
             s = *p;
           }
-          while (!isAsciiWhite(c) && c != char.init) {
+          while (!isWhite(c) && c != char.init) {
             if (strlen < s.length) {
               s[strlen] = c;
             } else {
@@ -985,7 +985,7 @@ class Stream : InputStream, OutputStream {
           if (width < 0)
             width = 1;
           else
-            while (isAsciiWhite(c)) {
+            while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -1008,8 +1008,8 @@ class Stream : InputStream, OutputStream {
         default:        // read character as is
           goto nws;
         }
-      } else if (isAsciiWhite(fmt[i])) {     // skip whitespace
-        while (isAsciiWhite(c))
+      } else if (isWhite(fmt[i])) {     // skip whitespace
+        while (isWhite(c))
           c = getc();
         i++;
       } else {  // read character as is

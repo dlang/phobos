@@ -76,7 +76,7 @@ pure int ispunct(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_PNC)      : 0; }
 
 /**
  * $(RED Scheduled for deprecation in December 2011. Please use
- * $(D std.ascii.isAsciiWhite) instead.)
+ * $(D std.ascii.isWhite) instead.)
  *
  * Returns !=0 if c is a space, tab, vertical tab, form feed,
  * carriage return, or linefeed.

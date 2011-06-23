@@ -185,7 +185,7 @@ alias std.ascii.newline newline;
 
 /**********************************
  * $(RED Scheduled for deprecation in December 2011.
- *       Please use $(XREF ascii, isAsciiWhite) or $(XREF uni, isUniWhite) instead.)
+ *       Please use $(XREF ascii, isWhite) or $(XREF uni, isUniWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
@@ -194,7 +194,7 @@ else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
     pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
-                            "std.ascii.isAsciiWhite or std.uni.isUniWhite"));
+                            "std.ascii.isWhite or std.uni.isUniWhite"));
 
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1

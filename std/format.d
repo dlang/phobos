@@ -828,8 +828,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && std.ascii.isAsciiWhite(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!(std.ascii.isAsciiWhite))(r);
+                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
                 }
                 else
                 {

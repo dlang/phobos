@@ -280,7 +280,7 @@ Negates predicate $(D pred).
 Example:
 ----
 string a = "   Hello, world!";
-assert(find!(not!isAsciiWhite)(a) == "Hello, world!");
+assert(find!(not!isWhite)(a) == "Hello, world!");
 ----
  */
 template not(alias pred)

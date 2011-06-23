@@ -174,7 +174,7 @@ unittest
     Whether or not $(D c) is a whitespace character. That includes the space,
     tab, vertical tab, form feed, carriage return, and linefeed characters.
   +/
-bool isAsciiWhite(dchar c) @safe pure nothrow
+bool isWhite(dchar c) @safe pure nothrow
 {
     return c <= 0x7F ? cast(bool)(_ctype[c] & _SPC) : false;
 }
@@ -182,10 +182,10 @@ bool isAsciiWhite(dchar c) @safe pure nothrow
 unittest
 {
     foreach(c; whitespace)
-        assert(isAsciiWhite(c));
+        assert(isWhite(c));
 
     foreach(c; chain(digits, letters))
-        assert(!isAsciiWhite(c));
+        assert(!isWhite(c));
 }
 
 
