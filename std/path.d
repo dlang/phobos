@@ -2,18 +2,19 @@
 
 /** Proposal for a new $(D std._path).
 
-    This module is used to parse file names. All the operations work
-    only on strings; they don't perform any input/output operations.
-    ($(D expandTilde()) is an exception to this rule.)
-    This means that if a path contains a directory name with a dot,
-    functions like $(D extension()) will work with it just as if it was a file.
-    To differentiate these cases, use the $(D std.file) module first (i.e.
-    $(D  std.file.isDir())).
+    This module is used to parse path strings. All functions, with the
+    exception of $(D absolutePath()) and $(D expandTilde()), are pure
+    string manipulation functions; they don't depend on any state outside
+    the program, nor do they perform any I/O.
+    This has the consequence that the module does not make any distinction
+    between a path that points to a directory and a path that points to a
+    file.  To differentiate between these cases, use $(D  std.file.isDir()).
 
     Note that on Windows, both the backslash (\) and the slash (/) are
     in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
-    added, a backslash will be used.
+    added, a backslash will be used.  Furthermore, the $(D normalize())
+    function will replace all slashes with backslashes on this platform.
 
     Authors:
         Lars Tandle Kyllingstad,
