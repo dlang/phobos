@@ -49,6 +49,8 @@ version(Posix)
     import core.sys.posix.stdlib;
 }
 
+version (Windows) private alias Signed!size_t ssize_t;
+
 
 
 
@@ -79,7 +81,7 @@ enum string parentDirSymbol = "..";     /// ditto
 
     On Windows, this includes both '\' and '/'.  On POSIX, it's just '/'.
 */
-bool isDirSeparator(dchar c)
+bool isDirSeparator(dchar c)  @safe pure nothrow
 {
     if (c == '/') return true;
     version(Windows) if (c == '\\') return true;
@@ -93,7 +95,7 @@ bool isDirSeparator(dchar c)
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(dchar c)
+private bool isDriveSeparator(dchar c)  @safe pure nothrow
 {
     version(Windows) return c == ':';
     else return false;
@@ -101,7 +103,7 @@ private bool isDriveSeparator(dchar c)
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)
+version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow
 {
     return isDirSeparator(c) || isDriveSeparator(c);
 }
@@ -112,9 +114,10 @@ version(Posix) private alias isDirSeparator isSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private int lastSeparator(C)(in C[] path)  if (isSomeChar!C)
+private ssize_t lastSeparator(C)(in C[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
-    int i = to!int(path.length) - 1;
+    auto i = (cast(ssize_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
     return i;
 }
@@ -123,9 +126,10 @@ private int lastSeparator(C)(in C[] path)  if (isSomeChar!C)
 /*  Helper function that strips trailing slashes and backslashes
     from a path.
 */
-private C[] chompDirSeparators(C)(C[] path)  if (isSomeChar!C)
+private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
-    int i = to!int(path.length) - 1;
+    auto i = (cast(ssize_t) path.length) - 1;
     while (i >= 0 && isDirSeparator(path[i])) --i;
     return path[0 .. i+1];
 }
@@ -163,7 +167,7 @@ private C[] chompDirSeparators(C)(C[] path)  if (isSomeChar!C)
 // This function is written so it adheres to the POSIX requirements
 // for the 'basename' shell utility:
 // http://pubs.opengroup.org/onlinepubs/9699919799/utilities/basename.html
-C[] baseName(C)(C[] path) if (isSomeChar!C)
+C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
     if (p1.length == 0) return null;
@@ -175,7 +179,8 @@ C[] baseName(C)(C[] path) if (isSomeChar!C)
 }
 
 /// ditto
-C[] baseName(C, C1)(C[] path, C1[] suffix)  if (isSomeChar!C && isSomeChar!C1)
+C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
+    if (isSomeChar!C && isSomeChar!C1)
 {
     auto p1 = baseName(path);
     auto p2 = std.string.chomp(p1, suffix);
@@ -243,7 +248,8 @@ unittest
     }
     ---
 */
-C[] dirName(C)(C[] path)  if (isSomeChar!C)
+C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow
+    if (isSomeChar!C)
 {
     // This function is written so it adheres to the POSIX requirements
     // for the 'dirname' shell utility:
@@ -256,7 +262,7 @@ C[] dirName(C)(C[] path)  if (isSomeChar!C)
     if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
         return path[0 .. 3];
 
-    int i = lastSeparator(p);
+    auto i = lastSeparator(p);
     if (i == -1) return to!(typeof(return))(".");
     if (i == 0) return p[0 .. 1];
 
@@ -321,7 +327,8 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  if (isSomeChar!C)
+C[] driveName(C)(C[] path)  //TODO: @safe pure nothrow
+    if (isSomeChar!C)
 {
     version (Windows)
     {
@@ -357,7 +364,7 @@ unittest
     }
     ---
 */
-C[] stripDrive(C)(C[] path)  if (isSomeChar!C)
+C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     version(Windows)
         if (path.length >= 2 && isDriveSeparator(path[1])) return path[2 .. $];
@@ -377,9 +384,10 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private int extSeparatorPos(C)(in C[] path) if (isSomeChar!C)
+private ssize_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
-    int i = to!int(path.length) - 1;
+    auto i = (cast(ssize_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
     {
         if (path[i] == '.' && i > 0 && !isSeparator(path[i-1])) return i;
@@ -402,9 +410,9 @@ private int extSeparatorPos(C)(in C[] path) if (isSomeChar!C)
     assert (extension(".file.ext")      == "ext");
     ---
 */
-C[] extension(C)(C[] path)  if (isSomeChar!C)
+C[] extension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
-    int i = extSeparatorPos(path);
+    auto i = extSeparatorPos(path);
     if (i == -1) return null;
     else return path[i+1 .. $];
 }
@@ -455,9 +463,9 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-C[] stripExtension(C)(C[] path)  if (isSomeChar!C)
+C[] stripExtension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
-    int i = extSeparatorPos(path);
+    auto i = extSeparatorPos(path);
     if (i == -1) return path;
     else return path[0 .. i];
 }
@@ -510,6 +518,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
+    @safe pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     return cast(typeof(return))(stripExtension(path)~'.'~ext);
@@ -543,6 +552,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
+    @safe pure // (BUG 5700) nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
@@ -618,6 +628,7 @@ version (unittest)
     ---
 */
 immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
+    @safe // (BUG 5304) pure  (BUG 5700) nothrow
     if (Strings.length > 0 && compatibleStrings!(C[], Strings))
 {
     // More than two path components
@@ -688,10 +699,13 @@ unittest
     }
     ---
 */
-auto pathSplitter(C)(const(C)[] path)
+auto pathSplitter(C)(const(C)[] path)  //TODO: @safe pure nothrow
+    if (isSomeChar!C)
 {
     struct PathSplitter
     {
+    // TODO: @safe pure nothrow:
+    //DMD BUG 5798
         @property empty() { return _empty; }
 
         @property front()
@@ -851,7 +865,7 @@ unittest
     }
     ---
 */
-bool isRooted(C)(in C[] path)  if (isSomeChar!C)
+bool isRooted(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
@@ -915,9 +929,11 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path)  if (isSomeChar!C);
+version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow
+    if (isSomeChar!C);
 
-else version (Windows) bool isAbsolute(C)(in C[] path)  if (isSomeChar!C)
+else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
     return path.length >= 3 && (
         (isDriveSeparator(path[1]) && isDirSeparator(path[2])) ||
@@ -929,7 +945,7 @@ else version (Posix) alias isRooted isAbsolute;
 
 
 /// ditto
-bool isRelative(C)(in C[] path)  if (isSomeChar!C)
+bool isRelative(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     if (path.length == 0)  return false;
     return !isAbsolute(path);
@@ -991,7 +1007,7 @@ unittest
     }
     ---
 */
-string absolutePath(string path)
+string absolutePath(string path)  // TODO: @safe nothrow
 {
     if (path.length == 0)  return null;
     if (isAbsolute(path))  return path;
@@ -1037,7 +1053,8 @@ unittest
     }
     ---
 */
-immutable(Unqual!C)[] normalize(C)(in C[] path)  if (isSomeChar!C)
+immutable(Unqual!C)[] normalize(C)(in C[] path)  //TODO: @safe pure nothrow
+    if (isSomeChar!C)
 {
     version (Windows)    enum Unqual!C dirSep = '\\';
     else version (Posix) enum Unqual!C dirSep = '/';
@@ -1244,6 +1261,7 @@ unittest
     On POSIX, it is an alias for $(D std.algorithm.cmp), i.e. a
     case sensitive comparison.
  */
+// TODO: @safe pure nothrow
 version (StdDdoc) int fcmp(alias pred = "a < b", S1, S2)(S1 filename1, S2 filename2);
 else version (Windows) alias std.string.icmp fcmp;
 else version (Posix) alias std.algorithm.cmp fcmp;
@@ -1272,7 +1290,7 @@ else version (Posix) alias std.algorithm.cmp fcmp;
     }
     -----
  */
-bool pathCharMatch(dchar c1, dchar c2)
+bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
 {
     version (Windows)
     {
@@ -1353,7 +1371,7 @@ bool pathCharMatch(dchar c1, dchar c2)
     }
     -----
  */
-bool glob(const(char)[] path, const(char)[] pattern)
+bool glob(const(char)[] path, const(char)[] pattern)  //TODO: @safe pure nothrow
 in
 {
     // Verify that pattern[] is valid
