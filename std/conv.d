@@ -299,7 +299,9 @@ unittest
     assert(to!int(b) == 43);
 }
 
-// Conversion using S.opCast!T
+/**
+When source type supports member template function opCast, is is used.
+*/
 T toImpl(T, S)(S value)
     if (is(typeof(S.init.opCast!T()) : T) &&
         !isSomeString!T)
@@ -320,7 +322,11 @@ unittest
     assert(to!int(s) == 43);
 }
 
-// Conversion with construction feature for struct type
+/**
+When target type supports 'converting construction', it is used.
+$(UL $(LI If target type is struct, $(D T(src)) is used.)
+     $(LI If target type is class, $(D new T(src)) is used.))
+*/
 T toImpl(T, S)(S src)
     if (!isImplicitlyConvertible!(S, T) &&
         is(T == struct) && is(typeof(T(src))))
@@ -343,7 +349,7 @@ unittest
     Int3 i3 = to!Int3(1);
 }
 
-// Conversion with construction feature for class type
+/// ditto
 T toImpl(T, S)(S src)
     if (!isImplicitlyConvertible!(S, T) &&
         is(T : Object) && is(typeof(new T(src))))
@@ -437,17 +443,37 @@ unittest
 }
 
 /**
-String _to string conversion works for any two string types having
-($(D char), $(D wchar), $(D dchar)) character widths and any
-combination of qualifiers (mutable, $(D const), or $(D immutable)).
-
-Example:
-----
-char[] a = "abc";
-auto b = to!dstring(a);
-assert(b == "abc"w);
-----
- */
+Stringnize conversion from all types is supported.
+$(UL
+  $(LI String _to string conversion works for any two string types having
+       ($(D char), $(D wchar), $(D dchar)) character widths and any
+       combination of qualifiers (mutable, $(D const), or $(D immutable)).)
+  $(LI Converts array (other than strings) to string. The left bracket,
+       separator, and right bracket are configurable. Each element is
+       converted by calling $(D to!T).)
+  $(LI Associative array to string conversion. The left bracket, key-value
+       separator, element separator, and right bracket are configurable.
+       Each element is printed by calling $(D to!T).)
+  $(LI Object to string conversion calls $(D toString) against the object or
+       returns $(D nullstr) if the object is null.)
+  $(LI Struct to string conversion calls $(D toString) against the struct if
+       it is defined.)
+  $(LI For structs that do not define $(D toString), the conversion to string
+       produces the list of fields.)
+  $(LI Enumerated types are converted to strings as their symbolic names.)
+  $(LI A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").)
+  $(LI Boolean values are printed as $(D "true") or $(D "false").)
+  $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
+  $(LI Unsigned or signed integers to strings.
+       $(DL $(DT [special case])
+            $(DD Convert inttegral value to string in $(D_PARAM radix) radix.
+            radix must be a value from 2 to 36.
+            value is treated as a signed value only if radix is 10.
+            The characters A through Z are used to represent values 10 through 36.)))
+  $(LI All floating point types to all string types.)
+  $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
+       If pointer is $(D char*), treat it as C-style strings.))
+*/
 T toImpl(T, S)(S s)
     if (!isImplicitlyConvertible!(S, T) &&
         isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
@@ -536,11 +562,7 @@ unittest
     }
 }
 
-/**
-Converts array (other than strings) to string. The left bracket,
-separator, and right bracket are configurable. Each element is
-converted by calling $(D to!T).
- */
+/// ditto
 T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
@@ -587,9 +609,7 @@ unittest
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-/*
- Converting arrays of void
-*/
+// Converting arrays of void
 T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
@@ -616,11 +636,7 @@ unittest
     assert(c == "abcx");
 }
 
-/**
-   Associative array to string conversion. The left bracket, key-value
-   separator, element separator, and right bracket are configurable.
-   Each element is printed by calling $(D to!T).
-*/
+/// ditto
 T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
     if (isAssociativeArray!S &&
         isSomeString!T)
@@ -641,10 +657,7 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = 
     return cast(T) result.data;
 }
 
-/**
-   Object to string conversion calls $(D toString) against the object or
-   returns $(D nullstr) if the object is null.
-*/
+/// ditto
 T toImpl(T, S)(S s, in T nullstr = "null")
     if (is(S : Object) &&
         isSomeString!T)
@@ -663,10 +676,7 @@ unittest
     assert(to!string(a) == "an A");
 }
 
-/**
-   Struct to string conversion calls $(D toString) against the struct if
-   it is defined.
-*/
+/// ditto
 T toImpl(T, S)(S s)
     if (is(S == struct) && is(typeof(&S.init.toString)) &&
         isSomeString!T)
@@ -681,10 +691,7 @@ unittest
     assert(to!string(S()) == "wyda");
 }
 
-/**
-   For structs that do not define $(D toString), the conversion to string
-   produces the list of fields.
-*/
+/// ditto
 T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
@@ -720,9 +727,7 @@ unittest
     assert(to!string(s) == "S(42, 43.5)");
 }
 
-/**
-Enumerated types are converted to strings as their symbolic names.
- */
+/// ditto
 T toImpl(T, S)(S s)
     if (!isImplicitlyConvertible!(S, T) &&
         is(S == enum) &&
@@ -759,9 +764,7 @@ unittest
     assert(to!dstring(o) == "cast(E)5"d);
 }
 
-/**
-A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").
- */
+/// ditto
 T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
@@ -781,9 +784,7 @@ unittest
     assert(to!string(km) == "Km(42)");
 }
 
-/**
-Boolean values are printed as $(D "true") or $(D "false").
- */
+/// ditto
 T toImpl(T, S)(S b)
     if (is(Unqual!S == bool) &&
         isSomeString!T)
@@ -800,7 +801,7 @@ unittest
     assert(to!string(b) == "true");
 }
 
-/// $(D char), $(D wchar), $(D dchar) to a string type.
+/// ditto
 T toImpl(T, S)(S c)
     if (isSomeChar!(Unqual!S) &&
         isSomeString!T)
@@ -865,7 +866,7 @@ unittest
     assert(s2 == "foo");
 }
 
-/// Unsigned integers to strings.
+/// ditto
 T toImpl(T, S)(S input)
     if (isIntegral!S && isUnsigned!S &&
         isSomeString!T)
@@ -1003,7 +1004,7 @@ unittest
     assert(i == 0);
 }
 
-/// Signed integers to strings.
+/// ditto
 T toImpl(T, S)(S value)
     if (isIntegral!S && isSigned!S &&
         isSomeString!T)
@@ -1159,13 +1160,7 @@ unittest
     assert(i == 0);
 }
 
-/******************************************
- * Convert inttegral value to string in _radix radix.
- *
- * radix must be a value from 2 to 36.
- * value is treated as a signed value only if radix is 10.
- * The characters A through Z are used to represent values 10 through 36.
- */
+/// ditto
 T toImpl(T, S)(S value, uint radix)
     if (isIntegral!(Unqual!S) &&
         isSomeString!T)
@@ -1257,7 +1252,7 @@ unittest
     assert(r == "1234AF");
 }
 
-/// All floating point types to all string types.
+/// ditto
 T toImpl(T, S)(S value)
     if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
         isSomeString!T)
@@ -1332,9 +1327,7 @@ T toImpl(T, S)(S value)
     }
 }
 
-/**
-Pointer to string conversions prints the pointer as a $(D size_t) value.
- */
+/// ditto
 T toImpl(T, S)(S value)
     if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
         isSomeString!T)
@@ -1342,7 +1335,7 @@ T toImpl(T, S)(S value)
     return to!T(cast(size_t) value, 16u);
 }
 
-/// C-style strings
+/// ditto
 T toImpl(T, S)(S s)
     if (isPointer!S && is(S : const(char)*) &&
         isSomeString!T)
@@ -1651,9 +1644,12 @@ unittest
 
 
 /**
-When the source is a wide string, it is first converted to a narrow
-string and then parsed.
- */
+String to non-string conversion runs parsing.
+$(UL
+  $(LI When the source is a wide string, it is first converted to a narrow
+       string and then parsed.)
+  $(LI When the source is a narrow string, normal text parsing occurs.))
+*/
 T toImpl(T, S)(S value)
     if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
         !isSomeString!T)
@@ -1662,9 +1658,7 @@ T toImpl(T, S)(S value)
     return parseString!T(toUTF8(value));
 }
 
-/**
-When the source is a narrow string, normal text parsing occurs.
- */
+/// ditto
 T toImpl(T, S)(S value)
     if (isDynamicArray!S && is(S : const(char)[]) &&
         !isSomeString!T)
