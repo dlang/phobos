@@ -57,6 +57,25 @@ private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, 
                     ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
 }
 
+private
+{
+    template isImaginary(T)
+    {
+        enum bool isImaginary = staticIndexOf!(Unqual!(T),
+                ifloat, idouble, ireal) >= 0;
+    }
+    template isComplex(T)
+    {
+        enum bool isComplex = staticIndexOf!(Unqual!(T),
+                cfloat, cdouble, creal) >= 0;
+    }
+    template isNarrowInteger(T)
+    {
+        enum bool isNarrowInteger = staticIndexOf!(Unqual!(T),
+                byte, ubyte, short, ushort) >= 0;
+    }
+}
+
 /**
  * Thrown on conversion overflow errors.
  */
@@ -799,15 +818,13 @@ T toImpl(T, S)(S c)
     }
 }
 
-version(unittest) private alias TypeTuple!(
-    char, wchar, dchar,
-    const(char), const(wchar), const(dchar),
-    immutable(char), immutable(wchar), immutable(dchar))
-                      AllChars;
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    alias TypeTuple!(
+        char, wchar, dchar,
+        const(char), const(wchar), const(dchar),
+        immutable(char), immutable(wchar), immutable(dchar)) AllChars;
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -848,61 +865,62 @@ unittest
     assert(s2 == "foo");
 }
 
-/// Small unsigned integers to strings.
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isUnsigned!S && S.sizeof < uint.sizeof &&
-        isSomeString!T)
-{
-    return to!T(cast(uint) value);
-}
-
-/// Unsigned integers (uint and ulong) to string.
+/// Unsigned integers to strings.
 T toImpl(T, S)(S input)
-    if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 &&
+    if (isIntegral!S && isUnsigned!S &&
         isSomeString!T)
 {
-    Unqual!S value = input;
-    alias Unqual!(typeof(T.init[0])) Char;
-    static if (is(typeof(T.init[0]) == const) ||
-            is(typeof(T.init[0]) == immutable))
+    static if (S.sizeof < uint.sizeof)
     {
-        if (value < 10)
+        // Small unsigned integers to strings.
+        return to!T(cast(uint) input);
+    }
+    else
+    {
+        // Unsigned integers (uint and ulong) to string.
+        Unqual!S value = input;
+        alias Unqual!(typeof(T.init[0])) Char;
+        static if (is(typeof(T.init[0]) == const) ||
+                is(typeof(T.init[0]) == immutable))
         {
-            static immutable Char[10] digits = "0123456789";
-            // Avoid storage allocation for simple stuff
-            return digits[cast(size_t) value .. cast(size_t) value + 1];
+            if (value < 10)
+            {
+                static immutable Char[10] digits = "0123456789";
+                // Avoid storage allocation for simple stuff
+                return digits[cast(size_t) value .. cast(size_t) value + 1];
+            }
         }
-    }
 
-    static if (S.sizeof == uint.sizeof)
-        enum maxlength = S.sizeof * 3;
-    else
-        auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
+        static if (S.sizeof == uint.sizeof)
+            enum maxlength = S.sizeof * 3;
+        else
+            auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
 
-    Char[] result;
-    if (__ctfe)
-    {
-        result = new Char[maxlength];
-    }
-    else
-    {
-        result = cast(Char[])
-            GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-            [0 .. Char.sizeof * maxlength];
-    }
+        Char[] result;
+        if (__ctfe)
+        {
+            result = new Char[maxlength];
+        }
+        else
+        {
+            result = cast(Char[])
+                GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
+                [0 .. Char.sizeof * maxlength];
+        }
 
-    uint ndigits = 0;
-    do
-    {
-        auto div = value / 10;
-        auto rem = value % 10;
-        const c = cast(Char) (rem + '0');
-        value = div;
-        ++ndigits;
-        result[$ - ndigits] = c;
+        uint ndigits = 0;
+        do
+        {
+            auto div = value / 10;
+            auto rem = value % 10;
+            const c = cast(Char) (rem + '0');
+            value = div;
+            ++ndigits;
+            result[$ - ndigits] = c;
+        }
+        while (value);
+        return cast(T) result[$ - ndigits .. $];
     }
-    while (value);
-    return cast(T) result[$ - ndigits .. $];
 }
 
 unittest
@@ -985,50 +1003,51 @@ unittest
     assert(i == 0);
 }
 
-/// Small signed integers to strings.
+/// Signed integers to strings.
 T toImpl(T, S)(S value)
-    if (isIntegral!S && isSigned!S && S.sizeof < int.sizeof &&
+    if (isIntegral!S && isSigned!S &&
         isSomeString!T)
 {
-    return to!T(cast(int) value);
-}
-
-/// Signed values ($(D int) and $(D long)).
-T toImpl(T, S)(S value)
-    if (staticIndexOf!(Unqual!S, int, long) >= 0 &&
-        isSomeString!T)
-{
-    if (value >= 0)
-        return to!T(cast(Unsigned!S) value);
-    alias Unqual!(typeof(T.init[0])) Char;
-
-    // Cache read-only data only for const and immutable; mutable
-    // data is supposed to use allocation in all cases
-    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
+    static if (S.sizeof < int.sizeof)
     {
-        if (value > -10)
+        // Small signed integers to strings.
+        return to!T(cast(int) value);
+    }
+    else
+    {
+        // Signed values ($(D int) and $(D long)).
+        if (value >= 0)
+            return to!T(cast(Unsigned!S) value);
+        alias Unqual!(typeof(T.init[0])) Char;
+
+        // Cache read-only data only for const and immutable; mutable
+        // data is supposed to use allocation in all cases
+        static if (is(ElementType!T == const) || is(ElementType!T == immutable))
         {
-            static immutable Char[20] data =
-                "00-1-2-3-4-5-6-7-8-9";
-            immutable i = cast(size_t) -value * 2;
-            return data[i .. i + 2];
+            if (value > -10)
+            {
+                static immutable Char[20] data =
+                    "00-1-2-3-4-5-6-7-8-9";
+                immutable i = cast(size_t) -value * 2;
+                return data[i .. i + 2];
+            }
         }
-    }
 
-    Char[1 + S.sizeof * 3] buffer;
+        Char[1 + S.sizeof * 3] buffer;
 
-    auto u = -cast(Unqual!(Unsigned!S)) value;
-    uint ndigits = 1;
-    while (u)
-    {
-        immutable c = cast(char)((u % 10) + '0');
-        u /= 10;
-        buffer[$ - ndigits] = c;
-        ++ndigits;
+        auto u = -cast(Unqual!(Unsigned!S)) value;
+        uint ndigits = 1;
+        while (u)
+        {
+            immutable c = cast(char)((u % 10) + '0');
+            u /= 10;
+            buffer[$ - ndigits] = c;
+            ++ndigits;
+        }
+        assert(ndigits <= buffer.length);
+        buffer[$ - ndigits] = '-';
+        return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
     }
-    assert(ndigits <= buffer.length);
-    buffer[$ - ndigits] = '-';
-    return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
 }
 
 unittest
@@ -1141,25 +1160,14 @@ unittest
 }
 
 /******************************************
- * Convert value to string in _radix radix.
+ * Convert inttegral value to string in _radix radix.
  *
  * radix must be a value from 2 to 36.
  * value is treated as a signed value only if radix is 10.
  * The characters A through Z are used to represent values 10 through 36.
  */
 T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) &&
-        isSomeString!T)
-{
-    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
-    if (radix == 10)
-        return to!string(value);     // handle signed cases only for radix 10
-    return to!string(cast(ulong) value, radix);
-}
-
-/// ditto
-T toImpl(T, S)(S value, uint radix)
-    if (is(Unqual!S == ulong) &&
+    if (isIntegral!(Unqual!S) &&
         isSomeString!T)
 in
 {
@@ -1167,21 +1175,31 @@ in
 }
 body
 {
-    char[value.sizeof * 8] buffer;
-    uint i = buffer.length;
-
-    if (value < radix && value < hexDigits.length)
-        return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
-
-    do
+    static if (!is(Unqual!S == ulong))
     {
-        ubyte c;
-        c = cast(ubyte)(value % radix);
-        value = value / radix;
-        i--;
-        buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
-    } while (value);
-    return to!T(buffer[i .. $].dup);
+        enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
+        if (radix == 10)
+            return to!string(value);     // handle signed cases only for radix 10
+        return to!string(cast(ulong) value, radix);
+    }
+    else
+    {
+        char[value.sizeof * 8] buffer;
+        uint i = buffer.length;
+
+        if (value < radix && value < hexDigits.length)
+            return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+
+        do
+        {
+            ubyte c;
+            c = cast(ubyte)(value % radix);
+            value = value / radix;
+            i--;
+            buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
+        } while (value);
+        return to!T(buffer[i .. $].dup);
+    }
 }
 
 unittest
@@ -1239,91 +1257,79 @@ unittest
     assert(r == "1234AF");
 }
 
-/// $(D float) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == float) &&
+/// All floating point types to all string types.
+T toImpl(T, S)(S value)
+    if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
         isSomeString!T)
 {
-    return to!T(cast(double) f);
-}
+    /// $(D float) to all string types.
+    static if (is(Unqual!S == float))
+    {
+        return to!T(cast(double) value);
+    }
 
-/// $(D double) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == double) &&
-        isSomeString!T)
-{
-    //alias Unqual!(ElementType!T) Char;
-    char[20] buffer;
-    int len = sprintf(buffer.ptr, "%g", d);
-    return to!T(buffer[0 .. len].dup);
-}
+    /// $(D double) to all string types.
+    static if (is(Unqual!S == double))
+    {
+        //alias Unqual!(ElementType!T) Char;
+        char[20] buffer;
+        int len = sprintf(buffer.ptr, "%g", value);
+        return to!T(buffer[0 .. len].dup);
+    }
 
-/// $(D real) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == real) &&
-        isSomeString!T)
-{
-    char[20] buffer;
-    int len = sprintf(buffer.ptr, "%Lg", r);
-    return to!T(buffer[0 .. len].dup);
-}
+    /// $(D real) to all string types.
+    static if (is(Unqual!S == real))
+    {
+        char[20] buffer;
+        int len = sprintf(buffer.ptr, "%Lg", value);
+        return to!T(buffer[0 .. len].dup);
+    }
 
-/// $(D ifloat) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == ifloat) &&
-        isSomeString!T)
-{
-    return to!T(cast(idouble) f);
-}
+    /// $(D ifloat) to all string types.
+    static if (is(Unqual!S == ifloat))
+    {
+        return to!T(cast(idouble) value);
+    }
 
-/// $(D idouble) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == idouble) &&
-        isSomeString!T)
-{
-    char[21] buffer;
-    int len = sprintf(buffer.ptr, "%gi", d);
-    return to!T(buffer[0 .. len].dup);
-}
+    /// $(D idouble) to all string types.
+    static if (is(Unqual!S == idouble))
+    {
+        char[21] buffer;
+        int len = sprintf(buffer.ptr, "%gi", value);
+        return to!T(buffer[0 .. len].dup);
+    }
 
-/// $(D ireal) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == ireal) &&
-        isSomeString!T)
-{
-    char[21] buffer;
-    int len = sprintf(buffer.ptr, "%Lgi", r);
-    //assert(len < buffer.length); // written bytes is len + 1
-    return to!T(buffer[0 .. len].dup);
-}
+    /// $(D ireal) to all string types.
+    static if (is(Unqual!S == ireal))
+    {
+        char[21] buffer;
+        int len = sprintf(buffer.ptr, "%Lgi", value);
+        //assert(len < buffer.length); // written bytes is len + 1
+        return to!T(buffer[0 .. len].dup);
+    }
 
-/// $(D cfloat) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == cfloat) &&
-        isSomeString!T)
-{
-    return to!string(cast(cdouble) f);
-}
+    /// $(D cfloat) to all string types.
+    static if (is(Unqual!S == cfloat))
+    {
+        return to!string(cast(cdouble) value);
+    }
 
-/// $(D cdouble) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == cdouble) &&
-        isSomeString!T)
-{
-    char[20 + 1 + 20 + 1] buffer;
+    /// $(D cdouble) to all string types.
+    static if (is(Unqual!S == cdouble))
+    {
+        char[20 + 1 + 20 + 1] buffer;
 
-    int len = sprintf(buffer.ptr, "%g+%gi", d.re, d.im);
-    return to!T(buffer[0 .. len]);
-}
+        int len = sprintf(buffer.ptr, "%g+%gi", value.re, value.im);
+        return to!T(buffer[0 .. len]);
+    }
 
-/// $(D creal) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == creal) &&
-        isSomeString!T)
-{
-    char[20 + 1 + 20 + 1] buffer;
-    int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
-    return to!T(buffer[0 .. len].dup);
+    /// $(D creal) to all string types.
+    static if (is(Unqual!S == creal))
+    {
+        char[20 + 1 + 20 + 1] buffer;
+        int len = sprintf(buffer.ptr, "%Lg+%Lgi", value.re, value.im);
+        return to!T(buffer[0 .. len].dup);
+    }
 }
 
 /**
@@ -1480,7 +1486,8 @@ unittest
     assert(to!(string)(a) == "[0:1, 1:2]");
 }
 
-private bool convFails(Source, Target, E)(Source src) {
+private bool convFails(Source, Target, E)(Source src)
+{
     try {
         auto t = to!(Target)(src);
     } catch (E) {
@@ -1489,14 +1496,16 @@ private bool convFails(Source, Target, E)(Source src) {
     return false;
 }
 
-private void testIntegralToFloating(Integral, Floating)() {
+private void testIntegralToFloating(Integral, Floating)()
+{
     Integral a = 42;
     auto b = to!(Floating)(a);
     assert(a == b);
     assert(a == to!(Integral)(b));
 }
 
-private void testFloatingToIntegral(Floating, Integral)() {
+private void testFloatingToIntegral(Floating, Integral)()
+{
     // convert some value
     Floating a = 4.2e1;
     auto b = to!(Integral)(a);
@@ -1703,7 +1712,8 @@ Example:
 Rounded conversions do not work with non-integral target types.
  */
 
-template roundTo(Target) {
+template roundTo(Target)
+{
     Target roundTo(Source)(Source value) {
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
@@ -1765,7 +1775,7 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
+    if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1847,7 +1857,7 @@ if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-if (isSomeString!Source && isIntegral!Target)
+    if (isSomeString!Source && isIntegral!Target)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1926,7 +1936,7 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && is(Target == enum))
+    if (isSomeString!Source && is(Target == enum))
 {
     // TODO: BUG4744
     foreach (i, e; EnumMembers!Target)
@@ -1981,7 +1991,7 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
+    if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -1993,7 +2003,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     // static immutable string nans = "nans";
 
     ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
-        (string msg = null) {
+        (string msg = null)
+    {
         if (!msg) msg = "Floating point conversion error";
         return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
     }
@@ -2346,7 +2357,7 @@ Parsing one character off a string returns the character and bumps the
 string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
 {
     Target result = s.front;
@@ -2357,7 +2368,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
 // Special case: okay so parse a char off a char[] or a wchar off a
 // wchar[]
 Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && is(Source : const(Target)[]))
+    if (isSomeString!Source && is(Source : const(Target)[]))
 {
     Target result = s[0];
     s = s[1 .. $];
@@ -2395,7 +2406,7 @@ Target parse(Target, Source)(ref Source s)
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && is(Target == typedef))
+    if (isSomeString!Source && is(Target == typedef))
 {
     static if (is(Target T == typedef))
         return cast(Target) parse!T(s);
@@ -2414,7 +2425,7 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
+    if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
 {
     Target result;
     skipWS(s);
@@ -3923,7 +3934,8 @@ unittest
 Take a look at int.max and int.max+1 in octal and the logic for this
 function follows directly.
  */
-template octalFitsInInt(string octalNum) {
+template octalFitsInInt(string octalNum)
+{
         // note it is important to strip the literal of all
         // non-numbers. kill the suffix and underscores lest they mess up
         // the number of digits here that we depend on.
@@ -3932,7 +3944,8 @@ template octalFitsInInt(string octalNum) {
         strippedOctalLiteral(octalNum)[0] == '1';
 }
 
-string strippedOctalLiteral(string original) {
+string strippedOctalLiteral(string original)
+{
         string stripped = "";
         foreach (c; original)
                 if (c >= '0' && c <= '7')
@@ -3940,7 +3953,8 @@ string strippedOctalLiteral(string original) {
         return stripped;
 }
 
-template literalIsLong(string num) {
+template literalIsLong(string num)
+{
         static if (num.length > 1)
         // can be xxL or xxLu according to spec
                 enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
@@ -3948,7 +3962,8 @@ template literalIsLong(string num) {
                 enum literalIsLong = false;
 }
 
-template literalIsUnsigned(string num) {
+template literalIsUnsigned(string num)
+{
         static if (num.length > 1)
         // can be xxL or xxLu according to spec
                 enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
@@ -3984,25 +3999,29 @@ auto z = octal!"1_000_000u";
 ----
  */
 int octal(string num)()
-if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num)) {
+    if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
+{
         return octal!(int, num);
 }
 
 /// Ditto
 long octal(string num)()
-if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num)) {
+    if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
+{
         return octal!(long, num);
 }
 
 /// Ditto
 uint octal(string num)()
-if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num)) {
+    if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
+{
         return octal!(int, num);
 }
 
 /// Ditto
 ulong octal(string num)()
-if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num)) {
+    if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
+{
         return octal!(long, num);
 }
 
@@ -4012,7 +4031,8 @@ Returns if the given string is a correctly formatted octal literal.
 The format is specified in lex.html. The leading zero is allowed, but
 not required.
  */
-bool isOctalLiteralString(string num) {
+bool isOctalLiteralString(string num)
+{
         if (num.length == 0)
                 return false;
 
@@ -4048,7 +4068,8 @@ bool isOctalLiteralString(string num) {
 /*
         Returns true if the given compile time string is an octal literal.
 */
-template isOctalLiteral(string num) {
+template isOctalLiteral(string num)
+{
         enum bool isOctalLiteral = isOctalLiteralString(num);
 }
 
@@ -4062,7 +4083,8 @@ template isOctalLiteral(string num) {
 
         assert(a == 8);
 */
-T octal(T, string num)() {
+T octal(T, string num)()
+{
     static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
 
     ulong pow = 1;
@@ -4083,7 +4105,8 @@ T octal(T, string num)() {
 }
 
 /// Ditto
-template octal(alias s) if (isIntegral!(typeof(s))) {
+template octal(alias s) if (isIntegral!(typeof(s)))
+{
     enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
 
@@ -4161,7 +4184,7 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T)(T* chunk)
-if (!is(T == class))
+    if (!is(T == class))
 {
     auto result = cast(typeof(return)) chunk;
     static T i;
@@ -4181,7 +4204,7 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T, Args...)(T* chunk, Args args)
-if (!is(T == class) && !is(T == struct) && Args.length == 1)
+    if (!is(T == class) && !is(T == struct) && Args.length == 1)
 {
     *chunk = args[0];
     return chunk;
@@ -4189,7 +4212,7 @@ if (!is(T == class) && !is(T == struct) && Args.length == 1)
 
 // Specialization for struct
 T* emplace(T, Args...)(T* chunk, Args args)
-if (is(T == struct))
+    if (is(T == struct))
 {
     auto result = cast(typeof(return)) chunk;
 
@@ -4275,7 +4298,7 @@ $(D T) is $(D @safe).
 Returns: A pointer to the newly constructed object.
  */
 T* emplace(T, Args...)(void[] chunk, Args args)
-if (!is(T == class))
+    if (!is(T == class))
 {
     enforce(chunk.length >= T.sizeof,
            new ConvException("emplace: chunk size too small"));
@@ -4352,7 +4375,7 @@ unittest
 
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
-if (isIntegral!T && isOutputRange!(W, char))
+    if (isIntegral!T && isOutputRange!(W, char))
 {
     Unqual!(Unsigned!T) v = void;
     if (value < 0)
