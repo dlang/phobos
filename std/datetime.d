@@ -74,7 +74,11 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
     There are a few functions in core.time which take $(D "nsecs"), but because
     nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept $(D "nsecs").
+    in core.time does, no functions in std.datetime accept $(D "nsecs"). If
+    you need help remembering which units are abbreviated and which aren't,
+    notice that all units seconds and greater use their full names, and all
+    sub-second units are abbreviated (since they'd be rather long if they
+    weren't).
 
     If you're looking for the definitions of $(D Duration), $(D TickDuration),
     or $(D FracSec), they're in core.time.
@@ -7335,61 +7339,67 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
 
         Examples:
 --------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonthDay == 31);
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).endOfMonthDay == 28);
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).endOfMonthDay == 29);
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).endOfMonthDay == 30);
+assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const nothrow
+    @property ubyte daysInMonth() const nothrow
     {
-        return Date(dayOfGregorianCal).endOfMonthDay;
+        return Date(dayOfGregorianCal).daysInMonth;
     }
+
+    /++
+        $(RED Scheduled for deprecation in December 2011.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 2, 1, 17, 13, 12)).endOfMonthDay, 28);
-            _assertPred!"=="(SysTime(DateTime(2000, 2, 1, 13, 2, 12)).endOfMonthDay, 29);
-            _assertPred!"=="(SysTime(DateTime(1999, 3, 1, 12, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 4, 1, 12, 6, 13)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 5, 1, 15, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 6, 1, 13, 7, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 1, 12, 13, 17)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 8, 1, 12, 3, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 9, 1, 12, 13, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 10, 1, 13, 19, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 11, 1, 12, 13, 17)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 12, 1, 12, 52, 13)).endOfMonthDay, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 2, 1, 17, 13, 12)).daysInMonth, 28);
+            _assertPred!"=="(SysTime(DateTime(2000, 2, 1, 13, 2, 12)).daysInMonth, 29);
+            _assertPred!"=="(SysTime(DateTime(1999, 3, 1, 12, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 4, 1, 12, 6, 13)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 5, 1, 15, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 6, 1, 13, 7, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 7, 1, 12, 13, 17)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 8, 1, 12, 3, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 9, 1, 12, 13, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 10, 1, 13, 19, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 11, 1, 12, 13, 17)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 12, 1, 12, 52, 13)).daysInMonth, 31);
 
             //Test B.C.
-            _assertPred!"=="(SysTime(DateTime(-1999, 1, 1, 12, 1, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 2, 1, 7, 13, 12)).endOfMonthDay, 28);
-            _assertPred!"=="(SysTime(DateTime(-2000, 2, 1, 13, 2, 12)).endOfMonthDay, 29);
-            _assertPred!"=="(SysTime(DateTime(-1999, 3, 1, 12, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 4, 1, 12, 6, 13)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 5, 1, 5, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 6, 1, 13, 7, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 7, 1, 12, 13, 17)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 8, 1, 12, 3, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 9, 1, 12, 13, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 10, 1, 13, 19, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 11, 1, 12, 13, 17)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 12, 1, 12, 52, 13)).endOfMonthDay, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 1, 1, 12, 1, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 2, 1, 7, 13, 12)).daysInMonth, 28);
+            _assertPred!"=="(SysTime(DateTime(-2000, 2, 1, 13, 2, 12)).daysInMonth, 29);
+            _assertPred!"=="(SysTime(DateTime(-1999, 3, 1, 12, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 4, 1, 12, 6, 13)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 5, 1, 5, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 6, 1, 13, 7, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 7, 1, 12, 13, 17)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 8, 1, 12, 3, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 9, 1, 12, 13, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 10, 1, 13, 19, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 11, 1, 12, 13, 17)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 12, 1, 12, 52, 13)).daysInMonth, 31);
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.endOfMonthDay));
-            //static assert(__traits(compiles, ist.endOfMonthDay));
+            static assert(__traits(compiles, cst.daysInMonth));
+            //static assert(__traits(compiles, ist.daysInMonth));
 
             //Verify Examples.
-            assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonthDay == 31);
-            assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).endOfMonthDay == 28);
-            assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).endOfMonthDay == 29);
-            assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).endOfMonthDay == 30);
+            assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+            assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+            assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+            assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         }
     }
 
@@ -7888,7 +7898,8 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -8442,13 +8453,13 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString, tz);
     }
@@ -12528,61 +12539,67 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 
         Examples:
 --------------------
-assert(Date(1999, 1, 6).endOfMonthDay == 31);
-assert(Date(1999, 2, 7).endOfMonthDay == 28);
-assert(Date(2000, 2, 7).endOfMonthDay == 29);
-assert(Date(2000, 6, 4).endOfMonthDay == 30);
+assert(Date(1999, 1, 6).daysInMonth == 31);
+assert(Date(1999, 2, 7).daysInMonth == 28);
+assert(Date(2000, 2, 7).daysInMonth == 29);
+assert(Date(2000, 6, 4).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const pure nothrow
+    @property ubyte daysInMonth() const pure nothrow
     {
         return maxDay(_year, _month);
     }
+
+    /++
+        $(RED Scheduled for deprecation in December 2011.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(Date(1999, 1, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 2, 1).endOfMonthDay, 28);
-            _assertPred!"=="(Date(2000, 2, 1).endOfMonthDay, 29);
-            _assertPred!"=="(Date(1999, 3, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 4, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 5, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 6, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 7, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 8, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 9, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 10, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 11, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 12, 1).endOfMonthDay, 31);
+            _assertPred!"=="(Date(1999, 1, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 2, 1).daysInMonth, 28);
+            _assertPred!"=="(Date(2000, 2, 1).daysInMonth, 29);
+            _assertPred!"=="(Date(1999, 3, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 4, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 5, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 6, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 7, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 8, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 9, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 10, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 11, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 12, 1).daysInMonth, 31);
 
             //Test B.C.
-            _assertPred!"=="(Date(-1999, 1, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 2, 1).endOfMonthDay, 28);
-            _assertPred!"=="(Date(-2000, 2, 1).endOfMonthDay, 29);
-            _assertPred!"=="(Date(-1999, 3, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 4, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 5, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 6, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 7, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 8, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 9, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 10, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 11, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 12, 1).endOfMonthDay, 31);
+            _assertPred!"=="(Date(-1999, 1, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 2, 1).daysInMonth, 28);
+            _assertPred!"=="(Date(-2000, 2, 1).daysInMonth, 29);
+            _assertPred!"=="(Date(-1999, 3, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 4, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 5, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 6, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 7, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 8, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 9, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 10, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 11, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 12, 1).daysInMonth, 31);
 
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.endOfMonthDay = 30));
-            static assert(!__traits(compiles, idate.endOfMonthDay = 30));
+            static assert(!__traits(compiles, cdate.daysInMonth = 30));
+            static assert(!__traits(compiles, idate.daysInMonth = 30));
 
             //Verify Examples.
-            assert(Date(1999, 1, 6).endOfMonthDay == 31);
-            assert(Date(1999, 2, 7).endOfMonthDay == 28);
-            assert(Date(2000, 2, 7).endOfMonthDay == 29);
-            assert(Date(2000, 6, 4).endOfMonthDay == 30);
+            assert(Date(1999, 1, 6).daysInMonth == 31);
+            assert(Date(1999, 2, 7).daysInMonth == 28);
+            assert(Date(2000, 2, 7).daysInMonth == 29);
+            assert(Date(2000, 6, 4).daysInMonth == 30);
         }
     }
 
@@ -12776,7 +12793,8 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -13085,13 +13103,13 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -14487,7 +14505,8 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -14697,13 +14716,13 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -17433,16 +17452,22 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
 
         Examples:
 --------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
+assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
+assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
+assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const pure nothrow
+    @property ubyte daysInMonth() const pure nothrow
     {
-        return _date.endOfMonthDay;
+        return _date.daysInMonth;
     }
+
+    /++
+        $(RED Scheduled for deprecation in December 2011.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
@@ -17450,14 +17475,14 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
         {
             const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.endOfMonthDay));
-            static assert(__traits(compiles, idt.endOfMonthDay));
+            static assert(__traits(compiles, cdt.daysInMonth));
+            static assert(__traits(compiles, idt.daysInMonth));
 
             //Verify Examples.
-            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
+            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
+            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
+            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
         }
     }
 
@@ -17660,7 +17685,8 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -17931,13 +17957,13 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -31048,7 +31074,7 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Scheduled for deprecation. This is only here to help
+    $(RED Scheduled for deprecation in August 2011. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
@@ -31075,7 +31101,7 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Scheduled for deprecation. This is only here to help
+    $(RED Scheduled for deprecation in August 2011. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).
@@ -34030,3 +34056,10 @@ template _isPrintable(T...)
     }
 }
 
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.datetime.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.datetime.%s instead.",
+                              vers, oldFunc, date, newFunc);
+}
