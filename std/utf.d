@@ -1223,6 +1223,192 @@ dstring toUTF32(in dchar[] s)
 } // Convert functions are @safe
 
 
+/* =================== toUTFz ======================= */
+
+/++
+    Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
+    contain embedded $(D '\0')'s as any C function will treat the first
+    $(D '\0') that it sees a the end of the string. If $(D s) is $(D null) or
+    empty, then a string containing only $(D '\0') is returned.
+
+    $(D toUTFz) accepts any type of string and is templated on the type of
+    character pointer that you wish to convert to. It will avoid allocating a
+    new string if it can, but there's a decent chance that it will end up having
+    to allocate a new string - particularly when dealing with character types
+    other than $(D char).
+
+    $(RED Warning:) When passing a character pointer to a C function, and the C
+    function keeps it around for any reason, make sure that you keep a reference
+    to it in your D code. Otherwise, it may go away during a garbage collection
+    cycle and cause a nasty bug when the C code tries to use it.
+
+    Examples:
+--------------------
+auto p1 = toUTFz!(char*)("hello world");
+auto p2 = toUTFz!(const(char)*)("hello world");
+auto p3 = toUTFz!(immutable(char)*)("hello world");
+auto p4 = toUTFz!(char*)("hello world"d);
+auto p5 = toUTFz!(const(wchar)*)("hello world");
+auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
+--------------------
+  +/
+P toUTFz(P, S)(S str)
+    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+       is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
+       is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+{
+    if(str.empty)
+        return cast(P)"".ptr;
+
+    alias Unqual!(typeof(str[0])) C;
+
+    //If the P is mutable, then we have to make a copy.
+    static if(is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
+        return toUTFz!(P, const(C)[])(cast(const(C)[])str);
+    else
+    {
+        immutable p = str.ptr + str.length;
+
+        // Peek past end of str, if it's 0, no conversion necessary.
+        // Note that the compiler will put a 0 past the end of static
+        // strings, and the storage allocator will put a 0 past the end
+        // of newly allocated char[]'s.
+        // Is p dereferenceable? A simple test: if the p points to an
+        // address multiple of 4, then conservatively assume the pointer
+        // might be pointing to a new block of memory, which might be
+        // unreadable. Otherwise, it's definitely pointing to valid
+        // memory.
+        if((cast(size_t)p & 3) && *p == '\0')
+            return str.ptr;
+
+        return toUTFz!(P, const(C)[])(cast(const(C)[])str);
+    }
+}
+
+P toUTFz(P, S)(S str)
+    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+       is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
+       !is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+{
+    alias Unqual!(typeof(*P.init)) OutChar;
+
+    auto copy = new OutChar[](str.length + 1);
+    copy[0 .. $ - 1] = str[];
+    copy[$ - 1] = '\0';
+
+    return cast(P)copy;
+}
+
+P toUTFz(P, S)(S str)
+    if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+       !is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))))
+{
+    auto retval = appender!(typeof(*P.init)[])();
+
+    foreach(dchar c; str)
+        retval.put(c);
+    retval.put('\0');
+
+    return cast(P)retval.data.ptr;
+}
+
+//Verify Examples.
+unittest
+{
+    auto p1 = toUTFz!(char*)("hello world");
+    auto p2 = toUTFz!(const(char)*)("hello world");
+    auto p3 = toUTFz!(immutable(char)*)("hello world");
+    auto p4 = toUTFz!(char*)("hello world"d);
+    auto p5 = toUTFz!(const(wchar)*)("hello world");
+    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
+}
+
+unittest
+{
+    import core.exception;
+    import std.algorithm;
+    import std.metastrings;
+    import std.typetuple;
+
+    size_t zeroLen(C)(const(C)* ptr)
+    {
+        size_t len = 0;
+
+        while(*ptr != '\0')
+        {
+            ++ptr;
+            ++len;
+        }
+
+        return len;
+    }
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        alias Unqual!(typeof(S.init[0])) C;
+
+        auto s1 = to!S("hello\U00010143\u0100\U00010143");
+        auto temp = new C[](s1.length + 1);
+        temp[0 .. $ - 1] = s1[0 .. $];
+        temp[$ - 1] = '\n';
+        --temp.length;
+        auto s2 = assumeUnique(temp);
+        assert(s1 == s2);
+
+        foreach(P; TypeTuple!(C*, const(C)*, immutable(C)*))
+        {
+            auto p1 = toUTFz!P(s1);
+            assert(p1[0 .. s1.length] == s1);
+            assert(p1[s1.length] == '\0');
+
+            auto p2 = toUTFz!P(s2);
+            assert(p2[0 .. s2.length] == s2);
+            assert(p2[s2.length] == '\0');
+        }
+    }
+
+    void test(P, S)(S s, size_t line = __LINE__)
+    {
+        auto p = toUTFz!P(s);
+        immutable len = zeroLen(p);
+        enforce(cmp(s, p[0 .. len]) == 0,
+                new AssertError(Format!("Unit test failed: %s %s", P.stringof, S.stringof),
+                                __FILE__, line));
+    }
+
+    foreach(P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
+                          dchar*, const(dchar)*, immutable(dchar)*))
+    {
+        test!P("hello\U00010143\u0100\U00010143");
+    }
+
+    foreach(P; TypeTuple!(char*, const(char)*, immutable(char)*,
+                          dchar*, const(dchar)*, immutable(dchar)*))
+    {
+        test!P("hello\U00010143\u0100\U00010143"w);
+    }
+
+    foreach(P; TypeTuple!(char*, const(char)*, immutable(char)*,
+                          wchar*, const(wchar)*, immutable(wchar)*))
+    {
+        test!P("hello\U00010143\u0100\U00010143"d);
+    }
+
+    foreach(S; TypeTuple!(char[], wchar[], dchar[],
+                          const(char)[], const(wchar)[], const(dchar)[]))
+    {
+        auto s = to!S("hello\U00010143\u0100\U00010143");
+
+        foreach(P; TypeTuple!(char*, wchar*, dchar*,
+                              const(char)*, const(wchar)*, const(dchar)*,
+                              immutable(char)*, immutable(wchar)*, immutable(dchar)*))
+        {
+            test!P(s);
+        }
+    }
+}
+
+
 /* ================================ tests ================================== */
 
 unittest
