@@ -1151,6 +1151,19 @@ wstring toUTF16(in wchar[] s)
 }
 
 /// ditto
+const(wchar)* toUTF16z(in wchar[] s)
+{
+    wchar[] r;
+    size_t slen = s.length;
+
+    validate(s);
+    r.length = slen+1;
+    r[0 .. slen] = s[0 .. $];
+    r[slen] = '\000';
+    return r.ptr;
+}
+
+/// ditto
 pure wstring toUTF16(in dchar[] s)
 {
     wchar[] r;
@@ -1164,6 +1177,24 @@ pure wstring toUTF16(in dchar[] s)
     }
 
     return r.assumeUnique();  // ok because r is unique
+}
+
+
+/// ditto
+const(wchar)* toUTF16z(in dchar[] s)
+{
+    wchar[] r;
+    size_t slen = s.length;
+
+    r.length = slen+1;
+    r.length = 0;
+    for (size_t i = 0; i < slen; i++)
+    {
+        encode(r, s[i]);
+    }
+    r ~= "\000";
+
+    return r.ptr;
 }
 
 
@@ -1232,6 +1263,7 @@ unittest
     string c;
     wstring w;
     dstring d;
+    const(wchar)* wp;
 
     c = "hello";
     w = toUTF16(c);
@@ -1247,6 +1279,13 @@ unittest
     assert(c == "hello");
     w = toUTF16(d);
     assert(w == "hello");
+    
+    wp = toUTF16z(c);
+    assert(wp[0 .. 6] == "hello\000");
+    wp = toUTF16z(w);
+    assert(wp[0 .. 6] == "hello\000");
+    wp = toUTF16z(d);
+    assert(wp[0 .. 6] == "hello\000");
 
 
     c = "hel\u1234o";
@@ -1264,6 +1303,13 @@ unittest
     assert(c == "hel\u1234o");
     w = toUTF16(d);
     assert(w == "hel\u1234o");
+
+    wp = toUTF16z(c);
+    assert(wp[0 .. 6] == "hel\u1234o\000");
+    wp = toUTF16z(w);
+    assert(wp[0 .. 6] == "hel\u1234o\000");
+    wp = toUTF16z(d);
+    assert(wp[0 .. 6] == "hel\u1234o\000");
 
 
     c = "he\U0010AAAAllo";
@@ -1283,6 +1329,13 @@ unittest
     assert(c == "he\U0010AAAAllo");
     w = toUTF16(d);
     assert(w == "he\U0010AAAAllo");
+
+    wp = toUTF16z(c);
+    assert(wp[0 .. 8] == "he\U0010AAAAllo\000");
+    wp = toUTF16z(w);
+    assert(wp[0 .. 8] == "he\U0010AAAAllo\000");
+    wp = toUTF16z(d);
+    assert(wp[0 .. 8] == "he\U0010AAAAllo\000");
 }
 
 
