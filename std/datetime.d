@@ -30758,7 +30758,7 @@ public:
         _timeStart = Clock.currSystemTick;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30784,7 +30784,7 @@ public:
         _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
