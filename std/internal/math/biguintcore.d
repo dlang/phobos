@@ -96,7 +96,7 @@ private:
     }
 public:
     // Length in uints
-    size_t uintLength() pure const
+    size_t uintLength() const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -108,7 +108,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    size_t ulongLength() pure const
+    size_t ulongLength() const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -121,7 +121,7 @@ public:
     }
 
     // The value at (cast(ulong[])data)[n]
-    ulong peekUlong(int n) pure const
+    ulong peekUlong(int n) const
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -140,7 +140,7 @@ public:
             return data[n];
         }
     }
-    uint peekUint(int n) pure const
+    uint peekUint(int n) const
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -161,9 +161,9 @@ public:
         else if (u == 2) data = TWO;
         else if (u == 10) data = TEN;
         else
-		{
+                {
             static if (BigDigit.sizeof == int.sizeof)
-		    {
+                    {
                 uint ulo = cast(uint)(u & 0xFFFF_FFFF);
                 uint uhi = cast(uint)(u >> 32);
                 if (uhi == 0)
@@ -177,7 +177,7 @@ public:
                   data[0] = ulo;
                   data[1] = uhi;
                 }
-		    }
+                    }
             else static if (BigDigit.sizeof == long.sizeof)
             {
                 data = new BigDigit[1];
@@ -215,12 +215,12 @@ int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
     return data[0] > ylo ? 1: -1;
 }
 
-bool opEquals(Tdummy = void)(ref const BigUint y) pure const
+bool opEquals(Tdummy = void)(ref const BigUint y) const
 {
        return y.data[] == data[];
 }
 
-bool opEquals(Tdummy = void)(ulong y) pure const 
+bool opEquals(Tdummy = void)(ulong y) const
 {
     if (data.length > 2)
         return false;
@@ -233,12 +233,12 @@ bool opEquals(Tdummy = void)(ulong y) pure const
     return (data[0] == ylo);
 }
 
-bool isZero() pure const
+bool isZero() const
 {
     return data.length == 1 && data[0] == 0;
 }
 
-size_t numBytes() pure const
+size_t numBytes() const
 {
     return data.length * BigDigit.sizeof;
 }
@@ -474,7 +474,7 @@ static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref 
             r.data = new BigDigit[ d > uint.max ? 2: 1];
             r.data[0] = cast(uint)(d & 0xFFFF_FFFF);
             if (d > uint.max)
-				r.data[1] = cast(uint)(d>>32);
+                                r.data[1] = cast(uint)(d>>32);
         }
     }
     else

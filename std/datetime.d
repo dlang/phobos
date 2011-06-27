@@ -678,7 +678,7 @@ public:
             tz      = The $(D TimeZone) to use for this $(D SysTime). If null,
                       $(D LocalTime) will be used.
       +/
-    this(long stdTime, immutable TimeZone tz = null) pure nothrow
+    this(long stdTime, immutable TimeZone tz = null) nothrow
     {
         _stdTime = stdTime;
         _timezone = tz is null ? LocalTime() : tz;
@@ -705,7 +705,7 @@ public:
         Params:
             rhs = The $(D SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(const ref SysTime rhs) pure nothrow
+    ref SysTime opAssign(const ref SysTime rhs) nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone.get;
@@ -717,7 +717,7 @@ public:
         Params:
             rhs = The $(D SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(SysTime rhs) pure nothrow
+    ref SysTime opAssign(SysTime rhs) nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone.get;
@@ -732,7 +732,7 @@ public:
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
      +/
-    bool opEquals(const ref SysTime rhs) const pure nothrow
+    bool opEquals(const ref SysTime rhs) const nothrow
     {
         return _stdTime == rhs._stdTime;
     }
@@ -792,7 +792,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in SysTime rhs) const pure nothrow
+    int opCmp(in SysTime rhs) const nothrow
     {
         if(_stdTime < rhs._stdTime)
             return -1;
@@ -2002,7 +2002,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
         internal representation of $(D SysTime).
      +/
-    @property long stdTime() const pure nothrow
+    @property long stdTime() const nothrow
     {
         return _stdTime;
     }
@@ -2031,7 +2031,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             stdTime = The number of hnsecs since January 1st, 1 A.D. UTC.
      +/
-    @property void stdTime(long stdTime) pure nothrow
+    @property void stdTime(long stdTime) nothrow
     {
         _stdTime = stdTime;
     }
@@ -2064,7 +2064,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         DST. Functions which return all or part of the time - such as hours -
         adjust the time to this $(D SysTime)'s time zone before returning.
       +/
-    @property immutable(TimeZone) timezone() const pure nothrow
+    @property immutable(TimeZone) timezone() const nothrow
     {
         return _timezone.get;
     }
@@ -2079,7 +2079,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             tz = The $(D TimeZone) to set this $(D SysTime)'s time zone to.
       +/
-    @property void timezone(immutable TimeZone timezone) pure nothrow
+    @property void timezone(immutable TimeZone timezone) nothrow
     {
         if(timezone is null)
             _timezone = LocalTime();
@@ -2137,7 +2137,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Returns a $(D SysTime) with the same std time as this one, but with
         $(D UTC) as its time zone.
       +/
-    SysTime toUTC() const pure nothrow
+    SysTime toUTC() const nothrow
     {
         return SysTime(_stdTime, UTC());
     }
@@ -2160,7 +2160,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Returns a $(D SysTime) with the same std time as this one, but with
         given time zone as its time zone.
       +/
-    SysTime toOtherTZ(immutable TimeZone tz) const pure nothrow
+    SysTime toOtherTZ(immutable TimeZone tz) const nothrow
     {
         if(tz is null)
             return SysTime(_stdTime, LocalTime());
@@ -2195,7 +2195,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         used (so $(D time_t.max) if it goes over and $(D time_t.min) if it goes
         under).
       +/
-    time_t toUnixTime() const pure nothrow
+    time_t toUnixTime() const nothrow
     {
         return stdTimeToUnixTime(_stdTime);
     }
@@ -2228,7 +2228,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         used for $(D tv_sec). (so $(D time_t.max) if it goes over and
         $(D time_t.min) if it goes under).
       +/
-    timeval toTimeVal() const pure nothrow
+    timeval toTimeVal() const nothrow
     {
         immutable tv_sec = toUnixTime();
 
@@ -5862,7 +5862,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
             duration = The duration to add to or subtract from this
                        $(D SysTime).
       +/
-    SysTime opBinary(string op, D)(in D duration) const pure nothrow
+    SysTime opBinary(string op, D)(in D duration) const nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -6088,7 +6088,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
             duration = The duration to add to or subtract from this
                        $(D SysTime).
       +/
-    /+ref+/ SysTime opOpAssign(string op, D)(in D duration) pure nothrow
+    /+ref+/ SysTime opOpAssign(string op, D)(in D duration) nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -6291,7 +6291,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in SysTime rhs) const pure nothrow
+    Duration opBinary(string op)(in SysTime rhs) const nothrow
         if(op == "-")
     {
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
@@ -7677,7 +7677,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     //It may be a good idea to keep it though, since casting from a type to itself
     //should be allowed, and it doesn't work without this opCast() since opCast()
     //has already been defined for other types.
-    SysTime opCast(T)() const pure nothrow
+    SysTime opCast(T)() const nothrow
         if(is(Unqual!T == SysTime))
     {
         return SysTime(_stdTime, _timezone.get);
@@ -8768,7 +8768,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
         The $(D SysTime) which is returned is in UTC.
       +/
-    @property static SysTime min() pure nothrow
+    @property static SysTime min() nothrow
     {
         return SysTime(long.min, UTC());
     }
@@ -8789,7 +8789,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
 
         The $(D SysTime) which is returned is in UTC.
       +/
-    @property static SysTime max() pure nothrow
+    @property static SysTime max() nothrow
     {
         return SysTime(long.max, UTC());
     }
@@ -8869,7 +8869,7 @@ public:
             month = Month of the year.
             day   = Day of the month.
      +/
-    this(int year, int month, int day) pure
+    this(int year, int month, int day)
     {
         enforceValid!"months"(cast(Month)month);
         enforceValid!"days"(year, cast(Month)month, day);
@@ -8947,7 +8947,7 @@ public:
             day = The Xth day of the Gregorian Calendar that the constructed
                   $(D Date) will be for.
      +/
-    this(int day) pure nothrow
+    this(int day) nothrow
     {
         if(day > 0)
         {
@@ -9088,7 +9088,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in Date rhs) const pure nothrow
+    int opCmp(in Date rhs) const nothrow
     {
         if(_year < rhs._year)
             return -1;
@@ -9206,7 +9206,7 @@ assert(Date(2010, 10, 4).year == 2010);
 assert(Date(-7, 4, 5).year == -7);
 --------------------
      +/
-    @property short year() const pure nothrow
+    @property short year() const nothrow
     {
         return _year;
     }
@@ -9242,7 +9242,7 @@ assert(Date(-7, 4, 5).year == -7);
             $(D DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
      +/
-    @property void year(int year) pure
+    @property void year(int year)
     {
         enforceValid!"days"(year, _month, _day);
         _year = cast(short)year;
@@ -9295,7 +9295,7 @@ assert(Date(-1, 1, 1).yearBC == 2);
 assert(Date(-100, 1, 1).yearBC == 101);
 --------------------
      +/
-    @property ushort yearBC() const pure
+    @property ushort yearBC() const 
     {
         if(isAD)
             throw new DateTimeException("Year " ~ numToString(_year) ~ " is A.D.");
@@ -9345,7 +9345,7 @@ date.yearBC = 10;
 assert(date == Date(-9, 1, 1));
 --------------------
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) 
     {
         if(year <= 0)
             throw new DateTimeException("The given year is not a year B.C.");
@@ -9391,7 +9391,7 @@ assert(Date(2010, 10, 4).month == 10);
 assert(Date(-7, 4, 5).month == 4);
 --------------------
      +/
-    @property Month month() const pure nothrow
+    @property Month month() const nothrow
     {
         return _month;
     }
@@ -9426,7 +9426,7 @@ assert(Date(-7, 4, 5).month == 4);
             $(D DateTimeException) if the given month is not a valid month or if
             the current day would not be valid in the given month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) 
     {
         enforceValid!"months"(month);
         enforceValid!"days"(_year, month, _day);
@@ -9470,7 +9470,7 @@ assert(Date(2010, 10, 4).day == 4);
 assert(Date(-7, 4, 5).day == 5);
 --------------------
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() const nothrow
     {
         return _day;
     }
@@ -9513,7 +9513,7 @@ assert(Date(-7, 4, 5).day == 5);
             $(D DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) 
     {
         enforceValid!"days"(_year, _month, day);
         _day = cast(ubyte)day;
@@ -9646,7 +9646,7 @@ d4.add!"years"(1, AllowDayOverflow.no);
 assert(d4 == Date(2001, 2, 28));
 --------------------
       +/
-    /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years")
     {
         immutable newYear = _year + value;
@@ -9883,7 +9883,7 @@ assert(d4 == Date(2001, 2, 28));
 
 
     //Shares documentation with "years" version.
-    /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "months")
     {
         auto years = months / 12;
@@ -10440,7 +10440,7 @@ d6.roll!"years"(1, AllowDayOverflow.no);
 assert(d6 == Date(2001, 2, 28));
 --------------------
       +/
-    /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years")
     {
         add!"years"(value, allowOverflow);
@@ -10490,7 +10490,7 @@ assert(d6 == Date(2001, 2, 28));
 
 
     //Shares documentation with "years" version.
-    /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "months")
     {
         months %= 12;
@@ -11104,7 +11104,7 @@ d.roll!"days"(-32);
 assert(d == Date(2010, 1, 25));
 --------------------
       +/
-    /+ref Date+/ void roll(string units)(long days) pure nothrow
+    /+ref Date+/ void roll(string units)(long days) nothrow
         if(units == "days")
     {
         immutable limit = maxDay(_year, _month);
@@ -11349,7 +11349,7 @@ assert(d == Date(2010, 1, 25));
         Params:
             duration = The duration to add to or subtract from this $(D Date).
       +/
-    Date opBinary(string op, D)(in D duration) const pure nothrow
+    Date opBinary(string op, D)(in D duration) const nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11461,7 +11461,7 @@ assert(d == Date(2010, 1, 25));
         Params:
             duration = The duration to add to or subtract from this $(D Date).
       +/
-    /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
+    /+ref+/ Date opOpAssign(string op, D)(in D duration) nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11549,7 +11549,7 @@ assert(d == Date(2010, 1, 25));
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in Date rhs) const pure nothrow
+    Duration opBinary(string op)(in Date rhs) const nothrow
         if(op == "-")
     {
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
@@ -11614,7 +11614,7 @@ assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
 assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 --------------------
       +/
-    int diffMonths(in Date rhs) const pure nothrow
+    int diffMonths(in Date rhs) const nothrow
     {
         immutable yearDiff = _year - rhs._year;
         immutable monthDiff = _month - rhs._month;
@@ -11852,7 +11852,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     /++
         Whether this $(D Date) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() const nothrow
     {
         return yearIsLeapYear(_year);
     }
@@ -11874,7 +11874,7 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     /++
         Day of the week this $(D Date) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() const nothrow
     {
         return getDayOfWeek(dayOfGregorianCal);
     }
@@ -11903,7 +11903,7 @@ assert(Date(1999, 12, 31).dayOfYear == 365);
 assert(Date(2000, 12, 31).dayOfYear == 366);
 --------------------
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() const nothrow
     {
         switch(_month)
         {
@@ -11983,7 +11983,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
             $(D DateTimeException) if the given day is an invalid day of the
             year.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) 
     {
         if(isLeapYear)
         {
@@ -12198,7 +12198,7 @@ assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
 assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
 --------------------
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() const nothrow
     {
         if(isAD)
         {
@@ -12313,7 +12313,7 @@ date.dayOfGregorianCal = 734_137;
 assert(date == Date(2010, 12, 31));
 --------------------
      +/
-    @property void dayOfGregorianCal(int day) pure nothrow
+    @property void dayOfGregorianCal(int day) nothrow
     {
         this = Date(day);
     }
@@ -12368,7 +12368,7 @@ assert(date == Date(2010, 12, 31));
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() const nothrow
     {
         immutable weekday = dayOfWeek;
         immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
@@ -12478,7 +12478,7 @@ assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
 assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 --------------------
       +/
-    @property Date endOfMonth() const pure nothrow
+    @property Date endOfMonth() const nothrow
     {
         try
             return Date(_year, _month, maxDay(_year, _month));
@@ -12545,7 +12545,7 @@ assert(Date(2000, 2, 7).daysInMonth == 29);
 assert(Date(2000, 6, 4).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() const nothrow
     {
         return maxDay(_year, _month);
     }
@@ -12615,7 +12615,7 @@ assert(!Date(0, 12, 31).isAD);
 assert(!Date(-2010, 1, 1).isAD);
 --------------------
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() const nothrow
     {
         return _year > 0;
     }
@@ -12648,7 +12648,7 @@ assert(!Date(-2010, 1, 1).isAD);
         The julian day for this $(D Date) at noon (since the julian day changes
         at noon).
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() const nothrow
     {
         return dayOfGregorianCal + 1_721_425;
     }
@@ -12678,7 +12678,7 @@ assert(!Date(-2010, 1, 1).isAD);
         The modified julian day for any time on this date (since, the modified
         julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() const nothrow
     {
         return julianDay - 2_400_001;
     }
@@ -13326,7 +13326,7 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
         Returns the $(D Date) farthest in the past which is representable by
         $(D Date).
       +/
-    @property static Date min() pure nothrow
+    @property static Date min() nothrow
     {
         auto date = Date.init;
         date._year = short.min;
@@ -13350,7 +13350,7 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
         Returns the $(D Date) farthest in the future which is representable by
         $(D Date).
       +/
-    @property static Date max() pure nothrow
+    @property static Date max() nothrow
     {
         auto date = Date.init;
         date._year = short.max;
@@ -13380,7 +13380,7 @@ private:
             month = The month of the Gregorian Calendar to test.
             day   = The day of the month to test.
      +/
-    static bool _valid(int year, int month, int day) pure nothrow
+    static bool _valid(int year, int month, int day) nothrow
     {
         if(!valid!"months"(month))
             return false;
@@ -13404,7 +13404,7 @@ private:
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date addDays(long days) pure nothrow
+    ref Date addDays(long days) nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
 
@@ -13573,7 +13573,7 @@ private:
     }
 
 
-    pure invariant()
+    invariant()
     {
         assert(valid!"months"(_month), "Invariant Failure: year [" ~
                                        numToString(_year) ~
@@ -13617,7 +13617,7 @@ public:
             $(D DateTimeException) if the resulting $(D TimeOfDay) would be not
             be valid.
      +/
-    this(int hour, int minute, int second = 0) pure
+    this(int hour, int minute, int second = 0)
     {
         enforceValid!"hours"(hour);
         enforceValid!"minutes"(minute);
@@ -13672,7 +13672,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in TimeOfDay rhs) const pure nothrow
+    int opCmp(in TimeOfDay rhs) const nothrow
     {
         if(_hour < rhs._hour)
             return -1;
@@ -13735,7 +13735,7 @@ public:
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() const nothrow
     {
         return _hour;
     }
@@ -13765,7 +13765,7 @@ public:
             $(D DateTimeException) if the given hour would result in an invalid
             $(D TimeOfDay).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) 
     {
         enforceValid!"hours"(hour);
         _hour = cast(ubyte)hour;
@@ -13792,7 +13792,7 @@ public:
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() const nothrow
     {
         return _minute;
     }
@@ -13822,7 +13822,7 @@ public:
             $(D DateTimeException) if the given minute would result in an
             invalid $(D TimeOfDay).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) 
     {
         enforceValid!"minutes"(minute);
         _minute = cast(ubyte)minute;
@@ -13849,7 +13849,7 @@ public:
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() const nothrow
     {
         return _second;
     }
@@ -13879,7 +13879,7 @@ public:
             $(D DateTimeException) if the given second would result in an
             invalid $(D TimeOfDay).
      +/
-    @property void second(int second) pure
+    @property void second(int second) 
     {
         enforceValid!"seconds"(second);
         _second = cast(ubyte)second;
@@ -13946,7 +13946,7 @@ tod6.roll!"seconds"(-1);
 assert(tod6 == TimeOfDay(0, 0, 59));
 --------------------
       +/
-    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
+    /+ref TimeOfDay+/ void roll(string units)(long value) nothrow
         if(units == "hours")
     {
         this += dur!"hours"(value);
@@ -13996,7 +13996,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
 
     //Shares documentation with "hours" version.
-    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
+    /+ref TimeOfDay+/ void roll(string units)(long value) nothrow
         if(units == "minutes" ||
            units == "seconds")
     {
@@ -14225,7 +14225,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
             duration = The duration to add to or subtract from this
                        $(D TimeOfDay).
       +/
-    TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
+    TimeOfDay opBinary(string op, D)(in D duration) const nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -14331,7 +14331,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
             duration = The duration to add to or subtract from this
                        $(D TimeOfDay).
       +/
-    /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
+    /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -14411,7 +14411,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         Params:
             rhs = The $(D TimeOfDay) to subtract from this one.
       +/
-    Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
+    Duration opBinary(string op)(in TimeOfDay rhs) const nothrow
         if(op == "-")
     {
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
@@ -14809,7 +14809,7 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     /++
         Returns midnight.
       +/
-    @property static TimeOfDay min() pure nothrow
+    @property static TimeOfDay min() nothrow
     {
         return TimeOfDay.init;
     }
@@ -14829,7 +14829,7 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     /++
         Returns one second short of midnight.
       +/
-    @property static TimeOfDay max() pure nothrow
+    @property static TimeOfDay max() nothrow
     {
         auto tod = TimeOfDay.init;
         tod._hour = maxHour;
@@ -14864,7 +14864,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay addSeconds(long seconds) pure nothrow
+    ref TimeOfDay addSeconds(long seconds) nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -14969,13 +14969,13 @@ private:
     /+
         Whether the given values form a valid $(D TimeOfDay).
      +/
-    static bool _valid(int hour, int minute, int second) pure nothrow
+    static bool _valid(int hour, int minute, int second) nothrow
     {
         return valid!"hours"(hour) && valid!"minutes"(minute) && valid!"seconds"(second);
     }
 
 
-    pure invariant()
+    invariant()
     {
         assert(_valid(_hour, _minute, _second),
                "Invariant Failure: hour [" ~
@@ -15015,7 +15015,7 @@ public:
             date = The date portion of $(D DateTime).
             tod  = The time portion of $(D DateTime).
       +/
-    this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
+    this(in Date date, in TimeOfDay tod = TimeOfDay.init) nothrow
     {
         _date = date;
         _tod = tod;
@@ -15056,7 +15056,7 @@ public:
             second = The second portion of the time;
       +/
     this(int year, int month, int day,
-         int hour = 0, int minute = 0, int second = 0) pure
+         int hour = 0, int minute = 0, int second = 0) 
     {
         _date = Date(year, month, day);
         _tod = TimeOfDay(hour, minute, second);
@@ -15091,7 +15091,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in DateTime rhs) const pure nothrow
+    int opCmp(in DateTime rhs) const nothrow
     {
         immutable dateResult = _date.opCmp(rhs._date);
 
@@ -15304,7 +15304,7 @@ public:
     /++
         The date portion of $(D DateTime).
       +/
-    @property Date date() const pure nothrow
+    @property Date date() const nothrow
     {
         return _date;
     }
@@ -15337,7 +15337,7 @@ public:
         Params:
             date = The Date to set this $(D DateTime)'s date portion to.
       +/
-    @property void date(in Date date) pure nothrow
+    @property void date(in Date date) nothrow
     {
         _date = date;
     }
@@ -15362,7 +15362,7 @@ public:
     /++
         The time portion of $(D DateTime).
       +/
-    @property TimeOfDay timeOfDay() const pure nothrow
+    @property TimeOfDay timeOfDay() const nothrow
     {
         return _tod;
     }
@@ -15396,7 +15396,7 @@ public:
             tod = The $(D TimeOfDay) to set this $(D DateTime)'s time portion
                   to.
       +/
-    @property void timeOfDay(in TimeOfDay tod) pure nothrow
+    @property void timeOfDay(in TimeOfDay tod) nothrow
     {
         _tod = tod;
     }
@@ -15422,7 +15422,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const pure nothrow
+    @property short year() const nothrow
     {
         return _date.year;
     }
@@ -15461,7 +15461,7 @@ assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
 assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
 --------------------
      +/
-    @property void year(int year) pure
+    @property void year(int year) 
     {
         _date.year = year;
     }
@@ -15506,7 +15506,7 @@ assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
 assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
 --------------------
      +/
-    @property short yearBC() const pure
+    @property short yearBC() const 
     {
         return _date.yearBC;
     }
@@ -15551,7 +15551,7 @@ dt.yearBC = 10;
 assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
 --------------------
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) 
     {
         _date.yearBC = year;
     }
@@ -15594,7 +15594,7 @@ assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
 assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
 --------------------
      +/
-    @property Month month() const pure nothrow
+    @property Month month() const nothrow
     {
         return _date.month;
     }
@@ -15629,7 +15629,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
         Throws:
             $(D DateTimeException) if the given month is not a valid month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) 
     {
         _date.month = month;
     }
@@ -15669,7 +15669,7 @@ assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
 assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
 --------------------
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() const nothrow
     {
         return _date.day;
     }
@@ -15716,7 +15716,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
             $(D DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) 
     {
         _date.day = day;
     }
@@ -15811,7 +15811,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() const nothrow
     {
         return _tod.hour;
     }
@@ -15841,7 +15841,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
             $(D DateTimeException) if the given hour would result in an invalid
             $(D DateTime).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) 
     {
         _tod.hour = hour;
     }
@@ -15867,7 +15867,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() const nothrow
     {
         return _tod.minute;
     }
@@ -15897,7 +15897,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
             $(D DateTimeException) if the given minute would result in an
             invalid $(D DateTime).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) 
     {
         _tod.minute = minute;
     }
@@ -15923,7 +15923,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() const nothrow
     {
         return _tod.second;
     }
@@ -15953,7 +15953,7 @@ assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
             $(D DateTimeException) if the given seconds would result in an
             invalid $(D DateTime).
      +/
-    @property void second(int second) pure
+    @property void second(int second) 
     {
         _tod.second = second;
     }
@@ -16014,7 +16014,7 @@ dt4.add!"years"(1, AllowDayOverflow.no);
 assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
 --------------------
       +/
-    /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -16104,7 +16104,7 @@ dt6.roll!"years"(1, AllowDayOverflow.no);
 assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
 --------------------
       +/
-    /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -16192,7 +16192,7 @@ dt3.roll!"seconds"(-1);
 assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 --------------------
       +/
-    /+ref DateTime+/ void roll(string units)(long days) pure nothrow
+    /+ref DateTime+/ void roll(string units)(long days) nothrow
         if(units == "days")
     {
         _date.roll!"days"(days);
@@ -16234,7 +16234,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
 
     //Shares documentation with "days" version.
-    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
+    /+ref DateTime+/ void roll(string units)(long value) nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
@@ -16765,7 +16765,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
             duration = The duration to add to or subtract from this
                        $(D DateTime).
       +/
-    DateTime opBinary(string op, D)(in D duration) const pure nothrow
+    DateTime opBinary(string op, D)(in D duration) const nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -16875,7 +16875,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
             duration = The duration to add to or subtract from this
                        $(D DateTime).
       +/
-    /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
+    /+ref+/ DateTime opOpAssign(string op, D)(in D duration) nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -16961,7 +16961,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in DateTime rhs) const pure nothrow
+    Duration opBinary(string op)(in DateTime rhs) const nothrow
         if(op == "-")
     {
         immutable dateResult = _date - rhs.date;
@@ -17076,7 +17076,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
             DateTime(1999, 3, 31, 0, 30, 58)) == -2);
 --------------------
       +/
-    int diffMonths(in DateTime rhs) const pure nothrow
+    int diffMonths(in DateTime rhs) const nothrow
     {
         return _date.diffMonths(rhs._date);
     }
@@ -17112,7 +17112,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
     /++
         Whether this $(D DateTime) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() const nothrow
     {
         return _date.isLeapYear;
     }
@@ -17134,7 +17134,7 @@ assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
     /++
         Day of the week this $(D DateTime) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() const nothrow
     {
         return _date.dayOfWeek;
     }
@@ -17163,7 +17163,7 @@ assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
 assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
 --------------------
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() const nothrow
     {
         return _date.dayOfYear;
     }
@@ -17194,7 +17194,7 @@ assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
             day = The day of the year to set which day of the year this
                   $(D DateTime) is on.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) 
     {
         _date.dayOfYear = day;
     }
@@ -17238,7 +17238,7 @@ assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal ==
        734_137);
 --------------------
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() const nothrow
     {
         return _date.dayOfGregorianCal;
     }
@@ -17304,7 +17304,7 @@ dt.dayOfGregorianCal = 734_137;
 assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
 --------------------
      +/
-    @property void dayOfGregorianCal(int days) pure nothrow
+    @property void dayOfGregorianCal(int days) nothrow
     {
         _date.dayOfGregorianCal = days;
     }
@@ -17353,7 +17353,7 @@ assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() const nothrow
     {
         return _date.isoWeek;
     }
@@ -17391,7 +17391,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
        DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
 --------------------
       +/
-    @property DateTime endOfMonth() const pure nothrow
+    @property DateTime endOfMonth() const nothrow
     {
         try
             return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
@@ -17458,7 +17458,7 @@ assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
 assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() const nothrow
     {
         return _date.daysInMonth;
     }
@@ -17498,7 +17498,7 @@ assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
 assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
 --------------------
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() const nothrow
     {
         return _date.isAD;
     }
@@ -17527,7 +17527,7 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
         this function returns 2_450_173, while from noon onward, the julian
         day number would be 2_450_174, so this function returns 2_450_174.
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() const nothrow
     {
         if(_tod._hour < 12)
             return _date.julianDay - 1;
@@ -17575,7 +17575,7 @@ assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
         The modified julian day for any time on this date (since, the modified
         julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() const nothrow
     {
         return _date.modJulianDay;
     }
@@ -18110,7 +18110,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         Returns the $(D DateTime) farthest in the past which is representable by
         $(D DateTime).
       +/
-    @property static DateTime min() pure nothrow
+    @property static DateTime min() nothrow
     out(result)
     {
         assert(result._date == Date.min);
@@ -18140,7 +18140,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         Returns the $(D DateTime) farthest in the future which is representable
         by $(D DateTime).
       +/
-    @property static DateTime max() pure nothrow
+    @property static DateTime max() nothrow
     out(result)
     {
         assert(result._date == Date.max);
@@ -18180,7 +18180,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(D DateTime).
       +/
-    ref DateTime addSeconds(long seconds) pure nothrow
+    ref DateTime addSeconds(long seconds) nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
@@ -18426,7 +18426,7 @@ public:
 Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 --------------------
       +/
-    this(U)(in TP begin, in U end) pure
+    this(U)(in TP begin, in U end) 
         if(is(Unqual!TP == Unqual!U))
     {
         if(!_valid(begin, end))
@@ -18452,7 +18452,7 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) ==
        Interval!Date(Date(1996, 1, 2), Date(1999, 1, 2)));
 --------------------
       +/
-    this(D)(in TP begin, in D duration) pure
+    this(D)(in TP begin, in D duration) 
         if(__traits(compiles, begin + duration))
     {
         _begin = cast(TP)begin;
@@ -18467,7 +18467,7 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) ==
         Params:
             rhs = The $(D Interval) to assign to this one.
       +/
-    /+ref+/ Interval opAssign(const ref Interval rhs) pure nothrow
+    /+ref+/ Interval opAssign(const ref Interval rhs) nothrow
     {
         _begin = cast(TP)rhs._begin;
         _end = cast(TP)rhs._end;
@@ -18480,7 +18480,7 @@ assert(Interval!Date(Date(1996, 1, 2), Dur.years(3)) ==
         Params:
             rhs = The $(D Interval) to assign to this one.
       +/
-    /+ref+/ Interval opAssign(Interval rhs) pure nothrow
+    /+ref+/ Interval opAssign(Interval rhs) nothrow
     {
         _begin = cast(TP)rhs._begin;
         _end = cast(TP)rhs._end;
@@ -18498,7 +18498,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
        Date(1996, 1, 2));
 --------------------
       +/
-    @property TP begin() const pure nothrow
+    @property TP begin() const nothrow
     {
         return cast(TP)_begin;
     }
@@ -18513,7 +18513,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).begin ==
         Throws:
             $(D DateTimeException) if the resulting interval would be invalid.
       +/
-    @property void begin(TP timePoint) pure
+    @property void begin(TP timePoint) 
     {
         if(!_valid(timePoint, _end))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
@@ -18531,7 +18531,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
        Date(2012, 3, 1));
 --------------------
       +/
-    @property TP end() const pure nothrow
+    @property TP end() const nothrow
     {
         return cast(TP)_end;
     }
@@ -18546,7 +18546,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
         Throws:
             $(D DateTimeException) if the resulting interval would be invalid.
       +/
-    @property void end(TP timePoint) pure
+    @property void end(TP timePoint) 
     {
         if(!_valid(_begin, timePoint))
             throw new DateTimeException("Arguments would result in an invalid Interval.");
@@ -18564,7 +18564,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
        dur!"days"(5903));
 --------------------
       +/
-    @property typeof(end - begin) length() const pure nothrow
+    @property typeof(end - begin) length() const nothrow
     {
         return _end - _begin;
     }
@@ -18579,7 +18579,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(1996, 1, 2)).empty);
 assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).empty);
 --------------------
       +/
-    @property bool empty() const pure nothrow
+    @property bool empty() const nothrow
     {
         return _begin == _end;
     }
@@ -18605,7 +18605,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             Date(2012, 3, 1)));
 --------------------
       +/
-    bool contains(in TP timePoint) const pure
+    bool contains(in TP timePoint) const 
     {
         _enforceNotEmpty();
 
@@ -18634,7 +18634,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
-    bool contains(in Interval interval) const pure
+    bool contains(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -18664,7 +18664,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool contains(in PosInfInterval!TP interval) const pure
+    bool contains(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18691,7 +18691,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).contains(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool contains(in NegInfInterval!TP interval) const pure
+    bool contains(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18721,7 +18721,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             Date(2012, 3, 1)));
 --------------------
       +/
-    bool isBefore(in TP timePoint) const pure
+    bool isBefore(in TP timePoint) const 
     {
         _enforceNotEmpty();
 
@@ -18751,7 +18751,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             Interval!Date(Date(2012, 3, 1), Date(2013, 5, 1))));
 --------------------
       +/
-    bool isBefore(in Interval interval) const pure
+    bool isBefore(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -18779,7 +18779,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             PosInfInterval!Date(Date(2013, 3, 7))));
 --------------------
       +/
-    bool isBefore(in PosInfInterval!TP interval) const pure
+    bool isBefore(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18806,7 +18806,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isBefore(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool isBefore(in NegInfInterval!TP interval) const pure
+    bool isBefore(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18836,7 +18836,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             Date(2012, 3, 1)));
 --------------------
       +/
-    bool isAfter(in TP timePoint) const pure
+    bool isAfter(in TP timePoint) const 
     {
         _enforceNotEmpty();
 
@@ -18866,7 +18866,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAfter(in Interval interval) const pure
+    bool isAfter(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -18894,7 +18894,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool isAfter(in PosInfInterval!TP interval) const pure
+    bool isAfter(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18918,7 +18918,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAfter(
             NegInfInterval!Date(Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAfter(in NegInfInterval!TP interval) const pure
+    bool isAfter(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -18947,7 +18947,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool intersects(in Interval interval) const pure
+    bool intersects(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -18974,7 +18974,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool intersects(in PosInfInterval!TP interval) const pure
+    bool intersects(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19000,7 +19000,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersects(
             NegInfInterval!Date(Date(2000, 1, 2))));
 --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure
+    bool intersects(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19120,7 +19120,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             Interval!Date(Date(1989, 3, 1), Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in Interval interval) const pure
+    bool isAdjacent(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -19148,7 +19148,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in PosInfInterval!TP interval) const pure
+    bool isAdjacent(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19175,7 +19175,7 @@ assert(!Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).isAdjacent(
             NegInfInterval!Date(Date(2000, 1, 2))));
 --------------------
       +/
-    bool isAdjacent(in NegInfInterval!TP interval) const pure
+    bool isAdjacent(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19298,7 +19298,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
        Interval!Date(Date(1996, 1 , 2), Date(2013, 5, 7)));
 --------------------
       +/
-    Interval span(in Interval interval) const pure
+    Interval span(in Interval interval) const 
     {
         _enforceNotEmpty();
         interval._enforceNotEmpty();
@@ -19332,7 +19332,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval!TP span(in PosInfInterval!TP interval) const pure
+    PosInfInterval!TP span(in PosInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19362,7 +19362,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
        NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
-    NegInfInterval!TP span(in NegInfInterval!TP interval) const pure
+    NegInfInterval!TP span(in NegInfInterval!TP interval) const 
     {
         _enforceNotEmpty();
 
@@ -19395,7 +19395,7 @@ interval2.shift(dur!"days"(-50));
 assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
 --------------------
       +/
-    void shift(D)(D duration) pure
+    void shift(D)(D duration) 
         if(__traits(compiles, begin + duration))
     {
         _enforceNotEmpty();
@@ -19492,7 +19492,7 @@ interval2.expand(-2);
 assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 --------------------
       +/
-    void expand(D)(D duration, Direction dir = Direction.both) pure
+    void expand(D)(D duration, Direction dir = Direction.both) 
         if(__traits(compiles, begin + duration))
     {
         _enforceNotEmpty();
@@ -19852,7 +19852,7 @@ private:
         Throws:
             $(D DateTimeException) if this interval is empty.
       +/
-    void _enforceNotEmpty(size_t line = __LINE__) const pure
+    void _enforceNotEmpty(size_t line = __LINE__) const 
     {
         if(empty)
             throw new DateTimeException("Invalid operation for an empty Interval.", __FILE__, line);
@@ -19866,13 +19866,13 @@ private:
             begin = The starting point of the interval.
             end   = The end point of the interval.
      +/
-    static bool _valid(in TP begin, in TP end) pure nothrow
+    static bool _valid(in TP begin, in TP end) nothrow
     {
         return begin <= end;
     }
 
 
-    pure invariant()
+     invariant()
     {
         assert(_valid(_begin, _end), "Invariant Failure: begin is not before or equal to end.");
     }
@@ -21389,7 +21389,7 @@ public:
 auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 --------------------
       +/
-    this(in TP begin) pure nothrow
+    this(in TP begin) nothrow
     {
         _begin = cast(TP)begin;
     }
@@ -21399,7 +21399,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D PosInfInterval) to assign to this one.
       +/
-    /+ref+/ PosInfInterval opAssign(const ref PosInfInterval rhs) pure nothrow
+    /+ref+/ PosInfInterval opAssign(const ref PosInfInterval rhs) nothrow
     {
         _begin = cast(TP)rhs._begin;
 
@@ -21411,7 +21411,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D PosInfInterval) to assign to this one.
       +/
-    /+ref+/ PosInfInterval opAssign(PosInfInterval rhs) pure nothrow
+    /+ref+/ PosInfInterval opAssign(PosInfInterval rhs) nothrow
     {
         _begin = cast(TP)rhs._begin;
 
@@ -21427,7 +21427,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
 --------------------
       +/
-    @property TP begin() const pure nothrow
+    @property TP begin() const nothrow
     {
         return cast(TP)_begin;
     }
@@ -21439,7 +21439,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
         Params:
             timePoint = The time point to set $(D begin) to.
       +/
-    @property void begin(TP timePoint) pure nothrow
+    @property void begin(TP timePoint) nothrow
     {
         _begin = timePoint;
     }
@@ -21453,7 +21453,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).begin == Date(1996, 1, 2));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).empty);
 --------------------
       +/
-    @property bool empty() const pure nothrow
+    @property bool empty() const nothrow
     {
         return false;
     }
@@ -21471,7 +21471,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(1994, 12, 24)));
 assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
 --------------------
       +/
-    bool contains(TP timePoint) const pure nothrow
+    bool contains(TP timePoint) const nothrow
     {
         return timePoint >= _begin;
     }
@@ -21498,7 +21498,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(
             Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
-    bool contains(in Interval!TP interval) const pure
+    bool contains(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -21521,7 +21521,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
             PosInfInterval!Date(Date(1995, 7, 2))));
 --------------------
       +/
-    bool contains(in PosInfInterval interval) const pure nothrow
+    bool contains(in PosInfInterval interval) const nothrow
     {
         return interval._begin >= _begin;
     }
@@ -21542,7 +21542,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).contains(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool contains(in NegInfInterval!TP interval) const pure nothrow
+    bool contains(in NegInfInterval!TP interval) const nothrow
     {
         return false;
     }
@@ -21564,7 +21564,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(1994, 12, 24)));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
 --------------------
       +/
-    bool isBefore(in TP timePoint) const pure nothrow
+    bool isBefore(in TP timePoint) const nothrow
     {
         return false;
     }
@@ -21593,7 +21593,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
-    bool isBefore(in Interval!TP interval) const pure
+    bool isBefore(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -21620,7 +21620,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             PosInfInterval!Date(Date(2013, 3, 7))));
 --------------------
       +/
-    bool isBefore(in PosInfInterval interval) const pure nothrow
+    bool isBefore(in PosInfInterval interval) const nothrow
     {
         return false;
     }
@@ -21642,7 +21642,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(
             NegInfInterval!Date(Date(1996, 5, 4))));
 --------------------
       +/
-    bool isBefore(in NegInfInterval!TP interval) const pure nothrow
+    bool isBefore(in NegInfInterval!TP interval) const nothrow
     {
         return false;
     }
@@ -21661,7 +21661,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(1994, 12, 24)));
 assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
 --------------------
       +/
-    bool isAfter(in TP timePoint) const pure nothrow
+    bool isAfter(in TP timePoint) const nothrow
     {
         return timePoint < _begin;
     }
@@ -21689,7 +21689,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAfter(in Interval!TP interval) const pure
+    bool isAfter(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -21716,7 +21716,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool isAfter(in PosInfInterval interval) const pure nothrow
+    bool isAfter(in PosInfInterval interval) const nothrow
     {
         return false;
     }
@@ -21738,7 +21738,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool isAfter(in NegInfInterval!TP interval) const pure nothrow
+    bool isAfter(in NegInfInterval!TP interval) const nothrow
     {
         return _begin >= interval._end;
     }
@@ -21765,7 +21765,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             Interval!Date(Date(1989, 3, 1), Date(1996, 1, 2))));
 --------------------
       +/
-    bool intersects(in Interval!TP interval) const pure
+    bool intersects(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -21792,7 +21792,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool intersects(in PosInfInterval interval) const pure nothrow
+    bool intersects(in PosInfInterval interval) const nothrow
     {
         return true;
     }
@@ -21814,7 +21814,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure nothrow
+    bool intersects(in NegInfInterval!TP interval) const nothrow
     {
         return _begin < interval._end;
     }
@@ -21868,7 +21868,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
        PosInfInterval!Date(Date(1999, 1 , 12)));
 --------------------
       +/
-    PosInfInterval intersection(in PosInfInterval interval) const pure nothrow
+    PosInfInterval intersection(in PosInfInterval interval) const nothrow
     {
         return PosInfInterval(_begin < interval._begin ? interval._begin : _begin);
     }
@@ -21921,7 +21921,7 @@ assert(!PosInfInterval!Date(Date(1999, 1, 12)).isAdjacent(
             Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
 --------------------
       +/
-    bool isAdjacent(in Interval!TP interval) const pure
+    bool isAdjacent(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -21948,7 +21948,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             PosInfInterval!Date(Date(1996, 1, 2))));
 --------------------
       +/
-    bool isAdjacent(in PosInfInterval interval) const pure nothrow
+    bool isAdjacent(in PosInfInterval interval) const nothrow
     {
         return false;
     }
@@ -21970,7 +21970,7 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             NegInfInterval!Date(Date(2000, 7, 1))));
 --------------------
       +/
-    bool isAdjacent(in NegInfInterval!TP interval) const pure nothrow
+    bool isAdjacent(in NegInfInterval!TP interval) const nothrow
     {
         return _begin == interval._end;
     }
@@ -22033,7 +22033,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval merge(in PosInfInterval interval) const pure nothrow
+    PosInfInterval merge(in PosInfInterval interval) const nothrow
     {
         return PosInfInterval(_begin < interval._begin ? _begin : interval._begin);
     }
@@ -22071,7 +22071,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval span(in Interval!TP interval) const pure
+    PosInfInterval span(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -22104,7 +22104,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
        PosInfInterval!Date(Date(1996, 1 , 2)));
 --------------------
       +/
-    PosInfInterval span(in PosInfInterval interval) const pure nothrow
+    PosInfInterval span(in PosInfInterval interval) const nothrow
     {
         return PosInfInterval(_begin < interval._begin ? _begin : interval._begin);
     }
@@ -22131,7 +22131,7 @@ interval2.shift(dur!"days"(-50));
 assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
       +/
-    void shift(D)(D duration) pure nothrow
+    void shift(D)(D duration) nothrow
         if(__traits(compiles, begin + duration))
     {
         _begin += duration;
@@ -22205,7 +22205,7 @@ interval2.expand(dur!"days"(-2));
 assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
 --------------------
       +/
-    void expand(D)(D duration) pure nothrow
+    void expand(D)(D duration) nothrow
         if(__traits(compiles, begin + duration))
     {
         _begin -= duration;
@@ -23633,7 +23633,7 @@ public:
 auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 --------------------
       +/
-    this(in TP end) pure nothrow
+    this(in TP end) nothrow
     {
         _end = cast(TP)end;
     }
@@ -23643,7 +23643,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D NegInfInterval) to assign to this one.
       +/
-    /+ref+/ NegInfInterval opAssign(const ref NegInfInterval rhs) pure nothrow
+    /+ref+/ NegInfInterval opAssign(const ref NegInfInterval rhs) nothrow
     {
         _end = cast(TP)rhs._end;
 
@@ -23655,7 +23655,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D NegInfInterval) to assign to this one.
       +/
-    /+ref+/ NegInfInterval opAssign(NegInfInterval rhs) pure nothrow
+    /+ref+/ NegInfInterval opAssign(NegInfInterval rhs) nothrow
     {
         _end = cast(TP)rhs._end;
 
@@ -23671,7 +23671,7 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
 assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
 --------------------
       +/
-    @property TP end() const pure nothrow
+    @property TP end() const nothrow
     {
         return cast(TP)_end;
     }
@@ -23683,7 +23683,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
         Params:
             timePoint = The time point to set end to.
       +/
-    @property void end(TP timePoint) pure nothrow
+    @property void end(TP timePoint) nothrow
     {
         _end = timePoint;
     }
@@ -23697,7 +23697,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
 assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
 --------------------
       +/
-    @property bool empty() const pure nothrow
+    @property bool empty() const nothrow
     {
         return false;
     }
@@ -23716,7 +23716,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
 assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
 --------------------
       +/
-    bool contains(TP timePoint) const pure nothrow
+    bool contains(TP timePoint) const nothrow
     {
         return timePoint < _end;
     }
@@ -23743,7 +23743,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
 --------------------
       +/
-    bool contains(in Interval!TP interval) const pure
+    bool contains(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -23766,7 +23766,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             PosInfInterval!Date(Date(1999, 5, 4))));
 --------------------
       +/
-    bool contains(in PosInfInterval!TP interval) const pure nothrow
+    bool contains(in PosInfInterval!TP interval) const nothrow
     {
         return false;
     }
@@ -23787,7 +23787,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool contains(in NegInfInterval interval) const pure nothrow
+    bool contains(in NegInfInterval interval) const nothrow
     {
         return interval._end <= _end;
     }
@@ -23807,7 +23807,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
 assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
 --------------------
       +/
-    bool isBefore(in TP timePoint) const pure nothrow
+    bool isBefore(in TP timePoint) const nothrow
     {
         return timePoint >= _end;
     }
@@ -23835,7 +23835,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isBefore(in Interval!TP interval) const pure
+    bool isBefore(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -23859,7 +23859,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isBefore(in PosInfInterval!TP interval) const pure nothrow
+    bool isBefore(in PosInfInterval!TP interval) const nothrow
     {
         return _end <= interval._begin;
     }
@@ -23885,7 +23885,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool isBefore(in NegInfInterval interval) const pure nothrow
+    bool isBefore(in NegInfInterval interval) const nothrow
     {
         return false;
     }
@@ -23908,7 +23908,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
 assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
 --------------------
       +/
-    bool isAfter(in TP timePoint) const pure nothrow
+    bool isAfter(in TP timePoint) const nothrow
     {
         return false;
     }
@@ -23940,7 +23940,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isAfter(in Interval!TP interval) const pure
+    bool isAfter(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -23967,7 +23967,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAfter(in PosInfInterval!TP interval) const pure nothrow
+    bool isAfter(in PosInfInterval!TP interval) const nothrow
     {
         return false;
     }
@@ -23992,7 +23992,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool isAfter(in NegInfInterval interval) const pure nothrow
+    bool isAfter(in NegInfInterval interval) const nothrow
     {
         return false;
     }
@@ -24019,7 +24019,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool intersects(in Interval!TP interval) const pure
+    bool intersects(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -24043,7 +24043,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool intersects(in PosInfInterval!TP interval) const pure nothrow
+    bool intersects(in PosInfInterval!TP interval) const nothrow
     {
         return interval._begin < _end;
     }
@@ -24067,7 +24067,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             NegInfInterval!Date(Date(2013, 7, 9))));
 --------------------
       +/
-    bool intersects(in NegInfInterval!TP interval) const pure nothrow
+    bool intersects(in NegInfInterval!TP interval) const nothrow
     {
         return true;
     }
@@ -24180,7 +24180,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
 --------------------
       +/
-    bool isAdjacent(in Interval!TP interval) const pure
+    bool isAdjacent(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -24204,7 +24204,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             PosInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
+    bool isAdjacent(in PosInfInterval!TP interval) const nothrow
     {
         return interval._begin == _end;
     }
@@ -24229,7 +24229,7 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             NegInfInterval!Date(Date(2012, 3, 1))));
 --------------------
       +/
-    bool isAdjacent(in NegInfInterval interval) const pure nothrow
+    bool isAdjacent(in NegInfInterval interval) const nothrow
     {
         return false;
     }
@@ -24292,7 +24292,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
        NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
-    NegInfInterval merge(in NegInfInterval interval) const pure nothrow
+    NegInfInterval merge(in NegInfInterval interval) const nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
@@ -24330,7 +24330,7 @@ assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
        NegInfInterval!Date(Date(2017, 7 , 1)));
 --------------------
       +/
-    NegInfInterval span(in Interval!TP interval) const pure
+    NegInfInterval span(in Interval!TP interval) const 
     {
         interval._enforceNotEmpty();
 
@@ -24363,7 +24363,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
        NegInfInterval!Date(Date(2013, 1 , 12)));
 --------------------
       +/
-    NegInfInterval span(in NegInfInterval interval) const pure nothrow
+    NegInfInterval span(in NegInfInterval interval) const nothrow
     {
         return NegInfInterval(_end > interval._end ? _end : interval._end);
     }
@@ -24390,7 +24390,7 @@ interval2.shift(dur!"days"(-50));
 assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
 --------------------
       +/
-    void shift(D)(D duration) pure nothrow
+    void shift(D)(D duration) nothrow
         if(__traits(compiles, end + duration))
     {
         _end += duration;
@@ -24463,7 +24463,7 @@ interval2.expand(dur!"days"(-2));
 assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
 --------------------
       +/
-    void expand(D)(D duration) pure nothrow
+    void expand(D)(D duration) nothrow
         if(__traits(compiles, end + duration))
     {
         _end += duration;
@@ -26485,7 +26485,7 @@ public:
         Params:
             rhs = The $(D IntervalRange) to assign to this one.
       +/
-    /+ref+/ IntervalRange opAssign(ref IntervalRange rhs) pure nothrow
+    /+ref+/ IntervalRange opAssign(ref IntervalRange rhs) nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
@@ -26497,7 +26497,7 @@ public:
     /++
         Whether this $(D IntervalRange) is empty.
       +/
-    @property bool empty() const pure nothrow
+    @property bool empty() const nothrow
     {
         return _interval.empty;
     }
@@ -26509,7 +26509,7 @@ public:
         Throws:
             $(D DateTimeException) if the range is empty.
       +/
-    @property TP front() const pure
+    @property TP front() const 
     {
         _enforceNotEmpty();
 
@@ -26568,7 +26568,7 @@ public:
     /++
         Returns a copy of $(D this).
       +/
-    @property IntervalRange save() pure nothrow
+    @property IntervalRange save() nothrow
     {
         return this;
     }
@@ -26577,7 +26577,7 @@ public:
     /++
         The interval that this $(D IntervalRange) currently covers.
       +/
-    @property Interval!TP interval() const pure nothrow
+    @property Interval!TP interval() const nothrow
     {
         return cast(Interval!TP)_interval;
     }
@@ -26586,7 +26586,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(in TP) func() nothrow @property
     {
         return _func;
     }
@@ -26595,7 +26595,7 @@ public:
     /++
         The $(D Direction) that this range iterates in.
       +/
-    @property Direction direction() const pure nothrow
+    @property Direction direction() const nothrow
     {
         return dir;
     }
@@ -26609,7 +26609,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in Interval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(in Interval!TP interval, TP delegate(in TP) func) nothrow
     {
         _func = func;
         _interval = interval;
@@ -26620,7 +26620,7 @@ private:
         Throws:
             $(D DateTimeException) if this interval is empty.
       +/
-    void _enforceNotEmpty(size_t line = __LINE__) const pure
+    void _enforceNotEmpty(size_t line = __LINE__) const 
     {
         if(empty)
             throw new DateTimeException("Invalid operation for an empty IntervalRange.", __FILE__, line);
@@ -27002,7 +27002,7 @@ public:
         Params:
             rhs = The $(D PosInfIntervalRange) to assign to this one.
       +/
-    /+ref+/ PosInfIntervalRange opAssign(ref PosInfIntervalRange rhs) pure nothrow
+    /+ref+/ PosInfIntervalRange opAssign(ref PosInfIntervalRange rhs) nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
@@ -27020,7 +27020,7 @@ public:
     /++
         The first time point in the range.
       +/
-    @property TP front() const pure nothrow
+    @property TP front() const nothrow
     {
         return _interval.begin;
     }
@@ -27047,7 +27047,7 @@ public:
     /++
         Returns a copy of $(D this).
       +/
-    @property PosInfIntervalRange save() pure nothrow
+    @property PosInfIntervalRange save() nothrow
     {
         return this;
     }
@@ -27056,7 +27056,7 @@ public:
     /++
         The interval that this range currently covers.
       +/
-    @property PosInfInterval!TP interval() const pure nothrow
+    @property PosInfInterval!TP interval() const nothrow
     {
         return cast(PosInfInterval!TP)_interval;
     }
@@ -27065,7 +27065,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(in TP) func() nothrow @property
     {
         return _func;
     }
@@ -27079,7 +27079,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in PosInfInterval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(in PosInfInterval!TP interval, TP delegate(in TP) func) nothrow
     {
         _func = func;
         _interval = interval;
@@ -27301,7 +27301,7 @@ public:
         Params:
             rhs = The $(D NegInfIntervalRange) to assign to this one.
       +/
-    /+ref+/ NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
+    /+ref+/ NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
@@ -27319,7 +27319,7 @@ public:
     /++
         The first time point in the range.
       +/
-    @property TP front() const pure nothrow
+    @property TP front() const nothrow
     {
         return _interval.end;
     }
@@ -27346,7 +27346,7 @@ public:
     /++
         Returns a copy of $(D this).
       +/
-    @property NegInfIntervalRange save() pure nothrow
+    @property NegInfIntervalRange save() nothrow
     {
         return this;
     }
@@ -27355,7 +27355,7 @@ public:
     /++
         The interval that this range currently covers.
       +/
-    @property NegInfInterval!TP interval() const pure nothrow
+    @property NegInfInterval!TP interval() const nothrow
     {
         return cast(NegInfInterval!TP)_interval;
     }
@@ -27364,7 +27364,7 @@ public:
     /++
         The function used to generate the next time point in the range.
       +/
-    TP delegate(in TP) func() pure nothrow @property
+    TP delegate(in TP) func() nothrow @property
     {
         return _func;
     }
@@ -27378,7 +27378,7 @@ private:
             func     = The function used to generate the time points which are
                        iterated over.
       +/
-    this(in NegInfInterval!TP interval, TP delegate(in TP) func) pure nothrow
+    this(in NegInfInterval!TP interval, TP delegate(in TP) func) nothrow
     {
         _func = func;
         _interval = interval;
@@ -27903,7 +27903,7 @@ private:
             stdName = The abbreviation for the time zone during std time.
             dstName = The abbreviation for the time zone during DST.
       +/
-    this(string name, string stdName, string dstName) immutable pure
+    this(string name, string stdName, string dstName) immutable 
     {
         _name = name;
         _stdName = stdName;
@@ -27935,7 +27935,7 @@ public:
         $(D LocalTime) is a singleton class. $(D LocalTime) returns its only
         instance.
       +/
-    static immutable(LocalTime) opCall() pure nothrow
+    static immutable(LocalTime) opCall() nothrow
     {
         return _localTime;
     }
@@ -28376,7 +28376,7 @@ public:
 
 private:
 
-    this() immutable pure
+    this() immutable 
     {
         super("", "", "");
     }
@@ -28404,7 +28404,7 @@ public:
     /++
         $(D UTC) is a singleton class. $(D UTC) returns its only instance.
       +/
-    static immutable(UTC) opCall() pure nothrow
+    static immutable(UTC) opCall() nothrow
     {
         return _utc;
     }
@@ -28500,7 +28500,7 @@ public:
 
 private:
 
-    this() immutable pure
+    this() immutable 
     {
         super("UTC", "UTC", "UTC");
     }
@@ -29861,7 +29861,7 @@ version(StdDdoc)
         static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow;
         static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow;
 
-        this() immutable pure
+        this() immutable 
         {
             super("", "", "");
         }
@@ -30737,7 +30737,7 @@ public:
 
 
     ///
-    bool opEquals(const ref StopWatch rhs) const pure nothrow
+    bool opEquals(const ref StopWatch rhs) const nothrow
     {
         return _timeStart == rhs._timeStart &&
                _timeMeasured == rhs._timeMeasured;
@@ -30784,7 +30784,7 @@ public:
         _timeStart = Clock.currSystemTick;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30810,7 +30810,7 @@ public:
         _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30864,7 +30864,7 @@ private:
 
 
 // workaround for bug4886
-@safe size_t lengthof(aliases...)() pure nothrow
+@safe size_t lengthof(aliases...)() nothrow
 {
     return aliases.length;
 }
@@ -30967,7 +30967,7 @@ version(testStdDateTime) @safe unittest
        baseFunc's time over targetFunc's time. If performance is high, this
        returns a high value.
       +/
-    @property real point() const pure nothrow
+    @property real point() const nothrow
     {
         return _baseTime.length / cast(const real)_targetTime.length;
     }
@@ -30976,7 +30976,7 @@ version(testStdDateTime) @safe unittest
     /++
        The time required of the base function
       +/
-    @property public TickDuration baseTime() const pure nothrow
+    @property public TickDuration baseTime() const nothrow
     {
         return _baseTime;
     }
@@ -30985,14 +30985,14 @@ version(testStdDateTime) @safe unittest
     /++
        The time required of the target function
       +/
-    @property public TickDuration targetTime() const pure nothrow
+    @property public TickDuration targetTime() const nothrow
     {
         return _targetTime;
     }
 
 private:
 
-    this(TickDuration baseTime, TickDuration targetTime) pure nothrow
+    this(TickDuration baseTime, TickDuration targetTime) nothrow
     {
         _baseTime = baseTime;
         _targetTime = targetTime;
@@ -31195,7 +31195,7 @@ unittest
     Params:
         year = The year to to be tested.
  +/
-static bool yearIsLeapYear(int year) pure nothrow
+static bool yearIsLeapYear(int year) nothrow
 {
     if(year % 400 == 0)
         return true;
@@ -31230,7 +31230,7 @@ version(testStdDateTime) unittest
     Params:
         unixTime = The $(D time_t) to convert.
   +/
-long unixTimeToStdTime(time_t unixTime) pure nothrow
+long unixTimeToStdTime(time_t unixTime) nothrow
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
 
@@ -31270,7 +31270,7 @@ unittest
     Params:
         stdTime = The std time to convert.
   +/
-time_t stdTimeToUnixTime(long stdTime) pure nothrow
+time_t stdTimeToUnixTime(long stdTime) nothrow
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
@@ -31825,7 +31825,7 @@ assert(valid!"months"(12));
 assert(!valid!"months"(13));
 --------------------
   +/
-bool valid(string units)(int value) pure nothrow
+bool valid(string units)(int value) nothrow
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -31863,7 +31863,7 @@ unittest
         month = The month of the day to validate.
         day   = The day to validate.
   +/
-bool valid(string units)(int year, int month, int day) pure nothrow
+bool valid(string units)(int year, int month, int day) nothrow
     if(units == "days")
 {
     return day > 0 && day <= maxDay(year, month);
@@ -31881,7 +31881,7 @@ bool valid(string units)(int year, int month, int day) pure nothrow
     Throws:
         $(D DateTimeException) if $(D valid!units(value)) is false.
   +/
-void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__)
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -31923,7 +31923,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     Throws:
         $(D DateTimeException) if $(D valid!"days"(year, month, day)) is false.
   +/
-void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__)
     if(units == "days")
 {
     if(!valid!"days"(year, month, day))
@@ -31945,7 +31945,7 @@ void enforceValid(string units)(int year, Month month, int day, string file = __
         currMonth = The current month of the year.
         month     = The month of the year to get the number of months to.
   +/
-static int monthsToMonth(int currMonth, int month) pure
+static int monthsToMonth(int currMonth, int month) 
 {
     enforceValid!"months"(currMonth);
     enforceValid!"months"(month);
@@ -32026,7 +32026,7 @@ unittest
         currDoW = The current day of the week.
         dow     = The day of the week to get the number of days to.
   +/
-static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) pure nothrow
+static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) nothrow
 {
     if(currDoW == dow)
         return 0;
@@ -32267,7 +32267,7 @@ assert(minutes == 5);
 assert(hnsecs == 7);
 --------------------
   +/
-long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
+long splitUnitsFromHNSecs(string units)(ref long hnsecs) nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -32316,7 +32316,7 @@ assert(days == 3);
 assert(hnsecs == 2595000000007L);
 --------------------
   +/
-long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long getUnitsFromHNSecs(string units)(long hnsecs) nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -32358,7 +32358,7 @@ assert(returned == 3000000007);
 assert(hnsecs == 2595000000007L);
 --------------------
   +/
-long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long removeUnitsFromHNSecs(string units)(long hnsecs) nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -32387,7 +32387,7 @@ unittest
         year  = The year to get the day for.
         month = The month of the Gregorian Calendar to get the day for.
  +/
-static ubyte maxDay(int year, int month) pure nothrow
+static ubyte maxDay(int year, int month) nothrow
 in
 {
     assert(valid!"months"(month));
@@ -32475,7 +32475,7 @@ unittest
         day = The day of the Gregorian Calendar for which to get the day of
               the week.
   +/
-DayOfWeek getDayOfWeek(int day) pure nothrow
+DayOfWeek getDayOfWeek(int day) nothrow
 {
     //January 1st, 1 A.D. was a Monday
     if(day >= 0)
@@ -32544,7 +32544,7 @@ unittest
     Throws:
         $(D DateTimeException) if the given month is not a valid month.
   +/
-string monthToString(Month month, bool useLongName = true) pure
+string monthToString(Month month, bool useLongName = true) 
 {
     if(useLongName == true)
     {
@@ -33167,7 +33167,7 @@ unittest
     (like it hopefully will be at some point), this function should
     be removed in favor of using to!string().
   +/
-string numToString(long value) pure nothrow
+string numToString(long value) nothrow
 {
     try
     {
@@ -33224,12 +33224,12 @@ template DTRebindable(T) if (is(T == class) || is(T == interface) || isArray!(T)
                 U stripped;
             }
 
-            void opAssign(T another) pure nothrow
+            void opAssign(T another) nothrow
             {
                 stripped = cast(U) another;
             }
 
-            void opAssign(DTRebindable another) pure nothrow
+            void opAssign(DTRebindable another) nothrow
             {
                 stripped = another.stripped;
             }
@@ -33237,35 +33237,35 @@ template DTRebindable(T) if (is(T == class) || is(T == interface) || isArray!(T)
             static if(is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(DTRebindable!(immutable U) another) pure nothrow
+                void opAssign(DTRebindable!(immutable U) another) nothrow
                 {
                     stripped = another.stripped;
                 }
             }
 
-            this(T initializer) pure nothrow
+            this(T initializer) nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref T get() pure nothrow
+            @property ref T get() nothrow
             {
                 return original;
             }
 
-            @property ref T get() const pure nothrow
+            @property ref T get() const nothrow
             {
                 return original;
             }
 
             alias get this;
 
-            T opDot() pure nothrow
+            T opDot() nothrow
             {
                 return original;
             }
 
-            T opDot() const pure nothrow
+            T opDot() const nothrow
             {
                 return original;
             }
