@@ -762,159 +762,154 @@ unittest
     assert(f_filename);
 }
 
-bool getopt(T...)(string helphdr, ref string[] args, T opts) {
-    enforce(args.length,
-            "Invalid arguments string passed: program name missing");
-
-    string helpMsg = GetoptHelp(opts); // extract all help strings
-
-    bool helpPrinted = false; // state tells if called with "--help"
-
-    void printHelp()
-    {
-        writeln("\n", helphdr, "\n", helpMsg,
-                "--help", "\n\tproduce
-                help message");
-        helpPrinted = true;
-    }
-
-    getopt(args, GetoptEx!(opts), "help", &printHelp);
-
-    return helpPrinted;
-}
-
-private template GetoptEx(TList...)
+private template ExcludeHelpStrings(TList...)
 {
     static if (TList.length)
     {
         static if (is(typeof(TList[0]) : config))
         {
             // it's a configuration flag, lets move on
-            alias TypeTuple!(TList[0],GetoptEx!(TList[1 .. $])) GetoptEx;
+            alias TypeTuple!(TList[0],ExcludeHelpStrings!(TList[1 .. $])) ExcludeHelpStrings;
         }
         else
         {
             // it's an option string, eat help string
-            alias TypeTuple!(TList[0],TList[2],GetoptEx!(TList[3 .. $]))
-                GetoptEx;
+            alias TypeTuple!(TList[0],TList[2],ExcludeHelpStrings!(TList[3 .. $]))
+                ExcludeHelpStrings;
         }
     }
     else
     {
-        alias TList GetoptEx;
+        alias TList ExcludeHelpStrings;
     }
 }
 
-private string GetoptHelp(T...)(T opts)
+private size_t maximumOptionLength(T...)(T options)
 {
-    static if (opts.length)
+    static if (options.length)
     {
-        static if (is(typeof(opts[0]) : config))
+        static if (is(typeof(options[0]) : config))
         {
             // it's a configuration flag, skip it
-            return GetoptHelp(opts[1 .. $]);
+            return maximumOptionLength(options[1 .. $]);
         }
         else
         {
-            // it's an option string
-            string option  = to!(string)(opts[0]);
-            string help    = to!(string)(opts[1]);
-
-            return( "--"~option~"\n"~help~"\n"~GetoptHelp(opts[3 .. $]) );
+            return max(options[0].length, maximumOptionLength(options[3 .. $]));
         }
     }
     else
     {
-        return to!(string)("\n");
+        return 0;
     }
 }
 
-unittest {
-    string inputFile, outputFile;
-
-    string[] args = ["program.name",
-                     "--input", "in", "--output", "out"];
-
-    bool helpPrinted = getopt(
-            "Test program to demonstrate getoptEx\n"~
-            "written by Igor Lesik on Feb 2010\n"~
-            "Usage: test1 { --switch }\n",
-            args,
-            std.getopt.config.caseInsensitive,
-            "input",
-            "\tinput file name,\n"~
-            "\tmust be html file",
-            &inputFile,
-            "output",
-            "\toutput file name",
-            &outputFile,
-            "author",
-            "\tprint name of\n"~
-            "\tthe author",
-            delegate() {writeln("Igor Lesik");}
-            );
-
-    if (helpPrinted)
-        return;
-
-    assert(inputFile == "in", to!(string)(inputFile));
-    assert(outputFile == "out", to!(string)(inputFile));
-}
-
-
-private template GetoptExcludeHelp(TList...)
+private string usageOptionsString(T...)(T options)
 {
-    static if (TList.length)
+    static if (options.length)
     {
-        static if (is(typeof(TList[0]) : config))
+        static if (is(typeof(options[0]) : config))
         {
-            // it's a configuration flag, lets move on
-            alias TypeTuple!(TList[0],GetoptExcludeHelp!(TList[1 .. $])) GetoptExcludeHelp;
+            // it's a configuration flag, skip it
+            return usageOptionsString(options[1 .. $]);
         }
         else
         {
-            // it's an option string, eat help string
-            alias TypeTuple!(TList[0],TList[2],GetoptExcludeHelp!(TList[3 .. $]))
-                GetoptExcludeHelp;
+            string helpMsg = helpOption(options[0 .. 3]);
+            return helpMsg ~ "\n" ~ usageOptionsString(options[3 .. $]);
         }
     }
     else
     {
-        alias TList GetoptExcludeHelp;
+        return "";
     }
 }
 
-private template magic(TList...)
+private string helpOption(T...)(T option)
 {
-	alias TypeTuple!(GetoptHelp!(TList), GetoptExcludeHelp(TList)) magic;
+    string optionHelp = format(optionFormat, optionChar, option[0], option[1]);
+    static if (!isDelegate!(typeof(option[2]))) {
+        if (optionDefaultFormat)
+            optionHelp ~= format(optionDefaultFormat, *option[2]);
+    }
+    return optionHelp;
 }
+
+// formatting options
+
+// spaces between the option and its help string
+size_t spacesBetween = 2;
+// format for an option
+string optionFormat = "%s%s\t%s";
+
+private string optionFormatString(size_t numSpaces)
+{
+    return "%s%-" ~ to!string(numSpaces) ~ "s%s";
+}
+
+// format for default values
+string optionDefaultFormat = " Defaults to '%s'.";
+
+// usage header
+string usageHeader;
+// usage options
+string usageOptions;
+
+/// Returns the usage string.
+@property string usage()
+{
+    return format("%s\n%s", usageHeader, usageOptions);
+}
+
+void getopt(T...)(string header, ref string[] args, T opts)
+{
+    usageHeader = header;
+    usageOptions = usageOptionsString(opts); // extract all help strings
+    getopt(args, ExcludeHelpStrings!(opts));
+}
+
+version(unittest) import std.c.process;
 
 import std.typecons;
+alias tuple options;
 
 unittest {
-    string inputFile, outputFile;
-
     string[] args = ["program.name",
                      "--input", "in", "--output", "out"];
+	
+    // program options
+    string inputFile = "test";
+    string outputFile;
 
-	string headerMsg = "Test program to demonstrate getoptEx\n"~
-                       "written by Igor Lesik on Feb 2010\n"~
-                       "Usage: test1 { --switch }\n";
-	string helpMsg;
+    auto programOptions = options(
+           std.getopt.config.caseInsensitive,
+           "i|input",  "input file name must be html file", &inputFile,
+           "o|output", "output file name",                  &outputFile,
+           "author",   "print name of the author",          delegate() {writeln("Igor Lesik");exit(0);},
+           "h|help",   "print help",                        delegate() {write(std.getopt.usage);exit(0);},
+    );
 
-	auto programFlags = tuple(
-            std.getopt.config.caseInsensitive,
-            "input", "input file name must be html file", &inputFile,
-            "output", "output file name", &outputFile,
-            "author", "print name of the author", delegate() {writeln("Igor Lesik");},
-            "version", "produce version message", delegate(lazy string versionMsg) {writeln(versionMsg);},
-            "help", "produce help message", delegate(lazy string helpMsg) {writeln(helpMsg);},
-	);
+    // configure options for formatting usage options (optionally)
+    spacesBetween = 5;
+    optionDefaultFormat = " (defaults to '%s')";
+    optionFormat = optionFormatString(maximumOptionLength(programOptions.expand) + spacesBetween);
 
-    //auto programFlags2 = magic(programFlags);
+    getopt(
+           "Test program to demonstrate getoptEx\n"
+           "written by Igor Lesik on Feb 2010\n"
+           "Usage: test1 { --switch }\n",
+           args,
+           programOptions.expand // note that programOptions can be put here,
+                                 // but then custom formatting gets difficult
+    );
 
-    getopt(args, GetoptEx!(programFlags.expand));
+    // if something goes wrong, report usage with current values
+    optionDefaultFormat = " (current value '%s')";
+    usageOptions = usageOptionsString(programOptions.expand);
+    writeln("---------");
+    write(usage);
+    writeln("---------");
 
-    assert(inputFile == "in", to!(string)(inputFile));
-    assert(outputFile == "out", to!(string)(inputFile));
+    assert(inputFile == "in");
+    assert(outputFile == "out");
 }
