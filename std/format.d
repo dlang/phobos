@@ -956,16 +956,18 @@ unittest
 /**
    Integrals are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, /*ref*/ FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isIntegral!T)
 {
+    FormatSpec!Char fs = f; // fs is copy for change its values.
+
     Unqual!T arg = val;
-    if (f.spec == 'r')
+    if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto begin = cast(const char*) &arg;
-        if (std.system.endian == Endian.LittleEndian && f.flPlus
-            || std.system.endian == Endian.BigEndian && f.flDash)
+        if (std.system.endian == Endian.LittleEndian && fs.flPlus
+            || std.system.endian == Endian.BigEndian && fs.flDash)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. arg.sizeof)
@@ -978,35 +980,35 @@ if (isIntegral!T)
         }
         return;
     }
-    if (f.precision == f.UNSPECIFIED)
+    if (fs.precision == fs.UNSPECIFIED)
     {
         // default precision for integrals is 1
-        f.precision = 1;
+        fs.precision = 1;
     }
     else
     {
         // if a precision is specified, the '0' flag is ignored.
-        f.flZero = false;
+        fs.flZero = false;
     }
     char leftPad = void;
-    if (!f.flDash && !f.flZero)
+    if (!fs.flDash && !fs.flZero)
         leftPad = ' ';
-    else if (!f.flDash && f.flZero)
+    else if (!fs.flDash && fs.flZero)
         leftPad = '0';
     else
         leftPad = 0;
     // format and write an integral argument
     uint base =
-        f.spec == 'x' || f.spec == 'X' ? 16 :
-        f.spec == 'o' ? 8 :
-        f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
+        fs.spec == 'x' || fs.spec == 'X' ? 16 :
+        fs.spec == 'o' ? 8 :
+        fs.spec == 'b' ? 2 :
+        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
         0;
     if (base == 0) throw new FormatError("integral");
     // figure out sign and continue in unsigned mode
     char forcedPrefix = void;
-    if (f.flPlus) forcedPrefix = '+';
-    else if (f.flSpace) forcedPrefix = ' ';
+    if (fs.flPlus) forcedPrefix = '+';
+    else if (fs.flSpace) forcedPrefix = ' ';
     else forcedPrefix = 0;
     if (base != 10)
     {
@@ -1031,51 +1033,51 @@ if (isIntegral!T)
             buffer[i] = cast(char) (n % base);
             n /= base;
             if (buffer[i] < 10) buffer[i] += '0';
-            else buffer[i] += (f.spec == 'x' ? 'a' : 'A') - 10;
+            else buffer[i] += (fs.spec == 'x' ? 'a' : 'A') - 10;
         } while (n);
         digits = buffer[i .. $]; // got the digits without the sign
     }
     // adjust precision to print a '0' for octal if alternate format is on
-    if (base == 8 && f.flHash
-        && (f.precision <= digits.length)) // too low precision
+    if (base == 8 && fs.flHash
+        && (fs.precision <= digits.length)) // too low precision
     {
-        //f.precision = digits.length + (arg != 0);
+        //fs.precision = digits.length + (arg != 0);
         forcedPrefix = '0';
     }
     // write left pad; write sign; write 0x or 0X; write digits;
     //   write right pad
     // Writing left pad
     sizediff_t spacesToPrint =
-        f.width // start with the minimum width
+        fs.width // start with the minimum width
         - digits.length  // take away digits to print
         - (forcedPrefix != 0) // take away the sign if any
-        - (base == 16 && f.flHash && arg ? 2 : 0); // 0x or 0X
-    const sizediff_t delta = f.precision - digits.length;
+        - (base == 16 && fs.flHash && arg ? 2 : 0); // 0x or 0X
+    const sizediff_t delta = fs.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
     if (spacesToPrint > 0) // need to do some padding
     {
         if (leftPad == '0')
         {
             // pad with zeros
-            f.precision =
-                cast(typeof(f.precision)) (spacesToPrint + digits.length);
-                //to!(typeof(f.precision))(spacesToPrint + digits.length);
+            fs.precision =
+                cast(typeof(fs.precision)) (spacesToPrint + digits.length);
+                //to!(typeof(fs.precision))(spacesToPrint + digits.length);
         }
         else if (leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
     }
     // write sign
     if (forcedPrefix) put(w, forcedPrefix);
     // write 0x or 0X
-    if (base == 16 && f.flHash && arg) {
+    if (base == 16 && fs.flHash && arg) {
         // @@@ overcome bug in dmd;
-        //w.write(f.spec == 'x' ? "0x" : "0X"); //crashes the compiler
+        //w.write(fs.spec == 'x' ? "0x" : "0X"); //crashes the compiler
         put(w, '0');
-        put(w, f.spec == 'x' ? 'x' : 'X'); // x or X
+        put(w, fs.spec == 'x' ? 'x' : 'X'); // x or X
     }
     // write the digits
-    if (arg || f.precision)
+    if (arg || fs.precision)
     {
-        sizediff_t zerosToPrint = f.precision - digits.length;
+        sizediff_t zerosToPrint = fs.precision - digits.length;
         foreach (i ; 0 .. zerosToPrint) put(w, '0');
         put(w, digits);
     }
@@ -1089,12 +1091,14 @@ if (isIntegral!T)
 void formatValue(Writer, D, Char)(Writer w, D obj, ref FormatSpec!Char f)
 if (isFloatingPoint!D)
 {
-    if (f.spec == 'r')
+    FormatSpec!Char fs = f; // fs is copy for change its values.
+
+    if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto begin = cast(const char*) &obj;
-        if (std.system.endian == Endian.LittleEndian && f.flPlus
-            || std.system.endian == Endian.BigEndian && f.flDash)
+        if (std.system.endian == Endian.LittleEndian && fs.flPlus
+            || std.system.endian == Endian.BigEndian && fs.flDash)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. obj.sizeof)
@@ -1107,31 +1111,31 @@ if (isFloatingPoint!D)
         }
         return;
     }
-    if (std.string.indexOf("fgFGaAeEs", f.spec) < 0) {
+    if (std.string.indexOf("fgFGaAeEs", fs.spec) < 0) {
         throw new FormatError("floating");
     }
-    if (f.spec == 's') f.spec = 'g';
+    if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] = void;
     sprintfSpec[0] = '%';
     uint i = 1;
-    if (f.flDash) sprintfSpec[i++] = '-';
-    if (f.flPlus) sprintfSpec[i++] = '+';
-    if (f.flZero) sprintfSpec[i++] = '0';
-    if (f.flSpace) sprintfSpec[i++] = ' ';
-    if (f.flHash) sprintfSpec[i++] = '#';
+    if (fs.flDash) sprintfSpec[i++] = '-';
+    if (fs.flPlus) sprintfSpec[i++] = '+';
+    if (fs.flZero) sprintfSpec[i++] = '0';
+    if (fs.flSpace) sprintfSpec[i++] = ' ';
+    if (fs.flHash) sprintfSpec[i++] = '#';
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
     if (is(Unqual!D == real)) sprintfSpec[i++] = 'L';
-    sprintfSpec[i++] = f.spec;
+    sprintfSpec[i++] = fs.spec;
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
     immutable n = snprintf(buf.ptr, buf.length,
             sprintfSpec.ptr,
-            f.width,
+            fs.width,
             // negative precision is same as no precision specified
-            f.precision == f.UNSPECIFIED ? -1 : f.precision,
+            fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
             obj);
     if (n < 0) throw new FormatError("floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
@@ -1418,13 +1422,26 @@ if (isPointer!T && !isInputRange!T)
     const void * p = val;
     if (f.spec == 's')
     {
-        f.spec = 'X';
+        FormatSpec!Char fs = f; // fs is copy for change its values.
+        fs.spec = 'X';
+        formatValue(w, cast(ulong) p, fs);
     }
     else
     {
         enforce(f.spec == 'X' || f.spec == 'x');
+        formatValue(w, cast(ulong) p, f);
     }
-    formatValue(w, cast(ulong) p, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+
+    struct S{ void* p; string s; }
+    auto s = S(cast(void*)0xFFEECCAA, "hello");
+    formatValue(a, s, f);
+    assert(a.data == `S(FFEECCAA, "hello")`);
 }
 
 /**
