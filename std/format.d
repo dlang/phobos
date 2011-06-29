@@ -1495,15 +1495,6 @@ unittest
     assert(a.data == `["aaa":1, "bbb":2, "ccc":3]`);
 }
 
-// @@@ BUG @@@
-// Workaround for a closure scoped destruction problem.
-struct WriterSink(Writer)
-{
-    Writer* w;
-    void sink(const(char)[] s) { put(*w, s); }
-}
-
-
 /**
    Structs are formatted using by calling toString member function
    of the struct. toString must have one of the following signatures:
@@ -1516,19 +1507,27 @@ struct WriterSink(Writer)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    alias void delegate(const (char)[]) SinkType;
+    // @@@ BUG @@@
+    // Workaround for a closure scoped destruction problem.
+    static struct WriterSink
+    {
+        Writer* w;
+        void sink(const(char)[] s) { put(*w, s); }
+    }
+
+    alias void delegate(const(char)[]) SinkType;
     static if (is(typeof(val.toString(SinkType, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
-        WriterSink!(Writer) sinker;
+        WriterSink sinker;
         sinker.w = &w;
         string outbuff = "";
         void sink(const(char)[] s) { outbuff ~= s; }
         val.toString(&sink, f);
-        put (w, outbuff);
+        put(w, outbuff);
     }
     else static if (is(typeof(val.toString(SinkType, "s"))))
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
-        WriterSink!(Writer) sinker;
+        WriterSink sinker;
         sinker.w = &w;
         // @@@ BUG @@@
         // Need to recreate the entire format string, eg "%.16f" rather than
@@ -1542,7 +1541,28 @@ if (is(T == struct) && !isInputRange!T)
     }
     else
     {
-        put(w, T.stringof);
+        enum left = T.stringof~"(";
+        enum separator = ", ";
+        enum right = ")";
+
+        Tuple!(FieldTypeTuple!T) * t = void;
+        static if ((*t).sizeof == T.sizeof)
+        {
+            // ok, attempt to forge the tuple
+            t = cast(typeof(t)) &val;
+            put(w, left);
+            foreach (i, e; t.field)
+            {
+                if (i > 0) put(w, separator);
+                formatElement(w, e, f);
+            }
+            put(w, right);
+        }
+        else
+        {
+            // struct with weird alignment
+            put(w, T.stringof);
+        }
     }
 }
 
@@ -1560,6 +1580,19 @@ unittest
     formatValue(w, U16(), f);
     formatValue(w, U32(), f);
     assert(w.data() == "blahblahblah");
+}
+
+unittest
+{
+    // 3890
+    struct Int{ int n; }
+    struct Pair{ string s; Int i; }
+
+    FormatSpec!char f;
+    auto w = appender!string();
+
+    formatValue(w, Pair("hello", Int(5)), f);
+    assert(w.data() == `Pair("hello", Int(5))`);
 }
 
 /**
