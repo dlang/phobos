@@ -845,6 +845,38 @@ struct FormatSpec(Char)
         return false;
     }
 
+    private const string getCurFmtStr()
+    {
+        auto w = appender!string();
+        auto f = FormatSpec!Char("%s"); // for stringnize
+
+        put(w, '%');
+        if (indexStart != 0)
+            formatValue(w, indexStart, f), put(w, '$');
+        if (flDash)  put(w, '-');
+        if (flZero)  put(w, '0');
+        if (flSpace) put(w, ' ');
+        if (flPlus)  put(w, '+');
+        if (flHash)  put(w, '#');
+        if (width != 0)
+            formatValue(w, width, f);
+        if (precision != FormatSpec!Char.UNSPECIFIED)
+            put(w, '.'), formatValue(w, precision, f);
+        put(w, spec);
+        return w.data;
+    }
+
+    unittest
+    {
+        // issue 5237
+        auto w = appender!string();
+        auto f = FormatSpec!char("%.16f");
+        f.writeUpToNextSpec(w); // dummy eating
+        assert(f.spec == 'f');
+        auto fmt = f.getCurFmtStr();
+        assert(fmt == "%.16f");
+    }
+
     string toString()
     {
         return text("address = ", cast(void*) &this,
@@ -1573,7 +1605,7 @@ if (is(T == struct) && !isInputRange!T)
     }
 
     alias void delegate(const(char)[]) SinkType;
-    static if (is(typeof(val.toString(SinkType, f))))
+    static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
         WriterSink sinker;
         sinker.w = &w;
@@ -1586,11 +1618,7 @@ if (is(T == struct) && !isInputRange!T)
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
         WriterSink sinker;
         sinker.w = &w;
-        // @@@ BUG @@@
-        // Need to recreate the entire format string, eg "%.16f" rather than
-        // just "%f"
-        string fmt = "%" ~ f.spec;
-        val.toString(&sinker.sink, fmt);
+        val.toString(&sinker.sink, f.getCurFmtStr());
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
