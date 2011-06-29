@@ -348,7 +348,8 @@ extern (Windows)
  * Private utility functions
  */
 
-shared static this() {
+shared static this()
+{
     //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
     //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
     extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
@@ -359,17 +360,23 @@ shared static this() {
 }
 
 private {
-    immutable shared bool isWow64;
+    immutable bool isWow64;
     shared Object advapi32Mutex;
     shared HMODULE hAdvapi32 = null;
-    ///Returns true, if we are in WoW64 mode and have WoW64 flags
-    bool testFor64(ref REGSAM samDesired)
+    
+    ///Removes WoW64 flags from samDesired if not in WoW64 mode
+    ///for compatibility with Windows 2000
+    REGSAM compatibleRegsam(REGSAM samDesired)
     {
-        if(!(samDesired & REGSAM.KEY_WOW64_RES)) //do nothing if no WoW64 flags
-            return false;
-        if(!isWow64) //remove WoW64 flags for compatibility with Windows 2000
+        if(!isWow64)
             samDesired &= ~REGSAM.KEY_WOW64_RES;
-        return isWow64;
+        return samDesired;
+    }
+    
+    ///Returns true, if we are in WoW64 mode and have WoW64 flags
+    bool haveWoW64Job(ref REGSAM samDesired)
+    {
+        return isWow64 && (samDesired & REGSAM.KEY_WOW64_RES);
     }
 }
 
@@ -380,7 +387,7 @@ void freeAdvapi32()
         if(hAdvapi32) {
             RegDeleteKeyExA = null;
             hAdvapi32 = null;
-            enforce(FreeLibrary(hAdvapi32));
+            enforce(FreeLibrary(hAdvapi32), `FreeLibrary(hAdvapi32)`);
         }
 }
 
@@ -504,9 +511,8 @@ in
 }
 body
 {
-    testFor64(samDesired);
     return RegCreateKeyExA( hkey, toStringz(subKey), RESERVED, RESERVED
-                        ,   dwOptions, samDesired, lpsa, hkeyResult
+                        ,   dwOptions, compatibleRegsam(samDesired), lpsa, hkeyResult
                         ,   disposition);
 }
 
@@ -518,13 +524,13 @@ in
 }
 body
 {
-    if(testFor64(samDesired))
+    if(haveWoW64Job(samDesired))
     {
         if(!RegDeleteKeyExA)
             synchronized(advapi32Mutex)
             {
-                hAdvapi32 = enforce(LoadLibraryA("Advapi32.dll"));
-                RegDeleteKeyExA = enforce(GetProcAddress(hAdvapi32 , "RegDeleteKeyExA"));
+                hAdvapi32 = enforce(LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`);
+                RegDeleteKeyExA = enforce(GetProcAddress(hAdvapi32 , "RegDeleteKeyExA"), `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`);
             }
         return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
     }
@@ -686,8 +692,7 @@ in
 }
 body
 {
-    testFor64(samDesired);
-    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, samDesired, hkeyResult);
+    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, compatibleRegsam(samDesired), hkeyResult);
 }
 
 private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
