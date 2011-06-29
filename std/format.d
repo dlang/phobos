@@ -1322,6 +1322,13 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
     }
 }
 
+private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+{
+    static if (isSomeString!T) formatValue(w, "\"", f);
+    formatValue(w, val, f);
+    static if (isSomeString!T) formatValue(w, "\"", f);
+}
+
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
     !is(const(T) == const(void[])))
@@ -1440,24 +1447,37 @@ unittest
 }
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ' ') as
-   separators.
+   Associative arrays are formatted by using $(D ':') and $(D ', ') as
+   separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
-    bool firstTime = true;
-    auto vf = f;
-    foreach (k, ref v; val)
-    {
-        if (firstTime) firstTime = false;
-        else put(w, ' ');
-        formatValue(w, k, f);
-        put(w, ':');
-        formatValue(w, v, vf);
+    enum leftBracket    = "[";
+    enum keyval         = ":";
+    enum separator      = ", ";
+    enum rightBracket   = "]";
+
+    put(w, leftBracket);
+    bool first = true;
+    foreach (k, ref v; val) {
+        if (first) first = false;
+        else put(w, separator);
+        formatElement(w, k, f);
+        put(w, keyval);
+        formatElement(w, v, f);
     }
+    put(w, rightBracket);
 }
 
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    int[string] aa;
+    formatValue(a, aa, f);
+    assert(a.data == `[]`);
+}
 
 unittest
 {
@@ -1465,7 +1485,7 @@ unittest
     auto a = appender!string();
     int[string] aa = ["aaa": 1, "bbb": 2, "ccc": 3];
     formatValue(a, aa, f);
-    assert(a.data == "aaa:1 bbb:2 ccc:3");
+    assert(a.data == `["aaa":1, "bbb":2, "ccc":3]`);
 }
 
 // @@@ BUG @@@
