@@ -1188,22 +1188,39 @@ if (isSomeChar!T)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
-    enforce(f.spec == 's');
-    StringTypeOf!T val2 = val;          // for `alias this`
-    auto s = val2[0 .. f.precision < $ ? f.precision : $];
-    if (!f.flDash)
+    if (f.spec == 's')
     {
-        // right align
-        if (f.width > s.length)
-            foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-        put(w, s);
+        StringTypeOf!T val2 = val;          // for `alias this`
+        auto s = val2[0 .. f.precision < $ ? f.precision : $];
+        if (!f.flDash)
+        {
+            // right align
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+            put(w, s);
+        }
+        else
+        {
+            // left align
+            put(w, s);
+            if (f.width > s.length)
+                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+        }
     }
     else
     {
-        // left align
-        put(w, s);
-        if (f.width > s.length)
-            foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+        static if (is(typeof(val[0]) : const(char)))
+        {
+            formatRange(w, cast(ubyte[])val, f);
+        }
+        else static if (is(typeof(val[0]) : const(wchar)))
+        {
+            formatRange(w, cast(ushort[])val, f);
+        }
+        else static if (is(typeof(val[0]) : const(dchar)))
+        {
+            formatRange(w, cast(uint[])val, f);
+        }
     }
 }
 
@@ -1280,10 +1297,20 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
             {
                 auto fmt = FormatSpec!Char(f.nested);
                 fmt.writeUpToNextSpec(w);
-                formatValue(w, arr.front, fmt);
-                arr.popFront();
-                if (arr.empty) break;
-                fmt.writeUpToNextSpec(w);
+                if (fmt.spec == '(')
+                {   // If element is range
+                    formatValue(w, arr.front, fmt);
+                    arr.popFront();
+                    fmt.writeUpToNextSpec(w);   // always put trailing
+                    if (arr.empty) break;
+                }
+                else
+                {
+                    formatValue(w, arr.front, fmt);
+                    arr.popFront();
+                    if (arr.empty) break;
+                    fmt.writeUpToNextSpec(w);
+                }
             }
 
             // auto itemFormatString = f.nested;
@@ -1411,6 +1438,17 @@ unittest
     formatValue(w, c, f);
     assert(w.data == "null");
     assert(r.empty);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    auto a = ["test", "msg"];
+    w.clear();
+    formattedWrite(w, "%({%(%02x %)} %)", a);
+    assert(w.data == `{74 65 73 74} {6d 73 67} `);
 }
 
 /**
