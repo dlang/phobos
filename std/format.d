@@ -852,6 +852,38 @@ struct FormatSpec(Char)
         return false;
     }
 
+    private const string getCurFmtStr()
+    {
+        auto w = appender!string();
+        auto f = FormatSpec!Char("%s"); // for stringnize
+
+        put(w, '%');
+        if (indexStart != 0)
+            formatValue(w, indexStart, f), put(w, '$');
+        if (flDash)  put(w, '-');
+        if (flZero)  put(w, '0');
+        if (flSpace) put(w, ' ');
+        if (flPlus)  put(w, '+');
+        if (flHash)  put(w, '#');
+        if (width != 0)
+            formatValue(w, width, f);
+        if (precision != FormatSpec!Char.UNSPECIFIED)
+            put(w, '.'), formatValue(w, precision, f);
+        put(w, spec);
+        return w.data;
+    }
+
+    unittest
+    {
+        // issue 5237
+        auto w = appender!string();
+        auto f = FormatSpec!char("%.16f");
+        f.writeUpToNextSpec(w); // dummy eating
+        assert(f.spec == 'f');
+        auto fmt = f.getCurFmtStr();
+        assert(fmt == "%.16f");
+    }
+
     string toString()
     {
         return text("address = ", cast(void*) &this,
@@ -1382,9 +1414,66 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
 
 private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 {
-    static if (isSomeString!T) formatValue(w, "\"", f);
-    formatValue(w, val, f);
-    static if (isSomeString!T) formatValue(w, "\"", f);
+    static if (isSomeString!T)
+    {
+        if (f.spec == 's')
+        {
+            /*
+             * Check C0 and C1 control code sets
+             * See Also: http://en.wikipedia.org/wiki/C0_and_C1_control_codes
+             */
+            static bool isUniControl(dchar c)
+            {
+                return (c <= 0x1F || (0x80 <= c && c <= 0x9F));
+            }
+
+            // ignore other specifications and quote
+            put(w, '\"');
+            foreach (c; val)
+            {
+                if(isUniControl(c))
+                {
+                    put(w, '\\');
+                    switch (c)
+                    {
+                    case '\a':  put(w, 'a');  break;
+                    case '\b':  put(w, 'b');  break;
+                    case '\f':  put(w, 'f');  break;
+                    case '\n':  put(w, 'n');  break;
+                    case '\r':  put(w, 'r');  break;
+                    case '\t':  put(w, 't');  break;
+                    case '\v':  put(w, 'v');  break;
+                    default:
+                        formattedWrite(w, "x%02x", c);
+                        break;
+                    }
+                }
+                else if (c == '\"' || c == '\\')
+                    put(w, '\\'), put(w, c);
+                else
+                    put(w, c);
+            }
+            put(w, '\"');
+        }
+        else
+            formatValue(w, val, f);
+    }
+    else
+        formatValue(w, val, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    w.clear();
+    formatValue(w, ["str\"\\\a\b\f\n\r\t\vend"], f);
+    assert(w.data == `["str\"\\\a\b\f\n\r\t\vend"]`);
+
+    w.clear();
+    formatValue(w, ["\x00\x10\x1F\x20\x80\x90\x9F"], f);
+    assert(w.data == `["\x00\x10\x1f \x80\x90\x9f"]`);
 }
 
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
@@ -1579,8 +1668,7 @@ if (is(T == struct) && !isInputRange!T)
         void sink(const(char)[] s) { put(*w, s); }
     }
 
-    alias void delegate(const(char)[]) SinkType;
-    static if (is(typeof(val.toString(SinkType, f))))
+    static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
         WriterSink sinker;
         sinker.w = &w;
@@ -1589,15 +1677,11 @@ if (is(T == struct) && !isInputRange!T)
         val.toString(&sink, f);
         put(w, outbuff);
     }
-    else static if (is(typeof(val.toString(SinkType, "s"))))
+    else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
         WriterSink sinker;
         sinker.w = &w;
-        // @@@ BUG @@@
-        // Need to recreate the entire format string, eg "%.16f" rather than
-        // just "%f"
-        string fmt = "%" ~ f.spec;
-        val.toString(&sinker.sink, fmt);
+        val.toString(&sinker.sink, f.getCurFmtStr());
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
