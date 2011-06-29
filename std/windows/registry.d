@@ -364,17 +364,15 @@ private {
     shared Object advapi32Mutex;
     shared HMODULE hAdvapi32 = null;
     
-    ///Removes WoW64 flags from samDesired if not in WoW64 mode
+    ///Returns samDesired but without WoW64 flags if not in WoW64 mode
     ///for compatibility with Windows 2000
-    REGSAM compatibleRegsam(REGSAM samDesired)
+    REGSAM compatibleRegsam(in REGSAM samDesired)
     {
-        if(!isWow64)
-            samDesired &= ~REGSAM.KEY_WOW64_RES;
-        return samDesired;
+        return isWow64 ? samDesired : cast(REGSAM)(samDesired & ~REGSAM.KEY_WOW64_RES);
     }
     
     ///Returns true, if we are in WoW64 mode and have WoW64 flags
-    bool haveWoW64Job(ref REGSAM samDesired)
+    bool haveWoW64Job(in REGSAM samDesired)
     {
         return isWow64 && (samDesired & REGSAM.KEY_WOW64_RES);
     }
