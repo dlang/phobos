@@ -1412,6 +1412,8 @@ if (isPointer!T && !isInputRange!T)
 
 /**
    Objects are formatted by calling $(D toString).
+   Interfaces are formatted by casting to $(D Object) and then calling
+   $(D toString).
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (!isSomeString!T && is(T == class) && !isInputRange!T)
@@ -1422,14 +1424,11 @@ if (!isSomeString!T && is(T == class) && !isInputRange!T)
     else put(w, val.toString);
 }
 
-/**
-   Interfaces are formatted by casting to $(D Object) and then calling
-   $(D toString).
- */
+/// ditto
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == interface) && !isInputRange!T)
 {
-    return formatValue(w, cast(Object) val, f);
+    return formatValue(w, cast(Object)val, f);
 }
 
 unittest
