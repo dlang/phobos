@@ -890,7 +890,7 @@ S tolower(S)(S s) if (isSomeString!S)
     characters are lowercase (in unicode, not just ASCII). If $(D s) does not
     have any uppercase characters, then $(D s) is returned.
   +/
-S toLower(S)(S s) @safe pure
+S toLower(S)(S s) @trusted pure
     if(isSomeString!S)
 {
     foreach (i, dchar cOuter; s)
@@ -1065,7 +1065,7 @@ S toupper(S)(S s) if (isSomeString!S)
     characters are uppercase (in unicode, not just ASCII). If $(D s) does not
     have any lowercase characters, then $(D s) is returned.
   +/
-S toUpper(S)(S s) @safe pure
+S toUpper(S)(S s) @trusted pure
     if(isSomeString!S)
 {
     foreach (i, dchar cOuter; s)
@@ -1216,7 +1216,7 @@ unittest
     Capitalize the first character of $(D s) and conver the rest of $(D s)
     to lowercase.
  +/
-S capitalize(S)(S s) @safe pure
+S capitalize(S)(S s) @trusted pure
     if(isSomeString!S)
 {
     Unqual!(typeof(s[0]))[] retval;
@@ -1693,7 +1693,8 @@ S ljustify(S)(S s, size_t width) if (isSomeString!S)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
 {
     alias typeof(S[0]) C;
 
@@ -1739,7 +1740,8 @@ S rjustify(S)(S s, size_t width) if (isSomeString!S)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
 {
     alias typeof(S[0]) C;
 
@@ -1773,7 +1775,8 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S center(S)(S s, size_t width, dchar fillChar = ' ') if(isSomeString!S)
+S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
 {
     alias typeof(S[0]) C;
 
@@ -1884,7 +1887,8 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
     to align the following character at the next tab stop where $(D tabSize)
     is the distance between tab stops.
   +/
-S detab(S)(S s, size_t tabSize = 8) if(isSomeString!S)
+S detab(S)(S s, size_t tabSize = 8) @trusted pure
+    if(isSomeString!S)
 {
     assert(tabSize > 0);
     alias Unqual!(typeof(s[0])) C;
@@ -1970,7 +1974,7 @@ unittest
         s       = String to convert.
         tabSize = Tab columns are $(D tabSize) spaces apart.
  +/
-S entab(S)(S s, size_t tabSize = 8)
+S entab(S)(S s, size_t tabSize = 8) @trusted pure
     if(isSomeString!S)
 {
     bool changes = false;
