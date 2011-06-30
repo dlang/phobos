@@ -2293,20 +2293,34 @@ struct FloatingPointControl
      */
     enum : uint
     {
-        inexactException   = 0x20,
-        underflowException = 0x10,
-        overflowException  = 0x08,
-        divByZeroException = 0x04,
-        invalidException   = 0x01,
+        inexactException      = 0x20,
+        underflowException    = 0x10,
+        overflowException     = 0x08,
+        divByZeroException    = 0x04,
+        denormalizedException = 0x02,
+        invalidException      = 0x01,
         /// Severe = The overflow, division by zero, and invalid exceptions.
         severeExceptions   = overflowException | divByZeroException
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
-                             | inexactException,
+                             | inexactException | denormalizedException,
+    };
+
+    alias uint PrecisionMode;
+
+    /** IEEE precision modes.
+     * The default mode is realPrecision.
+     */
+    enum : PrecisionMode
+    {
+        realPrecision   = 0x0300,
+        doublePrecision = 0x0200,
+        singlePrecision = 0x0000,
     };
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
     enum ushort ROUNDING_MASK = 0xC00;
+    enum ushort PRECISION_MASK = 0x300;
 public:
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
     void enableExceptions(uint exceptions)
@@ -2321,10 +2335,16 @@ public:
         setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
     }
     //// Change the floating-point hardware rounding mode
-    void rounding(RoundingMode newMode)
+    @property void rounding(RoundingMode newMode)
     {
         ushort old = getControlState();
         setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+    }
+    //// Change the floating-point hardware precision mode
+    @property void precision(PrecisionMode newMode)
+    {
+        ushort old = getControlState();
+        setControlState((old & ~PRECISION_MASK) | (newMode & PRECISION_MASK));
     }
     /// Return the exceptions which are currently enabled (unmasked)
     static uint enabledExceptions()
@@ -2332,9 +2352,14 @@ public:
         return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
     }
     /// Return the currently active rounding mode
-    static RoundingMode rounding()
+    @property static RoundingMode rounding()
     {
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+    }
+    /// Return the currently active precision mode
+    @property static PrecisionMode precision()
+    {
+        return cast(PrecisionMode)(getControlState() & PRECISION_MASK);
     }
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
     ~this()
@@ -2420,12 +2445,18 @@ unittest
             (FloatingPointControl.divByZeroException
           | FloatingPointControl.overflowException));
 
+        ctrl.precision = FloatingPointControl.singlePrecision;
+        assert(FloatingPointControl.precision
+          == FloatingPointControl.singlePrecision);
+
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
     assert(FloatingPointControl.rounding
        == FloatingPointControl.roundToNearest);
     assert(FloatingPointControl.enabledExceptions() ==0);
+    assert(FloatingPointControl.precision
+       == FloatingPointControl.realPrecision);
 }
 
 
