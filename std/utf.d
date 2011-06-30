@@ -1226,10 +1226,10 @@ dstring toUTF32(in dchar[] s)
 /* =================== toUTFz ======================= */
 
 /++
-    Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
-    contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees a the end of the string. If $(D s) is $(D null) or
-    empty, then a string containing only $(D '\0') is returned.
+    Returns a C-style zero-terminated string equivalent to $(D str). $(D str)
+    must not contain embedded $(D '\0')'s as any C function will treat the first
+    $(D '\0') that it sees a the end of the string. If $(D str.empty) is
+    $(D true), then a string containing only $(D '\0') is returned.
 
     $(D toUTFz) accepts any type of string and is templated on the type of
     character pointer that you wish to convert to. It will avoid allocating a
@@ -1237,10 +1237,15 @@ dstring toUTF32(in dchar[] s)
     to allocate a new string - particularly when dealing with character types
     other than $(D char).
 
-    $(RED Warning:) When passing a character pointer to a C function, and the C
-    function keeps it around for any reason, make sure that you keep a reference
-    to it in your D code. Otherwise, it may go away during a garbage collection
-    cycle and cause a nasty bug when the C code tries to use it.
+    $(RED Warning 1:) If the result of $(D toUTFz) equals $(D str.ptr), then if
+    anything alters the character one past the end of $(D str) (which is the
+    $(D '\0') character terminating the string), then the string won't be
+    zero-terminated anymore.
+
+    $(RED Warning 2:) When passing a character pointer to a C function, and the
+    C function keeps it around for any reason, make sure that you keep a
+    reference to it in your D code. Otherwise, it may go away during a garbage
+    collection cycle and cause a nasty bug when the C code tries to use it.
 
     Examples:
 --------------------
@@ -1256,6 +1261,7 @@ P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
        is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+//immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if(str.empty)
         return cast(P)"".ptr;
@@ -1289,19 +1295,40 @@ P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
        !is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+//C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
-    alias Unqual!(typeof(*P.init)) OutChar;
+    alias typeof(str[0]) InChar;
+    alias typeof(*P.init) OutChar;
 
-    auto copy = new OutChar[](str.length + 1);
-    copy[0 .. $ - 1] = str[];
-    copy[$ - 1] = '\0';
+    //const(C)[] -> const(C)* or
+    //C[] -> C* or const(C)*
+    static if((is(const(Unqual!InChar) == InChar) && is(const(Unqual!OutChar) == OutChar)) ||
+              (!is(const(Unqual!InChar) == InChar) && !is(immutable(Unqual!OutChar) == OutChar)))
+    {
+        auto p = str.ptr + str.length;
 
-    return cast(P)copy;
+        if((cast(size_t)p & 3) && *p == '\0')
+            return str.ptr;
+
+        str ~= '\0';
+        return str.ptr;
+    }
+    //const(C)[] -> C* or immutable(C)* or
+    //C[] -> immutable(C)*
+    else
+    {
+        auto copy = new Unqual!OutChar[](str.length + 1);
+        copy[0 .. $ - 1] = str[];
+        copy[$ - 1] = '\0';
+
+        return cast(P)copy;
+    }
 }
 
 P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        !is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))))
+//C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     auto retval = appender!(typeof(*P.init)[])();
 
