@@ -1240,7 +1240,10 @@ dstring toUTF32(in dchar[] s)
     $(RED Warning 1:) If the result of $(D toUTFz) equals $(D str.ptr), then if
     anything alters the character one past the end of $(D str) (which is the
     $(D '\0') character terminating the string), then the string won't be
-    zero-terminated anymore.
+    zero-terminated anymore. However, that should only happen when you append to
+    $(D str) and no reallocation takes place or when $(D str) is a slice of a
+    larger array, and you alter the character in the larger array which is one
+    character past the end of $(D str).
 
     $(RED Warning 2:) When passing a character pointer to a C function, and the
     C function keeps it around for any reason, make sure that you keep a
