@@ -1483,7 +1483,7 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     send(const(void)[] buf, SocketFlags flags)
         {
-        flags |= SocketFlags.NOSIGNAL;
+        flags = flags | SocketFlags.NOSIGNAL;
         auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
         }
@@ -1500,7 +1500,7 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     sendTo(const(void)[] buf, SocketFlags flags, Address to)
         {
-        flags |= SocketFlags.NOSIGNAL;
+        flags = flags | SocketFlags.NOSIGNAL;
         return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
 
@@ -1515,7 +1515,7 @@ class Socket
         /// ditto
         Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf, SocketFlags flags)
         {
-        flags |= SocketFlags.NOSIGNAL;
+        flags = flags | SocketFlags.NOSIGNAL;
         return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
         }
 

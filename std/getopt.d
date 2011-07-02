@@ -469,16 +469,16 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
-            static if (is(typeof(*receiver) : real))
+            static if (is(typeof(*receiver) == enum))
+            {
+                // enum receiver
+                *receiver = parse!(typeof(*receiver))(val);
+            }
+            else static if (is(typeof(*receiver) : real))
             {
                 // numeric receiver
                 if (incremental) ++*receiver;
                 else *receiver = to!(typeof(*receiver))(val);
-            }
-            else static if (is(typeof(*receiver) == enum))
-            {
-                // enum receiver
-                *receiver = parse!(typeof(*receiver))(val);
             }
             else static if (is(typeof(*receiver) == string))
             {
