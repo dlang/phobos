@@ -1679,6 +1679,9 @@ appending to the original array will reallocate.
         _data = new Data;
         _data.arr = cast(Unqual!(T)[])arr;
 
+        if (__ctfe)
+            return;
+
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
@@ -1703,6 +1706,13 @@ done.
         {
             // need to increase capacity
             immutable len = _data.arr.length;
+            if (__ctfe)
+            {
+                _data.arr.length = newCapacity;
+                _data.arr = _data.arr[0..len];
+                _data.capacity = newCapacity;
+                return;
+            }
             immutable growsize = (newCapacity - len) * T.sizeof;
             auto u = GC.extend(_data.arr.ptr, growsize, growsize);
             if(u)
@@ -1751,6 +1761,13 @@ Returns the managed array.
         immutable reqlen = len + nelems;
         if (reqlen > _data.capacity)
         {
+            if (__ctfe)
+            {
+                _data.arr.length = reqlen;
+                _data.arr = _data.arr[0..len];
+                _data.capacity = reqlen;
+                return;
+            }
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.
