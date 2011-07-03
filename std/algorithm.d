@@ -314,9 +314,9 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.ctype, std.exception,
+import std.array, std.ascii, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.stdio;
+    std.traits, std.typecons, std.typetuple, std.stdio, std.uni;
 
 version(unittest)
 {
@@ -2155,7 +2155,7 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
-    return splitter!isspace(input);
+    return splitter!(std.uni.isWhite)(input);
 }
 
 unittest
@@ -2733,7 +2733,7 @@ assert(!find(a, 2).empty);      // found
 
 // Case-insensitive find of a string
 string[] s = [ "Hello", "world", "!" ];
-assert(!find!("tolower(a) == b")(s, "hello").empty);
+assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
  */
 R find(alias pred = "a == b", R, E)(R haystack, E needle)
@@ -3103,10 +3103,10 @@ unittest
 
 // Case-insensitive find of a string
     string[] s = [ "Hello", "world", "!" ];
-    //writeln(find!("toupper(a) == toupper(b)")(s, "hello"));
-    assert(find!("toupper(a) == toupper(b)")(s, "hello").length == 3);
+    //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
+    assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
 
-    static bool f(string a, string b) { return toupper(a) == toupper(b); }
+    static bool f(string a, string b) { return toUpper(a) == toUpper(b); }
     assert(find!(f)(s, "hello").length == 3);
 }
 
@@ -5145,7 +5145,7 @@ assert(levenshteinDistance("cat", "rat") == 1);
 assert(levenshteinDistance("parks", "spark") == 2);
 assert(levenshteinDistance("kitten", "sitting") == 3);
 // ignore case
-assert(levenshteinDistance!("toupper(a) == toupper(b)")
+assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
     ("parks", "SPARK") == 2);
 ----
 */
@@ -5155,6 +5155,16 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 {
     Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
     return lev.distance(s, t);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(levenshteinDistance("cat", "rat") == 1);
+    assert(levenshteinDistance("parks", "spark") == 2);
+    assert(levenshteinDistance("kitten", "sitting") == 3);
+    assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
+        ("parks", "SPARK") == 2);
 }
 
 /**
@@ -5564,7 +5574,7 @@ Defines the swapping strategy for algorithms that need to swap
 elements in a range (such as partition and sort). The strategy
 concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
-"b", "aBc" ]) according to $(D toupper(a) < toupper(b)). That
+"b", "aBc" ]) according to $(D toUpper(a) < toUpper(b)). That
 algorithm might choose to swap the two equivalent strings $(D "abc")
 and $(D "aBc"). That does not affect the sorting since both $(D [
 "abc", "aBc", "b" ]) and $(D [ "aBc", "abc", "b" ]) are valid
@@ -6398,7 +6408,7 @@ sort!(myComp)(array);
 assert(array == [ 4, 3, 2, 1 ]);
 // Showcase stable sorting
 string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-sort!("toupper(a) < toupper(b)", SwapStrategy.stable)(words);
+sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
 assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 ----
 */
@@ -6460,7 +6470,7 @@ unittest
     assert(isSorted!(less)(a));
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-    bool lessi(string a, string b) { return toupper(a) < toupper(b); }
+    bool lessi(string a, string b) { return toUpper(a) < toUpper(b); }
     sort!(lessi, SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 
@@ -6472,8 +6482,8 @@ unittest
     sort(a);
     assert(isSorted(a));
     auto b = rndstuff!(string);
-    sort!("tolower(a) < tolower(b)")(b);
-    assert(isSorted!("toupper(a) < toupper(b)")(b));
+    sort!("toLower(a) < toLower(b)")(b);
+    assert(isSorted!("toUpper(a) < toUpper(b)")(b));
 }
 
 // @@@BUG1904
@@ -7257,14 +7267,14 @@ unittest
     // random data
     auto b = rndstuff!(string);
     auto index = new string*[b.length];
-    partialIndex!("toupper(a) < toupper(b)")(b, index);
-    assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+    partialIndex!("std.uni.toUpper(a) < std.uni.toUpper(b)")(b, index);
+    assert(isSorted!("std.uni.toUpper(*a) < std.uni.toUpper(*b)")(index));
 
     // random data with indexes
     auto index1 = new size_t[b.length];
-    bool cmp(string x, string y) { return toupper(x) < toupper(y); }
+    bool cmp(string x, string y) { return std.uni.toUpper(x) < std.uni.toUpper(y); }
     partialIndex!(cmp)(b, index1);
-    bool check(size_t x, size_t y) { return toupper(b[x]) < toupper(b[y]); }
+    bool check(size_t x, size_t y) { return std.uni.toUpper(b[x]) < std.uni.toUpper(b[y]); }
     assert(isSorted!(check)(index1));
 }
 
@@ -7279,10 +7289,10 @@ unittest
 
 // ----
 // string[] arr = [ "ab", "c", "Ab", "C" ];
-// auto index = schwartzMakeIndex!(toupper, less, SwapStrategy.stable)(arr);
+// auto index = schwartzMakeIndex!(toUpper, less, SwapStrategy.stable)(arr);
 // assert(*index[0] == "ab" && *index[1] == "Ab"
 //     && *index[2] == "c" && *index[2] == "C");
-// assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+// assert(isSorted!("toUpper(*a) < toUpper(*b)")(index));
 // ----
 // */
 // Iterator!(Range)[] schwartzMakeIndex(
@@ -7327,16 +7337,16 @@ unittest
 // version (wyda) unittest
 // {
 //     string[] arr = [ "D", "ab", "c", "Ab", "C" ];
-//     auto index = schwartzMakeIndex!(toupper, "a < b",
+//     auto index = schwartzMakeIndex!(toUpper, "a < b",
 //                                     SwapStrategy.stable)(arr);
-//     assert(isSorted!(q{toupper(*a) < toupper(*b)})(index));
+//     assert(isSorted!(q{toUpper(*a) < toUpper(*b)})(index));
 //     assert(*index[0] == "ab" && *index[1] == "Ab"
 //            && *index[2] == "c" && *index[3] == "C");
 
 //     // random data
 //     auto b = rndstuff!(string);
-//     auto index1 = schwartzMakeIndex!(toupper)(b);
-//     assert(isSorted!("toupper(*a) < toupper(*b)")(index1));
+//     auto index1 = schwartzMakeIndex!(toUpper)(b);
+//     assert(isSorted!("toUpper(*a) < toUpper(*b)")(index1));
 // }
 
 +/

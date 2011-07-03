@@ -110,8 +110,8 @@ import core.stdc.time;
 
 import std.array;
 import std.algorithm;
+import std.ascii;
 import std.conv;
-import std.ctype;
 import std.exception;
 import std.file;
 import std.functional;
@@ -12963,16 +12963,18 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
         auto month = dstr[$-4 .. $-2];
         auto year = dstr[0 .. $-4];
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(!canFind!(not!isDigit)(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
@@ -13088,16 +13090,21 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 
         enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         enforce(dstr[$-6] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(day),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(month),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(!canFind!(not!isDigit)(year),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
@@ -13225,15 +13232,18 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
         enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
         enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce(!canFind!(not!isDigit)(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid string format: %s", simpleString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(!canFind!(not!isDigit)(year),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         return Date(to!short(year), month, to!ubyte(day));
     }
@@ -14597,9 +14607,9 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         auto minutes = dstr[2 .. 4];
         auto seconds = dstr[4 .. $];
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
@@ -14708,9 +14718,12 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
         enforce(dstr[2] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         enforce(dstr[5] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(hours),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(minutes),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(seconds),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
@@ -28739,8 +28752,8 @@ private:
         else
             hoursStr = dstr;
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hoursStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutesStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
+        enforce(!canFind!(not!isDigit)(hoursStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
+        enforce(!canFind!(not!isDigit)(minutesStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
 
         immutable hours = to!int(hoursStr);
         immutable minutes = minutesStr.empty ? 0 : to!int(minutesStr);
@@ -32666,7 +32679,7 @@ unittest
   +/
 Month monthFromString(string monthStr)
 {
-    switch(tolower(monthStr))
+    switch(toLower(monthStr))
     {
         case "january":
         case "jan":
@@ -32908,7 +32921,7 @@ static FracSec fracSecFromISOString(S)(in S isoString)
     dstr.popFront();
 
     enforce(!dstr.empty && dstr.length <= 7, new DateTimeException("Invalid ISO String"));
-    enforce(!canFind!((dchar c){return !isdigit(c);})(dstr), new DateTimeException("Invalid ISO String"));
+    enforce(!canFind!(not!isDigit)(dstr), new DateTimeException("Invalid ISO String"));
 
     dchar[7] fullISOString;
 
