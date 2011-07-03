@@ -1407,9 +1407,66 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
 
 private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 {
-    static if (isSomeString!T) formatValue(w, "\"", f);
-    formatValue(w, val, f);
-    static if (isSomeString!T) formatValue(w, "\"", f);
+    static if (isSomeString!T)
+    {
+        if (f.spec == 's')
+        {
+            /*
+             * Check C0 and C1 control code sets
+             * See Also: http://en.wikipedia.org/wiki/C0_and_C1_control_codes
+             */
+            static bool isUniControl(dchar c)
+            {
+                return (c <= 0x1F || (0x80 <= c && c <= 0x9F));
+            }
+
+            // ignore other specifications and quote
+            put(w, '\"');
+            foreach (c; val)
+            {
+                if(isUniControl(c))
+                {
+                    put(w, '\\');
+                    switch (c)
+                    {
+                    case '\a':  put(w, 'a');  break;
+                    case '\b':  put(w, 'b');  break;
+                    case '\f':  put(w, 'f');  break;
+                    case '\n':  put(w, 'n');  break;
+                    case '\r':  put(w, 'r');  break;
+                    case '\t':  put(w, 't');  break;
+                    case '\v':  put(w, 'v');  break;
+                    default:
+                        formattedWrite(w, "x%02x", c);
+                        break;
+                    }
+                }
+                else if (c == '\"' || c == '\\')
+                    put(w, '\\'), put(w, c);
+                else
+                    put(w, c);
+            }
+            put(w, '\"');
+        }
+        else
+            formatValue(w, val, f);
+    }
+    else
+        formatValue(w, val, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    w.clear();
+    formatValue(w, ["str\"\\\a\b\f\n\r\t\vend"], f);
+    assert(w.data == `["str\"\\\a\b\f\n\r\t\vend"]`);
+
+    w.clear();
+    formatValue(w, ["\x00\x10\x1F\x20\x80\x90\x9F"], f);
+    assert(w.data == `["\x00\x10\x1f \x80\x90\x9f"]`);
 }
 
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
