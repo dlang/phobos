@@ -1,192 +1,243 @@
 // Written in the D programming language.
 
-/**
- * Simple Unicode character classification functions.
- * For ASCII classification, see $(LINK2 std_ctype.html, std.ctype).
- * Macros:
- *  WIKI=Phobos/StdUni
- * References:
- *  $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
- *  $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia),
- *  $(LINK2 http://www.unicode.org, The Unicode Consortium)
- * Trademarks:
- *  Unicode(tm) is a trademark of Unicode, Inc.
- *
- * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_uni.d)
- */
-/*          Copyright Digital Mars 2000 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
- */
+/++
+    Functions which operate on unicode characters.
+
+    For functions which operate on ASCII characters and ignore unicode
+    characters, see $(LINK2 std_ascii.html, std.ascii).
+
+    References:
+        $(WEB www.digitalmars.com/d/ascii-table.html, ASCII Table),
+        $(WEB en.wikipedia.org/wiki/Unicode, Wikipedia),
+        $(WEB www.unicode.org, The Unicode Consortium)
+
+    Trademarks:
+        Unicode(tm) is a trademark of Unicode, Inc.
+
+    Macros:
+        WIKI=Phobos/StdUni
+
+    Copyright: Copyright 2000 -
+    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+    Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+    Source:    $(PHOBOSSRC std/_uni.d)
+  +/
 module std.uni;
 
-/**
- * Returns !=0 if c is a Unicode lower case character.
- */
-int isUniLower(dchar c)
-{
-    if (c <= 0x7F)
-        return (c >= 'a' && c <= 'z');
+static import std.ascii;
 
-    return isUniAlpha(c) && c == toUniLower(c);
+enum dchar lineSep = '\u2028'; /// UTF line separator
+enum dchar paraSep = '\u2029'; /// UTF paragraph separator
+
+/++
+    Whether or not $(D c) is a unicode whitespace character.
+  +/
+bool isWhite(dchar c) @safe pure nothrow
+{
+    return std.ascii.isWhite(c) ||
+           c == lineSep || c == paraSep ||
+           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
+           (c >= '\u2000' && c <= '\u200A') ||
+           c == '\u202F' || c == '\u205F' || c == '\u3000';
 }
 
-/**
- * Returns !=0 if c is a Unicode upper case character.
- */
-int isUniUpper(dchar c)
-{
-    if (c <= 0x7F)
-    return (c >= 'A' && c <= 'Z');
 
-    return isUniAlpha(c) && c == toUniUpper(c);
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isLower) instead.)
+
+    Return whether $(D c) is a unicode lowercase character.
+  +/
+alias isLower isUniLower;
+
+/++
+    Return whether $(D c) is a unicode lowercase character.
+  +/
+bool isLower(dchar c) @safe pure nothrow
+{
+    if(std.ascii.isASCII(c))
+        return std.ascii.isLower(c);
+
+    return isAlpha(c) && c == toLower(c);
 }
 
-/**
- * If c is a Unicode upper case character, return the lower case
- * equivalent, otherwise return c.
- */
-dchar toUniLower(dchar c)
+
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isUpper) instead.)
+
+    Return whether $(D c) is a unicode uppercase character.
+  +/
+alias isUpper isUniUpper;
+
+/++
+    Return whether $(D c) is a unicode uppercase character.
+  +/
+bool isUpper(dchar c) @safe pure nothrow
 {
-    if (c >= 'A' && c <= 'Z')
-    {
-        c += 32;
-    }
-    else if (c >= 0x00C0)
-    {
-    if ((c >= 0x00C0 && c <= 0x00D6) || (c >= 0x00D8 && c<=0x00DE))
-    {
-        c += 32;
-    }
-    else if ((c >= 0x0100 && c < 0x0138) || (c > 0x0149 && c < 0x0178))
-    {
-        if (c == 0x0130)
-        c = 0x0069;
-        else if ((c & 1) == 0)
-        c += 1;
-    }
-    else if (c == 0x0178)
-    {
-        c = 0x00FF;
-    }
-    else if ((c >= 0x0139 && c < 0x0149) || (c > 0x0178 && c < 0x017F))
-    {
-        if (c & 1)
-        c += 1;
-    }
-    else if (c >= 0x0200 && c <= 0x0217)
-    {
-        if ((c & 1) == 0)
-        c += 1;
-    }
-    else if ((c >= 0x0401 && c <= 0x040C) || (c>= 0x040E && c <= 0x040F))
-    {
-        c += 80;
-    }
-    else if (c >= 0x0410  && c <= 0x042F)
-    {
-        c += 32;
-    }
-    else if (c >= 0x0460 && c <= 0x047F)
-    {
-        if ((c & 1) == 0)
-        c += 1;
-    }
-    else if (c >= 0x0531 && c <= 0x0556)
-    {
-        c += 48;
-    }
-    else if (c >= 0x10A0 && c <= 0x10C5)
-    {
-        c += 48;
-    }
-    else if (c >= 0xFF21 && c <= 0xFF3A)
-    {
-        c += 32;
-    }
-    }
-    return c;
+    if(std.ascii.isASCII(c))
+        return std.ascii.isUpper(c);
+
+    return isAlpha(c) && c == toUpper(c);
 }
 
-/**
- * If c is a Unicode lower case character, return the upper case
- * equivalent, otherwise return c.
- */
-dchar toUniUpper(dchar c)
+
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D toLower) instead.)
+
+    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+alias toLower toUniLower;
+
+/++
+    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+dchar toLower(dchar c) @safe pure nothrow
 {
-    if (c >= 'a' && c <= 'z')
+    if(std.ascii.isUpper(c))
+        c += 32;
+    else if(c >= 0x00C0)
     {
-    c -= 32;
+        if((c >= 0x00C0 && c <= 0x00D6) ||
+           (c >= 0x00D8 && c<=0x00DE))
+        {
+            c += 32;
+        }
+        else if((c >= 0x0100 && c < 0x0138) ||
+                (c > 0x0149 && c < 0x0178))
+        {
+            if(c == 0x0130)
+                c = 0x0069;
+            else if((c & 1) == 0)
+                ++c;
+        }
+        else if(c == 0x0178)
+            c = 0x00FF;
+        else if((c >= 0x0139 && c < 0x0149) ||
+                (c > 0x0178 && c < 0x017F))
+        {
+            if(c & 1)
+                ++c;
+        }
+        else if(c >= 0x0200 && c <= 0x0217)
+        {
+            if((c & 1) == 0)
+                ++c;
+        }
+        else if((c >= 0x0401 && c <= 0x040C) ||
+                (c>= 0x040E && c <= 0x040F))
+        {
+            c += 80;
+        }
+        else if(c >= 0x0410 && c <= 0x042F)
+            c += 32;
+        else if(c >= 0x0460 && c <= 0x047F)
+        {
+            if((c & 1) == 0)
+                ++c;
+        }
+        else if(c >= 0x0531 && c <= 0x0556)
+            c += 48;
+        else if(c >= 0x10A0 && c <= 0x10C5)
+            c += 48;
+        else if(c >= 0xFF21 && c <= 0xFF3A)
+            c += 32;
     }
-    else if (c >= 0x00E0)
-    {
-    if ((c >= 0x00E0 && c <= 0x00F6) || (c >= 0x00F8 && c <= 0x00FE))
-    {
-        c -= 32;
-    }
-    else if (c == 0x00FF)
-    {
-        c = 0x0178;
-    }
-    else if ((c >= 0x0100 && c < 0x0138) || (c > 0x0149 && c < 0x0178))
-    {
-        if (c == 0x0131)
-        c = 0x0049;
-        else if (c & 1)
-        c -= 1;
-    }
-    else if ((c >= 0x0139 && c < 0x0149) || (c > 0x0178 && c < 0x017F))
-    {
-        if ((c & 1) == 0)
-        c = c-1;
-    }
-    else if (c == 0x017F)
-    {
-        c = 0x0053;
-    }
-    else if (c >= 0x0200 && c <= 0x0217)
-    {
-        if (c & 1)
-        c = c-1;
-    }
-    else if (c >= 0x0430 && c<= 0x044F)
-    {
-        c -= 32;
-    }
-    else if ((c >= 0x0451 && c <= 0x045C) || (c >=0x045E && c<= 0x045F))
-    {
-        c -= 80;
-    }
-    else if (c >= 0x0460 && c <= 0x047F)
-    {
-        if (c & 1)
-        c -= 1;
-    }
-    else if (c >= 0x0561 && c < 0x0587)
-    {
-        c -= 48;
-    }
-    else if (c >= 0xFF41 && c <= 0xFF5A)
-    {
-        c -= 32;
-    }
-    }
+
     return c;
 }
 
 
-/*******************************
- * Return !=0 if u is a Unicode alpha character.
- * (general Unicode category: Lu, Ll, Lt, Lm and Lo)
- *
- * Standards: Unicode 5.0.0
- */
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D toUpper) instead.)
 
-int isUniAlpha(dchar u)
+    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+alias toUpper toUniUpper;
+
+/++
+    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    is returned. Otherwise $(D c) is returned.
+  +/
+dchar toUpper(dchar c) @safe pure nothrow
+{
+    if(std.ascii.isLower(c))
+        c -= 32;
+    else if(c >= 0x00E0)
+    {
+        if((c >= 0x00E0 && c <= 0x00F6) ||
+           (c >= 0x00F8 && c <= 0x00FE))
+        {
+            c -= 32;
+        }
+        else if(c == 0x00FF)
+            c = 0x0178;
+        else if((c >= 0x0100 && c < 0x0138) ||
+                (c > 0x0149 && c < 0x0178))
+        {
+            if(c == 0x0131)
+                c = 0x0049;
+            else if(c & 1)
+                --c;
+        }
+        else if((c >= 0x0139 && c < 0x0149) ||
+                (c > 0x0178 && c < 0x017F))
+        {
+            if((c & 1) == 0)
+                --c;
+        }
+        else if(c == 0x017F)
+            c = 0x0053;
+        else if(c >= 0x0200 && c <= 0x0217)
+        {
+            if(c & 1)
+                --c;
+        }
+        else if(c >= 0x0430 && c<= 0x044F)
+            c -= 32;
+        else if((c >= 0x0451 && c <= 0x045C) ||
+                (c >=0x045E && c<= 0x045F))
+        {
+            c -= 80;
+        }
+        else if(c >= 0x0460 && c <= 0x047F)
+        {
+            if(c & 1)
+                --c;
+        }
+        else if(c >= 0x0561 && c < 0x0587)
+            c -= 48;
+        else if(c >= 0xFF41 && c <= 0xFF5A)
+            c -= 32;
+    }
+
+    return c;
+}
+
+
+/++
+   $(RED Scheduled for deprecation in December 2011. Please use
+   $(D isAlpha) instead.)
+
+    Returns whether $(D c) is a unicode alpha character (general unicode
+    category: Lu, L1, Lt, Lm, and Lo).
+
+    Standards: Unicode 5.0.0.
+  +/
+alias isAlpha isUniAlpha;
+
+/++
+    Returns whether $(D c) is a unicode alpha character (general unicode
+    category: Lu, L1, Lt, Lm, and Lo).
+
+    Standards: Unicode 5.0.0.
+  +/
+bool isAlpha(dchar c) @safe pure nothrow
 {
     static immutable dchar table[][2] =
     [
@@ -551,82 +602,79 @@ int isUniAlpha(dchar u)
 
     debug
     {
-        for (int i = 0; i < table.length; i++)
+        for(size_t i = 0; i < table.length; ++i)
         {
             assert(table[i][0] <= table[i][1]);
-            if (i < table.length - 1)
-            {
-                //if (table[i][1] >= table[i + 1][0])
-                //printf("table[%d][1] = x%x, table[%d][0] = x%x\n", i, table[i][1], i + 1, table[i + 1][0]);
+            if(i < table.length - 1)
                 assert(table[i][1] < table[i + 1][0]);
-            }
         }
     }
 
-    if (u < 0xAA)
+    if(c < 0xAA)
     {
-        if (u < 'A')
+        if(c < 'A')
             goto Lisnot;
-        if (u <= 'Z')
+        if(c <= 'Z')
             goto Lis;
-        if (u < 'a')
+        if(c < 'a')
             goto Lisnot;
-        if (u <= 'z')
+        if(c <= 'z')
             goto Lis;
         goto Lisnot;
     }
 
     // Binary search
-    uint mid;
-    uint low;
-    uint high;
+    size_t mid;
+    size_t low;
+    size_t high;
 
     low = 0;
     high = table.length - 1;
-    while (cast(int)low <= cast(int)high)
+    while(cast(int)low <= cast(int)high)
     {
-    mid = (low + high) >> 1;
-    if (u < table[mid][0])
-        high = mid - 1;
-    else if (u > table[mid][1])
-        low = mid + 1;
-    else
-        goto Lis;
+        mid = (low + high) >> 1;
+
+        if(c < table[mid][0])
+            high = mid - 1;
+        else if(c > table[mid][1])
+            low = mid + 1;
+        else
+            goto Lis;
     }
 
 Lisnot:
     debug
     {
-    for (int i = 0; i < table.length; i++)
-    {
-        assert(u < table[i][0] || u > table[i][1]);
+        for(size_t i = 0; i < table.length; ++i)
+            assert(c < table[i][0] || c > table[i][1]);
     }
-    }
-    return 0;
+
+    return false;
 
 Lis:
     debug
     {
-    for (int i = 0; i < table.length; i++)
-    {
-        if (u >= table[i][0] && u <= table[i][1])
-        return 1;
-    }
-    assert(0);      // should have been in table
+        for(size_t i = 0; i < table.length; ++i)
+        {
+            if(c >= table[i][0] && c <= table[i][1])
+                return true;
+        }
+
+        assert(0);      // should have been in table
     }
     else
-    return 1;
+        return true;
 }
 
 unittest
 {
-    for (uint i = 0; i < 0x80; i++)
+    for(dchar c = 0; c < 0x80; ++c)
     {
-    if (i >= 'A' && i <= 'Z')
-        assert(isUniAlpha(i));
-    else if (i >= 'a' && i <= 'z')
-        assert(isUniAlpha(i));
-    else
-        assert(!isUniAlpha(i));
+        if(c >= 'A' && c <= 'Z')
+            assert(isAlpha(c));
+        else if(c >= 'a' && c <= 'z')
+            assert(isAlpha(c));
+        else
+            assert(!isAlpha(c));
     }
 }
