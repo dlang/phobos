@@ -2,6 +2,7 @@ $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
         $(LI std.aray.insertInPlace supports inserting of multiple ranges/elements in one go)
+		$(LI Added std.array.uninitializedArray and std.array.minimallyInitializedArray)
         $(LI Various functions in std.string were renamed to match Phobos'
              naming conventions and be properly camelcased. The old names
              are still there but have been scheduled for deprecation.)
@@ -11,6 +12,7 @@ $(VERSION 054, ddd mm, 2011, =================================================,
              are still there but have been scheduled for deprecation.)
         $(LI std.ctype has been scheduled for deprecation. std.ascii has been
              added to replace it.)
+		$(LI Major performance improvements for std.algorithm.sort)
      )
 
     $(LIBBUGSFIXED
