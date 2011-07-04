@@ -879,16 +879,6 @@ auto a = uniform(0, 1024, gen);
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
-            T1, T2, UniformRandomNumberGenerator)
-        (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
-
-/** ditto */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
-        (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
-
 auto uniform(string boundaries = "[)", T1, T2)
 (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
@@ -924,6 +914,7 @@ unittest
 }
 
 // Implementation of uniform for floating-point types
+/// ditto
 auto uniform(string boundaries = "[)",
         T1, T2, UniformRandomNumberGenerator)
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
