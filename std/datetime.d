@@ -7351,7 +7351,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in December 2011.
+        $(RED Scheduled for deprecation in January 2012.
               Please use daysInMonth instead.)
       +/
     alias daysInMonth endofMonthDay;
@@ -12551,7 +12551,7 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in December 2011.
+        $(RED Scheduled for deprecation in January 2012.
               Please use daysInMonth instead.)
       +/
     alias daysInMonth endofMonthDay;
@@ -17477,7 +17477,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in December 2011.
+        $(RED Scheduled for deprecation in January 2012.
               Please use daysInMonth instead.)
       +/
     alias daysInMonth endofMonthDay;

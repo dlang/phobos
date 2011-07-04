@@ -495,7 +495,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- * $(RED Scheduled for deprecation in December 2011. Please use the version
+ * $(RED Scheduled for deprecation in January 2012. Please use the version
  *       which takes a $(CXREF time, Duration) instead.)
  */
 bool receiveTimeout(T...)( long ms, T ops )

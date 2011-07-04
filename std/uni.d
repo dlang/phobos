@@ -43,7 +43,7 @@ bool isWhite(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in December 2011. Please use
+   $(RED Scheduled for deprecation in January 2012. Please use
    $(D isLower) instead.)
 
     Return whether $(D c) is a unicode lowercase character.
@@ -63,7 +63,7 @@ bool isLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in December 2011. Please use
+   $(RED Scheduled for deprecation in January 2012. Please use
    $(D isUpper) instead.)
 
     Return whether $(D c) is a unicode uppercase character.
@@ -83,7 +83,7 @@ bool isUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in December 2011. Please use
+   $(RED Scheduled for deprecation in January 2012. Please use
    $(D toLower) instead.)
 
     If $(D c) is a unicode uppercase character, then its lowercase equivalent
@@ -152,7 +152,7 @@ dchar toLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in December 2011. Please use
+   $(RED Scheduled for deprecation in January 2012. Please use
    $(D toUpper) instead.)
 
     If $(D c) is a unicode lowercase character, then its uppercase equivalent
@@ -221,7 +221,7 @@ dchar toUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in December 2011. Please use
+   $(RED Scheduled for deprecation in January 2012. Please use
    $(D isAlpha) instead.)
 
     Returns whether $(D c) is a unicode alpha character (general unicode

@@ -103,7 +103,7 @@ class StringException : Exception
 /* ************* Constants *************** */
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, hexDigits) instead.)
 
     0..9A..F
@@ -111,7 +111,7 @@ class StringException : Exception
 immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, digits) instead.)
 
     0..9
@@ -119,7 +119,7 @@ immutable char[16] hexdigits = "0123456789ABCDEF";
 alias std.ascii.digits digits;
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, octDigits) instead.)
 
     0..7
@@ -127,7 +127,7 @@ alias std.ascii.digits digits;
 immutable char[8]  octdigits = "01234567";
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, lowercase) instead.)
 
     a..z
@@ -135,7 +135,7 @@ immutable char[8]  octdigits = "01234567";
 immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, letters) instead.)
 
     A..Za..z
@@ -144,7 +144,7 @@ immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, uppercase) instead.)
 
     A..Z
@@ -152,7 +152,7 @@ immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, whitespace) instead.)
 
     ASCII whitespace.
@@ -160,7 +160,7 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 alias std.ascii.whitespace whitespace;
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF uni, lineSep) instead.)
 
     UTF line separator.
@@ -168,7 +168,7 @@ alias std.ascii.whitespace whitespace;
 enum dchar LS = '\u2028';
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF uni, paraSep) instead.)
 
     UTF paragraph separator.
@@ -176,7 +176,7 @@ enum dchar LS = '\u2028';
 enum dchar PS = '\u2029';
 
 /++
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(XREF ascii, newline) instead.)
 
     Newline sequence for this system.
@@ -184,7 +184,7 @@ enum dchar PS = '\u2029';
 alias std.ascii.newline newline;
 
 /**********************************
- * $(RED Scheduled for deprecation in December 2011.
+ * $(RED Scheduled for deprecation in January 2012.
  *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
@@ -193,7 +193,7 @@ version(StdDdoc) bool iswhite(dchar c);
 else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "iswhite",
+    pragma(msg, softDeprec!("2.054", "January 2012", "iswhite",
                             "std.ascii.isWhite or std.uni.isWhite"));
 
     return c <= 0x7F
@@ -874,14 +874,14 @@ unittest
 
 
 /************************************
- * $(RED Scheduled for deprecation in December 2011.
+ * $(RED Scheduled for deprecation in January 2012.
  *       Please use $(D toLower instead.)
  *
  * Convert string s[] to lower case.
  */
 S tolower(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "tolower", "std.string.toLower"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "tolower", "std.string.toLower"));
     return toLower!S(s);
 }
 
@@ -933,14 +933,14 @@ unittest
 }
 
 /**
-   $(RED Scheduled for deprecation in December 2011.
+   $(RED Scheduled for deprecation in January 2012.
          Please use toLowerInPlace instead.)
 
    Converts $(D s) to lowercase in place.
  */
 void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "tolowerInPlace", "std.string.toLowerInPlace"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "tolowerInPlace", "std.string.toLowerInPlace"));
     toLowerInPlace!C(s);
 }
 
@@ -1049,14 +1049,14 @@ unittest
 }
 
 /************************************
- * $(RED Scheduled for deprecation in December 2011.
+ * $(RED Scheduled for deprecation in January 2012.
  *       Please use toUpper instead.)
  *
  * Convert string s[] to upper case.
  */
 S toupper(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "toupper", "std.string.toUpper"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "toupper", "std.string.toUpper"));
     return toUpper!S(s);
 }
 
@@ -1108,14 +1108,14 @@ unittest
 }
 
 /**
-    $(RED Scheduled for deprecation in December 2011.
+    $(RED Scheduled for deprecation in January 2012.
           Please use $(D toUpperInPlace) instead.)
 
    Converts $(D s) to uppercase in place.
  */
 void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "toupperInPlace", "std.string.toUpperInPlace"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "toupperInPlace", "std.string.toUpperInPlace"));
     toUpperInPlace!C(s);
 }
 
@@ -1288,7 +1288,7 @@ unittest
 
 
 /********************************************
- *  $(RED Scheduled for deprecation in December 2011.)
+ *  $(RED Scheduled for deprecation in January 2012.)
  *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
@@ -1297,7 +1297,7 @@ unittest
 S capwords(S)(S s) if (isSomeString!S)
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.string.capwords has been " ~
-                "scheduled for deprecation in December 2011.");
+                "scheduled for deprecation in January 2012.");
 
     return _capWords!S(s);
 }
@@ -1378,7 +1378,7 @@ S repeat(S)(S s, size_t n)
  */
 S[] splitlines(S)(S s)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "splitlines", "std.string.splitLines"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "splitlines", "std.string.splitLines"));
     return splitLines!S(s);
 }
 
@@ -1446,14 +1446,14 @@ unittest
 
 
 /*****************************************
- *  $(RED Scheduled for deprecation in December 2011.
+ *  $(RED Scheduled for deprecation in January 2012.
  *        Please use $(D stripLeft) instead.
  *
  * Strips leading whitespace.
  */
 String stripl(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "stripl", "std.string.stripLeft"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "stripl", "std.string.stripLeft"));
     return stripLeft!String(s);
 }
 
@@ -1482,14 +1482,14 @@ S stripLeft(S)(S s) @safe pure
 }
 
 /*****************************************
- *  $(RED Scheduled for deprecation in December 2011.
+ *  $(RED Scheduled for deprecation in January 2012.
  *        Please use $(D stripRight) instead.
  *
  * Strips trailing whitespace.
  */
 String stripr(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "stripr", "std.string.stripRight"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "stripr", "std.string.stripRight"));
     return stripRight!String(s);
 }
 
@@ -1677,14 +1677,14 @@ unittest
 
 
 /*******************************************
- *  $(RED Scheduled for deprecation in December 2011.
+ *  $(RED Scheduled for deprecation in January 2012.
  *        Please use $(D leftJustify) instead.)
  *
  * Left justify string s[] in field width chars wide.
  */
 S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "ljustify", "std.string.leftJustify"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "ljustify", "std.string.leftJustify"));
     return leftJustify!S(s, width);
 }
 
@@ -1724,14 +1724,14 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 
 /*******************************************
- *  $(RED Scheduled for deprecation in December 2011.
+ *  $(RED Scheduled for deprecation in January 2012.
  *        Please use $(D rightJustify) instead.)
  *
  * Left right string s[] in field width chars wide.
  */
 S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "rjustify", "std.string.rightJustify"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "rjustify", "std.string.rightJustify"));
     return rightJustify!S(s, width);
 }
 
@@ -1836,7 +1836,7 @@ unittest
 
 
 /*****************************************
- * $(RED Scheduled for deprecation in December 2011.
+ * $(RED Scheduled for deprecation in January 2012.
  *       Please use $(D rightJustify) with a fill character of '0' instead.)
  *
  * Same as rjustify(), but fill with '0's.
@@ -1844,7 +1844,7 @@ unittest
  */
 S zfill(S)(S s, int width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "zfill",
+    pragma(msg, softDeprec!("2.054", "January 2012", "zfill",
                             "std.string.rightJustify with a fillChar of '0'"));
     return rightJustify!S(s, width, '0');
 }
@@ -1870,7 +1870,7 @@ body
 
 
 /************************************************
- * $(RED Scheduled for deprecation in December 2011.
+ * $(RED Scheduled for deprecation in January 2012.
  *       Please use $(D detab) instead.
  *
  * Replace tabs with the appropriate number of spaces.
@@ -1878,7 +1878,7 @@ body
  */
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "December 2011", "expandtabs", "std.string.detab"));
+    pragma(msg, softDeprec!("2.054", "January 2012", "expandtabs", "std.string.detab"));
     return detab!S(str, tabsize);
 }
 
@@ -3084,7 +3084,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 }
 
 /++
-    $(RED Scheduled for deprecation in December 2011.)
+    $(RED Scheduled for deprecation in January 2012.)
 
     Allow any object as a parameter
   +/
@@ -3094,7 +3094,7 @@ bool isNumeric(...)
 }
 
 /++
-    $(RED Scheduled for deprecation in December 2011.)
+    $(RED Scheduled for deprecation in January 2012.)
 
     Check only the first parameter, all others will be ignored.
   +/

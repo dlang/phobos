@@ -879,7 +879,7 @@ version(Windows) unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in October 2011. Please use the
+    $(RED Scheduled for deprecation in November 2011. Please use the
           $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
@@ -920,7 +920,7 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
     if(is(Unqual!C == char))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in October 2011. Please use " ~
+                "scheduled for deprecation in November 2011. Please use " ~
                 "the version of getTimes with two arguments instead.");
 
     struct_stat64 statbuf = void;
@@ -1262,7 +1262,7 @@ alias isDir isdir;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1403,7 +1403,7 @@ alias isFile isfile;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1599,7 +1599,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsSymLink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1957,7 +1957,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in October 2011.
+            $(RED Scheduled for deprecation in November 2011.
                   Please use $(D timeLastAccessed) instead.)
 
             $(BLUE This function is Posix-Only.)
