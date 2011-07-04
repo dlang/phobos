@@ -879,16 +879,6 @@ auto a = uniform(0, 1024, gen);
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
-            T1, T2, UniformRandomNumberGenerator)
-        (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
-
-/** ditto */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
-        (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
-
 auto uniform(string boundaries = "[)", T1, T2)
 (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
@@ -924,6 +914,7 @@ unittest
 }
 
 // Implementation of uniform for floating-point types
+/// ditto
 auto uniform(string boundaries = "[)",
         T1, T2, UniformRandomNumberGenerator)
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
@@ -1021,6 +1012,16 @@ unittest
     assert(0 <= b && b < 1, to!string(b));
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
+
+    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+                          int, uint, long, ulong, float, double, real))
+    {
+        T lo = 0, hi = 100;
+        T init = uniform(lo, hi);
+        size_t i = 50;
+        while (--i && uniform(lo, hi) == init) {}
+        assert(i > 0);
+    }
 }
 
 /**
@@ -1041,7 +1042,7 @@ if (isIntegral!T || isSomeChar!T)
     else
     {
         static assert(T.sizeof == 8 && r.sizeof == 4);
-        T r1 = urng.front | (r << 32);
+        T r1 = urng.front | (cast(T)r << 32);
         urng.popFront();
         return r1;
     }
@@ -1056,17 +1057,14 @@ if (isIntegral!T || isSomeChar!T)
 
 unittest
 {
-    {auto a = uniform!char(); }
-    {auto a = uniform!wchar();}
-    {auto a = uniform!dchar();}
-    {auto a = uniform!byte();}
-    {auto a = uniform!ubyte();}
-    {auto a = uniform!short();}
-    {auto a = uniform!ushort();}
-    {auto a = uniform!int();}
-    {auto a = uniform!uint();}
-    {auto a = uniform!long();}
-    {auto a = uniform!ulong();}
+    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+                          int, uint, long, ulong))
+    {
+        T init = uniform!T();
+        size_t i = 50;
+        while (--i && uniform!T() == init) {}
+        assert(i > 0);
+    }
 }
 
 /**

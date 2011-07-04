@@ -124,6 +124,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.xml;
 
 import std.array;
+import std.ascii;
 import std.string;
 import std.encoding;
 
@@ -920,7 +921,7 @@ class Element : Item
                 string[] b = item.pretty(indent);
                 foreach(s;b)
                 {
-                    a ~= rjustify(s,s.length + indent);
+                    a ~= rightJustify(s,s.length + indent);
                 }
             }
             a ~= tag.toEndString;

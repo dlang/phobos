@@ -1177,7 +1177,7 @@ private:
 public:
     // This is used in parallel_algorithm but is too unstable to document
     // as public API.
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
+    size_t defaultWorkUnitSize(size_t rangeLen) const nothrow @safe {
         if(this.size == 0) {
             return rangeLen;
         }
@@ -1609,7 +1609,7 @@ public:
                 static if(hasLength!R) {
                     size_t _length;
 
-                    public @property size_t length() const pure nothrow @safe {
+                    public @property size_t length() const nothrow @safe {
                         return _length;
                     }
                 }
@@ -1784,7 +1784,7 @@ public:
                 size_t _length;
 
                 // Available if hasLength!(R).
-                public @property size_t length() const pure nothrow @safe {
+                public @property size_t length() const nothrow @safe {
                     return _length;
                 }
             }
@@ -2527,7 +2527,7 @@ public:
     }
 
     /// Returns the number of worker threads in the pool.
-    @property size_t size() @safe const pure nothrow {
+    @property size_t size() @safe const nothrow {
         return pool.length;
     }
 
@@ -2655,7 +2655,7 @@ terminating the main thread.
     __gshared static TaskPool pool;
 
     if(!initialized) {
-        synchronized {
+        synchronized(TaskPool.classinfo) {
             if(!pool) {
                 pool = new TaskPool(defaultPoolThreads);
                 pool.isDaemon = true;

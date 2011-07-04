@@ -113,7 +113,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     T im;
 
 
-@safe pure nothrow  // The following functions depend only on std.math.
+@safe nothrow  // The following functions depend only on std.math.
 {
 
     /** Calculate the absolute value (or modulus) of the number. */
