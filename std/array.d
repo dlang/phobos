@@ -13,8 +13,8 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.conv, std.ctype, std.exception,
-    std.range, std.string, std.traits, std.typecons, std.utf, std.typetuple;
+import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
+       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 
@@ -359,7 +359,17 @@ unittest
     s2.popFront();
     assert(s2 == "hello");
     string s3 = "\u20AC100";
-    //write(s3, '\n');
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        S str = "hello\U00010143\u0100\U00010143";
+        foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
+        {
+            assert(str.front == c);
+            str.popFront();
+        }
+        assert(str.empty);
+    }
 
     static assert(!__traits(compiles, popFront!(immutable string)));
 }
@@ -398,68 +408,36 @@ unittest
 
 // Specialization for arrays of char
 @trusted void popBack(A)(ref A a)
-if (is(A : const(char)[]) && isMutable!A)
+    if(isNarrowString!A && isMutable!A)
 {
-    immutable n = a.length;
-    const p = a.ptr + n;
-    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 1];
-    }
-    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 2];
-    }
-    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 3];
-    }
-    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-    {
-        a = a[0 .. n - 4];
-    }
-    else
-    {
-        throw new UtfException("Invalid UTF character at end of string");
-    }
+    assert(a.length, "Attempting to popBack() past the front of an array of " ~
+                     typeof(a[0]).stringof);
+    a = a[0 .. $ - std.utf.strideBack(a, a.length)];
 }
 
 unittest
 {
-    string s = "hello\xE2\x89\xA0";
-    s.popBack();
-    assert(s == "hello", s);
-    string s3 = "\xE2\x89\xA0";
-    auto c = s3.back;
-    assert(c == cast(dchar)'\u2260');
-    s3.popBack();
-    assert(s3 == "");
-
-    static assert(!__traits(compiles, popBack!(immutable char[])));
-}
-
-// Specialization for arrays of wchar
-@trusted void popBack(A)(ref A a)
-if (is(A : const(wchar)[]) && isMutable!A)
-{
-    assert(a.length);
-    if (a.length <= 1) // this is technically == but costs nothing and is safer
+    foreach(S; TypeTuple!(string, wstring, dstring))
     {
-        a = a[0 .. 0];
-        return;
+        S s = "hello\xE2\x89\xA0";
+        s.popBack();
+        assert(s == "hello");
+        S s3 = "\xE2\x89\xA0";
+        auto c = s3.back;
+        assert(c == cast(dchar)'\u2260');
+        s3.popBack();
+        assert(s3 == "");
+
+        S str = "\U00010143\u0100\U00010143hello";
+        foreach(dchar c; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
+        {
+            assert(str.back == c);
+            str.popBack();
+        }
+        assert(str.empty);
+
+        static assert(!__traits(compiles, popBack!(immutable S)));
     }
-    // We can go commando from here on, we're safe; length is > 1
-    immutable c = a.ptr[a.length - 2];
-    a = a.ptr[0 .. a.length - 1 - (c >= 0xD800 && c <= 0xDBFF)];
-}
-
-unittest
-{
-    wstring s = "hello\xE2\x89\xA0";
-    s.popBack();
-    assert(s == "hello");
-
-    static assert(!__traits(compiles, popBack!(immutable wchar[])));
 }
 
 /**
@@ -480,13 +458,15 @@ assert(a.front == 1);
 ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
-    assert(a.length, "Attempting to fetch the front of an empty array");
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~
+                     typeof(a[0]).stringof);
     return a[0];
 }
 
 dchar front(A)(A a) if (isNarrowString!A)
 {
-    assert(a.length, "Attempting to fetch the front of an empty array");
+    assert(a.length, "Attempting to fetch the front of an empty array of " ~
+                     typeof(a[0]).stringof);
     size_t i = 0;
     return decode(a, i);
 }
@@ -515,7 +495,8 @@ assert(a.back == 3);
 */
 ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
-    assert(a.length, "Attempting to fetch the back of an empty array");
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~
+                     typeof(a[0]).stringof);
     return a[$ - 1];
 }
 
@@ -529,33 +510,12 @@ unittest
 
 // Specialization for strings
 dchar back(A)(A a)
-if (isDynamicArray!A && isNarrowString!A)
+    if(isDynamicArray!A && isNarrowString!A)
 {
-    auto n = a.length;
-    const p = a.ptr + n;
-    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
-    {
-        --n;
-    }
-    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 2;
-    }
-    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 3;
-    }
-    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
-    {
-        n -= 4;
-    }
-    else
-    {
-        throw new UtfException(a.length
-                ? "Invalid UTF character at end of string"
-                : "Attempting to fetch the back of an empty array");
-    }
-    return decode(a, n);
+    assert(a.length, "Attempting to fetch the back of an empty array of " ~
+                     typeof(a[0]).stringof);
+    size_t i = a.length - std.utf.strideBack(a, a.length);
+    return decode(a, i);
 }
 
 // overlap
@@ -1012,26 +972,18 @@ if (isInputRange!S && !isDynamicArray!S)
 
 unittest
 {
-    debug(std_array) printf("array.repeat.unittest\n");
+    debug(std_array) printf("array.replicate.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
 
-        s = replicate(to!S("1234"), 0);
-        assert(s is null);
-        s = replicate(to!S("1234"), 1);
-        assert(cmp(s, "1234") == 0);
-        s = replicate(to!S("1234"), 2);
-        assert(cmp(s, "12341234") == 0);
-        s = replicate(to!S("1"), 4);
-        assert(cmp(s, "1111") == 0);
-        s = replicate(cast(S) null, 4);
-        assert(s is null);
+        assert(replicate(to!S("1234"), 0) is null);
+        assert(replicate(to!S("1234"), 1) == "1234");
+        assert(replicate(to!S("1234"), 2) == "12341234");
+        assert(replicate(to!S("1"), 4) == "1111");
+        assert(replicate(cast(S) null, 4) is null);
     }
-
-    int[] a = [ 1, 2, 3 ];
-    assert(replicate(a, 3) == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
 }
 
 /**************************************
@@ -1073,7 +1025,7 @@ unittest
 {
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
-        debug(string) printf("string.split1\n");
+        debug(std_array) printf("array.split1\n");
         S s = " \t\npeter paul\tjerry \n";
         assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
@@ -1091,7 +1043,7 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
  */
 auto splitter(String)(String s) if (isSomeString!String)
 {
-    return std.algorithm.splitter!isspace(s);
+    return std.algorithm.splitter!(std.uni.isWhite)(s);
 }
 
 unittest
@@ -1279,7 +1231,7 @@ if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
 
 unittest
 {
-    debug(string) printf("array.replace.unittest\n");
+    debug(std_array) printf("array.replace.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -1577,7 +1529,7 @@ if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
 
 unittest
 {
-    debug(string) printf("array.replaceFirst.unittest\n");
+    debug(std_array) printf("array.replaceFirst.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -1679,6 +1631,9 @@ appending to the original array will reallocate.
         _data = new Data;
         _data.arr = cast(Unqual!(T)[])arr;
 
+        if (__ctfe)
+            return;
+
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
@@ -1703,6 +1658,13 @@ done.
         {
             // need to increase capacity
             immutable len = _data.arr.length;
+            if (__ctfe)
+            {
+                _data.arr.length = newCapacity;
+                _data.arr = _data.arr[0..len];
+                _data.capacity = newCapacity;
+                return;
+            }
             immutable growsize = (newCapacity - len) * T.sizeof;
             auto u = GC.extend(_data.arr.ptr, growsize, growsize);
             if(u)
@@ -1751,6 +1713,13 @@ Returns the managed array.
         immutable reqlen = len + nelems;
         if (reqlen > _data.capacity)
         {
+            if (__ctfe)
+            {
+                _data.arr.length = reqlen;
+                _data.arr = _data.arr[0..len];
+                _data.capacity = reqlen;
+                return;
+            }
             // Time to reallocate.
             // We need to almost duplicate what's in druntime, except we
             // have better access to the capacity field.

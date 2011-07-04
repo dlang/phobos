@@ -30,7 +30,7 @@ module std.uri;
 
 /* ====================== URI Functions ================ */
 
-private import std.ctype;
+private import std.ascii;
 private import std.c.stdlib;
 private import std.utf;
 private import std.stdio;
@@ -259,7 +259,7 @@ private dstring URI_Decode(string string, uint reservedSet)
     start = k;
     if (k + 2 >= len)
         goto LthrowURIerror;
-    if (!isxdigit(s[k + 1]) || !isxdigit(s[k + 2]))
+    if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
         goto LthrowURIerror;
     B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
     k += 2;
@@ -292,7 +292,7 @@ private dstring URI_Decode(string string, uint reservedSet)
         k++;
         if (s[k] != '%')
             goto LthrowURIerror;
-        if (!isxdigit(s[k + 1]) || !isxdigit(s[k + 2]))
+        if (!isHexDigit(s[k + 1]) || !isHexDigit(s[k + 2]))
             goto LthrowURIerror;
         B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
         if ((B & 0xC0) != 0x80)
@@ -407,7 +407,7 @@ size_t uriLength(string s)
     for (; i < s.length; i++)
     {
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_' || c == '?' ||
         c == '=' || c == '%' || c == '&' ||
@@ -442,7 +442,7 @@ Lno:
 size_t emailLength(string s)
 {   size_t i;
 
-    if (!isalpha(s[0]))
+    if (!isAlpha(s[0]))
     goto Lno;
 
     for (i = 1; 1; i++)
@@ -450,7 +450,7 @@ size_t emailLength(string s)
     if (i == s.length)
         goto Lno;
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_' || c == '.')
         continue;
@@ -467,7 +467,7 @@ size_t emailLength(string s)
     for (; i < s.length; i++)
     {
     auto c = s[i];
-    if (isalnum(c))
+    if (isAlphaNum(c))
         continue;
     if (c == '-' || c == '_')
         continue;
