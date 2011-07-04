@@ -1267,7 +1267,11 @@ P toUTFz(P, S)(S str)
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if(str.empty)
-        return cast(P)"".ptr;
+    {
+        typeof(*P.init)[] retval = ['\0'];
+
+        return retval.ptr;
+    }
 
     alias Unqual!(typeof(str[0])) C;
 
@@ -1320,11 +1324,11 @@ P toUTFz(P, S)(S str)
     //C[] -> immutable(C)*
     else
     {
-        auto copy = new Unqual!OutChar[](str.length + 1);
+        auto copy = uninitializedArray!(Unqual!OutChar[])(str.length + 1);
         copy[0 .. $ - 1] = str[];
         copy[$ - 1] = '\0';
 
-        return cast(P)copy;
+        return cast(P)copy.ptr;
     }
 }
 
