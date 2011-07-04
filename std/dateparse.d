@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ * $(RED Scheduled for deprecation in August 2011. Please use std.datetime instead.)
  *
  * dateparse module.
  *

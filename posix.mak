@@ -54,7 +54,7 @@ DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -154,9 +154,9 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
-        compiler complex concurrency container contracts conv cpuid		\
-        cstream ctype date datetime datebase dateparse demangle			\
+STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
+        bitmanip compiler complex concurrency container contracts conv	\
+        cpuid cstream ctype date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
@@ -316,6 +316,9 @@ $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<

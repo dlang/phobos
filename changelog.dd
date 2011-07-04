@@ -1,8 +1,17 @@
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-        $(LI Your news here)
-    )
+        $(LI std.aray.insertInPlace supports inserting of multiple ranges/elements in one go)
+        $(LI Various functions in std.string were renamed to match Phobos'
+             naming conventions and be properly camelcased. The old names
+             are still there but have been scheduled for deprecation.)
+        $(LI Various functions in std.uni were renamed so that they don't have
+             "Uni" in their name, since it was decided that it was not desirable to
+             repeat a module's name in its functions' names. The old names
+             are still there but have been scheduled for deprecation.)
+        $(LI std.ctype has been scheduled for deprecation. std.ascii has been
+             added to replace it.)
+     )
 
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 2108): regexp.d: The greedy dotstar isn't so greedy)
@@ -13,11 +22,14 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 3752): File.byLine fetches lines in a confusing manner)
         $(LI $(BUGZILLA 4367): std.regex: Captures is not a random access range)
         $(LI $(BUGZILLA 4574): std.regex: breaks with empy string regex)
+        $(LI $(BUGZILLA 4608): std.string.chomp documentation mismatch implementation)
         $(LI $(BUGZILLA 5019): In std.regex, empty capture at end of string causes error)
         $(LI $(BUGZILLA 5511): std.regex optional capture with no-match cause error)
         $(LI $(BUGZILLA 5673): Add lookahead and forgetful matching support std.regex)
         $(LI $(BUGZILLA 5857): std.regex (...){n,m} is bogus when (...) contains repetitions)
         $(LI $(BUGZILLA 6076): regression, std.regex: "c.*|d" matches "mm")
         $(LI $(BUGZILLA 6113): singletons in std.datetime are not created early enough)
-    )
+        $(LI $(BUGZILLA 5705): Swapping identical struct with hasElaborateAssign causes "overlapping array copy" exception)
+        $(LI $(BUGZILLA 6193): Appender.clear() functionality or documentation)
+     )
 )

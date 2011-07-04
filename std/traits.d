@@ -760,7 +760,7 @@ unittest
     static assert(is(F_ov3* == int function() @property));
 
     alias FunctionTypeOf!((int a){ return a; }) F_dglit;
-    static assert(is(F_dglit* == int function(int)));
+    static assert(is(F_dglit* : int function(int)));
 }
 
 
