@@ -119,7 +119,7 @@ template floatTraits(T) {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
-    // RECIP_EPSILON is the value such that (smallest_denormal) * RECIP_EPSILON == T.min_normal
+    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
     enum T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     { // float
@@ -408,7 +408,7 @@ real tan(real x) @trusted pure nothrow
         fstsw   AX                      ;
         sahf                            ;
         jc      trigerr                 ; // x is NAN, infinity, or empty
-                                          // 387's can handle denormals
+                                          // 387's can handle subnormals
 SC18:   fptan                           ;
         fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
@@ -443,7 +443,7 @@ Lret:
         fstsw   AX                      ;
         test    AH,1                    ;
         jnz     trigerr                 ; // x is NAN, infinity, or empty
-                                          // 387's can handle denormals
+                                          // 387's can handle subnormals
 SC18:   fptan                           ;
         fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
@@ -1467,7 +1467,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
@@ -1496,7 +1496,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
@@ -1522,7 +1522,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS)>> 4) - real.mant_dig + 1;
@@ -1569,7 +1569,7 @@ unittest
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                                           [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
                                           [real.min_normal,  .5,     -16381],
-                                          [real.min_normal/2.0L, .5,     -16382]    // denormal
+                                          [real.min_normal/2.0L, .5,     -16382]    // subnormal
                                            ];
 
         for (i = 0; i < extendedvals.length; i++) {
@@ -2147,8 +2147,8 @@ private:
             DIVBYZERO_MASK = 0x04,
             INVALID_MASK   = 0x01
         }
-        // Don't bother about denormals, they are not supported on most CPUs.
-        //  DENORMAL_MASK = 0x02;
+        // Don't bother about subnormals, they are not supported on most CPUs.
+        //  SUBNORMAL_MASK = 0x02;
     } else version (PPC) {
         // PowerPC FPSCR is a 32-bit register.
         enum : int {
@@ -2297,13 +2297,13 @@ struct FloatingPointControl
         underflowException    = 0x10,
         overflowException     = 0x08,
         divByZeroException    = 0x04,
-        denormalizedException = 0x02,
+        subnormalException    = 0x02,
         invalidException      = 0x01,
         /// Severe = The overflow, division by zero, and invalid exceptions.
         severeExceptions   = overflowException | divByZeroException
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
-                             | inexactException | denormalizedException,
+                             | inexactException | subnormalException,
     };
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
@@ -3033,7 +3033,7 @@ unittest {
         assert( nextUp(-real.infinity) == -real.max );
         assert( nextUp(-1.0L-real.epsilon) == -1.0 );
         assert( nextUp(-2.0L) == -2.0 + real.epsilon);
-        // denormals and zero
+        // subnormals and zero
         assert( nextUp(-real.min_normal) == -real.min_normal*(1-real.epsilon) );
         assert( nextUp(-real.min_normal*(1-real.epsilon)) == -real.min_normal*(1-2*real.epsilon) );
         assert( isIdentical(-0.0L, nextUp(-real.min_normal*real.epsilon)) );
@@ -3054,7 +3054,7 @@ unittest {
     assert( nextUp(-double.infinity) == -double.max );
     assert( nextUp(-1-double.epsilon) == -1.0 );
     assert( nextUp(-2.0) == -2.0 + double.epsilon);
-    // denormals and zero
+    // subnormals and zero
 
     assert( nextUp(-double.min_normal) == -double.min_normal*(1-double.epsilon) );
     assert( nextUp(-double.min_normal*(1-double.epsilon)) == -double.min_normal*(1-2*double.epsilon) );
@@ -3589,8 +3589,8 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
                                - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
         }
         if (pd[F.EXPPOS_SHORT] == 0)
-        {   // Difference is denormal
-            // For denormals, we need to add the number of zeros that
+        {   // Difference is subnormal
+            // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
             diff *= F.RECIP_EPSILON;
@@ -3714,7 +3714,7 @@ body {
     m >>>= 1;
     if (c) m |= 0x4000_0000_0000_0000L; // shift carry into significand
     if (e) *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
-    else *ul = m; // ... unless exponent is 0 (denormal or zero).
+    else *ul = m; // ... unless exponent is 0 (subnormal or zero).
     ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     } else static if(T.mant_dig == 113) { //quadruple
         // This would be trivial if 'ucent' were implemented...
