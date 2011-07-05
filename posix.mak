@@ -167,7 +167,8 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
 # OS-specific D modules
-EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
+EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket) \
+		    $(addprefix etc/, curl)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
@@ -321,6 +322,9 @@ $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/etc_%.html : etc/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)

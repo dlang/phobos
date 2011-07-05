@@ -11,21 +11,23 @@
   Possible improvements:
 
   * Progress may be deprecated in the future. Maybe implement a replacement.
-  * Support yyped http headers - by Johannes Pfau
+  * Support typed http headers - (Johannes Pfau)
   
 */
 
 /**
 Curl client functionality as provided by libcurl. 
 
-Most of the methods are available both as a synchronous and an
-asynchronous version. Http.get() is the synchronous version of a
-standard HTTP GET request that will return a Http.Result when all
-content has been received from the server. Http.getAsync() is the
-asynchronous version that will spawn a thread in the background and
-return a Http.AsyncResult immediately. You can read data from the
-result at later point in time. This allows you to start processing
-data before all data has been received.
+Most of the methods are available both as a synchronous and
+asynchronous versions. Http.get() is the synchronous version of a
+standard HTTP GET request that will return a Http.Result. The request
+is perform when first accessing a method or property on that
+Http.Result instance. Http.getAsync() is the asynchronous version that
+will spawn a thread in the background and return a Http.AsyncResult
+immediately. You can read data from the result at later point in
+time. This allows you to start processing data before all data has
+been received by using byChunk() or byLine() on the Http.AsyncResult
+instance.
 
 Example:
 ---
@@ -271,7 +273,7 @@ private struct Curl {
 curl.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); return data.length;};
        ----
     */
-    @property ref Curl onReceive(size_t delegate(indata) callback) {
+    @property void onReceive(size_t delegate(indata) callback) {
         _onReceive = (indata id) { 
             if (stopped)
                 throw new CurlException("Receive callback called on cleaned up Curl instance");
@@ -279,7 +281,6 @@ curl.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); return
         };
         set(CurlOption.file, cast(void*) &this);
         set(CurlOption.writefunction, cast(void*) &Curl._receiveCallback);
-        return this;
     }
 
     /**
@@ -296,7 +297,7 @@ curl.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); return
 curl.onReceiveHeader = (const(char)[] header) { writeln(header); };
        ----
     */
-    @property ref Curl onReceiveHeader(void delegate(const(char)[]) callback) {
+    @property void onReceiveHeader(void delegate(const(char)[]) callback) {
         _onReceiveHeader = (const(char)[] od) {
             if (stopped)
                 throw new CurlException("Receive header callback called on cleaned up Curl instance");
@@ -304,7 +305,6 @@ curl.onReceiveHeader = (const(char)[] header) { writeln(header); };
         };
         set(CurlOption.writeheader, cast(void*) &this);
         set(CurlOption.headerfunction, cast(void*) &Curl._receiveHeaderCallback);
-        return this;
     }
 
     /**
@@ -329,7 +329,7 @@ return l;
 };
        ----
     */
-    @property ref Curl onSend(size_t delegate(outdata) callback) {
+    @property void onSend(size_t delegate(outdata) callback) {
         _onSend = (outdata od) {
             if (stopped)
                 throw new CurlException("Send callback called on cleaned up Curl instance");
@@ -337,7 +337,6 @@ return l;
         };
         set(CurlOption.infile, cast(void*) &this);
         set(CurlOption.readfunction, cast(void*) &Curl._sendCallback);
-        return this;
     }
 
     /**
@@ -357,7 +356,7 @@ return CurlSeek.cantseek;
 };
        ----
     */
-    @property ref Curl onSeek(CurlSeek delegate(long, CurlSeekPos) callback) {
+    @property void onSeek(CurlSeek delegate(long, CurlSeekPos) callback) {
         _onSeek = (long ofs, CurlSeekPos sp) { 
             if (stopped)
                 throw new CurlException("Seek callback called on cleaned up Curl instance");
@@ -365,7 +364,6 @@ return CurlSeek.cantseek;
         };
         set(CurlOption.seekdata, cast(void*) &this);
         set(CurlOption.seekfunction, cast(void*) &Curl._seekCallback);
-        return this;
     }
 
     /**
@@ -384,7 +382,7 @@ return CurlSeek.cantseek;
 http.onSocketOption = delegate int(curl_socket_t s, CurlSockType t) { /+ do stuff +/ };
        ----
     */
-    @property ref Curl onSocketOption(int delegate(curl_socket_t, CurlSockType) callback) {
+    @property void onSocketOption(int delegate(curl_socket_t, CurlSockType) callback) {
         _onSocketOption = (curl_socket_t sock, CurlSockType st) {
             if (stopped)
                 throw new CurlException("Socket option callback called on cleaned up Curl instance");
@@ -392,7 +390,6 @@ http.onSocketOption = delegate int(curl_socket_t s, CurlSockType t) { /+ do stuf
         };
         set(CurlOption.sockoptdata, cast(void*) &this);
         set(CurlOption.sockoptfunction, cast(void*) &Curl._socketOptionCallback);
-        return this;
     }
 
     /**
@@ -413,7 +410,7 @@ writeln("Progress: uploaded ", uln, " of ", ul);
        };
        ----
     */
-    @property ref Curl onProgress(int delegate(double dltotal, double dlnow, double ultotal, double ulnow) callback) {
+    @property void onProgress(int delegate(double dltotal, double dlnow, double ultotal, double ulnow) callback) {
         _onProgress = (double dlt, double dln, double ult, double uln) {
             if (stopped)
                 throw new CurlException("Progress callback called on cleaned up Curl instance");
@@ -422,7 +419,6 @@ writeln("Progress: uploaded ", uln, " of ", ul);
         set(CurlOption.noprogress, 0);
         set(CurlOption.progressdata, cast(void*) &this);
         set(CurlOption.progressfunction, cast(void*) &Curl._progressCallback);
-        return this;
     }
  
     // Internal C callbacks to register with libcurl
@@ -531,7 +527,9 @@ private mixin template Protocol() {
         p.curl.cleanup();
     }
 
-    /// Set verbose.
+    /** Set verbose.
+        This will print request information to stderr.
+     */
     @property void verbose(bool on) {
         p.curl.set(CurlOption.verbose, on ? 1L : 0L);
     }
@@ -626,11 +624,10 @@ theprotocol.netInterface = "192.168.1.32";
     }
 
     /**
-       The event handler that gets called when data is needed for sending.
+       The event handler that gets called when data is needed for
+       sending. The length of the void[] specifies the max number of
+       bytes that can be send. 
 
-       Params:
-       callback = the callback that has a void[] buffer to be filled
-    
        Returns:
        The callback returns the number of elements in the buffer that has been filled and is ready to send.
 
@@ -653,12 +650,10 @@ return l;
     }
 
     /**
-       The event handler that receives incoming data.
+       The event handler that receives incoming data. Be sure to copy
+       the incoming ubyte[] since it is not guaranteed to be valid
+       aften the callback returns.
 
-       Params:
-       callback = the callback that receives the ubyte[] data.
-       Be sure to copy the incoming data and not store
-       a slice.
        Example:
        ----
 client.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); return data.length;};
@@ -672,8 +667,10 @@ client.onReceive = (ubyte[] data) { writeln("Got data", cast(char[]) data); retu
        The event handler that gets called to inform of upload/download progress.
     
        Params:
-       callback = the callback that receives the (total bytes to download, currently downloaded bytes,
-       total bytes to upload, currently uploaded bytes).
+       dltotal = total bytes to download
+       dlnow = currently downloaded bytes
+       ultotal = total bytes to upload
+       ulnow = currently uploaded bytes
     
        Returns:
        Return 0 from the callback to signal success, return non-zero to abort transfer
@@ -871,98 +868,13 @@ private mixin template ByLineSync() {
 
 }
 
-private mixin template ByChunkAsync(Proto, alias impl) {
-
-    auto byChunk(size_t chunkSize, size_t transmitBuffers = 5) {
-        static struct AsyncChunkInputRange {
-
-            private AsyncResult parent;
-            private Tid workerTid;
-            private ubyte[] chunk;
-    
-            this(AsyncResult parent, Tid tid, size_t chunkSize, size_t transmitBuffers) {
-                this.parent = parent;
-                this.parent.rp._running = RunState.running;
-                workerTid = tid;
-                state = State.needUnits;
-                    
-                // Send buffers to other thread for it to use.
-                // Since no mechanism is in place for moving ownership
-                // we simply cast to immutable here and cast it back
-                // to mutable in the receiving end.
-                foreach (i ; 0..transmitBuffers) {
-                    ubyte[] arr;
-                    arr.length = chunkSize;
-                    workerTid.send(cast(immutable(ubyte)[])arr);
-                }
-            }
-
-            mixin WorkerThreadProtocol!(ubyte, chunk, Proto);
-        }
-
-        // 50 is just an arbitrary number for now
-        // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, ubyte)));
-        tid.send(thisTid);
-        tid.send(impl._requestParams);
-        return AsyncChunkInputRange(this, tid, chunkSize, transmitBuffers);
-    }
-}
-
-private mixin template ByLineAsync(Proto, alias impl) {
-
-    auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
-                                                Terminator terminator = '\x0a',
-                                                size_t transmitBuffers = 5) {            
-        static struct AsyncLineInputRange {
-
-            private AsyncResult parent;
-            private Tid workerTid;
-            private bool keepTerminator;
-            private Terminator terminator;
-            private Char[] line;
-
-            this(AsyncResult parent, Tid tid, size_t transmitBuffers) {
-                this.parent = parent;
-                this.parent.rp._running = RunState.running;
-                workerTid = tid;
-                state = State.needUnits;
-
-                // Send buffers to other thread for it to use.
-                // Since no mechanism is in place for moving ownership
-                // we simply cast to immutable here and cast it back
-                // to mutable in the receiving end.
-                foreach (i ; 0..transmitBuffers) {
-                    Char[] arr;
-                    arr.length = parent.rp._defaultStringBufferSize;
-                    workerTid.send(cast(immutable(Char)[])arr);
-                }
-            }
-
-            mixin WorkerThreadProtocol!(Char, line, Proto);
-        }
-
-        // 50 is just an arbitrary number for now
-        // TODO: fix setMaxMailboxSize(thisTid, 50, OnCrowding.block);
-        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, Char, Terminator)));
-        tid.send(thisTid);
-        tid.send(impl._requestParams);
-        tid.send(terminator);
-        tid.send(keepTerminator);
-        static if ( is(Proto == Ftp) ) {
-            tid.send(encodingName().idup);
-        }
-        return AsyncLineInputRange(this, tid, transmitBuffers);
-    }
-}
-
 private mixin template TryEnsureUnit(Proto) if ( is(Proto == Http) ) {
 
     void tryEnsureUnits() {
         while (true) {
-            switch (state) {
+            final switch (state) {
             case State.needUnits:
-                if (parent.rp._running == RunState.done) {
+                if (asyncResult._running == RunState.done) {
                     state = State.done;
                     break;
                 }
@@ -977,21 +889,21 @@ private mixin template TryEnsureUnit(Proto) if ( is(Proto == Http) ) {
                         (Tid origin, Message!(Tuple!(string,string)) header) {
                             if (origin != workerTid)
                                 return false;
-                            parent.rp._headers[header.data[0]] = header.data[1];
+                            asyncResult._headers[header.data[0]] = header.data[1];
                             return true;
                         },
                         (Tid origin, Message!(Http.StatusLine) l) {
                             if (origin != workerTid)
                                 return false;
-                            parent.rp._running = RunState.statusReady;
-                            parent.rp._statusLine = l.data;
+                            asyncResult._running = RunState.statusReady;
+                            asyncResult._statusLine = l.data;
                             return true;
                         },
                         (Tid origin, Message!bool f) { 
                             if (origin != workerTid)
                                 return false;
                             state = state.done; 
-                            parent.rp._running = RunState.done; 
+                            asyncResult._running = RunState.done; 
                             return true;
                         }
                         );
@@ -1008,9 +920,9 @@ private mixin template TryEnsureUnit(Proto) if ( is(Proto == Ftp) ) {
 
     void tryEnsureUnits() {
         while (true) {
-            switch (state) {
+            final switch (state) {
             case State.needUnits:
-                if (parent.rp._running == RunState.done) {
+                if (asyncResult._running == RunState.done) {
                     state = State.done;
                     break;
                 }
@@ -1026,7 +938,7 @@ private mixin template TryEnsureUnit(Proto) if ( is(Proto == Ftp) ) {
                             if (origin != workerTid)
                                 return false;
                             state = state.done; 
-                            parent.rp._running = RunState.done; 
+                            asyncResult._running = RunState.done; 
                             return true;
                         }
                         );
@@ -1043,17 +955,17 @@ private mixin template TryEnsureUnit(Proto) if ( is(Proto == Ftp) ) {
   Main thread part of the message passing protocol used for all async
   curl protocols.
  */
-template WorkerThreadProtocol(Unit, alias units, Proto) {
+private mixin template WorkerThreadProtocol(Unit, alias units, Proto) {
 
     ~this() {
         workerTid.send(true);
     }
 
-    @property auto empty() {
+    @property bool empty() {
         tryEnsureUnits();
         return state == State.done;
     }
-                
+
     @property Unit[] front() {
         tryEnsureUnits();
         assert(state == State.gotUnits, "Expected " ~ to!string(State.gotUnits) ~ " but got " ~ to!string(state));
@@ -1079,6 +991,94 @@ template WorkerThreadProtocol(Unit, alias units, Proto) {
     mixin TryEnsureUnit!Proto;
 }
 
+
+private mixin template ByChunkAsync(Proto, alias impl) {
+
+    // Workaround bug #2458
+    // It should really be defined inside th byChunk method.
+    static struct AsyncChunkInputRange {
+        
+        private ubyte[] chunk;
+        private RefCounted!RImpl asyncResult;
+        private Tid workerTid;
+        
+        this(RefCounted!RImpl parent, Tid tid, size_t chunkSize, size_t transmitBuffers) {
+            asyncResult = parent;
+            asyncResult._running = RunState.running;
+            workerTid = tid;
+            state = State.needUnits;
+            
+            // Send buffers to other thread for it to use.
+            // Since no mechanism is in place for moving ownership
+            // we simply cast to immutable here and cast it back
+            // to mutable in the receiving end.
+            foreach (i ; 0..transmitBuffers) {
+                ubyte[] arr;
+                arr.length = chunkSize;
+                workerTid.send(cast(immutable(ubyte)[])arr);
+            }
+        }
+        
+        mixin WorkerThreadProtocol!(ubyte, chunk, Proto);
+    }
+
+    auto byChunk(size_t chunkSize, size_t transmitBuffers = 5) {
+        // 50 is just an arbitrary number for now
+        setMaxMailboxSize(thisTid, 50, OnCrowding.block);
+        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, ubyte)));
+        tid.send(thisTid);
+        tid.send(impl._requestParams);
+        return AsyncChunkInputRange(this.rp, tid, chunkSize, transmitBuffers);
+    }
+}
+
+private mixin template ByLineAsync(Proto, alias impl) {
+
+    // Workaround bug #2458
+    // It should really be defined inside th byLine method.
+    static struct AsyncLineInputRange(Char) {
+        
+        private RefCounted!RImpl asyncResult;
+        private Tid workerTid;
+        private Char[] line;
+        
+        this(RefCounted!RImpl parent, Tid tid, size_t transmitBuffers) {
+            asyncResult = parent;
+            asyncResult._running = RunState.running;
+            workerTid = tid;
+            state = State.needUnits;
+            
+            // Send buffers to other thread for it to use.
+            // Since no mechanism is in place for moving ownership
+            // we simply cast to immutable here and cast it back
+            // to mutable in the receiving end.
+            foreach (i ; 0..transmitBuffers) {
+                Char[] arr;
+                arr.length = asyncResult._defaultStringBufferSize;
+                workerTid.send(cast(immutable(Char)[])arr);
+            }
+        }
+        
+        mixin WorkerThreadProtocol!(Char, line, Proto);
+    }
+
+    auto byLine(Terminator = char, Char = char)(bool keepTerminator = false, 
+                                                Terminator terminator = '\x0a',
+                                                size_t transmitBuffers = 5) {            
+
+        // 50 is just an arbitrary number for now
+        setMaxMailboxSize(thisTid, 50, OnCrowding.block);
+        Tid tid = spawn(&(_spawnAsyncRequest!(Proto, Char, Terminator)));
+        tid.send(thisTid);
+        tid.send(impl._requestParams);
+        tid.send(terminator);
+        tid.send(keepTerminator);
+        static if ( is(Proto == Ftp) ) {
+            tid.send(encodingName().idup);
+        }
+        return AsyncLineInputRange!Char(this.rp, tid, transmitBuffers);
+    }
+}
 
 /*
   Decode ubyte[] array using the provided EncodingScheme up to maxChars
@@ -1284,7 +1284,7 @@ writeln(res.headers["Content-Length"]);
         ----
      
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result head(in const(char)[] url) {
         return Result(url, Method.head);
@@ -1309,7 +1309,7 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, AsyncResult) object.
+        A $(XREF _curl, Http.AsyncResult) object.
     */
     static AsyncResult headAsync(string url) {
         return AsyncResult(url, "", "", Method.head);
@@ -1335,7 +1335,7 @@ writeln(res.toString());
         ----
 
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result get(in const(char)[] url) {
         return Result(url, Method.get);
@@ -1358,7 +1358,7 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, AsyncResult) object.
+        A $(XREF _curl, Http.AsyncResult) object.
     */
     static AsyncResult getAsync(string url) {
         return AsyncResult(url, "", "", Method.get);
@@ -1389,7 +1389,7 @@ writeln(res.toString());
         ----
 
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result post(in const(char)[] url, const(void)[] postData, const(char)[] contentType = "application/octet-stream") {
         Result res = Result(url, Method.post);
@@ -1419,9 +1419,9 @@ writeln(res.toString());
 
     /** Convenience POST function as the one above but for associative arrays that
         will get application/form-url-encoded.
+        You must escape the params yourself.
     */
     static Result post(in const(char)[] url, string[string] params) {
-        // TODO: url encode params
         string delim = "";
         string data = "";
         foreach (key; params.byKey()) {
@@ -1450,7 +1450,7 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, AsyncResult) object.
+        A $(XREF _curl, Http.AsyncResult) object.
     */
     static AsyncResult postAsync(string url, immutable(void)[] postData, string contentType = "application/octet-stream") {
         return AsyncResult(url, postData, contentType, Method.post);
@@ -1488,9 +1488,9 @@ writeln(res.byChunk(100).front);
 
     /** Convenience asynchronous POST function as the one above but for
         associative arrays that will get application/form-url-encoded.
+        You must escape the params yourself.
     */
     static AsyncResult postAsync(string url, string[string] params) {
-        // TODO: url encode params
         string delim = "";
         string data = "";
         foreach (key; params.byKey()) {
@@ -1523,7 +1523,7 @@ writeln(res.code);
         ----
 
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result put(in const(char)[] url, const(void)[] putData, const(char)[] contentType = "application/octet-stream") {
         Result res = Result(url, Method.put);
@@ -1562,7 +1562,7 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, AsyncResult) object.
+        A $(XREF _curl, Http.AsyncResult) object.
     */
     static AsyncResult putAsync(string url, immutable(void)[] putData, string contentType = "application/octet-stream") {
         return AsyncResult(url, putData, contentType, Method.put);
@@ -1607,7 +1607,7 @@ writeln(res.toString());
         ----
      
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result del(in const(char)[] url) {
         return Result(url, Method.del);
@@ -1619,7 +1619,8 @@ writeln(res.toString());
     }
 
     /** Asynchronous version of del().  
-        See_Also: getAsync()
+        See_Also: $(XREF _curl, Http.getAsync).
+
     */
     static AsyncResult delAsync(string url) {
         return AsyncResult(url, "", "", Method.del);
@@ -1640,7 +1641,7 @@ writeln(res.toString());
         ----
      
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result options(in const(char)[] url) {
         return Result(url, Method.options);
@@ -1652,7 +1653,7 @@ writeln(res.toString());
     }
 
     /** Asynchronous version of options(). 
-        See_Also: getAsync()
+        See_Also: $(XREF _curl, Http.getAsync)
     */
     static AsyncResult optionsAsync(string url) {
         return AsyncResult(url, "", "", Method.options);
@@ -1673,7 +1674,7 @@ writeln(res.toString());
         ----
      
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result trace(in const(char)[] url) {
         return Result(url, Method.trace);
@@ -1685,7 +1686,7 @@ writeln(res.toString());
     }
 
     /** Asynchronous version of trace(). 
-        See_Also: getAsync() 
+        See_Also: $(XREF _curl, Http.getAsync)
     */
     static AsyncResult traceAsync(string url) {
         return AsyncResult(url, "", "", Method.get);
@@ -1709,7 +1710,7 @@ writeln(res.toString());
         ----
 
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result connect(in const(char)[] url) {
         return Result(url, Method.connect);
@@ -1735,18 +1736,17 @@ http.postData = [1,2,3,4,5];
 http.perform();
         ----
     */
-    @property ref Http postData(in const(void)[] data) {
+    @property void postData(in const(void)[] data) {
         // cannot use callback when specifying data directly so we disable it here.
         p.curl.clear(CurlOption.readfunction); 
         setHeader("Content-Type", "application/octet-stream");
         p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
-        return this;
     }
  
     /** Specifying data to post when not using the onSend callback.
 
         The data is NOT copied by the library.  Content-Type will
-        default to application/octet-stream.  Data is not converted or
+        default to text/plain.  Data is not converted or
         encoded for you.
 
         Example:
@@ -1757,21 +1757,20 @@ http.postData = "The quick....";
 http.perform();
         ----
     */
-    @property ref Http postData(in const(char)[] data) {
+    @property void postData(in const(char)[] data) {
         // cannot use callback when specifying data directly so we disable it here.
         p.curl.clear(CurlOption.readfunction); 
+        setHeader("Content-Type", "text/plain");
         p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
-        return this;
     }
 
     /**
-       Set the event handler that receives incoming headers.
+       Set the event handler that receives incoming headers. 
+       
+       The callback will receive a header field key, value as
+       parameter. The char[] arrays are not valid after the delegate
+       has returned.
 
-       Params:
-       callback = the callback that receives the key/value head strings.
-       Make sure the callback copies the incoming params if
-       it needs to store it because they are references into
-       the backend and may very likely change.
        Example:
        ----
 Http http = Http("http://www.google.com");
@@ -1780,7 +1779,7 @@ http.onReceiveHeader = (const(char)[] key, const(char[]) value) { writeln(key, "
 http.perform();
        ----
     */
-    @property ref Http onReceiveHeader(void delegate(const(char)[],const(char)[]) callback) {
+    @property void onReceiveHeader(void delegate(const(char)[],const(char)[]) callback) {
         // Wrap incoming callback in order to separate http status line from http headers.
         // On redirected requests there may be several such status lines. The last one is
         // the one recorded.
@@ -1809,12 +1808,11 @@ http.perform();
             auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
 
             if (!m.empty) {
-                callback(m.captures[1].tolower, m.captures[2]); 
+                callback(m.captures[1].toLower, m.captures[2]); 
             }
      
         };
         p.curl.onReceiveHeader(callback is null ? null : dg);
-        return this;
     }
 
     /**
@@ -1822,10 +1820,11 @@ http.perform();
 
        Notice that several callbacks can be done for on call to
        perform() because if redirections.
+
+       See_Also: $(XREF _curl, StatusLine)
      */
-    @property ref Http onReceiveStatusLine(void delegate(StatusLine) callback) {
+    @property void onReceiveStatusLine(void delegate(StatusLine) callback) {
         p._onReceiveStatusLine = callback;
-        return this;
     }
 
     /**
@@ -1859,6 +1858,10 @@ http.perform();
 
     /**
        Perform a http request.
+
+       After you have setup a Http request and possibly assigned
+       callbacks you can call perform() to actually perform the
+       request.
     */
     void perform() {
 
@@ -1871,7 +1874,7 @@ http.perform();
         if (headerChunk !is null)
             p.curl.set(CurlOption.httpheader, headerChunk);
 
-        switch (p.method) {
+        final switch (p.method) {
         case Method.head:
             p.curl.set(CurlOption.nobody, 1L);
             break;
@@ -2167,10 +2170,11 @@ http.perform();
 
         //
         private void execute() {
-            switch (rp._state) {
+            final switch (rp._state) {
             case State.uninitialized:
                 _client = new Http(rp._requestParams.url);
                 rp._state = State.ready;
+                goto case;
             case State.ready:
                 break;
             case State.done:
@@ -2245,16 +2249,23 @@ http.perform();
         */
         @property const(char)[] encodingName() {
             execute();
-            /// XXX : FIX
-            return "UTF-8"; // seems like an error has been introduced into the regex module?!?
             string * v = ("content-type" in headers);
             char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
             if (v) {
-                
+              
+                /*  
+                // XXX : FIX
+                // seems like an error has been introduced into the regex module?!?
                 auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
                 if (!m.empty && m.captures.length > 1) {
-                    charset = m.captures[1];
+                charset = m.captures[1];
                 }
+                */
+                auto a = *v;
+                if (!a.findSkip("charset")) return charset;
+                if (!a.findSkip("=")) return charset;
+                while (a.skipOver(" \t")) {};
+                return a.findSplitBefore(";")[0].stripRight();
             }
             return charset;
         }
@@ -2384,10 +2395,20 @@ foreach (l; Http.get("http://www.google.com").byLine())
             string * v = ("content-type" in headers);
             char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
             if (v) {
+              
+                /*  
+                // XXX : FIX
+                // seems like an error has been introduced into the regex module?!?
                 auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
                 if (!m.empty && m.captures.length > 1) {
-                    charset = m.captures[1];
+                charset = m.captures[1];
                 }
+                */
+                auto a = *v;
+                if (!a.findSkip("charset")) return charset;
+                if (!a.findSkip("=")) return charset;
+                while (a.skipOver(" \t")) {};
+                return a.findSplitBefore(";")[0].stripRight();
             }
             return charset;
         }
@@ -2468,8 +2489,7 @@ struct Ftp {
     }
 
     /** Convenience function that simply does a FTP GET on specified
-        URL. Internally this is implemented using an instance of the
-        Ftp class.
+        URL. 
 
         Example:
         ----
@@ -2494,7 +2514,7 @@ writeln(res.toString());
         ----
 
         Returns:
-        A $(XREF _curl, Result) object.
+        A $(XREF _curl, Http.Result) object.
     */
     static Result get(in const(char)[] url) {
         return Result(url);
@@ -2517,7 +2537,7 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, AsyncResult) object.
+        A $(XREF _curl, Http.AsyncResult) object.
     */
     static AsyncResult getAsync(string url) {
         return AsyncResult(url, "");
@@ -2525,14 +2545,17 @@ writeln(res.byChunk(100).front);
 
     /**
        Performs the ftp request as it has been configured.
+
+       After you have setup a Ftp request and possibly assigned
+       callbacks you can call perform() to actually perform the
+       request.
     */
     void perform() {
         p.curl.perform;
     }
 
     /**
-       The content length in bytes when using request that has content e.g. POST/PUT
-       and not using chunked transfer. Is set as the "Content-Length" header.
+       The content length in bytes of the ftp data.
     */
     @property void contentLength(size_t len) {
         p.curl.set(CurlOption.infilesize_large, len);      
@@ -2639,10 +2662,11 @@ writeln(res.byChunk(100).front);
         
         //
         void execute() {
-            switch (rp._state) {
+            final switch (rp._state) {
             case State.uninitialized:
                 _client = new Ftp(rp._requestParams.url);
                 rp._state = State.ready;
+                goto case;
             case State.ready:
                 break;
             case State.done:
@@ -2694,7 +2718,7 @@ writeln(res.byChunk(100).front);
         }
 
         /**
-           The encoding scheme name.
+           The encoding scheme name. Defaults to UTF-8 if not set explicitly.
         */
         @property const(char)[] encodingName() {
             if (rp._encodingSchemeName is null)
@@ -2794,7 +2818,7 @@ foreach (l; Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byLine())
         }
         
         /**
-           The encoding scheme name.
+           The encoding scheme name. Defaults to UTF-8 if not set explictly.
            This property is only valid after calling either byChunk or byLine           
         */
         @property const(char)[] encodingName() {
@@ -2928,7 +2952,7 @@ struct SMTP {
             if (!msg.length) return 0;
             auto m = cast(void[])msg;
             size_t to_copy = min(data.length, _message.length);
-            data[0..to_copy] = _message[0..to_copy];
+            data[0..to_copy] = (cast(void[])_message)[0..to_copy];
             _message = _message[to_copy..$];
             return to_copy;
         };
@@ -3222,6 +3246,8 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
 
 unittest {
     if (!netAllowed) return;
+
+    // Verify that sync and async versions of a request gives the same results.
 
     auto syncline = Http.get(testUrl1).byLine();
     foreach (asyncline; Http.getAsync(testUrl1).byLine()) {
