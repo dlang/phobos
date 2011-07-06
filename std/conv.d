@@ -10,7 +10,8 @@ License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            Shin Fujishiro,
-           Adam D. Ruppe
+           Adam D. Ruppe,
+           Kenji Hara
 
 Source:    $(PHOBOSSRC std/_conv.d)
 */
