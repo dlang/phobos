@@ -933,8 +933,7 @@ unittest
 /**
    Integrals are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        /*ref*/ FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, /*ref*/ FormatSpec!Char f)
 if (isIntegral!T)
 {
     Unqual!T arg = val;
@@ -1064,8 +1063,7 @@ if (isIntegral!T)
 /**
  * Floating-point values are formatted like $(D printf) does.
  */
-void formatValue(Writer, D, Char)(Writer w, D obj,
-        ref FormatSpec!Char f)
+void formatValue(Writer, D, Char)(Writer w, D obj, ref FormatSpec!Char f)
 if (isFloatingPoint!D)
 {
     if (f.spec == 'r')
@@ -1129,8 +1127,7 @@ unittest
    $(D bool) is formatted as "true" or "false" with %s and as "1" or
    "0" with integral-specific format specs.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T : bool) && !is(T == enum))
 {
     if (f.spec == 's') {
@@ -1161,8 +1158,7 @@ if (isSomeChar!T)
 /**
    Strings are formatted like printf does.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
     enforce(f.spec == 's');
@@ -1196,8 +1192,7 @@ unittest
 /**
    Input ranges are formatted like arrays.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isInputRange!T && !isSomeString!T)
 {
     static if (is(T == class) || is(T == interface) || isPointer!T)
@@ -1211,8 +1206,7 @@ if (isInputRange!T && !isSomeString!T)
     formatRange(w, val, f);
 }
 
-private void formatRange(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isInputRange!T && !isSomeChar!(ElementType!T))
 {
     auto arr = val;
@@ -1289,8 +1283,7 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
     }
 }
 
-private void formatRange(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isInputRange!T && isSomeChar!(ElementType!T))
 {
     if (!f.flDash)
@@ -1329,8 +1322,7 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
     }
 }
 
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
     !is(const(T) == const(void[])))
 {
@@ -1386,8 +1378,7 @@ unittest
 /**
    $(D void[0]) is formatted as "[]".
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(D == void[0]))
 {
     put(w, seqBefore);
@@ -1397,8 +1388,7 @@ if (is(D == void[0]))
 /**
    Pointers are formatted as hex integers.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isPointer!T && !isInputRange!T)
 {
     const void * p = val;
@@ -1453,8 +1443,7 @@ unittest
    Associative arrays are formatted by using $(D ':') and $(D ' ') as
    separators.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
     bool firstTime = true;
@@ -1497,8 +1486,7 @@ struct WriterSink(Writer)
    ---
 
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
     alias void delegate(const (char)[]) SinkType;
@@ -1623,8 +1611,7 @@ unittest
 /*
    Formatting a $(D typedef) is deprecated but still kept around for a while.
  */
-deprecated void formatValue(Writer, T, Char)
-(Writer w, T val, ref FormatSpec!Char f)
+deprecated void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == typedef))
 {
     static if (is(T U == typedef)) {
@@ -1646,8 +1633,7 @@ unittest
   'D'. The untyped signature is for the sake of taking this function's
   address.
  */
-private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg,
-        ref FormatSpec!Char f)
+private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, ref FormatSpec!Char f)
 {
     formatValue(w, *cast(D*) arg, f);
 }
