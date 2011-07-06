@@ -20,7 +20,8 @@
 //debug=1;
 
 import std.c.linux.linuxextern;
-import std.c.linux.linux;
+
+version (linux) import std.c.linux.linux;
 
 extern (C) int _d_isbaseof(ClassInfo oc, ClassInfo c);
 
