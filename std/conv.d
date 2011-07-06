@@ -675,6 +675,50 @@ unittest
 }
 
 /**
+$(RED Scheduled for deprecation in January 2012. Please use 
+      method $(D opCast) instead.)
+
+Object-_to-non-object conversions look for a method "to" of the source
+object.
+
+Example:
+----
+class Date
+{
+    T to(T)() if(is(T == long))
+    {
+        return timestamp;
+    }
+    ...
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    auto d = new Date;
+    auto ts = to!long(d); // same as d.to!long()
+}
+----
+ */
+T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
+        && is(typeof(S.init.to!(T)()) : T))
+{
+    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
+                "\"to\" has been scheduled for deprecation in January 2012. " ~
+                "Please use method opCast instead.");
+
+    return value.to!T();
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    class B { T to(T)() { return 43; } }
+    auto b = new B;
+    assert(to!int(b) == 43);
+}
+
+/**
 Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
