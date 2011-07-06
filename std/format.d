@@ -12,7 +12,7 @@
    License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
    Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.com,
-   Andrei Alexandrescu)
+   Andrei Alexandrescu) and Kenji Hara
 
    Source: $(PHOBOSSRC std/_format.d)
  */
@@ -1405,48 +1405,72 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
     }
 }
 
+// string element is formatted like UTF-8 string literal.
 private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 {
     static if (isSomeString!T)
     {
         if (f.spec == 's')
         {
-            /*
-             * Check C0 and C1 control code sets
-             * See Also: http://en.wikipedia.org/wiki/C0_and_C1_control_codes
-             */
-            static bool isUniControl(dchar c)
+            try
             {
-                return (c <= 0x1F || (0x80 <= c && c <= 0x9F));
-            }
+                // ignore other specifications and quote
+                auto app = appender!(typeof(T[0])[])();
 
-            // ignore other specifications and quote
-            put(w, '\"');
-            foreach (c; val)
-            {
-                if(isUniControl(c))
+                put(app, '\"');
+                for (size_t i = 0; i < val.length; )
                 {
-                    put(w, '\\');
-                    switch (c)
+                    auto c = std.utf.decode(val, i);
+                    // \uFFFE and \uFFFF are considered valid by isValidDchar,
+                    // so need checking for interchange.
+                    if (c == 0xFFFE || c == 0xFFFF)
+                        goto InvalidSeq;
+
+                    if (std.uni.isGraphical(c))
                     {
-                    case '\a':  put(w, 'a');  break;
-                    case '\b':  put(w, 'b');  break;
-                    case '\f':  put(w, 'f');  break;
-                    case '\n':  put(w, 'n');  break;
-                    case '\r':  put(w, 'r');  break;
-                    case '\t':  put(w, 't');  break;
-                    case '\v':  put(w, 'v');  break;
-                    default:
-                        formattedWrite(w, "x%02x", c);
-                        break;
+                        if (c == '\"' || c == '\\')
+                            put(app, '\\'), put(app, c);
+                        else
+                            put(app, c);
                     }
+                    else if (c <= 0xFF)
+                    {
+                        put(app, '\\');
+                        switch (c)
+                        {
+                        case '\a':  put(app, 'a');  break;
+                        case '\b':  put(app, 'b');  break;
+                        case '\f':  put(app, 'f');  break;
+                        case '\n':  put(app, 'n');  break;
+                        case '\r':  put(app, 'r');  break;
+                        case '\t':  put(app, 't');  break;
+                        case '\v':  put(app, 'v');  break;
+                        default:
+                            formattedWrite(app, "x%02X", cast(uint)c);
+                        }
+                    }
+                    else if (c <= 0xFFFF)
+                        formattedWrite(app, "\\u%04X", cast(uint)c);
+                    else
+                        formattedWrite(app, "\\U%08X", cast(uint)c);
                 }
-                else if (c == '\"' || c == '\\')
-                    put(w, '\\'), put(w, c);
-                else
-                    put(w, c);
+                put(app, '\"');
+
+                put(w, app.data());
             }
-            put(w, '\"');
+            catch (UtfException e)
+            {
+InvalidSeq:
+                // If val contains invalid UTF sequence, formatted like HexString literalx
+              static if (is(typeof(val[0]) : const(char)))
+                enum postfix = 'c';
+              else static if (is(typeof(val[0]) : const(wchar)))
+                enum postfix = 'w';
+              else static if (is(typeof(val[0]) : const(dchar)))
+                enum postfix = 'd';
+
+                formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
+            }
         }
         else
             formatValue(w, val, f);
@@ -1460,13 +1484,52 @@ unittest
     FormatSpec!char f;
     auto w = appender!(char[])();
 
-    w.clear();
-    formatValue(w, ["str\"\\\a\b\f\n\r\t\vend"], f);
-    assert(w.data == `["str\"\\\a\b\f\n\r\t\vend"]`);
+    // string literal from valid UTF sequence is encoding free.
+    foreach (StrType; TypeTuple!(string, wstring, dstring))
+    {
+        // Valid and printable (ASCII)
+        w.clear();
+        formatValue(w, [cast(StrType)"hello"], f);
+        assert(w.data == `["hello"]`);
 
-    w.clear();
-    formatValue(w, ["\x00\x10\x1F\x20\x80\x90\x9F"], f);
-    assert(w.data == `["\x00\x10\x1f \x80\x90\x9f"]`);
+        // 1 character escape sequences
+        w.clear();
+        formatValue(w, [cast(StrType)"\"\\\a\b\f\n\r\t\v"], f);
+        assert(w.data == `["\"\\\a\b\f\n\r\t\v"]`);
+
+        // Valid and non-printable code point (<= U+FF)
+        w.clear();
+        formatValue(w, [cast(StrType)"\x00\x10\x1F\x20test"], f);
+        assert(w.data == `["\x00\x10\x1F test"]`);
+
+        // Valid and non-printable code point (<= U+FFFF)
+        w.clear();
+        formatValue(w, [cast(StrType)"\u200B..\u200F"], f);
+        assert(w.data == `["\u200B..\u200F"]`);
+
+        // Valid and non-printable code point (<= U+10FFFF)
+        w.clear();
+        formatValue(w, [cast(StrType)"\U000E0020..\U000E007F"], f);
+        assert(w.data == `["\U000E0020..\U000E007F"]`);
+    }
+
+    // invalid UTF sequence needs hex-string literal postfix (c/w/d)
+    {
+        // U+FFFF with UTF-8 (Invalid code point for interchange)
+        w.clear();
+        formatValue(w, [cast(string)[0xEF, 0xBF, 0xBF]], f);
+        assert(w.data == `[x"EF BF BF"c]`);
+
+        // U+FFFF with UTF-16 (Invalid code point for interchange)
+        w.clear();
+        formatValue(w, [cast(wstring)[0xFFFF]], f);
+        assert(w.data == `[x"FFFF"w]`);
+
+        // U+FFFF with UTF-32 (Invalid code point for interchange)
+        w.clear();
+        formatValue(w, [cast(dstring)[0xFFFF]], f);
+        assert(w.data == `[x"FFFF"d]`);
+    }
 }
 
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
