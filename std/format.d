@@ -876,15 +876,31 @@ struct FormatSpec(Char)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(const(T) == const(void[])))
 {
-    put(w, cast(const ubyte[]) val);
+    formatValue(w, cast(const ubyte[])val, f);
 }
 
 unittest
 {
     FormatSpec!char f;
-    auto a = appender!string();
-    void[] val;
+    auto a = appender!(char[])();
+    void[] val0;
+    formatValue(a, val0, f);
+    assert(a.data == "[]");
+    a.clear();
+
+    void[] val = cast(void[])cast(ubyte[])[1, 2, 3];
     formatValue(a, val, f);
+    assert(a.data == "[1, 2, 3]");
+    a.clear();
+
+    void[0] sval0;
+    formatValue(a, sval0, f);
+    assert(a.data == "[]");
+    a.clear();
+
+    void[3] sval = cast(void[3])cast(ubyte[3])[1, 2, 3];
+    formatValue(a, sval, f);
+    assert(a.data == "[1, 2, 3]");
 }
 
 /**
@@ -1235,22 +1251,26 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
     }
     else
     {
-        if (arr.empty) return;
         // formatted writes
         if (!f.nested)
         {
             put(w, f.seqBefore);
             scope(exit) put(w, f.seqAfter);
-            formatValue(w, arr.front, f);
-            arr.popFront();
-            for (size_t i; !arr.empty; arr.popFront(), ++i)
+            if (!arr.empty)
             {
-                put(w, f.seqSeparator);
-                formatValue(w, arr.front, f);
+                formatElement(w, arr.front, f);
+                arr.popFront();
+                for (size_t i; !arr.empty; arr.popFront(), ++i)
+                {
+                    put(w, f.seqSeparator);
+                    formatElement(w, arr.front, f);
+                }
             }
         }
         else
         {
+            if (arr.empty)
+                return;
             // Nested specifier is to be used
             for (;;)
             {
@@ -1387,16 +1407,6 @@ unittest
     formatValue(w, c, f);
     assert(w.data == "null");
     assert(r.empty);
-}
-
-/**
-   $(D void[0]) is formatted as "[]".
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(D == void[0]))
-{
-    put(w, seqBefore);
-    put(w, seqAfter);
 }
 
 /**
@@ -1710,7 +1720,7 @@ unittest
     int[0] empt = [];
     w.clear;
     formattedWrite(w, "(%s)", empt);
-    assert(w.data == "()", w.data);
+    assert(w.data == "([])", w.data);
 }
 
 //------------------------------------------------------------------------------
@@ -1999,7 +2009,7 @@ unittest
     arr2[1] = "world";
     arr2[3] = "foo";
     stream.clear; formattedWrite(stream, "%s", arr2);
-    assert(stream.data == "[hello, world, , foo]", stream.data);
+    assert(stream.data == `["hello", "world", "", "foo"]`, stream.data);
 
     stream.clear; formattedWrite(stream, "%.8d", 7);
     assert(stream.data == "00000007");
