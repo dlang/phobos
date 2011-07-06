@@ -365,7 +365,10 @@ extern (C) void _d_throwc(Object *h)
         }
     }
 
+  version (linux)
+  {
     // If we're here, it probably means that no_catch_exceptions was
     // set with a debugger, so raise a signal
     raise(SIGTRAP);
+  }
 }
