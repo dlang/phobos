@@ -1622,6 +1622,47 @@ unittest
 }
 
 /**
+   Union object cannnot format except it has toString function.
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T == union) && !isInputRange!T)
+{
+    static if (is(typeof(val.toString())))
+    {
+        formatValue(w, val.toString(), f);
+    }
+    else
+    {
+        static assert(0, "unable to format union object because it does not have toString");
+    }
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+
+    union U1
+    {
+        int n;
+        string s;
+    }
+    U1 u1;
+    static assert(!__traits(compiles, formatValue(a, u1, f)));
+
+    union U2
+    {
+        int n;
+        string s;
+        string toString(){ return s; }
+    }
+    U2 u2;
+    u2.s = "hello";
+    formatValue(a, u2, f);
+    assert(a.data == "hello");
+}
+
+/**
    Static-size arrays are formatted just like arrays.
  */
 void formatValue(Writer, T, Char)(Writer w, ref T val, ref FormatSpec!Char f)
