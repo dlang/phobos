@@ -1534,7 +1534,9 @@ Returns the number of parenthesized captures
 Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 (String pattern, string flags = null)
 {
-    static Tuple!(String, string) lastReq = tuple(cast(String)"","\u0001");//most unlikely
+    alias Unqual!(typeof(String.init[0])) Char;
+    alias immutable(Char)[] IString;
+    static Tuple!(IString, string) lastReq = tuple(cast(IString)[],"\u0001");//most unlikely
     static typeof(return) lastResult;
     if (lastReq[0] == pattern && lastReq[1] == flags)
     {
@@ -1544,8 +1546,8 @@ Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 
     auto result = typeof(return)(pattern, flags);
 
-    lastReq[0] = cast(String) pattern.dup;
-    lastReq[1] = cast(string) flags.dup;
+    lastReq[0] = pattern.idup;
+    lastReq[1] = flags;
     lastResult = result;
 
     return result;
@@ -3538,12 +3540,12 @@ unittest
 //matching goes out of control if ... in (...){x} has .*/.+
 unittest
 {
-   /* auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
     assert(c[0] == "axxxzayyyyyzd");
     assert(c[1] == "ayyyyyz");
     auto c2 = match("axxxayyyyyd",regex("(a.*){2}d")).captures;
     assert(c2[0] == "axxxayyyyyd");
-    assert(c2[1] == "ayyyyy");*/
+    assert(c2[1] == "ayyyyy");
 }
 
 //issue 2108
@@ -3600,3 +3602,7 @@ unittest
     auto m = match("mm", re);
     assert(m.empty);
 }
+
+//issue 6261
+//regression: doesn't allow mutable patterns 
+unittest{ regex("foo".dup); }
