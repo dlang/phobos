@@ -76,6 +76,122 @@ class ConvOverflowException : ConvException
 
 deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 
+/* **************************************************************
+
+The $(D_PARAM to) family of functions converts a value from type
+$(D_PARAM Source) to type $(D_PARAM Target). The source type is
+deduced and the target type must be specified, for example the
+expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
+$(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
+it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
+$(D_PARAM ConvOverflowException) exception. Overflow checks are only
+inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
+any checking because any int fits in a double.
+
+Converting a value to its own type (useful mostly for generic code)
+simply returns its argument.
+Example:
+-------------------------
+int a = 42;
+auto b = to!(int)(a); // b is int with value 42
+auto c = to!(double)(3.14); // c is double with value 3.14
+-------------------------
+Converting among numeric types is a safe way to cast them around.
+Conversions from floating-point types to integral types allow loss of
+precision (the fractional part of a floating-point number). The
+conversion is truncating towards zero, the same way a cast would
+truncate. (To round a floating point value when casting to an
+integral, use $(D_PARAM roundTo).)
+Examples:
+-------------------------
+int a = 420;
+auto b = to!(long)(a); // same as long b = a;
+auto c = to!(byte)(a / 10); // fine, c = 42
+auto d = to!(byte)(a); // throw ConvOverflowException
+double e = 4.2e6;
+auto f = to!(int)(e); // f == 4200000
+e = -3.14;
+auto g = to!(uint)(e); // fails: floating-to-integral negative overflow
+e = 3.14;
+auto h = to!(uint)(e); // h = 3
+e = 3.99;
+h = to!(uint)(a); // h = 3
+e = -3.99;
+f = to!(int)(a); // f = -3
+-------------------------
+
+Conversions from integral types to floating-point types always
+succeed, but might lose accuracy. The largest integers with a
+predecessor representable in floating-point format are 2^24-1 for
+float, 2^53-1 for double, and 2^64-1 for $(D_PARAM real) (when
+$(D_PARAM real) is 80-bit, e.g. on Intel machines).
+
+Example:
+-------------------------
+int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
+assert(to!(int)(to!(float)(a)) == a);
+assert(to!(int)(to!(float)(-a)) == -a);
+a += 2;
+assert(to!(int)(to!(float)(a)) == a); // fails!
+-------------------------
+
+Conversions from string to numeric types differ from the C equivalents
+$(D_PARAM atoi()) and $(D_PARAM atol()) by checking for overflow and
+not allowing whitespace.
+
+For conversion of strings to signed types, the grammar recognized is:
+<pre>
+$(I Integer): $(I Sign UnsignedInteger)
+$(I UnsignedInteger)
+$(I Sign):
+    $(B +)
+    $(B -)
+</pre>
+For conversion to unsigned types, the grammar recognized is:
+<pre>
+$(I UnsignedInteger):
+    $(I DecimalDigit)
+    $(I DecimalDigit) $(I UnsignedInteger)
+</pre>
+
+Converting an array to another array type works by converting each
+element in turn. Associative arrays can be converted to associative
+arrays as long as keys and values can in turn be converted.
+
+Example:
+-------------------------
+int[] a = ([1, 2, 3]).dup;
+auto b = to!(float[])(a);
+assert(b == [1.0f, 2, 3]);
+string str = "1 2 3 4 5 6";
+auto numbers = to!(double[])(split(str));
+assert(numbers == [1.0, 2, 3, 4, 5, 6]);
+int[string] c;
+c["a"] = 1;
+c["b"] = 2;
+auto d = to!(double[wstring])(c);
+assert(d["a"w] == 1 && d["b"w] == 2);
+-------------------------
+
+Conversions operate transitively, meaning that they work on arrays and
+associative arrays of any complexity:
+
+-------------------------
+int[string][double[int[]]] a;
+...
+auto b = to!(short[wstring][string[double[]]])(a);
+-------------------------
+
+This conversion works because $(D_PARAM to!(short)) applies to an
+$(D_PARAM int), $(D_PARAM to!(wstring)) applies to a $(D_PARAM
+string), $(D_PARAM to!(string)) applies to a $(D_PARAM double), and
+$(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
+conversion might throw an exception because $(D_PARAM to!(short))
+might fail the range check.
+
+Macros: WIKI=Phobos/StdConv
+ */
+
 /**
    Entry point that dispatches to the appropriate conversion
    primitive. Client code normally calls $(D _to!TargetType(value))
@@ -84,6 +200,221 @@ deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 template to(T)
 {
     T to(A...)(A args) { return toImpl!T(args); }
+}
+
+/**
+If the source type is implicitly convertible to the target type, $(D
+to) simply performs the implicit conversion.
+ */
+T toImpl(T, S)(S value)
+    if (isImplicitlyConvertible!(S, T))
+{
+    return value;
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    int a = 42;
+    auto b = to!long(a);
+    assert(a == b);
+}
+
+/*
+  Converting static arrays forwards to their dynamic counterparts.
+ */
+T toImpl(T, S)(ref S s)
+    if (isStaticArray!S)
+{
+    return toImpl!(T, typeof(s[0])[])(s);
+}
+
+unittest
+{
+    char[4] test = ['a', 'b', 'c', 'd'];
+    static assert(!isInputRange!(Unqual!(char[4])));
+    assert(to!string(test) == test);
+}
+
+/**
+$(RED Scheduled for deprecation in January 2012. Please use 
+      method $(D opCast) instead.)
+
+Object-_to-non-object conversions look for a method "to" of the source
+object.
+
+Example:
+----
+class Date
+{
+    T to(T)() if(is(T == long))
+    {
+        return timestamp;
+    }
+    ...
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    auto d = new Date;
+    auto ts = to!long(d); // same as d.to!long()
+}
+----
+ */
+T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
+        && is(typeof(S.init.to!(T)()) : T))
+{
+    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
+                "\"to\" has been scheduled for deprecation in January 2012. " ~
+                "Please use method opCast instead.");
+
+    return value.to!T();
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    class B { T to(T)() { return 43; } }
+    auto b = new B;
+    assert(to!int(b) == 43);
+}
+
+// Conversion using S.opCast!T
+T toImpl(T, S)(S value)
+    if (is(typeof(S.init.opCast!T()) : T) &&
+        !isSomeString!T)
+{
+    return value.opCast!T();
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    class B { T opCast(T)() { return 43; } }
+    auto b = new B;
+    assert(to!int(b) == 43);
+
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S { T opCast(T)() { return 43; } }
+    auto s = S();
+    assert(to!int(s) == 43);
+}
+
+// Conversion with construction feature for struct type
+T toImpl(T, S)(S src)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(T == struct) && is(typeof(T(src))))
+{
+    return T(src);
+}
+
+// Bugzilla 3961
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
+    struct Int { int x; }
+    Int i = to!Int(1);
+
+    static struct Int2 { int x; this(int x){ this.x = x; } }
+    Int2 i2 = to!Int2(1);
+
+    static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
+    Int3 i3 = to!Int3(1);
+}
+
+// Conversion with construction feature for class type
+T toImpl(T, S)(S src)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(T : Object) && is(typeof(new T(src))))
+{
+    return new T(src);
+}
+
+unittest
+{
+    static struct S { int x; }
+    static class C { int x; this(int x){ this.x = x; } }
+
+    static class B {
+        int value;
+        this(S src){ value = src.x; }
+        this(C src){ value = src.x; }
+    }
+
+    S s = S(1);
+    auto b1 = to!B(s);  // == new B(s)
+    assert(b1.value == 1);
+
+    C c = new C(2);
+    auto b2 = to!B(c);  // == new B(c)
+    assert(b2.value == 2);
+
+    auto c2 = to!C(3);   // == new C(3)
+    assert(c2.x == 3);
+}
+
+version (unittest)
+{
+    class A { this(B b){} }
+    class B : A { this(){ super(this); } }
+}
+unittest
+{
+    B b = new B();
+    A a = to!A(b);      // == cast(A)b
+                        // (do not run construction conversion like new A(b))
+    assert(b is a);
+
+    static class C : Object
+    {
+        this(){}
+        this(Object o){}
+    }
+
+    Object oc = new C();
+    C a2 = to!C(oc);     // == new C(a)
+                        // Construction conversion overrides down-casting conversion
+    assert(a2 != a);    // 
+}
+
+/**
+Object-to-object conversions by dynamic casting throw exception when the source is
+non-null and the target is null.
+ */
+T toImpl(T, S)(S value)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
+        is(T : Object) && !is(typeof(new T(value))))
+{
+    auto result = cast(T) value;
+    if (!result && value)
+    {
+        throw new ConvException("Cannot convert object of static type "
+                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
+                ~" to type "~T.classinfo.name);
+    }
+    return result;
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    // Testing object conversions
+    class A {} class B : A {} class C : A {}
+    A a1 = new A, a2 = new B, a3 = new C;
+    assert(to!(B)(a2) is a2);
+    assert(to!(C)(a3) is a3);
+    try
+    {
+        to!(B)(a3);
+        assert(false);
+    }
+    catch (ConvException e)
+    {
+        //writeln(e);
+    }
 }
 
 /**
@@ -170,9 +501,20 @@ unittest
 
 unittest
 {
-    char[4] test = ['a', 'b', 'c', 'd'];
-    static assert(!isInputRange!(Unqual!(char[4])));
-    assert(to!string(test) == test);
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    // string tests
+    alias TypeTuple!(char, wchar, dchar) AllChars;
+    foreach (T; AllChars) {
+        foreach (U; AllChars) {
+            T[] s1 = to!(T[])("Hello, world!");
+            auto s2 = to!(U[])(s1);
+            assert(s1 == to!(T[])(s2));
+            auto s3 = to!(const(U)[])(s1);
+            assert(s1 == to!(T[])(s3));
+            auto s4 = to!(immutable(U)[])(s1);
+            assert(s1 == to!(T[])(s4));
+        }
+    }
 }
 
 /**
@@ -213,13 +555,17 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBra
     }
 }
 
-/*
-  Converting static arrays forwards to their dynamic counterparts.
- */
-T toImpl(T, S)(ref S s)
-    if (isStaticArray!S)
+unittest
 {
-    return toImpl!(T, typeof(s[0])[])(s);
+    debug(conv) scope(success) writeln("unittest @",
+            __FILE__, ":", __LINE__, " succeeded.");
+    long[] b = [ 1, 3, 5 ];
+    auto s = to!string(b);
+//printf("%d, |%*s|\n", s.length, s.length, s.ptr);
+    assert(to!string(b) == "[1, 3, 5]", s);
+    double[2] a = [ 1.5, 2.5 ];
+//writeln(to!string(a));
+    assert(to!string(a) == "[1.5, 2.5]");
 }
 
 /*
@@ -244,13 +590,11 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @",
             __FILE__, ":", __LINE__, " succeeded.");
-    long[] b = [ 1, 3, 5 ];
-    auto s = to!string(b);
-//printf("%d, |%*s|\n", s.length, s.length, s.ptr);
-    assert(to!string(b) == "[1, 3, 5]", s);
-    double[2] a = [ 1.5, 2.5 ];
-//writeln(to!string(a));
-    assert(to!string(a) == "[1.5, 2.5]");
+    auto a = "abcx"w;
+    const(void)[] b = a;
+    assert(b.length == 8);
+    auto c = to!(wchar[])(b);
+    assert(c == "abcx");
 }
 
 /**
@@ -418,151 +762,6 @@ unittest
     assert(to!string(km) == "Km(42)");
 }
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
-    auto a = "abcx"w;
-    const(void)[] b = a;
-    assert(b.length == 8);
-    auto c = to!(wchar[])(b);
-    assert(c == "abcx");
-}
-
-/* **************************************************************
-
-The $(D_PARAM to) family of functions converts a value from type
-$(D_PARAM Source) to type $(D_PARAM Target). The source type is
-deduced and the target type must be specified, for example the
-expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
-$(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
-it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
-$(D_PARAM ConvOverflowException) exception. Overflow checks are only
-inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
-any checking because any int fits in a double.
-
-Converting a value to its own type (useful mostly for generic code)
-simply returns its argument.
-Example:
--------------------------
-int a = 42;
-auto b = to!(int)(a); // b is int with value 42
-auto c = to!(double)(3.14); // c is double with value 3.14
--------------------------
-Converting among numeric types is a safe way to cast them around.
-Conversions from floating-point types to integral types allow loss of
-precision (the fractional part of a floating-point number). The
-conversion is truncating towards zero, the same way a cast would
-truncate. (To round a floating point value when casting to an
-integral, use $(D_PARAM roundTo).)
-Examples:
--------------------------
-int a = 420;
-auto b = to!(long)(a); // same as long b = a;
-auto c = to!(byte)(a / 10); // fine, c = 42
-auto d = to!(byte)(a); // throw ConvOverflowException
-double e = 4.2e6;
-auto f = to!(int)(e); // f == 4200000
-e = -3.14;
-auto g = to!(uint)(e); // fails: floating-to-integral negative overflow
-e = 3.14;
-auto h = to!(uint)(e); // h = 3
-e = 3.99;
-h = to!(uint)(a); // h = 3
-e = -3.99;
-f = to!(int)(a); // f = -3
--------------------------
-
-Conversions from integral types to floating-point types always
-succeed, but might lose accuracy. The largest integers with a
-predecessor representable in floating-point format are 2^24-1 for
-float, 2^53-1 for double, and 2^64-1 for $(D_PARAM real) (when
-$(D_PARAM real) is 80-bit, e.g. on Intel machines).
-
-Example:
--------------------------
-int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
-assert(to!(int)(to!(float)(a)) == a);
-assert(to!(int)(to!(float)(-a)) == -a);
-a += 2;
-assert(to!(int)(to!(float)(a)) == a); // fails!
--------------------------
-
-Conversions from string to numeric types differ from the C equivalents
-$(D_PARAM atoi()) and $(D_PARAM atol()) by checking for overflow and
-not allowing whitespace.
-
-For conversion of strings to signed types, the grammar recognized is:
-<pre>
-$(I Integer): $(I Sign UnsignedInteger)
-$(I UnsignedInteger)
-$(I Sign):
-    $(B +)
-    $(B -)
-</pre>
-For conversion to unsigned types, the grammar recognized is:
-<pre>
-$(I UnsignedInteger):
-    $(I DecimalDigit)
-    $(I DecimalDigit) $(I UnsignedInteger)
-</pre>
-
-Converting an array to another array type works by converting each
-element in turn. Associative arrays can be converted to associative
-arrays as long as keys and values can in turn be converted.
-
-Example:
--------------------------
-int[] a = ([1, 2, 3]).dup;
-auto b = to!(float[])(a);
-assert(b == [1.0f, 2, 3]);
-string str = "1 2 3 4 5 6";
-auto numbers = to!(double[])(split(str));
-assert(numbers == [1.0, 2, 3, 4, 5, 6]);
-int[string] c;
-c["a"] = 1;
-c["b"] = 2;
-auto d = to!(double[wstring])(c);
-assert(d["a"w] == 1 && d["b"w] == 2);
--------------------------
-
-Conversions operate transitively, meaning that they work on arrays and
-associative arrays of any complexity:
-
--------------------------
-int[string][double[int[]]] a;
-...
-auto b = to!(short[wstring][string[double[]]])(a);
--------------------------
-
-This conversion works because $(D_PARAM to!(short)) applies to an
-$(D_PARAM int), $(D_PARAM to!(wstring)) applies to a $(D_PARAM
-string), $(D_PARAM to!(string)) applies to a $(D_PARAM double), and
-$(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
-conversion might throw an exception because $(D_PARAM to!(short))
-might fail the range check.
-
-Macros: WIKI=Phobos/StdConv
- */
-
-/**
-If the source type is implicitly convertible to the target type, $(D
-to) simply performs the implicit conversion.
- */
-T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T))
-{
-    return value;
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    int a = 42;
-    auto b = to!long(a);
-    assert(a == b);
-}
-
 /**
 Boolean values are printed as $(D "true") or $(D "false").
  */
@@ -582,142 +781,586 @@ unittest
     assert(to!string(b) == "true");
 }
 
+/// $(D char), $(D wchar), $(D dchar) to a string type.
+T toImpl(T, S)(S c)
+    if (isSomeChar!(Unqual!S) &&
+        isSomeString!T)
+{
+    alias typeof(T.init[0]) Char;
+    static if (Char.sizeof >= S.sizeof)
+    {
+        return [ c ];
+    }
+    else
+    {
+        Unqual!Char[] result;
+        encode(result, c);
+        return cast(T) result;
+    }
+}
+
+version(unittest) private alias TypeTuple!(
+    char, wchar, dchar,
+    const(char), const(wchar), const(dchar),
+    immutable(char), immutable(wchar), immutable(dchar))
+                      AllChars;
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    foreach (Char1; AllChars)
+    {
+        foreach (Char2; AllChars)
+        {
+            Char1 c = 'a';
+            assert(to!(Char2[])(c)[0] == c);
+        }
+        uint x = 4;
+        assert(to!(Char1[])(x) == "4");
+    }
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    string s = "foo";
+    string s2;
+    foreach (char c; s)
+    {
+        s2 ~= to!string(c);
+    }
+    //printf("%.*s", s2);
+    assert(s2 == "foo");
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(char).unittest\n");
+
+    string s = "foo";
+    string s2;
+    foreach (char c; s)
+    {
+        s2 ~= to!string(c);
+    }
+    //printf("%.*s", s2);
+    assert(s2 == "foo");
+}
+
+/// Small unsigned integers to strings.
+T toImpl(T, S)(S value)
+    if (isIntegral!S && isUnsigned!S && S.sizeof < uint.sizeof &&
+        isSomeString!T)
+{
+    return to!T(cast(uint) value);
+}
+
+/// Unsigned integers (uint and ulong) to string.
+T toImpl(T, S)(S input)
+    if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 &&
+        isSomeString!T)
+{
+    Unqual!S value = input;
+    alias Unqual!(typeof(T.init[0])) Char;
+    static if (is(typeof(T.init[0]) == const) ||
+            is(typeof(T.init[0]) == immutable))
+    {
+        if (value < 10)
+        {
+            static immutable Char[10] digits = "0123456789";
+            // Avoid storage allocation for simple stuff
+            return digits[cast(size_t) value .. cast(size_t) value + 1];
+        }
+    }
+
+    static if (S.sizeof == uint.sizeof)
+        enum maxlength = S.sizeof * 3;
+    else
+        auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
+
+    Char[] result;
+    if (__ctfe)
+    {
+        result = new Char[maxlength];
+    }
+    else
+    {
+        result = cast(Char[])
+            GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
+            [0 .. Char.sizeof * maxlength];
+    }
+
+    uint ndigits = 0;
+    do
+    {
+        auto div = value / 10;
+        auto rem = value % 10;
+        const c = cast(Char) (rem + '0');
+        value = div;
+        ++ndigits;
+        result[$ - ndigits] = c;
+    }
+    while (value);
+    return cast(T) result[$ - ndigits .. $];
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    string r;
+    int i;
+
+    r = to!string(0u);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9u);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123u);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(uint).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(0u);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9u);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123u);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    string r;
+    int i;
+
+    r = to!string(0uL);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9uL);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123uL);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(ulong).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(0uL);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9uL);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123uL);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+/// Small signed integers to strings.
+T toImpl(T, S)(S value)
+    if (isIntegral!S && isSigned!S && S.sizeof < int.sizeof &&
+        isSomeString!T)
+{
+    return to!T(cast(int) value);
+}
+
+/// Signed values ($(D int) and $(D long)).
+T toImpl(T, S)(S value)
+    if (staticIndexOf!(Unqual!S, int, long) >= 0 &&
+        isSomeString!T)
+{
+    if (value >= 0)
+        return to!T(cast(Unsigned!S) value);
+    alias Unqual!(typeof(T.init[0])) Char;
+
+    // Cache read-only data only for const and immutable; mutable
+    // data is supposed to use allocation in all cases
+    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
+    {
+        if (value > -10)
+        {
+            static immutable Char[20] data =
+                "00-1-2-3-4-5-6-7-8-9";
+            immutable i = cast(size_t) -value * 2;
+            return data[i .. i + 2];
+        }
+    }
+
+    Char[1 + S.sizeof * 3] buffer;
+
+    auto u = -cast(Unqual!(Unsigned!S)) value;
+    uint ndigits = 1;
+    while (u)
+    {
+        immutable c = cast(char)((u % 10) + '0');
+        u /= 10;
+        buffer[$ - ndigits] = c;
+        ++ndigits;
+    }
+    assert(ndigits <= buffer.length);
+    buffer[$ - ndigits] = '-';
+    return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    assert(wtext(int.max) == "2147483647"w);
+    assert(wtext(int.min) == "-2147483648"w);
+    assert(to!string(0L) == "0");
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    string r;
+    int i;
+
+    r = to!string(0L);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9L);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123L);
+    i = cmp(r, "123");
+    assert(i == 0);
+
+    r = to!string(-0L);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(-9L);
+    i = cmp(r, "-9");
+    assert(i == 0);
+
+    r = to!string(-123L);
+    i = cmp(r, "-123");
+    assert(i == 0);
+
+    const h  = 6;
+    string s = to!string(h);
+    assert(s == "6");
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(int).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(0);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123);
+    i = cmp(r, "123");
+    assert(i == 0);
+
+    r = to!string(-0);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(-9);
+    i = cmp(r, "-9");
+    assert(i == 0);
+
+    r = to!string(-123);
+    i = cmp(r, "-123");
+    assert(i == 0);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(long).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(0L);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(9L);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = to!string(123L);
+    i = cmp(r, "123");
+    assert(i == 0);
+
+    r = to!string(-0L);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = to!string(-9L);
+    i = cmp(r, "-9");
+    assert(i == 0);
+
+    r = to!string(-123L);
+    i = cmp(r, "-123");
+    assert(i == 0);
+}
+
+/******************************************
+ * Convert value to string in _radix radix.
+ *
+ * radix must be a value from 2 to 36.
+ * value is treated as a signed value only if radix is 10.
+ * The characters A through Z are used to represent values 10 through 36.
+ */
+T toImpl(T, S)(S value, uint radix)
+    if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) &&
+        isSomeString!T)
+{
+    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
+    if (radix == 10)
+        return to!string(value);     // handle signed cases only for radix 10
+    return to!string(cast(ulong) value, radix);
+}
+
+/// ditto
+T toImpl(T, S)(S value, uint radix)
+    if (is(Unqual!S == ulong) &&
+        isSomeString!T)
+in
+{
+    assert(radix >= 2 && radix <= 36);
+}
+body
+{
+    char[value.sizeof * 8] buffer;
+    uint i = buffer.length;
+
+    if (value < radix && value < hexDigits.length)
+        return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+
+    do
+    {
+        ubyte c;
+        c = cast(ubyte)(value % radix);
+        value = value / radix;
+        i--;
+        buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
+    } while (value);
+    return to!T(buffer[i .. $].dup);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    size_t x = 16;
+    assert(to!string(x, 16) == "10");
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.toString(ulong, uint).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(-10L, 10u);
+    assert(r == "-10");
+
+    r = to!string(15L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1111");
+
+    r = to!string(1L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1");
+
+    r = to!string(0x1234AFL, 16u);
+    //writefln("r = '%s'", r);
+    assert(r == "1234AF");
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(string) printf("string.to!string(ulong, uint).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(-10L, 10u);
+    assert(r == "-10");
+
+    r = to!string(15L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1111");
+
+    r = to!string(1L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1");
+
+    r = to!string(0x1234AFL, 16u);
+    //writefln("r = '%s'", r);
+    assert(r == "1234AF");
+}
+
+/// $(D float) to all string types.
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == float) &&
+        isSomeString!T)
+{
+    return to!T(cast(double) f);
+}
+
+/// $(D double) to all string types.
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == double) &&
+        isSomeString!T)
+{
+    //alias Unqual!(ElementType!T) Char;
+    char[20] buffer;
+    int len = sprintf(buffer.ptr, "%g", d);
+    return to!T(buffer[0 .. len].dup);
+}
+
+/// $(D real) to all string types.
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == real) &&
+        isSomeString!T)
+{
+    char[20] buffer;
+    int len = sprintf(buffer.ptr, "%Lg", r);
+    return to!T(buffer[0 .. len].dup);
+}
+
+/// $(D ifloat) to all string types.
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == ifloat) &&
+        isSomeString!T)
+{
+    return to!T(cast(idouble) f);
+}
+
+/// $(D idouble) to all string types.
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == idouble) &&
+        isSomeString!T)
+{
+    char[21] buffer;
+    int len = sprintf(buffer.ptr, "%gi", d);
+    return to!T(buffer[0 .. len].dup);
+}
+
+/// $(D ireal) to all string types.
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == ireal) &&
+        isSomeString!T)
+{
+    char[21] buffer;
+    int len = sprintf(buffer.ptr, "%Lgi", r);
+    //assert(len < buffer.length); // written bytes is len + 1
+    return to!T(buffer[0 .. len].dup);
+}
+
+/// $(D cfloat) to all string types.
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == cfloat) &&
+        isSomeString!T)
+{
+    return to!string(cast(cdouble) f);
+}
+
+/// $(D cdouble) to all string types.
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == cdouble) &&
+        isSomeString!T)
+{
+    char[20 + 1 + 20 + 1] buffer;
+
+    int len = sprintf(buffer.ptr, "%g+%gi", d.re, d.im);
+    return to!T(buffer[0 .. len]);
+}
+
+/// $(D creal) to all string types.
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == creal) &&
+        isSomeString!T)
+{
+    char[20 + 1 + 20 + 1] buffer;
+    int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
+    return to!T(buffer[0 .. len].dup);
+}
 
 /**
-When the source is a wide string, it is first converted to a narrow
-string and then parsed.
+Pointer to string conversions prints the pointer as a $(D size_t) value.
  */
 T toImpl(T, S)(S value)
-    if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
-        !isSomeString!T)
+    if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
+        isSomeString!T)
 {
-    // todo: improve performance
-    return parseString!T(toUTF8(value));
+    return to!T(cast(size_t) value, 16u);
 }
 
-/**
-When the source is a narrow string, normal text parsing occurs.
- */
-T toImpl(T, S)(S value)
-    if (isDynamicArray!S && is(S : const(char)[]) &&
-        !isSomeString!T)
+/// C-style strings
+T toImpl(T, S)(S s)
+    if (isPointer!S && is(S : const(char)*) &&
+        isSomeString!T)
 {
-    return parseString!T(value);
+    return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    foreach (Char; TypeTuple!(char, wchar, dchar))
-    {
-        auto a = to!(Char[])("123");
-        assert(to!int(a) == 123);
-        assert(to!double(a) == 123);
-    }
+    debug(string) printf("string.to!string(char*).unittest\n");
+
+    string r;
+    int i;
+
+    r = to!string(cast(char*) null);
+    i = cmp(r, "");
+    assert(i == 0);
+
+    r = to!string("foo\0".ptr);
+    i = cmp(r, "foo");
+    assert(i == 0);
 }
 
-/**
-Object-to-object conversions by dynamic casting throw exception when the source is
-non-null and the target is null.
- */
-T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object) && !is(typeof(new T(value))))
-{
-    auto result = cast(T) value;
-    if (!result && value)
-    {
-        throw new ConvException("Cannot convert object of static type "
-                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
-                ~" to type "~T.classinfo.name);
-    }
-    return result;
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    // Testing object conversions
-    class A {} class B : A {} class C : A {}
-    A a1 = new A, a2 = new B, a3 = new C;
-    assert(to!(B)(a2) is a2);
-    assert(to!(C)(a3) is a3);
-    try
-    {
-        to!(B)(a3);
-        assert(false);
-    }
-    catch (ConvException e)
-    {
-        //writeln(e);
-    }
-}
-
-// Conversion using S.opCast!T
-T toImpl(T, S)(S value)
-    if (is(typeof(S.init.opCast!T()) : T) &&
-        !isSomeString!T)
-{
-    return value.opCast!T();
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B { T opCast(T)() { return 43; } }
-    auto b = new B;
-    assert(to!int(b) == 43);
-
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S { T opCast(T)() { return 43; } }
-    auto s = S();
-    assert(to!int(s) == 43);
-}
-
-/**
-$(RED Scheduled for deprecation in January 2012. Please use 
-      method $(D opCast) instead.)
-
-Object-_to-non-object conversions look for a method "to" of the source
-object.
-
-Example:
-----
-class Date
-{
-    T to(T)() if(is(T == long))
-    {
-        return timestamp;
-    }
-    ...
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    auto d = new Date;
-    auto ts = to!long(d); // same as d.to!long()
-}
-----
- */
-T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
-        && is(typeof(S.init.to!(T)()) : T))
-{
-    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
-                "\"to\" has been scheduled for deprecation in January 2012. " ~
-                "Please use method opCast instead.");
-
-    return value.to!T();
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B { T to(T)() { return 43; } }
-    auto b = new B;
-    assert(to!int(b) == 43);
-}
 
 /**
 Narrowing numeric-numeric conversions throw when the value does not
@@ -768,18 +1411,6 @@ unittest
 
     char from4 = 'A';
     dchar to4 = to!(dchar)(from4);
-}
-
-private T parseString(T)(const(char)[] v)
-{
-    scope(exit)
-    {
-        if (v.length)
-        {
-            convError!(const(char)[], T)(v);
-        }
-    }
-    return parse!T(v);
 }
 
 /**
@@ -847,24 +1478,6 @@ unittest
     assert(b["0"d] == 1 && b["1"d] == 2);
     //hash to string conversion
     assert(to!(string)(a) == "[0:1, 1:2]");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    // string tests
-    alias TypeTuple!(char, wchar, dchar) AllChars;
-    foreach (T; AllChars) {
-        foreach (U; AllChars) {
-            T[] s1 = to!(T[])("Hello, world!");
-            auto s2 = to!(U[])(s1);
-            assert(s1 == to!(T[])(s2));
-            auto s3 = to!(const(U)[])(s1);
-            assert(s1 == to!(T[])(s3));
-            auto s4 = to!(immutable(U)[])(s1);
-            assert(s1 == to!(T[])(s4));
-        }
-    }
 }
 
 private bool convFails(Source, Target, E)(Source src) {
@@ -1025,6 +1638,52 @@ unittest
     // Testing t;
     // auto a = to!(string)(t);
     // assert(a == "0");
+}
+
+
+/**
+When the source is a wide string, it is first converted to a narrow
+string and then parsed.
+ */
+T toImpl(T, S)(S value)
+    if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
+        !isSomeString!T)
+{
+    // todo: improve performance
+    return parseString!T(toUTF8(value));
+}
+
+/**
+When the source is a narrow string, normal text parsing occurs.
+ */
+T toImpl(T, S)(S value)
+    if (isDynamicArray!S && is(S : const(char)[]) &&
+        !isSomeString!T)
+{
+    return parseString!T(value);
+}
+
+private T parseString(T)(const(char)[] v)
+{
+    scope(exit)
+    {
+        if (v.length)
+        {
+            convError!(const(char)[], T)(v);
+        }
+    }
+    return parse!T(v);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    foreach (Char; TypeTuple!(char, wchar, dchar))
+    {
+        auto a = to!(Char[])("123");
+        assert(to!int(a) == 123);
+        assert(to!double(a) == 123);
+    }
 }
 
 /***************************************************************
@@ -1778,6 +2437,15 @@ if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
         s.popFront();
     }
     return result;
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    typedef uint Testing;
+    auto s = "123";
+    auto t = parse!Testing(s);
+    assert(t == cast(Testing) 123);
 }
 
 unittest
@@ -3213,586 +3881,6 @@ private bool feq(in creal r1, in creal r2)
     return feq(r1a, r2b, 0.000001L);
 }
 
-/// Small unsigned integers to strings.
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isUnsigned!S && S.sizeof < uint.sizeof &&
-        isSomeString!T)
-{
-    return to!T(cast(uint) value);
-}
-
-/// Small signed integers to strings.
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isSigned!S && S.sizeof < int.sizeof &&
-        isSomeString!T)
-{
-    return to!T(cast(int) value);
-}
-
-/// Unsigned integers (uint and ulong) to string.
-T toImpl(T, S)(S input)
-    if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 &&
-        isSomeString!T)
-{
-    Unqual!S value = input;
-    alias Unqual!(typeof(T.init[0])) Char;
-    static if (is(typeof(T.init[0]) == const) ||
-            is(typeof(T.init[0]) == immutable))
-    {
-        if (value < 10)
-        {
-            static immutable Char[10] digits = "0123456789";
-            // Avoid storage allocation for simple stuff
-            return digits[cast(size_t) value .. cast(size_t) value + 1];
-        }
-    }
-
-    static if (S.sizeof == uint.sizeof)
-        enum maxlength = S.sizeof * 3;
-    else
-        auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
-
-    Char[] result;
-    if (__ctfe)
-    {
-        result = new Char[maxlength];
-    }
-    else
-    {
-        result = cast(Char[])
-            GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-            [0 .. Char.sizeof * maxlength];
-    }
-
-    uint ndigits = 0;
-    do
-    {
-        auto div = value / 10;
-        auto rem = value % 10;
-        const c = cast(Char) (rem + '0');
-        value = div;
-        ++ndigits;
-        result[$ - ndigits] = c;
-    }
-    while (value);
-    return cast(T) result[$ - ndigits .. $];
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(wtext(int.max) == "2147483647"w);
-    assert(wtext(int.min) == "-2147483648"w);
-    assert(to!string(0L) == "0");
-}
-
-/// $(D char), $(D wchar), $(D dchar) to a string type.
-T toImpl(T, S)(S c)
-    if (isSomeChar!(Unqual!S) &&
-        isSomeString!T)
-{
-    alias typeof(T.init[0]) Char;
-    static if (Char.sizeof >= S.sizeof)
-    {
-        return [ c ];
-    }
-    else
-    {
-        Unqual!Char[] result;
-        encode(result, c);
-        return cast(T) result;
-    }
-}
-
-version(unittest) private alias TypeTuple!(
-    char, wchar, dchar,
-    const(char), const(wchar), const(dchar),
-    immutable(char), immutable(wchar), immutable(dchar))
-                      AllChars;
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    foreach (Char1; AllChars)
-    {
-        foreach (Char2; AllChars)
-        {
-            Char1 c = 'a';
-            assert(to!(Char2[])(c)[0] == c);
-        }
-        uint x = 4;
-        assert(to!(Char1[])(x) == "4");
-    }
-}
-
-/// Signed values ($(D int) and $(D long)).
-T toImpl(T, S)(S value)
-    if (staticIndexOf!(Unqual!S, int, long) >= 0 &&
-        isSomeString!T)
-{
-    if (value >= 0)
-        return to!T(cast(Unsigned!S) value);
-    alias Unqual!(typeof(T.init[0])) Char;
-
-    // Cache read-only data only for const and immutable; mutable
-    // data is supposed to use allocation in all cases
-    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
-    {
-        if (value > -10)
-        {
-            static immutable Char[20] data =
-                "00-1-2-3-4-5-6-7-8-9";
-            immutable i = cast(size_t) -value * 2;
-            return data[i .. i + 2];
-        }
-    }
-
-    Char[1 + S.sizeof * 3] buffer;
-
-    auto u = -cast(Unqual!(Unsigned!S)) value;
-    uint ndigits = 1;
-    while (u)
-    {
-        immutable c = cast(char)((u % 10) + '0');
-        u /= 10;
-        buffer[$ - ndigits] = c;
-        ++ndigits;
-    }
-    assert(ndigits <= buffer.length);
-    buffer[$ - ndigits] = '-';
-    return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
-
-    const h  = 6;
-    string s = to!string(h);
-    assert(s == "6");
-}
-
-/// C-style strings
-T toImpl(T, S)(S s)
-    if (isPointer!S && is(S : const(char)*) &&
-        isSomeString!T)
-{
-    return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
-}
-
-/// $(D float) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == float) &&
-        isSomeString!T)
-{
-    return to!T(cast(double) f);
-}
-
-/// $(D double) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == double) &&
-        isSomeString!T)
-{
-    //alias Unqual!(ElementType!T) Char;
-    char[20] buffer;
-    int len = sprintf(buffer.ptr, "%g", d);
-    return to!T(buffer[0 .. len].dup);
-}
-
-/// $(D real) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == real) &&
-        isSomeString!T)
-{
-    char[20] buffer;
-    int len = sprintf(buffer.ptr, "%Lg", r);
-    return to!T(buffer[0 .. len].dup);
-}
-
-/// $(D ifloat) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == ifloat) &&
-        isSomeString!T)
-{
-    return to!T(cast(idouble) f);
-}
-
-/// $(D idouble) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == idouble) &&
-        isSomeString!T)
-{
-    char[21] buffer;
-    int len = sprintf(buffer.ptr, "%gi", d);
-    return to!T(buffer[0 .. len].dup);
-}
-
-/// $(D ireal) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == ireal) &&
-        isSomeString!T)
-{
-    char[21] buffer;
-    int len = sprintf(buffer.ptr, "%Lgi", r);
-    //assert(len < buffer.length); // written bytes is len + 1
-    return to!T(buffer[0 .. len].dup);
-}
-
-/// $(D cfloat) to all string types.
-T toImpl(T, S)(S f)
-    if (is(Unqual!S == cfloat) &&
-        isSomeString!T)
-{
-    return to!string(cast(cdouble) f);
-}
-
-/// $(D cdouble) to all string types.
-T toImpl(T, S)(S d)
-    if (is(Unqual!S == cdouble) &&
-        isSomeString!T)
-{
-    char[20 + 1 + 20 + 1] buffer;
-
-    int len = sprintf(buffer.ptr, "%g+%gi", d.re, d.im);
-    return to!T(buffer[0 .. len]);
-}
-
-/// $(D creal) to all string types.
-T toImpl(T, S)(S r)
-    if (is(Unqual!S == creal) &&
-        isSomeString!T)
-{
-    char[20 + 1 + 20 + 1] buffer;
-    int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
-    return to!T(buffer[0 .. len].dup);
-}
-
-/******************************************
- * Convert value to string in _radix radix.
- *
- * radix must be a value from 2 to 36.
- * value is treated as a signed value only if radix is 10.
- * The characters A through Z are used to represent values 10 through 36.
- */
-T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) &&
-        isSomeString!T)
-{
-    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
-    if (radix == 10)
-        return to!string(value);     // handle signed cases only for radix 10
-    return to!string(cast(ulong) value, radix);
-}
-
-/// ditto
-T toImpl(T, S)(S value, uint radix)
-    if (is(Unqual!S == ulong) &&
-        isSomeString!T)
-in
-{
-    assert(radix >= 2 && radix <= 36);
-}
-body
-{
-    char[value.sizeof * 8] buffer;
-    uint i = buffer.length;
-
-    if (value < radix && value < hexDigits.length)
-        return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
-
-    do
-    {
-        ubyte c;
-        c = cast(ubyte)(value % radix);
-        value = value / radix;
-        i--;
-        buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
-    } while (value);
-    return to!T(buffer[i .. $].dup);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    size_t x = 16;
-    assert(to!string(x, 16) == "10");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong, uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(char).unittest\n");
-
-    string s = "foo";
-    string s2;
-    foreach (char c; s)
-    {
-        s2 ~= to!string(c);
-    }
-    //printf("%.*s", s2);
-    assert(s2 == "foo");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(int).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(long).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(ulong, uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(char*).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(cast(char*) null);
-    i = cmp(r, "");
-    assert(i == 0);
-
-    r = to!string("foo\0".ptr);
-    i = cmp(r, "foo");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string s = "foo";
-    string s2;
-    foreach (char c; s)
-    {
-        s2 ~= to!string(c);
-    }
-    //printf("%.*s", s2);
-    assert(s2 == "foo");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-/**
-Pointer to string conversions prints the pointer as a $(D size_t) value.
- */
-T toImpl(T, S)(S value)
-    if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
-        isSomeString!T)
-{
-    return to!T(cast(size_t) value, 16u);
-}
-
 private S textImpl(S, U...)(U args)
 {
     S result;
@@ -3826,15 +3914,6 @@ unittest
     assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    typedef uint Testing;
-    auto s = "123";
-    auto t = parse!Testing(s);
-    assert(t == cast(Testing) 123);
 }
 
 //------------------------------------------------------------------------------
@@ -4067,84 +4146,6 @@ unittest
 
     static assert(__traits(compiles, b = octal!"1L"));
     static assert(__traits(compiles, b = octal!1L));
-}
-
-// Conversion with construction feature for struct type
-T toImpl(T, S)(S src)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T == struct) && is(typeof(T(src))))
-{
-    return T(src);
-}
-
-// Bugzilla 3961
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
-    struct Int { int x; }
-    Int i = to!Int(1);
-
-    static struct Int2 { int x; this(int x){ this.x = x; } }
-    Int2 i2 = to!Int2(1);
-
-    static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
-    Int3 i3 = to!Int3(1);
-}
-
-// Conversion with construction feature for class type
-T toImpl(T, S)(S src)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T : Object) && is(typeof(new T(src))))
-{
-    return new T(src);
-}
-
-unittest
-{
-    static struct S { int x; }
-    static class C { int x; this(int x){ this.x = x; } }
-
-    static class B {
-        int value;
-        this(S src){ value = src.x; }
-        this(C src){ value = src.x; }
-    }
-
-    S s = S(1);
-    auto b1 = to!B(s);  // == new B(s)
-    assert(b1.value == 1);
-
-    C c = new C(2);
-    auto b2 = to!B(c);  // == new B(c)
-    assert(b2.value == 2);
-
-    auto c2 = to!C(3);   // == new C(3)
-    assert(c2.x == 3);
-}
-
-version (unittest)
-{
-    class A { this(B b){} }
-    class B : A { this(){ super(this); } }
-}
-unittest
-{
-    B b = new B();
-    A a = to!A(b);      // == cast(A)b
-                        // (do not run construction conversion like new A(b))
-    assert(b is a);
-
-    static class C : Object
-    {
-        this(){}
-        this(Object o){}
-    }
-
-    Object oc = new C();
-    C a2 = to!C(oc);     // == new C(a)
-                        // Construction conversion overrides down-casting conversion
-    assert(a2 != a);    // 
 }
 
 // emplace
