@@ -6,6 +6,9 @@ $(VERSION 054, ddd mm, 2011, =================================================,
         $(LI Various functions in std.string were renamed to match Phobos'
              naming conventions and be properly camelcased. The old names
              are still there but have been scheduled for deprecation.)
+        $(LI The deprecated std.string.toString and std.string.atoi functions
+             were removed. If you were still using them for any reason,
+             replace them with calls to std.conv.to.)
         $(LI Various functions in std.uni were renamed so that they don't have
              "Uni" in their name, since it was decided that it was not desirable to
              repeat a module's name in its functions' names. The old names
