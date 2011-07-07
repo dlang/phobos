@@ -1531,10 +1531,11 @@ Returns the number of parenthesized captures
 }
 
 /// Ditto
-Regex!(Unqual!(typeof(String.init[0]))) regex(String)
-(String pattern, string flags = null)
+Regex!(Unqual!(ElementEncodingType!String)) regex(String)
+(String pattern, string flags = null) 
+    if (isSomeString!String)
 {
-    alias Unqual!(typeof(String.init[0])) Char;
+    alias Unqual!(ElementEncodingType!String) Char;
     alias immutable(Char)[] IString;
     static Tuple!(IString, string) lastReq = tuple(cast(IString)[],"\u0001");//most unlikely
     static typeof(return) lastResult;
@@ -1546,7 +1547,7 @@ Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 
     auto result = typeof(return)(pattern, flags);
 
-    lastReq[0] = pattern.idup;
+    lastReq[0] = to!IString(pattern);
     lastReq[1] = flags;
     lastResult = result;
 
