@@ -940,7 +940,6 @@ enum SocketFlags: int
         OOB =        MSG_OOB,       /// out-of-band stream data
         PEEK =       MSG_PEEK,      /// peek at incoming data without removing it from the queue, only for receiving
         DONTROUTE =  MSG_DONTROUTE, /// data should not be subject to routing; this flag may be ignored. Only for sending
-        NOSIGNAL =   MSG_NOSIGNAL,  /// don't send SIGPIPE signal on socket write error and instead return EPIPE
 }
 
 
@@ -1175,6 +1174,19 @@ class Socket
         // and Windows Server 2008 R2 boxes.
         enum WINSOCK_TIMEOUT_SKEW = 500;
 
+        void setSock(socket_t handle)
+        {
+                assert(handle != socket_t.init);
+                sock = handle;
+
+                // Set the option to disable SIGPIPE on send() if the platform
+                // has it (e.g. on OS X).
+                static if (is(typeof(SO_NOSIGPIPE)))
+                {
+                        setOption(SocketOptionLevel.SOCKET, cast(SocketOption)SO_NOSIGPIPE, true);
+                }
+        }
+
 
         // For use with accepting().
         protected this()
@@ -1191,10 +1203,11 @@ class Socket
          */
         this(AddressFamily af, SocketType type, ProtocolType protocol)
         {
-                sock = cast(socket_t)socket(af, type, protocol);
-                if(sock == socket_t.init)
-                        throw new SocketException("Unable to create socket", _lasterr());
                 _family = af;
+                auto handle = cast(socket_t)socket(af, type, protocol);
+                if(handle == socket_t.init)
+                        throw new SocketException("Unable to create socket", _lasterr());
+                setSock(handle);
         }
 
 
@@ -1363,10 +1376,7 @@ class Socket
          */
         Socket accept()
         {
-                socket_t newsock;
-                //newsock = cast(socket_t).accept(sock, null, null); // DMD 0.101 error: found '(' when expecting ';' following 'statement
-                alias .accept topaccept;
-                newsock = cast(socket_t)topaccept(sock, null, null);
+                auto newsock = cast(socket_t).accept(sock, null, null);
                 if(socket_t.init == newsock)
                         throw new SocketAcceptException("Unable to accept socket connection", _lasterr());
 
@@ -1376,7 +1386,7 @@ class Socket
                         newSocket = accepting();
                         assert(newSocket.sock == socket_t.init);
 
-                        newSocket.sock = newsock;
+                        newSocket.setSock(newsock);
                         version(Win32)
                                 newSocket._blocking = _blocking; //inherits blocking mode
                         newSocket._family = _family; //same family
@@ -1483,15 +1493,18 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     send(const(void)[] buf, SocketFlags flags)
         {
-        flags = flags | SocketFlags.NOSIGNAL;
-        auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = flags | MSG_NOSIGNAL;
+                }
+                auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
         }
 
         /// ditto
         Select!(size_t.sizeof > 4, long, int) send(const(void)[] buf)
         {
-                return send(buf, SocketFlags.NOSIGNAL);
+                return send(buf, SocketFlags.NONE);
         }
 
         /**
@@ -1500,8 +1513,11 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     sendTo(const(void)[] buf, SocketFlags flags, Address to)
         {
-        flags = flags | SocketFlags.NOSIGNAL;
-        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = flags | MSG_NOSIGNAL;
+                }
+                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
 
         /// ditto
@@ -1515,8 +1531,11 @@ class Socket
         /// ditto
         Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf, SocketFlags flags)
         {
-        flags = flags | SocketFlags.NOSIGNAL;
-        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = flags | MSG_NOSIGNAL;
+                }
+                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
         }
 
 
@@ -1935,8 +1954,8 @@ Socket[2] socketPair() {
         }
 
         Socket toSocket(size_t id) {
-            Socket s = new Socket;
-            s.sock = cast(socket_t)socks[id];
+            auto s = new Socket;
+            s.setSock(cast(socket_t)socks[id]);
             s._family = AddressFamily.UNIX;
             return s;
         }
