@@ -2972,11 +2972,7 @@ private struct DirIteratorImpl
         bool stepIn(string directory)
         {
             auto h = cenforce(opendir(toStringz(directory)), directory);
-            if(_stack.data.empty)
-                _stack.put(DirHandle(directory, h));
-            else
-                _stack.put(
-                    DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+            _stack.put(DirHandle(directory, h));
             return next();
         }
 
