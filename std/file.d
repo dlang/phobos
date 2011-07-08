@@ -2863,12 +2863,7 @@ private struct DirIteratorImpl
                 WIN32_FIND_DATAW findinfo;
                 HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
                 cenforce(h != INVALID_HANDLE_VALUE, directory);
-                if(_stack.data.empty)
-                    _stack.put(DirHandle(directory, h));
-                else
-                    _stack.put(
-                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
-
+                _stack.put(DirHandle(directory, h));
                 return toNext(false, &findinfo);
             }
             else
@@ -2876,12 +2871,7 @@ private struct DirIteratorImpl
                 WIN32_FIND_DATA findinfo;
                 HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
                 cenforce(h != INVALID_HANDLE_VALUE, directory);
-                if(_stack.data.empty)
-                    _stack.put(DirHandle(directory, h));
-                else
-                    _stack.put(
-                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
-
+                _stack.put(DirHandle(directory, h));
                 return toNext(false, &findinfo);
             }
         }
