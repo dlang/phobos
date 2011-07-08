@@ -1,7 +1,7 @@
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-        $(LI std.aray.insertInPlace supports inserting of multiple ranges/elements in one go)
+        $(LI std.array.insertInPlace supports inserting of multiple ranges/elements in one go)
 		$(LI Added std.array.uninitializedArray and std.array.minimallyInitializedArray)
         $(LI Various functions in std.string were renamed to match Phobos'
              naming conventions and be properly camelcased. The old names
