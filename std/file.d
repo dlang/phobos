@@ -3006,7 +3006,7 @@ private struct DirIteratorImpl
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
-        if(stepIn(std.path.rel2abs(pathname)))
+        if(stepIn(pathname))
         {
             if(_mode == SpanMode.depth)
                 while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
