@@ -1495,7 +1495,7 @@ class Socket
         {
                 static if (is(typeof(MSG_NOSIGNAL)))
                 {
-                        flags = flags | MSG_NOSIGNAL;
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
                 auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
@@ -1515,7 +1515,7 @@ class Socket
         {
                 static if (is(typeof(MSG_NOSIGNAL)))
                 {
-                        flags = flags | MSG_NOSIGNAL;
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
                 return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
@@ -1533,7 +1533,7 @@ class Socket
         {
                 static if (is(typeof(MSG_NOSIGNAL)))
                 {
-                        flags = flags | MSG_NOSIGNAL;
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
                 return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
         }
