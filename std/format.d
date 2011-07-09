@@ -1459,7 +1459,7 @@ if (isAssociativeArray!T && !is(T == enum))
 {
     bool firstTime = true;
     auto vf = f;
-    foreach (ref k, v; val)
+    foreach (k, ref v; val)
     {
         if (firstTime) firstTime = false;
         else put(w, ' ');
