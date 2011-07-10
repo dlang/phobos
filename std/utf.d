@@ -1262,8 +1262,8 @@ auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
   +/
 P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
-       is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+       is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+       is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if(str.empty)
@@ -1273,7 +1273,7 @@ P toUTFz(P, S)(S str)
         return retval.ptr;
     }
 
-    alias Unqual!(typeof(str[0])) C;
+    alias Unqual!(ElementEncodingType!S) C;
 
     //If the P is mutable, then we have to make a copy.
     static if(is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
@@ -1300,11 +1300,11 @@ P toUTFz(P, S)(S str)
 
 P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))) &&
-       !is(immutable(Unqual!(typeof(str[0]))) == typeof(str[0])))
+       is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+       !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
-    alias typeof(str[0]) InChar;
+    alias ElementEncodingType!S InChar;
     alias typeof(*P.init) OutChar;
 
     //const(C)[] -> const(C)* or
@@ -1334,7 +1334,7 @@ P toUTFz(P, S)(S str)
 
 P toUTFz(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-       !is(Unqual!(typeof(*P.init)) == Unqual!(typeof(str[0]))))
+       !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     auto retval = appender!(typeof(*P.init)[])();
