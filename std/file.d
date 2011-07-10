@@ -879,7 +879,7 @@ version(Windows) unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in October 2011. Please use the
+    $(RED Scheduled for deprecation in November 2011. Please use the
           $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
@@ -920,7 +920,7 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
     if(is(Unqual!C == char))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in October 2011. Please use " ~
+                "scheduled for deprecation in November 2011. Please use " ~
                 "the version of getTimes with two arguments instead.");
 
     struct_stat64 statbuf = void;
@@ -1262,7 +1262,7 @@ alias isDir isdir;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1403,7 +1403,7 @@ alias isFile isfile;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1599,7 +1599,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsSymLink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1767,10 +1767,10 @@ void rmdir(in char[] pathname)
 version(Windows) string getcwd()
 {
     /* GetCurrentDirectory's return value:
-        1. function succeeds: the number of characters that are written to 
+        1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
         2. function fails: zero
-        3. the buffer (lpBuffer) is not large enough: the required size of 
+        3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
     ushort[4096] staticBuff = void; //enough for most common case
@@ -1810,7 +1810,7 @@ version(Windows) string getcwd()
             scope(exit) free(ptr);
             immutable n2 = GetCurrentDirectoryA(n, ptr);
             cenforce(n2 && n2 < n, "getcwd");
-            
+
             string res = fromMBSz(cast(immutable)ptr);
             return res.ptr == ptr ? res.idup : res;
         }
@@ -1957,7 +1957,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in October 2011.
+            $(RED Scheduled for deprecation in November 2011.
                   Please use $(D timeLastAccessed) instead.)
 
             $(BLUE This function is Posix-Only.)
@@ -2854,7 +2854,7 @@ private struct DirIteratorImpl
             string dirpath;
             HANDLE h;
         }
-        
+
         bool stepIn(string directory)
         {
             string search_pattern = std.path.join(directory, "*.*");
@@ -2885,7 +2885,7 @@ private struct DirIteratorImpl
                 return toNext(false, &findinfo);
             }
         }
-        
+
         bool next()
         {
             if(_stack.data.empty)
@@ -2904,7 +2904,7 @@ private struct DirIteratorImpl
             }
             return result;
         }
-        
+
         bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
         {
             if(fetch)
@@ -3445,6 +3445,9 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D dirEntries) instead.)
+
     Returns the contents of the given directory.
 
     The names in the contents do not include the pathname.
@@ -3471,9 +3474,7 @@ void main(string[] args)
 
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-            "scheduled for deprecation in August 2011. Please use " ~
-            "dirEntries instead.");
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3495,7 +3496,8 @@ unittest
 
 /++
     $(RED Scheduled for deprecation in August 2011.
-       Please use $(D dirEntries) instead.)
+          Please use $(D dirEntries) instead.)
+
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
 
@@ -3544,18 +3546,16 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "dirEntries instead.");
-    import std.regexp;    
-    auto result = appender!(string[])();           
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
+    import std.regexp;
+    auto result = appender!(string[])();
     bool callback(DirEntry* de)
     {
         if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else 
+        else
         {
             static if(is(U : const(C[])))
             {//pattern version
@@ -3619,9 +3619,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "dirEntries instead.");
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 

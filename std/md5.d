@@ -88,6 +88,7 @@ module std.md5;
 
 //debug=md5;            // uncomment to turn on debugging printf's
 
+import std.ascii;
 import std.string;
 import std.exception;
 import std.c.stdio : printf;
@@ -127,8 +128,8 @@ string digestToString(in ubyte[16] digest)
 
     foreach (ubyte u; digest)
     {
-        result[i] = std.string.hexdigits[u >> 4];
-        result[i + 1] = std.string.hexdigits[u & 15];
+        result[i] = std.ascii.hexDigits[u >> 4];
+        result[i + 1] = std.ascii.hexDigits[u & 15];
         i += 2;
     }
     return assumeUnique(result);

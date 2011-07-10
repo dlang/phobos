@@ -19,8 +19,9 @@ module std.conv;
 import core.stdc.math : ldexpl;
 import core.memory, core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
-import std.algorithm, std.array, std.ctype, std.exception, std.math, std.range,
-    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.utf;
+import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
+    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.utf;
 import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
@@ -1314,7 +1315,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     for (;;)
     {
         enforce(!p.empty, bailOut());
-        if (!isspace(p.front)) break;
+        if (!std.uni.isWhite(p.front)) break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */
@@ -1323,7 +1324,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     case '-':
         sign++;
         p.popFront();
-        if (tolower(p.front) == 'i') goto case 'i';
+        if (std.ascii.toLower(p.front) == 'i') goto case 'i';
         enforce(!p.empty, bailOut());
         break;
     case '+':
@@ -1332,8 +1333,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         break;
     case 'i': case 'I':
         p.popFront();
-        if (tolower(p.front) == 'n' &&
-                (p.popFront(), tolower(p.front) == 'f') &&
+        if (std.ascii.toLower(p.front) == 'n' &&
+                (p.popFront(), std.ascii.toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'
@@ -1372,10 +1373,10 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         while (!p.empty)
         {
             int i = p.front;
-            while (isxdigit(i))
+            while (isHexDigit(i))
             {
                 anydigits = 1;
-                i = isalpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                i = std.ascii.isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
                 if (ndigits < 16)
                 {
                     msdec = msdec * 16 + i;
@@ -1446,7 +1447,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
         ndigits = 0;
         e = 0;
-        while (!p.empty && isdigit(p.front))
+        while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
             {
@@ -1480,11 +1481,11 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     }
     else // not hex
     {
-        if (toupper(p.front) == 'N' && !startsWithZero)
+        if (std.ascii.toUpper(p.front) == 'N' && !startsWithZero)
         {
             // nan
-            enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
-                    && (p.popFront(), !p.empty && toupper(p.front) == 'N'),
+            enforce((p.popFront(), !p.empty && std.ascii.toUpper(p.front) == 'A')
+                    && (p.popFront(), !p.empty && std.ascii.toUpper(p.front) == 'N'),
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
@@ -1496,7 +1497,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         while (!p.empty)
         {
             int i = p.front;
-            while (isdigit(i))
+            while (isDigit(i))
             {
                 sawDigits = true;        /* must have at least 1 digit   */
                 if (msdec < (0x7FFFFFFFFFFFL-10)/10)
@@ -1543,7 +1544,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
         bool sawDigits = 0;
         e = 0;
-        while (!p.empty && isdigit(p.front))
+        while (!p.empty && isDigit(p.front))
         {
             if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
             {
@@ -2451,7 +2452,7 @@ unittest
 // {
 //     //writefln("toFloat('%s')", s);
 //     auto sz = toStringz(to!(const char[])(s));
-//     if (std.ctype.isspace(*sz))
+//     if (std.ascii.isspace(*sz))
 //      goto Lerr;
 
 //     // issue 1589
@@ -3468,8 +3469,8 @@ body
     char[value.sizeof * 8] buffer;
     uint i = buffer.length;
 
-    if (value < radix && value < hexdigits.length)
-        return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
+    if (value < radix && value < hexDigits.length)
+        return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
 
     do
     {
@@ -4245,9 +4246,9 @@ if (isIntegral!T && isOutputRange!(W, char))
         v = value;
     }
 
-    if (v < 10 && v < hexdigits.length)
+    if (v < 10 && v < hexDigits.length)
     {
-        put(writer, hexdigits[cast(size_t) v]);
+        put(writer, hexDigits[cast(size_t) v]);
         return;
     }
 

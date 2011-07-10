@@ -495,19 +495,24 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- *
+ * $(RED Scheduled for deprecation in January 2012. Please use the version
+ *       which takes a $(CXREF time, Duration) instead.)
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
-    checkops( ops );
-    static enum long TICKS_PER_MILLI = 10_000;
-    return mbox.get( ms * TICKS_PER_MILLI, ops );
+    return receiveTimeout( dur!"msecs"( ms ), ops );
 }
 
-/++ ditto +/
+/++
+    Same as $(D receive) except that rather than wait forever for a message,
+    it waits until either it receives a message or the given
+    $(CXREF time, Duration) has passed. It returns $(D true) if it received a
+    message and $(D false) if it timed out waiting for one.
+  +/
 bool receiveTimeout(T...)( Duration duration, T ops )
 {
-    return receiveTimeout(duration.total!"msecs"(), ops);
+    checkops( ops );
+    return mbox.get( duration, ops );
 }
 
 unittest
@@ -851,13 +856,13 @@ private
         {
             static assert( T.length );
 
-            static if( isImplicitlyConvertible!(T[0], long) )
+            static if( isImplicitlyConvertible!(T[0], Duration) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
-                assert( vals[0] >= 0 );
+                assert( vals[0] >= dur!"msecs"(0) );
                 enum timedWait = true;
-                long period = vals[0];
+                Duration period = vals[0];
             }
             else
             {

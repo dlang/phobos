@@ -5175,7 +5175,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     return .moveBack(_range);
                 }
 
-                @property void popBack() { return _range.back; }
+                @property void popBack() { return _range.popBack; }
 
                 static if (hasAssignableElements!R) {
                     @property void back(E newVal) {
