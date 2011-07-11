@@ -366,7 +366,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() const
+    long toLong() pure const
     {
         return (sign ? -1 : 1) *
           (data.ulongLength() == 1  && (data.peekUlong(0) <= cast(ulong)(long.max)) 
@@ -375,7 +375,7 @@ public:
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    long toInt() const
+    long toInt() pure const
     {
         return (sign ? -1 : 1) *
           (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max)) 
@@ -384,13 +384,13 @@ public:
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() const
+    @property size_t uintLength() pure const
     {
         return data.uintLength(); 
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() const
+    @property size_t ulongLength() pure const
     {
         return data.ulongLength(); 
     }
@@ -440,16 +440,16 @@ private:
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() const
+    bool isZero() pure const
     {
         return data.isZero();
     }
-    bool isNegative() const
+    bool isNegative() pure const
     {
         return sign;
     }
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() const
+    void checkDivByZero() pure const
     {
         assert(!isZero(), "BigInt division by zero");
         if (isZero())

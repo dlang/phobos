@@ -203,21 +203,24 @@ else
 
 public:
 
-enum real E =          2.7182818284590452354L;  /** e */ // 0x1.5BF0A8B1_45769535_5FF5p+1L
-enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t
-enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 1.4427 fldl2e
-enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */ // 0.30103 fldlg2
-enum real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
-enum real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
-enum real LN10 =       2.30258509299404568402;  /** ln 10 */
-enum real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
-enum real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
-enum real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
-enum real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
-enum real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
-enum real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / $(SQRT)$(PI) */
-enum real SQRT2 =      1.41421356237309504880;  /** $(SQRT)2 */
-enum real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
+// Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
+// Wolfram Alpha LLC. 2011. Wolfram|Alpha. http://www.wolframalpha.com/input/?i=e+in+base+16 (access July 6, 2011).
+enum real E =          0x1.5bf0a8b1457695355fb8ac404e7a8p+1L; /** e = 2.718281... */
+enum real LOG2T =      0x1.a934f0979a3715fc9257edfe9b5fbp+1L; /** $(SUB log, 2)10 = 3.321928... */
+enum real LOG2E =      0x1.71547652b82fe1777d0ffda0d23a8p+0L; /** $(SUB log, 2)e = 1.442695... */
+enum real LOG2 =       0x1.34413509f79fef311f12b35816f92p-2L; /** $(SUB log, 10)2 = 0.301029... */
+enum real LOG10E =     0x1.bcb7b1526e50e32a6ab7555f5a67cp-2L; /** $(SUB log, 10)e = 0.434294... */
+enum real LN2 =        0x1.62e42fefa39ef35793c7673007e5fp-1L; /** ln 2  = 0.693147... */
+enum real LN10 =       0x1.26bb1bbb5551582dd4adac5705a61p+1L; /** ln 10 = 2.302585... */
+enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(_PI) = 3.141592... */
+enum real PI_2 =       PI/2;                                  /** $(PI) / 2 = 1.570796... */
+enum real PI_4 =       PI/4;                                  /** $(PI) / 4 = 0.785398... */
+enum real M_1_PI =     0x1.45f306dc9c882a53f84eafa3ea69cp-2L; /** 1 / $(PI) = 0.318309... */
+enum real M_2_PI =     2*M_1_PI;                              /** 2 / $(PI) = 0.636619... */
+enum real M_2_SQRTPI = 0x1.20dd750429b6d11ae3a914fed7fd8p+0L; /** 2 / $(SQRT)$(PI) = 1.128379... */
+enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.414213... */
+enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
+// Note: Make sure the magic numbers in compiler backend for x87 match these.
 
 /*
         Octal versions:

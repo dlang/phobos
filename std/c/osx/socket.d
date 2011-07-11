@@ -54,11 +54,6 @@ enum: int
 
 enum: int
 {
-    MSG_NOSIGNAL =   0x4000,
-}
-
-enum: int
-{
     IP_MULTICAST_LOOP =  11,
     IP_ADD_MEMBERSHIP =  12,
     IP_DROP_MEMBERSHIP = 13,

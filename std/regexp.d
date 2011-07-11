@@ -2,8 +2,8 @@
 // Regular Expressions.
 
 /**
- * $(RED This module has been deprecated. Use $(LINK2 std_regex.html,
- * std.regex) instead.)
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(LINK2 std_regex.html, std.regex) instead.)
  *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
  * expressions) are a powerful method of string pattern matching.  The
@@ -123,6 +123,9 @@
 */
 
 module std.regexp;
+
+pragma(msg, "Warning: As of Phobos 2.054, std.regexp has been scheduled for " ~
+            "deprecation in August 2011. Please use std.regex instead.");
 
 //debug = regexp;       // uncomment to turn on debugging printf's
 
