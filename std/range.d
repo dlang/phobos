@@ -2854,6 +2854,8 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
+private template lengthType(R) { alias typeof(R.init.length) lengthType; }
+
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
    that allows accessing the current element in the $(D n)th range by
@@ -3155,7 +3157,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
     static if (allSatisfy!(hasLength, R))
         @property auto length()
         {
-            auto result = ranges[0].length;
+            CommonType!(staticMap!(lengthType, R)) result = ranges[0].length;
             if (stoppingPolicy == StoppingPolicy.requireSameLength)
                 return result;
             foreach (i, Unused; R[1 .. $])
@@ -3375,6 +3377,10 @@ unittest
     auto z = zip(LL, [4]);
 
     assert(equal(z, [tuple(1L,4)]));
+
+    auto LL2 = iota(0L, 500L);
+    auto z2 = zip([7], LL2);
+    assert(equal(z2, [tuple(7, 0L)]));
 }
 
 /* CTFE function to generate opApply loop for Lockstep.*/
