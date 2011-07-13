@@ -879,7 +879,7 @@ version(Windows) unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in October 2011. Please use the
+    $(RED Scheduled for deprecation in November 2011. Please use the
           $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
@@ -920,7 +920,7 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
     if(is(Unqual!C == char))
 {
     pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in October 2011. Please use " ~
+                "scheduled for deprecation in November 2011. Please use " ~
                 "the version of getTimes with two arguments instead.");
 
     struct_stat64 statbuf = void;
@@ -1262,7 +1262,7 @@ alias isDir isdir;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1403,7 +1403,7 @@ alias isFile isfile;
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1599,7 +1599,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in October 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D attrIsSymLink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1767,10 +1767,10 @@ void rmdir(in char[] pathname)
 version(Windows) string getcwd()
 {
     /* GetCurrentDirectory's return value:
-        1. function succeeds: the number of characters that are written to 
+        1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
         2. function fails: zero
-        3. the buffer (lpBuffer) is not large enough: the required size of 
+        3. the buffer (lpBuffer) is not large enough: the required size of
     the buffer, in characters, including the null-terminating character.
     */
     ushort[4096] staticBuff = void; //enough for most common case
@@ -1810,7 +1810,7 @@ version(Windows) string getcwd()
             scope(exit) free(ptr);
             immutable n2 = GetCurrentDirectoryA(n, ptr);
             cenforce(n2 && n2 < n, "getcwd");
-            
+
             string res = fromMBSz(cast(immutable)ptr);
             return res.ptr == ptr ? res.idup : res;
         }
@@ -1957,7 +1957,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in October 2011.
+            $(RED Scheduled for deprecation in November 2011.
                   Please use $(D timeLastAccessed) instead.)
 
             $(BLUE This function is Posix-Only.)
@@ -2854,7 +2854,7 @@ private struct DirIteratorImpl
             string dirpath;
             HANDLE h;
         }
-        
+
         bool stepIn(string directory)
         {
             string search_pattern = std.path.join(directory, "*.*");
@@ -2863,12 +2863,7 @@ private struct DirIteratorImpl
                 WIN32_FIND_DATAW findinfo;
                 HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
                 cenforce(h != INVALID_HANDLE_VALUE, directory);
-                if(_stack.data.empty)
-                    _stack.put(DirHandle(directory, h));
-                else
-                    _stack.put(
-                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
-
+                _stack.put(DirHandle(directory, h));
                 return toNext(false, &findinfo);
             }
             else
@@ -2876,16 +2871,11 @@ private struct DirIteratorImpl
                 WIN32_FIND_DATA findinfo;
                 HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
                 cenforce(h != INVALID_HANDLE_VALUE, directory);
-                if(_stack.data.empty)
-                    _stack.put(DirHandle(directory, h));
-                else
-                    _stack.put(
-                        DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
-
+                _stack.put(DirHandle(directory, h));
                 return toNext(false, &findinfo);
             }
         }
-        
+
         bool next()
         {
             if(_stack.data.empty)
@@ -2904,7 +2894,7 @@ private struct DirIteratorImpl
             }
             return result;
         }
-        
+
         bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
         {
             if(fetch)
@@ -2972,11 +2962,7 @@ private struct DirIteratorImpl
         bool stepIn(string directory)
         {
             auto h = cenforce(opendir(toStringz(directory)), directory);
-            if(_stack.data.empty)
-                _stack.put(DirHandle(directory, h));
-            else
-                _stack.put(
-                    DirHandle(std.path.join(_stack.data.back.dirpath, directory), h));
+            _stack.put(DirHandle(directory, h));
             return next();
         }
 
@@ -3020,7 +3006,7 @@ private struct DirIteratorImpl
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
-        if(stepIn(std.path.rel2abs(pathname)))
+        if(stepIn(pathname))
         {
             if(_mode == SpanMode.depth)
                 while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
@@ -3163,34 +3149,37 @@ auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
 
 unittest
 {
-    version (linux)
-    {
-        assert(std.process.system("mkdir --parents dmd-testing") == 0);
-        scope(exit) std.process.system("rm -rf dmd-testing");
-        assert(std.process.system("mkdir --parents dmd-testing/somedir") == 0);
-        assert(std.process.system("touch dmd-testing/somefile") == 0);
-        assert(std.process.system("touch dmd-testing/somedir/somedeepfile")
-                == 0);
-        foreach (string name; dirEntries("dmd-testing", SpanMode.shallow))
-        {
-        }
-        foreach (string name; dirEntries("dmd-testing", SpanMode.depth))
-        {
-            //writeln(name);
-        }
-        foreach (string name; dirEntries("dmd-testing", SpanMode.breadth))
-        {
-            //writeln(name);
-        }
-        foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
-        {
-            //writeln(e.name);
-        }
+    string testdir = "deleteme.dmd.unittest.std.file"; // needs to be relative
+    mkdirRecurse(std.path.join(testdir, "somedir"));
+    scope(exit) rmdirRecurse(testdir);
+    write(std.path.join(testdir, "somefile"), null);
+    write(std.path.join(testdir, "somedir", "somedeepfile"), null);
 
-        foreach (DirEntry e; dirEntries("/usr/share/zoneinfo", SpanMode.depth))
-        {
-            assert(e.isFile || e.isDir, e.name);
-        }
+    // testing range interface
+    size_t equalEntries(string relpath, SpanMode mode)
+    {
+        auto len = enforce(walkLength(dirEntries(std.path.rel2abs(relpath), mode)));
+        assert(walkLength(dirEntries(relpath, mode)) == len);
+        assert(equal(
+                   map!(q{std.path.rel2abs(a.name)})(dirEntries(relpath, mode)),
+                   map!(q{a.name})(dirEntries(std.path.rel2abs(relpath), mode))));
+        return len;
+    }
+
+    assert(equalEntries(testdir, SpanMode.shallow) == 2);
+    assert(equalEntries(testdir, SpanMode.depth) == 3);
+    assert(equalEntries(testdir, SpanMode.breadth) == 3);
+
+    // testing opApply
+    foreach (string name; dirEntries(testdir, SpanMode.breadth))
+    {
+        //writeln(name);
+        assert(name.startsWith(testdir));
+    }
+    foreach (DirEntry e; dirEntries(std.path.rel2abs(testdir), SpanMode.breadth))
+    {
+        //writeln(name);
+        assert(e.isFile || e.isDir, e.name);
     }
 }
 
@@ -3445,6 +3434,9 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D dirEntries) instead.)
+
     Returns the contents of the given directory.
 
     The names in the contents do not include the pathname.
@@ -3471,9 +3463,7 @@ void main(string[] args)
 
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-            "scheduled for deprecation in August 2011. Please use " ~
-            "dirEntries instead.");
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3495,7 +3485,8 @@ unittest
 
 /++
     $(RED Scheduled for deprecation in August 2011.
-       Please use $(D dirEntries) instead.)
+          Please use $(D dirEntries) instead.)
+
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
 
@@ -3544,18 +3535,16 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "dirEntries instead.");
-    import std.regexp;    
-    auto result = appender!(string[])();           
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
+    import std.regexp;
+    auto result = appender!(string[])();
     bool callback(DirEntry* de)
     {
         if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else 
+        else
         {
             static if(is(U : const(C[])))
             {//pattern version
@@ -3619,9 +3608,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.listDir has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "dirEntries instead.");
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 

@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ * $(RED Scheduled for deprecation in August 2011. Please use std.datetime instead.)
  *
  * Dates are represented in several formats. The date implementation
  * revolves around a central type, $(D d_time), from which other
@@ -28,8 +28,8 @@ module std.date;
 import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
 
-pragma(msg, "std.date and std.dateparse have been scheduled for deprecation. "
-            "Please use std.datetime instead.");
+pragma(msg, "Warning: As of Phobos 2.052, std.date and std.dateparse have been " ~
+            "scheduled for deprecation in August 2011. Please use std.datetime instead.");
 
 /**
  * $(D d_time) is a signed arithmetic type giving the time elapsed

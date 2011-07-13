@@ -21,8 +21,8 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.array, std.bitmanip, std.conv,
-    std.ctype, std.exception, std.functional, std.math, std.range,
+import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
+    std.exception, std.functional, std.math, std.range,
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
@@ -692,7 +692,7 @@ struct FormatSpec(Char)
             case '0': flZero = true; ++i; break;
             case ' ': flSpace = true; ++i; break;
             case '*':
-                if (isdigit(trailing[++i]))
+                if (isDigit(trailing[++i]))
                 {
                     // a '*' followed by digits and '$' is a
                     // positional format
@@ -747,7 +747,7 @@ struct FormatSpec(Char)
                 // Precision
                 if (trailing[++i] == '*')
                 {
-                    if (isdigit(trailing[++i]))
+                    if (isDigit(trailing[++i]))
                     {
                         // a '.*' followed by digits and '$' is a
                         // positional precision
@@ -771,7 +771,7 @@ struct FormatSpec(Char)
                     .parse!(int)(tmp); // skip digits
                     i = tmp.ptr - trailing.ptr;
                 }
-                else if (isdigit(trailing[i]))
+                else if (isDigit(trailing[i]))
                 {
                     auto tmp = trailing[i .. $];
                     precision = .parse!int(tmp);
@@ -816,7 +816,7 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(islower(trailing[1]) || trailing[1] == '*',
+                    enforce(isLower(trailing[1]) || trailing[1] == '*',
                             text("'%", trailing[1],
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
@@ -828,8 +828,8 @@ struct FormatSpec(Char)
             {
                 if (trailing.ptr[0] == ' ')
                 {
-                    while (!r.empty && isspace(r.front)) r.popFront();
-                    //r = std.algorithm.find!(not!isspace)(r);
+                    while (!r.empty && std.ascii.isWhite(r.front)) r.popFront();
+                    //r = std.algorithm.find!(not!(std.ascii.isWhite))(r);
                 }
                 else
                 {
@@ -1459,7 +1459,7 @@ if (isAssociativeArray!T && !is(T == enum))
 {
     bool firstTime = true;
     auto vf = f;
-    foreach (ref k, v; val)
+    foreach (k, ref v; val)
     {
         if (firstTime) firstTime = false;
         else put(w, ' ');
@@ -2256,7 +2256,7 @@ private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
             if (input.front == '+' || input.front == '-') input.popFront();
             goto case 'u';
         case 'u':
-            while (!input.empty && isdigit(input.front)) input.popFront;
+            while (!input.empty && isDigit(input.front)) input.popFront;
             break;
         default:
             assert(false,

@@ -2087,7 +2087,7 @@ abstract class EncodingScheme
             throw new EncodingException("Unable to create class "~className);
         foreach(encodingName;scheme.names())
         {
-            supported[tolower(encodingName)] = className;
+            supported[toLower(encodingName)] = className;
         }
     }
 
@@ -2105,7 +2105,7 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = std.string.tolower(encodingName) in supported;
+        auto p = std.string.toLower(encodingName) in supported;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;

@@ -104,7 +104,7 @@ import core.stdc.stdlib;
 import core.stdc.string;
 import std.stdio;
 import std.string;
-import std.ctype;
+import std.ascii;
 import std.outbuffer;
 import std.bitmanip;
 import std.utf;
@@ -631,7 +631,7 @@ Returns the number of parenthesized captures
         case '{':       // {n} {n,} {n,m}
             p++;
 
-            if (p == plength || !isdigit(pattern[p]))
+            if (p == plength || !isDigit(pattern[p]))
                 error("badly formed {n,m}");
             auto src = pattern[p..$];
             n = parse!uint(src);
@@ -651,7 +651,7 @@ Returns the number of parenthesized captures
                 m = inf;
                 break;
             }
-            if (!isdigit(pattern[p]))
+            if (!isDigit(pattern[p]))
                 error("badly formed {n,m}");
             src = pattern[p..$];
             m = parse!uint(src);
@@ -833,10 +833,10 @@ Returns the number of parenthesized captures
             op = REchar;
             if (attributes & REA.ignoreCase)
             {
-                if (isalpha(c))
+                if (isAlpha(c))
                 {
                     op = REichar;
-                    c = cast(char)std.ctype.toupper(c);
+                    c = cast(char)std.ascii.toUpper(c);
                 }
             }
             if (op == REchar && c <= 0xFF)
@@ -1037,13 +1037,13 @@ Returns the number of parenthesized captures
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isspace(i))
+                        if (isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isspace(i))
+                        if (!isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -1274,7 +1274,7 @@ Returns the number of parenthesized captures
     }
 
 // BUG: should this include '$'?
-    private int isword(dchar c) { return isalnum(c) || c == '_'; }
+    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
 
     void printProgram(const(ubyte)[] prog = null)
     {
@@ -1918,7 +1918,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         if (engine.program[0] == engine.REchar)
         {
             firstc = engine.program[1];
-            if (engine.attributes & engine.REA.ignoreCase && isalpha(firstc))
+            if (engine.attributes & engine.REA.ignoreCase && isAlpha(firstc))
                 firstc = 0;
         }
         ubyte* pmemory = cast(ubyte *)alloca(stackSize);
@@ -2001,8 +2001,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
             {
                 if (j == b.length) return i != a.length;
                 if (i == a.length) return -1;
-                immutable x = std.uni.toUniLower(a[i]),
-                    y = std.uni.toUniLower(b[j]);
+                immutable x = std.uni.toLower(a[i]),
+                    y = std.uni.toLower(b[j]);
                 if (x == y) continue;
                 return x - y;
             }
@@ -2119,8 +2119,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                    if (isLower(cast(E) c2))
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2150,8 +2150,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                    if (isLower(cast(E) c2))
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2490,7 +2490,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isdigit(input[src]))
+                if (!isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2500,7 +2500,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isdigit(input[src]))
+                if (isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2510,7 +2510,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isspace(input[src]))
+                if (!isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2520,7 +2520,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isspace(input[src]))
+                if (isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2922,7 +2922,7 @@ Capitalize the letters 'a' and 'r':
 ---
 string baz(RegexMatch!(string) m)
 {
-    return std.string.toupper(m.hit);
+    return std.string.toUpper(m.hit);
 }
 auto s = replace!(baz)("Strap a rocket engine on a chicken.",
         regex("[ar]", "g"));
@@ -2997,7 +2997,7 @@ unittest
 
     string baz(RegexMatch!(string) m)
     {
-        return std.string.toupper(m.hit);
+        return std.string.toUpper(m.hit);
     }
     auto s = replace!(baz)("Strap a rocket engine on a chicken.",
             regex("[ar]", "g"));
@@ -3386,7 +3386,7 @@ unittest
                 {
                     case '\\':
                         fmt.popFront();
-                        if (!isdigit(fmt.front) )
+                        if (!isDigit(fmt.front) )
                         {
                             result ~= fmt.front;
                             fmt.popFront();
