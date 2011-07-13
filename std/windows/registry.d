@@ -34,7 +34,6 @@
  * ////////////////////////////////////////////////////////////////////////// */
 
 
-
 /** \file std/windows/registry.d This file contains
  * the \c std.windows.registry.* classes
  */
@@ -49,26 +48,19 @@ pragma(lib, "advapi32.lib");
  * Imports
  */
 
-//import std.windows.error_codes;
-//import std.windows.types;
+private import core.bitop : bswap;
+private import std.array : join, split;
 private import std.string;
+private import std.windows.syserror;
 private import std.c.windows.windows;
-import std.c.stdio;
-//private import std.windows.exceptions;
+private import std.utf : toUTF16z;
+private import std.system;
+import std.c.stdio : printf;
 import std.conv;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
  +/
-
-version(LittleEndian)
-{
-    private const int Endian_Ambient =   1;
-}
-version(BigEndian)
-{
-    private const int Endian_Ambient =   2;
-}
 
 class Win32Exception : Exception
 {
@@ -86,117 +78,6 @@ class Win32Exception : Exception
     }
 }
 
-/// An enumeration representing byte-ordering (Endian) strategies
-public enum Endian
-{
-        Unknown =   0                   //!< Unknown endian-ness. Indicates an error
-    ,   Little  =   1                   //!< Little endian architecture
-    ,   Big     =   2                   //!< Big endian architecture
-    ,   Middle  =   3                   //!< Middle endian architecture
-    ,   ByteSex =   4
-    ,   Ambient =   Endian_Ambient      //!< The ambient architecture, e.g. equivalent to Big on big-endian architectures.
-/+ ++++ The compiler does not support this, due to deficiencies in the version() mechanism ++++
-  version(LittleEndian)
-  {
-    ,   Ambient =   Little
-  }
-  version(BigEndian)
-  {
-    ,   Ambient =   Big
-  }
-+/
-}
-/+
- +/
-
-
-//import synsoft.win32.types;
-/+ + These are borrowed from synsoft.win32.types for the moment, but will not be
- + needed once I've convinced Walter to use strong typedefs for things like HKEY +
- +/
-private typedef uint Reserved;
-
-//import synsoft.text.token;
-/+ ++++++ This is borrowed from synsoft.text.token, until such time as something
- + similar is in Phobos ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- +/
-string[] tokenise(string source, char delimiter, bool bElideBlanks, bool bZeroTerminate)
-{
-    int         i;
-    int         cDelimiters =   128;
-    string[]   tokens      =   new string[cDelimiters];
-    int         start;
-    int         begin;
-    int         cTokens;
-
-    /// Ensures that the tokens array is big enough
-    void ensure_length()
-    {
-        if(!(cTokens < tokens.length))
-        {
-            tokens.length = tokens.length * 2;
-        }
-    }
-
-    if(bElideBlanks)
-    {
-        for(start = 0, begin = 0, cTokens = 0; begin < source.length; ++begin)
-        {
-            if(source[begin] == delimiter)
-            {
-                if(start < begin)
-                {
-                    ensure_length();
-
-                    tokens[cTokens++]   =   source[start .. begin];
-                }
-
-                start = begin + 1;
-            }
-        }
-
-        if(start < begin)
-        {
-            ensure_length();
-
-            tokens[cTokens++]   =   source[start .. begin];
-        }
-    }
-    else
-    {
-        for(start = 0, begin = 0, cTokens = 0; begin < source.length; ++begin)
-        {
-            if(source[begin] == delimiter)
-            {
-                ensure_length();
-
-                tokens[cTokens++]   =   source[start .. begin];
-
-                start = begin + 1;
-            }
-        }
-
-        ensure_length();
-
-        tokens[cTokens++]   =   source[start .. begin];
-    }
-
-    tokens.length = cTokens;
-
-    if(bZeroTerminate)
-    {
-        for(i = 0; i < tokens.length; ++i)
-        {
-            tokens[i] ~= cast(char)0;
-        }
-    }
-
-    return tokens;
-}
-/+
- +/
-
-
 /* ////////////////////////////////////////////////////////////////////////// */
 
 /// \defgroup group_std_windows_reg std.windows.registry
@@ -207,26 +88,24 @@ string[] tokenise(string source, char delimiter, bool bElideBlanks, bool bZeroTe
  * Private constants
  */
 
-private const DWORD DELETE                      =   0x00010000L;
-private const DWORD READ_CONTROL                =   0x00020000L;
-private const DWORD WRITE_DAC                   =   0x00040000L;
-private const DWORD WRITE_OWNER                 =   0x00080000L;
-private const DWORD SYNCHRONIZE                 =   0x00100000L;
+private const DWORD DELETE                      =   0x0001_0000L;
+private const DWORD READ_CONTROL                =   0x0002_0000L;
+private const DWORD WRITE_DAC                   =   0x0004_0000L;
+private const DWORD WRITE_OWNER                 =   0x0008_0000L;
+private const DWORD SYNCHRONIZE                 =   0x0010_0000L;
 
-private const DWORD STANDARD_RIGHTS_REQUIRED    =   0x000F0000L;
+private const DWORD STANDARD_RIGHTS_REQUIRED    =   0x000F_0000L;
 
-private const DWORD STANDARD_RIGHTS_READ        =   0x00020000L/* READ_CONTROL */;
-private const DWORD STANDARD_RIGHTS_WRITE       =   0x00020000L/* READ_CONTROL */;
-private const DWORD STANDARD_RIGHTS_EXECUTE     =   0x00020000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_READ        =   0x0002_0000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_WRITE       =   0x0002_0000L/* READ_CONTROL */;
+private const DWORD STANDARD_RIGHTS_EXECUTE     =   0x0002_0000L/* READ_CONTROL */;
 
-private const DWORD STANDARD_RIGHTS_ALL         =   0x001F0000L;
+private const DWORD STANDARD_RIGHTS_ALL         =   0x001F_0000L;
 
-private const DWORD SPECIFIC_RIGHTS_ALL         =   0x0000FFFFL;
+private const DWORD SPECIFIC_RIGHTS_ALL         =   0x0000_FFFFL;
 
-private const Reserved  RESERVED                =   cast(Reserved)0;
-
-private const DWORD REG_CREATED_NEW_KEY     =   0x00000001;
-private const DWORD REG_OPENED_EXISTING_KEY =   0x00000002;
+private const DWORD REG_CREATED_NEW_KEY     =   0x0000_0001;
+private const DWORD REG_OPENED_EXISTING_KEY =   0x0000_0002;
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Public enumerations
@@ -290,54 +169,26 @@ public enum REG_VALUE_TYPE
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
- * External function declarations
- */
-
-private extern (Windows)
-{
-    LONG    RegCreateKeyExA(in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in Reserved , in DWORD dwOptions
-                        ,   in REGSAM samDesired
-                        ,   in LPSECURITY_ATTRIBUTES lpsa
-                        ,   out HKEY hkeyResult, out DWORD disposition);
-    LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in REGSAM samDesired, out HKEY hkeyResult);
-    LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
-                            ,   out REG_VALUE_TYPE type, in void *lpData
-                            ,   ref DWORD cbData);
-    LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-                        ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
-                        ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
-    LONG    RegEnumValueA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpValueName
-                        ,   ref DWORD cchValueName, in Reserved
-                        ,   in LPDWORD lpType, in void *lpData
-                        ,   in LPDWORD lpcbData);
-    LONG    RegQueryInfoKeyA(   in HKEY hkey, in LPSTR lpClass
-                            ,   in LPDWORD lpcClass, in Reserved
-                            ,   in LPDWORD lpcSubKeys
-                            ,   in LPDWORD lpcMaxSubKeyLen
-                            ,   in LPDWORD lpcMaxClassLen, in LPDWORD lpcValues
-                            ,   in LPDWORD lpcMaxValueNameLen
-                            ,   in LPDWORD lpcMaxValueLen
-                            ,   in LPDWORD lpcbSecurityDescriptor
-                            ,   in FILETIME *lpftLastWriteTime);
-    LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved
-                        ,   in REG_VALUE_TYPE type, in LPCVOID lpData
-                        ,   in DWORD cbData);
-}
-
-/* /////////////////////////////////////////////////////////////////////////////
  * Private utility functions
  */
 
+private uint sysEnforce(uint errcode)
+{
+    if (errcode != ERROR_SUCCESS && errcode != ERROR_NO_MORE_ITEMS)
+    {
+        throw new RegistryException(sysErrorString(errcode), errcode);
+    }
+    return errcode;
+}
+
 private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
-    switch(endian)
+    switch (endian)
     {
-        case    Endian.Big:
+        case Endian.BigEndian:
             return REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN;
 
-        case    Endian.Little:
+        case Endian.LittleEndian:
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
 
         default:
@@ -345,527 +196,403 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
     }
 }
 
-private uint swap(in uint i)
-{
-    version(X86)
-    {
-        asm
-        {    naked;
-             bswap EAX ;
-             ret ;
-        }
-    }
-    else
-    {
-        uint    v_swap  =   (i & 0xff) << 24
-                        |   (i & 0xff00) << 8
-                        |   (i >> 8) & 0xff00
-                        |   (i >> 24) & 0xff;
-
-        return v_swap;
-    }
-}
-
-/+
-private string expand_environment_strings(in string value)
-in
-{
-    assert(!(null is value));
-}
-body
-{
-    LPCSTR  lpSrc       =   toStringz(value);
-    DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
-    char[]  newValue    =   new char[cchRequired];
-
-    if(!ExpandEnvironmentStringsA(lpSrc, newValue, newValue.length))
-    {
-        throw new Win32Exception("Failed to expand environment variables");
-    }
-
-    return newValue;
-}
-+/
-
 /* /////////////////////////////////////////////////////////////////////////////
  * Translation of the raw APIs:
  *
- * - translating char[] to char*
+ * - translating string to char*
  * - removing the reserved arguments.
+ * - checking all return values
  */
 
-private LONG Reg_CloseKey_(in HKEY hkey)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    /* No need to attempt to close any of the standard hive keys.
-     * Although it's documented that calling RegCloseKey() on any of
-     * these hive keys is ignored, we'd rather not trust the Win32
-     * API.
-     */
-    if(cast(uint)hkey & 0x80000000)
-    {
-        switch(cast(uint)hkey)
+private struct HKey {
+	HKEY hkey;
+	
+	private bool isStandardHiveKey()
+	{
+        if (cast(uint)hkey & 0x8000_0000)
         {
-            case    HKEY_CLASSES_ROOT:
-            case    HKEY_CURRENT_USER:
-            case    HKEY_LOCAL_MACHINE:
-            case    HKEY_USERS:
-            case    HKEY_PERFORMANCE_DATA:
-            case    HKEY_PERFORMANCE_TEXT:
-            case    HKEY_PERFORMANCE_NLSTEXT:
-            case    HKEY_CURRENT_CONFIG:
-            case    HKEY_DYN_DATA:
-                return ERROR_SUCCESS;
-            default:
-                /* Do nothing */
+            switch (cast(uint)hkey)
+            {
+                case HKEY_CLASSES_ROOT:
+                case HKEY_CURRENT_USER:
+                case HKEY_LOCAL_MACHINE:
+                case HKEY_USERS:
+                case HKEY_PERFORMANCE_DATA:
+                case HKEY_PERFORMANCE_TEXT:
+                case HKEY_PERFORMANCE_NLSTEXT:
+                case HKEY_CURRENT_CONFIG:
+                case HKEY_DYN_DATA:
+                    return true;
+                default:
+                    /* Do nothing */
+                    break;
+            }
+        }
+        return false;
+	}
+
+    private void closeKey()
+    {
+        /* No need to attempt to close any of the standard hive keys.
+         * Although it's documented that calling RegCloseKey() on any of
+         * these hive keys is ignored, we'd rather not trust the Win32
+         * API.
+         */
+        if (isStandardHiveKey())
+        {
+            return ;
+        }
+    
+        sysEnforce(RegCloseKey(hkey));
+        hkey = null;
+    }
+    
+    private void flushKey()
+    {
+        sysEnforce(RegFlushKey(hkey));
+    }
+
+    private HKey createKey(in string subKey, in DWORD dwOptions, in REGSAM samDesired, in LPSECURITY_ATTRIBUTES lpsa, out DWORD disposition)
+    in
+    {
+        assert(subKey !is null);
+    }
+    body
+    {
+    	HKEY hkeyResult;
+        sysEnforce(RegCreateKeyExW(hkey, toUTF16z(subKey), 0, null, dwOptions, samDesired, cast(LPSECURITY_ATTRIBUTES) lpsa, &hkeyResult, &disposition));
+        return HKey(hkeyResult);
+    }
+    
+    private void deleteKey(in string subKey)
+    in
+    {
+        assert(subKey !is null);
+    }
+    body
+    {
+        sysEnforce(RegDeleteKeyW(hkey, toUTF16z(subKey)));
+    }
+
+    private void deleteValue(in string valueName)
+    in
+    {
+        assert(valueName !is null);
+    }
+    body
+    {
+        sysEnforce(RegDeleteValueW(hkey, toUTF16z(valueName)));
+    }
+    
+    private HKey dup()
+    {
+        /* Can't duplicate standard keys, but don't need to, so can just return */
+        if (isStandardHiveKey())
+        {
+            return this.dup;
+        }
+    
+        HKEY hkeyDup;
+        sysEnforce(RegOpenKeyW(hkey, null, &hkeyDup));
+        return HKey(hkeyDup);
+    }
+
+    private bool enumKeyName(in DWORD index, out string name)
+    out(result)
+    {
+        assert(!result || name !is null);
+    }
+    body
+    {
+        wchar[] buf = new wchar[256];
+    
+        LONG res;
+        DWORD cchName;
+        // The buffer should be large enough to hold the key.
+        // But the registry limit may change in future, so be prepared.
+        for (;;)
+        {
+        	cchName = buf.length;
+            res = RegEnumKeyExW(hkey, index, buf.ptr, &cchName, null, null, null, null);
+    
+            if (res != ERROR_MORE_DATA)
+            {
                 break;
+            }
+            else
+            {
+                // Now need to increase the size of the buffer and try again
+                buf.length = 2 * buf.length;
+            }
         }
+        
+        sysEnforce(res);
+        
+        name = to!string(buf[0 .. cchName]);
+        return res == ERROR_SUCCESS;
     }
-
-    return RegCloseKey(hkey);
-}
-
-private LONG Reg_FlushKey_(in HKEY hkey)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    return RegFlushKey(hkey);
-}
-
-private LONG Reg_CreateKeyExA_(     in HKEY hkey, in string subKey
-                                ,   in DWORD dwOptions, in REGSAM samDesired
-                                ,   in LPSECURITY_ATTRIBUTES lpsa
-                                ,   out HKEY hkeyResult, out DWORD disposition)
-in
-{
-    assert(!(null is hkey));
-    assert(!(null is subKey));
-}
-body
-{
-    return RegCreateKeyExA( hkey, toStringz(subKey), RESERVED, RESERVED
-                        ,   dwOptions, samDesired, lpsa, hkeyResult
-                        ,   disposition);
-}
-
-private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey)
-in
-{
-    assert(!(null is hkey));
-    assert(!(null is subKey));
-}
-body
-{
-    return RegDeleteKeyA(hkey, toStringz(subKey));
-}
-
-private LONG Reg_DeleteValueA_(in HKEY hkey, in string valueName)
-in
-{
-    assert(!(null is hkey));
-    assert(!(null is valueName));
-}
-body
-{
-    return RegDeleteValueA(hkey, toStringz(valueName));
-}
-
-private HKEY Reg_Dup_(HKEY hkey)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    /* Can't duplicate standard keys, but don't need to, so can just return */
-    if(cast(uint)hkey & 0x80000000)
+    
+    private bool enumValueName(in DWORD dwIndex, out string name)
+    out(result)
     {
-        switch(cast(uint)hkey)
+        //assert(!result || name !is null);
+    }
+    body
+    {
+        wchar[] buf = new wchar[256];
+    
+        LONG res;
+        DWORD cchName;
+        // A value name may have up to 16,384 characters. In general,
+        // much shorter names are used.
+        for (;;)
         {
-            case    HKEY_CLASSES_ROOT:
-            case    HKEY_CURRENT_USER:
-            case    HKEY_LOCAL_MACHINE:
-            case    HKEY_USERS:
-            case    HKEY_PERFORMANCE_DATA:
-            case    HKEY_PERFORMANCE_TEXT:
-            case    HKEY_PERFORMANCE_NLSTEXT:
-            case    HKEY_CURRENT_CONFIG:
-            case    HKEY_DYN_DATA:
-                return hkey;
-            default:
-                /* Do nothing */
+            cchName = buf.length;
+            res = RegEnumValueW(hkey, dwIndex, buf.ptr, &cchName, null, null, null, null);
+
+            if (res != ERROR_MORE_DATA)
+            {
                 break;
+            }
+            else
+            {
+                // Now need to increase the size of the buffer and try again
+                buf.length = 2 * buf.length;
+            }
         }
+        
+        sysEnforce(res);
+        
+        name = to!string(buf[0 .. cchName]);
+        return res == ERROR_SUCCESS;
     }
-
-    HKEY    hkeyDup;
-    LONG    lRes = RegOpenKeyA(hkey, null, &hkeyDup);
-
-    debug
+    
+    private void getNumSubKeys(out DWORD cSubKeys, out DWORD cchSubKeyMaxLen)
     {
-        if(ERROR_SUCCESS != lRes)
+        sysEnforce(RegQueryInfoKeyW(hkey, null, null, null, &cSubKeys, &cchSubKeyMaxLen, null, null, null, null, null, null));
+    }
+    
+    private void getNumValues(out DWORD cValues, out DWORD cchValueMaxLen)
+    {
+        sysEnforce(RegQueryInfoKeyW(hkey, null, null, null, null, null, null, &cValues, &cchValueMaxLen, null, null, null));
+    }
+    
+    private LONG getValueType(in string name, out REG_VALUE_TYPE type)
+    {
+        DWORD cbData = 0;
+        LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, null, &cbData);
+    
+        if (res == ERROR_MORE_DATA)
         {
-            printf("Reg_Dup_() failed: 0x%08x 0x%08x %d\n", hkey, hkeyDup, lRes);
+            res = ERROR_SUCCESS;
         }
-
-        assert(ERROR_SUCCESS == lRes);
+    
+        return res;
+    }
+    
+    private HKey openKey(in string subKey, in REGSAM samDesired)
+    in
+    {
+        assert(subKey !is null);
+    }
+    body
+    {
+    	HKEY hkeyResult;
+        sysEnforce(RegOpenKeyExW(hkey, toUTF16z(subKey), 0, samDesired, &hkeyResult));
+        return HKey(hkeyResult);
     }
 
-    return (ERROR_SUCCESS == lRes) ? hkeyDup : null;
-}
-
-private LONG Reg_EnumKeyName_(  in HKEY hkey, in DWORD index, ref char [] name
-                            ,   out DWORD cchName)
-in
-{
-    assert(!(null is hkey));
-    assert(!(null is name));
-    assert(0 < name.length);
-}
-body
-{
-    LONG    res;
-
-    // The Registry API lies about the lengths of a very few sub-key lengths
-    // so we have to test to see if it whinges about more data, and provide
-    // more if it does.
-    for(;;)
+    private void queryValue(string name, out string value, out REG_VALUE_TYPE type)
     {
-        cchName = name.length;
-
-        res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
-
-        if(ERROR_MORE_DATA != res)
+        // See bugzilla 961 on this
+        static union U
         {
-            break;
-        }
-        else
+            uint dw;
+            ulong qw;
+        };
+        U u;
+        void *data = &u.qw;
+        DWORD cbData = u.qw.sizeof;
+        LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
+
+        if (res == ERROR_MORE_DATA)
         {
-            // Now need to increase the size of the buffer and try again
-            name.length = 2 * name.length;
+            data = (new byte[cbData]).ptr;
+            res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data, &cbData);
         }
-    }
 
-    return res;
-}
-
-
-private LONG Reg_EnumValueName_(in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-                            ,   ref DWORD cchName)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    return RegEnumValueA(hkey, dwIndex, lpName, cchName, RESERVED, null, null, null);
-}
-
-private LONG Reg_GetNumSubKeys_(in HKEY hkey, out DWORD cSubKeys
-                            ,   out DWORD cchSubKeyMaxLen)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    return RegQueryInfoKeyA(hkey, null, null, RESERVED, &cSubKeys
-                        ,   &cchSubKeyMaxLen, null, null, null, null, null, null);
-}
-
-private LONG Reg_GetNumValues_( in HKEY hkey, out DWORD cValues
-                            ,   out DWORD cchValueMaxLen)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    return RegQueryInfoKeyA(hkey, null, null, RESERVED, null, null, null
-                        ,   &cValues, &cchValueMaxLen, null, null, null);
-}
-
-private LONG Reg_GetValueType_( in HKEY hkey, in string name
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    DWORD   cbData  =   0;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   cast(byte*)0, cbData);
-
-    if(ERROR_MORE_DATA == res)
-    {
-        res = ERROR_SUCCESS;
-    }
-
-    return res;
-}
-
-private LONG Reg_OpenKeyExA_(   in HKEY hkey, in string subKey
-                            ,   in REGSAM samDesired, out HKEY hkeyResult)
-in
-{
-    assert(!(null is hkey));
-    assert(!(null is subKey));
-}
-body
-{
-    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, samDesired, hkeyResult);
-}
-
-private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    // See bugzilla 961 on this
-    union U
-    {
-        uint    dw;
-        ulong   qw;
-    };
-    U       u;
-    void    *data   =   &u.qw;
-    DWORD   cbData  =   U.qw.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED
-                                        ,   type, data, cbData);
-
-    if(ERROR_MORE_DATA == res)
-    {
-        data = (new byte[cbData]).ptr;
-
-        res = RegQueryValueExA( hkey, toStringz(name), RESERVED, type, data
-                            ,   cbData);
-    }
-
-    if(ERROR_SUCCESS != res)
-    {
-        throw new RegistryException("Cannot read the requested value", res);
-    }
-    else
-    {
-        switch(type)
+    	sysEnforce(res);
+        switch (type)
         {
             default:
-            case    REG_VALUE_TYPE.REG_BINARY:
-            case    REG_VALUE_TYPE.REG_MULTI_SZ:
+            case REG_VALUE_TYPE.REG_BINARY:
+            case REG_VALUE_TYPE.REG_MULTI_SZ:
                 throw new RegistryException("Cannot read the given value as a string");
 
-            case    REG_VALUE_TYPE.REG_SZ:
-            case    REG_VALUE_TYPE.REG_EXPAND_SZ:
-                value = to!string(cast(char*)data);
+            case REG_VALUE_TYPE.REG_SZ:
+            case REG_VALUE_TYPE.REG_EXPAND_SZ:
+            	assert(cbData%2 == 0);
+                value = to!string((cast(wchar*)data)[0 .. cbData/2-1]);
                 if (value.ptr == cast(char*)&u.qw)
                     value = value.idup;         // don't point into the stack
                 break;
 version(LittleEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
                 value = to!string(u.dw);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-                value = to!string(swap(u.dw));
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+                value = to!string(bswap(u.dw));
                 break;
 }
 version(BigEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-                value = to!string(swap(u.dw));
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+                value = to!string(bswap(u.dw));
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 value = to!string(u.dw);
                 break;
 }
-            case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
                 value = to!string(u.qw);
                 break;
         }
     }
-}
 
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out string[] value
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    char[]  data    =   new char[256];
-    DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA( hkey, toStringz(name), RESERVED, type
-                                        , data.ptr, cbData);
+    private void queryValue(in string name, out string[] value, out REG_VALUE_TYPE type)
+    {
+        wchar[] data = new wchar[256];
+        DWORD cbData = data.length * wchar.sizeof;
+        LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
 
-    if(ERROR_MORE_DATA == res)
-    {
-        data.length = cbData;
-
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
-    }
-    else if(ERROR_SUCCESS == res)
-    {
-        data.length = cbData;
-    }
-
-    if(ERROR_SUCCESS != res)
-    {
-        throw new RegistryException("Cannot read the requested value", res);
-    }
-    else
-    {
-        switch(type)
+        if (res == ERROR_MORE_DATA)
+        {
+            data.length = cbData / wchar.sizeof;
+            res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
+        }
+        else if (res == ERROR_SUCCESS)
+        {
+            data.length = cbData / wchar.sizeof;
+        }
+        
+        sysEnforce(res);
+    
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
 
-            case    REG_VALUE_TYPE.REG_MULTI_SZ:
+            case REG_VALUE_TYPE.REG_MULTI_SZ:
                 break;
         }
+    
+        // Now need to tokenise it
+        auto last = data.length-1;
+        while (last > 0 && data[last] == cast(wchar) 0) last--;
+        wstring[] wvalue = split(cast(wstring) data[0 .. last+1], "\0");
+        value.length = wvalue.length;
+        foreach (i, ref v; value)
+        {
+        	v = to!string(wvalue[i]);
+        }
     }
-
-    // Now need to tokenise it
-    value = tokenise(cast(string)data, cast(char)0, 1, 0);
-}
-
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out uint value
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   &value, cbData);
-
-    if(ERROR_SUCCESS != res)
+    
+    private void queryValue(in string name, out uint value, out REG_VALUE_TYPE type)
     {
-        throw new RegistryException("Cannot read the requested value", res);
-    }
-    else
-    {
-        switch(type)
+        DWORD cbData = value.sizeof;
+        LONG res = sysEnforce(RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, &value, &cbData));
+    
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 32-bit integer");
 
 version(LittleEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
                 assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
 } // version(LittleEndian)
 version(BigEndian)
 {
-            case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);
                 break;
-            case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
 } // version(BigEndian)
-                value = swap(value);
+                value = bswap(value);
                 break;
         }
     }
-}
-
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out ulong value
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    DWORD   cbData  =   value.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   &value, cbData);
-
-    if(ERROR_SUCCESS != res)
+    
+    private void queryValue(in string name, out ulong value, out REG_VALUE_TYPE type)
     {
-        throw new RegistryException("Cannot read the requested value", res);
-    }
-    else
-    {
-        switch(type)
+        DWORD cbData = value.sizeof;
+        LONG res = sysEnforce(RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, &value, &cbData));
+    
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 64-bit integer");
 
-            case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
+            case REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
                 break;
         }
     }
-}
-
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out byte[] value
-                            ,   out REG_VALUE_TYPE type)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    byte[]  data    =   new byte[100];
-    DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   data.ptr, cbData);
-
-    if(ERROR_MORE_DATA == res)
+    
+    private void queryValue(in string name, out byte[] value, out REG_VALUE_TYPE type)
     {
-        data.length = cbData;
+        byte[] data = new byte[100];
+        DWORD cbData = data.sizeof;
+        LONG res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
+    
+        if (res == ERROR_MORE_DATA)
+        {
+            data.length = cbData;    
+            res = RegQueryValueExW(hkey, toUTF16z(name), null, cast(uint*) &type, data.ptr, &cbData);
+        }
 
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
-    }
+		sysEnforce(res);
 
-    if(ERROR_SUCCESS != res)
-    {
-        throw new RegistryException("Cannot read the requested value", res);
-    }
-    else
-    {
-        switch(type)
+        switch (type)
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
 
-            case    REG_VALUE_TYPE.REG_BINARY:
+            case REG_VALUE_TYPE.REG_BINARY:
                 data.length = cbData;
                 value = data;
                 break;
         }
     }
-}
-
-private void Reg_SetValueExA_(  in HKEY hkey, in string subKey
-                            ,   in REG_VALUE_TYPE type, in LPCVOID lpData
-                            ,   in DWORD cbData)
-in
-{
-    assert(!(null is hkey));
-}
-body
-{
-    LONG    res =   RegSetValueExA( hkey, toStringz(subKey), RESERVED, type
-                                ,   lpData, cbData);
-
-    if(ERROR_SUCCESS != res)
+    
+    private void setValue(in string subKey, in REG_VALUE_TYPE type, in string data)
     {
-        throw new RegistryException("Value cannot be set: \"" ~ subKey ~ "\"", res);
+    	const wchar *lpData = toUTF16z(data);
+    	DWORD cbData = wcslen(lpData)*wchar.sizeof;
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) lpData, cbData));
+    }
+
+    private void setValue(in string subKey, in REG_VALUE_TYPE type, in string[] data)
+    {
+    	wstring[] value = new wstring[data.length+1];
+    	foreach (i, ref s; value)
+    	{
+    		if (i < data.length)
+	   			s = to!wstring(data[i]);
+    		else 
+    			s = "\0";
+    	}
+    	auto all = join!(wstring[],wstring)(value, "\0"w);
+
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) all.ptr, all.length * wchar.sizeof));
+    }
+
+    private void setValue(in string subKey, in REG_VALUE_TYPE type, in LPCVOID lpData, in DWORD cbData)
+    {
+        sysEnforce(RegSetValueExW(hkey, toUTF16z(subKey), 0, cast(uint*) type, cast(LPBYTE) lpData, cbData));
     }
 }
 
@@ -909,9 +636,9 @@ unittest
     // (i) Test that we can throw and catch one by its own type
     try
     {
-        string  message =   "Test 1";
-        int     code    =   3;
-        string  string  =   "Test 1 (3)";
+        string message = "Test 1";
+        int code = 3;
+        string string = "Test 1 (3)";
 
         try
         {
@@ -921,7 +648,7 @@ unittest
         {
             assert(x.error == code);
 /+
-            if(string != x.toString())
+            if (string != x.toString())
             {
                 printf( "UnitTest failure for RegistryException:\n"
                         "  x.message [%d;\"%.*s\"] does not equal [%d;\"%.*s\"]\n"
@@ -948,33 +675,23 @@ unittest
 
 public class Key
 {
-    invariant()
-    {
-        assert(!(null is m_hkey));
-    }
-
 /// \name Construction
 //@{
 private:
-    this(HKEY hkey, string name, bool created)
-    in
+    this(HKey hkey, string name, bool created)
     {
-        assert(!(null is hkey));
-    }
-    body
-    {
-        m_hkey      =   hkey;
-        m_name      =   name;
-        m_created   =   created;
+        m_hkey = hkey;
+        m_name = name;
+        m_created = created;
     }
 
     ~this()
     {
-        Reg_CloseKey_(m_hkey);
+        m_hkey.closeKey();
 
         // Even though this is horried waste-of-cycles programming
         // we're doing it here so that the
-        m_hkey = null;
+        m_hkey = HKey.init;
     }
 //@}
 
@@ -997,14 +714,9 @@ public:
     /// The number of sub keys
     uint keyCount()
     {
-        uint    cSubKeys;
-        uint    cchSubKeyMaxLen;
-        LONG    res =   Reg_GetNumSubKeys_(m_hkey, cSubKeys, cchSubKeyMaxLen);
-
-        if(ERROR_SUCCESS != res)
-        {
-            throw new RegistryException("Number of sub-keys cannot be determined", res);
-        }
+        uint cSubKeys;
+        uint cchSubKeyMaxLen;
+        m_hkey.getNumSubKeys(cSubKeys, cchSubKeyMaxLen);
 
         return cSubKeys;
     }
@@ -1024,14 +736,9 @@ public:
     /// The number of values
     uint valueCount()
     {
-        uint    cValues;
-        uint    cchValueMaxLen;
-        LONG    res =   Reg_GetNumValues_(m_hkey, cValues, cchValueMaxLen);
-
-        if(ERROR_SUCCESS != res)
-        {
-            throw new RegistryException("Number of values cannot be determined", res);
-        }
+        uint cValues;
+        uint cchValueMaxLen;
+        m_hkey.getNumValues(cValues, cchValueMaxLen);
 
         return cValues;
     }
@@ -1059,25 +766,14 @@ public:
     /// \note If the key cannot be created, a RegistryException is thrown.
     Key createKey(string name, REGSAM access)
     {
-        if( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
             throw new RegistryException("Key name is invalid");
         }
         else
         {
-            HKEY    hkey;
-            DWORD   disposition;
-            LONG    lRes    =   Reg_CreateKeyExA_(  m_hkey, name, 0
-                                                ,   REGSAM.KEY_ALL_ACCESS
-                                                ,   null, hkey, disposition);
-
-            if(ERROR_SUCCESS != lRes)
-            {
-                throw new RegistryException("Failed to create requested key: \"" ~ name ~ "\"", lRes);
-            }
-
-            assert(!(null is hkey));
+            DWORD disposition;
+            HKey hkey = m_hkey.createKey(name, 0, access, null, disposition);
 
             // Potential resource leak here!!
             //
@@ -1086,17 +782,15 @@ public:
             // the HKEY there. If the creation of
             try
             {
-                Key key =   new Key(hkey, name, disposition == REG_CREATED_NEW_KEY);
-
-                hkey = null;
-
+                Key key = new Key(hkey, name, disposition == REG_CREATED_NEW_KEY);
+                hkey.hkey = null;
                 return key;
             }
             finally
             {
-                if(hkey != null)
+                if (hkey.hkey !is null)
                 {
-                    Reg_CloseKey_(hkey);
+                    hkey.closeKey();
                 }
             }
         }
@@ -1121,22 +815,13 @@ public:
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     Key getKey(string name, REGSAM access)
     {
-        if( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
-            return new Key(Reg_Dup_(m_hkey), m_name, false);
+            return new Key(m_hkey.dup(), m_name, false);
         }
         else
         {
-            HKEY    hkey;
-            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, REGSAM.KEY_ALL_ACCESS, hkey);
-
-            if(ERROR_SUCCESS != lRes)
-            {
-                throw new RegistryException("Failed to open requested key: \"" ~ name ~ "\"", lRes);
-            }
-
-            assert(!(null is hkey));
+            HKey hkey = m_hkey.openKey(name, access);
 
             // Potential resource leak here!!
             //
@@ -1145,17 +830,15 @@ public:
             // the HKEY there. If the creation of
             try
             {
-                Key key =   new Key(hkey, name, false);
-
-                hkey = null;
-
+                Key key = new Key(hkey, name, false);
+                hkey.hkey = null;
                 return key;
             }
             finally
             {
-                if(hkey != null)
+                if (hkey.hkey !is null)
                 {
-                    Reg_CloseKey_(hkey);
+                    hkey.closeKey();
                 }
             }
         }
@@ -1177,19 +860,13 @@ public:
     /// \param name The name of the key to delete. May not be null
     void deleteKey(string name)
     {
-        if( null is name ||
-            0 == name.length)
+        if (name is null || name.length == 0)
         {
             throw new RegistryException("Key name is invalid");
         }
         else
         {
-            LONG    res =   Reg_DeleteKeyA_(m_hkey, name);
-
-            if(ERROR_SUCCESS != res)
-            {
-                throw new RegistryException("Value cannot be deleted: \"" ~ name ~ "\"", res);
-            }
+            m_hkey.deleteKey(name);
         }
     }
 
@@ -1199,10 +876,10 @@ public:
     /// \return This function never returns null. If a value corresponding to the requested name is not found, a RegistryException is thrown
     Value getValue(string name)
     {
-        REG_VALUE_TYPE  type;
-        LONG            res =   Reg_GetValueType_(m_hkey, name, type);
+        REG_VALUE_TYPE type;
+        LONG res = m_hkey.getValueType(name, type);
 
-        if(ERROR_SUCCESS == res)
+        if (res == ERROR_SUCCESS)
         {
             return new Value(this, name, type);
         }
@@ -1219,7 +896,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, uint value)
     {
-        setValue(name, value, Endian.Ambient);
+        setValue(name, value, endian);
     }
 
     /// Sets the named value with the given 32-bit unsigned integer value, according to the desired byte-ordering
@@ -1230,12 +907,12 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, uint value, Endian endian)
     {
-        REG_VALUE_TYPE  type    =   _RVT_from_Endian(endian);
+        REG_VALUE_TYPE type = _RVT_from_Endian(endian);
 
-        assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
-                type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
+        assert(type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
+               type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
 
-        Reg_SetValueExA_(m_hkey, name, type, &value, value.sizeof);
+        m_hkey.setValue(name, type, &value, value.sizeof);
     }
 
     /// Sets the named value with the given 64-bit unsigned integer value
@@ -1245,7 +922,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, ulong value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
+        m_hkey.setValue(name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
     }
 
     /// Sets the named value with the given string value
@@ -1266,10 +943,8 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, string value, bool asEXPAND_SZ)
     {
-        Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
-                                            ? REG_VALUE_TYPE.REG_EXPAND_SZ
-                                            : REG_VALUE_TYPE.REG_SZ, value.ptr
-                        , value.length);
+        m_hkey.setValue(name, asEXPAND_SZ ? REG_VALUE_TYPE.REG_EXPAND_SZ
+                                          : REG_VALUE_TYPE.REG_SZ, value);
     }
 
     /// Sets the named value with the given multiple-strings value
@@ -1279,33 +954,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, string[] value)
     {
-        int total = 2;
-
-        // Work out the length
-
-        foreach(string s; value)
-        {
-            total += 1 + s.length;
-        }
-
-        // Allocate
-
-        char[]  cs      =   new char[total];
-        int     base    =   0;
-
-        // Slice the individual strings into the new array
-
-        foreach(string s; value)
-        {
-            int top = base + s.length;
-
-            cs[base .. top] = s;
-            cs[top] = 0;
-
-            base = 1 + top;
-        }
-
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
+        m_hkey.setValue(name, REG_VALUE_TYPE.REG_MULTI_SZ, value);
     }
 
     /// Sets the named value with the given binary value
@@ -1315,7 +964,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
+        m_hkey.setValue(name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
     }
 
     /// Deletes the named value
@@ -1324,31 +973,21 @@ public:
     /// \note If a value of the requested name is not found, a RegistryException is thrown
     void deleteValue(string name)
     {
-        LONG    res =   Reg_DeleteValueA_(m_hkey, name);
-
-        if(ERROR_SUCCESS != res)
-        {
-            throw new RegistryException("Value cannot be deleted: \"" ~ name ~ "\"", res);
-        }
+        m_hkey.deleteValue(name);
     }
 
     /// Flushes any changes to the key to disk
     ///
     void flush()
     {
-        LONG    res =   Reg_FlushKey_(m_hkey);
-
-        if(ERROR_SUCCESS != res)
-        {
-            throw new RegistryException("Key cannot be flushed", res);
-        }
+        m_hkey.flushKey();
     }
 //@}
 
 /// \name Members
 //@{
 private:
-    HKEY    m_hkey;
+    HKey m_hkey;
     string m_name;
     bool m_created;
 //@}
@@ -1365,20 +1004,20 @@ public class Value
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 private:
     this(Key key, string name, REG_VALUE_TYPE type)
     in
     {
-        assert(!(key is null));
+        assert(key !is null);
     }
     body
     {
-        m_key   =   key;
-        m_type  =   type;
-        m_name  =   name;
+        m_key = key;
+        m_type = type;
+        m_name = name;
     }
 
 /// \name Attributes
@@ -1405,12 +1044,12 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_SZ, REG_EXPAND_SZ, REG_DWORD(_*) or REG_QWORD(_*):
     string value_SZ()
     {
-        REG_VALUE_TYPE  type;
-        string          value;
+        REG_VALUE_TYPE type;
+        string value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1425,25 +1064,17 @@ public:
     /// \note This function works with the same value-types as Value_SZ().
     string value_EXPAND_SZ()
     {
-        string  value   =   value_SZ;
+        string value = value_SZ;
+        LPCWSTR lpSrc = toUTF16z(value);
+        DWORD cchRequired = ExpandEnvironmentStringsW(lpSrc, null, 0);
+        wchar[] newValue = new wchar[cchRequired];
 
-/+
-        value = expand_environment_strings(value);
-
-        return value;
- +/
-        // ExpandEnvironemntStrings():
-        //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
-        LPCSTR  lpSrc       =   toStringz(value);
-        DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
-        char[]  newValue    =   new char[cchRequired];
-
-        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, newValue.length))
+        if (!ExpandEnvironmentStringsW(lpSrc, newValue.ptr, newValue.length))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }
 
-        return to!string(newValue.ptr); // remove trailing 0
+        return to!string(newValue[0 .. $-1]); // remove trailing 0
     }
 
     /// Obtains the current value as an array of strings
@@ -1452,12 +1083,12 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_MULTI_SZ
     string[] value_MULTI_SZ()
     {
-        REG_VALUE_TYPE  type;
-        string[]        value;
+        REG_VALUE_TYPE type;
+        string[] value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1471,12 +1102,12 @@ public:
     /// \note An exception is thrown for all types other than REG_DWORD, REG_DWORD_LITTLE_ENDIAN and REG_DWORD_BIG_ENDIAN.
     uint value_DWORD()
     {
-        REG_VALUE_TYPE  type;
-        uint            value;
+        REG_VALUE_TYPE type;
+        uint value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1500,12 +1131,12 @@ public:
     /// \note Throws a RegistryException if the type of the value is not REG_QWORD
     ulong value_QWORD()
     {
-        REG_VALUE_TYPE  type;
-        ulong           value;
+        REG_VALUE_TYPE type;
+        ulong value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1522,14 +1153,14 @@ public:
     ///
     /// \return The contents of the value
     /// \note Throws a RegistryException if the type of the value is not REG_BINARY
-    byte[]  value_BINARY()
+    byte[] value_BINARY()
     {
-        REG_VALUE_TYPE  type;
-        byte[]          value;
+        REG_VALUE_TYPE type;
+        byte[] value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        m_key.m_hkey.queryValue(m_name, value, type);
 
-        if(type != m_type)
+        if (type != m_type)
         {
             throw new RegistryException("Value type has been changed since the value was acquired");
         }
@@ -1541,9 +1172,9 @@ public:
 /// \name Members
 //@{
 private:
-    Key             m_key;
-    REG_VALUE_TYPE  m_type;
-    string         m_name;
+    Key m_key;
+    REG_VALUE_TYPE m_type;
+    string m_name;
 //@}
 }
 
@@ -1559,19 +1190,19 @@ public class Registry
 private:
     shared static this()
     {
-        sm_keyClassesRoot       = new Key(  Reg_Dup_(HKEY_CLASSES_ROOT)
+        sm_keyClassesRoot       = new Key(  HKey(HKEY_CLASSES_ROOT)
                                         ,   "HKEY_CLASSES_ROOT", false);
-        sm_keyCurrentUser       = new Key(  Reg_Dup_(HKEY_CURRENT_USER)
+        sm_keyCurrentUser       = new Key(  HKey(HKEY_CURRENT_USER)
                                         ,   "HKEY_CURRENT_USER", false);
-        sm_keyLocalMachine      = new Key(  Reg_Dup_(HKEY_LOCAL_MACHINE)
+        sm_keyLocalMachine      = new Key(  HKey(HKEY_LOCAL_MACHINE)
                                         ,   "HKEY_LOCAL_MACHINE", false);
-        sm_keyUsers             = new Key(  Reg_Dup_(HKEY_USERS)
+        sm_keyUsers             = new Key(  HKey(HKEY_USERS)
                                         ,   "HKEY_USERS", false);
-        sm_keyPerformanceData   = new Key(  Reg_Dup_(HKEY_PERFORMANCE_DATA)
+        sm_keyPerformanceData   = new Key(  HKey(HKEY_PERFORMANCE_DATA)
                                         ,   "HKEY_PERFORMANCE_DATA", false);
-        sm_keyCurrentConfig     = new Key(  Reg_Dup_(HKEY_CURRENT_CONFIG)
+        sm_keyCurrentConfig     = new Key(  HKey(HKEY_CURRENT_CONFIG)
                                         ,   "HKEY_CURRENT_CONFIG", false);
-        sm_keyDynData           = new Key(  Reg_Dup_(HKEY_DYN_DATA)
+        sm_keyDynData           = new Key(  HKey(HKEY_DYN_DATA)
                                         ,   "HKEY_DYN_DATA", false);
     }
 
@@ -1618,7 +1249,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] kName; key.SubKeys)</code>
+/// <code>&nbsp;&nbsp;foreach (char[] kName; key.SubKeys)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1634,7 +1265,7 @@ public class KeyNameSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1660,25 +1291,12 @@ public:
     /// \note Throws a RegistryException if no corresponding key is retrieved
     string getKeyName(uint index)
     {
-        DWORD   cSubKeys;
-        DWORD   cchSubKeyMaxLen;
-        HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
-        char[]  sName   =   new char[1 + cchSubKeyMaxLen];
-        DWORD   cchName;
-
-        assert(ERROR_SUCCESS == res);
-
-        res = Reg_EnumKeyName_(hkey, index, sName, cchName);
-
-        assert(ERROR_MORE_DATA != res);
-
-        if(ERROR_SUCCESS != res)
-        {
-            throw new RegistryException("Invalid key", res);
+        HKey hkey = m_key.m_hkey;
+        string name;
+        if (!hkey.enumKeyName(index, name)) {
+            throw new RegistryException(sysErrorString(ERROR_NO_MORE_ITEMS), ERROR_NO_MORE_ITEMS);
         }
-
-        return cast(string)sName[0 .. cchName];
+        return name;
     }
 
     /// The name of the key at the given index
@@ -1695,37 +1313,20 @@ public:
 public:
     int opApply(scope int delegate(ref string name) dg)
     {
-        int     result  =   0;
-        HKEY    hkey    =   m_key.m_hkey;
-        DWORD   cSubKeys;
-        DWORD   cchSubKeyMaxLen;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
-        char[]  sName   =   new char[1 + cchSubKeyMaxLen];
+        int result = 0;
+        HKey hkey = m_key.m_hkey;
 
-        assert(ERROR_SUCCESS == res);
-
-        for(DWORD index = 0; 0 == result; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
-            DWORD   cchName;
-
-            res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
-            assert(ERROR_MORE_DATA != res);
-
-            if(ERROR_NO_MORE_ITEMS == res)
+            string name;
+            if (hkey.enumKeyName(index, name))
             {
-                // Enumeration complete
-
-                break;
-            }
-            else if(ERROR_SUCCESS == res)
-            {
-                string name = cast(string)sName[0 .. cchName];
-
                 result = dg(name);
             }
             else
             {
-                throw new RegistryException("Key name enumeration incomplete", res);
+                // Enumeration complete
+                break;
             }
         }
 
@@ -1749,7 +1350,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(Key k; key.SubKeys)</code>
+/// <code>&nbsp;&nbsp;foreach (Key k; key.SubKeys)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1765,7 +1366,7 @@ public class KeySequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1791,25 +1392,14 @@ public:
     /// \note Throws a RegistryException if no corresponding key is retrieved
     Key getKey(uint index)
     {
-        DWORD   cSubKeys;
-        DWORD   cchSubKeyMaxLen;
-        HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
-        char[]  sName   =   new char[1 + cchSubKeyMaxLen];
-        DWORD   cchName;
-
-        assert(ERROR_SUCCESS == res);
-
-        res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
-
-        assert(ERROR_MORE_DATA != res);
-
-        if(ERROR_SUCCESS != res)
+        HKey hkey = m_key.m_hkey;
+        string name;
+        if (!hkey.enumKeyName(index, name))
         {
-            throw new RegistryException("Invalid key", res);
+            throw new RegistryException(sysErrorString(ERROR_NO_MORE_ITEMS), ERROR_NO_MORE_ITEMS);
         }
 
-        return m_key.getKey(cast(string)sName[0 .. cchName]);
+        return m_key.getKey(name);
     }
 
     /// The key at the given index
@@ -1826,41 +1416,24 @@ public:
 public:
     int opApply(scope int delegate(ref Key key) dg)
     {
-        int         result  =   0;
-        HKEY        hkey    =   m_key.m_hkey;
-        DWORD       cSubKeys;
-        DWORD       cchSubKeyMaxLen;
-        LONG        res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
-        char[]      sName   =   new char[1 + cchSubKeyMaxLen];
+        int result = 0;
+        HKey hkey = m_key.m_hkey;
 
-        assert(ERROR_SUCCESS == res);
-
-        for(DWORD index = 0; 0 == result; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
-            DWORD   cchName;
-
-            res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
-            assert(ERROR_MORE_DATA != res);
-
-            if(ERROR_NO_MORE_ITEMS == res)
-            {
-                // Enumeration complete
-
-                break;
-            }
-            else if(ERROR_SUCCESS == res)
+            string name;
+            if (hkey.enumKeyName(index, name))
             {
                 try
                 {
-                    Key key =   m_key.getKey(sName[0 .. cchName].idup);
-
+                    Key key = m_key.getKey(name);
                     result = dg(key);
                 }
                 catch(RegistryException x)
                 {
                     // Skip inaccessible keys; they are
                     // accessible via the KeyNameSequence
-                    if(x.error == ERROR_ACCESS_DENIED)
+                    if (x.error == ERROR_ACCESS_DENIED)
                     {
                         continue;
                     }
@@ -1870,7 +1443,8 @@ public:
             }
             else
             {
-                throw new RegistryException("Key enumeration incomplete", res);
+                // Enumeration complete
+                break;
             }
         }
 
@@ -1893,7 +1467,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] vName; key.Values)</code>
+/// <code>&nbsp;&nbsp;foreach (char[] vName; key.Values)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -1909,7 +1483,7 @@ public class ValueNameSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -1935,23 +1509,14 @@ public:
     /// \note Throws a RegistryException if no corresponding value is retrieved
     string getValueName(uint index)
     {
-        DWORD   cValues;
-        DWORD   cchValueMaxLen;
-        HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
-        char[]  sName   =   new char[1 + cchValueMaxLen];
-        DWORD   cchName =   1 + cchValueMaxLen;
-
-        assert(ERROR_SUCCESS == res);
-
-        res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
-
-        if(ERROR_SUCCESS != res)
+        HKey hkey = m_key.m_hkey;
+		string name;
+        if (!hkey.enumValueName(index, name))
         {
-            throw new RegistryException("Invalid value", res);
+            throw new RegistryException(sysErrorString(ERROR_NO_MORE_ITEMS), ERROR_NO_MORE_ITEMS);
         }
 
-        return cast(string)sName[0 .. cchName];
+        return name;
     }
 
     /// The name of the value at the given index
@@ -1968,34 +1533,20 @@ public:
 public:
     int opApply(scope int delegate(ref string name) dg)
     {
-        int     result  =   0;
-        HKEY    hkey    =   m_key.m_hkey;
-        DWORD   cValues;
-        DWORD   cchValueMaxLen;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
-        char[]  sName   =   new char[1 + cchValueMaxLen];
+        int result = 0;
+        HKey hkey = m_key.m_hkey;
 
-        assert(ERROR_SUCCESS == res);
-
-        for(DWORD index = 0; 0 == result; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
-            DWORD   cchName =   1 + cchValueMaxLen;
-
-            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
-            if(ERROR_NO_MORE_ITEMS == res)
+			string name;
+            if (hkey.enumValueName(index, name))
             {
-                // Enumeration complete
-                break;
-            }
-            else if(ERROR_SUCCESS == res)
-            {
-                string name = cast(string)sName[0 .. cchName];
-
                 result = dg(name);
             }
             else
             {
-                throw new RegistryException("Value name enumeration incomplete", res);
+                // Enumeration complete
+                break;
             }
         }
 
@@ -2018,7 +1569,7 @@ private:
 /// <br>
 /// <code></code>
 /// <br>
-/// <code>&nbsp;&nbsp;foreach(Value v; key.Values)</code>
+/// <code>&nbsp;&nbsp;foreach (Value v; key.Values)</code>
 /// <br>
 /// <code>&nbsp;&nbsp;{</code>
 /// <br>
@@ -2034,7 +1585,7 @@ public class ValueSequence
 {
     invariant()
     {
-        assert(!(null is m_key));
+        assert(m_key !is null);
     }
 
 /// Construction
@@ -2060,23 +1611,14 @@ public:
     /// \note Throws a RegistryException if no corresponding value is retrieved
     Value getValue(uint index)
     {
-        DWORD   cValues;
-        DWORD   cchValueMaxLen;
-        HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
-        char[]  sName   =   new char[1 + cchValueMaxLen];
-        DWORD   cchName =   1 + cchValueMaxLen;
-
-        assert(ERROR_SUCCESS == res);
-
-        res     =   Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
-
-        if(ERROR_SUCCESS != res)
+        HKey hkey = m_key.m_hkey;
+		string name;
+        if (!hkey.enumValueName(index, name))
         {
-            throw new RegistryException("Invalid value", res);
+            throw new RegistryException(sysErrorString(ERROR_NO_MORE_ITEMS), ERROR_NO_MORE_ITEMS);
         }
 
-        return m_key.getValue(cast(string)sName[0 .. cchName]);
+        return m_key.getValue(name);
     }
 
     /// The value at the given index
@@ -2093,34 +1635,22 @@ public:
 public:
     int opApply(scope int delegate(ref Value value) dg)
     {
-        int     result  =   0;
-        HKEY    hkey    =   m_key.m_hkey;
-        DWORD   cValues;
-        DWORD   cchValueMaxLen;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
-        char[]  sName   =   new char[1 + cchValueMaxLen];
+        int result = 0;
+        HKey hkey = m_key.m_hkey;
 
-        assert(ERROR_SUCCESS == res);
-
-        for(DWORD index = 0; 0 == result; ++index)
+        for (DWORD index = 0; result == 0; ++index)
         {
-            DWORD   cchName =   1 + cchValueMaxLen;
-
-            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
-            if(ERROR_NO_MORE_ITEMS == res)
+			string name;
+            if (hkey.enumValueName(index, name))
             {
-                // Enumeration complete
-                break;
-            }
-            else if(ERROR_SUCCESS == res)
-            {
-                Value value = m_key.getValue(cast(string)sName[0 .. cchName]);
+                Value value = m_key.getValue(name);
 
                 result = dg(value);
             }
             else
             {
-                throw new RegistryException("Value enumeration incomplete", res);
+                // Enumeration complete
+                break;
             }
         }
 
@@ -2136,17 +1666,89 @@ private:
 
 unittest
 {
-    Key HKCR    =   Registry.classesRoot;
-    Key CLSID   =   HKCR.getKey("CLSID");
+    Key HKCR = Registry.classesRoot;
+    Key CLSID = HKCR.getKey("CLSID");
 
-//  foreach(Key key; CLSID.keys) // Still cannot use a property as a freachable quantity without calling the prop function
-    foreach(Key key; CLSID.keys())
+    foreach (Key key; CLSID.keys)
     {
-//      foreach(Value val; key.Values) // Still cannot use a property as a freachable quantity without calling the prop function
-        foreach(Value val; key.values())
+        foreach (Value val; key.values)
         {
         }
     }
+}
+
+unittest
+{
+	// Warning: This unit test writes to the registry.
+	// The test can fail if you don't have sufficient rights
+    Key HKCU = Registry.currentUser;
+    assert(HKCU);
+    
+    // Enumerate all subkeys of key Software
+    Key softwareKey = HKCU.getKey("Software");
+    assert(softwareKey);
+    foreach (Key key; softwareKey.keys)
+    {
+    	//writefln("Key %1$s", key.name());
+    }
+    
+    // Create a new key
+    string unittestKeyName = "Temporary key for a D UnitTest which can be deleted afterwards";
+    Key unittestKey = HKCU.createKey(unittestKeyName); 
+    assert(unittestKey);
+    Key cityKey = unittestKey.createKey("CityCollection using foreign names with umlauts and accents: öäüÖÄÜàáâß");
+    cityKey.setValue("Köln", "Germany");
+    cityKey.setValue("Минск", "Belarus");
+    cityKey.setValue("北京", "China");
+    bool foundCologne, foundMinsk, foundBeijing;
+    foreach (Value v; cityKey.values)
+    {
+    	//writefln("(name,value) = (%1$s,%2$s)", v.name(), v.value_SZ());
+    	if (v.name() == "Köln")
+    	{
+    		foundCologne = true;
+    		assert(v.value_SZ() == "Germany");
+    	}
+    	if (v.name() == "Минск")
+    	{
+    		foundMinsk = true;
+    		assert(v.value_SZ() == "Belarus");
+    	}
+    	if (v.name() == "北京")
+    	{
+    		foundBeijing = true;
+    		assert(v.value_SZ() == "China");
+    	}
+    }
+    assert(foundCologne);
+    assert(foundMinsk);
+    assert(foundBeijing);
+    Key stateKey = unittestKey.createKey("StateCollection");
+    stateKey.setValue("Germany", ["Düsseldorf", "Köln", "Hamburg"]);
+    Value v = stateKey.getValue("Germany");
+    string[] actual = v.value_MULTI_SZ;
+    assert(actual.length == 3);
+    assert(actual[0] == "Düsseldorf");
+    assert(actual[1] == "Köln");
+    assert(actual[2] == "Hamburg");
+
+    Key numberKey = unittestKey.createKey("Number");
+    numberKey.setValue("One", 1);
+    Value one = numberKey.getValue("One");
+    assert(one.value_SZ() == "1");
+    assert(one.value_DWORD() == 1);
+    
+    Key pathKey = unittestKey.createKey("Path");
+    string path = "%windir%\\test";
+    pathKey.setValue("myfile", path, true);
+    assert(pathKey.getValue("myfile").value_EXPAND_SZ() != path);
+
+    // Cleanup
+    unittestKey.deleteKey(pathKey.name());
+    unittestKey.deleteKey(numberKey.name());
+    unittestKey.deleteKey(stateKey.name());
+    unittestKey.deleteKey(cityKey.name());
+    HKCU.deleteKey(unittestKeyName);
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
