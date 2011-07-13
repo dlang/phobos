@@ -1830,7 +1830,7 @@ unittest
         }
     }
 }
-unittest 
+unittest
 {
     auto L = retro(iota(1L, 10L));
     auto s = splitter(L, 5L);
@@ -1906,7 +1906,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         {
             @property bool empty()
             {
-                return _frontLength == size_t.max && _input.empty;
+                return _frontLength == RIndexType.max && _input.empty;
             }
         }
 
@@ -2133,7 +2133,7 @@ if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
 
     return Result(input);
 }
-unittest 
+unittest
 {
     auto L = iota(1L, 10L);
     auto s = splitter(L, [5L, 6L]);
