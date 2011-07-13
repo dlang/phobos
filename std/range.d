@@ -2040,7 +2040,7 @@ unittest
     // immutable int[] immi = [ 1, 2 ];
     // static assert(is(typeof(radial(immi))));
 }
-unittest 
+unittest
 {
     auto LL = iota(1L, 6L);
     auto r = radial(LL);
@@ -3926,14 +3926,14 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         alias back moveBack;
         void popBack() { pastLast -= step; }
         @property auto save() { return this; }
-        Value opIndex(IndexType n)
+        Value opIndex(ulong n)
         {
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + step * n);
         }
         auto opSlice() { return this; }
-        auto opSlice(IndexType lower, IndexType upper)
+        auto opSlice(ulong lower, ulong upper)
         {
             assert(upper >= lower && upper <= this.length);
 
@@ -3990,14 +3990,14 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         alias back moveBack;
         void popBack() { --pastLast; }
         @property auto save() { return this; }
-        Value opIndex(IndexType n)
+        Value opIndex(ulong n)
         {
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + n);
         }
         auto opSlice() { return this; }
-        auto opSlice(IndexType lower, IndexType upper)
+        auto opSlice(ulong lower, ulong upper)
         {
             assert(upper >= lower && upper <= this.length);
 
