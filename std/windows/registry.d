@@ -344,6 +344,11 @@ shared static this()
     advapi32Mutex = new shared(Object)();
 }
 
+shared static ~this()
+{
+    freeAdvapi32();
+}
+
 private {
     immutable bool isWow64;
     shared Object advapi32Mutex;
