@@ -1377,10 +1377,22 @@ dstring toUTF32(in dchar[] s)
     $(RED Warning 1:) If the result of $(D toUTFz) equals $(D str.ptr), then if
     anything alters the character one past the end of $(D str) (which is the
     $(D '\0') character terminating the string), then the string won't be
-    zero-terminated anymore. However, that should only happen when you append to
-    $(D str) and no reallocation takes place or when $(D str) is a slice of a
-    larger array, and you alter the character in the larger array which is one
-    character past the end of $(D str).
+    zero-terminated anymore. The most likely scenarios for that are if you
+    append to $(D str) and no reallocation takes place or when $(D str) is a
+    slice of a larger array, and you alter the character in the larger array
+    which is one character past the end of $(D str). Another case where it could
+    occur would be if you had a mutable character array immediately after
+    $(D str) in memory (for example, if they're member variables in a
+    user-defined type with one declared right after the other) and that
+    character array happened to start with $(D '\0'). Such scenarios will never
+    occur if you immediately use the zero-terminated string after calling
+    $(D toUTFz) and the C function using it doesn't keep a reference to it.
+    Also, they are unlikely to occur even if you save the zero-terminated string
+    (the cases above would be among the few examples of where it could happen).
+    However, if you save the zero-terminate string and want to be absolutely
+    certain that the string stays zero-terminated, then simply append a
+    $(D '\0') to the string and use its $(D ptr) property rather than calling
+    $(D toUTFz).
 
     $(RED Warning 2:) When passing a character pointer to a C function, and the
     C function keeps it around for any reason, make sure that you keep a
@@ -1397,7 +1409,7 @@ auto p5 = toUTFz!(const(wchar)*)("hello world");
 auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 --------------------
   +/
-P toUTFz(P, S)(S str)
+P toUTFz(P, S)(S str) @system
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
        is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
@@ -1435,7 +1447,7 @@ P toUTFz(P, S)(S str)
     }
 }
 
-P toUTFz(P, S)(S str)
+P toUTFz(P, S)(S str) @system
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
        !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
