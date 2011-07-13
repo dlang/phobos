@@ -477,6 +477,9 @@ unittest
     a.front = 4;
     assert(a.front == 4);
     assert(a == [ 4, 2 ]);
+
+    immutable b = [ 1, 2 ];
+    assert(b.front == 1);
 }
 
 /**
@@ -506,6 +509,9 @@ unittest
     assert(a.back == 3);
     a.back += 4;
     assert(a.back == 7);
+
+    immutable b = [ 1, 2, 3 ];
+    assert(b.back == 3);
 }
 
 // Specialization for strings
@@ -546,17 +552,29 @@ T[] overlap(T)(T[] r1, T[] r2) @trusted pure nothrow
 
 unittest
 {
+    static void test(L, R)(L l, R r)
+    {
+        scope(failure) writeln("Types: L %s  R %s", L.stringof, R.stringof);
+
+        assert(overlap(l, r) == [ 100, 12 ]);
+
+        assert(overlap(l, l[0 .. 2]) is l[0 .. 2]);
+        assert(overlap(l, l[3 .. 5]) is l[3 .. 5]);
+        assert(overlap(l[0 .. 2], l) is l[0 .. 2]);
+        assert(overlap(l[3 .. 5], l) is l[3 .. 5]);
+    }
+
     int[] a = [ 10, 11, 12, 13, 14 ];
     int[] b = a[1 .. 3];
     a[1] = 100;
-    assert(overlap(a, b) == [ 100, 12 ]);
 
-    assert(overlap(a, a[0 .. 2]) is a[0 .. 2]);
-    assert(overlap(a, a[3 .. 5]) is a[3 .. 5]);
-    assert(overlap(a[0 .. 2], a) is a[0 .. 2]);
-    assert(overlap(a[3 .. 5], a) is a[3 .. 5]);
+    immutable int[] c = a.idup;
+    immutable int[] d = c[1 .. 3];
 
+    test(a, b);
     assert(overlap(a, b.dup).empty);
+    test(c, d);
+    assert(overlap(c, d.idup).empty);
 }
 
 /+
@@ -938,18 +956,38 @@ pure bool sameHead(T)(in T[] lhs, in T[] rhs)
     return lhs.ptr == rhs.ptr;
 }
 
+unittest
+{
+    foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    {
+        T a = [1, 2, 3, 4, 5];
+        T b = a;
+        T c = a[1 .. $];
+        T d = a[0 .. 1];
+        T e = null;
+
+        assert(sameHead(a, a));
+        assert(sameHead(a, b));
+        assert(!sameHead(a, c));
+        assert(sameHead(a, d));
+        assert(!sameHead(a, e));
+    }
+}
+
 /********************************************
 Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
 returns a new array. For a lazy version, refer to $(XREF range, repeat).
  */
-S replicate(S)(S s, size_t n) if (isDynamicArray!S)
+ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
+    alias ElementEncodingType!S[] RetType;
+
     // Optimization for return join(std.range.repeat(s, n));
     if (n == 0)
-        return S.init;
+        return RetType.init;
     if (n == 1)
-        return s;
+        return cast(RetType) s;
     auto r = new Unqual!(typeof(s[0]))[n * s.length];
     if (s.length == 1)
         r[] = s[0];
@@ -961,7 +999,7 @@ S replicate(S)(S s, size_t n) if (isDynamicArray!S)
             r[i .. i + len] = s[];
         }
     }
-    return cast(S) r;
+    return cast(RetType) r;
 }
 
 ElementType!S[] replicate(S)(S s, size_t n)
@@ -977,11 +1015,14 @@ unittest
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
+        immutable S t = "abc";
 
+        assert(replicate(to!S("1234"), 0) is null);
         assert(replicate(to!S("1234"), 0) is null);
         assert(replicate(to!S("1234"), 1) == "1234");
         assert(replicate(to!S("1234"), 2) == "12341234");
         assert(replicate(to!S("1"), 4) == "1111");
+        assert(replicate(t, 3) == "abcabcabc");
         assert(replicate(cast(S) null, 4) is null);
     }
 }
@@ -1029,6 +1070,9 @@ unittest
         S s = " \t\npeter paul\tjerry \n";
         assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
+
+    immutable string s = " \t\npeter paul\tjerry \n";
+    assert(equal(split(s), ["peter", "paul", "jerry"]));
 }
 
 /**
@@ -1041,17 +1085,24 @@ auto a = " a     bcd   ef gh ";
 assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 ----
  */
-auto splitter(String)(String s) if (isSomeString!String)
+auto splitter(C)(C[] s)
+    if(isSomeString!(C[]))
 {
     return std.algorithm.splitter!(std.uni.isWhite)(s);
 }
 
 unittest
 {
-    auto a = " a     bcd   ef gh ";
-    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
-    a = "";
-    assert(splitter(a).empty);
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        S a = " a     bcd   ef gh ";
+        assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
+        a = "";
+        assert(splitter(a).empty);
+    }
+
+    immutable string s = " a     bcd   ef gh ";
+    assert(equal(splitter(s), ["", "a", "bcd", "ef", "gh"][]));
 }
 
 /**************************************
@@ -1075,63 +1126,48 @@ unittest
     foreach (S; TypeTuple!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
-                    const(char)[], const(wchar)[], const(dchar)[]))
+                    const(char)[], const(wchar)[], const(dchar)[],
+                    const(char[]), immutable(char[])))
     {
         S s = to!S(",peter,paul,jerry,");
-        int i;
 
         auto words = split(s, ",");
         assert(words.length == 5, text(words.length));
-        i = cmp(words[0], "");
-        assert(i == 0);
-        i = cmp(words[1], "peter");
-        assert(i == 0);
-        i = cmp(words[2], "paul");
-        assert(i == 0);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-        i = cmp(words[4], "");
-        assert(i == 0);
+        assert(cmp(words[0], "") == 0);
+        assert(cmp(words[1], "peter") == 0);
+        assert(cmp(words[2], "paul") == 0);
+        assert(cmp(words[3], "jerry") == 0);
+        assert(cmp(words[4], "") == 0);
 
         auto s1 = s[0 .. s.length - 1];   // lop off trailing ','
         words = split(s1, ",");
         assert(words.length == 4);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
+        assert(cmp(words[3], "jerry") == 0);
 
         auto s2 = s1[1 .. s1.length];   // lop off leading ','
         words = split(s2, ",");
         assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
+        assert(cmp(words[0], "peter") == 0);
 
         auto s3 = to!S(",,peter,,paul,,jerry,,");
 
         words = split(s3, ",,");
-        //printf("words.length = %d\n", words.length);
         assert(words.length == 5);
-        i = cmp(words[0], "");
-        assert(i == 0);
-        i = cmp(words[1], "peter");
-        assert(i == 0);
-        i = cmp(words[2], "paul");
-        assert(i == 0);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-        i = cmp(words[4], "");
-        assert(i == 0);
+        assert(cmp(words[0], "") == 0);
+        assert(cmp(words[1], "peter") == 0);
+        assert(cmp(words[2], "paul") == 0);
+        assert(cmp(words[3], "jerry") == 0);
+        assert(cmp(words[4], "") == 0);
 
         auto s4 = s3[0 .. s3.length - 2];    // lop off trailing ',,'
         words = split(s4, ",,");
         assert(words.length == 4);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
+        assert(cmp(words[3], "jerry") == 0);
 
         auto s5 = s4[2 .. s4.length];    // lop off leading ',,'
         words = split(s5, ",,");
         assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
+        assert(cmp(words[0], "peter") == 0);
     }
 }
 
@@ -1187,16 +1223,11 @@ unittest
     string word2 = "paul";
     string word3 = "jerry";
     string[3] words;
-    string r;
-    int i;
 
     words[0] = word1;
     words[1] = word2;
     words[2] = word3;
-    r = join(words[], ",");
-    i = cmp(r, "peter,paul,jerry");
-    assert(i == 0, text(i));
-
+    assert(cmp(join(words[], ","), "peter,paul,jerry") == 0);
     assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
 }
@@ -1205,12 +1236,12 @@ unittest
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
     array without changing the contents of $(D subject).
  +/
-R1 replace(R1, R2, R3)(R1 subject, R2 from, R3 to)
-if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
-        && (hasLength!R3 || isSomeString!R3))
+E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
+if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
+        && (hasLength!R2 || isSomeString!R2))
 {
     if (from.empty) return subject;
-    auto app = appender!R1();
+    auto app = appender!(E[])();
 
     for (;;)
     {
@@ -1254,6 +1285,9 @@ unittest
 
         assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
     }
+
+    immutable s = "This is a foo foo list";
+    assert(replace(s, "foo", "silly") == "This is a silly silly list");
 }
 
 /+
@@ -1513,8 +1547,8 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
     Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
     new array without changing the contents of $(D subject).
  +/
-R1 replaceFirst(R1, R2, R3)(R1 subject, R2 from, R3 to)
-if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
+E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
+if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
 {
     if (from.empty) return subject;
     auto balance = std.algorithm.find(subject, from.save);
@@ -1531,26 +1565,22 @@ unittest
 {
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-
-    foreach (S; TestTypes)
+    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+                          const(char[]), immutable(char[])))
     {
+        alias Unqual!S T;
+
         auto s = to!S("This is a foo foo list");
-        auto from = to!S("foo");
-        auto into = to!S("silly");
-        S r;
-        int i;
+        auto from = to!T("foo");
+        auto into = to!T("silly");
 
-        r = replace(s, from, into);
-        i = cmp(r, "This is a silly silly list");
-        assert(i == 0);
+        S r1 = replace(s, from, into);
+        assert(cmp(r1, "This is a silly silly list") == 0);
 
-        r = replace(s, to!S(""), into);
-        i = cmp(r, "This is a foo foo list");
-        assert(i == 0);
+        S r2 = replace(s, to!T(""), into);
+        assert(cmp(r2, "This is a foo foo list") == 0);
 
-        assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
+        assert(replace(r2, to!T("won't find this"), to!T("whatever")) is r2);
     }
 }
 
