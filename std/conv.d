@@ -617,12 +617,13 @@ unittest
 }
 
 /**
-Object-to-object conversions throw exception when the source is
+Object-to-object conversions by dynamic casting throw exception when the source is
 non-null and the target is null.
  */
 T toImpl(T, S)(S value)
-    if (is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object))
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
+        is(T : Object) && !is(typeof(new T(value))))
 {
     auto result = cast(T) value;
     if (!result && value)
@@ -4068,6 +4069,7 @@ unittest
     static assert(__traits(compiles, b = octal!1L));
 }
 
+// Conversion with construction feature for struct type
 T toImpl(T, S)(S src)
     if (!isImplicitlyConvertible!(S, T) &&
         is(T == struct) && is(typeof(T(src))))
@@ -4088,6 +4090,61 @@ unittest
 
     static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
     Int3 i3 = to!Int3(1);
+}
+
+// Conversion with construction feature for class type
+T toImpl(T, S)(S src)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(T : Object) && is(typeof(new T(src))))
+{
+    return new T(src);
+}
+
+unittest
+{
+    static struct S { int x; }
+    static class C { int x; this(int x){ this.x = x; } }
+
+    static class B {
+        int value;
+        this(S src){ value = src.x; }
+        this(C src){ value = src.x; }
+    }
+
+    S s = S(1);
+    auto b1 = to!B(s);  // == new B(s)
+    assert(b1.value == 1);
+
+    C c = new C(2);
+    auto b2 = to!B(c);  // == new B(c)
+    assert(b2.value == 2);
+
+    auto c2 = to!C(3);   // == new C(3)
+    assert(c2.x == 3);
+}
+
+version (unittest)
+{
+    class A { this(B b){} }
+    class B : A { this(){ super(this); } }
+}
+unittest
+{
+    B b = new B();
+    A a = to!A(b);      // == cast(A)b
+                        // (do not run construction conversion like new A(b))
+    assert(b is a);
+
+    static class C : Object
+    {
+        this(){}
+        this(Object o){}
+    }
+
+    Object oc = new C();
+    C a2 = to!C(oc);     // == new C(a)
+                        // Construction conversion overrides down-casting conversion
+    assert(a2 != a);    // 
 }
 
 // emplace
