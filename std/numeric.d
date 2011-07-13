@@ -40,7 +40,6 @@ import std.typetuple;
 import std.complex;
 
 import core.bitop;
-import core.memory;
 import core.exception;
 
 version(unittest)
@@ -2312,10 +2311,7 @@ public:
     this(size_t size) {
         // Allocate all twiddle factor buffers in one contiguous block so that,
         // when one is done being used, the next one is next in cache.
-        auto memSpace = (cast(lookup_t*)
-            GC.malloc(lookup_t.sizeof * size * 2, GC.BlkAttr.NO_SCAN))
-            [0..2 * size];
-
+        auto memSpace = uninitializedArray!(lookup_t[])(2 * size);
         this(memSpace);
     }
 
@@ -2342,9 +2338,7 @@ public:
         }
 
         // Don't waste time initializing the memory for ret.
-        ret = (cast(Complex!(F)*) GC.malloc(range.length * (Complex!(F)).sizeof,
-               GC.BlkAttr.NO_SCAN))[0..range.length];
-
+        ret = uninitializedArray!(Complex!F[])(range.length);
 
         fft(range,  ret);
         return ret;
@@ -2395,8 +2389,7 @@ public:
         }
 
         // Don't waste time initializing the memory for ret.
-        ret = (cast(Complex!(F)*) GC.malloc(range.length * (Complex!(F)).sizeof,
-               GC.BlkAttr.NO_SCAN))[0..range.length];
+        ret = uninitializedArray!(Complex!F[])(range.length);
 
         inverseFft(range, ret);
         return ret;

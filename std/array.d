@@ -39,14 +39,8 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        // Determines whether the GC should scan the array.
-        auto blkInfo = (typeid(E).flags & 1) ?
-                       cast(GC.BlkAttr) 0 :
-                       GC.BlkAttr.NO_SCAN;
+        auto result = uninitializedArray!(E[])(r.length);
 
-        auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof, blkInfo),
-                text("Out of memory while allocating an array of ", r.length,
-                        " objects of type ", E.stringof)))[0 .. r.length];
         size_t i = 0;
         foreach (e; r)
         {
@@ -154,6 +148,11 @@ private template blockAttribute(T)
     {
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
+}
+unittest {
+    static assert(blockAttribute!void == GC.BlkAttr.NO_SCAN);
+    static assert(blockAttribute!char == GC.BlkAttr.NO_SCAN);
+    static assert(void.sizeof == 1u);
 }
 
 // Returns the number of dimensions in an array T.

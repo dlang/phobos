@@ -310,7 +310,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         auto size = GetFileSize(h, null);
         cenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
-        auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
+        auto buf = uninitializedArray!(void[])(size);
         scope(failure) delete buf;
 
         DWORD numread = void;
@@ -340,8 +340,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
-        auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
-            [0 .. initialAlloc];
+        auto result = uninitializedArray!(void[])(initialAlloc);
         scope(failure) delete result;
         size_t size = 0;
 
