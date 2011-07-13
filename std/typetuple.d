@@ -66,7 +66,7 @@ template TypeTuple(TList...)
  *
  * void foo()
  * {
- *    writefln("The index of long is ",
+ *    writefln("The index of long is %s",
  *          staticIndexOf!(long, TypeTuple!(int, long, double)));
  *    // prints: The index of long is 1
  * }

@@ -760,7 +760,7 @@ unittest
     static assert(is(F_ov3* == int function() @property));
 
     alias FunctionTypeOf!((int a){ return a; }) F_dglit;
-    static assert(is(F_dglit* == int function(int)));
+    static assert(is(F_dglit* : int function(int)));
 }
 
 
@@ -2070,7 +2070,7 @@ unittest
     alias MemberFunctionsTuple!(C, "test") test;
     static assert(test.length == 2);
     static assert(is(FunctionTypeOf!(test[0]) == FunctionTypeOf!(C.test)));
-    static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(B.test)));
+    static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(K.test)));
     alias MemberFunctionsTuple!(C, "noexist") noexist;
     static assert(noexist.length == 0);
 
@@ -2236,9 +2236,10 @@ Is $(D From) implicitly convertible to $(D To)?
 template isImplicitlyConvertible(From, To)
 {
     enum bool isImplicitlyConvertible = is(typeof({
-                        void fun(To) {}
-                        From f;
-                        fun(f);
+                        void fun(ref From v) {
+                            void gun(To) {}
+                            gun(v);
+                        }
                     }()));
 }
 
@@ -2248,6 +2249,15 @@ unittest
     static assert(isImplicitlyConvertible!(const(char), char));
     static assert(isImplicitlyConvertible!(char, wchar));
     static assert(!isImplicitlyConvertible!(wchar, char));
+
+    // bug6197
+    static assert(!isImplicitlyConvertible!(const(ushort), ubyte));
+    static assert(!isImplicitlyConvertible!(const(uint), ubyte));
+    static assert(!isImplicitlyConvertible!(const(ulong), ubyte));
+
+    // from std.conv.implicitlyConverts
+    assert(!isImplicitlyConvertible!(const(char)[], string));
+    assert(isImplicitlyConvertible!(string, const(char)[]));
 }
 
 /**
@@ -3428,6 +3438,13 @@ auto unsigned(T)(T x) if (isIntegral!T)
 unittest
 {
     static assert(is(typeof(unsigned(1 + 1)) == uint));
+}
+
+auto unsigned(T)(T x) if (isSomeChar!T)
+{
+    // All characters are unsigned
+    static assert(T.min == 0);
+    return x;
 }
 
 /**

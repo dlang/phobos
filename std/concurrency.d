@@ -164,6 +164,11 @@ private
 
 shared static this()
 {
+    // NOTE: Normally, mbox is initialized by spawn() or thisTid().  This
+    //       doesn't support the simple case of calling only receive() in main
+    //       however.  To ensure that this works, initialize the main thread's
+    //       mbox field here (as shared static ctors are run once on startup
+    //       by the main thread).
     mbox = new MessageBox;
 }
 
@@ -490,25 +495,25 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- *
+ * $(RED Scheduled for deprecation in January 2012. Please use the version
+ *       which takes a $(CXREF time, Duration) instead.)
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
-    //return receiveTimeout( dur!"msecs"( ms ), ops );
-    checkops( ops );
-    return mbox.get( dur!"msecs"( ms ), ops );
+    return receiveTimeout( dur!"msecs"( ms ), ops );
 }
 
-
-/**
- *
- */
-bool receiveTimeout(T...)( Duration val, T ops )
+/++
+    Same as $(D receive) except that rather than wait forever for a message,
+    it waits until either it receives a message or the given
+    $(CXREF time, Duration) has passed. It returns $(D true) if it received a
+    message and $(D false) if it timed out waiting for one.
+  +/
+bool receiveTimeout(T...)( Duration duration, T ops )
 {
     checkops( ops );
-    return mbox.get( val, ops );
+    return mbox.get( duration, ops );
 }
-
 
 unittest
 {
@@ -530,7 +535,7 @@ unittest
 
     assert( __traits( compiles,
                       {
-                          receiveTimeout( dur!"msecs"( 10 ), (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
                       } ) );
 }
 
@@ -851,12 +856,13 @@ private
         {
             static assert( T.length );
 
-            static if( is( T[0] : Duration ) )
+            static if( isImplicitlyConvertible!(T[0], Duration) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
+                assert( vals[0] >= dur!"msecs"(0) );
                 enum timedWait = true;
-                auto period = vals[0];
+                Duration period = vals[0];
             }
             else
             {
@@ -1211,7 +1217,7 @@ private
          */
         void put( T val )
         {
-            put( new Node( val ) );
+            appendNode( new Node( val ) );
             m_count++;
         }
 
@@ -1223,7 +1229,8 @@ private
         {
             if( !rhs.empty )
             {
-                put( rhs.m_first );
+                appendNode( rhs.m_first );
+                m_count++;
                 while( m_last.next !is null )
                 {
                     m_last = m_last.next;
@@ -1260,6 +1267,8 @@ private
             Node* todelete = n.next;
             n.next = n.next.next;
             //delete todelete;
+
+            assert( m_count > 0 );
             m_count--;
         }
 
@@ -1279,6 +1288,7 @@ private
         void clear()
         {
             m_first = m_last = null;
+            m_count = 0;
         }
 
 
@@ -1307,7 +1317,7 @@ private
         /*
          *
          */
-        void put( Node* n )
+        void appendNode( Node* n )
         {
             if( !empty )
             {
@@ -1357,15 +1367,24 @@ version( unittest )
         prioritySend( tid, "done" );
     }
 
-
-    unittest
+    void runTest( Tid tid )
     {
-        auto tid = spawn( &testfn, thisTid );
-
         send( tid, 42, 86 );
         send( tid, tuple(42, 86) );
         send( tid, "hello", "there" );
         send( tid, "the quick brown fox" );
         receive( (string val) { assert(val == "done"); } );
+    }
+
+
+    unittest
+    {
+        auto tid = spawn( &testfn, thisTid );
+        runTest( tid );
+
+        // Run the test again with a limited mailbox size.
+        tid = spawn( &testfn, thisTid );
+        setMaxMailboxSize( tid, 2, OnCrowding.block );
+        runTest( tid );
     }
 }

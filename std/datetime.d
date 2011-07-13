@@ -71,10 +71,14 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),
     $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
     $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns) or some subset thereof.
+    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
     There are a few functions in core.time which take $(D "nsecs"), but because
     nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept $(D "nsecs").
+    in core.time does, no functions in std.datetime accept $(D "nsecs"). If
+    you need help remembering which units are abbreviated and which aren't,
+    notice that all units seconds and greater use their full names, and all
+    sub-second units are abbreviated (since they'd be rather long if they
+    weren't).
 
     If you're looking for the definitions of $(D Duration), $(D TickDuration),
     or $(D FracSec), they're in core.time.
@@ -106,8 +110,8 @@ import core.stdc.time;
 
 import std.array;
 import std.algorithm;
+import std.ascii;
 import std.conv;
-import std.ctype;
 import std.exception;
 import std.file;
 import std.functional;
@@ -119,8 +123,6 @@ import std.stdio;
 import std.string;
 import std.system;
 import std.traits;
-
-private alias std.algorithm.find find;
 
 version(Windows)
 {
@@ -151,7 +153,11 @@ version(unittest)
     import std.stdio;
 }
 
-alias std.string.indexOf indexOf;
+//I'd just alias it to indexOf, but
+//http://d.puremagic.com/issues/show_bug.cgi?id=6013 would mean that that would
+//pollute the global namespace. So, for now, I've created an alias which is
+//highly unlikely to conflict with anything that anyone else is doing.
+private alias std.string.indexOf stds_indexOf;
 
 //Verify module example.
 version(testStdDateTime) unittest
@@ -7333,61 +7339,67 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
 
         Examples:
 --------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonthDay == 31);
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).endOfMonthDay == 28);
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).endOfMonthDay == 29);
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).endOfMonthDay == 30);
+assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const nothrow
+    @property ubyte daysInMonth() const nothrow
     {
-        return Date(dayOfGregorianCal).endOfMonthDay;
+        return Date(dayOfGregorianCal).daysInMonth;
     }
+
+    /++
+        $(RED Scheduled for deprecation in January 2012.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 2, 1, 17, 13, 12)).endOfMonthDay, 28);
-            _assertPred!"=="(SysTime(DateTime(2000, 2, 1, 13, 2, 12)).endOfMonthDay, 29);
-            _assertPred!"=="(SysTime(DateTime(1999, 3, 1, 12, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 4, 1, 12, 6, 13)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 5, 1, 15, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 6, 1, 13, 7, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 7, 1, 12, 13, 17)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 8, 1, 12, 3, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 9, 1, 12, 13, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 10, 1, 13, 19, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(1999, 11, 1, 12, 13, 17)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(1999, 12, 1, 12, 52, 13)).endOfMonthDay, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 2, 1, 17, 13, 12)).daysInMonth, 28);
+            _assertPred!"=="(SysTime(DateTime(2000, 2, 1, 13, 2, 12)).daysInMonth, 29);
+            _assertPred!"=="(SysTime(DateTime(1999, 3, 1, 12, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 4, 1, 12, 6, 13)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 5, 1, 15, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 6, 1, 13, 7, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 7, 1, 12, 13, 17)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 8, 1, 12, 3, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 9, 1, 12, 13, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 10, 1, 13, 19, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(1999, 11, 1, 12, 13, 17)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(1999, 12, 1, 12, 52, 13)).daysInMonth, 31);
 
             //Test B.C.
-            _assertPred!"=="(SysTime(DateTime(-1999, 1, 1, 12, 1, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 2, 1, 7, 13, 12)).endOfMonthDay, 28);
-            _assertPred!"=="(SysTime(DateTime(-2000, 2, 1, 13, 2, 12)).endOfMonthDay, 29);
-            _assertPred!"=="(SysTime(DateTime(-1999, 3, 1, 12, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 4, 1, 12, 6, 13)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 5, 1, 5, 13, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 6, 1, 13, 7, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 7, 1, 12, 13, 17)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 8, 1, 12, 3, 13)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 9, 1, 12, 13, 12)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 10, 1, 13, 19, 12)).endOfMonthDay, 31);
-            _assertPred!"=="(SysTime(DateTime(-1999, 11, 1, 12, 13, 17)).endOfMonthDay, 30);
-            _assertPred!"=="(SysTime(DateTime(-1999, 12, 1, 12, 52, 13)).endOfMonthDay, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 1, 1, 12, 1, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 2, 1, 7, 13, 12)).daysInMonth, 28);
+            _assertPred!"=="(SysTime(DateTime(-2000, 2, 1, 13, 2, 12)).daysInMonth, 29);
+            _assertPred!"=="(SysTime(DateTime(-1999, 3, 1, 12, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 4, 1, 12, 6, 13)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 5, 1, 5, 13, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 6, 1, 13, 7, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 7, 1, 12, 13, 17)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 8, 1, 12, 3, 13)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 9, 1, 12, 13, 12)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 10, 1, 13, 19, 12)).daysInMonth, 31);
+            _assertPred!"=="(SysTime(DateTime(-1999, 11, 1, 12, 13, 17)).daysInMonth, 30);
+            _assertPred!"=="(SysTime(DateTime(-1999, 12, 1, 12, 52, 13)).daysInMonth, 31);
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-            static assert(__traits(compiles, cst.endOfMonthDay));
-            //static assert(__traits(compiles, ist.endOfMonthDay));
+            static assert(__traits(compiles, cst.daysInMonth));
+            //static assert(__traits(compiles, ist.daysInMonth));
 
             //Verify Examples.
-            assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonthDay == 31);
-            assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).endOfMonthDay == 28);
-            assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).endOfMonthDay == 29);
-            assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).endOfMonthDay == 30);
+            assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+            assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+            assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+            assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         }
     }
 
@@ -7886,7 +7898,8 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -8388,7 +8401,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     {
         auto dstr = to!dstring(strip(isoExtString));
 
-        auto tIndex = dstr.indexOf("T");
+        auto tIndex = dstr.stds_indexOf("T");
         enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         auto found = dstr[tIndex + 1 .. $].find(".", "Z", "+", "-");
@@ -8440,13 +8453,13 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString, tz);
     }
@@ -8600,7 +8613,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
     {
         auto dstr = to!dstring(strip(simpleString));
 
-        auto spaceIndex = dstr.indexOf(" ");
+        auto spaceIndex = dstr.stds_indexOf(" ");
         enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
 
         auto found = dstr[spaceIndex + 1 .. $].find(".", "Z", "+", "-");
@@ -12526,61 +12539,67 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 
         Examples:
 --------------------
-assert(Date(1999, 1, 6).endOfMonthDay == 31);
-assert(Date(1999, 2, 7).endOfMonthDay == 28);
-assert(Date(2000, 2, 7).endOfMonthDay == 29);
-assert(Date(2000, 6, 4).endOfMonthDay == 30);
+assert(Date(1999, 1, 6).daysInMonth == 31);
+assert(Date(1999, 2, 7).daysInMonth == 28);
+assert(Date(2000, 2, 7).daysInMonth == 29);
+assert(Date(2000, 6, 4).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const pure nothrow
+    @property ubyte daysInMonth() const pure nothrow
     {
         return maxDay(_year, _month);
     }
+
+    /++
+        $(RED Scheduled for deprecation in January 2012.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
         version(testStdDateTime)
         {
             //Test A.D.
-            _assertPred!"=="(Date(1999, 1, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 2, 1).endOfMonthDay, 28);
-            _assertPred!"=="(Date(2000, 2, 1).endOfMonthDay, 29);
-            _assertPred!"=="(Date(1999, 3, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 4, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 5, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 6, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 7, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 8, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 9, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 10, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(1999, 11, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(1999, 12, 1).endOfMonthDay, 31);
+            _assertPred!"=="(Date(1999, 1, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 2, 1).daysInMonth, 28);
+            _assertPred!"=="(Date(2000, 2, 1).daysInMonth, 29);
+            _assertPred!"=="(Date(1999, 3, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 4, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 5, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 6, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 7, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 8, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 9, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 10, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(1999, 11, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(1999, 12, 1).daysInMonth, 31);
 
             //Test B.C.
-            _assertPred!"=="(Date(-1999, 1, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 2, 1).endOfMonthDay, 28);
-            _assertPred!"=="(Date(-2000, 2, 1).endOfMonthDay, 29);
-            _assertPred!"=="(Date(-1999, 3, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 4, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 5, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 6, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 7, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 8, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 9, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 10, 1).endOfMonthDay, 31);
-            _assertPred!"=="(Date(-1999, 11, 1).endOfMonthDay, 30);
-            _assertPred!"=="(Date(-1999, 12, 1).endOfMonthDay, 31);
+            _assertPred!"=="(Date(-1999, 1, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 2, 1).daysInMonth, 28);
+            _assertPred!"=="(Date(-2000, 2, 1).daysInMonth, 29);
+            _assertPred!"=="(Date(-1999, 3, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 4, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 5, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 6, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 7, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 8, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 9, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 10, 1).daysInMonth, 31);
+            _assertPred!"=="(Date(-1999, 11, 1).daysInMonth, 30);
+            _assertPred!"=="(Date(-1999, 12, 1).daysInMonth, 31);
 
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.endOfMonthDay = 30));
-            static assert(!__traits(compiles, idate.endOfMonthDay = 30));
+            static assert(!__traits(compiles, cdate.daysInMonth = 30));
+            static assert(!__traits(compiles, idate.daysInMonth = 30));
 
             //Verify Examples.
-            assert(Date(1999, 1, 6).endOfMonthDay == 31);
-            assert(Date(1999, 2, 7).endOfMonthDay == 28);
-            assert(Date(2000, 2, 7).endOfMonthDay == 29);
-            assert(Date(2000, 6, 4).endOfMonthDay == 30);
+            assert(Date(1999, 1, 6).daysInMonth == 31);
+            assert(Date(1999, 2, 7).daysInMonth == 28);
+            assert(Date(2000, 2, 7).daysInMonth == 29);
+            assert(Date(2000, 6, 4).daysInMonth == 30);
         }
     }
 
@@ -12774,7 +12793,8 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -12943,16 +12963,18 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
         auto month = dstr[$-4 .. $-2];
         auto year = dstr[0 .. $-4];
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(!canFind!(not!isDigit)(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
@@ -13068,28 +13090,33 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 
         enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         enforce(dstr[$-6] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(day),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(month),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(!canFind!(not!isDigit)(year),
+                    new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -13205,15 +13232,18 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
         enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
         enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce(!canFind!(not!isDigit)(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid string format: %s", simpleString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(year.startsWith("-") || year.startsWith("+"),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(!canFind!(not!isDigit)(year[1..$]),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
         }
         else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(!canFind!(not!isDigit)(year),
+                    new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         return Date(to!short(year), month, to!ubyte(day));
     }
@@ -14485,7 +14515,8 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -14576,9 +14607,9 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         auto minutes = dstr[2 .. 4];
         auto seconds = dstr[4 .. $];
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!(not!isDigit)(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
@@ -14687,21 +14718,24 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
         enforce(dstr[2] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         enforce(dstr[5] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(hours),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(minutes),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!(not!isDigit)(seconds),
+                new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -17431,16 +17465,22 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth ==
 
         Examples:
 --------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
+assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
+assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
+assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
 --------------------
       +/
-    @property ubyte endOfMonthDay() const pure nothrow
+    @property ubyte daysInMonth() const pure nothrow
     {
-        return _date.endOfMonthDay;
+        return _date.daysInMonth;
     }
+
+    /++
+        $(RED Scheduled for deprecation in January 2012.
+              Please use daysInMonth instead.)
+      +/
+    alias daysInMonth endofMonthDay;
 
     unittest
     {
@@ -17448,14 +17488,14 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
         {
             const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.endOfMonthDay));
-            static assert(__traits(compiles, idt.endOfMonthDay));
+            static assert(__traits(compiles, cdt.daysInMonth));
+            static assert(__traits(compiles, idt.daysInMonth));
 
             //Verify Examples.
-            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
+            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
+            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
+            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
         }
     }
 
@@ -17658,7 +17698,8 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use toISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use toISOExtString instead.)
       +/
     alias toISOExtString toISOExtendedString;
 
@@ -17826,7 +17867,7 @@ assert(DateTime.fromISOString(" 20100704T070612 ") ==
         immutable dstr = to!dstring(strip(isoString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = dstr.indexOf('T');
+        auto t = dstr.stds_indexOf('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
@@ -17918,7 +17959,7 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
         immutable dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = dstr.indexOf('T');
+        auto t = dstr.stds_indexOf('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
@@ -17929,13 +17970,13 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     }
 
     /++
-        $(RED Scheduled for deprecation. Use fromISOExtString instead.)
+        $(RED Scheduled for deprecation in November 2011.
+              Please use fromISOExtString instead.)
       +/
     static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, "fromISOExtendedString has been scheduled for deprecation. " ~
-                    "Use fromISOExtString instead.");
+        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
 
         return fromISOExtString!string(isoExtString);
     }
@@ -18016,7 +18057,7 @@ assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
         immutable dstr = to!dstring(strip(simpleString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = dstr.indexOf(' ');
+        auto t = dstr.stds_indexOf(' ');
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
@@ -28357,7 +28398,7 @@ private:
     static immutable LocalTime _localTime;
 
 
-    static this()
+    shared static this()
     {
         tzset();
 
@@ -28481,7 +28522,7 @@ private:
     static immutable UTC _utc;
 
 
-    static this()
+    shared static this()
     {
         _utc = new immutable(UTC)();
     }
@@ -28697,7 +28738,7 @@ private:
         dstr.popFront();
         enforce(!dstr.empty, new DateTimeException("Invalid ISO String"));
 
-        immutable colon = dstr.indexOf(":");
+        immutable colon = dstr.stds_indexOf(":");
 
         dstring hoursStr;
         dstring minutesStr;
@@ -28711,8 +28752,8 @@ private:
         else
             hoursStr = dstr;
 
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hoursStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutesStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
+        enforce(!canFind!(not!isDigit)(hoursStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
+        enforce(!canFind!(not!isDigit)(minutesStr), new DateTimeException(format("Invalid ISO String: %s", dstr)));
 
         immutable hours = to!int(hoursStr);
         immutable minutes = minutesStr.empty ? 0 : to!int(minutesStr);
@@ -29250,7 +29291,7 @@ assert(tz.dstName == "PDT");
                     tempTTInfo.tt_gmtoff = -tempTTInfo.tt_gmtoff;
 
                 auto abbrevChars = tzAbbrevChars[tempTTInfo.tt_abbrind .. $];
-                string abbrev = abbrevChars[0 .. std.string.indexOf(abbrevChars, "\0")].idup;
+                string abbrev = abbrevChars[0 .. abbrevChars.stds_indexOf("\0")].idup;
 
                 ttInfo = new immutable(TTInfo)(tempTTInfos[i], abbrev);
             }
@@ -30756,7 +30797,7 @@ public:
         _timeStart = Clock.currSystemTick;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30782,7 +30823,7 @@ public:
         _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-    version(testStdDateTime) @safe unittest
+    version(testStdDateTime) @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -31046,7 +31087,7 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Scheduled for deprecation. This is only here to help
+    $(RED Scheduled for deprecation in August 2011. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
@@ -31073,7 +31114,7 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Scheduled for deprecation. This is only here to help
+    $(RED Scheduled for deprecation in August 2011. This is only here to help
           transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).
@@ -32638,7 +32679,7 @@ unittest
   +/
 Month monthFromString(string monthStr)
 {
-    switch(tolower(monthStr))
+    switch(toLower(monthStr))
     {
         case "january":
         case "jan":
@@ -32880,7 +32921,7 @@ static FracSec fracSecFromISOString(S)(in S isoString)
     dstr.popFront();
 
     enforce(!dstr.empty && dstr.length <= 7, new DateTimeException("Invalid ISO String"));
-    enforce(!canFind!((dchar c){return !isdigit(c);})(dstr), new DateTimeException("Invalid ISO String"));
+    enforce(!canFind!(not!isDigit)(dstr), new DateTimeException("Invalid ISO String"));
 
     dchar[7] fullISOString;
 
@@ -34028,3 +34069,10 @@ template _isPrintable(T...)
     }
 }
 
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.datetime.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.datetime.%s instead.",
+                              vers, oldFunc, date, newFunc);
+}
