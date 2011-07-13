@@ -433,7 +433,7 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasLength!R || isSomeString!R)
             {
-                @property size_t length()
+                @property auto length()
                 {
                     return _input.length;
                 }
@@ -547,6 +547,12 @@ unittest
         static assert(propagatesRangeType!(typeof(m), DummyType));
         assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
     }
+}
+unittest
+{
+    auto LL = iota(1L, 4L);
+    auto m = map!"a*a"(LL);
+    assert(equal(m, [1L, 4L, 9L]));
 }
 
 // reduce
@@ -1629,13 +1635,15 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     private:
         Range _input;
         Separator _separator;
-        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
-        size_t _frontLength = _unComputed;
-        size_t _backLength = _unComputed;
+        // Do we need hasLength!Range? popFront uses _input.length...
+        alias typeof(unsigned(_input.length)) IndexType;
+        enum IndexType _unComputed = IndexType.max - 1, _atEnd = IndexType.max;
+        IndexType _frontLength = _unComputed;
+        IndexType _backLength = _unComputed;
 
         static if(isBidirectionalRange!Range)
         {
-            static sizediff_t lastIndexOf(Range haystack, Separator needle)
+            static IndexType lastIndexOf(Range haystack, Separator needle)
             {
                 immutable index = countUntil(retro(haystack), needle);
                 return (index == -1) ? -1 : haystack.length - 1 - index;
@@ -1822,6 +1830,16 @@ unittest
         }
     }
 }
+unittest
+{
+    auto L = retro(iota(1L, 10L));
+    auto s = splitter(L, 5L);
+    assert(equal(s.front, [9L, 8L, 7L, 6L]));
+    s.popFront();
+    assert(equal(s.front, [4L, 3L, 2L, 1L]));
+    s.popFront();
+    assert(s.empty);
+}
 
 /**
 Splits a range using another range as a separator. This can be used
@@ -1835,12 +1853,13 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
     private:
         Range _input;
         Separator _separator;
+        alias typeof(unsigned(_input.length)) RIndexType;
         // _frontLength == size_t.max means empty
-        size_t _frontLength = size_t.max;
+        RIndexType _frontLength = RIndexType.max;
         static if (isBidirectionalRange!Range)
-            size_t _backLength = size_t.max;
+            RIndexType _backLength = RIndexType.max;
 
-        size_t separatorLength() { return _separator.length; }
+        auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
@@ -1887,7 +1906,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         {
             @property bool empty()
             {
-                return _frontLength == size_t.max && _input.empty;
+                return _frontLength == RIndexType.max && _input.empty;
             }
         }
 
@@ -2113,6 +2132,16 @@ if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
     }
 
     return Result(input);
+}
+unittest
+{
+    auto L = iota(1L, 10L);
+    auto s = splitter(L, [5L, 6L]);
+    assert(equal(s.front, [1L, 2L, 3L, 4L]));
+    s.popFront();
+    assert(equal(s.front, [7L, 8L, 9L]));
+    s.popFront();
+    assert(s.empty);
 }
 
 unittest
