@@ -76,20 +76,6 @@ class ConvOverflowException : ConvException
 
 deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 
-private template implicitlyConverts(S, T)
-{
-    enum bool implicitlyConverts = T.sizeof >= S.sizeof
-        && is(typeof({S s; T t = s;}()));
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
-    assert(!implicitlyConverts!(const(char)[], string));
-    assert(implicitlyConverts!(string, const(char)[]));
-}
-
 /**
    Entry point that dispatches to the appropriate conversion
    primitive. Client code normally calls $(D _to!TargetType(value))
@@ -112,8 +98,10 @@ auto b = to!dstring(a);
 assert(b == "abc"w);
 ----
  */
-T toImpl(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!T
-        && isInputRange!(Unqual!S) && isSomeChar!(ElementType!S))
+T toImpl(T, S)(S s)
+    if (!isImplicitlyConvertible!(S, T) &&
+        isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
+        isSomeString!T)
 {
     static if (isSomeString!S)
     {
@@ -192,10 +180,9 @@ Converts array (other than strings) to string. The left bracket,
 separator, and right bracket are configurable. Each element is
 converted by calling $(D to!T).
  */
-T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ",
-    in T rightBracket = "]")
-if (isSomeString!T && !isSomeChar!(ElementType!S) &&
-(isInputRange!S || isInputRange!(Unqual!S)))
+T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBracket = "]")
+    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
+        isSomeString!T)
 {
     static if (!isInputRange!S)
     {
@@ -230,7 +217,7 @@ if (isSomeString!T && !isSomeChar!(ElementType!S) &&
   Converting static arrays forwards to their dynamic counterparts.
  */
 T toImpl(T, S)(ref S s)
-if (isStaticArray!S)
+    if (isStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
@@ -238,10 +225,9 @@ if (isStaticArray!S)
 /*
  Converting arrays of void
 */
-T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ",
-    in T rightBracket = "]")
-if (isSomeString!T && (is(S == void[]) || is(S == const(void)[]) ||
-                is(S == immutable(void)[])))
+T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T rightBracket = "]")
+    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
+        isSomeString!T)
 {
     alias Unqual!(typeof(T.init[0])) Char;
     auto raw = cast(const(ubyte)[]) s;
@@ -272,9 +258,9 @@ unittest
    separator, element separator, and right bracket are configurable.
    Each element is printed by calling $(D to!T).
 */
-T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":",
-        in T separator = ", ", in T rightBracket = "]")
-if (isAssociativeArray!S && isSomeString!T)
+T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+    if (isAssociativeArray!S &&
+        isSomeString!T)
 {
     alias Unqual!(typeof(T.init[0])) Char;
     auto result = appender!(Char[])();
@@ -284,9 +270,9 @@ if (isAssociativeArray!S && isSomeString!T)
     foreach (k, v; s) {
         if (!first) result.put(separator);
         else first = false;
-        result.put(to!(T)(k));
+        result.put(to!T(k));
         result.put(keyval);
-        result.put(to!(T)(v));
+        result.put(to!T(v));
     }
     result.put(rightBracket);
     return cast(T) result.data;
@@ -297,10 +283,11 @@ if (isAssociativeArray!S && isSomeString!T)
    returns $(D nullstr) if the object is null.
 */
 T toImpl(T, S)(S s, in T nullstr = "null")
-if (is(S : Object) && isSomeString!T)
+    if (is(S : Object) &&
+        isSomeString!T)
 {
     if (!s) return nullstr;
-    return to!(T)(s.toString);
+    return to!T(s.toString);
 }
 
 unittest
@@ -318,7 +305,8 @@ unittest
    it is defined.
 */
 T toImpl(T, S)(S s)
-if (is(S == struct) && isSomeString!T && is(typeof(&S.init.toString)))
+    if (is(S == struct) && is(typeof(&S.init.toString)) &&
+        isSomeString!T)
 {
     return to!T(s.toString);
 }
@@ -334,12 +322,11 @@ unittest
    For structs that do not define $(D toString), the conversion to string
    produces the list of fields.
 */
-T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ",
-        in T right = ")")
-if (is(S == struct) && isSomeString!T && !is(typeof(&S.init.toString)) &&
-        !isInputRange!S)
+T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T right = ")")
+    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
+        isSomeString!T)
 {
-    Tuple!(FieldTypeTuple!(S)) * t = void;
+    Tuple!(FieldTypeTuple!S) * t = void;
     static if ((*t).sizeof == S.sizeof)
     {
         // ok, attempt to forge the tuple
@@ -349,8 +336,8 @@ if (is(S == struct) && isSomeString!T && !is(typeof(&S.init.toString)) &&
         app.put(left);
         foreach (i, e; t.field)
         {
-            if (i > 0) app.put(to!(T)(separator));
-            app.put(to!(T)(e));
+            if (i > 0) app.put(to!T(separator));
+            app.put(to!T(e));
         }
         app.put(right);
         return cast(T) app.data;
@@ -373,8 +360,10 @@ unittest
 /**
 Enumerated types are converted to strings as their symbolic names.
  */
-T toImpl(T, S)(S s) if (is(S == enum) && isSomeString!(T)
-        && !implicitlyConverts!(S, T))
+T toImpl(T, S)(S s)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(S == enum) &&
+        isSomeString!T)
 {
     foreach (i, e; EnumMembers!S)
     {
@@ -411,11 +400,12 @@ unittest
 A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").
  */
 T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
-if (is(S == typedef) && isSomeString!(T))
+    if (is(S == typedef) &&
+        isSomeString!T)
 {
     static if (is(S Original == typedef)) {
         // typedef
-        return left ~ to!(T)(cast(Original) s) ~ right;
+        return left ~ to!T(cast(Original) s) ~ right;
     }
 }
 
@@ -559,8 +549,8 @@ Macros: WIKI=Phobos/StdConv
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
-Target toImpl(Target, Source)(Source value)
-if (implicitlyConverts!(Source, Target))
+T toImpl(T, S)(S value)
+    if (isImplicitlyConvertible!(S, T))
 {
     return value;
 }
@@ -576,7 +566,9 @@ unittest
 /**
 Boolean values are printed as $(D "true") or $(D "false").
  */
-T toImpl(T, S)(S b) if (is(Unqual!S == bool) && isSomeString!T)
+T toImpl(T, S)(S b)
+    if (is(Unqual!S == bool) &&
+        isSomeString!T)
 {
     return to!T(b ? "true" : "false");
 }
@@ -595,20 +587,22 @@ unittest
 When the source is a wide string, it is first converted to a narrow
 string and then parsed.
  */
-T toImpl(T, S)(S value) if ((is(S : const(wchar)[]) || is(S : const(dchar)[]))
-        && !isSomeString!T)
+T toImpl(T, S)(S value)
+    if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
+        !isSomeString!T)
 {
     // todo: improve performance
-    return parseString!(T)(toUTF8(value));
+    return parseString!T(toUTF8(value));
 }
 
 /**
 When the source is a narrow string, normal text parsing occurs.
  */
-T toImpl(T, S)(S value) if (isDynamicArray!S &&
-        is(S : const(char)[]) && !isSomeString!T)
+T toImpl(T, S)(S value)
+    if (isDynamicArray!S && is(S : const(char)[]) &&
+        !isSomeString!T)
 {
-    return parseString!(T)(value);
+    return parseString!T(value);
 }
 
 unittest
@@ -626,7 +620,9 @@ unittest
 Object-to-object conversions throw exception when the source is
 non-null and the target is null.
  */
-T toImpl(T, S)(S value) if (is(S : Object) && is(T : Object))
+T toImpl(T, S)(S value)
+    if (is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
+        is(T : Object))
 {
     auto result = cast(T) value;
     if (!result && value)
@@ -657,7 +653,31 @@ unittest
     }
 }
 
+// Conversion using S.opCast!T
+T toImpl(T, S)(S value)
+    if (is(typeof(S.init.opCast!T()) : T) &&
+        !isSomeString!T)
+{
+    return value.opCast!T();
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    class B { T opCast(T)() { return 43; } }
+    auto b = new B;
+    assert(to!int(b) == 43);
+
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    struct S { T opCast(T)() { return 43; } }
+    auto s = S();
+    assert(to!int(s) == 43);
+}
+
 /**
+$(RED Scheduled for deprecation in January 2012. Please use 
+      method $(D opCast) instead.)
+
 Object-_to-non-object conversions look for a method "to" of the source
 object.
 
@@ -683,6 +703,10 @@ unittest
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
         && is(typeof(S.init.to!(T)()) : T))
 {
+    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
+                "\"to\" has been scheduled for deprecation in January 2012. " ~
+                "Please use method opCast instead.");
+
     return value.to!T();
 }
 
@@ -699,12 +723,12 @@ Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
 T toImpl(T, S)(S value)
-if (!implicitlyConverts!(S, T)
-        && (isNumeric!S || isSomeChar!S)
-        && (isNumeric!T || isSomeChar!T))
+    if (!isImplicitlyConvertible!(S, T) &&
+        (isNumeric!S || isSomeChar!S) &&
+        (isNumeric!T || isSomeChar!T))
 {
-    enum sSmallest = mostNegative!(S);
-    enum tSmallest = mostNegative!(T);
+    enum sSmallest = mostNegative!S;
+    enum tSmallest = mostNegative!T;
     static if (sSmallest < 0) {
         // possible underflow converting from a signed
         static if (tSmallest == 0) {
@@ -754,16 +778,17 @@ private T parseString(T)(const(char)[] v)
             convError!(const(char)[], T)(v);
         }
     }
-    return parse!(T)(v);
+    return parse!T(v);
 }
 
 /**
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
-T toImpl(T, S)(S src) if (isDynamicArray!(S) && isArray!(T)
-        && !isSomeString!(S) && !isSomeString!(T)
-        && !implicitlyConverts!(S, T))
+T toImpl(T, S)(S src)
+    if (!isImplicitlyConvertible!(S, T) &&
+        !isSomeString!S && isDynamicArray!S &&
+        !isSomeString!T && isArray!T)
 {
     alias typeof(T.init[0]) E;
     auto result = new E[src.length];
@@ -798,7 +823,8 @@ Associative array to associative array conversion converts each key
 and each value in turn.
  */
 T toImpl(T, S)(S src)
-if (isAssociativeArray!(S) && isAssociativeArray!(T))
+    if (isAssociativeArray!S &&
+        isAssociativeArray!T)
 {
     alias typeof(T.keys[0]) K2;
     alias typeof(T.values[0]) V2;
@@ -914,7 +940,7 @@ unittest
     {
         foreach (T; AllNumerics) {
             T a = 42;
-            auto b = to!(T)(a);
+            auto b = to!T(a);
             assert(is(typeof(a) == typeof(b)) && a == b);
         }
     }
@@ -958,19 +984,19 @@ unittest
     {
         foreach (T; AllNumerics) {
             // from type immutable(char)[2]
-            auto a = to!(T)("42");
+            auto a = to!T("42");
             assert(a == 42);
             // from type char[]
             char[] s1 = "42".dup;
-            a = to!(T)(s1);
+            a = to!T(s1);
             assert(a == 42);
             // from type char[2]
             char[2] s2;
             s2[] = "42";
-            a = to!(T)(s2);
+            a = to!T(s2);
             assert(a == 42);
             // from type immutable(wchar)[2]
-            a = to!(T)("42"w);
+            a = to!T("42"w);
             assert(a == 42);
         }
     }
@@ -990,7 +1016,7 @@ unittest
     }
     // test array to string conversion
     foreach (T ; AllNumerics) {
-        auto a = [to!(T)(1), 2, 3];
+        auto a = [to!T(1), 2, 3];
         assert(to!string(a) == "[1, 2, 3]");
     }
     // test enum to int conversion
@@ -3187,22 +3213,25 @@ private bool feq(in creal r1, in creal r2)
 }
 
 /// Small unsigned integers to strings.
-T toImpl(T, S)(S value) if (isIntegral!S && S.min == 0
-        && S.sizeof < uint.sizeof && isSomeString!T)
+T toImpl(T, S)(S value)
+    if (isIntegral!S && isUnsigned!S && S.sizeof < uint.sizeof &&
+        isSomeString!T)
 {
     return to!T(cast(uint) value);
 }
 
 /// Small signed integers to strings.
-T toImpl(T, S)(S value) if (isIntegral!S && S.min < 0
-        && S.sizeof < int.sizeof && isSomeString!T)
+T toImpl(T, S)(S value)
+    if (isIntegral!S && isSigned!S && S.sizeof < int.sizeof &&
+        isSomeString!T)
 {
     return to!T(cast(int) value);
 }
 
 /// Unsigned integers (uint and ulong) to string.
 T toImpl(T, S)(S input)
-if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
+    if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 &&
+        isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(typeof(T.init[0])) Char;
@@ -3257,8 +3286,9 @@ unittest
 }
 
 /// $(D char), $(D wchar), $(D dchar) to a string type.
-T toImpl(T, S)(S c) if (staticIndexOf!(Unqual!S, char, wchar, dchar) >= 0
-        && isSomeString!(T))
+T toImpl(T, S)(S c)
+    if (isSomeChar!(Unqual!S) &&
+        isSomeString!T)
 {
     alias typeof(T.init[0]) Char;
     static if (Char.sizeof >= S.sizeof)
@@ -3296,10 +3326,11 @@ unittest
 
 /// Signed values ($(D int) and $(D long)).
 T toImpl(T, S)(S value)
-if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
+    if (staticIndexOf!(Unqual!S, int, long) >= 0 &&
+        isSomeString!T)
 {
     if (value >= 0)
-        return to!T(cast(Unsigned!(S)) value);
+        return to!T(cast(Unsigned!S) value);
     alias Unqual!(typeof(T.init[0])) Char;
 
     // Cache read-only data only for const and immutable; mutable
@@ -3367,19 +3398,25 @@ unittest
 }
 
 /// C-style strings
-T toImpl(T, S)(S s) if (isPointer!S && is(S : const(char)*) && isSomeString!T)
+T toImpl(T, S)(S s)
+    if (isPointer!S && is(S : const(char)*) &&
+        isSomeString!T)
 {
     return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
 }
 
 /// $(D float) to all string types.
-T toImpl(T, S)(S f) if (is(Unqual!S == float) && isSomeString!(T))
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == float) &&
+        isSomeString!T)
 {
     return to!T(cast(double) f);
 }
 
 /// $(D double) to all string types.
-T toImpl(T, S)(S d) if (is(Unqual!S == double) && isSomeString!(T))
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == double) &&
+        isSomeString!T)
 {
     //alias Unqual!(ElementType!T) Char;
     char[20] buffer;
@@ -3388,7 +3425,9 @@ T toImpl(T, S)(S d) if (is(Unqual!S == double) && isSomeString!(T))
 }
 
 /// $(D real) to all string types.
-T toImpl(T, S)(S r) if (is(Unqual!S == real) && isSomeString!T)
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == real) &&
+        isSomeString!T)
 {
     char[20] buffer;
     int len = sprintf(buffer.ptr, "%Lg", r);
@@ -3396,13 +3435,17 @@ T toImpl(T, S)(S r) if (is(Unqual!S == real) && isSomeString!T)
 }
 
 /// $(D ifloat) to all string types.
-T toImpl(T, S)(S f) if (is(Unqual!S == ifloat) && isSomeString!(T))
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == ifloat) &&
+        isSomeString!T)
 {
     return to!T(cast(idouble) f);
 }
 
 /// $(D idouble) to all string types.
-T toImpl(T, S)(S d) if (is(Unqual!S == idouble) && isSomeString!(T))
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == idouble) &&
+        isSomeString!T)
 {
     char[21] buffer;
     int len = sprintf(buffer.ptr, "%gi", d);
@@ -3410,7 +3453,9 @@ T toImpl(T, S)(S d) if (is(Unqual!S == idouble) && isSomeString!(T))
 }
 
 /// $(D ireal) to all string types.
-T toImpl(T, S)(S r) if (is(Unqual!S == ireal) && isSomeString!(T))
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == ireal) &&
+        isSomeString!T)
 {
     char[21] buffer;
     int len = sprintf(buffer.ptr, "%Lgi", r);
@@ -3419,13 +3464,17 @@ T toImpl(T, S)(S r) if (is(Unqual!S == ireal) && isSomeString!(T))
 }
 
 /// $(D cfloat) to all string types.
-T toImpl(T, S)(S f) if (is(Unqual!S == cfloat) && isSomeString!(T))
+T toImpl(T, S)(S f)
+    if (is(Unqual!S == cfloat) &&
+        isSomeString!T)
 {
     return to!string(cast(cdouble) f);
 }
 
 /// $(D cdouble) to all string types.
-T toImpl(T, S)(S d) if (is(Unqual!S == cdouble) && isSomeString!(T))
+T toImpl(T, S)(S d)
+    if (is(Unqual!S == cdouble) &&
+        isSomeString!T)
 {
     char[20 + 1 + 20 + 1] buffer;
 
@@ -3434,7 +3483,9 @@ T toImpl(T, S)(S d) if (is(Unqual!S == cdouble) && isSomeString!(T))
 }
 
 /// $(D creal) to all string types.
-T toImpl(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
+T toImpl(T, S)(S r)
+    if (is(Unqual!S == creal) &&
+        isSomeString!T)
 {
     char[20 + 1 + 20 + 1] buffer;
     int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
@@ -3449,7 +3500,8 @@ T toImpl(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
  * The characters A through Z are used to represent values 10 through 36.
  */
 T toImpl(T, S)(S value, uint radix)
-if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
+    if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) &&
+        isSomeString!T)
 {
     enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
     if (radix == 10)
@@ -3459,7 +3511,8 @@ if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-if (is(Unqual!S == ulong) && isSomeString!(T))
+    if (is(Unqual!S == ulong) &&
+        isSomeString!T)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -3733,8 +3786,8 @@ unittest
 Pointer to string conversions prints the pointer as a $(D size_t) value.
  */
 T toImpl(T, S)(S value)
-if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init)))
-    && isSomeString!T)
+    if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
+        isSomeString!T)
 {
     return to!T(cast(size_t) value, 16u);
 }
@@ -4015,7 +4068,9 @@ unittest
     static assert(__traits(compiles, b = octal!1L));
 }
 
-T toImpl(T, S)(S src) if (is(T == struct) && is(typeof(T(src))))
+T toImpl(T, S)(S src)
+    if (!isImplicitlyConvertible!(S, T) &&
+        is(T == struct) && is(typeof(T(src))))
 {
     return T(src);
 }
@@ -4027,6 +4082,12 @@ unittest
             " succeeded.");
     struct Int { int x; }
     Int i = to!Int(1);
+
+    static struct Int2 { int x; this(int x){ this.x = x; } }
+    Int2 i2 = to!Int2(1);
+
+    static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
+    Int3 i3 = to!Int3(1);
 }
 
 // emplace

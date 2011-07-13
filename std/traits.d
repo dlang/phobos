@@ -2236,9 +2236,10 @@ Is $(D From) implicitly convertible to $(D To)?
 template isImplicitlyConvertible(From, To)
 {
     enum bool isImplicitlyConvertible = is(typeof({
-                        void fun(To) {}
-                        From f;
-                        fun(f);
+                        void fun(ref From v) {
+                            void gun(To) {}
+                            gun(v);
+                        }
                     }()));
 }
 
@@ -2248,6 +2249,15 @@ unittest
     static assert(isImplicitlyConvertible!(const(char), char));
     static assert(isImplicitlyConvertible!(char, wchar));
     static assert(!isImplicitlyConvertible!(wchar, char));
+
+    // bug6197
+    static assert(!isImplicitlyConvertible!(const(ushort), ubyte));
+    static assert(!isImplicitlyConvertible!(const(uint), ubyte));
+    static assert(!isImplicitlyConvertible!(const(ulong), ubyte));
+
+    // from std.conv.implicitlyConverts
+    assert(!isImplicitlyConvertible!(const(char)[], string));
+    assert(isImplicitlyConvertible!(string, const(char)[]));
 }
 
 /**
