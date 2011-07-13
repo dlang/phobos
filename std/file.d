@@ -1526,12 +1526,6 @@ unittest
     }
 }
 
-/++
-    $(RED Scheduled for deprecation in October 2011.
-          Please use $(D isSymlink) instead.)
-  +/
-alias isSymlink isSymLink;
-
 unittest
 {
     version(Windows)
@@ -2032,12 +2026,6 @@ assert(!de2.isFile);
         @property bool isSymlink();
 
         /++
-            $(RED Scheduled for deprecation in October 2011.
-                  Please use $(D isSymlink) instead.)
-          +/
-        alias isSymlink isSymLink;
-
-        /++
             Returns the size of the the file represented by this $(D DirEntry)
             in bytes.
           +/
@@ -2187,8 +2175,6 @@ else version(Windows)
         {
             return false;
         }
-
-        alias isSymlink isSymLink;
 
         @property ulong size() const
         {
@@ -2355,8 +2341,6 @@ else version(Posix)
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
-
-        alias isSymlink isSymLink;
 
         // This property was not documented before, and it's almost
         // worthless, since the odds are high that it will be DT_UNKNOWN,
