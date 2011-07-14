@@ -1171,19 +1171,34 @@ unittest
     }
 }
 
-/********************************************
- * Concatenate all the ranges in $(D ror) together into one array;
- * use $(D sep) as the separator if present, otherwise none.
- */
-ElementEncodingType!(ElementType!RoR)[]
-join(RoR, R)(RoR ror, R sep)
-if (isInputRange!RoR && isInputRange!(ElementType!RoR) && isForwardRange!R)
+/++
+   Concatenates all of the ranges in $(D ror) together into one array using
+   $(D sep) as the separator if present.
+
+Examples:
+--------------------
+assert(join(["hello", "silly", "world"], " ") == "hello silly world");
+assert(join(["hello", "silly", "world"]) == "hellosillyworld");
+
+assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
+assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
+--------------------
+  +/
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+    if(isInputRange!RoR &&
+       isInputRange!(ElementType!RoR) &&
+       !isDynamicArray!(ElementType!RoR) &&
+       isForwardRange!R &&
+       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
-    if (ror.empty) return typeof(return).init;
+    if(ror.empty)
+        return typeof(return).init;
     auto iter = joiner(ror, sep);
-    static if (isForwardRange!RoR && hasLength!RoR
-            && (hasLength!(ElementType!RoR) || isSomeString!(ElementType!RoR))
-            && hasLength!R)
+
+    static if(isForwardRange!RoR &&
+              hasLength!RoR &&
+              hasLength!(ElementType!RoR) &&
+              hasLength!R)
     {
         immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save)
             + sep.length * (ror.length - 1);
@@ -1192,44 +1207,212 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR) && isForwardRange!R)
         return result;
     }
     else
-    {
         return copy(iter, appender!(typeof(return))).data;
+}
+
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+    if(isForwardRange!RoR &&
+       hasLength!RoR &&
+       isDynamicArray!(ElementType!RoR) &&
+       isForwardRange!R &&
+       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+{
+    alias ElementEncodingType!(ElementType!RoR) RetElem;
+    alias RetElem[] RetType;
+
+    if(ror.empty)
+        return RetType.init;
+
+    auto sepArr = to!RetType(sep);
+    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror) +
+                          sepArr.length * (ror.length - 1);
+    auto result = new Unqual!RetElem[](resultLen);
+
+    size_t i = 0;
+    size_t j = 0;
+    foreach(r; ror)
+    {
+        result[i .. i + r.length] = r[];
+        i += r.length;
+
+        if(++j < ror.length)
+        {
+            result[i .. i + sepArr.length] = sepArr[];
+            i += sepArr.length;
+        }
     }
+
+    return cast(RetType)result;
+}
+
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+    if(isInputRange!RoR &&
+       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
+       isDynamicArray!(ElementType!RoR) &&
+       isForwardRange!R &&
+       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+{
+    if(ror.empty)
+        return typeof(return).init;
+
+    auto result = appender!(typeof(return))();
+
+    static if(isForwardRange!RoR)
+    {
+        immutable numRanges = walkLength(ror);
+        size_t j = 0;
+    }
+
+    foreach(r; ror)
+    {
+        result.put(r);
+
+        static if(isForwardRange!RoR)
+        {
+            if(++j < numRanges)
+                result.put(sep);
+        }
+        else
+            result.put(sep);
+    }
+
+    static if(isForwardRange!RoR)
+        return result.data;
+    else
+        return result.data[0 .. $ - sep.length];
 }
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-if (isInputRange!RoR && isInputRange!(ElementType!RoR))
+    if(isInputRange!RoR &&
+       isInputRange!(ElementType!RoR) &&
+       !isDynamicArray!(ElementType!RoR))
 {
     auto iter = joiner(ror);
-    static if (hasLength!RoR && hasLength!(ElementType!RoR))
+
+    static if(isForwardRange!RoR &&
+              hasLength!RoR &&
+              hasLength!(ElementType!RoR))
     {
-        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror.save);
+        immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
         auto result = new Unqual!(ElementEncodingType!(ElementType!RoR))[resultLen];
         copy(iter, result);
         return cast(typeof(return)) result;
     }
     else
-    {
         return copy(iter, appender!(typeof(return))).data;
+}
+
+ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+    if(isForwardRange!RoR &&
+       hasLength!RoR &&
+       isDynamicArray!(ElementType!RoR))
+{
+    alias ElementEncodingType!(ElementType!RoR) RetElem;
+    alias RetElem[] RetType;
+
+    if(ror.empty)
+        return RetType.init;
+
+    immutable resultLen = reduce!"a + b.length"(cast(size_t) 0, ror);
+    auto result = new Unqual!RetElem[](resultLen);
+
+    size_t i = 0;
+    foreach(r; ror)
+    {
+        result[i .. i + r.length] = r[];
+        i += r.length;
     }
+
+    return cast(RetType)result;
+}
+
+ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+    if(isInputRange!RoR &&
+       ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
+       isDynamicArray!(ElementType!RoR))
+{
+    if(ror.empty)
+        return typeof(return).init;
+
+    auto result = appender!(typeof(return))();
+
+    foreach(r; ror)
+        result.put(r);
+
+    return result.data;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(join(["hello", "silly", "world"], " ") == "hello silly world");
+    assert(join(["hello", "silly", "world"]) == "hellosillyworld");
+
+    assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
+    assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 }
 
 unittest
 {
     debug(std_array) printf("array.join.unittest\n");
 
-    string word1 = "peter";
-    string word2 = "paul";
-    string word3 = "jerry";
-    string[3] words;
+    string word1   = "peter";
+    string word2   = "paul";
+    string word3   = "jerry";
+    string[] words = [word1, word2, word3];
 
-    words[0] = word1;
-    words[1] = word2;
-    words[2] = word3;
-    assert(cmp(join(words[], ","), "peter,paul,jerry") == 0);
+    auto filteredWord1    = filter!"true"(word1);
+    auto filteredWord2    = filter!"true"(word2);
+    auto filteredWord3    = filter!"true"(word3);
+    auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
+    auto filteredWords    = filter!"true"(filteredWordsArr);
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        assert(join(filteredWords, to!S(", ")) == "peter, paul, jerry");
+        assert(join(filteredWordsArr, to!S(", ")) == "peter, paul, jerry");
+        assert(join(filter!"true"(words), to!S(", ")) == "peter, paul, jerry");
+        assert(join(words, to!S(", ")) == "peter, paul, jerry");
+
+        assert(join(filteredWords, to!S("")) == "peterpauljerry");
+        assert(join(filteredWordsArr, to!S("")) == "peterpauljerry");
+        assert(join(filter!"true"(words), to!S("")) == "peterpauljerry");
+        assert(join(words, to!S("")) == "peterpauljerry");
+
+        assert(join(filter!"true"([word1]), to!S(", ")) == "peter");
+        assert(join([filteredWord1], to!S(", ")) == "peter");
+        assert(join(filter!"true"([filteredWord1]), to!S(", ")) == "peter");
+        assert(join([word1], to!S(", ")) == "peter");
+    }
+
+    assert(join(filteredWords) == "peterpauljerry");
+    assert(join(filteredWordsArr) == "peterpauljerry");
+    assert(join(filter!"true"(words)) == "peterpauljerry");
+    assert(join(words) == "peterpauljerry");
+
+    assert(join(filteredWords, filter!"true"(", ")) == "peter, paul, jerry");
+    assert(join(filteredWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
+    assert(join(filter!"true"(words), filter!"true"(", ")) == "peter, paul, jerry");
+    assert(join(words, filter!"true"(", ")) == "peter, paul, jerry");
+
+    assert(join(filter!"true"(cast(typeof(filteredWordsArr))[]), ", ").empty);
+    assert(join(cast(typeof(filteredWordsArr))[], ", ").empty);
+    assert(join(filter!"true"(cast(string[])[]), ", ").empty);
+    assert(join(cast(string[])[], ", ").empty);
+
+    assert(join(filter!"true"(cast(typeof(filteredWordsArr))[])).empty);
+    assert(join(cast(typeof(filteredWordsArr))[]).empty);
+    assert(join(filter!"true"(cast(string[])[])).empty);
+    assert(join(cast(string[])[]).empty);
+
     assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
+    assert(join([[1, 2], [41, 42]], cast(int[])[]) == [1, 2, 41, 42]);
+    assert(join([[1, 2]], [5, 6]) == [1, 2]);
+    assert(join(cast(int[][])[], [5, 6]).empty);
+
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
+    assert(join(cast(int[][])[]).empty);
 }
 
 /++
