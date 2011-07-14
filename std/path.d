@@ -34,11 +34,8 @@ module std.path;
 
 
 import std.algorithm;
-import std.array;
 import std.conv;
-import std.ctype;
-import std.file;
-import std.range;
+import std.file: getcwd;
 import std.string;
 import std.traits;
 
@@ -52,7 +49,7 @@ version(Posix)
 
 version (Windows) private alias Signed!size_t ssize_t;
 
-void main() { }
+
 
 
 /** String used to separate directory names in a path.  Under
@@ -180,7 +177,7 @@ C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 }
 
 /// ditto
-C[] baseName(C, C1)(C[] path, C1[] suffix)  @safe nothrow //TODO: pure
+C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
     if (isSomeChar!C && isSomeChar!C1)
 {
     auto p1 = baseName(path);
@@ -328,12 +325,12 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  @safe pure nothrow
+C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
     if (isSomeChar!C)
 {
     version (Windows)
     {
-        path = stripl(path);
+        path = stripLeft(path);
         if (path.length > 2  &&  path[1] == ':')  return path[0 .. 2];
     }
     return null;
@@ -1383,11 +1380,11 @@ body
 {
 	size_t ni; // current character in path
 
-        foreach (pi; 0 .. pattern.length)
+    foreach (pi; 0 .. pattern.length)
+    {
+        char pc = pattern[pi];
+        switch (pc)
         {
-            char pc = pattern[pi];
-            switch (pc)
-            {
             case '*':
                 if (pi + 1 == pattern.length)
                     return true;
