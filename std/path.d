@@ -52,7 +52,7 @@ version(Posix)
 
 version (Windows) private alias Signed!size_t ssize_t;
 
-
+void main() { }
 
 
 /** String used to separate directory names in a path.  Under
@@ -180,7 +180,7 @@ C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 }
 
 /// ditto
-C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
+C[] baseName(C, C1)(C[] path, C1[] suffix)  @safe nothrow //TODO: pure
     if (isSomeChar!C && isSomeChar!C1)
 {
     auto p1 = baseName(path);
@@ -249,7 +249,7 @@ unittest
     }
     ---
 */
-C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow
+C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
     if (isSomeChar!C)
 {
     // This function is written so it adheres to the POSIX requirements
@@ -328,7 +328,7 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  //TODO: @safe pure nothrow
+C[] driveName(C)(C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     version (Windows)
@@ -519,7 +519,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @safe pure nothrow
+    @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     return cast(typeof(return))(stripExtension(path)~'.'~ext);
@@ -553,7 +553,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @safe pure // (BUG 5700) nothrow
+    @trusted pure // (BUG 5700) nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
@@ -629,7 +629,7 @@ version (unittest)
     ---
 */
 immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
-    @safe // (BUG 5304) pure  (BUG 5700) nothrow
+    @trusted // (BUG 5304) pure  (BUG 5700) nothrow
     if (Strings.length > 0 && compatibleStrings!(C[], Strings))
 {
     // More than two path components
@@ -1372,7 +1372,7 @@ bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
     }
     -----
  */
-bool glob(const(char)[] path, const(char)[] pattern)  //TODO: @safe pure nothrow
+bool glob(const(char)[] path, const(char)[] pattern)  @safe nothrow //TODO: pure
 in
 {
     // Verify that pattern[] is valid
