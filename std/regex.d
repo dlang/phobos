@@ -104,7 +104,7 @@ import core.stdc.stdlib;
 import core.stdc.string;
 import std.stdio;
 import std.string;
-import std.ctype;
+import std.ascii;
 import std.outbuffer;
 import std.bitmanip;
 import std.utf;
@@ -182,7 +182,10 @@ auto s = regex(r"p[1-5]\s*"w, "g");
 struct Regex(E) if (is(E == Unqual!E))
 {
 private:
-    alias Tuple!(size_t, "startIdx", size_t, "endIdx") regmatch_t;
+    struct regmatch_t
+    {
+        size_t startIdx, endIdx;
+    }
     enum REA
     {
         global          = 1,    // has the g attribute
@@ -360,7 +363,7 @@ Returns the number of parenthesized captures
                 {
                     auto dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
                     if (pc + *dest > place)
-                        *dest -= change; 
+                        *dest -= change;
                 }
                 pc += 1 + 2*uint.sizeof;
                 break;
@@ -374,10 +377,10 @@ Returns the number of parenthesized captures
                 }
                 pc += 1 + 3*uint.sizeof;
                 break;
-                    
+
             case REneglookahead://jump or call forward
             case RElookahead:
-            case REor: 
+            case REor:
             case REgoto:
                 if (pc < place)
                 {
@@ -387,10 +390,10 @@ Returns the number of parenthesized captures
                 }
                 pc += 1 + uint.sizeof;
                 break;
-                
+
             case REret:
             case REanychar:
-            case REanystarg: 
+            case REanystarg:
             case REanystar:
             case REbol:
             case REeol:
@@ -404,7 +407,7 @@ Returns the number of parenthesized captures
             case REnotword:
                 pc++;
                 break;
-                
+
             case REchar:
             case REichar:
             case REbackref:
@@ -471,7 +474,7 @@ Returns the number of parenthesized captures
                 {
                     prog[pc] = prog[offs+1] == REloop ? REanystar : REanystarg;
                     uint change = 2*(1 + uint.sizeof) + 1 + 3*uint.sizeof - 1;
-                    std.array.replaceInPlace(prog, pc + 1, 
+                    std.array.replaceInPlace(prog, pc + 1,
                                              pc + change + 1, cast(ubyte[])[]);
                     fixup(prog, pc, change);
                     pc++;
@@ -536,7 +539,7 @@ Returns the number of parenthesized captures
                 len = *cast(uint *)&prog[pc+1];
                 pc += 1 + uint.sizeof + len;
                 break;
-                
+
             case REneglookahead:
             case RElookahead:
             case REor:
@@ -628,7 +631,7 @@ Returns the number of parenthesized captures
         case '{':       // {n} {n,} {n,m}
             p++;
 
-            if (p == plength || !isdigit(pattern[p]))
+            if (p == plength || !isDigit(pattern[p]))
                 error("badly formed {n,m}");
             auto src = pattern[p..$];
             n = parse!uint(src);
@@ -648,7 +651,7 @@ Returns the number of parenthesized captures
                 m = inf;
                 break;
             }
-            if (!isdigit(pattern[p]))
+            if (!isDigit(pattern[p]))
                 error("badly formed {n,m}");
             src = pattern[p..$];
             m = parse!uint(src);
@@ -830,10 +833,10 @@ Returns the number of parenthesized captures
             op = REchar;
             if (attributes & REA.ignoreCase)
             {
-                if (isalpha(c))
+                if (isAlpha(c))
                 {
                     op = REichar;
-                    c = cast(char)std.ctype.toupper(c);
+                    c = cast(char)std.ascii.toUpper(c);
                 }
             }
             if (op == REchar && c <= 0xFF)
@@ -1001,6 +1004,7 @@ Returns the number of parenthesized captures
                 {
                 case RS.dash:
                     r.setbit2('-');
+                    goto case;
                 case RS.rliteral:
                     r.setbit2(c);
                     break;
@@ -1033,13 +1037,13 @@ Returns the number of parenthesized captures
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isspace(i))
+                        if (isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isspace(i))
+                        if (!isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -1059,7 +1063,8 @@ Returns the number of parenthesized captures
                     switch (rs)
                     {
                     case RS.dash:
-                            r.setbit2('-');
+                        r.setbit2('-');
+                        goto case;
                     case RS.rliteral:
                         r.setbit2(c);
                         break;
@@ -1096,7 +1101,8 @@ Returns the number of parenthesized captures
                 switch (rs)
                 {
                 case RS.rliteral:
-                        r.setbit2(c);
+                    r.setbit2(c);
+                    goto case;
                 case RS.start:
                     c = c2;
                     rs = RS.rliteral;
@@ -1268,7 +1274,7 @@ Returns the number of parenthesized captures
     }
 
 // BUG: should this include '$'?
-    private int isword(dchar c) { return isalnum(c) || c == '_'; }
+    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
 
     void printProgram(const(ubyte)[] prog = null)
     {
@@ -1909,7 +1915,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         if (engine.program[0] == engine.REchar)
         {
             firstc = engine.program[1];
-            if (engine.attributes & engine.REA.ignoreCase && isalpha(firstc))
+            if (engine.attributes & engine.REA.ignoreCase && isAlpha(firstc))
                 firstc = 0;
         }
         ubyte* pmemory = cast(ubyte *)alloca(stackSize);
@@ -1992,8 +1998,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
             {
                 if (j == b.length) return i != a.length;
                 if (i == a.length) return -1;
-                immutable x = std.uni.toUniLower(a[i]),
-                    y = std.uni.toUniLower(b[j]);
+                immutable x = std.uni.toLower(a[i]),
+                    y = std.uni.toLower(b[j]);
                 if (x == y) continue;
                 return x - y;
             }
@@ -2110,8 +2116,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                    if (isLower(cast(E) c2))
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2141,8 +2147,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 size_t c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(E) c2))
-                        c2 = std.ctype.toupper(cast(E) c2);
+                    if (isLower(cast(E) c2))
+                        c2 = std.ascii.toUpper(cast(E) c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2481,7 +2487,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isdigit(input[src]))
+                if (!isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2491,7 +2497,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotdigit");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isdigit(input[src]))
+                if (isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2501,7 +2507,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isspace(input[src]))
+                if (!isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2511,7 +2517,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREnotspace");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isspace(input[src]))
+                if (isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2545,7 +2551,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 auto so = pmatch[n + 1].startIdx;
                 auto eo = pmatch[n + 1].endIdx;
                 auto len = eo - so;
-				debug(std_regex) writefln("len \t%d", len);
+                                debug(std_regex) writefln("len \t%d", len);
                 if (src + len > input.length)
                     goto Lnomatch;
 
@@ -2913,7 +2919,7 @@ Capitalize the letters 'a' and 'r':
 ---
 string baz(RegexMatch!(string) m)
 {
-    return std.string.toupper(m.hit);
+    return std.string.toUpper(m.hit);
 }
 auto s = replace!(baz)("Strap a rocket engine on a chicken.",
         regex("[ar]", "g"));
@@ -2988,7 +2994,7 @@ unittest
 
     string baz(RegexMatch!(string) m)
     {
-        return std.string.toupper(m.hit);
+        return std.string.toUpper(m.hit);
     }
     auto s = replace!(baz)("Strap a rocket engine on a chicken.",
             regex("[ar]", "g"));
@@ -3377,7 +3383,7 @@ unittest
                 {
                     case '\\':
                         fmt.popFront();
-                        if (!isdigit(fmt.front) )
+                        if (!isDigit(fmt.front) )
                         {
                             result ~= fmt.front;
                             fmt.popFront();
@@ -3588,9 +3594,9 @@ unittest
 
 //issue 6076
 //regression on .*
-unittest 
+unittest
 {
     auto re = regex("c.*|d");
     auto m = match("mm", re);
-    assert(m.empty);          
+    assert(m.empty);
 }

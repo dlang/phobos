@@ -22,8 +22,11 @@ import core.memory;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        core.stdc.errno, std.algorithm, std.array, std.conv,
        std.datetime, std.exception, std.format, std.path, std.process,
-       std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
-       std.typetuple, std.utf;
+       std.range, std.stdio, std.string, std.traits,
+       std.typecons, std.typetuple, std.utf;
+
+import std.metastrings; //For generating deprecation messages only. Remove once
+                        //deprecation path complete.
 
 version (Win32)
 {
@@ -37,11 +40,13 @@ version (Win32)
  */
     version(Windows) alias std.windows.charset.toMBSz toMBSz;
 }
-version (Posix)
+else version (Posix)
 {
     import core.sys.posix.dirent, core.sys.posix.fcntl, core.sys.posix.sys.stat,
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 }
+else
+    static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
 version (unittest)
 {
@@ -56,7 +61,7 @@ version (unittest)
         {
             version(Windows)
                 _deleteme = std.path.join(std.process.getenv("TEMP"), _deleteme);
-            else
+            else version(Posix)
                 _deleteme = "/tmp/" ~ _deleteme;
 
             _first = false;
@@ -250,7 +255,14 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 {
     if (!condition)
     {
-        throw new FileException(name, "", file, line);
+      version (Windows)
+      {
+        throw new FileException(name, .GetLastError(), file, line);
+      }
+      else version (Posix)
+      {
+        throw new FileException(name, .getErrno(), file, line);
+      }
     }
     return condition;
 }
@@ -280,75 +292,76 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void[] read(in char[] name, size_t upTo = size_t.max)
+void[] read(in char[] name, size_t upTo = size_t.max)
 {
-    alias TypeTuple!(GENERIC_READ,
-            FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-            HANDLE.init)
-        defaults;
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
-
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    auto size = GetFileSize(h, null);
-    cenforce(size != INVALID_FILE_SIZE, name);
-    size = min(upTo, size);
-    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
-    scope(failure) delete buf;
-
-    DWORD numread = void;
-    cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
-            && numread == size, name);
-    return buf[0 .. size];
-}
-
-version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
-{
-    // A few internal configuration parameters {
-    enum size_t
-        minInitialAlloc = 1024 * 4,
-        maxInitialAlloc = size_t.max / 2,
-        sizeIncrement = 1024 * 16,
-        maxSlackMemoryAllowed = 1024;
-    // }
-
-    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
-            core.sys.posix.fcntl.O_RDONLY);
-    cenforce(fd != -1, name);
-    scope(exit) core.sys.posix.unistd.close(fd);
-
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, name);
-    //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
-
-    immutable initialAlloc = to!size_t(statbuf.st_size
-        ? min(statbuf.st_size + 1, maxInitialAlloc)
-        : minInitialAlloc);
-    auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
-        [0 .. initialAlloc];
-    scope(failure) delete result;
-    size_t size = 0;
-
-    for (;;)
+    version(Windows)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
-                min(result.length, upTo) - size);
-        cenforce(actual != -1, name);
-        if (actual == 0) break;
-        size += actual;
-        if (size < result.length) continue;
-        immutable newAlloc = size + sizeIncrement;
-        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
-            [0 .. newAlloc];
-    }
+        alias TypeTuple!(GENERIC_READ,
+                FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    return result.length - size >= maxSlackMemoryAllowed
-        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
-        : result[0 .. size];
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        auto size = GetFileSize(h, null);
+        cenforce(size != INVALID_FILE_SIZE, name);
+        size = min(upTo, size);
+        auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
+        scope(failure) delete buf;
+
+        DWORD numread = void;
+        cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+                && numread == size, name);
+        return buf[0 .. size];
+    }
+    else version(Posix)
+    {
+        // A few internal configuration parameters {
+        enum size_t
+            minInitialAlloc = 1024 * 4,
+            maxInitialAlloc = size_t.max / 2,
+            sizeIncrement = 1024 * 16,
+            maxSlackMemoryAllowed = 1024;
+        // }
+
+        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+                core.sys.posix.fcntl.O_RDONLY);
+        cenforce(fd != -1, name);
+        scope(exit) core.sys.posix.unistd.close(fd);
+
+        struct_stat64 statbuf = void;
+        cenforce(fstat64(fd, &statbuf) == 0, name);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
+
+        immutable initialAlloc = to!size_t(statbuf.st_size
+            ? min(statbuf.st_size + 1, maxInitialAlloc)
+            : minInitialAlloc);
+        auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
+            [0 .. initialAlloc];
+        scope(failure) delete result;
+        size_t size = 0;
+
+        for (;;)
+        {
+            immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+                    min(result.length, upTo) - size);
+            cenforce(actual != -1, name);
+            if (actual == 0) break;
+            size += actual;
+            if (size < result.length) continue;
+            immutable newAlloc = size + sizeIncrement;
+            result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
+                [0 .. newAlloc];
+        }
+
+        return result.length - size >= maxSlackMemoryAllowed
+            ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+            : result[0 .. size];
+    }
 }
 
 unittest
@@ -418,28 +431,27 @@ void main()
 }
 ----
  */
-
-version(Windows) void write(in char[] name, const void[] buffer)
+void write(in char[] name, const void[] buffer)
 {
-    alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-            HANDLE.init)
-        defaults;
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
+    version(Windows)
+    {
+        alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    DWORD numwritten;
-    cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
-            && buffer.length == numwritten,
-            name);
-}
-
-version(Posix) void write(in char[] name, in void[] buffer)
-{
-    return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        DWORD numwritten;
+        cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
+                && buffer.length == numwritten,
+                name);
+    }
+    else version(Posix)
+        return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
 }
 
 /*********************************************
@@ -460,29 +472,28 @@ void main()
 }
 ----
  */
-
-version(Windows) void append(in char[] name, in void[] buffer)
+void append(in char[] name, in void[] buffer)
 {
-    alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
-        defaults;
+    version(Windows)
+    {
+        alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
+            defaults;
 
-    auto h = useWfuncs
-        ? CreateFileW(std.utf.toUTF16z(name), defaults)
-        : CreateFileA(toMBSz(name), defaults);
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(CloseHandle(h), name);
-    DWORD numwritten;
-    cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-            && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
-            && buffer.length == numwritten,
-            name);
-}
-
-version(Posix) void append(in char[] name, in void[] buffer)
-{
-    return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
+        DWORD numwritten;
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+                && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
+                && buffer.length == numwritten,
+                name);
+    }
+    else version(Posix)
+        return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
 }
 
 // Posix implementation helper for write and append
@@ -507,38 +518,37 @@ version(Posix) private void writeImpl(in char[] name,
  * Rename file $(D from) to $(D to).
  * Throws: $(D FileException) on error.
  */
-
-version(Windows) void rename(in char[] from, in char[] to)
+void rename(in char[] from, in char[] to)
 {
-    enforce(useWfuncs
-            ? MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to))
-            : MoveFileA(toMBSz(from), toMBSz(to)),
-            new FileException(
-                text("Attempting to rename file ", from, " to ",
-                        to)));
-}
-
-version(Posix) void rename(in char[] from, in char[] to)
-{
-    cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to))
+                : MoveFileA(toMBSz(from), toMBSz(to)),
+                new FileException(
+                    text("Attempting to rename file ", from, " to ",
+                            to)));
+    }
+    else version(Posix)
+        cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
 /***************************************************
 Delete file $(D name).
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void remove(in char[] name)
+void remove(in char[] name)
 {
-    cenforce(useWfuncs
-            ? DeleteFileW(std.utf.toUTF16z(name))
-            : DeleteFileA(toMBSz(name)),
-            name);
-}
-
-version(Posix) void remove(in char[] name)
-{
-    cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
+    version(Windows)
+    {
+        cenforce(useWfuncs
+                ? DeleteFileW(std.utf.toUTF16z(name))
+                : DeleteFileA(toMBSz(name)),
+                name);
+    }
+    else version(Posix)
+        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
+            "Failed to remove file " ~ name);
 }
 
 /***************************************************
@@ -546,44 +556,45 @@ Get size of file $(D name) in bytes.
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
-
-version(Windows) ulong getSize(in char[] name)
+ulong getSize(in char[] name)
 {
-    HANDLE findhndl = void;
-    uint resulth = void;
-    uint resultl = void;
-    const (char)[] file = name[];
-
-    //FindFirstFileX can't handle file names which end in a backslash.
-    if(file.endsWith(sep))
-        file.popBackN(sep.length);
-
-    if (useWfuncs)
+    version(Windows)
     {
-        WIN32_FIND_DATAW filefindbuf;
+        HANDLE findhndl = void;
+        uint resulth = void;
+        uint resultl = void;
+        const (char)[] file = name[];
 
-        findhndl = FindFirstFileW(std.utf.toUTF16z(file), &filefindbuf);
-        resulth = filefindbuf.nFileSizeHigh;
-        resultl = filefindbuf.nFileSizeLow;
+        //FindFirstFileX can't handle file names which end in a backslash.
+        if(file.endsWith(sep))
+            file.popBackN(sep.length);
+
+        if (useWfuncs)
+        {
+            WIN32_FIND_DATAW filefindbuf;
+
+            findhndl = FindFirstFileW(std.utf.toUTF16z(file), &filefindbuf);
+            resulth = filefindbuf.nFileSizeHigh;
+            resultl = filefindbuf.nFileSizeLow;
+        }
+        else
+        {
+            WIN32_FIND_DATA filefindbuf;
+
+            findhndl = FindFirstFileA(toMBSz(file), &filefindbuf);
+            resulth = filefindbuf.nFileSizeHigh;
+            resultl = filefindbuf.nFileSizeLow;
+        }
+
+        cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), file);
+        return (cast(ulong) resulth << 32) + resultl;
     }
-    else
+    else version(Posix)
     {
-        WIN32_FIND_DATA filefindbuf;
-
-        findhndl = FindFirstFileA(toMBSz(file), &filefindbuf);
-        resulth = filefindbuf.nFileSizeHigh;
-        resultl = filefindbuf.nFileSizeLow;
+        struct_stat64 statbuf = void;
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        return statbuf.st_size;
     }
-
-    cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), file);
-    return (cast(ulong) resulth << 32) + resultl;
-}
-
-version(Posix) ulong getSize(in char[] name)
-{
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    return statbuf.st_size;
 }
 
 unittest
@@ -598,141 +609,99 @@ unittest
 }
 
 /*************************
- * $(RED Scheduled for deprecation. Please use getTimesWin (for Windows)
- *       or getTimesPosix (for Posix) instead.)
+ * $(RED Scheduled for deprecation in August 2011. Please use either the version
+ *       of $(D getTimes) which takes two arguments or $(D getTimesWin)
+ *       (Windows-Only) instead.)
  */
-version(StdDdoc)
+version(StdDdoc) void getTimes(in char[] name,
+                               out d_time ftc,
+                               out d_time fta,
+                               out d_time ftm);
+else version(Windows) void getTimes(C)(in C[] name,
+                                       out d_time ftc,
+                                       out d_time fta,
+                                       out d_time ftm) if(is(Unqual!C == char))
 {
-    void getTimes(in char[] name,
-            out d_time ftc,
-            out d_time fta,
-            out d_time ftm);
-}
-else version(Windows)
-{
-    void getTimes(C)(in C[] name,
-                     out d_time ftc,
-                     out d_time fta,
-                     out d_time ftm)
-        if(is(Unqual!C == char))
-    {
-        pragma(msg, "std.file.getTimes has been scheduled for deprecation. " ~
-                    "Please use getTimesWin (for Windows) or getTimesPosix (for Posix) "
-                    "instead.");
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "either the version of getTimes with two arguments or " ~
+                "getTimesWin (Windows-Only) instead.");
 
+    HANDLE findhndl = void;
+
+    if (useWfuncs)
+    {
+        WIN32_FIND_DATAW filefindbuf;
+
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+    }
+    else
+    {
+        WIN32_FIND_DATA filefindbuf;
+
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+    }
+
+    if (findhndl == cast(HANDLE)-1)
+    {
+        throw new FileException(name.idup);
+    }
+    FindClose(findhndl);
+}
+else version(Posix) void getTimes(C)(in C[] name,
+                                     out d_time ftc,
+                                     out d_time fta,
+                                     out d_time ftm) if(is(Unqual!C == char))
+{
+    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
+                "scheduled for deprecation in August 2011. Please use " ~
+                "either the version of getTimes with two arguments or " ~
+                "getTimesWin (Windows-Only) instead.");
+
+    struct_stat64 statbuf = void;
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
+    fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
+    ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
+}
+
+
+/++
+    Get the access and modified times of file $(D name).
+
+    Params:
+        name                 = File name to get times for.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void getTimes(in char[] name,
+                               out SysTime fileAccessTime,
+                               out SysTime fileModificationTime);
+//Oh, how it would be nice of you could overload templated functions with
+//non-templated functions. Untemplatize this when the old getTimes goes away.
+else void getTimes(C)(in C[] name,
+                      out SysTime fileAccessTime,
+                      out SysTime fileModificationTime)
+    if(is(Unqual!C == char))
+{
+    version(Windows)
+    {
         HANDLE findhndl = void;
 
-        if (useWfuncs)
+        if(useWfuncs)
         {
             WIN32_FIND_DATAW filefindbuf;
 
             findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-            ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
-            fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-            ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
-        }
-        else
-        {
-            WIN32_FIND_DATA filefindbuf;
-
-            findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-            ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
-            fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-            ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
-        }
-
-        if (findhndl == cast(HANDLE)-1)
-        {
-            throw new FileException(name.idup);
-        }
-        FindClose(findhndl);
-    }
-}
-else version(Posix)
-{
-    void getTimes(C)(in C[] name, out d_time ftc, out d_time fta, out d_time ftm)
-        if(is(Unqual!C == char))
-    {
-        pragma(msg, "std.file.getTimes has been scheduled for deprecation. " ~
-                    "Please use getTimesWin (for Windows) or getTimesPosix (for Posix) "
-                    "instead.");
-
-        struct_stat64 statbuf = void;
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-        ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
-        fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
-        ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
-    }
-}
-else
-    static assert(0, "Unsupported/Unknown OS");
-
-
-version(StdDdoc)
-{
-    /++
-        $(BLUE This function is Windows-Only.)
-
-        Get creation/access/modified times of file $(D name).
-
-        Note that the Windows and Posix versions of getTimesX differ
-        because Posix has no file creation time whereas Windows
-        has no file status changed time.
-
-        Params:
-            name                 = File name to get times for.
-            fileCreationTime     = Time the file was created.
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
-
-        Throws:
-            $(D FileException) on error.
-     +/
-    void getTimesWin(in char[] name,
-            out SysTime fileCreationTime,
-            out SysTime fileAccessTime,
-            out SysTime fileModificationTime);
-
-
-    /++
-        $(BLUE This function is Posix-Only.)
-
-        Get file status change time, acces time, and modification times
-        of file $(D name).
-
-        Note that the Windows and Posix versions of getTimesX differ
-        because Posix has no file creation time whereas Windows
-        has no file status changed time.
-
-        Params:
-            name                 = File name to get times for.
-            fileStatusChangeTime = Time the file's status was last changed.
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
-
-        Throws:
-            $(D FileException) on error.
-     +/
-    version(Posix) void getTimesPosix(in char[] name,
-                                      out SysTime fileStatusChangeTime,
-                                      out SysTime fileAccessTime,
-            out SysTime fileModificationTime);
-}
-else version(Windows)
-{
-    void getTimesWin(in char[] name,
-                     out SysTime fileCreationTime,
-                     out SysTime fileAccessTime,
-                     out SysTime fileModificationTime)
-    {
-        HANDLE findhndl = void;
-
-        if (useWfuncs)
-        {
-            WIN32_FIND_DATAW filefindbuf;
-
-            findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
             fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
             fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
         }
@@ -741,207 +710,277 @@ else version(Windows)
             WIN32_FIND_DATA filefindbuf;
 
             findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
             fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
             fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
         }
 
-        if(findhndl == cast(HANDLE)-1)
-        {
-            throw new FileException(name.idup);
-        }
+        enforce(findhndl != cast(HANDLE)-1, new FileException(name.idup));
 
         FindClose(findhndl);
     }
-
-    unittest
-    {
-        version(Windows)
-        {
-            auto currTime = Clock.currTime();
-
-            write(deleteme, "a");
-            scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-
-            SysTime creationTime1 = void;
-            SysTime accessTime1 = void;
-            SysTime modificationTime1 = void;
-
-            getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
-
-            enum leeway = dur!"seconds"(4);
-
-            {
-                auto diffc = creationTime1 - currTime;
-                auto diffa = accessTime1 - currTime;
-                auto diffm = modificationTime1 - currTime;
-
-                assert(abs(diffc) <= leeway);
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            Thread.sleep(dur!"seconds"(1));
-
-            currTime = Clock.currTime();
-            write(deleteme, "b");
-
-            SysTime creationTime2 = void;
-            SysTime accessTime2 = void;
-            SysTime modificationTime2 = void;
-
-            getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
-
-            {
-                auto diffa = accessTime2 - currTime;
-                auto diffm = modificationTime2 - currTime;
-
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            assert(creationTime1 <= creationTime2);
-            assert(accessTime1 <= accessTime2);
-            assert(modificationTime1 <= modificationTime2);
-        }
-    }
-}
-else version(Posix)
-{
-    void getTimesPosix(in char[] name,
-            out SysTime fileStatusChangeTime,
-            out SysTime fileAccessTime,
-            out SysTime fileModificationTime)
+    else version(Posix)
     {
         struct_stat64 statbuf = void;
 
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
 
-        fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
         fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
+}
 
-    unittest
+unittest
+{
+    auto currTime = Clock.currTime();
+
+    write(deleteme, "a");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+
+    SysTime accessTime1 = void;
+    SysTime modificationTime1 = void;
+
+    getTimes(deleteme, accessTime1, modificationTime1);
+
+    enum leeway = dur!"seconds"(4);
+
     {
-        auto currTime = Clock.currTime();
+        auto diffa = accessTime1 - currTime;
+        auto diffm = modificationTime1 - currTime;
 
-        write(deleteme, "a");
-        scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
 
-        SysTime statusChangedTime1 = void;
-        SysTime accessTime1 = void;
-        SysTime modificationTime1 = void;
+    Thread.sleep(dur!"seconds"(1));
 
-        getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
+    currTime = Clock.currTime();
+    write(deleteme, "b");
 
-        enum leeway = dur!"seconds"(4);
+    SysTime accessTime2 = void;
+    SysTime modificationTime2 = void;
 
-        {
-            auto diffc = statusChangedTime1 - currTime;
-            auto diffa = accessTime1 - currTime;
-            auto diffm = modificationTime1 - currTime;
+    getTimes(deleteme, accessTime2, modificationTime2);
 
-            assert(abs(diffc) <= leeway);
-            assert(abs(diffa) <= leeway);
-            assert(abs(diffm) <= leeway);
-        }
+    {
+        auto diffa = accessTime2 - currTime;
+        auto diffm = modificationTime2 - currTime;
 
-        Thread.sleep(dur!"seconds"(1));
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
 
-        currTime = Clock.currTime();
-        write(deleteme, "b");
+    assert(accessTime1 <= accessTime2);
+    assert(modificationTime1 <= modificationTime2);
+}
 
-        SysTime statusChangedTime2 = void;
-        SysTime accessTime2 = void;
-        SysTime modificationTime2 = void;
 
-        getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
+/++
+    $(BLUE This function is Windows-Only.)
 
-        {
-            auto diffc = statusChangedTime2 - currTime;
-            auto diffa = accessTime2 - currTime;
-            auto diffm = modificationTime2 - currTime;
+    Get creation/access/modified times of file $(D name).
 
-            assert(abs(diffc) <= leeway);
-            assert(abs(diffa) <= leeway);
-            assert(abs(diffm) <= leeway);
-        }
+    This is the same as $(D getTimes) except that it also gives you the file
+    creation time - which isn't possible on Posix systems.
 
-        assert(statusChangedTime1 <= statusChangedTime2);
-        assert(accessTime1 <= accessTime2);
-            assert(modificationTime1 <= modificationTime2);
+    Params:
+        name                 = File name to get times for.
+        fileCreationTime     = Time the file was created.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void getTimesWin(in char[] name,
+                                  out SysTime fileCreationTime,
+                                  out SysTime fileAccessTime,
+                                  out SysTime fileModificationTime);
+else version(Windows) void getTimesWin(in char[] name,
+                                       out SysTime fileCreationTime,
+                                       out SysTime fileAccessTime,
+                                       out SysTime fileModificationTime)
+{
+    HANDLE findhndl = void;
+
+    if (useWfuncs)
+    {
+        WIN32_FIND_DATAW filefindbuf;
+
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
+        fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+        fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
+    }
+    else
+    {
+        WIN32_FIND_DATA filefindbuf;
+
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
+        fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
+        fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
+    }
+
+    if(findhndl == cast(HANDLE)-1)
+    {
+        throw new FileException(name.idup);
+    }
+
+    FindClose(findhndl);
+}
+
+version(Windows) unittest
+{
+    auto currTime = Clock.currTime();
+
+    write(deleteme, "a");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+
+    SysTime creationTime1 = void;
+    SysTime accessTime1 = void;
+    SysTime modificationTime1 = void;
+
+    getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
+
+    enum leeway = dur!"seconds"(4);
+
+    {
+        auto diffc = creationTime1 - currTime;
+        auto diffa = accessTime1 - currTime;
+        auto diffm = modificationTime1 - currTime;
+
+        assert(abs(diffc) <= leeway);
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    Thread.sleep(dur!"seconds"(1));
+
+    currTime = Clock.currTime();
+    write(deleteme, "b");
+
+    SysTime creationTime2 = void;
+    SysTime accessTime2 = void;
+    SysTime modificationTime2 = void;
+
+    getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
+
+    {
+        auto diffa = accessTime2 - currTime;
+        auto diffm = modificationTime2 - currTime;
+
+        assert(abs(diffa) <= leeway);
+        assert(abs(diffm) <= leeway);
+    }
+
+    assert(creationTime1 <= creationTime2);
+    assert(accessTime1 <= accessTime2);
+    assert(modificationTime1 <= modificationTime2);
+}
+
+/++
+    $(RED Scheduled for deprecation in November 2011. Please use the
+          $(D getTimes) with two arguments instead.)
+
+    $(BLUE This function is Posix-Only.)
+
+    Get file status change time, acces time, and modification times
+    of file $(D name).
+
+    $(D getTimes) is the same on both Windows and Posix, but it is not
+    possible to get the file creation time on Posix systems, so
+    $(D getTimes) cannot give you the file creation time. $(D getTimesWin)
+    does the same thing on Windows as $(D getTimes) except that it also gives
+    you the file creation time. This function was created to do the same
+    thing that the old, 3 argument $(D getTimes) was doing on Posix - giving
+    you the time that the file status last changed - but ultimately, that's
+    not really very useful, and we don't like having functions which are
+    OS-specific when we can reasonably avoid it. So, this function is being
+    deprecated. You can use $(D DirEntry)'s  $(D statBuf) property if you
+    really want to get at that information (along with all of the other
+    OS-specific stuff that $(D stat) gives you).
+
+    Params:
+        name                 = File name to get times for.
+        fileStatusChangeTime = Time the file's status was last changed.
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
+
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void getTimesPosix(in char[] name,
+                                    out SysTime fileStatusChangeTime,
+                                    out SysTime fileAccessTime,
+                                    out SysTime fileModificationTime);
+else version(Posix) void getTimesPosix(C)(in C[] name,
+                                          out SysTime fileStatusChangeTime,
+                                          out SysTime fileAccessTime,
+                                          out SysTime fileModificationTime)
+    if(is(Unqual!C == char))
+{
+    pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
+                "scheduled for deprecation in November 2011. Please use " ~
+                "the version of getTimes with two arguments instead.");
+
+    struct_stat64 statbuf = void;
+
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+
+    fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
+    fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
+    fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
+}
+
+
+/++
+ $(RED Scheduled for deprecation in August 2011. Please use
+       $(D timeLastModified) instead.)
+ +/
+version(StdDdoc) d_time lastModified(in char[] name);
+else d_time lastModified(C)(in C[] name)
+    if(is(Unqual!C == char))
+{
+    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+
+    version(Windows)
+    {
+        d_time dummy = void, ftm = void;
+        getTimes(name, dummy, dummy, ftm);
+        return ftm;
+    }
+    else version(Posix)
+    {
+        struct_stat64 statbuf = void;
+        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+        return cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
 }
-else
-    static assert(0, "Unsupported/Unknown OS");
 
 
-version(StdDdoc)
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D timeLastModified) instead.)
++/
+version(StdDdoc) d_time lastModified(in char[] name, d_time returnIfMissing);
+else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
+    if(is(Unqual!C == char))
 {
-    /++
-     $(RED Scheduled for deprecation. Please use
-     $(XREF file,timeLastModified) instead.)
-     +/
-    d_time lastModified(in char[] name);
-}
-else
-{
-    d_time lastModified(C)(in C[] name)
-        if(is(Unqual!C == char))
+    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+
+    version(Windows)
     {
-        pragma(msg, "std.file.lastModified has been scheduled for deprecation. " ~
-                    "Please use timeLastModified instead.");
-
-        version(Windows)
-        {
-            d_time dummy = void, ftm = void;
-            getTimes(name, dummy, dummy, ftm);
-            return ftm;
-        }
-        else version(Posix)
-        {
-            struct_stat64 statbuf = void;
-            cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-            return cast(d_time) statbuf.st_mtime * ticksPerSecond;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        if (!exists(name)) return returnIfMissing;
+        d_time dummy = void, ftm = void;
+        getTimes(name, dummy, dummy, ftm);
+        return ftm;
     }
-}
-
-
-version(StdDdoc)
-{
-    /++
-        $(RED Scheduled for deprecation. Please use timeLastModified instead.)
-    +/
-    d_time lastModified(in char[] name, d_time returnIfMissing);
-}
-else
-{
-    d_time lastModified(C)(in C[] name, d_time returnIfMissing)
-        if(is(Unqual!C == char))
+    else version(Posix)
     {
-        pragma(msg, "std.file.lastModified has been scheduled for deprecation. " ~
-                    "Please use timeLastModified instead.");
-
-        version(Windows)
-        {
-            if (!exists(name)) return returnIfMissing;
-            d_time dummy = void, ftm = void;
-            getTimes(name, dummy, dummy, ftm);
-            return ftm;
-        }
-        else version(Posix)
-        {
-            struct_stat64 statbuf = void;
-            return stat64(toStringz(name), &statbuf) != 0
-                ? returnIfMissing
-                : cast(d_time) statbuf.st_mtime * ticksPerSecond;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        struct_stat64 statbuf = void;
+        return stat64(toStringz(name), &statbuf) != 0
+            ? returnIfMissing
+            : cast(d_time) statbuf.st_mtime * ticksPerSecond;
     }
 }
 
@@ -957,10 +996,10 @@ unittest
 }
 
 /++
-Returns the time that the given file was last modified.
+    Returns the time that the given file was last modified.
 
-Throws:
-$(D FileException) if the given file does not exist.
+    Throws:
+        $(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(in char[] name)
 {
@@ -981,8 +1020,6 @@ SysTime timeLastModified(in char[] name)
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1001,7 +1038,7 @@ SysTime timeLastModified(in char[] name)
     correctly prompts building it.
 
     Params:
-        name = The name of the file to get the modification time for.
+        name            = The name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
 
 Examples:
@@ -1038,9 +1075,6 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
-
 }
 
 unittest
@@ -1081,8 +1115,6 @@ unittest
     {
         return access(toStringz(name), 0) == 0;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1133,55 +1165,44 @@ uint getAttributes(in char[] name)
 
         return statbuf.st_mode;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
-version(StdDdoc)
+/++
+    If the given file is a symbolic link, then this returns the attributes of the
+    symbolic link itself rather than file that it points to. If the given file
+    is $(I not) a symbolic link, then this function returns the same result
+    as getAttributes.
+
+    On Windows, getLinkAttributes is identical to getAttributes. It exists on
+    Windows so that you don't have to special-case code for Windows when dealing
+    with symbolic links.
+
+    Params:
+        name = The file to get the symbolic link attributes of.
+
+    Throws:
+        FileException on error.
+ +/
+uint getLinkAttributes(in char[] name)
 {
-    /++
-        If the given file is a symbolic link, then this returns the attributes of the
-        symbolic link itself rather than file that it points to. If the given file
-        is $(I not) a symbolic link, then this function returns the same result
-        as getAttributes.
-
-        On Windows, getLinkAttributes is identical to getAttributes. It exists on
-        Windows so that you don't have to special-case code for Windows when dealing
-        with symbolic links.
-
-        Params:
-            name = The file to get the symbolic link attributes of.
-
-        Throws:
-            FileException on error.
-     +/
-    uint getLinkAttributes(in char[] name);
-}
-else
-{
-    uint getLinkAttributes(in char[] name)
+    version(Windows)
     {
-        version(Windows)
-        {
-            return getAttributes(name);
-        }
-        else version(OSX)
-        {
-            struct_stat64 lstatbuf = void;
-            cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
-            return lstatbuf.st_mode;
-        }
-        else version(Posix)
-        {
-            struct_stat64 lstatbuf = void;
+        return getAttributes(name);
+    }
+    else version(OSX)
+    {
+        struct_stat64 lstatbuf = void;
+        cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
+        return lstatbuf.st_mode;
+    }
+    else version(Posix)
+    {
+        struct_stat64 lstatbuf = void;
 
-            cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
+        cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
 
-            return lstatbuf.st_mode;
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        return lstatbuf.st_mode;
     }
 }
 
@@ -1211,8 +1232,6 @@ assert("/usr/share/include".isDir);
     {
         return (getAttributes(name) & S_IFMT) == S_IFDIR;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1233,22 +1252,23 @@ unittest
         if("/usr/include/assert.h".exists)
             assert(!"/usr/include/assert.h".isDir);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
+
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isDir) instead.)
+ +/
+alias isDir isdir;
 
 
 /++
+    $(RED Scheduled for deprecation in November 2011.
+          Please use $(D attrIsDir) instead.)
+
     Returns whether the given file attributes are for a directory.
 
     Params:
         attributes = The file attributes.
-
-Examples:
---------------------
-assert(!getAttributes("/etc/fonts/fonts.conf").isDir);
-assert(!getLinkAttributes("/etc/fonts/fonts.conf").isDir);
---------------------
   +/
 @property bool isDir(uint attributes) nothrow
 {
@@ -1260,8 +1280,31 @@ assert(!getLinkAttributes("/etc/fonts/fonts.conf").isDir);
     {
         return (attributes & S_IFMT) == S_IFDIR;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
+}
+
+
+/++
+    Returns whether the given file attributes are for a directory.
+
+    Params:
+        attributes = The file attributes.
+
+Examples:
+--------------------
+assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
+assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
+--------------------
+  +/
+bool attrIsDir(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFDIR;
+    }
 }
 
 unittest
@@ -1270,59 +1313,53 @@ unittest
     {
         if("C:\\Program Files\\".exists)
         {
-            assert(isDir(getAttributes("C:\\Program Files\\")));
-            assert(isDir(getLinkAttributes("C:\\Program Files\\")));
+            assert(attrIsDir(getAttributes("C:\\Program Files\\")));
+            assert(attrIsDir(getLinkAttributes("C:\\Program Files\\")));
         }
 
         if("C:\\Windows\\system.ini".exists)
         {
-            assert(!isDir(getAttributes("C:\\Windows\\system.ini")));
-            assert(!isDir(getLinkAttributes("C:\\Windows\\system.ini")));
+            assert(!attrIsDir(getAttributes("C:\\Windows\\system.ini")));
+            assert(!attrIsDir(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
     else version(Posix)
     {
         if("/usr/include".exists)
         {
-            assert(isDir(getAttributes("/usr/include")));
-            assert(isDir(getLinkAttributes("/usr/include")));
+            assert(attrIsDir(getAttributes("/usr/include")));
+            assert(attrIsDir(getLinkAttributes("/usr/include")));
         }
 
         if("/usr/include/assert.h".exists)
         {
-            assert(!isDir(getAttributes("/usr/include/assert.h")));
-            assert(!isDir(getLinkAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getLinkAttributes("/usr/include/assert.h")));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
-
-/++
-    $(RED Scheduled for deprecation. Please use isDir instead.)
- +/
-alias isDir isdir;
 
 
 /++
     Returns whether the given file (or directory) is a file.
 
     On Windows, if a file is not a directory, then it's a file. So,
-    either isFile or isDir will return true for any given file.
+    either $(D isFile) or $(D isDir) will return true for any given file.
 
-    On Posix systems, if isFile is true, that indicates that the file is
-    a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both isFile and isDir to be false for a particular
-    file (in which case, it's a special file). You can use getAttributes
-    to get the attributes to figure out what type of special it is, or
-    you can use dirEntry to get at its statBuf, which is the result from
-    stat. In either case, see the stat man page for more details.
+    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
+    is a regular file (e.g. not a block not device). So, on Posix systems, it's
+    possible for both $(D isFile) and $(D isDir) to be $(D false) for a
+    particular file (in which case, it's a special file). You can use
+    $(D getAttributes) to get the attributes to figure out what type of special
+    it is, or you can use $(D dirEntry) to get at its $(D statBuf), which is the
+    result from $(D stat). In either case, see the man page for $(D stat) for
+    more information.
 
     Params:
         name = The path to the file.
 
     Throws:
-        FileException if the given file does not exist.
+        $(D FileException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1333,15 +1370,9 @@ assert(!"/usr/share/include".isFile);
 @property bool isFile(in char[] name)
 {
     version(Windows)
-    {
         return !name.isDir;
-    }
     else version(Posix)
-    {
         return (getAttributes(name) & S_IFMT) == S_IFREG;
-    }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1362,32 +1393,33 @@ unittest
         if("/usr/include/assert.h".exists)
             assert("/usr/include/assert.h".isFile);
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
+
+/++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D isFile) instead.)
+ +/
+alias isFile isfile;
 
 
 /++
+    $(RED Scheduled for deprecation in November 2011.
+          Please use $(D attrIsFile) instead.)
+
     Returns whether the given file attributes are for a file.
 
     On Windows, if a file is not a directory, it's a file. So,
-    either isFile or isDir will return true for any given file.
+    either $(D isFile) or $(D isDir) will return $(D true) for any given file.
 
-    On Posix systems, if isFile is true, that indicates that the file is
-    a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both isFile and isDir to be false for a particular
-    file (in which case, it's a special file). If a file is a special
+    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
+    is a regular file (e.g. not a block not device). So, on Posix systems,
+    it's possible for both $(D isFile) and $(D isDir) to be $(D false) for a
+    particular file (in which case, it's a special file). If a file is a special
     file, you can use the attributes to check what type of special
-    file it is (see the stat man page for more information).
+    file it is (see the man page for $(D stat) for more information).
 
     Params:
         attributes = The file attributes.
-
-Examples:
---------------------
-assert(getAttributes("/etc/fonts/fonts.conf").isFile);
-assert(getLinkAttributes("/etc/fonts/fonts.conf").isFile);
---------------------
   +/
 @property bool isFile(uint attributes) nothrow
 {
@@ -1399,8 +1431,42 @@ assert(getLinkAttributes("/etc/fonts/fonts.conf").isFile);
     {
         return (attributes & S_IFMT) == S_IFREG;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
+}
+
+
+/++
+    Returns whether the given file attributes are for a file.
+
+    On Windows, if a file is not a directory, it's a file. So, either
+    $(D attrIsFile) or $(D attrIsDir) will return $(D true) for the
+    attributes of any given file.
+
+    On Posix systems, if $(D attrIsFile) is $(D true), that indicates that the
+    file is a regular file (e.g. not a block not device). So, on Posix systems,
+    it's possible for both $(D attrIsFile) and $(D attrIsDir) to be $(D false)
+    for a particular file (in which case, it's a special file). If a file is a
+    special file, you can use the attributes to check what type of special file
+    it is (see the man page for $(D stat) for more information).
+
+    Params:
+        attributes = The file attributes.
+
+Examples:
+--------------------
+assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
+assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
+--------------------
+  +/
+bool attrIsFile(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFREG;
+    }
 }
 
 unittest
@@ -1409,40 +1475,31 @@ unittest
     {
         if("C:\\Program Files\\".exists)
         {
-            assert(!isFile(getAttributes("C:\\Program Files\\")));
-            assert(!isFile(getLinkAttributes("C:\\Program Files\\")));
+            assert(!attrIsFile(getAttributes("C:\\Program Files\\")));
+            assert(!attrIsFile(getLinkAttributes("C:\\Program Files\\")));
         }
 
         if("C:\\Windows\\system.ini".exists)
         {
-            assert(isFile(getAttributes("C:\\Windows\\system.ini")));
-            assert(isFile(getLinkAttributes("C:\\Windows\\system.ini")));
+            assert(attrIsFile(getAttributes("C:\\Windows\\system.ini")));
+            assert(attrIsFile(getLinkAttributes("C:\\Windows\\system.ini")));
         }
     }
     else version(Posix)
     {
         if("/usr/include".exists)
         {
-            assert(!isFile(getAttributes("/usr/include")));
-            assert(!isFile(getLinkAttributes("/usr/include")));
+            assert(!attrIsFile(getAttributes("/usr/include")));
+            assert(!attrIsFile(getLinkAttributes("/usr/include")));
         }
 
         if("/usr/include/assert.h".exists)
         {
-            assert(isFile(getAttributes("/usr/include/assert.h")));
-            assert(isFile(getLinkAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getLinkAttributes("/usr/include/assert.h")));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
-
-/++
-    $(RED Scheduled for deprecation. Please use isFile instead.)
-
-    Same is isFile.
- +/
-alias isFile isfile;
 
 
 /++
@@ -1467,8 +1524,6 @@ alias isFile isfile;
     {
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 unittest
@@ -1540,15 +1595,38 @@ unittest
             assert(!isFile(getLinkAttributes(symfile)));
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
+}
+
+
+/++
+    $(RED Scheduled for deprecation in November 2011.
+          Please use $(D attrIsSymLink) instead.)
+
+    Returns whether the given file attributes are for a symbolic link.
+
+    Always return $(D false) on Windows. It exists on Windows so that you don't
+    have to special-case code for Windows when dealing with symbolic links.
+
+    Params:
+        attributes = The file attributes.
+  +/
+@property bool isSymLink(uint attributes) nothrow
+{
+    version(Windows)
+    {
+        return false;
+    }
+    else version(Posix)
+    {
+        return (attributes & S_IFMT) == S_IFLNK;
+    }
 }
 
 
 /++
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return false on Windows. It exists on Windows so that you don't
+    Always return $(D false) on Windows. It exists on Windows so that you don't
     have to special-case code for Windows when dealing with symbolic links.
 
     Params:
@@ -1562,7 +1640,7 @@ assert(!getAttributes("/tmp/alink").isSymLink);
 assert(getLinkAttributes("/tmp/alink").isSymLink);
 --------------------
   +/
-@property bool isSymLink(uint attributes) nothrow
+bool attrIsSymLink(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1572,8 +1650,6 @@ assert(getLinkAttributes("/tmp/alink").isSymLink);
     {
         return (attributes & S_IFMT) == S_IFLNK;
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
@@ -1581,19 +1657,20 @@ assert(getLinkAttributes("/tmp/alink").isSymLink);
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-
-version(Windows) void chdir(in char[] pathname)
+void chdir(in char[] pathname)
 {
-    enforce(useWfuncs
-            ? SetCurrentDirectoryW(std.utf.toUTF16z(pathname))
-            : SetCurrentDirectoryA(toMBSz(pathname)),
-            new FileException(pathname.idup));
-}
-
-version(Posix) void chdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
-            pathname);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? SetCurrentDirectoryW(std.utf.toUTF16z(pathname))
+                : SetCurrentDirectoryA(toMBSz(pathname)),
+                new FileException(pathname.idup));
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0,
+                pathname);
+    }
 }
 
 /****************************************************
@@ -1601,19 +1678,20 @@ Make directory $(D pathname).
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void mkdir(in char[] pathname)
+void mkdir(in char[] pathname)
 {
-    enforce(useWfuncs
-            ? CreateDirectoryW(std.utf.toUTF16z(pathname), null)
-            : CreateDirectoryA(toMBSz(pathname), null),
-            new FileException(pathname.idup));
-}
-
-version(Posix) void mkdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
-            pathname);
+    version(Windows)
+    {
+        enforce(useWfuncs
+                ? CreateDirectoryW(std.utf.toUTF16z(pathname), null)
+                : CreateDirectoryA(toMBSz(pathname), null),
+                new FileException(pathname.idup));
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), octal!777) == 0,
+                 pathname);
+    }
 }
 
 /****************************************************
@@ -1647,7 +1725,7 @@ unittest
         immutable basepath = deleteme ~ "_dir";
         version (Windows)
         {
-            immutable path = basepath ~ `\fake\here\`;
+            immutable path = basepath ~ "\\fake\\here\\";
         }
         else version (Posix)
         {
@@ -1666,50 +1744,80 @@ Remove directory $(D pathname).
 
 Throws: $(D FileException) on error.
  */
-
-version(Windows) void rmdir(in char[] pathname)
+void rmdir(in char[] pathname)
 {
-    cenforce(useWfuncs
-            ? RemoveDirectoryW(std.utf.toUTF16z(pathname))
-            : RemoveDirectoryA(toMBSz(pathname)),
-            pathname);
-}
-
-version(Posix) void rmdir(in char[] pathname)
-{
-    cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
-            pathname);
+    version(Windows)
+    {
+        cenforce(useWfuncs
+                ? RemoveDirectoryW(std.utf.toUTF16z(pathname))
+                : RemoveDirectoryA(toMBSz(pathname)),
+                pathname);
+    }
+    else version(Posix)
+    {
+        cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0,
+                pathname);
+    }
 }
 
 /****************************************************
  * Get current directory.
  * Throws: $(D FileException) on error.
  */
-
 version(Windows) string getcwd()
 {
-    // A bit odd API: calling GetCurrentDirectory(0, null) returns
-    // length including the \0, whereas calling with non-zero
-    // params returns length excluding the \0.
+    /* GetCurrentDirectory's return value:
+        1. function succeeds: the number of characters that are written to
+    the buffer, not including the terminating null character.
+        2. function fails: zero
+        3. the buffer (lpBuffer) is not large enough: the required size of
+    the buffer, in characters, including the null-terminating character.
+    */
+    ushort[4096] staticBuff = void; //enough for most common case
     if (useWfuncs)
     {
-        auto dir =
-            new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return to!string(dir);
+        auto buffW = cast(wchar[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryW(buffW.length, buffW.ptr),
+                "getcwd");
+        // we can do it because toUTFX always produces a fresh string
+        if(n < buffW.length)
+        {
+            return toUTF8(buffW[0 .. n]);
+        }
+        else //staticBuff isn't enough
+        {
+            auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryW(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+            return toUTF8(ptr[0 .. n2]);
+        }
     }
     else
     {
-        auto dir =
-            new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
-        dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-        cenforce(dir.length, "getcwd");
-        return assumeUnique(dir);
+        auto buffA = cast(char[]) staticBuff;
+        immutable n = cenforce(GetCurrentDirectoryA(buffA.length, buffA.ptr),
+                "getcwd");
+        // fromMBSz doesn't always produce a fresh string
+        if(n < buffA.length)
+        {
+            string res = fromMBSz(cast(immutable)buffA.ptr);
+            return res.ptr == buffA.ptr ? res.idup : res;
+        }
+        else //staticBuff isn't enough
+        {
+            auto ptr = cast(char*) malloc(char.sizeof * n);
+            scope(exit) free(ptr);
+            immutable n2 = GetCurrentDirectoryA(n, ptr);
+            cenforce(n2 && n2 < n, "getcwd");
+
+            string res = fromMBSz(cast(immutable)ptr);
+            return res.ptr == ptr ? res.idup : res;
+        }
     }
 }
 
-version(Posix) string getcwd()
+version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
@@ -1729,9 +1837,9 @@ version(StdDdoc)
     /++
         Info on a file, similar to what you'd get from stat on a Posix system.
 
-        A DirEntry is obtained by using the functions dirEntry (to get the DirEntry
-        for a specific file) or dirEntries (to get a DirEntry for each file/directory
-        in a particular directory).
+        A $(D DirEntry) is obtained by using the functions $(D dirEntry) (to get
+        the $(D DirEntry) for a specific file) or $(D dirEntries) (to get a
+        $(D DirEntry) for each file/directory in a particular directory).
       +/
     struct DirEntry
     {
@@ -1739,7 +1847,7 @@ version(StdDdoc)
     public:
 
         /++
-            Returns the path to the file represented by this DirEntry.
+            Returns the path to the file represented by this $(D DirEntry).
 
 Examples:
 --------------------
@@ -1754,7 +1862,8 @@ assert(de2.name == "/usr/share/include");
 
 
         /++
-            Returns whether the file represented by this DirEntry is a directory.
+            Returns whether the file represented by this $(D DirEntry) is a
+            directory.
 
 Examples:
 --------------------
@@ -1768,25 +1877,25 @@ assert(de2.isDir);
         @property bool isDir();
 
         /++
-            $(RED Scheduled for deprecation. Please use isDir instead.)
-
-            Same as isdir.
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D isDir) instead.)
           +/
         alias isDir isdir;
 
 
         /++
-            Returns whether the file represented by this DirEntry is a file.
+            Returns whether the file represented by this $(D DirEntry) is a file.
 
             On Windows, if a file is not a directory, then it's a file. So,
-            either isFile or isDir will return true.
+            either $(D isFile) or $(D isDir) will return $(D true).
 
-            On Posix systems, if isFile is true, that indicates that the file is
-            a regular file (e.g. not a block not device). So, on Posix systems,
-            it's possible for both isFile and isDir to be false for a particular
-            file (in which case, it's a special file). You can use attributes
-            or statBuf to get more information about a special file (see the
-            stat man page for more details).
+            On Posix systems, if $(D isFile) is $(D true), that indicates that
+            the file is a regular file (e.g. not a block not device). So, on
+            Posix systems, it's possible for both $(D isFile) and $(D isDir) to
+            be $(D false) for a particular file (in which case, it's a special
+            file). You can use $(D attributes) or $(D statBuf) to get more
+            information about a special file (see the stat man page for more
+            details).
 
 Examples:
 --------------------
@@ -1800,14 +1909,14 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-            $(RED Scheduled for deprecation. Please use isFile instead.)
-
-            Same as isfile.
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D isFile) instead.)
           +/
         alias isFile isfile;
 
         /++
-            Returns whether the file represented by this DirEntry is a symbol link.
+            Returns whether the file represented by this $(D DirEntry) is a
+            symbolic link.
 
             Always return false on Windows. It exists on Windows so that you don't
             have to special-case code for Windows when dealing with symbolic links.
@@ -1815,90 +1924,110 @@ assert(!de2.isFile);
         @property bool isSymLink();
 
         /++
-            Returns the size of the the file represented by this DirEntry in bytes.
+            Returns the size of the the file represented by this $(D DirEntry)
+            in bytes.
           +/
         @property ulong size();
 
         /++
-            $(RED Scheduled for deprecation. Please use timeCreated instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeCreated) instead.)
 
-            Returns the creation time of the file represented by this DirEntry.
+            Returns the creation time of the file represented by this
+            $(D DirEntry).
 
-            $(RED Note that this property has existed for both Windows and Posix systems
-                  but that it is $(I incorrect) on Posix systems. Posix systems do not have
-                  access to the creation time of a file. On Posix systems this property
-                  has incorrectly been the time that the file's status status last changed.
-                  If you want that value, use timeStatusChanged.)
+            $(RED Note that this property has existed for both Windows and Posix
+                  systems but that it is $(I incorrect) on Posix systems. Posix
+                  systems do not have access to the creation time of a file. On
+                  Posix systems this property has incorrectly been the time that
+                  the file's status status last changed. If you want that value,
+                  then get it from the $(D statBuf) property, which gives you
+                  access to the $(D stat) struct which Posix systems use (check
+                  out $(D stat)'s man page for more details.))
           +/
         @property d_time creationTime() const;
 
         /++
             $(BLUE This function is Windows-Only.)
 
-            Returns the creation time of the file represented by this DirEntry.
+            Returns the creation time of the file represented by this
+            $(D DirEntry).
           +/
         @property SysTime timeCreated() const;
 
 
         /++
+            $(RED Scheduled for deprecation in November 2011.
+                  Please use $(D timeLastAccessed) instead.)
+
             $(BLUE This function is Posix-Only.)
 
-            Returns the last time that the status of file represented by this DirEntry
-            was changed (i.e. owner, group, link count, mode, etc.).
+            Returns the last time that the status of file represented by this
+            $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
           +/
         @property SysTime timeStatusChanged();
 
         /++
-            $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeLastAccessed) instead.)
 
-            Returns the time that the file represented by this DirEntry was last accessed.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last accessed.
 
-            Note that many file systems do not update the access time for files (generally
-            for performance reasons), so there's a good chance that lastAccessTime will
-            return the same value as lastWriteTime.
+            Note that many file systems do not update the access time for files
+            (generally for performance reasons), so there's a good chance that
+            $(D lastAccessTime) will return the same value as $(D lastWriteTime).
           +/
         @property d_time lastAccessTime();
         /++
-            Returns the time that the file represented by this DirEntry was last accessed.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last accessed.
 
-            Note that many file systems do not update the access time for files (generally
-            for performance reasons), so there's a good chance that timeLastAccessed will
-            return the same value as timeLastModified.
+            Note that many file systems do not update the access time for files
+            (generally for performance reasons), so there's a good chance that
+            $(D timeLastAccessed) will return the same value as
+            $(D timeLastModified).
           +/
         @property SysTime timeLastAccessed();
         /++
-            $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
+            $(RED Scheduled for deprecation in August 2011.
+                  Please use $(D timeLastModified) instead.)
 
-            Returns the time that the file represented by this DirEntry was last modified.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last modified.
           +/
         @property d_time lastWriteTime();
         /++
-            Returns the time that the file represented by this DirEntry was last modified.
+            Returns the time that the file represented by this $(D DirEntry) was
+            last modified.
           +/
         @property SysTime timeLastModified();
 
         /++
-            Returns the attributes of the file represented by this DirEntry.
+            Returns the attributes of the file represented by this $(D DirEntry).
 
-            Note that the file attributes on Windows and Posix systems are completely
-            different. On, Windows, they're what is returned by GetFileAttributes
-            <a href="http://msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx">GetFileAttributes</a>.
-            Whereas, an Posix systems, they're the st_mode value which is part of the
-            stat struct gotten by calling stat.
+            Note that the file attributes on Windows and Posix systems are
+            completely different. On, Windows, they're what is returned by
+            $(D GetFileAttributes)
+            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
+            Whereas, an Posix systems, they're the $(D st_mode) value which is
+            part of the $(D stat) struct gotten by calling $(D stat).
 
-            On Posix systems, if the file represented by this DirEntry is a symbolic link,
-            then attributes are the attributes of the file pointed to by the symbolic link.
+            On Posix systems, if the file represented by this $(D DirEntry) is a
+            symbolic link, then attributes are the attributes of the file
+            pointed to by the symbolic link.
           +/
         @property uint attributes();
 
         /++
-            On Posix systems, if the file represented by this DirEntry is a symbolic link,
-            then linkAttributes are the attributes of the symbolic link itself. Otherwise,
-            linkAttributes is identical to attributes.
+            On Posix systems, if the file represented by this $(D DirEntry) is a
+            symbolic link, then $(D linkAttributes) are the attributes of the
+            symbolic link itself. Otherwise, $(D linkAttributes) is identical to
+            $(D attributes).
 
-            On Windows, linkAttributes is identical to attributes. It exists on
-            Windows so that you don't have to special-case code for Windows when dealing
-            with symbolic links.
+            On Windows, $(D linkAttributes) is identical to $(D attributes). It
+            exists on Windows so that you don't have to special-case code for
+            Windows when dealing with symbolic links.
           +/
         @property uint linkAttributes();
 
@@ -1907,7 +2036,7 @@ assert(!de2.isFile);
         /++
             $(BLUE This function is Posix-Only.)
 
-            The stat struct gotten from calling stat.
+            The $(D stat) struct gotten from calling $(D stat).
           +/
         @property struct_stat64 statBuf();
     }
@@ -1917,36 +2046,6 @@ else version(Windows)
     struct DirEntry
     {
     public:
-
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATA* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
-
-        void init(C)(in C[] path, in WIN32_FIND_DATAW* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
 
         @property string name() const
         {
@@ -2019,7 +2118,6 @@ else version(Windows)
         {
             return _attributes;
         }
-
 
     private:
 
@@ -2097,6 +2195,7 @@ else version(Windows)
 
         string _name; /// The file or directory represented by this DirEntry.
 
+
         SysTime _timeCreated;      /// The time when the file was created.
         SysTime _timeLastAccessed; /// The time when the file was last accessed.
         SysTime _timeLastModified; /// The time when the file was last modified.
@@ -2110,26 +2209,6 @@ else version(Posix)
     struct DirEntry
     {
     public:
-
-        void init(C)(in C[] path)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path);
-        }
-
-        void init(C)(in C[] path, core.sys.posix.dirent.dirent* fd)
-            if(is(Unqual!C == char))
-        {
-            pragma(msg, "std.file.DirEntry.init has been scheduled for deprecation. " ~
-                        "It was not documented before, and you shouldn't need it. " ~
-                        "Just use std.file.dirEntry to get a DirEntry for an arbitrary file.");
-
-            _init(path, fd);
-        }
 
         @property string name() const
         {
@@ -2165,8 +2244,7 @@ else version(Posix)
         // worthless, since the odds are high that it will be DT_UNKNOWN,
         // so it continues to be left undocumented.
         //
-        // For the moment, it's still here for backwards compatability, if
-        // nothing else. It may or may not be deprecated later.
+        // Scheduled for deprecation in August 2011.
         @property ubyte d_type()
         {
             return _dType;
@@ -2332,10 +2410,6 @@ else version(Posix)
         bool _dTypeSet = false;   /// Whether the dType of the file has been set.
     }
 }
-else
-{
-    static assert(0, "Unsupported/Unknown OS");
-}
 
 unittest
 {
@@ -2392,15 +2466,14 @@ unittest
             assert(!de.isSymLink);
         }
     }
-    else
-        static assert(0, "Unsupported/Unknown OS");
 }
 
 
 /******************************************************
- * $(RED Scheduled for deprecation. Please use dirEntries instead.)
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(D dirEntries) instead.)
  *
- * For each file and directory DirEntry in pathname[],
+ * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
  *
  * Params:
@@ -2430,184 +2503,167 @@ unittest
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
-{
-    _listDir(pathname, callback);
-}
+alias listDir listdir;
 
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
  */
-
-version(Windows) void copy(in char[] from, in char[] to)
+void copy(in char[] from, in char[] to)
 {
-    immutable result = useWfuncs
-        ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
-        : CopyFileA(toMBSz(from), toMBSz(to), false);
-    if (!result)
-        throw new FileException(to.idup);
-}
-
-version(Posix) void copy(in char[] from, in char[] to)
-{
-    immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
-    cenforce(fd != -1, from);
-    scope(exit) core.sys.posix.unistd.close(fd);
-
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, from);
-    //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
-
-    auto toz = toStringz(to);
-    immutable fdw = core.sys.posix.fcntl.open(toz,
-            O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-    cenforce(fdw != -1, from);
-    scope(failure) std.c.stdio.remove(toz);
+    version(Windows)
     {
-        scope(failure) core.sys.posix.unistd.close(fdw);
-        auto BUFSIZ = 4096u * 16;
-        auto buf = std.c.stdlib.malloc(BUFSIZ);
-        if (!buf)
-        {
-            BUFSIZ = 4096;
-            buf = std.c.stdlib.malloc(BUFSIZ);
-            buf || assert(false, "Out of memory in std.file.copy");
-        }
-        scope(exit) std.c.stdlib.free(buf);
-
-        for (auto size = statbuf.st_size; size; )
-        {
-            immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
-            cenforce(
-                core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
-                && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
-                from);
-            assert(size >= toxfer);
-            size -= toxfer;
-        }
+        immutable result = useWfuncs
+            ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
+            : CopyFileA(toMBSz(from), toMBSz(to), false);
+        if (!result)
+            throw new FileException(to.idup);
     }
+    else version(Posix)
+    {
+        immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
+        cenforce(fd != -1, from);
+        scope(exit) core.sys.posix.unistd.close(fd);
 
-    cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        struct_stat64 statbuf = void;
+        cenforce(fstat64(fd, &statbuf) == 0, from);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
-    utimbuf utim = void;
-    utim.actime = cast(time_t)statbuf.st_atime;
-    utim.modtime = cast(time_t)statbuf.st_mtime;
+        auto toz = toStringz(to);
+        immutable fdw = core.sys.posix.fcntl.open(toz,
+                O_CREAT | O_WRONLY | O_TRUNC, octal!666);
+        cenforce(fdw != -1, from);
+        scope(failure) std.c.stdio.remove(toz);
+        {
+            scope(failure) core.sys.posix.unistd.close(fdw);
+            auto BUFSIZ = 4096u * 16;
+            auto buf = std.c.stdlib.malloc(BUFSIZ);
+            if (!buf)
+            {
+                BUFSIZ = 4096;
+                buf = std.c.stdlib.malloc(BUFSIZ);
+                buf || assert(false, "Out of memory in std.file.copy");
+            }
+            scope(exit) std.c.stdlib.free(buf);
 
-    cenforce(utime(toz, &utim) != -1, from);
+            for (auto size = statbuf.st_size; size; )
+            {
+                immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
+                cenforce(
+                    core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
+                    && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
+                    from);
+                assert(size >= toxfer);
+                size -= toxfer;
+            }
+        }
+
+        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+
+        utimbuf utim = void;
+        utim.actime = cast(time_t)statbuf.st_atime;
+        utim.modtime = cast(time_t)statbuf.st_mtime;
+
+        cenforce(utime(toz, &utim) != -1, from);
+    }
 }
 
-version(StdDdoc)
-{
     /++
-        $(RED Scheduled for deprecation. Please use the version which takes
-              std.datetime.SysTime instead).
+        $(RED Scheduled for deprecation in August 2011. Please use the version
+              which takes $(XREF datetime, SysTime) instead).
 
-        Set access/modified times of file $(D_PARAM name).
+        Set access/modified times of file $(D name).
 
         Throws:
             $(D_PARAM FileException) on error.
      +/
-    void setTimes(in char[] name, d_time fta, d_time ftm);
-}
-else
+version(StdDdoc) void setTimes(in char[] name, d_time fta, d_time ftm);
+else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
+    if(is(Unqual!C == char))
 {
-    void setTimes(C)(in C[] name, d_time fta, d_time ftm)
-        if(is(Unqual!C == char))
+    pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
+                "which takes std.date.d_time has been scheduled for deprecation " ~
+                "in August 2011. Please use the version which takes " ~
+                "std.datetime.SysTime instead.");
+
+    version(Windows)
     {
-        pragma(msg, "The version of std.file.setTimes which takes std.date.d_time " ~
-                    "has been scheduled for deprecation. " ~
-                    "Please use the version which takes std.datetime.SysTime instead.");
+        const ta = d_time2FILETIME(fta);
+        const tm = d_time2FILETIME(ftm);
+        alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL, HANDLE.init)
+            defaults;
+        auto h = useWfuncs
+            ? CreateFileW(std.utf.toUTF16z(name), defaults)
+            : CreateFileA(toMBSz(name), defaults);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) cenforce(CloseHandle(h), name);
 
-        version(Windows)
-        {
-            const ta = d_time2FILETIME(fta);
-            const tm = d_time2FILETIME(ftm);
-            alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-                defaults;
-            auto h = useWfuncs
-                ? CreateFileW(std.utf.toUTF16z(name), defaults)
-                : CreateFileA(toMBSz(name), defaults);
-            cenforce(h != INVALID_HANDLE_VALUE, name);
-            scope(exit) cenforce(CloseHandle(h), name);
-
-            cenforce(SetFileTime(h, null, &ta, &tm), name);
-        }
-        else version(Posix)
-        {
-            timeval[2] t = void;
-            t[0].tv_sec = to!int(fta / ticksPerSecond);
-            t[0].tv_usec = cast(int)
-                (cast(long) ((cast(double) fta / ticksPerSecond)
-                        * 1_000_000) % 1_000_000);
-            t[1].tv_sec = to!int(ftm / ticksPerSecond);
-            t[1].tv_usec = cast(int)
-                (cast(long) ((cast(double) ftm / ticksPerSecond)
-                        * 1_000_000) % 1_000_000);
-            enforce(utimes(toStringz(name), t) == 0);
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
+    }
+    else version(Posix)
+    {
+        timeval[2] t = void;
+        t[0].tv_sec = to!int(fta / ticksPerSecond);
+        t[0].tv_usec = cast(int)
+            (cast(long) ((cast(double) fta / ticksPerSecond)
+                    * 1_000_000) % 1_000_000);
+        t[1].tv_sec = to!int(ftm / ticksPerSecond);
+        t[1].tv_usec = cast(int)
+            (cast(long) ((cast(double) ftm / ticksPerSecond)
+                    * 1_000_000) % 1_000_000);
+        enforce(utimes(toStringz(name), t) == 0);
     }
 }
 
 
-version(StdDdoc)
-{
-    /++
-        Set access/modified times of file $(D name).
+/++
+    Set access/modified times of file $(D name).
 
-        Params:
-            fileAccessTime       = Time the file was last accessed.
-            fileModificationTime = Time the file was last modified.
+    Params:
+        fileAccessTime       = Time the file was last accessed.
+        fileModificationTime = Time the file was last modified.
 
-        Throws:
-            $(D FileException) on error.
-     +/
-    void setTimes(in char[] name,
-                  SysTime fileAccessTime,
-            SysTime fileModificationTime);
-}
-else
+    Throws:
+        $(D FileException) on error.
+ +/
+version(StdDdoc) void setTimes(in char[] name,
+                               SysTime fileAccessTime,
+                               SysTime fileModificationTime);
+else void setTimes(C)(in C[] name,
+                      SysTime fileAccessTime,
+                      SysTime fileModificationTime)
+    if(is(Unqual!C == char))
 {
-    void setTimes(C)(in C[] name,
-                     SysTime fileAccessTime,
-                     SysTime fileModificationTime)
-        if(is(Unqual!C == char))
+    version(Windows)
     {
-        version(Windows)
-        {
-            const ta = SysTimeToFILETIME(fileAccessTime);
-            const tm = SysTimeToFILETIME(fileModificationTime);
-            alias TypeTuple!(GENERIC_WRITE,
-                             0,
-                             null,
-                             OPEN_EXISTING,
-                             FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-                  defaults;
-            auto h = useWfuncs ?
-                     CreateFileW(std.utf.toUTF16z(name), defaults) :
-                     CreateFileA(toMBSz(name), defaults);
+        const ta = SysTimeToFILETIME(fileAccessTime);
+        const tm = SysTimeToFILETIME(fileModificationTime);
+        alias TypeTuple!(GENERIC_WRITE,
+                         0,
+                         null,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL, HANDLE.init)
+              defaults;
+        auto h = useWfuncs ?
+                 CreateFileW(std.utf.toUTF16z(name), defaults) :
+                 CreateFileA(toMBSz(name), defaults);
 
-            cenforce(h != INVALID_HANDLE_VALUE, name);
+        cenforce(h != INVALID_HANDLE_VALUE, name);
 
-            scope(exit)
-                cenforce(CloseHandle(h), name);
+        scope(exit)
+            cenforce(CloseHandle(h), name);
 
-            cenforce(SetFileTime(h, null, &ta, &tm), name);
-        }
-        else version(Posix)
-        {
-            timeval[2] t = void;
+        cenforce(SetFileTime(h, null, &ta, &tm), name);
+    }
+    else version(Posix)
+    {
+        timeval[2] t = void;
 
-            t[0] = fileAccessTime.toTimeVal();
-            t[1] = fileModificationTime.toTimeVal();
+        t[0] = fileAccessTime.toTimeVal();
+        t[1] = fileModificationTime.toTimeVal();
 
-            enforce(utimes(toStringz(name), t) == 0);
-        }
-        else
-            static assert(0, "Unsupported/Unknown OS");
+        enforce(utimes(toStringz(name), t) == 0);
     }
 }
 
@@ -2675,7 +2731,6 @@ void rmdirRecurse(ref DirEntry de)
 version(Windows) unittest
 {
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
-
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
     enforce(!exists(deleteme ~ ".dir"));
@@ -2746,8 +2801,6 @@ unittest
                                        de.timeLastModified,
                                        de.timeLastAccessed);
         }
-        else
-            static assert(0, "Unsupported/Unknown OS");
 
         return true;
     }
@@ -2770,104 +2823,287 @@ enum SpanMode
     breadth,
 }
 
-struct DirIterator
+private struct DirIteratorImpl
 {
-    string pathname;
-    SpanMode mode;
-
+    SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
-    bool followSymLinks;
-
-    private int doIt(D)(D dg, DirEntry* de)
+    bool _followSymLinks;
+    DirEntry _cur;
+    Appender!(DirHandle[]) _stack;
+    Appender!(DirEntry[]) _stashed; //used in depth first mode
+    //stack helpers
+    void pushExtra(DirEntry de){ _stashed.put(de); }
+    //ditto
+    bool hasExtra(){ return !_stashed.data.empty; }
+    //ditto
+    DirEntry popExtra()
     {
-        alias ParameterTypeTuple!D Parms;
+        DirEntry de;
+        de = _stashed.data[$-1];
+        _stashed.shrinkTo(_stashed.data.length - 1);
+        return de;
 
-        static if(is(Parms[0] : const(char)[]))
+    }
+    version(Windows)
+    {
+        struct DirHandle
         {
-            return dg(de.name[]);
+            string dirpath;
+            HANDLE h;
         }
-        else static if(is(Parms[0] : DirEntry))
+
+        bool stepIn(string directory)
         {
-            return dg(*de);
+            string search_pattern = std.path.join(directory, "*.*");
+            if(useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                HANDLE h = FindFirstFileW(toUTF16z(search_pattern), &findinfo);
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
+                _stack.put(DirHandle(directory, h));
+                return toNext(false, &findinfo);
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                HANDLE h = FindFirstFileA(toMBSz(search_pattern), &findinfo);
+                cenforce(h != INVALID_HANDLE_VALUE, directory);
+                _stack.put(DirHandle(directory, h));
+                return toNext(false, &findinfo);
+            }
         }
-        else
+
+        bool next()
         {
-            static assert(0, "Dunno how to enumerate directory entries "
-                             "against type " ~ Parms[0].stringof);
+            if(_stack.data.empty)
+                return false;
+            bool result;
+            if (useWfuncs)
+            {
+                WIN32_FIND_DATAW findinfo;
+                result = toNext(true, &findinfo);
+
+            }
+            else
+            {
+                WIN32_FIND_DATA findinfo;
+                result = toNext(true, &findinfo);
+            }
+            return result;
+        }
+
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
+        {
+            if(fetch)
+            {
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
+        {
+            if(fetch)
+            {
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            }
+            while( std.c.string.strcmp(findinfo.cFileName.ptr, ".") == 0
+                    || std.c.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
+                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                {
+                    popDirStack();
+                    return false;
+                }
+            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            return true;
+        }
+
+        void popDirStack()
+        {
+            assert(!_stack.data.empty);
+            FindClose(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
+        void releaseDirStack()
+        {
+            foreach( d;  _stack.data)
+                FindClose(d.h);
+        }
+
+    }
+    else version(Posix)
+    {
+        struct DirHandle
+        {
+            string dirpath;
+            DIR*   h;
+        }
+
+        bool stepIn(string directory)
+        {
+            auto h = cenforce(opendir(toStringz(directory)), directory);
+            _stack.put(DirHandle(directory, h));
+            return next();
+        }
+
+        bool next()
+        {
+            if(_stack.data.empty)
+                return false;
+            for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+            {
+                // Skip "." and ".."
+                if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
+                   std.c.string.strcmp(fdata.d_name.ptr, "..") )
+                {
+                    _cur._init(_stack.data[$-1].dirpath, fdata);
+                    return true;
+                }
+            }
+            popDirStack();
+            return false;
+        }
+
+        void popDirStack()
+        {
+            assert(!_stack.data.empty);
+            closedir(_stack.data[$-1].h);
+            _stack.shrinkTo(_stack.data.length-1);
+        }
+
+        void releaseDirStack()
+        {
+
+            foreach( d;  _stack.data)
+                closedir(d.h);
         }
     }
 
-    int opApply(D)(scope D dg)
+    this(string pathname, SpanMode mode, bool _followSymLinks)
     {
-        int result = 0;
-        // worklist used only in breadth-first traversal
-        string[] worklist = [pathname];
-
-        bool callback(DirEntry* de)
+        _mode = mode;
+        _followSymLinks = _followSymLinks;
+        _stack = appender(cast(DirHandle[])[]);
+        if(_mode == SpanMode.depth)
+            _stashed = appender(cast(DirEntry[])[]);
+        if(stepIn(pathname))
         {
-            switch(mode)
+            if(_mode == SpanMode.depth)
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+                {
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
+                    {
+                        pushExtra(thisDir);
+                    }
+                    else
+                        break;
+                }
+        }
+    }
+    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
+    @property DirEntry front(){ return _cur; }
+    void popFront()
+    {
+        switch(_mode)
+        {
+        case SpanMode.depth:
+            if(next())
             {
-                case SpanMode.shallow:
+                while(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
                 {
-                    result = doIt(dg, de);
-                    break;
-                }
-                case SpanMode.breadth:
-                {
-                    result = doIt(dg, de);
-
-                    if(!result && (followSymLinks ? de.isDir
-                                                  : isDir(de.linkAttributes)))
+                    auto thisDir = _cur;
+                    if(stepIn(_cur.name))
                     {
-                        worklist ~= de.name;
+                        pushExtra(thisDir);
                     }
-
-                    break;
-                }
-                default:
-                {
-                    assert(mode == SpanMode.depth);
-
-                    if(followSymLinks ? de.isdir
-                                      : isdir(de.linkAttributes))
-                    {
-                        _listDir(de.name, &callback);
-                    }
-
-                    if(!result)
-                        result = doIt(dg, de);
-
-                    break;
+                    else
+                        break;
                 }
             }
-
-            return result == 0;
+            else if(hasExtra())
+                _cur = popExtra();
+            break;
+        case SpanMode.breadth:
+            if(_followSymLinks ? _cur.isDir : isDir(_cur.linkAttributes))
+            {
+                if(!stepIn(_cur.name))
+                    while(!empty && !next()){}
+            }
+            else
+                while(!empty && !next()){}
+            break;
+        default:
+            next();
         }
+    }
 
-        while(!worklist.empty)
-        {
-            auto listThis = worklist.back;
-            worklist.popBack();
-            _listDir(listThis, &callback);
-        }
-
-        return result;
+    ~this()
+    {
+        releaseDirStack();
     }
 }
 
-
+struct DirIterator
+{
+private:
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
+    this(string pathname, SpanMode mode, bool followSymLinks)
+    {
+        impl = typeof(impl)(pathname, mode, followSymLinks);
+    }
+public:
+    @property bool empty(){ return impl.empty; }
+    @property DirEntry front(){ return impl.front; }
+    void popFront(){ impl.popFront(); }
+    int opApply(int delegate(ref string name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+        {
+            string s = v.name;
+            if(dg(s))
+                return 1;
+        }
+        return 0;
+    }
+    int opApply(int delegate(ref DirEntry name) dg)
+    {
+        foreach(DirEntry v; impl.refCountedPayload)
+            if(dg(v))
+                return 1;
+        return 0;
+    }
+}
 /++
-    Iterates a directory using foreach. The iteration variable can be
-    of type $(D_PARAM string) if only the name is needed, or $(D_PARAM
-    DirEntry) if additional details are needed. The span mode dictates
-    the how the directory is traversed. The name of the directory entry
-    includes the $(D_PARAM path) prefix.
+    Returns an input range of DirEntry that lazily iterates a given directory,
+    also provides two ways of foreach iteration. The iteration variable can be of
+    type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
+    if additional details are needed. The span mode dictates the how the
+    directory is traversed. The name of the each directory entry iterated
+    contains the absolute path.
 
     Params:
-        path = The directory to iterato over.
+        path = The directory to iterate over.
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -2892,49 +3128,58 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
---------------------
- +/
-DirIterator dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+// Iterate over all *.d files in current directory and all it's subdirectories
+auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
+foreach(d; dFiles)
+    writeln(d.name);
+// Hook it up with std.parallelism to compile them all in parallel:
+foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
-    DirIterator result;
-
-    result.pathname = path;
-    result.mode = mode;
-    result.followSymLinks = followSymLinks;
-
-    return result;
+    string cmd = "dmd -c "  ~ d.name;
+    writeln(cmd);
+    std.process.system(cmd);
+}
+--------------------
+//
+ +/
+auto dirEntries(string path, SpanMode mode, bool followSymLinks = true)
+{
+    return DirIterator(path, mode, followSymLinks);
 }
 
 unittest
 {
-    version (linux)
-    {
-        assert(std.process.system("mkdir --parents dmd-testing") == 0);
-        scope(exit) std.process.system("rm -rf dmd-testing");
-        assert(std.process.system("mkdir --parents dmd-testing/somedir") == 0);
-        assert(std.process.system("touch dmd-testing/somefile") == 0);
-        assert(std.process.system("touch dmd-testing/somedir/somedeepfile")
-                == 0);
-        foreach (string name; dirEntries("dmd-testing", SpanMode.shallow))
-        {
-        }
-        foreach (string name; dirEntries("dmd-testing", SpanMode.depth))
-        {
-            //writeln(name);
-        }
-        foreach (string name; dirEntries("dmd-testing", SpanMode.breadth))
-        {
-            //writeln(name);
-        }
-        foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
-        {
-            //writeln(e.name);
-        }
+    string testdir = "deleteme.dmd.unittest.std.file"; // needs to be relative
+    mkdirRecurse(std.path.join(testdir, "somedir"));
+    scope(exit) rmdirRecurse(testdir);
+    write(std.path.join(testdir, "somefile"), null);
+    write(std.path.join(testdir, "somedir", "somedeepfile"), null);
 
-        foreach (DirEntry e; dirEntries("/usr/share/zoneinfo", SpanMode.depth))
-        {
-            assert(e.isFile || e.isDir, e.name);
-        }
+    // testing range interface
+    size_t equalEntries(string relpath, SpanMode mode)
+    {
+        auto len = enforce(walkLength(dirEntries(std.path.rel2abs(relpath), mode)));
+        assert(walkLength(dirEntries(relpath, mode)) == len);
+        assert(equal(
+                   map!(q{std.path.rel2abs(a.name)})(dirEntries(relpath, mode)),
+                   map!(q{a.name})(dirEntries(std.path.rel2abs(relpath), mode))));
+        return len;
+    }
+
+    assert(equalEntries(testdir, SpanMode.shallow) == 2);
+    assert(equalEntries(testdir, SpanMode.depth) == 3);
+    assert(equalEntries(testdir, SpanMode.breadth) == 3);
+
+    // testing opApply
+    foreach (string name; dirEntries(testdir, SpanMode.breadth))
+    {
+        //writeln(name);
+        assert(name.startsWith(testdir));
+    }
+    foreach (DirEntry e; dirEntries(std.path.rel2abs(testdir), SpanMode.breadth))
+    {
+        //writeln(name);
+        assert(e.isFile || e.isDir, e.name);
     }
 }
 
@@ -3189,6 +3434,9 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D dirEntries) instead.)
+
     Returns the contents of the given directory.
 
     The names in the contents do not include the pathname.
@@ -3205,7 +3453,7 @@ import std.file;
 
 void main(string[] args)
 {
-    auto dirs = std.file.listdir(args[1]);
+    auto dirs = std.file.listDir(args[1]);
 
     foreach(d; dirs)
         writefln(d);
@@ -3213,8 +3461,9 @@ void main(string[] args)
 --------------------
  +/
 
-string[] listDir(in char[] pathname)
+string[] listDir(C)(in C[] pathname)
 {
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3228,13 +3477,6 @@ string[] listDir(in char[] pathname)
     return result.data;
 }
 
-/++
-    $(RED Scheduled for deprecation. Please use listDir instead.)
-
-    Same is listDir.
- +/
-alias listDir listdir;
-
 unittest
 {
     assert(listDir(".").length > 0);
@@ -3242,6 +3484,9 @@ unittest
 
 
 /++
+    $(RED Scheduled for deprecation in August 2011.
+          Please use $(D dirEntries) instead.)
+
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
 
@@ -3287,21 +3532,34 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = true)
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymLinks = true)
+    if(is(C : char) && !is(U: bool delegate(string filename)))
 {
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
+    import std.regexp;
     auto result = appender!(string[])();
-
     bool callback(DirEntry* de)
     {
         if(followSymLinks ? de.isDir : isDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
-        else if(std.path.fnmatch(de.name, pattern))
+        else
         {
-            result.put(de.name);
-        }
+            static if(is(U : const(C[])))
+            {//pattern version
+                if(std.path.fnmatch(de.name, filter))
+                    result.put(de.name);
+            }
+            else static if(is(U : RegExp))
+            {//RegExp version
 
+                if(filter.test(de.name))
+                    result.put(de.name);
+            }
+            else
+                static assert(0,"There is no version of listDir that takes " ~ U.stringof);
+        }
         return true; // continue
     }
 
@@ -3309,34 +3567,10 @@ string[] listDir(in char[] pathname, in char[] pattern, bool followSymLinks = tr
 
     return result.data;
 }
-
-/++ Ditto +/
-string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
-{
-    auto result = appender!(string[])();
-
-    bool callback(DirEntry* de)
-    {
-        if(followSymLinks ? de.isdir : isDir(de.linkAttributes))
-        {
-            _listDir(de.name, &callback);
-        }
-        else if(r.test(de.name))
-        {
-            result.put(de.name);
-        }
-
-        return true; // continue
-    }
-
-    _listDir(pathname, &callback);
-
-    return result.data;
-}
-
 
 /******************************************************
- * $(RED Scheduled for deprecation. Please use dirEntries instead.)
+ * $(RED Scheduled for deprecation in August 2011.
+ *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
  * pass it to the callback delegate.
@@ -3371,8 +3605,10 @@ string[] listDir(in char[] pathname, RegExp r, bool followSymLinks = true)
  * }
  * ----
  */
-void listdir(in char[] pathname, bool delegate(string filename) callback)
+void listDir(C, U)(in C[] pathname, U callback)
+    if(is(C : char) && is(U: bool delegate(string filename)))
 {
+    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3481,8 +3717,6 @@ else version(Posix)
         }
     }
 }
-else
-    static assert(0, "Unsupported/Unknown OS");
 
 
 //==============================================================================
@@ -3507,4 +3741,11 @@ version(Windows)
 
         return sysTimeToDTime(sysTime);
     }
+}
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.file.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.file.%s instead.",
+                              vers, oldFunc, date, newFunc);
 }

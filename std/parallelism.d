@@ -2151,16 +2151,18 @@ public:
                 );
             }
 
-            try {
-                (cast(AbstractTask*) &tasks[0]).job();
-            } catch(Throwable e) {
-                tasks[0].exception = e;
-            }
-            tasks[0].taskStatus = TaskStatus.done;
+            if(tasks.length > 0) {
+                try {
+                    (cast(AbstractTask*) &tasks[0]).job();
+                } catch(Throwable e) {
+                    tasks[0].exception = e;
+                }
+                tasks[0].taskStatus = TaskStatus.done;
 
-            // Try to execute each of these in the current thread
-            foreach(ref task; tasks[1..$]) {
-                tryDeleteExecute( cast(AbstractTask*) &task);
+                // Try to execute each of these in the current thread
+                foreach(ref task; tasks[1..$]) {
+                    tryDeleteExecute( cast(AbstractTask*) &task);
+                }
             }
 
             // Now that we've tried to execute every task, they're all either
@@ -2653,7 +2655,7 @@ terminating the main thread.
     __gshared static TaskPool pool;
 
     if(!initialized) {
-        synchronized {
+        synchronized(TaskPool.classinfo) {
             if(!pool) {
                 pool = new TaskPool(defaultPoolThreads);
                 pool.isDaemon = true;
@@ -2950,18 +2952,6 @@ private mixin template ResubmittingTasks() {
             pool.abstractPutGroupNoSync(head, tail);
         }
 
-        AbstractTask* first;  // Do in this thread.
-
-        void doFirst() {
-            if(first is null) return;
-            try {
-                first.job();
-            } catch(Throwable e) {
-                first.exception = e;
-            }
-            atomicSetUbyte(first.taskStatus, TaskStatus.done);
-        }
-
         // Search for slots.
         foreach(ref task; tasks) {
             try {
@@ -2981,10 +2971,7 @@ private mixin template ResubmittingTasks() {
             assert(task.next is null);
             assert(task.prev is null);
 
-            if(first is null) {
-                first = cast(AbstractTask*) &task;
-                first.taskStatus = TaskStatus.inProgress;
-            } else if(head is null) {
+            if(head is null) {
                 head = tail = cast(AbstractTask*) &task;
             } else {
                 auto at = cast(AbstractTask*) &task;
@@ -2996,14 +2983,12 @@ private mixin template ResubmittingTasks() {
             if(emptyCheck()) {
                 doGroupSubmit();
                 atomicSetUbyte(doneSubmitting, 1);
-                doFirst();
                 return;
             }
         }
 
         doGroupSubmit();
         submitResubmittingTask(cast(AbstractTask*) &submitNextBatch);
-        doFirst();
     }
 
     void submitAndExecute() {
@@ -3397,39 +3382,26 @@ unittest {
     }
 
     auto arr = [1,2,3,4,5];
-    auto appNums = appender!(uint[])();
-    auto appNums2 = appender!(uint[])();
+    auto nums = new uint[5];
+    auto nums2 = new uint[5];
 
     foreach(i, ref elem; poolInstance.parallel(arr)) {
         elem++;
-        synchronized {
-            appNums.put(cast(uint) i + 2);
-            appNums2.put(elem);
-        }
+        nums[i] = cast(uint) i + 2;
+        nums2[i] = elem;
     }
 
-    uint[] nums = appNums.data, nums2 = appNums2.data;
-    sort!"a.at!0 < b.at!0"(zip(nums, nums2));
     assert(nums == [2,3,4,5,6], text(nums));
     assert(nums2 == nums, text(nums2));
     assert(arr == nums, text(arr));
 
     // Test parallel foreach with non-random access range.
-    appNums.clear();
-    appNums2.clear();
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
 
     foreach(i, elem; poolInstance.parallel(range)) {
-        synchronized {
-            appNums.put(cast(uint) i);
-            appNums2.put(cast(uint) i);
-        }
+        nums[i] = cast(uint) i;
     }
 
-    nums = appNums.data;
-    nums2 = appNums2.data;
-    sort!"a.at!0 < b.at!0"(zip(nums, nums2));
-    assert(nums == nums2);
     assert(nums == [0,1,2,3,4]);
 
     auto logs = new double[1_000_000];
@@ -3485,14 +3457,10 @@ unittest {
     // Test default pool stuff.
     assert(taskPool.size == totalCPUs - 1);
 
-    appNums.clear();
+    nums = new uint[1000];
     foreach(i; parallel(iota(1000))) {
-        synchronized {
-            appNums.put(i);
-        }
+        nums[i] = cast(uint) i;
     }
-    nums = appNums.data;
-    sort(nums);
     assert(equal(nums, iota(1000)));
 
     assert(equal(

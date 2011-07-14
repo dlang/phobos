@@ -6,6 +6,7 @@
  */
 module std.c.freebsd.socket;
 
+public import core.sys.posix.netdb;
 import core.sys.posix.sys.socket;
 
 extern(C):
@@ -41,38 +42,3 @@ enum // <netinet/in.h>
     INADDR_LOOPBACK = 0x7f000001,
     INADDR_NONE     = 0xffffffff,
 }
-
-
-/*========== <netdb.h> ==========*/
-
-struct hostent
-{
-    char*       h_name;
-    char**      h_aliases;
-    int         h_addrtype;
-    int         h_length;
-    char**      h_addr_list;
-}
-
-struct servent
-{
-    char*       s_name;
-    char**      s_aliases;
-    int         s_port;
-    char*       s_proto;
-}
-
-struct protoent
-{
-    char*       p_name;
-    char**      p_aliases;
-    int         p_proto;
-}
-
-hostent*    gethostbyaddr(in void*, socklen_t, int);    // obsolete
-hostent*    gethostbyname(in char*);                    // obsolete
-protoent*   getprotobyname(in char *);
-protoent*   getprotobynumber(int);
-servent*    getservbyname(in char*, in char*);
-servent*    getservbyport(int, in char*);
-

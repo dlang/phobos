@@ -331,7 +331,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise,
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -350,14 +350,14 @@ enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
+    (T value, lazy const(char)[] msg = null) @safe
 {
     if (!value) bailOut(file, line, msg);
     return value;
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, the given
+    If $(D !!value) is true, $(D value) is returned. Otherwise, the given
     delegate is called.
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
@@ -367,7 +367,7 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg)
+private void bailOut(string file, int line, in char[] msg) @safe
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -390,7 +390,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
    Example:
 --------------------
@@ -399,7 +399,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex)
+T enforce(T)(T value, lazy Throwable ex) @safe
 {
     if (!value) throw ex();
     return value;
@@ -419,7 +419,7 @@ unittest
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise,
+    If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
     last operation set $(D errno) to an error code.
 
@@ -431,14 +431,14 @@ enforce(line.length); // expect a non-empty line
 --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null)
+    (T value, lazy string msg = null) @safe
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
 }
 
 /++
-    If $(D !value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
+    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
     is thrown.
 
    Example:
@@ -448,7 +448,7 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "")
+T enforceEx(E, T)(T value, lazy string msg = "") @safe
 {
     if (!value) throw new E(msg);
     return value;
@@ -736,11 +736,9 @@ bool pointsTo(S, T)(ref const S source, ref const T target) @trusted pure nothro
         }
         return false;
     }
-    else static if (isDynamicArray!(S))
+    else static if (isArray!(S))
     {
-        const p1 = cast(void*) source.ptr, p2 = p1 + source.length,
-              b = cast(void*) &target, e = b + target.sizeof;
-        return overlap(p1[0 .. p2 - p1], b[0 .. e - b]).length != 0;
+        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -784,6 +782,18 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
+    
+    int[] darr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(darr, darr[i]));
+    assert(pointsTo(darr[0..3], darr[2]));
+    assert(!pointsTo(darr[0..3], darr[3]));
+    
+    int[4] sarr = [1, 2, 3, 4];
+    foreach(i; 0 .. 4)
+        assert(pointsTo(sarr, sarr[i]));
+    assert(pointsTo(sarr[0..3], sarr[2]));
+    assert(!pointsTo(sarr[0..3], sarr[3]));
 }
 
 /*********************

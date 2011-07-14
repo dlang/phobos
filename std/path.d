@@ -1383,11 +1383,11 @@ body
 {
 	size_t ni; // current character in path
 
-	foreach (pi; 0 .. pattern.length)
-	{
-	    char pc = pattern[pi];
-	    switch (pc)
-	    {
+        foreach (pi; 0 .. pattern.length)
+        {
+            char pc = pattern[pi];
+            switch (pc)
+            {
             case '*':
                 if (pi + 1 == pattern.length)
                     return true;

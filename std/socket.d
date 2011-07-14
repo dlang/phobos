@@ -29,7 +29,7 @@
 /**
  * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See /dmd/samples/d/listener.d.
- * Authors: Christopher E. Miller
+ * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger)
  * Source:  $(PHOBOSSRC std/_socket.d)
  * Macros:
  *      WIKI=Phobos/StdSocket
@@ -39,6 +39,11 @@ module std.socket;
 
 import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv,
     std.traits;
+
+import core.stdc.config;
+import core.time : dur, Duration;
+import std.algorithm : max;
+import std.exception : assumeUnique, enforce;
 
 version(unittest)
 {
@@ -74,9 +79,7 @@ else version(BsdSockets)
         version(linux)
             import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                 IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-                protoent, servent, hostent, SD_RECEIVE, SD_SEND, SD_BOTH,
-                MSG_NOSIGNAL, INADDR_NONE, getprotobyname, getprotobynumber,
-                getservbyname, getservbyport, gethostbyname, gethostbyaddr;
+                SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE;
         else version(OSX)
             private import std.c.osx.socket;
         else version(FreeBSD)
@@ -90,6 +93,8 @@ else version(BsdSockets)
         }
         else
             static assert(false);
+
+        import core.sys.posix.netdb;
         private import core.sys.posix.fcntl;
         private import core.sys.posix.unistd;
         private import core.sys.posix.arpa.inet;
@@ -176,6 +181,8 @@ class SocketException: Exception
 }
 
 
+private __gshared typeof(&getnameinfo) getnameinfoPointer;
+
 shared static this()
 {
         version(Win32)
@@ -188,6 +195,19 @@ shared static this()
                 val = WSAStartup(0x2020, &wd);
                 if(val) // Request Winsock 2.2 for IPv6.
                         throw new SocketException("Unable to initialize socket library", val);
+
+                // See the comment in InternetAddress.toHostNameString() for
+                // details on the getnameinfo() issue.
+                auto ws2Lib = GetModuleHandleA("ws2_32.dll");
+                if (ws2Lib)
+                {
+                        getnameinfoPointer = cast(typeof(getnameinfoPointer))
+                                GetProcAddress(ws2Lib, "getnameinfo");
+                }
+        }
+        else version(Posix)
+        {
+                getnameinfoPointer = &getnameinfo;
         }
 }
 
@@ -564,6 +584,9 @@ class InternetHost
 
         /**
          * Resolve IPv4 address number. Returns false if unable to resolve.
+         *
+         * Params:
+         *   addr = The IPv4 address to resolve, in network byte order.
          */
         bool getHostByAddr(uint addr)
         {
@@ -750,9 +773,9 @@ class InternetAddress: Address
 
 
         public:
-        const uint ADDR_ANY = INADDR_ANY;       /// Any IPv4 address number.
-        const uint ADDR_NONE = INADDR_NONE;     /// An invalid IPv4 address number.
-        const ushort PORT_ANY = 0;              /// Any IPv4 port number.
+        enum uint ADDR_ANY = INADDR_ANY;       /// Any IPv4 address number.
+        enum uint ADDR_NONE = INADDR_NONE;     /// An invalid IPv4 address number.
+        enum ushort PORT_ANY = 0;              /// Any IPv4 port number.
 
         /// Overridden to return AddressFamily.INET.
         override AddressFamily addressFamily()
@@ -828,6 +851,35 @@ class InternetAddress: Address
                 return std.conv.to!string(port());
         }
 
+        /*
+         * Returns the host name as a fully qualified domain name, if
+         * available, or the IP address in dotted-decimal notation otherwise.
+         */
+        string toHostNameString()
+        {
+                // getnameinfo() is the recommended way to perform a reverse (name)
+                // lookup on both Posix and Windows. However, it is only available
+                // on Windows XP and above, and not included with the WinSock import
+                // libraries shipped with DMD. Thus, we check for getnameinfo at
+                // runtime in the shared module constructor, and fall back to the
+                // deprecated getHostByAddr() if it could not be found. See also:
+                // http://technet.microsoft.com/en-us/library/aa450403.aspx
+                if (getnameinfoPointer is null)
+                {
+                        auto host = new InternetHost();
+                        enforce(host.getHostByAddr(sin.sin_addr.s_addr),
+                                new SocketException("Could not get host name."));
+                        return host.name;
+                }
+
+                auto buf = new char[NI_MAXHOST];
+                auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
+                        buf.ptr, cast(uint)buf.length, null, 0, 0);
+                enforce(rc == 0, new SocketException(
+                        "Could not get host name", _lasterr()));
+                return assumeUnique(buf[0 .. strlen(buf.ptr)]);
+        }
+
         /// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
         override string toString()
         {
@@ -888,7 +940,6 @@ enum SocketFlags: int
         OOB =        MSG_OOB,       /// out-of-band stream data
         PEEK =       MSG_PEEK,      /// peek at incoming data without removing it from the queue, only for receiving
         DONTROUTE =  MSG_DONTROUTE, /// data should not be subject to routing; this flag may be ignored. Only for sending
-        NOSIGNAL =   MSG_NOSIGNAL,  /// don't send SIGPIPE signal on socket write error and instead return EPIPE
 }
 
 
@@ -896,8 +947,8 @@ enum SocketFlags: int
 extern(C) struct timeval
 {
         // D interface
-        int seconds;            /// Number of seconds.
-        int microseconds;       /// Number of additional microseconds.
+        c_long seconds;            /// Number of seconds.
+        c_long microseconds;       /// Number of additional microseconds.
 
         // C interface
         deprecated
@@ -1089,6 +1140,8 @@ enum SocketOption: int
         SNDBUF =               SO_SNDBUF,       /// send buffer size
         RCVBUF =               SO_RCVBUF,       /// receive buffer size
         DONTROUTE =            SO_DONTROUTE,    /// do not route
+        SNDTIMEO =             SO_SNDTIMEO,     /// send timeout
+        RCVTIMEO =             SO_RCVTIMEO,     /// receive timeout
 
         // SocketOptionLevel.TCP:
         TCP_NODELAY =          .TCP_NODELAY,    /// disable the Nagle algorithm for send coalescing
@@ -1115,6 +1168,25 @@ class Socket
         version(Win32)
             bool _blocking = false;     /// Property to get or set whether the socket is blocking or nonblocking.
 
+        // The WinSock timeouts seem to be effectively skewed by a constant
+        // offset of about half a second (value in milliseconds). This has
+        // been confirmed on updated (as of Jun 2011) Windows XP, Windows 7
+        // and Windows Server 2008 R2 boxes.
+        enum WINSOCK_TIMEOUT_SKEW = 500;
+
+        void setSock(socket_t handle)
+        {
+                assert(handle != socket_t.init);
+                sock = handle;
+
+                // Set the option to disable SIGPIPE on send() if the platform
+                // has it (e.g. on OS X).
+                static if (is(typeof(SO_NOSIGPIPE)))
+                {
+                        setOption(SocketOptionLevel.SOCKET, cast(SocketOption)SO_NOSIGPIPE, true);
+                }
+        }
+
 
         // For use with accepting().
         protected this()
@@ -1131,10 +1203,11 @@ class Socket
          */
         this(AddressFamily af, SocketType type, ProtocolType protocol)
         {
-                sock = cast(socket_t)socket(af, type, protocol);
-                if(sock == socket_t.init)
-                        throw new SocketException("Unable to create socket", _lasterr());
                 _family = af;
+                auto handle = cast(socket_t)socket(af, type, protocol);
+                if(handle == socket_t.init)
+                        throw new SocketException("Unable to create socket", _lasterr());
+                setSock(handle);
         }
 
 
@@ -1303,10 +1376,7 @@ class Socket
          */
         Socket accept()
         {
-                socket_t newsock;
-                //newsock = cast(socket_t).accept(sock, null, null); // DMD 0.101 error: found '(' when expecting ';' following 'statement
-                alias .accept topaccept;
-                newsock = cast(socket_t)topaccept(sock, null, null);
+                auto newsock = cast(socket_t).accept(sock, null, null);
                 if(socket_t.init == newsock)
                         throw new SocketAcceptException("Unable to accept socket connection", _lasterr());
 
@@ -1316,7 +1386,7 @@ class Socket
                         newSocket = accepting();
                         assert(newSocket.sock == socket_t.init);
 
-                        newSocket.sock = newsock;
+                        newSocket.setSock(newsock);
                         version(Win32)
                                 newSocket._blocking = _blocking; //inherits blocking mode
                         newSocket._family = _family; //same family
@@ -1412,7 +1482,7 @@ class Socket
         }
 
         /// Send or receive error code.
-        const int ERROR = _SOCKET_ERROR;
+        enum int ERROR = _SOCKET_ERROR;
 
         /**
          * Send data on the connection. Returns the number of bytes actually
@@ -1423,15 +1493,18 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     send(const(void)[] buf, SocketFlags flags)
         {
-        flags |= SocketFlags.NOSIGNAL;
-        auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
+                }
+                auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
         }
 
         /// ditto
         Select!(size_t.sizeof > 4, long, int) send(const(void)[] buf)
         {
-                return send(buf, SocketFlags.NOSIGNAL);
+                return send(buf, SocketFlags.NONE);
         }
 
         /**
@@ -1440,8 +1513,11 @@ class Socket
         Select!(size_t.sizeof > 4, long, int)
     sendTo(const(void)[] buf, SocketFlags flags, Address to)
         {
-        flags |= SocketFlags.NOSIGNAL;
-        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
+                }
+                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
 
         /// ditto
@@ -1455,8 +1531,11 @@ class Socket
         /// ditto
         Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf, SocketFlags flags)
         {
-        flags |= SocketFlags.NOSIGNAL;
-        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
+                static if (is(typeof(MSG_NOSIGNAL)))
+                {
+                        flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
+                }
+                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
         }
 
 
@@ -1562,6 +1641,31 @@ class Socket
                 return getOption(level, option, (&result)[0 .. 1]);
         }
 
+        /// Get a timeout (duration) option.
+        void getOption(SocketOptionLevel level, SocketOption option, out Duration result)
+        {
+                enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
+                        new SocketException("Not a valid timeout option: " ~ to!string(option)));
+                // WinSock returns the timeout values as a milliseconds DWORD,
+                // while Linux and BSD return a timeval struct.
+                version (Win32)
+                {
+                        int msecs;
+                        getOption(level, option, (&msecs)[0 .. 1]);
+                        if (option == SocketOption.RCVTIMEO) {
+                                msecs += WINSOCK_TIMEOUT_SKEW;
+                        }
+                        result = dur!"msecs"(msecs);
+                }
+                else version (BsdSockets)
+                {
+                        timeval tv;
+                        getOption(level, option, (&tv)[0..1]);
+                        result = dur!"seconds"(tv.seconds) + dur!"usecs"(tv.microseconds);
+                }
+                else static assert(false);
+        }
+
         // Set a socket option.
         void setOption(SocketOptionLevel level, SocketOption option, void[] value)
         {
@@ -1585,6 +1689,74 @@ class Socket
                 setOption(level, option, (&value)[0 .. 1]);
         }
 
+        /**
+         * Sets a timeout (duration) option, i.e. SocketOption.SNDTIMEO or
+         * RCVTIMEO. Zero indicates no timeout.
+         *
+         * In a typical application, you might also want to consider using
+         * a non-blocking socket instead of setting a timeout on a blocking one.
+         *
+         * Note: While the receive timeout setting is generally quite accurate
+         * on *nix systems even for smaller durations, there are two issues to
+         * be aware of on Windows: First, although undocumented, the effective
+         * timeout duration seems to be the one set on the socket plus half
+         * a second. setOption() tries to compensate for that, but still,
+         * timeouts under 500ms are not possible on Windows. Second, be aware
+         * that the actual amount of time spent until a blocking call returns
+         * randomly varies on the order of 10ms.
+         *
+         * Params:
+         *   value = The timeout duration to set. Must not be negative.
+         *
+         * Throws: SocketException if setting the options fails.
+         *
+         * Example:
+         * ---
+         * import std.datetime;
+         * auto pair = socketPair();
+         * scope(exit) foreach (s; pair) s.close();
+         *
+         * // Set a receive timeout, and then wait at one end of
+         * // the socket pair, knowing that no data will arrive.
+         * pair[0].setOption(SocketOptionLevel.SOCKET,
+         *     SocketOption.RCVTIMEO, dur!"seconds"(1));
+         *
+         * auto sw = StopWatch(AutoStart.yes);
+         * ubyte[1] buffer;
+         * pair[0].receive(buffer);
+         * writefln("Waited %s ms until the socket timed out.",
+         *     sw.peek.msecs);
+         * ---
+         */
+        void setOption(SocketOptionLevel level, SocketOption option, Duration value)
+        {
+                enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
+                        new SocketException("Not a valid timeout option: " ~ to!string(option)));
+
+                enforce(value >= dur!"hnsecs"(0), new SocketException(
+                        "Timeout duration must not be negative."));
+
+                version (Win32)
+                {
+                        auto msecs = cast(int)value.total!"msecs"();
+                        if (msecs == 0 || option != SocketOption.RCVTIMEO)
+                        {
+                                setOption(level, option, msecs);
+                        }
+                        else
+                        {
+                                setOption(level, option, cast(int)
+                                      max(1, msecs - WINSOCK_TIMEOUT_SKEW));
+                        }
+                }
+                else version (BsdSockets)
+                {
+                        timeval tv = { seconds: cast(int)value.total!"seconds"(),
+                                microseconds: value.fracSec.usecs };
+                        setOption(level, option, (&tv)[0 .. 1]);
+                }
+                else static assert(false);
+        }
 
         /**
          * Wait for a socket to change status. A wait timeout timeval or int microseconds may be specified; if a timeout is not specified or the timeval is null, the maximum timeout is used. The timeval timeout has an unspecified value when select returns. Returns the number of sockets with status changes, 0 on timeout, or -1 on interruption. If the return value is greater than 0, the SocketSets are updated to only contain the sockets having status changes. For a connecting socket, a write status change means the connection is established and it's able to send. For a listening socket, a read status change means there is an incoming connection request and it's able to accept.
@@ -1754,3 +1926,67 @@ class UdpSocket: Socket
         }
 }
 
+/**
+ * Creates a pair of connected sockets.
+ *
+ * The two sockets are indistinguishable.
+ *
+ * Throws: SocketException if creation of the sockets fails.
+ *
+ * Example:
+ * ---
+ * immutable ubyte[] data = [1, 2, 3, 4];
+ * auto pair = socketPair();
+ * scope(exit) foreach (s; pair) s.close();
+ *
+ * pair[0].send(data);
+ *
+ * auto buf = new ubyte[data.length];
+ * pair[1].receive(buf);
+ * assert(buf == data);
+ * ---
+ */
+Socket[2] socketPair() {
+    version(BsdSockets) {
+        int[2] socks;
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1) {
+            throw new SocketException("Unable to create socket pair", _lasterr());
+        }
+
+        Socket toSocket(size_t id) {
+            auto s = new Socket;
+            s.setSock(cast(socket_t)socks[id]);
+            s._family = AddressFamily.UNIX;
+            return s;
+        }
+        return [toSocket(0), toSocket(1)];
+    } else version(Win32) {
+        // We do not have socketpair() on Windows, just manually create a
+        // pair of sockets connected over some localhost port.
+        Socket[2] result;
+
+        auto listener = new TcpSocket();
+        listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        listener.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
+        auto addr = listener.localAddress();
+        listener.listen(1);
+
+        result[0] = new TcpSocket(addr);
+        result[1] = listener.accept();
+
+        listener.close();
+        return result;
+    } else static assert(false);
+}
+
+unittest {
+    immutable ubyte[] data = [1, 2, 3, 4];
+    auto pair = socketPair();
+    scope(exit) foreach (s; pair) s.close();
+
+    pair[0].send(data);
+
+    auto buf = new ubyte[data.length];
+    pair[1].receive(buf);
+    assert(buf == data);
+}

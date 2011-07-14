@@ -38,6 +38,8 @@ const int IOCPARM_MASK =  0x7F;
 const int IOC_IN =        cast(int)0x80000000;
 const int FIONBIO =       cast(int)(IOC_IN | ((UINT.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 
+enum NI_MAXHOST = 1025;
+enum NI_MAXSERV = 32;
 
 int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
@@ -380,8 +382,7 @@ enum: int
 {
         MSG_OOB =        0x1,
         MSG_PEEK =       0x2,
-        MSG_DONTROUTE =  0x4,
-        MSG_NOSIGNAL =   0x0, /// not supported on win32, would be 0x4000 if it was
+        MSG_DONTROUTE =  0x4
 }
 
 

@@ -40,7 +40,7 @@ private class MangleException : Exception
  *        pretty-printing any found D mangled names.
 -------------------
 import std.stdio;
-import std.ctype;
+import std.ascii;
 import std.demangle;
 
 int main()
@@ -52,7 +52,7 @@ int main()
     {
         if (inword)
         {
-            if (c == '_' || isalnum(c))
+            if (c == '_' || isAlphaNum(c))
                 buffer ~= cast(char) c;
             else
             {
@@ -61,7 +61,7 @@ int main()
             }
         }
         else
-        {   if (c == '_' || isalpha(c))
+        {   if (c == '_' || isAlpha(c))
             {        inword = true;
                 buffer.length = 0;
                 buffer ~= cast(char) c;

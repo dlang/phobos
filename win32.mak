@@ -101,15 +101,17 @@ OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 # SRCS_1 is the heavyweight modules which are most likely to trigger the bug.
 # Do not add any more modules to SRCS_1.
-SRCS_1 = std\stdio.d std\stdiobase.d \
+SRCS_11 = std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
-	std\algorithm.d std\array.d std\functional.d std\range.d \
-	std\path.d std\file.d std\outbuffer.d std\utf.d
+	std\algorithm.d std\file.d
+
+SRCS_12 = std\array.d std\functional.d std\range.d \
+	std\path.d std\outbuffer.d std\utf.d
 
 SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\dateparse.d std\date.d std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\md5.d std\ctype.d \
+    std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
     std\signals.d std\typetuple.d std\traits.d std\bind.d \
     std\encoding.d std\xml.d \
@@ -153,7 +155,7 @@ SRCS_3 = std\variant.d \
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 # See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
-SRCS = $(SRCS_1) $(SRCS_2) $(SRCS_3)
+SRCS = $(SRCS_11) $(SRCS_12) $(SRCS_2) $(SRCS_3)
 
 
 DOCS=	$(DOC)\object.html \
@@ -175,6 +177,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\core_sync_semaphore.html \
 	$(DOC)\std_algorithm.html \
 	$(DOC)\std_array.html \
+	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
@@ -269,7 +272,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d std\datebase.d \
-	std\__fileinit.d std\gregorian.d std\exception.d
+	std\__fileinit.d std\gregorian.d std\exception.d std\ascii.d
 
 SRC_STD_NET= std\net\isemail.d
 
@@ -298,7 +301,7 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -345,9 +348,10 @@ phobos.lib : $(OBJS) $(SRCS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) phobos.lib
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRCS_1)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest1.obj unittest2.obj \
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest11.obj unittest12.obj unittest2.obj \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 
@@ -378,6 +382,9 @@ algorithm.obj : std\algorithm.d
 
 array.obj : std\array.d
 	$(DMD) -c $(DFLAGS) std\array.d
+
+ascii.obj : std\ascii.d
+	$(DMD) -c $(DFLAGS) std\ascii.d
 
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
@@ -677,6 +684,9 @@ $(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
+
+$(DOC)\std_ascii.html : $(STDDOC) std\ascii.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_ascii.html $(STDDOC) std\ascii.d
 
 $(DOC)\std_base64.html : $(STDDOC) std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html $(STDDOC) std\base64.d

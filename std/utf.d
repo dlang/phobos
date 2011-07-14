@@ -38,6 +38,12 @@ import std.traits;     // isSomeChar, isSomeString
 
 debug (utf) import core.stdc.stdio : printf;
 
+version(unittest)
+{
+    import core.exception;
+    import std.string;
+}
+
 
 /**********************************
  * Exception class that is thrown upon any errors.
@@ -73,25 +79,6 @@ class UtfException : Exception
         }
 
         return result;
-    }
-}
-
-// For unittests
-version (unittest) private
-{
-    @trusted
-    bool expectError_(lazy void expr)
-    {
-        try
-        {
-            expr();
-        }
-        catch (UtfException e)
-        {
-            return true;
-        }
-
-        return false;
     }
 }
 
@@ -175,6 +162,31 @@ uint stride(in char[] s, size_t i)
     return result;
 }
 
+@trusted unittest
+{
+    static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
+    {
+        enforce(stride(s, i) == codeLength!char(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'a');
+    test("hello\U00010143\u0100\U00010143", 'h', 0);
+    test("hello\U00010143\u0100\U00010143", 'e', 1);
+    test("hello\U00010143\u0100\U00010143", 'l', 2);
+    test("hello\U00010143\u0100\U00010143", 'l', 3);
+    test("hello\U00010143\u0100\U00010143", 'o', 4);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
+    test("hello\U00010143\u0100\U00010143", '\u0100', 9);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 11);
+}
+
 /**
  * strideBack() returns the length of a UTF-8 sequence ending before index $(D_PARAM i)
  * in string $(D_PARAM s).
@@ -197,6 +209,31 @@ uint strideBack(in char[] s, size_t i)
         throw new UtfException("Not the end of the UTF sequence");
 }
 
+@trusted unittest
+{
+    static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
+    {
+        enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'f');
+    test("\U00010143\u0100\U00010143hello", 'o', 15);
+    test("\U00010143\u0100\U00010143hello", 'l', 14);
+    test("\U00010143\u0100\U00010143hello", 'l', 13);
+    test("\U00010143\u0100\U00010143hello", 'e', 12);
+    test("\U00010143\u0100\U00010143hello", 'h', 11);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 10);
+    test("\U00010143\u0100\U00010143hello", '\u0100', 6);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
+}
+
 /**
  * stride() returns the length of a UTF-16 sequence starting at index $(D_PARAM i)
  * in string $(D_PARAM s).
@@ -205,6 +242,31 @@ nothrow uint stride(in wchar[] s, size_t i)
 {
     immutable uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+@trusted unittest
+{
+    static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
+    {
+        enforce(stride(s, i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'a');
+    test("hello\U00010143\u0100\U00010143", 'h', 0);
+    test("hello\U00010143\u0100\U00010143", 'e', 1);
+    test("hello\U00010143\u0100\U00010143", 'l', 2);
+    test("hello\U00010143\u0100\U00010143", 'l', 3);
+    test("hello\U00010143\u0100\U00010143", 'o', 4);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
+    test("hello\U00010143\u0100\U00010143", '\u0100', 7);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
 }
 
 /**
@@ -221,6 +283,31 @@ uint strideBack(in wchar[] s, size_t i)
     return 1 + (c >= 0xD800 && c <= 0xDBFF);
 }
 
+@trusted unittest
+{
+    static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
+    {
+        enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'f');
+    test("\U00010143\u0100\U00010143hello", 'o', 10);
+    test("\U00010143\u0100\U00010143hello", 'l', 9);
+    test("\U00010143\u0100\U00010143hello", 'l', 8);
+    test("\U00010143\u0100\U00010143hello", 'e', 7);
+    test("\U00010143\u0100\U00010143hello", 'h', 6);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 5);
+    test("\U00010143\u0100\U00010143hello", '\u0100', 3);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
+}
+
 /**
  * stride() returns the length of a UTF-32 sequence starting at index $(D_PARAM i)
  * in string $(D_PARAM s).
@@ -231,6 +318,31 @@ nothrow uint stride(in dchar[] s, size_t i)
     return 1;
 }
 
+@trusted unittest
+{
+    static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
+    {
+        enforce(stride(s, i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'a');
+    test("hello\U00010143\u0100\U00010143", 'h', 0);
+    test("hello\U00010143\u0100\U00010143", 'e', 1);
+    test("hello\U00010143\u0100\U00010143", 'l', 2);
+    test("hello\U00010143\u0100\U00010143", 'l', 3);
+    test("hello\U00010143\u0100\U00010143", 'o', 4);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 5);
+    test("hello\U00010143\u0100\U00010143", '\u0100', 6);
+    test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
+}
+
 /**
  * strideBack() returns the length of a UTF-32 sequence ending before index $(D_PARAM i)
  * in string $(D_PARAM s).
@@ -239,6 +351,31 @@ nothrow uint stride(in dchar[] s, size_t i)
 nothrow uint strideBack(in dchar[] s, size_t i)
 {
     return 1;
+}
+
+@trusted unittest
+{
+    static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
+    {
+        enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
+                new AssertError(format("Unit test failure: %s", s), __FILE__, line));
+    }
+
+    test("a", 'a');
+    test(" ", ' ');
+    test("\u2029", '\u2029'); //paraSep
+    test("\u0100", '\u0100');
+    test("\u0430", '\u0430');
+    test("\U00010143", '\U00010143');
+    test("abcdefcdef", 'f');
+    test("\U00010143\u0100\U00010143hello", 'o', 8);
+    test("\U00010143\u0100\U00010143hello", 'l', 7);
+    test("\U00010143\u0100\U00010143hello", 'l', 6);
+    test("\U00010143\u0100\U00010143hello", 'e', 5);
+    test("\U00010143\u0100\U00010143hello", 'h', 4);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 3);
+    test("\U00010143\u0100\U00010143hello", '\u0100', 2);
+    test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
 }
 
 }  // stride functions are @safe and pure
@@ -491,20 +628,20 @@ unittest
     }
 }
 
-unittest
+@trusted unittest
 {
     size_t i;
 
     i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar)0xFFFE);
     i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar)0xFFFF);
     i = 0;
-    assert(expectError_( decode("\xED\xA0\x80"c, i) ));
-    assert(expectError_( decode("\xED\xAD\xBF"c, i) ));
-    assert(expectError_( decode("\xED\xAE\x80"c, i) ));
-    assert(expectError_( decode("\xED\xAF\xBF"c, i) ));
-    assert(expectError_( decode("\xED\xB0\x80"c, i) ));
-    assert(expectError_( decode("\xED\xBE\x80"c, i) ));
-    assert(expectError_( decode("\xED\xBF\xBF"c, i) ));
+    assertThrown!UtfException(decode("\xED\xA0\x80"c, i));
+    assertThrown!UtfException(decode("\xED\xAD\xBF"c, i));
+    assertThrown!UtfException(decode("\xED\xAE\x80"c, i));
+    assertThrown!UtfException(decode("\xED\xAF\xBF"c, i));
+    assertThrown!UtfException(decode("\xED\xB0\x80"c, i));
+    assertThrown!UtfException(decode("\xED\xBE\x80"c, i));
+    assertThrown!UtfException(decode("\xED\xBF\xBF"c, i));
 }
 
 /// ditto
@@ -643,7 +780,7 @@ pure size_t encode(ref char[4] buf, dchar c)
     throw new UtfException("encoding an invalid code point in UTF-8", c);
 }
 
-unittest
+@trusted unittest
 {
     char[4] buf;
 
@@ -659,11 +796,11 @@ unittest
     assert(encode(buf, '\U00010000') == 4 && buf[0 .. 4] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 4 && buf[0 .. 4] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0x110000));
 }
 
 
@@ -691,7 +828,7 @@ pure size_t encode(ref wchar[2] buf, dchar c)
     throw new UtfException("encoding an invalid code point in UTF-16", c);
 }
 
-unittest
+@trusted unittest
 {
     wchar[2] buf;
 
@@ -703,11 +840,11 @@ unittest
     assert(encode(buf, '\U00010000') == 2 && buf[0 .. 2] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 2 && buf[0 .. 2] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0x110000));
 }
 
 
@@ -784,7 +921,7 @@ unittest
     assert(s == "abcda\xC2\xA9\xE2\x89\xA0");
 }
 
-unittest
+@trusted unittest
 {
     char[] buf;
 
@@ -800,11 +937,11 @@ unittest
     encode(buf, '\U00010000'); assert(buf[21 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[25 .. $] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0x110000));
 }
 
 /// ditto
@@ -838,7 +975,7 @@ pure void encode(ref wchar[] s, dchar c)
     s = r;
 }
 
-unittest
+@trusted unittest
 {
     wchar[] buf;
 
@@ -850,11 +987,11 @@ unittest
     encode(buf, '\U00010000'); assert(buf[5 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[7 .. $] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0x110000));
 }
 
 /// ditto
@@ -867,7 +1004,7 @@ pure void encode(ref dchar[] s, dchar c)
     s ~= c;
 }
 
-unittest
+@trusted unittest
 {
     dchar[] buf;
 
@@ -878,20 +1015,31 @@ unittest
     encode(buf, 0xFFFF ); assert(buf[4] == 0xFFFF);
     encode(buf, '\U0010FFFF'); assert(buf[5] == '\U0010FFFF');
 
-    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xD800));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDBFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDC00));
+    assertThrown!UtfException(encode(buf, cast(dchar)0xDFFF));
+    assertThrown!UtfException(encode(buf, cast(dchar)0x110000));
 }
 
 }  // Encode functions are @safe and pure
 
 
-/**
- * Returns the code length of $(D_PARAM c) in the encoding using $(D_PARAM C)
- * as a code point. The code is returned in character count, not in bytes.
- */
+/++
+    Returns the number of code units that are required to encode the code point
+    $(D c) when $(D C) is the character type used to encode it.
+
+Examples:
+------
+assert(codeLength!char('a') == 1);
+assert(codeLength!wchar('a') == 1);
+assert(codeLength!dchar('a') == 1);
+
+assert(codeLength!char('\U0010FFFF') == 4);
+assert(codeLength!wchar('\U0010FFFF') == 2);
+assert(codeLength!dchar('\U0010FFFF') == 1);
+------
+  +/
 @safe
 pure nothrow ubyte codeLength(C)(dchar c)
 {
@@ -913,6 +1061,18 @@ pure nothrow ubyte codeLength(C)(dchar c)
         static assert(C.sizeof == 4);
         return 1;
     }
+}
+
+//Verify Examples.
+unittest
+{
+    assert(codeLength!char('a') == 1);
+    assert(codeLength!wchar('a') == 1);
+    assert(codeLength!dchar('a') == 1);
+
+    assert(codeLength!char('\U0010FFFF') == 4);
+    assert(codeLength!wchar('\U0010FFFF') == 2);
+    assert(codeLength!dchar('\U0010FFFF') == 1);
 }
 
 
