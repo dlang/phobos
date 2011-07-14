@@ -892,11 +892,7 @@ unittest
 
 
 
-/** Determines whether a path is absolute or relative.
-
-    $(D isRelative()) is just defined as $(D !_isAbsolute()), with the
-    notable exception that both functions return false if
-    path is an empty string.
+/** Determines whether a path is absolute or not.
 
     Examples:
     On POSIX, an absolute path starts at the root directory.
@@ -904,10 +900,10 @@ unittest
     ---
     version (Posix)
     {
-        assert (isRelative("foo"));
-        assert (isRelative("../foo"));
         assert (isAbsolute("/"));
         assert (isAbsolute("/foo"));
+        assert (!isAbsolute("foo"));
+        assert (!isAbsolute("../foo"));
     }
     ---
 
@@ -918,12 +914,12 @@ unittest
     ---
     version (Windows)
     {
-        assert (isRelative(r"\"));
-        assert (isRelative(r"\foo"));
-        assert (isRelative( "d:foo"));
         assert (isAbsolute(r"d:\"));
         assert (isAbsolute(r"d:\foo"));
         assert (isAbsolute(r"\\foo\bar"));
+        assert (!isAbsolute(r"\"));
+        assert (!isAbsolute(r"\foo"));
+        assert (!isAbsolute( "d:foo"));
     }
     ---
 */
@@ -942,18 +938,10 @@ else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
 else version (Posix) alias isRooted isAbsolute;
 
 
-/// ditto
-bool isRelative(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
-{
-    if (path.length == 0)  return false;
-    return !isAbsolute(path);
-}
-
-
 unittest
 {
-    assert (isRelative("foo"));
-    assert (isRelative("../foo"w));
+    assert (!isAbsolute("foo"));
+    assert (!isAbsolute("../foo"w));
 
     version (Posix)
     {
@@ -963,13 +951,13 @@ unittest
 
     version (Windows)
     {
-    assert (isRelative("\\"w.dup));
-    assert (isRelative("\\foo"d.dup));
-    assert (isRelative("d:"));
-    assert (isRelative("d:foo"));
     assert (isAbsolute("d:\\"w));
     assert (isAbsolute("d:\\foo"d));
     assert (isAbsolute("\\\\foo\\bar"));
+    assert (!isAbsolute("\\"w.dup));
+    assert (!isAbsolute("\\foo"d.dup));
+    assert (!isAbsolute("d:"));
+    assert (!isAbsolute("d:foo"));
     }
 }
 
