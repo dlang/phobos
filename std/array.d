@@ -1171,6 +1171,7 @@ unittest
     }
 }
 
+
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
@@ -1185,6 +1186,35 @@ assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 --------------------
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+    if(isInputRange!RoR &&
+       isInputRange!(ElementType!RoR) &&
+       isForwardRange!R &&
+       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+{
+    return joinImpl(ror, sep);
+}
+
+/// Ditto
+ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+    if(isInputRange!RoR && isInputRange!(ElementType!RoR))
+{
+    return joinImpl(ror);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(join(["hello", "silly", "world"], " ") == "hello silly world");
+    assert(join(["hello", "silly", "world"]) == "hellosillyworld");
+
+    assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
+    assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
+}
+
+// We have joinImpl instead of just making them all join in order to simplify
+// the template constraint that the user will see on errors (it's condensed down
+// to the conditions that are common to all).
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR) &&
        !isDynamicArray!(ElementType!RoR) &&
@@ -1210,7 +1240,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
         return copy(iter, appender!(typeof(return))).data;
 }
 
-ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
     if(isForwardRange!RoR &&
        hasLength!RoR &&
        isDynamicArray!(ElementType!RoR) &&
@@ -1245,7 +1275,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     return cast(RetType)result;
 }
 
-ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
        ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
        isDynamicArray!(ElementType!RoR) &&
@@ -1282,8 +1312,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
         return result.data[0 .. $ - sep.length];
 }
 
-/// Ditto
-ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
     if(isInputRange!RoR &&
        isInputRange!(ElementType!RoR) &&
        !isDynamicArray!(ElementType!RoR))
@@ -1303,7 +1332,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         return copy(iter, appender!(typeof(return))).data;
 }
 
-ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
     if(isForwardRange!RoR &&
        hasLength!RoR &&
        isDynamicArray!(ElementType!RoR))
@@ -1327,7 +1356,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     return cast(RetType)result;
 }
 
-ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
+ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
     if(isInputRange!RoR &&
        ((isForwardRange!RoR && !hasLength!RoR) || !isForwardRange!RoR) &&
        isDynamicArray!(ElementType!RoR))
@@ -1341,16 +1370,6 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         result.put(r);
 
     return result.data;
-}
-
-//Verify Examples.
-unittest
-{
-    assert(join(["hello", "silly", "world"], " ") == "hello silly world");
-    assert(join(["hello", "silly", "world"]) == "hellosillyworld");
-
-    assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
-    assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 }
 
 unittest
@@ -1414,6 +1433,7 @@ unittest
     assert(join([[1, 2], [41, 42]]) == [1, 2, 41, 42]);
     assert(join(cast(int[][])[]).empty);
 }
+
 
 /++
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
