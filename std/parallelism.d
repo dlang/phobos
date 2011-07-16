@@ -652,7 +652,7 @@ struct Task(alias fun, Args...) {
 
     // When this is uncommented, it somehow gets called even though it's
     // disabled and Bad Things Happen.
-    @disable this(this) { assert(0);}
+    //@disable this(this) { assert(0);}
 }
 
 
