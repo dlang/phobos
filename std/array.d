@@ -146,7 +146,7 @@ unittest
 
 private template blockAttribute(T)
 {
-    static if (hasIndirections!(T))
+    static if (hasIndirections!(T) || is(T == void))
     {
         enum blockAttribute = 0;
     }
