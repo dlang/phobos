@@ -310,7 +310,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         auto size = GetFileSize(h, null);
         cenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
-        auto buf = uninitializedArray!(void[])(size);
+        auto buf = uninitializedArray!(ubyte[])(size);
         scope(failure) delete buf;
 
         DWORD numread = void;
@@ -340,7 +340,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
-        auto result = uninitializedArray!(void[])(initialAlloc);
+        void[] result = uninitializedArray!(ubyte[])(initialAlloc);
         scope(failure) delete result;
         size_t size = 0;
 

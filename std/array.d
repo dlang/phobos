@@ -150,9 +150,7 @@ private template blockAttribute(T)
     }
 }
 unittest {
-    static assert(blockAttribute!void == GC.BlkAttr.NO_SCAN);
-    static assert(blockAttribute!char == GC.BlkAttr.NO_SCAN);
-    static assert(void.sizeof == 1u);
+    static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
 }
 
 // Returns the number of dimensions in an array T.
