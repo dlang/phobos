@@ -403,10 +403,6 @@ pointer.
 
 Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
        call site, only to $(D args) in this struct.
-
-       Copying is not actually disabled yet due to compiler bugs.  In the
-       mean time, please understand that if you copy this struct, you're
-       relying on implementation bugs.
 */
 struct Task(alias fun, Args...) {
     // Work around syntactic ambiguity w.r.t. address of function return vals.
