@@ -2478,6 +2478,87 @@ unittest
     assert(s.empty);
 }
 
+
+/++
+    Returns a range which lazily iterates over the given range until $(D pred)
+    is $(D false) for $(D r.front) or $(D r) is empty;
+
+    Examples:
+--------------------
+assert(equal(takeWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [0, 2, 1]));
+assert(equal(takeWhile!(std.uni.isAlpha)("hello world"), "hello"));
+assert(equal(takeWhile!(not!(std.ascii.isDigit))("hello world"), "hello world"));
+assert(takeWhile!(std.uni.isWhite)("hello world").empty);
+--------------------
+  +/
+auto takeWhile(alias pred, R)(R range)
+    if(isInputRange!R &&
+       is(typeof(unaryFun!pred(range.front))))
+{
+    struct Result
+    {
+        bool empty()
+        {
+            return _done;
+        }
+
+        auto ref front()
+        {
+            assert(!_done);
+            return _input.front;
+        }
+
+        void popFront()
+        {
+            _input.popFront();
+
+            if(_input.empty || !unaryFun!pred(_input.front))
+                _done = true;
+        }
+
+        static if(isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return Result(_input);
+            }
+        }
+
+        this(R input)
+        {
+            _input = input;
+            _done = _input.empty || !unaryFun!pred(_input.front);
+        }
+
+        bool _done;
+        R    _input;
+    }
+
+    return Result(range);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(equal(takeWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [0, 2, 1]));
+    assert(equal(takeWhile!(std.uni.isAlpha)("hello world"), "hello"));
+    assert(equal(takeWhile!(not!(std.ascii.isDigit))("hello world"), "hello world"));
+    assert(takeWhile!(std.uni.isWhite)("hello world").empty);
+}
+
+unittest
+{
+    assert(takeWhile!(std.uni.isWhite)("").empty);
+
+    auto r =  takeWhile!(std.uni.isAlpha)("hello world");
+    static assert(isInputRange!(typeof(r)));
+    static assert(isForwardRange!(typeof(r)));
+    static assert(!isBidirectionalRange!(typeof(r)));
+    static assert(!isRandomAccessRange!(typeof(r)));
+    static assert(!isOutputRange!(typeof(r), ElementType!(typeof(r))));
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
