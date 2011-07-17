@@ -25,6 +25,8 @@
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000, the authors. All rights reserved.
+    License:
+        $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
         $(PHOBOSSRC std/_path.d)
     Macros:
