@@ -159,10 +159,13 @@ private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
     ---
     assert (baseName(stripExtension("dir/file.ext")) == "file");
     ---
+
+    Standards:
+    This function complies with
+    $(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/basename.html,
+    the POSIX requirements for the 'basename' shell utility)
+    (with suitable adaptions for Windows paths).
 */
-// This function is written so it adheres to the POSIX requirements
-// for the 'basename' shell utility:
-// http://pubs.opengroup.org/onlinepubs/9699919799/utilities/basename.html
 C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -243,14 +246,16 @@ unittest
         assert (dirName(`dir\subdir\`) == `dir`);
     }
     ---
+
+    Standards:
+    This function complies with
+    $(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/dirname.html,
+    the POSIX requirements for the 'dirname' shell utility)
+    (with suitable adaptions for Windows paths).
 */
 C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
     if (isSomeChar!C)
 {
-    // This function is written so it adheres to the POSIX requirements
-    // for the 'dirname' shell utility:
-    // http://pubs.opengroup.org/onlinepubs/9699919799/utilities/dirname.html
-
     if (path.empty) return to!(typeof(return))(".");
 
     auto p = chompDirSeparators(path);
