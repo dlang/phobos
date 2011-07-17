@@ -55,8 +55,9 @@ version(Posix)
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
 */
-version(Posix)   enum string dirSeparator = "/";
-version(Windows) enum string dirSeparator = "\\";
+version(Posix)          enum string dirSeparator = "/";
+else version(Windows)   enum string dirSeparator = "\\";
+else static assert (0, "unsupported platform");
 
 
 
@@ -64,8 +65,9 @@ version(Windows) enum string dirSeparator = "\\";
 /** Path separator string.  A colon under POSIX, a semicolon
     under Windows.
 */
-version(Posix)   enum string pathSeparator = ":";
-version(Windows) enum string pathSeparator = ";";
+version(Posix)          enum string pathSeparator = ":";
+else version(Windows)   enum string pathSeparator = ";";
+else static assert (0, "unsupported platform");
 
 
 
@@ -495,8 +497,8 @@ unittest
 }
 
 
-import std.stdio;
-void main() {}
+
+
 /** Set the extension of a filename.
 
     If the filename already has an extension, it is replaced.   If not, the
