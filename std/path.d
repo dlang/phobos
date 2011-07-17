@@ -1585,13 +1585,9 @@ unittest
     not enough memory to perform the query.
 
     Returns:
-    inputPath with the tilde expanded, or just inputPath
+    $(D inputPath) with the tilde expanded, or just $(D inputPath)
     if it could not be expanded.
-    For Windows, expandTilde() merely returns its argument inputPath.
-
-    Throws:
-    OutOfMemoryException if there is not enough memory to perform
-    the database lookup for the $(D ~user) syntax.
+    For Windows, $(D expandTilde()) merely returns its argument $(D inputPath).
 
     Examples:
     -----
