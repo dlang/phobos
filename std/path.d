@@ -144,8 +144,8 @@ private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
 
     version (Windows)
     {
-        assert (baseName( "d:file.ext")      == "file.ext");
-        assert (baseName(r"d:\dir\file.ext") == "file.ext");
+        assert (baseName(`d:file.ext`)      == "file.ext");
+        assert (baseName(`d:\dir\file.ext`) == "file.ext");
     }
     ---
 
@@ -236,10 +236,10 @@ unittest
 
     version (Windows)
     {
-        assert (dirName( "d:file")      ==  "d:");
-        assert (dirName(r"d:\dir\file") == r"d:\dir");
-        assert (dirName(r"d:\file")     == r"d:\");
-        assert (dirName(r"dir\subdir\") ==  "dir");
+        assert (dirName("d:file")      == "d:");
+        assert (dirName(`d:\dir\file`) == `d:\dir`);
+        assert (dirName(`d:\file`)     == `d:\`);
+        assert (dirName(`dir\subdir\`) == `dir`);
     }
     ---
 */
@@ -316,9 +316,9 @@ unittest
     ---
     version (Windows)
     {
-        assert (driveName( "d:file")   == "d:");
-        assert (driveName(r"d:\file")  == "d:");
-        assert (driveName(r"dir\file") == "");
+        assert (driveName("d:file")   == "d:");
+        assert (driveName(`d:\file`)  == "d:");
+        assert (driveName(`dir\file`) == "");
     }
     ---
 */
@@ -355,7 +355,7 @@ unittest
     ---
     version (Windows)
     {
-        assert (stripDrive(r"d:\dir\file") == r"\dir\file");
+        assert (stripDrive(`d:\dir\file`) == `\dir\file`);
     }
     ---
 */
@@ -369,8 +369,8 @@ C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 
 unittest
 {
-    version(Windows) assert (stripDrive(r"d:\dir\file") == r"\dir\file");
-    version(Posix)   assert (stripDrive(r"d:\dir\file") == r"d:\dir\file");
+    version(Windows) assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+    version(Posix)   assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
 }
 
 
@@ -643,9 +643,9 @@ version (unittest)
     version (Windows)
     {
         assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (joinPath(r"c:\foo", "bar")    == r"c:\foo\bar");
-        assert (joinPath("foo", r"d:\bar")    == r"d:\bar");
-        assert (joinPath("foo", r"\bar")      == r"\bar");
+        assert (joinPath(`c:\foo`, "bar")    == `c:\foo\bar`);
+        assert (joinPath("foo", `d:\bar`)    == `d:\bar`);
+        assert (joinPath("foo", `\bar`)      == `\bar`);
     }
     ---
 */
@@ -696,9 +696,9 @@ unittest
     version (Windows)
     {
         assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (joinPath("foo", r"\bar") == r"\bar");
-        assert (joinPath(r"c:\foo", "bar") == r"c:\foo\bar");
-        assert (joinPath("foo"w, r"d:\bar"w.dup) ==  r"d:\bar");
+        assert (joinPath("foo", `\bar`) == `\bar`);
+        assert (joinPath(`c:\foo`, "bar") == `c:\foo\bar`);
+        assert (joinPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
     }
 }
 
@@ -716,10 +716,10 @@ unittest
 
     version (Windows)
     {
-        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
         assert (equal(pathSplitter("c:"), ["c:"]));
-        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
-        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+        assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
+        assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
     ---
 */
@@ -849,11 +849,11 @@ unittest
     // Windows-specific
     version (Windows)
     {
-        assert (equal(pathSplitter(r"\"), [r"\"]));
-        assert (equal(pathSplitter(r"foo\..\bar\/.\"), ["foo", "..", "bar", "."]));
+        assert (equal(pathSplitter(`\`), [`\`]));
+        assert (equal(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
         assert (equal(pathSplitter("c:"), ["c:"]));
-        assert (equal(pathSplitter(r"c:\foo\bar"), [r"c:\", "foo", "bar"]));
-        assert (equal(pathSplitter(r"c:foo\bar"), [r"c:foo", "bar"]));
+        assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
+        assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
 }
 
@@ -880,10 +880,10 @@ unittest
     ---
     version (Windows)
     {
-        assert (isRooted(r"\"));
-        assert (isRooted(r"\foo"));
-        assert (isRooted(r"d:\foo"));
-        assert (isRooted(r"\\foo\bar"));
+        assert (isRooted(`\`));
+        assert (isRooted(`\foo`));
+        assert (isRooted(`d:\foo`));
+        assert (isRooted(`\\foo\bar`));
         assert (!isRooted("foo"));
         assert (!isRooted("d:foo"));
     }
@@ -906,10 +906,10 @@ unittest
 
     version (Windows)
     {
-    assert (isRooted(r"\"));
-    assert (isRooted(r"\foo"));
-    assert (isRooted(r"d:\foo"));
-    assert (isRooted(r"\\foo\bar"));
+    assert (isRooted(`\`));
+    assert (isRooted(`\foo`));
+    assert (isRooted(`d:\foo`));
+    assert (isRooted(`\\foo\bar`));
     assert (!isRooted("foo"));
     assert (!isRooted("d:foo"));
     }
@@ -940,12 +940,12 @@ unittest
     ---
     version (Windows)
     {
-        assert (isAbsolute(r"d:\"));
-        assert (isAbsolute(r"d:\foo"));
-        assert (isAbsolute(r"\\foo\bar"));
-        assert (!isAbsolute(r"\"));
-        assert (!isAbsolute(r"\foo"));
-        assert (!isAbsolute( "d:foo"));
+        assert (isAbsolute(`d:\`));
+        assert (isAbsolute(`d:\foo`));
+        assert (isAbsolute(`\\foo\bar`));
+        assert (!isAbsolute(`\`));
+        assert (!isAbsolute(`\foo`));
+        assert (!isAbsolute("d:foo"));
     }
     ---
 */
@@ -1013,9 +1013,9 @@ unittest
     version (Windows)
     {
         // Assuming the current working directory is c:\foo\bar
-        assert (absolutePath(r"some\file")    == r"c:\foo\bar\some\file");
-        assert (absolutePath(r"..\file")      == r"c:\foo\bar\..\file");
-        assert (absolutePath(r"c:\some\file") == r"c:\some\file");
+        assert (absolutePath(`some\file`)    == `c:\foo\bar\some\file`);
+        assert (absolutePath(`..\file`)      == `c:\foo\bar\..\file`);
+        assert (absolutePath(`c:\some\file`) == `c:\some\file`);
     }
     ---
 */
@@ -1037,8 +1037,8 @@ unittest
 
     version (Windows)
     {
-        assert (absolutePath(r"c:\foo\bar") == r"c:\foo\bar");
-        assert (absolutePath(r"c:\foo\..\.\\bar\\") == r"c:\foo\..\.\\bar\\");
+        assert (absolutePath(`c:\foo\bar`) == `c:\foo\bar`);
+        assert (absolutePath(`c:\foo\..\.\\bar\\`) == `c:\foo\..\.\\bar\\`);
     }
 }
 
@@ -1060,8 +1060,8 @@ unittest
     }
     version (Windows)
     {
-        assert (normalize(r"c:\foo\.\bar/..\\baz\") == r"c:\foo\baz");
-        assert (normalize(r"..\foo\.") == "..\foo");
+        assert (normalize(`c:\foo\.\bar/..\\baz\`) == `c:\foo\baz`);
+        assert (normalize(`..\foo\.`) == `..\foo`);
     }
     ---
 */
@@ -1202,56 +1202,56 @@ unittest
     {
         // Trivial
         assert (normalize("") == "");
-        assert (normalize(r"foo\bar") == r"foo\bar");
-        assert (normalize("foo/bar") == r"foo\bar");
+        assert (normalize(`foo\bar`) == `foo\bar`);
+        assert (normalize("foo/bar") == `foo\bar`);
 
         // Correct handling of absolute paths
-        assert (normalize("/") == r"\");
-        assert (normalize(r"\") == r"\");
-        assert (normalize(r"\\\") == r"\");
-        assert (normalize(r"\\\\") == r"\");
-        assert (normalize(r"\foo\bar") == r"\foo\bar");
-        assert (normalize(r"\\foo") == r"\\foo");
-        assert (normalize(r"\\foo\\") == r"\\foo");
-        assert (normalize(r"\\foo/bar") == r"\\foo\bar");
-        assert (normalize(r"\\\foo\bar") == r"\foo\bar");
-        assert (normalize(r"\\\\foo\bar") == r"\foo\bar");
-        assert (normalize(r"c:\") == r"c:\");
-        assert (normalize(r"c:\foo\bar") == r"c:\foo\bar");
-        assert (normalize(r"c:\\foo\bar") == r"c:\foo\bar");
+        assert (normalize("/") == `\`);
+        assert (normalize(`\`) == `\`);
+        assert (normalize(`\\\`) == `\`);
+        assert (normalize(`\\\\`) == `\`);
+        assert (normalize(`\foo\bar`) == `\foo\bar`);
+        assert (normalize(`\\foo`) == `\\foo`);
+        assert (normalize(`\\foo\\`) == `\\foo`);
+        assert (normalize(`\\foo/bar`) == `\\foo\bar`);
+        assert (normalize(`\\\foo\bar`) == `\foo\bar`);
+        assert (normalize(`\\\\foo\bar`) == `\foo\bar`);
+        assert (normalize(`c:\`) == `c:\`);
+        assert (normalize(`c:\foo\bar`) == `c:\foo\bar`);
+        assert (normalize(`c:\\foo\bar`) == `c:\foo\bar`);
 
         // Correct handling of single-dot symbol (current directory)
-        assert (normalize(r"\./foo") == r"\foo");
-        assert (normalize(r"\foo/.\bar") == r"\foo\bar");
+        assert (normalize(`\./foo`) == `\foo`);
+        assert (normalize(`\foo/.\bar`) == `\foo\bar`);
 
-        assert (normalize(r".\foo") == r"foo");
-        assert (normalize(r"./.\foo") == r"foo");
-        assert (normalize(r"foo\.\./bar") == r"foo\bar");
+        assert (normalize(`.\foo`) == `foo`);
+        assert (normalize(`./.\foo`) == `foo`);
+        assert (normalize(`foo\.\./bar`) == `foo\bar`);
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (normalize(r"\foo\..\bar") == r"\bar");
-        assert (normalize(r"\foo\../..\bar") == r"\bar");
-        assert (normalize(r"\..\foo") == r"\foo");
-        assert (normalize(r"\..\..\foo") == r"\foo");
-        assert (normalize(r"\foo\..") == r"\");
-        assert (normalize(r"\foo\../..") == r"\");
+        assert (normalize(`\foo\..\bar`) == `\bar`);
+        assert (normalize(`\foo\../..\bar`) == `\bar`);
+        assert (normalize(`\..\foo`) == `\foo`);
+        assert (normalize(`\..\..\foo`) == `\foo`);
+        assert (normalize(`\foo\..`) == `\`);
+        assert (normalize(`\foo\../..`) == `\`);
 
-        assert (normalize(r"foo\..\bar") == r"bar");
-        assert (normalize(r"foo\..\../bar") == r"..\bar");
-        assert (normalize(r"..\foo") == r"..\foo");
-        assert (normalize(r"..\..\foo") == r"..\..\foo");
-        assert (normalize(r"..\foo\..\bar") == r"..\bar");
-        assert (normalize(r"..\.\..\foo") == r"..\..\foo");
-        assert (normalize(r"foo\bar\..") == r"foo");
-        assert (normalize(r"\foo\..\..") == r"\");
-        assert (normalize(r"c:\foo\..\..") == r"c:\");
+        assert (normalize(`foo\..\bar`) == `bar`);
+        assert (normalize(`foo\..\../bar`) == `..\bar`);
+        assert (normalize(`..\foo`) == `..\foo`);
+        assert (normalize(`..\..\foo`) == `..\..\foo`);
+        assert (normalize(`..\foo\..\bar`) == `..\bar`);
+        assert (normalize(`..\.\..\foo`) == `..\..\foo`);
+        assert (normalize(`foo\bar\..`) == `foo`);
+        assert (normalize(`\foo\..\..`) == `\`);
+        assert (normalize(`c:\foo\..\..`) == `c:\`);
 
         // Correct handling of non-root path with drive specifier
-        assert (normalize(r"c:foo") == r"c:foo");
-        assert (normalize(r"c:..\foo\.\..\bar") == r"c:..\bar");
+        assert (normalize(`c:foo`) == `c:foo`);
+        assert (normalize(`c:..\foo\.\..\bar`) == `c:..\bar`);
 
         // The ultimate path
-        assert (normalize(r"c:\foo\..\bar\\.\..\...\\\baz\\") == r"c:\...\baz");
+        assert (normalize(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
     }
     else static assert (false);
 }
@@ -1364,7 +1364,7 @@ bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
     -----
     assert (glob("foo.bar", "*"));
     assert (glob("foo.bar", "*.*"));
-    assert (glob(r"foo/foo\bar", "f*b*r"));
+    assert (glob(`foo/foo\bar`, "f*b*r"));
     assert (glob("foo.bar", "f???bar"));
     assert (glob("foo.bar", "[fg]???bar"));
     assert (glob("foo.bar", "[!gh]*bar"));
