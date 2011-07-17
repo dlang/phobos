@@ -1061,6 +1061,146 @@ unittest
 
 
 
+/** Translate $(D path) into a relative _path.
+
+    The returned _path is relative to $(D base), which is by default
+    taken to be the current working directory.  If specified,
+    $(D base) must be an absolute _path, and it is always assumed
+    to refer to a directory.  If $(D path) and $(D base) refer to
+    the same directory, the function returns $(D ".").
+
+    The following algorithm is used:
+    $(OL
+        $(LI If $(D path) is a relative directory, return it unaltered.)
+        $(LI Find a common root between $(D path) and $(D base).
+            If there is no common root, return $(D path) unaltered.)
+        $(LI Prepare a string with as many $(D "../") or $(D "..\") as
+            necessary to reach the common root from base path.)
+        $(LI Append the remaining segments of $(D path) to the string
+            and return.)
+    )
+
+    Examples:
+    ---
+    assert (relativePath("foo") == "foo");
+
+    version (Posix)
+    {
+        assert (relativePath("foo", "/bar") == "foo");
+        assert (relativePath("/foo/bar", "/foo/bar") == ".");
+        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assert (relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
+        assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
+    }
+    version (Windows)
+    {
+        assert (relativePath("foo", `c:\bar`) == "foo");
+        assert (relativePath(`c:\foo\bar`, `c:\foo\bar`) == ".");
+        assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
+        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
+        assert (relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
+    }
+    ---
+
+    Throws:
+    $(D Exception) if the specified _base directory is not absolute.
+*/
+string relativePath(string path, string base = getcwd())
+    //TODO: @safe  (object.reserve(T[]) should be @trusted)
+{
+    if (!isAbsolute(path)) return path;
+    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
+
+    // Find common root with current working directory
+    string result;
+    result.reserve(base.length + path.length);
+
+    auto basePS = pathSplitter(base);
+    auto pathPS = pathSplitter(path);
+    version (Posix)
+    {
+        if (fcmp(basePS.front, pathPS.front) != 0) return path;
+    }
+    else version (Windows)
+    {
+        auto bf = basePS.front;
+        auto pf = pathPS.front;
+        if (bf.length != pf.length) return path;
+        foreach (i; 0 .. bf.length)
+        {
+            if (isDirSeparator(bf[i]))
+            {
+                if (!isDirSeparator(bf[i])) return path;
+            }
+            else if (!pathCharMatch(bf[i], pf[i])) return path;
+        }
+    }
+    else static assert (0);
+    basePS.popFront();
+    pathPS.popFront();
+
+    while (!basePS.empty && !pathPS.empty && fcmp(basePS.front, pathPS.front) == 0)
+    {
+        basePS.popFront();
+        pathPS.popFront();
+    }
+
+    // Append as many "../" as necessary to reach common base from path
+    while (!basePS.empty)
+    {
+        result ~= "..";
+        result ~= dirSeparator;
+        basePS.popFront();
+    }
+
+    // Append the remainder of path
+    while (!pathPS.empty)
+    {
+        result ~= pathPS.front;
+        result ~= dirSeparator;
+        pathPS.popFront();
+    }
+
+    // base == path
+    if (result.empty) return ".";
+
+    // Strip off last path separator
+    return result[0 .. $-1];
+}
+
+unittest
+{
+    import std.exception;
+    assert (relativePath("foo") == "foo");
+    version (Posix)
+    {
+        assert (relativePath("foo", "/bar") == "foo");
+        assert (relativePath("/foo/bar", "/foo/bar") == ".");
+        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assert (relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
+        assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
+        assert (relativePath("//foo/bar", "/foo") == "//foo/bar");
+        assertThrown(relativePath("/foo", "bar"));
+    }
+    else version (Windows)
+    {
+        assert (relativePath("foo", `c:\bar`) == "foo");
+        assert (relativePath(`c:\foo\bar`, `c:\foo\bar`) == ".");
+        assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
+        assert (relativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
+        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
+        assert (relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
+        assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
+        assertThrown(relativePath(`c:\foo`, "bar"));
+    }
+    else static assert (0);
+}
+
+
+
+
 /** Resolve current/parent directory symbols (. and ..) and remove
     superfluous directory separators.  Replace slashes with
     backslashes on Windows.
