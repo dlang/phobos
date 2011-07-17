@@ -59,18 +59,13 @@ version(Posix)   enum string dirSeparator = "/";
 version(Windows) enum string dirSeparator = "\\";
 
 
+
+
 /** Path separator string.  A colon under POSIX, a semicolon
     under Windows.
 */
 version(Posix)   enum string pathSeparator = ":";
 version(Windows) enum string pathSeparator = ";";
-
-
-/** Strings representing the current and parent directories
-    ("." and "..", respectively)
-*/
-enum string currentDirSymbol = ".";
-enum string parentDirSymbol = "..";     /// ditto
 
 
 
@@ -1760,8 +1755,8 @@ enum string altsep = "/";
 alias pathSeparator pathsep;
 version(Windows) enum string linesep = "\r\n";
 version(Posix) enum string linesep = "\n";
-alias currentDirSymbol curdir;
-alias parentDirSymbol pardir;
+enum string curdir = ".";
+enum string pardir = "..";
 alias extension getExt;
 string getName(string path) { return baseName(stripExtension(path)); }
 alias baseName getBaseName;
