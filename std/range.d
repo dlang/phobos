@@ -2559,6 +2559,52 @@ unittest
 }
 
 
+/++
+    Pops $(D n) elements off of the given range and returns it. The original
+    range is not affected. If the length of the given range is less than $(D n)
+    than an empty range is returned.
+
+    The main reason to use this instead of $(LREF popFrontN) is so that you can
+    pop the elements off and pass the resulting range in one operation, allowing
+    for a more functional style of programming.
+
+    Examples:
+--------------------
+auto r = "hello world";
+assert(drop(r, 3) == "lo world");
+assert(r == "hello world");
+
+assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+assert(drop("hello world", 6) == "world");
+assert(drop("hello world", 50).empty);
+--------------------
+  +/
+R drop(R)(R range, size_t n)
+    if(isForwardRange!R)
+{
+    auto r = range.save;
+    r.popFrontN(n);
+    return r;
+}
+
+//Verify Examples
+unittest
+{
+    auto r = "hello world";
+    assert(drop(r, 3) == "lo world");
+    assert(r == "hello world");
+
+    assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+    assert(drop("hello world", 6) == "world");
+    assert(drop("hello world", 50).empty);
+}
+
+unittest
+{
+    assert(drop("", 5).empty);
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
