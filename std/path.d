@@ -635,15 +635,17 @@ version (unittest)
     ---
     version (Posix)
     {
-        assert (joinPath("/foo/", "bar") == "/foo/bar");
-        assert (joinPath("/foo", "/bar") == "/bar");
+        assert (joinPath("foo", "bar", "baz") == "foo/bar/baz");
+        assert (joinPath("/foo/", "bar")      == "/foo/bar");
+        assert (joinPath("/foo", "/bar")      == "/bar");
     }
 
     version (Windows)
     {
-        assert (joinPath(r"c:\foo", "bar") == r"c:\foo\bar");
-        assert (joinPath("foo", r"d:\bar") == r"d:\bar");
-        assert (joinPath("foo", r"\bar")   == r"\bar");
+        assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
+        assert (joinPath(r"c:\foo", "bar")    == r"c:\foo\bar");
+        assert (joinPath("foo", r"d:\bar")    == r"d:\bar");
+        assert (joinPath("foo", r"\bar")      == r"\bar");
     }
     ---
 */
@@ -679,6 +681,7 @@ unittest
     version (Posix)
     {
         assert (joinPath("foo", "bar") == "foo/bar");
+        assert (joinPath("foo", "bar", "baz") == "foo/bar/baz");
         assert (joinPath("foo/".dup, "bar") == "foo/bar");
         assert (joinPath("foo///", "bar".dup) == "foo///bar");
         assert (joinPath("/foo"w, "bar"w) == "/foo/bar");
@@ -692,6 +695,7 @@ unittest
     }
     version (Windows)
     {
+        assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
         assert (joinPath("foo", r"\bar") == r"\bar");
         assert (joinPath(r"c:\foo", "bar") == r"c:\foo\bar");
         assert (joinPath("foo"w, r"d:\bar"w.dup) ==  r"d:\bar");
