@@ -49,8 +49,6 @@ version(Posix)
     import core.sys.posix.stdlib;
 }
 
-version (Windows) private alias Signed!size_t ssize_t;
-
 
 
 
@@ -109,10 +107,10 @@ version(Posix) private alias isDirSeparator isSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ssize_t lastSeparator(C)(in C[] path)  @safe pure nothrow
+private sizediff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(ssize_t) path.length) - 1;
+    auto i = (cast(sizediff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
     return i;
 }
@@ -124,7 +122,7 @@ private ssize_t lastSeparator(C)(in C[] path)  @safe pure nothrow
 private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(ssize_t) path.length) - 1;
+    auto i = (cast(sizediff_t) path.length) - 1;
     while (i >= 0 && isDirSeparator(path[i])) --i;
     return path[0 .. i+1];
 }
@@ -379,10 +377,10 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private ssize_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
+private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    auto i = (cast(ssize_t) path.length) - 1;
+    auto i = (cast(sizediff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
     {
         if (path[i] == '.' && i > 0 && !isSeparator(path[i-1])) return i;
