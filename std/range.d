@@ -2497,12 +2497,12 @@ auto takeWhile(alias pred, R)(R range)
 {
     static struct Result
     {
-        bool empty()
+        @property bool empty()
         {
             return _done;
         }
 
-        auto ref front()
+        @property auto ref front()
         {
             assert(!_done);
             return _input.front;
@@ -2549,6 +2549,7 @@ unittest
 unittest
 {
     assert(takeWhile!(std.uni.isWhite)("").empty);
+    assert(equal(takeWhile!"a < 3"(filter!"true"([0, 2, 1, 5, 0, 3])), [0, 2, 1]));
 
     auto r =  takeWhile!(std.uni.isAlpha)("hello world");
     static assert(isInputRange!(typeof(r)));
@@ -2577,7 +2578,7 @@ assert(drop("hello world", 50).empty);
 R drop(R)(R range, size_t n)
     if(isInputRange!R)
 {
-    range.popFrontN(n);
+    popFrontN(range, n);
     return range;
 }
 
@@ -2592,6 +2593,7 @@ unittest
 unittest
 {
     assert(drop("", 5).empty);
+    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
 
 
