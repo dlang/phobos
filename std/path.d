@@ -36,6 +36,7 @@ module std.path;
 
 
 import std.algorithm;
+import std.array;
 import std.conv;
 import std.file: getcwd;
 import std.string;
@@ -165,10 +166,10 @@ private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
 C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
-    if (p1.length == 0) return null;
+    if (p1.empty) return null;
 
     auto p2 = chompDirSeparators(p1);
-    if (p2.length == 0) return p1[0 .. 1];
+    if (p2.empty) return p1[0 .. 1];
 
     return p2[lastSeparator(p2)+1 .. $];
 }
@@ -179,7 +180,7 @@ C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
 {
     auto p1 = baseName(path);
     auto p2 = std.string.chomp(p1, suffix);
-    if (p2.length == 0) return p1;
+    if (p2.empty) return p1;
     else return p2;
 }
 
@@ -250,10 +251,10 @@ C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
     // for the 'dirname' shell utility:
     // http://pubs.opengroup.org/onlinepubs/9699919799/utilities/dirname.html
 
-    if (path.length == 0) return to!(typeof(return))(".");
+    if (path.empty) return to!(typeof(return))(".");
 
     auto p = chompDirSeparators(path);
-    if (p.length == 0) return path[0 .. 1];
+    if (p.empty) return path[0 .. 1];
     if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
         return path[0 .. 3];
 
@@ -664,8 +665,8 @@ immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
     {
         alias path path1;
         alias morePaths[0] path2;
-        if (path2.length == 0) return path1.idup;
-        if (path1.length == 0) return path2.idup;
+        if (path2.empty) return path1.idup;
+        if (path1.empty) return path2.idup;
         if (isRooted(path2)) return path2.idup;
 
         if (isDirSeparator(path1[$-1]) || isDirSeparator(path2[0]))
@@ -751,7 +752,7 @@ auto pathSplitter(C)(const(C)[] path)  //TODO: @safe pure nothrow
         void popFront()
         {
             assert (!empty, "PathSplitter: called popFront() on empty range");
-            if (_path.length == 0)
+            if (_path.empty)
             {
                 _empty = true;
             }
@@ -775,7 +776,7 @@ auto pathSplitter(C)(const(C)[] path)  //TODO: @safe pure nothrow
 
         this(typeof(path) p)
         {
-            if (p.length == 0)
+            if (p.empty)
             {
                 _empty = true;
                 return;
@@ -1031,7 +1032,7 @@ unittest
 */
 string absolutePath(string path)  // TODO: @safe nothrow
 {
-    if (path.length == 0)  return null;
+    if (path.empty)  return null;
     if (isAbsolute(path))  return path;
     return joinPath(getcwd(), path);
 }
