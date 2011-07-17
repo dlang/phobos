@@ -495,14 +495,15 @@ unittest
 }
 
 
-
-
+import std.stdio;
+void main() {}
 /** Set the extension of a filename.
 
     If the filename already has an extension, it is replaced.   If not, the
     extension is simply appended to the filename.
 
-    This function always allocates a new string.
+    This function normally allocates a new string (the possible exception
+    being case when path is immutable and doesn't already have an extension).
 
     Examples:
     ---
@@ -512,21 +513,45 @@ unittest
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
-    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+    if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
     return cast(typeof(return))(stripExtension(path)~'.'~ext);
+}
+
+///ditto
+immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, in C2[] ext)
+    @trusted pure nothrow
+    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+{
+    // Optimised for the case where path is immutable and has no extension
+    auto i = extSeparatorPos(path);
+    if (i == -1)
+    {
+        path ~= '.';
+        path ~= ext;
+        return path;
+    }
+    else if (i == path.length - 1)
+    {
+        path ~= ext;
+        return path;
+    }
+    else
+    {
+        return cast(typeof(return))(path[0 .. i+1] ~ ext);
+    }
 }
 
 
 unittest
 {
-    auto p1 = setExtension("file", "ext");
-    assert (p1 == "file.ext");
-    static assert (is(typeof(p1) == string));
+    assert (setExtension("file", "ext") == "file.ext");
+    assert (setExtension("file.", "ext") == "file.ext");
+    assert (setExtension("file.old", "new") == "file.new");
 
-    auto p2 = setExtension("file.old"w.dup, "new"w);
-    assert (p2 == "file.new");
-    static assert (is(typeof(p2) == wstring));
+    assert (setExtension("file"w.dup, "ext"w) == "file.ext");
+    assert (setExtension("file."w, "ext"w.dup) == "file.ext");
+    assert (setExtension("file.old"d.dup, "new"d) == "file.new");
 }
 
 
