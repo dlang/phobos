@@ -336,10 +336,10 @@ C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
 
 unittest
 {
-    version (Posix)  assert (driveName("c:/foo") == null);
+    version (Posix)  assert (driveName("c:/foo") is null);
     version (Windows)
     {
-    assert (driveName("dir\\file") == null);
+    assert (driveName("dir\\file") is null);
     assert (driveName("d:file") == "d:");
     assert (driveName("d:\\file") == "d:");
     }
