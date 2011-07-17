@@ -2495,7 +2495,7 @@ auto takeWhile(alias pred, R)(R range)
     if(isInputRange!R &&
        is(typeof(unaryFun!pred(range.front))))
 {
-    struct Result
+    static struct Result
     {
         bool empty()
         {
