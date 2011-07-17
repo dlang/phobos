@@ -1538,28 +1538,28 @@ unittest
 
     Examples:
     -----
-    assert (glob("foo.bar", "*"));
-    assert (glob("foo.bar", "*.*"));
-    assert (glob(`foo/foo\bar`, "f*b*r"));
-    assert (glob("foo.bar", "f???bar"));
-    assert (glob("foo.bar", "[fg]???bar"));
-    assert (glob("foo.bar", "[!gh]*bar"));
-    assert (glob("bar.fooz", "bar.{foo,bif}z"));
-    assert (glob("bar.bifz", "bar.{foo,bif}z"));
+    assert (globMatch("foo.bar", "*"));
+    assert (globMatch("foo.bar", "*.*"));
+    assert (globMatch(`foo/foo\bar`, "f*b*r"));
+    assert (globMatch("foo.bar", "f???bar"));
+    assert (globMatch("foo.bar", "[fg]???bar"));
+    assert (globMatch("foo.bar", "[!gh]*bar"));
+    assert (globMatch("bar.fooz", "bar.{foo,bif}z"));
+    assert (globMatch("bar.bifz", "bar.{foo,bif}z"));
 
     version (Windows)
     {
-        assert (glob("foo", "Foo"));
-        assert (glob("Goo.bar", "[fg]???bar"));
+        assert (globMatch("foo", "Foo"));
+        assert (globMatch("Goo.bar", "[fg]???bar"));
     }
     version (Posix)
     {
-        assert (!glob("foo", "Foo"));
-        assert (!glob("Goo.bar", "[fg]???bar"));
+        assert (!globMatch("foo", "Foo"));
+        assert (!globMatch("Goo.bar", "[fg]???bar"));
     }
     -----
  */
-bool glob(const(char)[] path, const(char)[] pattern)  @safe nothrow //TODO: pure
+bool globMatch(const(char)[] path, const(char)[] pattern)  @safe nothrow //TODO: pure
 in
 {
     // Verify that pattern[] is valid
@@ -1580,7 +1580,7 @@ body
                     return true;
                 foreach (j; ni .. path.length)
                 {
-                    if (glob(path[j .. path.length],
+                    if (globMatch(path[j .. path.length],
                                     pattern[pi + 1 .. pattern.length]))
                         return true;
                 }
@@ -1641,7 +1641,7 @@ body
 
                     if (pi0 == pi)
                     {
-                        if (glob(path[ni..$], pattern[piRemain..$]))
+                        if (globMatch(path[ni..$], pattern[piRemain..$]))
                         {
                             return true;
                         }
@@ -1649,7 +1649,7 @@ body
                     }
                     else
                     {
-                        if (glob(path[ni..$],
+                        if (globMatch(path[ni..$],
                                         pattern[pi0..pi-1]
                                         ~ pattern[piRemain..$]))
                         {
@@ -1679,43 +1679,43 @@ body
 
 unittest
 {
-    version (Windows) assert(glob("foo", "Foo"));
-    version (Posix) assert(!glob("foo", "Foo"));
-    assert(glob("foo", "*"));
-    assert(glob("foo.bar", "*"));
-    assert(glob("foo.bar", "*.*"));
-    assert(glob("foo.bar", "foo*"));
-    assert(glob("foo.bar", "f*bar"));
-    assert(glob("foo.bar", "f*b*r"));
-    assert(glob("foo.bar", "f???bar"));
-    assert(glob("foo.bar", "[fg]???bar"));
-    assert(glob("foo.bar", "[!gh]*bar"));
+    version (Windows) assert(globMatch("foo", "Foo"));
+    version (Posix) assert(!globMatch("foo", "Foo"));
+    assert(globMatch("foo", "*"));
+    assert(globMatch("foo.bar", "*"));
+    assert(globMatch("foo.bar", "*.*"));
+    assert(globMatch("foo.bar", "foo*"));
+    assert(globMatch("foo.bar", "f*bar"));
+    assert(globMatch("foo.bar", "f*b*r"));
+    assert(globMatch("foo.bar", "f???bar"));
+    assert(globMatch("foo.bar", "[fg]???bar"));
+    assert(globMatch("foo.bar", "[!gh]*bar"));
 
-    assert(!glob("foo", "bar"));
-    assert(!glob("foo", "*.*"));
-    assert(!glob("foo.bar", "f*baz"));
-    assert(!glob("foo.bar", "f*b*x"));
-    assert(!glob("foo.bar", "[gh]???bar"));
-    assert(!glob("foo.bar", "[!fg]*bar"));
-    assert(!glob("foo.bar", "[fg]???baz"));
+    assert(!globMatch("foo", "bar"));
+    assert(!globMatch("foo", "*.*"));
+    assert(!globMatch("foo.bar", "f*baz"));
+    assert(!globMatch("foo.bar", "f*b*x"));
+    assert(!globMatch("foo.bar", "[gh]???bar"));
+    assert(!globMatch("foo.bar", "[!fg]*bar"));
+    assert(!globMatch("foo.bar", "[fg]???baz"));
 
-    assert(glob("foo.bar", "{foo,bif}.bar"));
-    assert(glob("bif.bar", "{foo,bif}.bar"));
+    assert(globMatch("foo.bar", "{foo,bif}.bar"));
+    assert(globMatch("bif.bar", "{foo,bif}.bar"));
 
-    assert(glob("bar.foo", "bar.{foo,bif}"));
-    assert(glob("bar.bif", "bar.{foo,bif}"));
+    assert(globMatch("bar.foo", "bar.{foo,bif}"));
+    assert(globMatch("bar.bif", "bar.{foo,bif}"));
 
-    assert(glob("bar.fooz", "bar.{foo,bif}z"));
-    assert(glob("bar.bifz", "bar.{foo,bif}z"));
+    assert(globMatch("bar.fooz", "bar.{foo,bif}z"));
+    assert(globMatch("bar.bifz", "bar.{foo,bif}z"));
 
-    assert(glob("bar.foo", "bar.{biz,,baz}foo"));
-    assert(glob("bar.foo", "bar.{biz,}foo"));
-    assert(glob("bar.foo", "bar.{,biz}foo"));
-    assert(glob("bar.foo", "bar.{}foo"));
+    assert(globMatch("bar.foo", "bar.{biz,,baz}foo"));
+    assert(globMatch("bar.foo", "bar.{biz,}foo"));
+    assert(globMatch("bar.foo", "bar.{,biz}foo"));
+    assert(globMatch("bar.foo", "bar.{}foo"));
 
-    assert(glob("bar.foo", "bar.{ar,,fo}o"));
-    assert(glob("bar.foo", "bar.{,ar,fo}o"));
-    assert(glob("bar.o", "bar.{,ar,fo}o"));
+    assert(globMatch("bar.foo", "bar.{ar,,fo}o"));
+    assert(globMatch("bar.foo", "bar.{,ar,fo}o"));
+    assert(globMatch("bar.o", "bar.{,ar,fo}o"));
 }
 
 
@@ -1973,4 +1973,4 @@ alias isAbsolute isabs;
 alias absolutePath rel2abs;
 alias joinPath join;
 alias pathCharMatch fncharmatch;
-alias glob fnmatch;
+alias globMatch fnmatch;
