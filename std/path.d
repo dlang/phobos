@@ -623,7 +623,7 @@ version (unittest)
 
 
 
-/** Joins two or more path components.
+/** Joins one or more path components.
 
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
@@ -651,16 +651,16 @@ version (unittest)
 */
 immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
     @trusted // (BUG 5304) pure  (BUG 5700) nothrow
-    if (Strings.length > 0 && compatibleStrings!(C[], Strings))
+    if (compatibleStrings!(C[], Strings))
 {
-    // More than two path components
-    static if (Strings.length > 1)
+    // Exactly one path component
+    static if (Strings.length == 0)
     {
-        return joinPath(joinPath(path, morePaths[0]), morePaths[1 .. $]);
+        return path.idup;
     }
 
     // Exactly two path components
-    else
+    else static if (Strings.length == 1)
     {
         alias path path1;
         alias morePaths[0] path2;
@@ -673,6 +673,12 @@ immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
         else
             return cast(typeof(return))(path1 ~ dirSeparator ~ path2);
     }
+
+    // More than two path components
+    else
+    {
+        return joinPath(joinPath(path, morePaths[0]), morePaths[1 .. $]);
+    }
 }
 
 
@@ -680,6 +686,8 @@ unittest
 {
     version (Posix)
     {
+        assert (joinPath("foo") == "foo");
+        assert (joinPath("/foo/") == "/foo/");
         assert (joinPath("foo", "bar") == "foo/bar");
         assert (joinPath("foo", "bar", "baz") == "foo/bar/baz");
         assert (joinPath("foo/".dup, "bar") == "foo/bar");
@@ -695,6 +703,8 @@ unittest
     }
     version (Windows)
     {
+        assert (joinPath("foo") == "foo");
+        assert (joinPath(`\foo/`) == `\foo/`);
         assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
         assert (joinPath("foo", `\bar`) == `\bar`);
         assert (joinPath(`c:\foo`, "bar") == `c:\foo\bar`);
