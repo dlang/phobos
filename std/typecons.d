@@ -2508,47 +2508,49 @@ unittest
 }
 ----
  */
-@system auto scoped(T, Args...)(Args args) if (is(T == class))
+@system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
 {
-    static struct Scoped
-    {
-        private ubyte[__traits(classInstanceSize, T)] Scoped_store = void;
-        @property T Scoped_payload()
-        {
-            return cast(T) (Scoped_store.ptr);
-        }
-        alias Scoped_payload this;
+    Scoped!T result;
 
-        @disable this(this)
-        {
-            writeln("Illegal call to Scoped this(this)");
-            assert(false);
-        }
-
-        ~this()
-        {
-            destroy(Scoped_payload);
-            if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
-            {
-                _d_monitordelete(Scoped_payload, true);
-            }
-        }
-    }
-
-    byte[__traits(classInstanceSize, T)] result;
     static if (Args.length == 0)
     {
-        result[] = typeid(T).init[];
+        result.Scoped_store[] = typeid(T).init[];
         static if (is(typeof(T.init.__ctor())))
         {
-            (cast(T) result.ptr).__ctor();
+            result.Scoped_payload.__ctor();
         }
     }
     else
     {
-        emplace!T(cast(void[]) result, args);
+        emplace!T(cast(void[]) result.Scoped_store, args);
     }
-    return cast(Scoped) result;
+
+    return result;
+}
+
+private struct Scoped(T)
+{
+    private byte[__traits(classInstanceSize, T)] Scoped_store = void;
+    @property T Scoped_payload()
+    {
+        return cast(T) (Scoped_store.ptr);
+    }
+    alias Scoped_payload this;
+
+    @disable this(this)
+    {
+        writeln("Illegal call to Scoped this(this)");
+        assert(false);
+    }
+
+    ~this()
+    {
+        destroy(Scoped_payload);
+        if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
+        {
+            _d_monitordelete(Scoped_payload, true);
+        }
+    }
 }
 
 // Used by scoped() above
@@ -2614,6 +2616,27 @@ unittest
     }
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
+}
+
+unittest
+{
+    // bug4500
+    class A
+    {
+        this() { a = this; }
+        this(int i) { a = this; }
+        A a;
+        bool check() { return this is a; }
+    }
+
+    auto a1 = scoped!A;
+    assert(a1.check());
+
+    auto a2 = scoped!A(1);
+    assert(a2.check());
+
+    a1.a = a1;
+    assert(a1.check());
 }
 
 /**
