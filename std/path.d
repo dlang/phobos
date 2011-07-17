@@ -739,13 +739,12 @@ unittest
     }
     ---
 */
-auto pathSplitter(C)(const(C)[] path)  //TODO: @safe pure nothrow
+auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     struct PathSplitter
     {
-    // TODO: @safe pure nothrow:
-    //DMD BUG 5798
+    @safe pure nothrow:
         @property empty() { return _empty; }
 
         @property front()
@@ -842,18 +841,18 @@ unittest
 
     // Root directories
     assert (equal(pathSplitter("/"), ["/"]));
-    assert (equal(pathSplitter("///"), ["/"]));
-    assert (equal(pathSplitter("//foo"), ["//foo"]));
+    assert (equal(pathSplitter("///"w), ["/"w]));
+    assert (equal(pathSplitter("//foo"d), ["//foo"d]));
 
     // Absolute paths
-    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
-    assert (equal(pathSplitter("//foo/bar"), ["//foo", "bar"]));
+    assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    assert (equal(pathSplitter("//foo/bar"w.dup), ["//foo"w, "bar"w]));
 
     // General
-    assert (equal(pathSplitter("foo/bar"), ["foo", "bar"]));
+    assert (equal(pathSplitter("foo/bar"d.dup), ["foo"d, "bar"d]));
     assert (equal(pathSplitter("foo//bar"), ["foo", "bar"]));
-    assert (equal(pathSplitter("foo/bar//"), ["foo", "bar"]));
-    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+    assert (equal(pathSplitter("foo/bar//"w), ["foo"w, "bar"w]));
+    assert (equal(pathSplitter("foo/../bar//./"d), ["foo"d, ".."d, "bar"d, "."d]));
 
     // save()
     auto ps1 = pathSplitter("foo/bar/baz");
