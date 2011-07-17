@@ -2605,6 +2605,43 @@ unittest
 }
 
 
+/++
+    Pops elements off of the given range until $(D pred) fails. Then the
+    resulting range is returned.
+
+    Examples:
+--------------------
+assert(dropWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [5, 0, 3]));
+assert(dropWhile!(std.uni.isAlpha)("hello world"), " world"));
+assert(dropWhile!(not!(std.ascii.isDigit))("hello world").empty);
+assert(dropWhile!(std.uni.isWhite)("hello world") == "hello world");
+--------------------
+  +/
+R dropWhile(alias pred, R)(R range)
+    if(isInputRange!R &&
+       is(typeof(unaryFun!pred(range.front))))
+{
+    while(!range.empty && unaryFun!pred(range.front))
+        range.popFront();
+
+    return range;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(dropWhile!"a < 3"([0, 2, 1, 5, 0, 3]) == [5, 0, 3]);
+    assert(dropWhile!(std.uni.isAlpha)("hello world") == " world");
+    assert(dropWhile!(not!(std.ascii.isDigit))("hello world").empty);
+    assert(dropWhile!(std.uni.isWhite)("hello world") == "hello world");
+}
+
+unittest
+{
+    assert(dropWhile!(std.uni.isWhite)("").empty);
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
