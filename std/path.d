@@ -1128,11 +1128,7 @@ string relativePath(string path, string base = getcwd())
         if (bf.length != pf.length) return path;
         foreach (i; 0 .. bf.length)
         {
-            if (isDirSeparator(bf[i]))
-            {
-                if (!isDirSeparator(bf[i])) return path;
-            }
-            else if (!pathCharMatch(bf[i], pf[i])) return path;
+            if (!pathCharMatch(bf[i], pf[i])) return path;
         }
     }
     else static assert (0);
@@ -1438,22 +1434,28 @@ else version (Posix) alias std.algorithm.cmp fcmp;
 
 /** Matches path characters.
 
-    Under Windows, the comparison is done ignoring case. Under Linux
-    an exact match is performed.
+    Under Windows the comparison is done ignoring case, and
+    '\' and '/' are treated as equal.
+    Under Linux an exact match is performed.
 
     Returns: $(D true) if c1 matches c2, $(D false) otherwise.
 
     Examples:
     -----
+    assert (pathCharMatch('a', 'a'));
+
     version(Windows)
     {
         assert (!pathCharMatch('a', 'b'));
         assert (pathCharMatch('A', 'a'));
+        assert (pathCharMatch('/', '\\'));
     }
+
     version(Posix)
     {
         assert (!pathCharMatch('a', 'b'));
         assert (!pathCharMatch('A', 'a'));
+        assert (!pathCharMatch('/', '\\'));
     }
     -----
  */
@@ -1463,6 +1465,7 @@ bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
     {
         if (c1 != c2)
         {
+            if (isDirSeparator(c1)) return isDirSeparator(c2);
             if ('A' <= c1 && c1 <= 'Z')
                 c1 += cast(char)'a' - 'A';
             if ('A' <= c2 && c2 <= 'Z')
@@ -1478,6 +1481,24 @@ bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
     else
     {
         static assert(0);
+    }
+}
+
+
+unittest
+{
+    assert (pathCharMatch('a', 'a'));
+    version(Windows)
+    {
+        assert (!pathCharMatch('a', 'b'));
+        assert (pathCharMatch('A', 'a'));
+        assert (pathCharMatch('/', '\\'));
+    }
+    version(Posix)
+    {
+        assert (!pathCharMatch('a', 'b'));
+        assert (!pathCharMatch('A', 'a'));
+        assert (!pathCharMatch('/', '\\'));
     }
 }
 
