@@ -1011,34 +1011,37 @@ unittest
     $(UL
         $(LI If path is empty, return an empty string.)
         $(LI If path is already absolute, return it.)
-        $(LI Otherwise, append path to the current working
-            directory and return the result.)
+        $(LI Otherwise, append $(D path) to $(D base) and return
+            the result. If $(D base) is not specified, the current
+            working directory is used.)
     )
 
     Examples:
     ---
     version (Posix)
     {
-        // Assuming the current working directory is /foo/bar
-        assert (absolutePath("some/file")  == "/foo/bar/some/file");
-        assert (absolutePath("../file")    == "/foo/bar/../file");
-        assert (absolutePath("/some/file") == "/some/file");
+        assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
+        assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
+        assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
     }
 
     version (Windows)
     {
-        // Assuming the current working directory is c:\foo\bar
-        assert (absolutePath(`some\file`)    == `c:\foo\bar\some\file`);
-        assert (absolutePath(`..\file`)      == `c:\foo\bar\..\file`);
-        assert (absolutePath(`c:\some\file`) == `c:\some\file`);
+        assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
+        assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
+        assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
     }
     ---
+
+    Throws:
+    $(D Exception) if the specified _base directory is not absolute.
 */
-string absolutePath(string path)  // TODO: @safe nothrow
+string absolutePath(string path, string base = getcwd())  // TODO: @safe
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
-    return joinPath(getcwd(), path);
+    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
+    return joinPath(base, path);
 }
 
 
@@ -1046,15 +1049,20 @@ unittest
 {
     version (Posix)
     {
-        assert (absolutePath("/foo/bar") == "/foo/bar");
-        assert (absolutePath("/foo/.././/bar//") == "/foo/.././/bar//");
+        assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
+        assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
+        assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
     }
 
     version (Windows)
     {
-        assert (absolutePath(`c:\foo\bar`) == `c:\foo\bar`);
-        assert (absolutePath(`c:\foo\..\.\\bar\\`) == `c:\foo\..\.\\bar\\`);
+        assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
+        assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
+        assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
     }
+
+    import std.exception;
+    assertThrown(absolutePath("bar", "foo"));
 }
 
 
