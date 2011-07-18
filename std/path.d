@@ -223,6 +223,9 @@ unittest
     }
 
     assert (baseName(stripExtension("dir/file.ext")) == "file");
+
+    static assert (baseName("dir/file.ext")         == "file.ext");
+    static assert (baseName("dir/file.ext", ".ext") == "file");
 }
 
 
@@ -308,6 +311,8 @@ unittest
     assert (dirName("d:\\file")         == "d:\\");
     assert (dirName("d:\\dir\\file")    == "d:\\dir");
     }
+
+    static assert (dirName("dir/file") == "dir");
 }
 
 
@@ -348,6 +353,9 @@ unittest
     assert (driveName("dir\\file").empty);
     assert (driveName("d:file") == "d:");
     assert (driveName("d:\\file") == "d:");
+
+    //BUG: Not CTFEable due to stripLeft()
+    //static assert (driveName(`d:\file`) == "d:");
     }
 }
 
@@ -375,8 +383,15 @@ C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 
 unittest
 {
-    version(Windows) assert (stripDrive(`d:\dir\file`) == `\dir\file`);
-    version(Posix)   assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
+    version(Windows)
+    {
+        assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+        static assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+    }
+    version(Posix)
+    {
+        assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
+    }
 }
 
 
@@ -447,6 +462,9 @@ unittest
     assert (extension("d:.foo").empty);
     assert (extension("d:.foo.ext") == "ext");
     }
+
+    static assert (extension("file").empty);
+    static assert (extension("file.ext") == "ext");
 }
 
 
@@ -500,6 +518,9 @@ unittest
     assert (stripExtension("d:.foo") == "d:.foo");
     assert (stripExtension("d:.foo.ext") == "d:.foo");
     }
+
+    static assert (stripExtension("file") == "file");
+    static assert (stripExtension("file.ext"w) == "file");
 }
 
 
@@ -560,6 +581,12 @@ unittest
     assert (setExtension("file"w.dup, "ext"w) == "file.ext");
     assert (setExtension("file."w, "ext"w.dup) == "file.ext");
     assert (setExtension("file.old"d.dup, "new"d) == "file.new");
+
+    static assert (setExtension("file", "ext") == "file.ext");
+    static assert (setExtension("file.old", "new") == "file.new");
+
+    static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
+    static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
 }
 
 
@@ -589,13 +616,17 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
 
 unittest
 {
-    auto p1 = defaultExtension("file"w, "ext"w);
-    assert (p1 == "file.ext");
-    static assert (is(typeof(p1) == wstring));
+    assert (defaultExtension("file", "ext") == "file.ext");
+    assert (defaultExtension("file.old", "new") == "file.old");
 
-    auto p2 = defaultExtension("file.old"d, "new"d.dup);
-    assert (p2 == "file.old");
-    static assert (is(typeof(p2) == dstring));
+    assert (defaultExtension("file"w.dup, "ext"w) == "file.ext");
+    assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
+
+    static assert (defaultExtension("file", "ext") == "file.ext");
+    static assert (defaultExtension("file.old", "new") == "file.old");
+
+    static assert (defaultExtension("file"w.dup, "ext"w) == "file.ext");
+    static assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
 }
 
 
@@ -706,6 +737,9 @@ unittest
         assert (joinPath("foo"d, ""d.dup) == "foo");
         assert (joinPath("foo", "bar".dup, "baz") == "foo/bar/baz");
         assert (joinPath("foo"w, "/bar"w, "baz"w.dup) == "/bar/baz");
+
+        static assert (joinPath("foo", "bar", "baz") == "foo/bar/baz");
+        static assert (joinPath("foo", "/bar", "baz") == "/bar/baz");
     }
     version (Windows)
     {
@@ -715,6 +749,9 @@ unittest
         assert (joinPath("foo", `\bar`) == `\bar`);
         assert (joinPath(`c:\foo`, "bar") == `c:\foo\bar`);
         assert (joinPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
+
+        static assert (joinPath("foo", "bar", "baz") == `foo\bar\baz`);
+        static assert (joinPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
     }
 }
 
@@ -870,6 +907,9 @@ unittest
         assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
         assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
+
+    // CTFE
+    static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 }
 
 
@@ -928,6 +968,9 @@ unittest
     assert (!isRooted("foo"));
     assert (!isRooted("d:foo"));
     }
+
+    static assert (isRooted("/foo"));
+    static assert (!isRooted("foo"));
 }
 
 
@@ -983,11 +1026,13 @@ unittest
 {
     assert (!isAbsolute("foo"));
     assert (!isAbsolute("../foo"w));
+    static assert (!isAbsolute("foo"));
 
     version (Posix)
     {
     assert (isAbsolute("/"d));
     assert (isAbsolute("/foo".dup));
+    static assert (isAbsolute("/foo"));
     }
 
     version (Windows)
@@ -999,6 +1044,7 @@ unittest
     assert (!isAbsolute("\\foo"d.dup));
     assert (!isAbsolute("d:"));
     assert (!isAbsolute("d:foo"));
+    static assert (isAbsolute(`d:\foo`));
     }
 }
 
@@ -1052,6 +1098,7 @@ unittest
         assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
         assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
         assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
+        static assert (absolutePath("some/file", "/foo/bar") == "/foo/bar/some/file");
     }
 
     version (Windows)
@@ -1059,6 +1106,7 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
     import std.exception;
@@ -1121,13 +1169,13 @@ string relativePath(string path, string base = getcwd())
 
     // Find common root with current working directory
     string result;
-    result.reserve(base.length + path.length);
+    if (!__ctfe) result.reserve(base.length + path.length);
 
     auto basePS = pathSplitter(base);
     auto pathPS = pathSplitter(path);
     version (Posix)
     {
-        if (fcmp(basePS.front, pathPS.front) != 0) return path;
+        if (basePS.front != pathPS.front) return path;
     }
     else version (Windows)
     {
@@ -1185,6 +1233,9 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assert (relativePath("//foo/bar", "/foo") == "//foo/bar");
         assertThrown(relativePath("/foo", "bar"));
+
+        //BUG: std.algorithm.cmp is not CTFEable
+        //static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
     }
     else version (Windows)
     {
@@ -1197,6 +1248,8 @@ unittest
         assert (relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
+
+        static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
     }
     else static assert (0);
 }
@@ -1356,6 +1409,7 @@ unittest
 
         // The ultimate path
         assert (normalize("/foo/../bar//./../...///baz//") == "/.../baz");
+        static assert (normalize("/foo/../bar//./../...///baz//") == "/.../baz");
     }
     else version (Windows)
     {
@@ -1411,6 +1465,7 @@ unittest
 
         // The ultimate path
         assert (normalize(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
+        static assert (normalize(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
     }
     else static assert (false);
 }
@@ -1508,6 +1563,9 @@ unittest
         assert (!pathCharMatch('A', 'a'));
         assert (!pathCharMatch('/', '\\'));
     }
+
+    static assert (pathCharMatch('a', 'a'));
+    static assert (!pathCharMatch('a', 'b'));
 }
 
 
@@ -1724,6 +1782,8 @@ unittest
     assert(globMatch("bar.foo", "bar.{ar,,fo}o"));
     assert(globMatch("bar.foo", "bar.{,ar,fo}o"));
     assert(globMatch("bar.o", "bar.{,ar,fo}o"));
+
+    static assert(globMatch("foo.bar", "[!gh]*bar"));
 }
 
 
