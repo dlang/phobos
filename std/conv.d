@@ -18,7 +18,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 module std.conv;
 
 import core.stdc.math : ldexpl;
-import core.memory, core.stdc.errno, core.stdc.string,
+import core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
@@ -905,9 +905,7 @@ T toImpl(T, S)(S input)
         }
         else
         {
-            result = cast(Char[])
-                GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-                [0 .. Char.sizeof * maxlength];
+            result = uninitializedArray!(Char[])(maxlength);
         }
 
         uint ndigits = 0;
