@@ -164,7 +164,7 @@ private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
     This function complies with
     $(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/basename.html,
     the POSIX requirements for the 'basename' shell utility)
-    (with suitable adaptions for Windows paths).
+    (with suitable adaptations for Windows paths).
 */
 C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
@@ -254,7 +254,7 @@ unittest
     This function complies with
     $(LINK2 http://pubs.opengroup.org/onlinepubs/9699919799/utilities/dirname.html,
     the POSIX requirements for the 'dirname' shell utility)
-    (with suitable adaptions for Windows paths).
+    (with suitable adaptations for Windows paths).
 */
 C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
     if (isSomeChar!C)
