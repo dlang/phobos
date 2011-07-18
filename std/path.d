@@ -190,7 +190,7 @@ C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
 
 unittest
 {
-    assert (baseName("")                            == "");
+    assert (baseName("").empty);
     assert (baseName("file.ext"w)                   == "file.ext");
     assert (baseName("file.ext"d, ".ext")           == "file");
     assert (baseName("file", "file"w.dup)           == "file");
@@ -219,7 +219,7 @@ unittest
     assert (baseName("\\\\")                        == "\\");
     assert (baseName("\\\\\\")                      == "\\");
     assert (baseName("d:\\")                        == "\\");
-    assert (baseName("d:")                          == "");
+    assert (baseName("d:").empty);
     }
 
     assert (baseName(stripExtension("dir/file.ext")) == "file");
@@ -342,10 +342,10 @@ C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
 
 unittest
 {
-    version (Posix)  assert (driveName("c:/foo") is null);
+    version (Posix)  assert (driveName("c:/foo").empty);
     version (Windows)
     {
-    assert (driveName("dir\\file") is null);
+    assert (driveName("dir\\file").empty);
     assert (driveName("d:file") == "d:");
     assert (driveName("d:\\file") == "d:");
     }
@@ -421,30 +421,30 @@ C[] extension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 
 unittest
 {
-    assert (extension("file") == "");
+    assert (extension("file").empty);
     assert (extension("file.ext"w) == "ext");
     assert (extension("file.ext1.ext2"d) == "ext2");
-    assert (extension(".foo".dup) == "");
+    assert (extension(".foo".dup).empty);
     assert (extension(".foo.ext"w.dup) == "ext");
 
-    assert (extension("dir/file"d.dup) == "");
+    assert (extension("dir/file"d.dup).empty);
     assert (extension("dir/file.ext") == "ext");
     assert (extension("dir/file.ext1.ext2"w) == "ext2");
-    assert (extension("dir/.foo"d) == "");
+    assert (extension("dir/.foo"d).empty);
     assert (extension("dir/.foo.ext".dup) == "ext");
 
     version(Windows)
     {
-    assert (extension("dir\\file") == "");
+    assert (extension("dir\\file").empty);
     assert (extension("dir\\file.ext") == "ext");
     assert (extension("dir\\file.ext1.ext2") == "ext2");
-    assert (extension("dir\\.foo") == "");
+    assert (extension("dir\\.foo").empty);
     assert (extension("dir\\.foo.ext") == "ext");
 
-    assert (extension("d:file") == "");
+    assert (extension("d:file").empty);
     assert (extension("d:file.ext") == "ext");
     assert (extension("d:file.ext1.ext2") == "ext2");
-    assert (extension("d:.foo") == "");
+    assert (extension("d:.foo").empty);
     assert (extension("d:.foo.ext") == "ext");
     }
 }
@@ -1315,7 +1315,7 @@ unittest
     version (Posix)
     {
         // Trivial
-        assert (normalize("") == "");
+        assert (normalize("").empty);
         assert (normalize("foo/bar") == "foo/bar");
 
         // Correct handling of leading slashes
@@ -1360,7 +1360,7 @@ unittest
     else version (Windows)
     {
         // Trivial
-        assert (normalize("") == "");
+        assert (normalize("").empty);
         assert (normalize(`foo\bar`) == `foo\bar`);
         assert (normalize("foo/bar") == `foo\bar`);
 
