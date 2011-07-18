@@ -605,12 +605,12 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @trusted pure // (BUG 5700) nothrow
+    @trusted // (BUG 4850) pure (BUG 5700) nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return cast(typeof(return))(path~'.'~ext);
-    else return path.idup;
+    else return to!(typeof(return))(path);
 }
 
 
@@ -687,13 +687,13 @@ version (unittest)
     ---
 */
 immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
-    @trusted // (BUG 5304) pure  (BUG 5700) nothrow
+    @trusted // (BUG 4850, 5304) pure  (BUG 5700) nothrow
     if (compatibleStrings!(C[], Strings))
 {
     // Exactly one path component
     static if (Strings.length == 0)
     {
-        return path.idup;
+        return to!(typeof(return))(path);
     }
 
     // Exactly two path components
@@ -701,9 +701,9 @@ immutable(Unqual!C)[] joinPath(C, Strings...)(in C[] path, in Strings morePaths)
     {
         alias path path1;
         alias morePaths[0] path2;
-        if (path2.empty) return path1.idup;
-        if (path1.empty) return path2.idup;
-        if (isRooted(path2)) return path2.idup;
+        if (path2.empty) return to!(typeof(return))(path1);
+        if (path1.empty) return to!(typeof(return))(path2);
+        if (isRooted(path2)) return to!(typeof(return))(path2);
 
         if (isDirSeparator(path1[$-1]) || isDirSeparator(path2[0]))
             return cast(typeof(return))(path1 ~ path2);
