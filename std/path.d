@@ -338,7 +338,15 @@ C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
 {
     version (Windows)
     {
-        path = stripLeft(path);
+        if (__ctfe)
+        {
+            import std.ascii;
+            while (path.length && isWhite(path[0])) path = path[1 .. $];
+        }
+        else
+        {
+            path = stripLeft(path);
+        }
         if (path.length > 2  &&  path[1] == ':')  return path[0 .. 2];
     }
     return null;
@@ -354,8 +362,7 @@ unittest
     assert (driveName("d:file") == "d:");
     assert (driveName("d:\\file") == "d:");
 
-    //BUG: Not CTFEable due to stripLeft()
-    //static assert (driveName(`d:\file`) == "d:");
+    static assert (driveName(`d:\file`) == "d:");
     }
 }
 
