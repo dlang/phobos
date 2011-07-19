@@ -79,7 +79,7 @@ import core.sync.condition, core.sync.mutex, core.atomic;
 version(Posix) {
     // Can't use alloca() because it can't be used with exception handling.
     // Use the GC instead even though it's slightly less efficient.
-    void* alloca(size_t nBytes) {
+    private void* alloca(size_t nBytes) {
         return GC.malloc(nBytes);
     }
 } else {
