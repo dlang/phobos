@@ -151,7 +151,8 @@ SRCS_3 = std\variant.d \
 	std\windows\charset.d \
 	std\windows\iunknown.d \
 	std\windows\registry.d \
-	std\windows\syserror.d
+	std\windows\syserror.d \
+	std\net\browser.d
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 # See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
@@ -250,6 +251,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
+	$(DOC)\std_net_browser.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\phobos.html
 
@@ -274,7 +276,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\regex.d std\datebase.d \
 	std\__fileinit.d std\gregorian.d std\exception.d std\ascii.d
 
-SRC_STD_NET= std\net\isemail.d
+SRC_STD_NET= std\net\browser.d std\net\isemail.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -573,6 +575,9 @@ errorfunction.obj : std\internal\math\errorfunction.d
 	$(DMD) -c $(DFLAGS) std\internal\math\errorfunction.d
 
 ### std\net
+
+browser.obj : std\net\browser.d
+	$(DMD) -c $(DFLAGS) std\net\browser.d
 
 isemail.obj : std\net\isemail.d
 	$(DMD) -c $(DFLAGS) std\net\isemail.d
@@ -903,6 +908,9 @@ $(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
 
 $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
+
+$(DOC)\std_net_browser.html : $(STDDOC) std\net\browser.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_net_browser.html $(STDDOC) std\net\browser.d
 
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d

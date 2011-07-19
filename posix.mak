@@ -164,7 +164,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         stream string syserror system traits typecons typetuple uni		\
         uri utf variant xml zip zlib)
 
-STD_NET_MODULES = $(addprefix std/net/, isemail)
+STD_NET_MODULES = $(addprefix std/net/, browser isemail)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
