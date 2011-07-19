@@ -309,7 +309,7 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
         // We can safely cast away shared because all data is either
         // immutable or completely owned by this function.
-        argsAddresses[i] = cast(const(void*)) &arg;
+        argsAddresses[i] = cast(const(void*)) &args[ i ];
     }
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
