@@ -17,7 +17,7 @@ module std.stdio;
 
 public import core.stdc.stdio;
 import std.stdiobase;
-import core.memory, core.stdc.errno, core.stdc.stddef, core.stdc.stdlib,
+import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib,
     core.stdc.string, core.stdc.wchar_;
 import std.algorithm, std.array, std.conv, std.exception, std.file, std.format,
     std.range, std.string, std.traits, std.typecons,
@@ -2321,7 +2321,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
             }
             if (i > sz)
             {
-                buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+                buf = uninitializedArray!(char[])(i);
             }
             if (i - 1)
                 memcpy(buf.ptr, p, i - 1);
@@ -2343,7 +2343,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
             }
             if (i > sz)
             {
-                buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+                buf = uninitializedArray!(char[])(i);
             }
             memcpy(buf.ptr, p, i);
             buf = buf[0 .. i];
