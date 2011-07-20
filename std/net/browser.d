@@ -69,6 +69,8 @@ else version (OSX)
             perror(args[0]);                // failed to execute
             return;
         }
+        if (browser)
+            free(cast(void*)browser);
     }
 }
 else version (Posix)
@@ -82,15 +84,16 @@ else version (Posix)
 
     void browse(string url)
     {
+        const(char)*[3] args;
 
         const(char)* browser = getenv("BROWSER");
         if (browser)
-            browser = strdup(browser);
+        {   browser = strdup(browser);
+            args[0] = browser;
+        }
         else
-            browser = "x-www-browser".ptr;
+            args[0] = "x-www-browser".ptr;
 
-        const(char)*[3] args;
-        args[0] = browser;
         args[1] = toStringz(url);
         args[2] = null;
 
@@ -101,6 +104,8 @@ else version (Posix)
             perror(args[0]);                // failed to execute
             return;
         }
+        if (browser)
+            free(cast(void*)browser);
     }
 }
 else
