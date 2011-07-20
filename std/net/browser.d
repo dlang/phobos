@@ -43,7 +43,7 @@ else version (OSX)
 
     void browse(string url)
     {
-        const char *args[5];
+        const(char)*[5] args;
 
         const(char)* browser = getenv("BROWSER");
         if (browser)
