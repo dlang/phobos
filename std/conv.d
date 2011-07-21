@@ -930,20 +930,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string s = "foo";
-    string s2;
-    foreach (char c; s)
-    {
-        s2 ~= to!string(c);
-    }
-    //printf("%.*s", s2);
-    assert(s2 == "foo");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(char).unittest\n");
+    debug(conv) printf("string.to!string(char).unittest\n");
 
     string s = "foo";
     string s2;
@@ -1014,26 +1001,7 @@ T toImpl(T, S)(S input)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(uint).unittest\n");
+    debug(conv) printf("string.to!string(uint).unittest\n");
 
     string r;
     int i;
@@ -1054,27 +1022,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong).unittest\n");
-
+    debug(conv) printf("string.to!string(ulong).unittest\n");
     string r;
     int i;
 
@@ -1149,6 +1097,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) printf("string.to!string(long).unittest\n");
     string r;
     int i;
 
@@ -1184,7 +1133,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(int).unittest\n");
+    debug(conv) printf("string.to!string(int).unittest\n");
 
     string r;
     int i;
@@ -1210,39 +1159,6 @@ unittest
     assert(i == 0);
 
     r = to!string(-123);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(long).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
     i = cmp(r, "-123");
     assert(i == 0);
 }
@@ -1287,6 +1203,8 @@ body
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) printf("string.to!string(uint, uint).unittest\n");
+
     size_t x = 16;
     assert(to!string(x, 16) == "10");
 }
@@ -1294,31 +1212,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong, uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(ulong, uint).unittest\n");
+    debug(conv) printf("string.to!string(ulong, uint).unittest\n");
 
     string r;
     int i;
@@ -1433,7 +1327,7 @@ T toImpl(T, S)(S s)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(char*).unittest\n");
+    debug(conv) printf("string.to!string(char*).unittest\n");
 
     string r;
     int i;
