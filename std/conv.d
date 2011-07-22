@@ -2971,7 +2971,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
         isDynamicArray!Target)
 {
     Target result;
-    skipWS(s);
+
     parseCheck!s(lbracket);
     skipWS(s);
     if (s.front == rbracket)
