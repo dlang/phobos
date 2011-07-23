@@ -18,7 +18,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 module std.conv;
 
 import core.stdc.math : ldexpl;
-import core.memory, core.stdc.errno, core.stdc.string,
+import core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
@@ -905,9 +905,7 @@ T toImpl(T, S)(S input)
         }
         else
         {
-            result = cast(Char[])
-                GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-                [0 .. Char.sizeof * maxlength];
+            result = uninitializedArray!(Char[])(maxlength);
         }
 
         uint ndigits = 0;
@@ -1945,6 +1943,11 @@ Target parse(Target, Source)(ref Source s)
         ~ to!string(s) ~ "'");
 }
 
+//@@@BUG4737@@@: typeid doesn't work for scoped enum with initializer
+version(unittest)
+{
+    private enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+}
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1953,7 +1956,7 @@ unittest
     assert(to!E("b"w) == E.b);
     assert(to!E("c"d) == E.c);
 
-    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+    
     assert(to!F("x"c) == F.x);
     assert(to!F("y"w) == F.y);
     assert(to!F("z"d) == F.z);
