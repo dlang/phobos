@@ -1513,16 +1513,12 @@ unittest
     Throws:
         FileException if the given file does not exist.
   +/
-@property bool isSymlink(in char[] name)
+@property bool isSymlink(C)(const(C)[] name)
 {
     version(Windows)
-    {
         return false;
-    }
     else version(Posix)
-    {
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
-    }
 }
 
 unittest
@@ -1564,8 +1560,8 @@ unittest
             core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
 
             assert(symfile.isSymlink);
-            assert(!isSymlink(getAttributes(symfile)));
-            assert(isSymlink(getLinkAttributes(symfile)));
+            assert(!attrIsSymlink(getAttributes(symfile)));
+            assert(attrIsSymlink(getLinkAttributes(symfile)));
 
             assert(isDir(getAttributes(symfile)));
             assert(!isDir(getLinkAttributes(symfile)));
@@ -1584,8 +1580,8 @@ unittest
             core.sys.posix.unistd.symlink("/usr/include/assert.h", symfile.ptr);
 
             assert(symfile.isSymlink);
-            assert(!isSymlink(getAttributes(symfile)));
-            assert(isSymlink(getLinkAttributes(symfile)));
+            assert(!attrIsSymlink(getAttributes(symfile)));
+            assert(attrIsSymlink(getLinkAttributes(symfile)));
 
             assert(!isDir(getAttributes(symfile)));
             assert(!isDir(getLinkAttributes(symfile)));
@@ -1609,16 +1605,12 @@ unittest
     Params:
         attributes = The file attributes.
   +/
-@property bool isSymlink(uint attributes) nothrow
+@property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
-    {
         return false;
-    }
     else version(Posix)
-    {
         return (attributes & S_IFMT) == S_IFLNK;
-    }
 }
 
 
@@ -1642,13 +1634,9 @@ assert(getLinkAttributes("/tmp/alink").isSymlink);
 bool attrIsSymlink(uint attributes) nothrow
 {
     version(Windows)
-    {
         return false;
-    }
     else version(Posix)
-    {
         return (attributes & S_IFMT) == S_IFLNK;
-    }
 }
 
 
@@ -1772,10 +1760,11 @@ void rmdir(in char[] pathname)
         $(D FileException) on error (which includes if the symlink already
         exists).
   +/
-version(StdDdoc) void symlink(in char[] original, in char[] link);
-else version(Posix) void symlink(in char[] original, in char[] link)
+version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link);
+else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
 {
-    cenforce(core.sys.posix.unistd.symlink(toStringz(original), toStringz(link)) == 0,
+    cenforce(core.sys.posix.unistd.symlink(toUTFz!(const char*)(original),
+                                           toUTFz!(const char*)(link)) == 0,
              link);
 }
 
@@ -1790,8 +1779,8 @@ version(Posix) unittest
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
-        assert(!isSymlink(getAttributes(symfile)));
-        assert(isSymlink(getLinkAttributes(symfile)));
+        assert(!attrIsSymlink(getAttributes(symfile)));
+        assert(attrIsSymlink(getLinkAttributes(symfile)));
 
         assert(isDir(getAttributes(symfile)));
         assert(!isDir(getLinkAttributes(symfile)));
@@ -1811,8 +1800,8 @@ version(Posix) unittest
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
-        assert(!isSymlink(getAttributes(symfile)));
-        assert(isSymlink(getLinkAttributes(symfile)));
+        assert(!attrIsSymlink(getAttributes(symfile)));
+        assert(attrIsSymlink(getLinkAttributes(symfile)));
 
         assert(!isDir(getAttributes(symfile)));
         assert(!isDir(getLinkAttributes(symfile)));
@@ -1834,12 +1823,14 @@ version(Posix) unittest
     Throws:
         $(D FileException) on error.
   +/
-version(StdDdoc) string readLink(in char[] link);
-else version(Posix) string readLink(in char[] link)
+version(StdDdoc) string readLink(C)(const(C)[] link);
+else version(Posix) string readLink(C)(const(C)[] link)
 {
     char[2048] buffer;
-    auto size = cenforce(core.sys.posix.unistd.readlink(toStringz(link), buffer, buffer.length),
-                         link);
+    immutable size = cenforce(core.sys.posix.unistd.readlink(toUTFz!(const char*)(link),
+                                                             buffer,
+                                                             buffer.length),
+                              link);
 
     return to!string(buffer[0 .. (size >= buffer.length ? $ - 1 : size)]);
 }
@@ -3338,8 +3329,8 @@ unittest
     assert(isDir(de.linkAttributes));
     assert(!isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymlink(de.attributes));
-    assert(!isSymlink(de.linkAttributes));
+    assert(!attrIsSymlink(de.attributes));
+    assert(!attrIsSymlink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3387,8 +3378,8 @@ unittest
     assert(!isDir(de.linkAttributes));
     assert(isFile(de.attributes));
     assert(isFile(de.linkAttributes));
-    assert(!isSymlink(de.attributes));
-    assert(!isSymlink(de.linkAttributes));
+    assert(!isSymLink(de.attributes));
+    assert(!isSymLink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3439,8 +3430,8 @@ version(linux) unittest
     assert(!isDir(de.linkAttributes));
     assert(!isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymlink(de.attributes));
-    assert(isSymlink(de.linkAttributes));
+    assert(!attrIsSymlink(de.attributes));
+    assert(attrIsSymlink(de.linkAttributes));
 
     assert(de.timeStatusChanged > before);
     assert(de.timeStatusChanged < now);
@@ -3483,8 +3474,8 @@ version(linux) unittest
     assert(!isDir(de.linkAttributes));
     assert(isFile(de.attributes));
     assert(!isFile(de.linkAttributes));
-    assert(!isSymlink(de.attributes));
-    assert(isSymlink(de.linkAttributes));
+    assert(!attrIsSymlink(de.attributes));
+    assert(attrIsSymlink(de.linkAttributes));
 
     assert(de.timeStatusChanged > before);
     assert(de.timeStatusChanged < now);
