@@ -1593,7 +1593,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
     private alias AutoImplement_Helper!(
             "autoImplement_helper_", "Base", Base, how, what )
              autoImplement_helper_;
-    override mixin(autoImplement_helper_.code);
+    mixin(autoImplement_helper_.code);
 }
 
 /*
@@ -2081,6 +2081,8 @@ private static:
             enum storageClass = make_storageClass();
 
             //
+            if (isAbstractFunction!func)
+                code ~= "override ";
             code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,

@@ -1,3 +1,13 @@
+$(VERSION 055, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+     )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
+     )
+ )
+
 $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
