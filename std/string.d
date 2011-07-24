@@ -60,7 +60,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
-    std.ascii, std.conv, std.exception, std.format, std.functional,
+    std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
 
@@ -3620,6 +3620,256 @@ unittest
     assert(wrap("u u") == "u u\n");
 }
 
+/******************************************
+ * Removes indentation from a multi-line string or an array of single-line strings.
+ *
+ * This uniformly outdents the text as much as possible.
+ * Whitespace-only lines are always converted to blank lines.
+ *
+ * The indentation style must be consistent (except for whitespace-only lines)
+ * or else this will throw an Exception.
+ * 
+ * Works at compile-time.
+ * 
+ * Example:
+ * ---
+ * writeln(q{
+ *     import std.stdio;
+ *     void main() {
+ *         writeln("Hello");
+ *     }
+ * }.outdent());
+ * ---
+ * 
+ * Output:
+ * ---
+ * 
+ * import std.stdio;
+ * void main() {
+ *     writeln("Hello");
+ * }
+ * 
+ * ---
+ * 
+ */
+
+S outdent(S)(S str) if(isSomeString!S)
+{
+	if(str == "")
+		return "";
+		
+	S[] lines;
+	if(__ctfe)
+		lines = str.ctfe_split("\n");
+	else
+		lines = str.split("\n");
+	
+	lines = outdent(lines);
+	
+	if(__ctfe)
+		return lines.ctfe_join("\n");
+	else
+		return lines.join("\n");
+}
+
+/// ditto
+S[] outdent(S)(S[] lines) if(isSomeString!S)
+{
+	if(lines.length == 0)
+		return null;
+		
+	bool isNonWhite(dchar ch)
+	{
+		if(__ctfe)
+			return !ctfe_isWhite(ch);
+		else
+			return !std.uni.isWhite(ch);
+	}
+	S leadingWhiteOf(S str)
+	{
+		return str[ 0 .. $-find!(isNonWhite)(str).length ];
+	}
+	
+	// Apply leadingWhiteOf, but emit null instead for whitespace-only lines
+	S[] indents;
+	indents.length = lines.length;
+	foreach(i, line; lines)
+	{
+		string stripped;
+		if(__ctfe)
+			stripped = line.ctfe_strip();
+		else
+			stripped = line.strip();
+		
+		indents[i] = stripped==""? null : leadingWhiteOf(line);
+	}
+
+	S shorterAndNonNull(S a, S b) {
+		if(a is null) return b;
+		if(b is null) return a;
+		
+		return (a.length < b.length)? a : b;
+	};
+	auto shortestIndent = std.algorithm.reduce!(shorterAndNonNull)(indents);
+	
+	foreach(i; 0..lines.length)
+	{
+		if(indents[i] is null)
+			lines[i] = "";
+		else if(indents[i].startsWith(shortestIndent))
+			lines[i] = lines[i][shortestIndent.length..$];
+		else
+		{
+			if(__ctfe)
+				assert(false, "Inconsistent indentation");
+			else
+				throw new Exception("Inconsistent indentation");
+		}
+	}
+	
+	return lines;
+}
+
+private S ctfe_join(S)(S[] strs, S delim) if(isSomeString!S)
+{
+	S value = "";
+	
+	foreach(i, str; strs)
+		value ~= (i==0?"":delim) ~ str;
+	
+	return value;
+}
+
+private S[] ctfe_split(S)(S str, S delim) if(isSomeString!S)
+{
+	S[] arr;
+	S match;
+	while((match = ctfe_find(str, delim)).length > 0)
+	{
+		arr ~= str[0..$-match.length];
+		str = match[delim.length..$];
+	}
+	arr ~= str;
+	return arr;
+}
+
+private bool ctfe_isWhite(dchar c)
+{
+	foreach(i; 0..std.ascii.whitespace.length)
+	if(c == std.ascii.whitespace[i])
+		return true;
+
+    return c == lineSep || c == paraSep ||
+           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
+           (c >= '\u2000' && c <= '\u200A') ||
+           c == '\u202F' || c == '\u205F' || c == '\u3000';
+}
+
+private S ctfe_find(S)(S haystack, S needle) if(isSomeString!S)
+{
+	if(haystack.length < needle.length)
+		return null;
+
+	for(size_t i=0; i <= haystack.length-needle.length; i++)
+	{
+		if(haystack[i..i+needle.length] == needle)
+			return haystack[i..$];
+	}
+	return null;
+}
+
+private S ctfe_strip(S)(S str) if(isSomeString!S)
+{
+	return str.ctfe_stripl().ctfe_stripr();
+}
+
+private S ctfe_stripl(S)(S str) if(isSomeString!S)
+{
+	size_t startIndex = str.length;
+	
+	foreach(i, ElementEncodingType!S ch; str)
+	if(!ctfe_isWhite(cast(dchar)ch))
+	{
+		startIndex = i;
+		break;
+	}
+	
+	return str[startIndex..$];
+}
+
+private S ctfe_stripr(S)(S str) if(isSomeString!S)
+{
+	size_t endIndex = 0;
+	
+	foreach_reverse(i, ElementEncodingType!S ch; str)
+	if(!ctfe_isWhite(cast(dchar)ch))
+	{
+		endIndex = i+1;
+		break;
+	}
+	
+	return str[0..endIndex];
+}
+
+unittest
+{
+    debug(string) printf("string.outdent.unittest\n");
+	
+	static assert(ctfe_split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
+	static assert(ctfe_split("-Xa", "-X") == ["","a"]);
+
+	static assert(ctfe_split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
+	static assert(ctfe_split("-Xa", "-X") == ["","a"]);
+
+	static assert(ctfe_join([""," ","","A","","BC","","D"," ",""], "\n") == "\n \n\nA\n\nBC\n\nD\n \n");
+	
+	static assert(ctfe_isWhite(' '));
+	static assert(ctfe_isWhite('\t'));
+	static assert(ctfe_isWhite('\n'));
+	static assert(!ctfe_isWhite('d'));
+	static assert(!ctfe_isWhite('-'));
+
+	static assert(ctfe_find("abcde", "d" ) == "de");
+	static assert(ctfe_find("abcde", "cd") == "cde");
+	static assert(ctfe_find("abcde", "cX") == "");
+
+	static assert(ctfe_find("abc", "a")     == "abc");
+	static assert(ctfe_find("abc", "c")     == "c");
+	static assert(ctfe_find("aabbcc", "aa") == "aabbcc");
+	static assert(ctfe_find("aabbcc", "cc") == "cc");
+
+	static assert(ctfe_find("abc", "abcde") == "");
+
+	static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+	static assert(ctfe_strip("Hi")         == "Hi");
+	static assert(ctfe_strip(" \t \r\n")   == "");
+	static assert(ctfe_strip("")           == "");
+
+	enum testStr =
+"
+ \t\tX
+ \tX
+ \t\t
+
+ \t\t\tX
+\t ";
+
+	enum expected =
+"
+\tX
+X
+
+
+\t\tX
+";
+	
+	assert(testStr.outdent() == expected);
+	assert("".outdent() == "");
+	assert(" \n \t\n ".outdent() == "\n\n");
+
+	enum ctfeResult = testStr.outdent();
+	assert(ctfeResult == expected);
+}
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
