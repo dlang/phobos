@@ -165,6 +165,7 @@ private struct Curl {
     void initialize() {
         enforce(!handle, "Curl instance already initialized");
         handle = curl_easy_init();
+        enforce(handle, "Curl instance couldn't be initialized");
         stopped = false;
     }
 
@@ -173,15 +174,18 @@ private struct Curl {
         // this struct when doing its stuff. Emplace is used by
         // RefCounted.
         // enforce(handle, "No valid curl handle in Curl instance");
-
         if (!handle) return;
         curl_easy_cleanup(handle);
     }
 
     private void _check(CURLcode code) {
         if (code != CurlError.ok) {
-            throw new CurlException(to!string(curl_easy_strerror(code)));
+            throw new CurlException(errorString(code));
         }
+    }
+
+    private string errorString(CURLcode code) {
+        return to!string(curl_easy_strerror(code)) ~ " on handle " ~ to!string(handle);
     }
 
     private void throwOnStopped() {
@@ -256,9 +260,12 @@ private struct Curl {
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
     */
-    void perform() {
+    CURLcode perform(bool throwOnError = true) {
         throwOnStopped();
-        _check(curl_easy_perform(this.handle));
+        CURLcode code = curl_easy_perform(this.handle);
+        if (throwOnError)
+            _check(code);
+        return code;
     }
 
     /**
@@ -1864,7 +1871,10 @@ http.perform();
        request.
     */
     void perform() {
+        _perform();
+    }
 
+    private CURLcode _perform(bool throwOnError = true) {
         p.status.reset;
 
         curl_slist * headerChunk;
@@ -1901,8 +1911,8 @@ http.perform();
             break;
         }
 
-        p.curl.perform;
-        curl_slist_free_all(headerChunk);
+        scope(exit) curl_slist_free_all(headerChunk);
+        return p.curl.perform(throwOnError);
     }
 
     /**
@@ -2046,20 +2056,23 @@ http.perform();
             res._statusLine.majorVersion = 0;
         }
         
-        scheme = EncodingScheme.create("UTF-8"); // seems like an error has been introduced into the regex module?!?
-        return;
-        static if (false) {
-            string * v = ("content-type" in _headers);
-            char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
-            if (v) {
-                
-                auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
-                if (!m.empty && m.captures.length > 1) {
-                    charset = m.captures[1];
-                }
+        string * v = ("content-type" in res._headers);
+        string charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
+        if (v) {
+            auto m = match(cast(char[]) (*v), regex("charset=([^;]*)"));
+            if (!m.empty && m.captures.length > 1) {
+            charset = m.captures[1].idup;
             }
-        scheme = EncodingScheme.create(charset);
+            /*
+            auto a = *v;
+            if (a.findSkip("charset")) 
+                if (a.findSkip("=")) {
+                        while (a.skipOver(" \t")) {};
+                        charset = a.findSplitBefore(";")[0].stripRight();
+                }
+            */
         }
+        scheme = EncodingScheme.create(charset);
     }
 
     private void _preAsyncPerform(Res, RParams)(ref Res res, ref RParams requestParams) {
@@ -2250,22 +2263,12 @@ http.perform();
         @property const(char)[] encodingName() {
             execute();
             string * v = ("content-type" in headers);
-            char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
+            string charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
             if (v) {
-              
-                /*  
-                // XXX : FIX
-                // seems like an error has been introduced into the regex module?!?
-                auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
+                auto m = match(cast(char[]) (*v), regex("charset=([^;]*)"));
                 if (!m.empty && m.captures.length > 1) {
-                charset = m.captures[1];
+                    charset = m.captures[1].idup;
                 }
-                */
-                auto a = *v;
-                if (!a.findSkip("charset")) return charset;
-                if (!a.findSkip("=")) return charset;
-                while (a.skipOver(" \t")) {};
-                return a.findSplitBefore(";")[0].stripRight();
             }
             return charset;
         }
@@ -2393,22 +2396,12 @@ foreach (l; Http.get("http://www.google.com").byLine())
             enforce(rp._running == RunState.statusReady || rp._running == RunState.done, 
                     "Cannot get encoding before a call to either byChunk or byLine on a Http.AsyncResult");
             string * v = ("content-type" in headers);
-            char[] charset = "ISO-8859-1".dup; // Default charset defined in HTTP RFC
+            string charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
             if (v) {
-              
-                /*  
-                // XXX : FIX
-                // seems like an error has been introduced into the regex module?!?
                 auto m = match(cast(char[]) (*v), regex(".*charset=([^;]*)"));
                 if (!m.empty && m.captures.length > 1) {
-                charset = m.captures[1];
+                    charset = m.captures[1].idup;
                 }
-                */
-                auto a = *v;
-                if (!a.findSkip("charset")) return charset;
-                if (!a.findSkip("=")) return charset;
-                while (a.skipOver(" \t")) {};
-                return a.findSplitBefore(";")[0].stripRight();
             }
             return charset;
         }
@@ -2514,7 +2507,7 @@ writeln(res.toString());
         ----
 
         Returns:
-        A $(XREF _curl, Http.Result) object.
+        A $(XREF _curl, Ftp.Result) object.
     */
     static Result get(in const(char)[] url) {
         return Result(url);
@@ -2522,9 +2515,10 @@ writeln(res.toString());
 
     unittest {
         if (!netAllowed) return;
-        auto res = Http.get(testUrl1);
-        assert(res.bytes[0..11] == [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100], "get() returns unexpected content " ~ to!string(res.bytes[0..11]));
-        assert(res.toString()[0..11] == "Hello world", "get() returns unexpected text "); 
+        auto res = Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byLine();
+        res.popFront();
+        assert(res.front == "/* Eratosthenes Sieve prime number calculation. */\r", 
+               "get() returns unexpected content " ~ res.front);
     }
 
     /** Asynchronous FTP GET to the specified URL. 
@@ -2537,10 +2531,18 @@ writeln(res.byChunk(100).front);
         ----
 
         Returns:
-        A $(XREF _curl, Http.AsyncResult) object.
+        A $(XREF _curl, Ftp.AsyncResult) object.
     */
     static AsyncResult getAsync(string url) {
         return AsyncResult(url, "");
+    }
+
+    unittest {
+        if (!netAllowed) return;
+        auto res = Ftp.getAsync("ftp://ftp.digitalmars.com/sieve.ds").byLine();
+        res.popFront();
+        assert(res.front == "/* Eratosthenes Sieve prime number calculation. */\r", 
+               "get() returns unexpected content " ~ res.front);
     }
 
     /**
@@ -2551,7 +2553,11 @@ writeln(res.byChunk(100).front);
        request.
     */
     void perform() {
-        p.curl.perform;
+        _perform();
+    }
+
+    private CURLcode _perform(bool throwOnError = true) {
+        return p.curl.perform(throwOnError);
     }
 
     /**
@@ -2562,8 +2568,8 @@ writeln(res.byChunk(100).front);
     }
 
     // This structure is used to keep parameters when using static
-    // request methods on the Http class.
-    // It enables the e.g. Http.get("...").dataTimeout(100).byLine()
+    // request methods on the Ftp class.
+    // It enables the e.g. Ftp.get("...").dataTimeout(100).byLine()
     struct RequestParams(T) {
         alias T[] STR;
         static if ( is(T == const(char))) {
@@ -2630,7 +2636,7 @@ writeln(res.byChunk(100).front);
         alias RequestParams!(const(char)) RParams;
         private struct RImpl {
             private State _state;
-            private ubyte[] _bytes; /// The received http content as raw ubyte[].
+            private ubyte[] _bytes; /// The received ftp content as raw ubyte[].
             RParams _requestParams;
             const(char)[] _encodingSchemeName;
         }
@@ -2699,7 +2705,7 @@ writeln(res.byChunk(100).front);
         }
         
         /**
-           The received http content decoded from content-type charset into text.
+           The received ftp content decoded from content-type charset into text.
         */
         @property Char[] toString(Char = char)() {
             auto scheme = encodingScheme;
@@ -2711,7 +2717,7 @@ writeln(res.byChunk(100).front);
                 // Special case where encoding is utf8 since that is what
                 // this method returns
                 if (scheme.toString() == "UTF-8")
-                    return cast(char[])(_bytes);
+                    return cast(char[])(rp._bytes);
 
             auto r = decodeString!Char(rp._bytes, scheme);
             return r[1];
@@ -2810,6 +2816,7 @@ foreach (l; Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byLine())
             rp._running = RunState.init;
 	    // A guess on how long a normal line is
 	    rp._defaultStringBufferSize = 100;
+            rp._encodingSchemeName = "UTF-8";
         }
         
         /** The running state. */
@@ -2831,7 +2838,7 @@ foreach (l; Ftp.get("ftp://ftp.digitalmars.com/sieve.ds").byLine())
         */
         ref AsyncResult encoding(const(char)[] schemeName) {
             enforce(rp._running != RunState.statusReady && rp._running != RunState.done, 
-                    "Cannot set encodingSchemeName after a call to either byChunk or byLine on a Http.AsyncResult");
+                    "Cannot set encodingSchemeName after a call to either byChunk or byLine on a Ftp.AsyncResult");
             rp._encodingSchemeName = schemeName;
             return this;
         }
@@ -3023,7 +3030,7 @@ public:
 // sending the to a parent thread
 private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata, 
                                           Pool!(ubyte[]) freeBuffers, 
-                                          ref ubyte[] buffer, Tid fromTid) {
+                                          ref ubyte[] buffer, Tid fromTid, ref bool aborted) {
     size_t datalen = data.length;
 
     // Copy data to fill active buffer
@@ -3035,14 +3042,13 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
             // available buffers in the pool. Wait for buffers
             // to return from main thread in order to reuse
             // them.
-            bool stop = false;
             receive((immutable(ubyte)[] buf) {
                     buffer = cast(ubyte[])buf;
                     outdata = buffer[];
                 },
-                (bool flag) { stop = true; }
+                (bool flag) { aborted = true; }
                 );
-            if (stop) return cast(size_t)0;
+            if (aborted) return cast(size_t)0;
         }
         if (outdata.length == 0) {
             buffer = freeBuffers.pop();
@@ -3082,7 +3088,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
      bool keepTerminator, Terminator terminator, 
      ref ubyte[] leftOverBytes, ref bool bufferValid,
      ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
-     Tid fromTid) {
+     Tid fromTid, ref bool aborted) {
     
     size_t datalen = data.length;
 
@@ -3101,16 +3107,15 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             // available buffers in the pool. Wait for buffers
             // to return from main thread in order to reuse
             // them.
-            bool stop = false;
             receive((immutable(Unit)[] buf) {
                     buffer = cast(Unit[])buf;
                     buffer.length = 0;
                     buffer.assumeSafeAppend();
                     bufferValid = true;
                 },
-                (bool flag) { stop = true; }
+                (bool flag) { aborted = true; }
                 );
-            if (stop) return cast(size_t)0;
+            if (aborted) return cast(size_t)0;
         }
         if (!bufferValid) {
             buffer = freeBuffers.pop();
@@ -3175,6 +3180,7 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
 	
     // Number of bytes filled into active buffer
     Unit[] buffer;
+    bool aborted = false;
 
     EncodingScheme encodingScheme;
     static if ( !is(Terminator == void)) {
@@ -3207,11 +3213,11 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
             Proto._preAsyncOnReceive(res, encodingScheme, fromTid);
         // If no terminator is specified the chunk size is fixed.
         static if ( is(Terminator == void) ) {
-            return _receiveAsyncChunks(data, outdata, freeBuffers, buffer, fromTid);
+            return _receiveAsyncChunks(data, outdata, freeBuffers, buffer, fromTid, aborted);
         } else {
             return _receiveAsyncLines(data, encodingScheme, 
                                       keepTerminator, terminator, leftOverBytes, 
-                                      bufferValid, freeBuffers, buffer, fromTid);
+                                      bufferValid, freeBuffers, buffer, fromTid, aborted);
         }
     };
 
@@ -3221,11 +3227,21 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
         client._preAsyncPerform(requestParams);
 
     // Start the request
+    CURLcode code;
     try {
-        client.perform;
-    } catch (CurlException ex) {
-        prioritySend(fromTid, cast(immutable(CurlException))ex);
+        code = client._perform(false);
+    } catch (Exception ex) {
+        writeln("Error is ", ex.msg);
+        prioritySend(fromTid, cast(immutable(Exception)) ex);
+        fromTid.send(thisTid(), message(true)); // signal done
         return;
+    }
+    if (code != CurlError.ok) {
+        if (aborted && (code == CurlError.aborted_by_callback || 
+                        code == CurlError.write_error)) {
+            return;
+        }
+        prioritySend(fromTid, cast(immutable(CurlException)) new CurlException(client.p.curl.errorString(code)));
     }
 
     static if ( is(Proto == Http) ) 
@@ -3245,10 +3261,7 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
 }
 
 unittest {
-    if (!netAllowed) return;
-
     // Verify that sync and async versions of a request gives the same results.
-
     auto syncline = Http.get(testUrl1).byLine();
     foreach (asyncline; Http.getAsync(testUrl1).byLine()) {
         assert(asyncline == syncline.front, "Get async by line does not give the same result as get sync by line");
