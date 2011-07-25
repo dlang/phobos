@@ -1111,7 +1111,7 @@ unittest
 
 /**
 Defines a value paired with a distinctive "null" state that denotes
-the absence of a valud value. If default constructed, a $(D
+the absence of a value. If default constructed, a $(D
 Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling $(D nullify) can nullify it again.
 
