@@ -2112,9 +2112,196 @@ unittest
 }
 
 
+/++
+    Replaces the characters in $(D str) which are keys in $(D transTable) with
+    their corresponding values in $(D transTable). $(D transTable) is an AA
+    where its keys are $(D dchar) and its values are either $(D dchar) or some
+    type of string. Also, if $(D toRemove) is given, the characters in it are
+    removed from $(D str) prior to translation. $(D str) itself is unaltered.
+    A copy with the changes is returned.
+
+    See_Also:
+        $(LREF tr)
+        $(XREF array, replace)
+
+    Params:
+        str        = The original string.
+        transTable = The AA indicating which characters to replace and what to
+                     replace them with.
+        toRemove   = The characters to remove from the string.
+
+        Examples:
+--------------------
+dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+assert(translate("hello world", transTable3) == "h5llorange worangerld");
+--------------------
+  +/
+C1[] translate(C1, C2 = char)(C1[] str,
+                              dchar[dchar] transTable,
+                              const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+//Verify Examples.
+unittest
+{
+    dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+    dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+    string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+    assert(translate("hello world", transTable3) == "h5llorange worangerld");
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
+               to!S("qe55o wor5d"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
+               to!S("he\U00010143\U00010143l wlr\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['h' : 'q', 'l': '5']) ==
+               to!S("qe55o \U00010143 wor5d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['o' : '0', '\U00010143' : 'o']) ==
+               to!S("hell0 o w0rld"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("r")) ==
+                   to!S("qe55o wo5d"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("q5")) ==
+                   to!S("qe55o wor5d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             cast(dchar[dchar])['o' : '0', '\U00010143' : 'o'],
+                             to!T("\U00010143 ")) ==
+                   to!S("hell0w0rld"));
+        }
+    }
+
+    string a = "hello world";
+    const(char)[] b = "hello world";
+    char[] c = "hello world".dup;
+    dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
+
+    static assert(is(typeof(a) == typeof(translate(a, transTable))));
+    static assert(is(typeof(b) == typeof(translate(b, transTable))));
+    static assert(is(typeof(c) == typeof(translate(c, transTable))));
+}
+
+/++ Ditto +/
+C1[] translate(C1, S, C2 = char)(C1[] str,
+                                 S[dchar] transTable,
+                                 const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o wor42d"));
+        assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o \U00010143 wor42d"));
+        assert(translate(to!S("hello \U00010143 world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl \U00010143 wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : ""]) ==
+               to!S("ello \U00010143 world"));
+        assert(translate(to!S("hello \U00010143 world"), ['\U00010143' : ""]) ==
+               to!S("hello  world"));
+        assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("r")) ==
+                   to!S("yellowe4242o wo42d"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("y42")) ==
+                   to!S("yellowe4242o wor42d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             ['o' : "owl", '\U00010143' : "\n"],
+                             to!T("\U00010143 ")) ==
+                   to!S("hellowlwowlrld"));
+        }
+    }
+
+    string a = "hello world";
+    const(char)[] b = "hello world";
+    char[] c = "hello world".dup;
+    string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
+
+    static assert(is(typeof(a) == typeof(translate(a, transTable))));
+    static assert(is(typeof(b) == typeof(translate(b, transTable))));
+    static assert(is(typeof(c) == typeof(translate(c, transTable))));
+}
+
+private auto translateImpl(C1, T, C2)(C1[] str,
+                                      T transTable,
+                                      const(C2)[] toRemove) @trusted
+{
+    auto retval = appender!(C1[])();
+
+    bool[dchar] removeTable;
+
+    foreach(dchar c; toRemove)
+        removeTable[c] = true;
+
+    foreach(dchar c; str)
+    {
+        if(c in removeTable)
+            continue;
+
+        auto newC = c in transTable;
+
+        if(newC)
+            retval.put(*newC);
+        else
+            retval.put(c);
+    }
+
+    return retval.data;
+}
+
+
+
 /************************************
+ * $(RED Scheduled for deprecation in February 2012.)
+ *
  * Construct translation table for translate().
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
 string maketrans(in char[] from, in char[] to)
@@ -2140,12 +2327,15 @@ body
 }
 
 /******************************************
+ * $(RED Scheduled for deprecation in February 2012.
+ *   Please use the version of $(D translate) which takes an AA instead.)
+ *
  * Translate characters in s[] using table created by maketrans().
  * Delete chars in delchars[].
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
-string translate(in char[] s, in char[] transtab, in char[] delchars)
+string translate()(in char[] s, in char[] transtab, in char[] delchars)
 in
 {
     assert(transtab.length == 256);
