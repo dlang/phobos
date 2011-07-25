@@ -2142,9 +2142,9 @@ string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
 assert(translate("hello world", transTable3) == "h5llorange worangerld");
 --------------------
   +/
-C1[] translate(C1, C2 = char)(C1[] str,
-                              dchar[dchar] transTable,
-                              const(C2)[] toRemove = null) @safe
+C1[] translate(C1, C2 = immutable char)(C1[] str,
+                                        dchar[dchar] transTable,
+                                        const(C2)[] toRemove = null) @safe
     if(isSomeChar!C1 && isSomeChar!C2)
 {
     return translateImpl(str, transTable, toRemove);
@@ -2200,22 +2200,17 @@ unittest
                              to!T("\U00010143 ")) ==
                    to!S("hell0w0rld"));
         }
+
+        auto s = to!S("hello world");
+        dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
     }
-
-    string a = "hello world";
-    const(char)[] b = "hello world";
-    char[] c = "hello world".dup;
-    dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
-
-    static assert(is(typeof(a) == typeof(translate(a, transTable))));
-    static assert(is(typeof(b) == typeof(translate(b, transTable))));
-    static assert(is(typeof(c) == typeof(translate(c, transTable))));
 }
 
 /++ Ditto +/
-C1[] translate(C1, S, C2 = char)(C1[] str,
-                                 S[dchar] transTable,
-                                 const(C2)[] toRemove = null) @safe
+C1[] translate(C1, S, C2 = immutable char)(C1[] str,
+                                           S[dchar] transTable,
+                                           const(C2)[] toRemove = null) @safe
     if(isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 {
     return translateImpl(str, transTable, toRemove);
@@ -2256,16 +2251,11 @@ unittest
                              to!T("\U00010143 ")) ==
                    to!S("hellowlwowlrld"));
         }
+
+        auto s = to!S("hello world");
+        string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
     }
-
-    string a = "hello world";
-    const(char)[] b = "hello world";
-    char[] c = "hello world".dup;
-    string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
-
-    static assert(is(typeof(a) == typeof(translate(a, transTable))));
-    static assert(is(typeof(b) == typeof(translate(b, transTable))));
-    static assert(is(typeof(c) == typeof(translate(c, transTable))));
 }
 
 private auto translateImpl(C1, T, C2)(C1[] str,
@@ -2900,41 +2890,51 @@ unittest
 }
 
 
-/***********************************************
- * Replaces characters in str[] that are in from[]
- * with corresponding characters in to[] and returns the resulting
- * string.
- * Params:
- *  modifiers = a string of modifier characters
- * Modifiers:
+/++
+    Replaces the characters in $(D str) which are in $(D from) with the
+    the corresponding characters in $(D to) and returns the resulting string.
+
+    $(D tr) is based on
+    $(WEB pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
+    though it doesn't do everything that the Posix utility does.
+
+    Params:
+        str       = The original string.
+        from      = The characters to replace.
+        to        = The characters to replace with.
+        modifiers = String containing modifiers.
+
+    Modifiers:
         <table border=1 cellspacing=0 cellpadding=5>
         <tr> <th>Modifier <th>Description
-        <tr> <td><b>c</b> <td>Complement the list of characters in from[]
-        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
-        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
+        <tr> <td><b>c</b> <td>Complement the list of characters in $(D from).
+        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding
+                              replacement in $(D to).
+        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced
+                              characters.
         </table>
 
-    If modifier <b>d</b> is present, then the number of characters
-    in to[] may be only 0 or 1.
+    If the modifier $(D 'd') is present, then the number of characters in
+    $(D to) may be only $(D 0) or $(D 1).
 
-    If modifier <b>d</b> is not present and to[] is null,
-    then to[] is taken _to be the same as from[].
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is empty, then
+    $(D to) is taken to be the same as $(D from).
 
-    If modifier <b>d</b> is not present and to[] is shorter
-    than from[], then to[] is extended by replicating the
-    last character in to[].
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
+    $(D from), then $(D to) is extended by replicating the last charcter in
+    $(D to).
 
-    Both from[] and to[] may contain ranges using the <b>-</b>
-    character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
-    Neither accept a leading <b>^</b> as meaning the complement of
-    the string (use the <b>c</b> modifier for that).
- */
-
-string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[] modifiers = null)
+    Both $(D from) and $(D to) may contain ranges using the $(D '-') character
+    (e.g. $(D "a-d") is synonymous with $(D "abcd).) Neither accept a leading
+    $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
+    for that).
+  +/
+C1[] tr(C1, C2, C3, C4 = immutable char)
+       (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
 {
-    int mod_c;
-    int mod_d;
-    int mod_s;
+    bool mod_c;
+    bool mod_d;
+    bool mod_s;
 
     foreach (char c; modifiers)
     {
@@ -2947,12 +2947,11 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         }
     }
 
-    if (to is null && !mod_d)
-        to = from;
+    if (to.empty && !mod_d)
+        to = std.conv.to!(typeof(to))(from);
 
-    char[] result = new char[str.length];
-    result.length = 0;
-    int m;
+    auto result = appender!(C1[])();
+    bool modified;
     dchar lastc;
 
     foreach (dchar c; str)
@@ -2965,11 +2964,9 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         for (size_t i = 0; i < from.length; )
         {
             dchar f = std.utf.decode(from, i);
-            //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
                 dchar nextf = std.utf.decode(from, i);
-                //writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -2997,14 +2994,12 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
       Lfound:
 
         // Find the nth character in to[]
-        //writefln("\tc = '%s', n = %d", c, n);
         dchar nextt;
         for (size_t i = 0; i < to.length; )
         {   dchar t = std.utf.decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
                 nextt = std.utf.decode(to, i);
-                //writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
                 n -= nextt - lastt;
                 if (n < 0)
                 {
@@ -3027,60 +3022,57 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         newc = nextt;
 
       Lnewc:
-        if (mod_s && m && newc == lastc)
+        if (mod_s && modified && newc == lastc)
             continue;
-        std.utf.encode(result, newc);
-        m = 1;
+        result.put(newc);
+        assert(newc != dchar.init);
+        modified = true;
         lastc = newc;
         continue;
 
       Lnotfound:
-        std.utf.encode(result, c);
+        result.put(c);
         lastc = c;
-        m = 0;
+        modified = false;
     }
-    return assumeUnique(result);
+
+    return result.data;
 }
 
 unittest
 {
     debug(string) printf("std.string.tr.unittest\n");
+    import std.algorithm;
 
-    string r;
-    //writefln("r = '%s'", r);
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            foreach(U; TypeTuple!(char[], const(char)[], immutable(char)[],
+                                  wchar[], const(wchar)[], immutable(wchar)[],
+                                  dchar[], const(dchar)[], immutable(dchar)[]))
+            {
+                assert(equal(tr(to!S("abcdef"), to!T("cd"), to!U("CD")), "abCDef"));
+                assert(equal(tr(to!S("abcdef"), to!T("b-d"), to!U("B-D")), "aBCDef"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-Dx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-CDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-BCDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U("*"), to!S("c")), "****ef"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U(""), to!T("d")), "abcd"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U(""), to!U("s")), "helo godbye"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U("x"), "s"), "hex gxdbye"));
+                assert(equal(tr(to!S("14-Jul-87"), to!T("a-zA-Z"), to!U(" "), "cs"), " Jul "));
+                assert(equal(tr(to!S("Abc"), to!T("AAA"), to!U("XYZ")), "Xbc"));
+            }
+        }
 
-    r = tr("abcdef", "cd", "CD");
-    assert(r == "abCDef");
-
-    r = tr("abcdef", "b-d", "B-D");
-    assert(r == "aBCDef");
-
-    r = tr("abcdefgh", "b-dh", "B-Dx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-CDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-BCDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdef", "ef", "*", "c");
-    assert(r == "****ef");
-
-    r = tr("abcdef", "ef", "", "d");
-    assert(r == "abcd");
-
-    r = tr("hello goodbye", "lo", null, "s");
-    assert(r == "helo godbye");
-
-    r = tr("hello goodbye", "lo", "x", "s");
-    assert(r == "hex gxdbye");
-
-    r = tr("14-Jul-87", "a-zA-Z", " ", "cs");
-    assert(r == " Jul ");
-
-    r = tr("Abc", "AAA", "XYZ");
-    assert(r == "Xbc");
+        auto s = to!S("hello world");
+        static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
+    }
 }
 
 
