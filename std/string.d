@@ -3653,64 +3653,44 @@ unittest
  * 
  */
 
-S outdent(S)(S str) if(isSomeString!S)
+C[] outdent(C)(C[] str) if(isSomeChar!C)
 {
-    if(str == "")
+    if(str.empty)
         return "";
-        
-    S[] lines;
-    if(__ctfe)
-        lines = str.ctfe_split("\n");
-    else
-        lines = str.split("\n");
     
+	C[] nl = "\n";
+    C[][] lines = __ctfe? str.ctfe_split(nl) : str.split(nl);
     lines = outdent(lines);
-    
-    if(__ctfe)
-        return lines.ctfe_join("\n");
-    else
-        return lines.join("\n");
+    return lines.join(nl);
 }
 
 /// ditto
-S[] outdent(S)(S[] lines) if(isSomeString!S)
+C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
 {
-    if(lines.length == 0)
+    if(lines.empty)
         return null;
         
-    bool isNonWhite(dchar ch)
+    C[] leadingWhiteOf(C[] str)
     {
-        if(__ctfe)
-            return !ctfe_isWhite(ch);
-        else
-            return !std.uni.isWhite(ch);
-    }
-    S leadingWhiteOf(S str)
-    {
-        return str[ 0 .. $-find!(isNonWhite)(str).length ];
+        return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
     }
     
     // Apply leadingWhiteOf, but emit null instead for whitespace-only lines
-    S[] indents;
+    C[][] indents;
     indents.length = lines.length;
     foreach(i, line; lines)
     {
-        string stripped;
-        if(__ctfe)
-            stripped = line.ctfe_strip();
-        else
-            stripped = line.strip();
-        
+        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
         indents[i] = stripped==""? null : leadingWhiteOf(line);
     }
 
-    S shorterAndNonNull(S a, S b) {
+    C[] shorterAndNonNull(C[] a, C[] b) {
         if(a is null) return b;
         if(b is null) return a;
         
         return (a.length < b.length)? a : b;
     };
-    auto shortestIndent = std.algorithm.reduce!(shorterAndNonNull)(indents);
+    auto shortestIndent = std.algorithm.reduce!shorterAndNonNull(indents);
     
     foreach(i; 0..lines.length)
     {
@@ -3730,21 +3710,12 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
     return lines;
 }
 
-private S ctfe_join(S)(S[] strs, S delim) if(isSomeString!S)
+// TODO: Remove this and use std.array.split when BUG6374 is fixed
+private C[][] ctfe_split(C)(C[] str, C[] delim) if(isSomeChar!C)
 {
-    S value = "";
-    
-    foreach(i, str; strs)
-        value ~= (i==0?"":delim) ~ str;
-    
-    return value;
-}
-
-private S[] ctfe_split(S)(S str, S delim) if(isSomeString!S)
-{
-    S[] arr;
-    S match;
-    while((match = ctfe_find(str, delim)).length > 0)
+    C[][] arr;
+    C[] match;
+    while((match = find(str, delim)).length > 0)
     {
         arr ~= str[0..$-match.length];
         str = match[delim.length..$];
@@ -3753,42 +3724,19 @@ private S[] ctfe_split(S)(S str, S delim) if(isSomeString!S)
     return arr;
 }
 
-private bool ctfe_isWhite(dchar c)
+// TODO: Remove this and use std.string.strip when BUG3512 is fixed
+private C[] ctfe_strip(C)(C[] str) if(isSomeChar!C)
 {
-    foreach(i; 0..std.ascii.whitespace.length)
-    if(c == std.ascii.whitespace[i])
-        return true;
-
-    return c == lineSep || c == paraSep ||
-           c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
-           (c >= '\u2000' && c <= '\u200A') ||
-           c == '\u202F' || c == '\u205F' || c == '\u3000';
+    return str.ctfe_stripLeft().ctfe_stripRight();
 }
 
-private S ctfe_find(S)(S haystack, S needle) if(isSomeString!S)
-{
-    if(haystack.length < needle.length)
-        return null;
-
-    for(size_t i=0; i <= haystack.length-needle.length; i++)
-    {
-        if(haystack[i..i+needle.length] == needle)
-            return haystack[i..$];
-    }
-    return null;
-}
-
-private S ctfe_strip(S)(S str) if(isSomeString!S)
-{
-    return str.ctfe_stripl().ctfe_stripr();
-}
-
-private S ctfe_stripl(S)(S str) if(isSomeString!S)
+// TODO: Remove this and use std.string.stripLeft when BUG3512 is fixed
+private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
 {
     size_t startIndex = str.length;
     
-    foreach(i, ElementEncodingType!S ch; str)
-    if(!ctfe_isWhite(cast(dchar)ch))
+    foreach(i, C ch; str)
+    if(!std.uni.isWhite(ch))
     {
         startIndex = i;
         break;
@@ -3797,12 +3745,13 @@ private S ctfe_stripl(S)(S str) if(isSomeString!S)
     return str[startIndex..$];
 }
 
-private S ctfe_stripr(S)(S str) if(isSomeString!S)
+// TODO: Remove this and use std.string.stripRight when BUG3512 is fixed
+private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
 {
     size_t endIndex = 0;
     
-    foreach_reverse(i, ElementEncodingType!S ch; str)
-    if(!ctfe_isWhite(cast(dchar)ch))
+    foreach_reverse(i, C ch; str)
+    if(!std.uni.isWhite(ch))
     {
         endIndex = i+1;
         break;
@@ -3821,25 +3770,6 @@ unittest
     static assert(ctfe_split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
     static assert(ctfe_split("-Xa", "-X") == ["","a"]);
 
-    static assert(ctfe_join([""," ","","A","","BC","","D"," ",""], "\n") == "\n \n\nA\n\nBC\n\nD\n \n");
-    
-    static assert(ctfe_isWhite(' '));
-    static assert(ctfe_isWhite('\t'));
-    static assert(ctfe_isWhite('\n'));
-    static assert(!ctfe_isWhite('d'));
-    static assert(!ctfe_isWhite('-'));
-
-    static assert(ctfe_find("abcde", "d" ) == "de");
-    static assert(ctfe_find("abcde", "cd") == "cde");
-    static assert(ctfe_find("abcde", "cX") == "");
-
-    static assert(ctfe_find("abc", "a")     == "abc");
-    static assert(ctfe_find("abc", "c")     == "c");
-    static assert(ctfe_find("aabbcc", "aa") == "aabbcc");
-    static assert(ctfe_find("aabbcc", "cc") == "cc");
-
-    static assert(ctfe_find("abc", "abcde") == "");
-
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip("Hi")         == "Hi");
     static assert(ctfe_strip(" \t \r\n")   == "");
@@ -3848,27 +3778,42 @@ unittest
     enum testStr =
 "
  \t\tX
- \tX
+ \t\U00010143X
  \t\t
 
  \t\t\tX
-\t ";
+\t "c;
 
     enum expected =
 "
 \tX
-X
+\U00010143X
 
 
 \t\tX
-";
+"c;
     
+	immutable iblank = "";
+	
     assert(testStr.outdent() == expected);
-    assert("".outdent() == "");
-    assert(" \n \t\n ".outdent() == "\n\n");
+    assert(to!wstring(testStr).outdent() == to!wstring(expected));
+    assert(to!dstring(testStr).outdent() == to!dstring(expected));
+    assert(""c.outdent() == ""c);
+    assert(""w.outdent() == ""w);
+    assert(""d.outdent() == ""d);
+    assert(" \n \t\n "c.outdent() == "\n\n"c);
+    assert(" \n \t\n "w.outdent() == "\n\n"w);
+    assert(" \n \t\n "d.outdent() == "\n\n"d);
+    assert(iblank.outdent() == iblank);
 
-    enum ctfeResult = testStr.outdent();
-    assert(ctfeResult == expected);
+    static assert(testStr.outdent() == expected);
+	// TODO: Uncomment these when to!w/dstring(string) works at compile-time
+    //static assert(to!wstring(testStr).outdent() == to!wstring(expected));
+    //static assert(to!dstring(testStr).outdent() == to!dstring(expected));
+
+    static assert(" \n \t\n "c.outdent() == "\n\n"c);
+    static assert(" \n \t\n "w.outdent() == "\n\n"w);
+    static assert(" \n \t\n "d.outdent() == "\n\n"d);
 }
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
