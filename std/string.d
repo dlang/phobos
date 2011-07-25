@@ -3658,7 +3658,7 @@ C[] outdent(C)(C[] str) if(isSomeChar!C)
     if(str.empty)
         return "";
     
-	C[] nl = "\n";
+    C[] nl = "\n";
     C[][] lines = __ctfe? str.ctfe_split(nl) : str.split(nl);
     lines = outdent(lines);
     return lines.join(nl);
@@ -3793,8 +3793,8 @@ unittest
 \t\tX
 "c;
     
-	immutable iblank = "";
-	
+    immutable iblank = "";
+    
     assert(testStr.outdent() == expected);
     assert(to!wstring(testStr).outdent() == to!wstring(expected));
     assert(to!dstring(testStr).outdent() == to!dstring(expected));
@@ -3807,7 +3807,7 @@ unittest
     assert(iblank.outdent() == iblank);
 
     static assert(testStr.outdent() == expected);
-	// TODO: Uncomment these when to!w/dstring(string) works at compile-time
+    // TODO: Uncomment these when to!w/dstring(string) works at compile-time
     //static assert(to!wstring(testStr).outdent() == to!wstring(expected));
     //static assert(to!dstring(testStr).outdent() == to!dstring(expected));
 
