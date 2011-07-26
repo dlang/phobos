@@ -1,6 +1,8 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Scheduled for deprecation. Please use core.cpuid instead.)
+ *
  * Identify the characteristics of the host CPU.
  *
  * Implemented according to:
