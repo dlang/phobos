@@ -3750,12 +3750,6 @@ unittest
 {
     debug(string) printf("string.outdent.unittest\n");
     
-    static assert(split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
-    static assert(split("-Xa", "-X") == ["","a"]);
-
-    static assert(split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
-    static assert(split("-Xa", "-X") == ["","a"]);
-
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip("Hi")         == "Hi");
     static assert(ctfe_strip(" \t \r\n")   == "");
