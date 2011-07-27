@@ -119,10 +119,58 @@ private sizediff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
 }
 
 
-/*  Helper function that strips trailing slashes and backslashes
+version (Windows)
+{
+    private bool isUNC(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    {
+        return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
+            && !isDirSeparator(path[2]);
+    }
+
+    private sizediff_t uncRootLength(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+        in { assert (isUNC(path)); }
+        body
+    {
+        sizediff_t i = 3;
+        while (i < path.length && !isDirSeparator(path[i])) ++i;
+        if (i < path.length)
+        {
+            auto j = i;
+            do { ++j; } while (j < path.length && isDirSeparator(path[j]));
+            if (j < path.length)
+            {
+                do { ++j; } while (j < path.length && !isDirSeparator(path[j]));
+                i = j;
+            }
+        }
+        return i;
+    }
+
+    private bool hasDrive(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    {
+        return path.length >= 2 && isDriveSeparator(path[1]);
+    }
+
+    private bool isDriveRoot(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    {
+        return path.length >= 3 && isDriveSeparator(path[1])
+            && isDirSeparator(path[2]);
+    }
+}
+
+
+/*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private C[] chompDirSeparators(C)(C[] path)  @safe pure nothrow
+private C[] ltrimDirSeparators(C)(C[] path)  @safe pure nothrow
+    if (isSomeChar!C)
+{
+    int i = 0;
+    while (i < path.length && isDirSeparator(path[i])) ++i;
+    return path[i .. $];
+}
+
+private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     auto i = (cast(sizediff_t) path.length) - 1;
@@ -171,7 +219,7 @@ C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
     auto p1 = stripDrive(path);
     if (p1.empty) return null;
 
-    auto p2 = chompDirSeparators(p1);
+    auto p2 = rtrimDirSeparators(p1);
     if (p2.empty) return p1[0 .. 1];
 
     return p2[lastSeparator(p2)+1 .. $];
@@ -261,7 +309,7 @@ C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
 {
     if (path.empty) return to!(typeof(return))(".");
 
-    auto p = chompDirSeparators(path);
+    auto p = rtrimDirSeparators(path);
     if (p.empty) return path[0 .. 1];
     if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
         return path[0 .. 3];
@@ -276,7 +324,7 @@ C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
         return p[0 .. i+1];
 
     // Remove any remaining trailing (back)slashes.
-    return chompDirSeparators(p[0 .. i]);
+    return rtrimDirSeparators(p[0 .. i]);
 }
 
 
@@ -318,8 +366,9 @@ unittest
 
 
 
-/** Returns the drive letter (including the colon) of a path, or
-    an empty string if there is no drive letter.
+/** Returns the drive of a path, or an empty string if the drive
+    is not specified.  In the case of UNC paths, the network share
+    is returned.
 
     Always returns an empty string on POSIX.
 
@@ -327,9 +376,9 @@ unittest
     ---
     version (Windows)
     {
-        assert (driveName("d:file")   == "d:");
-        assert (driveName(`d:\file`)  == "d:");
-        assert (driveName(`dir\file`) == "");
+        assert (driveName(`d:\file`) == "d:");
+        assert (drivename(`\\server\share\file`) == `\\server\share`);
+        assert (driveName(`dir\file`).empty);
     }
     ---
 */
@@ -347,7 +396,11 @@ C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
         {
             path = stripLeft(path);
         }
-        if (path.length > 2  &&  path[1] == ':')  return path[0 .. 2];
+
+        if (hasDrive(path))
+            return path[0 .. 2];
+        else if (isUNC(path))
+            return path[0 .. uncRootLength(path)];
     }
     return null;
 }
@@ -358,11 +411,15 @@ unittest
     version (Posix)  assert (driveName("c:/foo").empty);
     version (Windows)
     {
-    assert (driveName("dir\\file").empty);
-    assert (driveName("d:file") == "d:");
-    assert (driveName("d:\\file") == "d:");
+        assert (driveName(`dir\file`).empty);
+        assert (driveName(`d:file`) == "d:");
+        assert (driveName(`d:\file`) == "d:");
+        assert (driveName("d:") == "d:");
+        assert (driveName(`\\server\share\file`) == `\\server\share`);
+        assert (driveName(`\\server\share\`) == `\\server\share`);
+        assert (driveName(`\\server\share`) == `\\server\share`);
 
-    static assert (driveName(`d:\file`) == "d:");
+        static assert (driveName(`d:\file`) == "d:");
     }
 }
 
@@ -377,13 +434,17 @@ unittest
     version (Windows)
     {
         assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+        assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
     }
     ---
 */
 C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     version(Windows)
-        if (path.length >= 2 && isDriveSeparator(path[1])) return path[2 .. $];
+    {
+        if (hasDrive(path))      return path[2 .. $];
+        else if (isUNC(path))    return path[uncRootLength(path) .. $];
+    }
     return path;
 }
 
@@ -393,6 +454,7 @@ unittest
     version(Windows)
     {
         assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+        assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
         static assert (stripDrive(`d:\dir\file`) == `\dir\file`);
     }
     version(Posix)
@@ -809,8 +871,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
                 int i = 0;
                 while (i < _path.length && !isDirSeparator(_path[i])) ++i;
                 _front = _path[0 .. i];
-                while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                _path = _path[i .. $];
+                _path = ltrimDirSeparators(_path[i .. $]);
             }
         }
 
@@ -832,46 +893,43 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             _path = p;
 
             // If path is rooted, first element is special
-            if (isDirSeparator(_path[0]))
+            version (Windows)
             {
-                if (_path.length > 2 && isDirSeparator(_path[1])
-                    && !isDirSeparator(_path[2]))
+                if (isUNC(_path))
                 {
-                    // Network mount
-                    int i = 3;
-                    while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                    auto i = uncRootLength(_path);
                     _front = _path[0 .. i];
-                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                    _path = _path[i .. $];
+                    _path = ltrimDirSeparators(_path[i .. $]);
+                }
+                else if (isDriveRoot(_path))
+                {
+                    _front = _path[0 .. 3];
+                    _path = ltrimDirSeparators(_path[3 .. $]);
+                }
+                else if (_path.length >= 1 && isDirSeparator(_path[0]))
+                {
+                    _front = _path[0 .. 1];
+                    _path = ltrimDirSeparators(_path[1 .. $]);
                 }
                 else
                 {
-                    _front = _path[0 .. 1];
-                    int i = 1;
-                    while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                    _path = _path[i .. $];
+                    assert (!isRooted(_path));
+                    popFront();
                 }
             }
-            else
+            else version (Posix)
             {
-                version (Posix)
+                if (_path.length >= 1 && isDirSeparator(_path[0]))
+                {
+                    _front = _path[0 .. 1];
+                    _path = ltrimDirSeparators(_path[1 .. $]);
+                }
+                else
                 {
                     popFront();
                 }
-                else version (Windows)
-                {
-                    if (_path.length > 2 && isDriveSeparator(_path[1])
-                        && isDirSeparator(_path[2]))
-                    {
-                        _front = _path[0 .. 3];
-                        int i = 3;
-                        while (i < _path.length && isDirSeparator(_path[i])) ++i;
-                        _path = _path[i .. $];
-                    }
-                    else popFront();
-                }
-                else static assert (false);
             }
+            else static assert (0);
         }
     }
 
@@ -885,12 +943,11 @@ unittest
 
     // Root directories
     assert (equal(pathSplitter("/"), ["/"]));
+    assert (equal(pathSplitter("//"), ["/"]));
     assert (equal(pathSplitter("///"w), ["/"w]));
-    assert (equal(pathSplitter("//foo"d), ["//foo"d]));
 
     // Absolute paths
     assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
-    assert (equal(pathSplitter("//foo/bar"w.dup), ["//foo"w, "bar"w]));
 
     // General
     assert (equal(pathSplitter("foo/bar"d.dup), ["foo"d, "bar"d]));
@@ -905,7 +962,11 @@ unittest
     assert (equal(ps1, ["bar", "baz"]));
     assert (equal(ps2, ["foo", "bar", "baz"]));
 
-    // Windows-specific
+    // Platform specific
+    version (Posix)
+    {
+        assert (equal(pathSplitter("//foo/bar"w.dup), ["/"w, "foo"w, "bar"w]));
+    }
     version (Windows)
     {
         assert (equal(pathSplitter(`\`), [`\`]));
@@ -913,6 +974,9 @@ unittest
         assert (equal(pathSplitter("c:"), ["c:"]));
         assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
         assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
+        assert (equal(pathSplitter(`\\foo\bar`), [`\\foo\bar`]));
+        assert (equal(pathSplitter(`\\foo\bar\\`), [`\\foo\bar`]));
+        assert (equal(pathSplitter(`\\foo\bar\baz`), [`\\foo\bar`, "baz"]));
     }
 
     // CTFE
@@ -1020,10 +1084,7 @@ version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow
 else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    return path.length >= 3 && (
-        (isDriveSeparator(path[1]) && isDirSeparator(path[2])) ||
-        (isDirSeparator(path[0]) && isDirSeparator(path[1]) && !isDirSeparator(path[2]))
-        );
+    return isDriveRoot(path) || isUNC(path);
 }
 
 else version (Posix) alias isRooted isAbsolute;
@@ -1238,7 +1299,6 @@ unittest
         assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
         assert (relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
-        assert (relativePath("//foo/bar", "/foo") == "//foo/bar");
         assertThrown(relativePath("/foo", "bar"));
 
         //BUG: std.algorithm.cmp is not CTFEable
@@ -1383,9 +1443,7 @@ unittest
         assert (normalize("///") == "/");
         assert (normalize("////") == "/");
         assert (normalize("/foo/bar") == "/foo/bar");
-        assert (normalize("//foo/bar") == "//foo/bar");
-        assert (normalize("//foo") == "//foo");
-        assert (normalize("//foo///") == "//foo");
+        assert (normalize("//foo/bar") == "/foo/bar");
         assert (normalize("///foo/bar") == "/foo/bar");
         assert (normalize("////foo/bar") == "/foo/bar");
 
