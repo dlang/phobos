@@ -3659,7 +3659,7 @@ C[] outdent(C)(C[] str) if(isSomeChar!C)
         return "";
     
     C[] nl = "\n";
-    C[][] lines = __ctfe? str.ctfe_split(nl) : str.split(nl);
+    C[][] lines = str.split(nl);
     lines = outdent(lines);
     return lines.join(nl);
 }
@@ -3710,20 +3710,6 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     return lines;
 }
 
-// TODO: Remove this and use std.array.split when BUG6374 is fixed
-private C[][] ctfe_split(C)(C[] str, C[] delim) if(isSomeChar!C)
-{
-    C[][] arr;
-    C[] match;
-    while((match = find(str, delim)).length > 0)
-    {
-        arr ~= str[0..$-match.length];
-        str = match[delim.length..$];
-    }
-    arr ~= str;
-    return arr;
-}
-
 // TODO: Remove this and use std.string.strip when BUG3512 is fixed
 private C[] ctfe_strip(C)(C[] str) if(isSomeChar!C)
 {
@@ -3764,11 +3750,11 @@ unittest
 {
     debug(string) printf("string.outdent.unittest\n");
     
-    static assert(ctfe_split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
-    static assert(ctfe_split("-Xa", "-X") == ["","a"]);
+    static assert(split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
+    static assert(split("-Xa", "-X") == ["","a"]);
 
-    static assert(ctfe_split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
-    static assert(ctfe_split("-Xa", "-X") == ["","a"]);
+    static assert(split("a--b-b--ccc---d----e--", "--") == ["a","b-b","ccc","-d","","e",""]);
+    static assert(split("-Xa", "-X") == ["","a"]);
 
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip("Hi")         == "Hi");
