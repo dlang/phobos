@@ -311,17 +311,26 @@ C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
 
     auto p = rtrimDirSeparators(path);
     if (p.empty) return path[0 .. 1];
-    if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
-        return path[0 .. 3];
+
+    version (Windows)
+    {
+        if (isUNC(p) && uncRootLength(p) == p.length)
+            return p;
+        if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
+            return path[0 .. 3];
+    }
 
     auto i = lastSeparator(p);
     if (i == -1) return to!(typeof(return))(".");
     if (i == 0) return p[0 .. 1];
 
-    // If the directory part is either d: or d:\, don't
-    // chop off the last symbol.
-    if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
-        return p[0 .. i+1];
+    version (Windows)
+    {
+        // If the directory part is either d: or d:\, don't
+        // chop off the last symbol.
+        if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
+            return p[0 .. i+1];
+    }
 
     // Remove any remaining trailing (back)slashes.
     return rtrimDirSeparators(p[0 .. i]);
@@ -330,34 +339,38 @@ C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
 
 unittest
 {
-    assert (dirName("")                 == ".");
-    assert (dirName("file"w)            == ".");
-    assert (dirName("dir/"d)            == ".");
-    assert (dirName("dir///")           == ".");
-    assert (dirName("dir/file"w.dup)    == "dir");
-    assert (dirName("dir///file"d.dup)  == "dir");
-    assert (dirName("dir/subdir/")      == "dir");
-    assert (dirName("/dir/file"w)       == "/dir");
-    assert (dirName("/file"d)           == "/");
-    assert (dirName("/")                == "/");
-    assert (dirName("///")              == "/");
+    assert (dirName("") == ".");
+    assert (dirName("file"w) == ".");
+    assert (dirName("dir/"d) == ".");
+    assert (dirName("dir///") == ".");
+    assert (dirName("dir/file"w.dup) == "dir");
+    assert (dirName("dir///file"d.dup) == "dir");
+    assert (dirName("dir/subdir/") == "dir");
+    assert (dirName("/dir/file"w) == "/dir");
+    assert (dirName("/file"d) == "/");
+    assert (dirName("/") == "/");
+    assert (dirName("///") == "/");
 
     version (Windows)
     {
-    assert (dirName("dir\\")            == ".");
-    assert (dirName("dir\\\\\\")        == ".");
-    assert (dirName("dir\\file")        == "dir");
-    assert (dirName("dir\\\\\\file")    == "dir");
-    assert (dirName("dir\\subdir\\")    == "dir");
-    assert (dirName("\\dir\\file")      == "\\dir");
-    assert (dirName("\\file")           == "\\");
-    assert (dirName("\\")               == "\\");
-    assert (dirName("\\\\\\")           == "\\");
-    assert (dirName("d:")               == "d:");
-    assert (dirName("d:file")           == "d:");
-    assert (dirName("d:\\")             == "d:\\");
-    assert (dirName("d:\\file")         == "d:\\");
-    assert (dirName("d:\\dir\\file")    == "d:\\dir");
+        assert (dirName(`dir\`) == `.`);
+        assert (dirName(`dir\\\`) == `.`);
+        assert (dirName(`dir\file`) == `dir`);
+        assert (dirName(`dir\\\file`) == `dir`);
+        assert (dirName(`dir\subdir\`) == `dir`);
+        assert (dirName(`\dir\file`) == `\dir`);
+        assert (dirName(`\file`) == `\`);
+        assert (dirName(`\`) == `\`);
+        assert (dirName(`\\\`) == `\`);
+        assert (dirName(`d:`) == `d:`);
+        assert (dirName(`d:file`) == `d:`);
+        assert (dirName(`d:\`) == `d:\`);
+        assert (dirName(`d:\file`) == `d:\`);
+        assert (dirName(`d:\dir\file`) == `d:\dir`);
+        assert (dirName(`\\server\share\dir\file`) == `\\server\share\dir`);
+        assert (dirName(`\\server\share\file`) == `\\server\share`);
+        assert (dirName(`\\server\share\`) == `\\server\share`);
+        assert (dirName(`\\server\share`) == `\\server\share`);
     }
 
     static assert (dirName("dir/file") == "dir");
