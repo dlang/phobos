@@ -112,7 +112,7 @@ immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, digits) instead.)
+          Please use $(XREF ascii, _digits) instead.)
 
     0..9
   +/
@@ -128,7 +128,7 @@ immutable char[8]  octdigits = "01234567";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, lowercase) instead.)
+          Please use $(XREF ascii, _lowercase) instead.)
 
     a..z
   +/
@@ -136,7 +136,7 @@ immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, letters) instead.)
+          Please use $(XREF ascii, _letters) instead.)
 
     A..Za..z
   +/
@@ -145,7 +145,7 @@ immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, uppercase) instead.)
+          Please use $(XREF ascii, _uppercase) instead.)
 
     A..Z
   +/
@@ -153,7 +153,7 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, whitespace) instead.)
+          Please use $(XREF ascii, _whitespace) instead.)
 
     ASCII whitespace.
   +/
@@ -177,7 +177,7 @@ enum dchar PS = '\u2029';
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, newline) instead.)
+          Please use $(XREF ascii, _newline) instead.)
 
     Newline sequence for this system.
   +/
@@ -2905,14 +2905,14 @@ unittest
         modifiers = String containing modifiers.
 
     Modifiers:
-        <table border=1 cellspacing=0 cellpadding=5>
-        <tr> <th>Modifier <th>Description
-        <tr> <td><b>c</b> <td>Complement the list of characters in $(D from).
-        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding
-                              replacement in $(D to).
-        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced
-                              characters.
-        </table>
+        $(BOOKTABLE,
+        $(TR $(TD Modifier) $(TD Description))
+        $(TR $(TD $(D 'c')) $(TD Complement the list of characters in $(D from)))
+        $(TR $(TD $(D 'd')) $(TD Removes matching characters with no corresponding
+                              replacement in $(D to)))
+        $(TR $(TD $(D 's')) $(TD Removes adjacent duplicates in the replaced
+                              characters))
+        )
 
     If the modifier $(D 'd') is present, then the number of characters in
     $(D to) may be only $(D 0) or $(D 1).
