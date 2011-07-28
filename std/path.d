@@ -214,10 +214,18 @@ private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] baseName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow
+    if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
-    if (p1.empty) return null;
+    if (p1.empty)
+    {
+        version (Windows)
+        {
+            if (isUNC(path)) return to!(typeof(return))(dirSeparator);
+        }
+        return null;
+    }
 
     auto p2 = rtrimDirSeparators(p1);
     if (p2.empty) return p1[0 .. 1];
@@ -239,40 +247,43 @@ C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
 unittest
 {
     assert (baseName("").empty);
-    assert (baseName("file.ext"w)                   == "file.ext");
-    assert (baseName("file.ext"d, ".ext")           == "file");
-    assert (baseName("file", "file"w.dup)           == "file");
-    assert (baseName("dir/file.ext"d.dup)           == "file.ext");
-    assert (baseName("dir/file.ext", ".ext"d)       == "file");
-    assert (baseName("dir/file"w, "file"d)          == "file");
-    assert (baseName("dir///subdir////")            == "subdir");
-    assert (baseName("dir/subdir.ext/", ".ext")     == "subdir");
-    assert (baseName("dir/subdir/".dup, "subdir")   == "subdir");
-    assert (baseName("/"w.dup)                      == "/");
-    assert (baseName("//"d.dup)                     == "/");
-    assert (baseName("///")                         == "/");
+    assert (baseName("file.ext"w) == "file.ext");
+    assert (baseName("file.ext"d, ".ext") == "file");
+    assert (baseName("file", "file"w.dup) == "file");
+    assert (baseName("dir/file.ext"d.dup) == "file.ext");
+    assert (baseName("dir/file.ext", ".ext"d) == "file");
+    assert (baseName("dir/file"w, "file"d) == "file");
+    assert (baseName("dir///subdir////") == "subdir");
+    assert (baseName("dir/subdir.ext/", ".ext") == "subdir");
+    assert (baseName("dir/subdir/".dup, "subdir") == "subdir");
+    assert (baseName("/"w.dup) == "/");
+    assert (baseName("//"d.dup) == "/");
+    assert (baseName("///") == "/");
 
     version (Windows)
     {
-    assert (baseName("dir\\file.ext")               == "file.ext");
-    assert (baseName("dir\\file.ext", ".ext")       == "file");
-    assert (baseName("dir\\file", "file")           == "file");
-    assert (baseName("d:file.ext")                  == "file.ext");
-    assert (baseName("d:file.ext", ".ext")          == "file");
-    assert (baseName("d:file", "file")              == "file");
-    assert (baseName("dir\\\\subdir\\\\\\")         == "subdir");
-    assert (baseName("dir\\subdir.ext\\", ".ext")   == "subdir");
-    assert (baseName("dir\\subdir\\", "subdir")     == "subdir");
-    assert (baseName("\\")                          == "\\");
-    assert (baseName("\\\\")                        == "\\");
-    assert (baseName("\\\\\\")                      == "\\");
-    assert (baseName("d:\\")                        == "\\");
-    assert (baseName("d:").empty);
+        assert (baseName(`dir\file.ext`) == `file.ext`);
+        assert (baseName(`dir\file.ext`, `.ext`) == `file`);
+        assert (baseName(`dir\file`, `file`) == `file`);
+        assert (baseName(`d:file.ext`) == `file.ext`);
+        assert (baseName(`d:file.ext`, `.ext`) == `file`);
+        assert (baseName(`d:file`, `file`) == `file`);
+        assert (baseName(`dir\\subdir\\\`) == `subdir`);
+        assert (baseName(`dir\subdir.ext\`, `.ext`) == `subdir`);
+        assert (baseName(`dir\subdir\`, `subdir`) == `subdir`);
+        assert (baseName(`\`) == `\`);
+        assert (baseName(`\\`) == `\`);
+        assert (baseName(`\\\`) == `\`);
+        assert (baseName(`d:\`) == `\`);
+        assert (baseName(`d:`).empty);
+        assert (baseName(`\\server\share\file`) == `file`);
+        assert (baseName(`\\server\share\`) == `\`);
+        assert (baseName(`\\server\share`) == `\`);
     }
 
     assert (baseName(stripExtension("dir/file.ext")) == "file");
 
-    static assert (baseName("dir/file.ext")         == "file.ext");
+    static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
 }
 
