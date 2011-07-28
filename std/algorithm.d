@@ -3658,6 +3658,9 @@ enum OpenRight
 Lazily iterates $(D range) until value $(D sentinel) is found, at
 which point it stops.
 
+See_Also:
+    $(XREF range, takeWhile)
+
 Example:
 ----
 int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];

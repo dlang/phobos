@@ -2483,6 +2483,9 @@ unittest
     Returns a range which lazily iterates over the given range until $(D pred)
     is $(D false) for $(D r.front) or $(D r) is empty;
 
+    See_Also:
+        $(XREF algorithm, until)
+
     Examples:
 --------------------
 assert(equal(takeWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [0, 2, 1]));
