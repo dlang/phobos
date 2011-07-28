@@ -803,7 +803,7 @@ public:
         Time zone is irrelevant when comparing $(D SysTime)s.
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -5879,7 +5879,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
         $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
         )
@@ -6105,7 +6105,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
         $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
         )
@@ -6313,7 +6313,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
         )
       +/
@@ -9108,7 +9108,7 @@ public:
         Compares this $(D Date) with the given $(D Date).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -11367,7 +11367,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for Date using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
         $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
         )
@@ -11479,7 +11479,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for $(D Date) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
         $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
         )
@@ -11571,7 +11571,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for Date using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
@@ -13702,7 +13702,7 @@ public:
         Compares this $(D TimeOfDay) with the given $(D TimeOfDay).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -14252,7 +14252,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
         $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
         )
@@ -14358,7 +14358,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
         $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
         )
@@ -14440,7 +14440,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
         )
 
@@ -15124,7 +15124,7 @@ public:
         Compares this $(D DateTime) with the given $(D DateTime.).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -16795,7 +16795,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
         $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
         )
@@ -16905,7 +16905,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
         $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
         )
@@ -16996,7 +16996,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
@@ -18437,7 +18437,7 @@ private:
     is therefore the time starting at the starting point up to, but not
     including, the end point. e.g.
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD [January 5th, 2010 - March 10th, 2010$(RPAREN)))
     $(TR $(TD [05:00:30 - 12:00:00$(RPAREN)))
     $(TR $(TD [1982-01-04T08:59:00 - 2010-07-04T12:00:00$(RPAREN)))
@@ -31724,7 +31724,7 @@ bool validTimeUnits(string[] units...)
     $(D "hnsecs") are the smallest.
 
     Returns:
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD this &lt; rhs) $(TD &lt; 0))
         $(TR $(TD this == rhs) $(TD 0))
         $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -31783,7 +31783,7 @@ unittest
     template constraint instead.
 
     Returns:
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD this &lt; rhs) $(TD &lt; 0))
         $(TR $(TD this == rhs) $(TD 0))
         $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -33089,7 +33089,7 @@ unittest
     Whether the given type defines the overloaded opBinary operators that a time
     point is supposed to define which work with time durations. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD TimePoint opBinary"+"(duration)))
     $(TR $(TD TimePoint opBinary"-"(duration)))
     )
@@ -33130,7 +33130,7 @@ unittest
     Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
     to define. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD TimePoint opOpAssign"+"(duration)))
     $(TR $(TD TimePoint opOpAssign"-"(duration)))
     )
@@ -33171,7 +33171,7 @@ unittest
     Whether the given type defines the overloaded opBinary operator that a time point is supposed
     to define which works with itself. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD duration opBinary"-"(Date)))
     )
   +/
