@@ -1319,25 +1319,13 @@ string relativePath(string path, string base = getcwd())
 
     auto basePS = pathSplitter(base);
     auto pathPS = pathSplitter(path);
-    version (Posix)
-    {
-        if (basePS.front != pathPS.front) return path;
-    }
-    else version (Windows)
-    {
-        auto bf = basePS.front;
-        auto pf = pathPS.front;
-        if (bf.length != pf.length) return path;
-        foreach (i; 0 .. bf.length)
-        {
-            if (!pathCharMatch(bf[i], pf[i])) return path;
-        }
-    }
-    else static assert (0);
+    if (filenameCmp(basePS.front, pathPS.front) != 0) return path;
+
     basePS.popFront();
     pathPS.popFront();
 
-    while (!basePS.empty && !pathPS.empty && fcmp(basePS.front, pathPS.front) == 0)
+    while (!basePS.empty && !pathPS.empty
+        && filenameCmp(basePS.front, pathPS.front) == 0)
     {
         basePS.popFront();
         pathPS.popFront();
@@ -1619,99 +1607,184 @@ unittest
 
 
 
-/** Compare file names.
+/** This enum is used as a template argument to functions which
+    compare file names, and determines whether the comparison is
+    case sensitive or not.
+*/
+enum CaseSensitive : bool
+{
+    /// File names are case insensitive
+    no = false,
 
-    Returns (for $(D pred = "a < b")):
-    $(BOOKTABLE,
-    $(TR $(TD $(D < 0))  $(TD $(D filename1 < filename2) ))
-    $(TR $(TD $(D = 0))  $(TD $(D filename1 == filename2)))
-    $(TR $(TD $(D > 0))  $(TD $(D filename1 > filename2)))
-    )
+    /// File names are case sensitive
+    yes = true,
 
-    On Windows, $(D fcmp) is an alias for $(D std.string.icmp),
-    which yields a case insensitive comparison.
-    On POSIX, it is an alias for $(D std.algorithm.cmp), i.e. a
-    case sensitive comparison.
- */
-// TODO: @safe pure nothrow
-version (StdDdoc) int fcmp(alias pred = "a < b", S1, S2)(S1 filename1, S2 filename2);
-else version (Windows) alias std.string.icmp fcmp;
-else version (Posix) alias std.algorithm.cmp fcmp;
+    /** The default (or most common) setting for the current platform
+        ($(D yes) on POSIX, $(D no) on Windows).
+    */
+    osDefault = osDefaultCaseSensitivity
+}
+version (Windows)    private enum osDefaultCaseSensitivity = false;
+else version (Posix) private enum osDefaultCaseSensitivity = true;
+else static assert (0);
 
 
 
 
-/** Matches path characters.
+/** Compare filename characters and return $(D < 0) if $(D a < b), $(D 0) if
+    $(D a == b) and $(D > 0) if $(D a > b).
 
-    Under Windows the comparison is done ignoring case, and
-    '\' and '/' are treated as equal.
-    Under Linux an exact match is performed.
+    This function can perform a case-sensitive or a case-insensitive
+    comparison.  This is controlled through the $(D cs) template parameter
+    which, if not specified, defaults to $(D CaseSensitive.yes) on POSIX
+    and $(D CaseSensitive.no) on Windows.
 
-    Returns: $(D true) if c1 matches c2, $(D false) otherwise.
+    On Windows, the backslash and slash characters ($(D \) and $(D /))
+    are considered equal.
 
     Examples:
-    -----
-    assert (pathCharMatch('a', 'a'));
+    ---
+    assert (filenameCharCmp('a', 'a') == 0);
+    assert (filenameCharCmp('a', 'b') < 0);
+    assert (filenameCharCmp('b', 'a') > 0);
 
-    version(Windows)
+    version (Posix)
     {
-        assert (!pathCharMatch('a', 'b'));
-        assert (pathCharMatch('A', 'a'));
-        assert (pathCharMatch('/', '\\'));
+        // Same as calling filenameCharCmp!(CaseSensitive.yes)(a, b)
+        assert (filenameCharCmp('A', 'a') < 0);
+        assert (filenameCharCmp('a', 'A') > 0);
     }
 
-    version(Posix)
-    {
-        assert (!pathCharMatch('a', 'b'));
-        assert (!pathCharMatch('A', 'a'));
-        assert (!pathCharMatch('/', '\\'));
-    }
-    -----
- */
-bool pathCharMatch(dchar c1, dchar c2)  @safe pure nothrow
-{
     version (Windows)
     {
-        if (c1 != c2)
-        {
-            if (isDirSeparator(c1)) return isDirSeparator(c2);
-            if ('A' <= c1 && c1 <= 'Z')
-                c1 += cast(char)'a' - 'A';
-            if ('A' <= c2 && c2 <= 'Z')
-                c2 += cast(char)'a' - 'A';
-            return c1 == c2;
-        }
-        return true;
+        // Same as calling filenameCharCmp!(CaseSensitive.no)(a, b)
+        assert (filenameCharCmp('a', 'A') == 0);
+        assert (filenameCharCmp('a', 'B') < 0);
+        assert (filenameCharCmp('A', 'b') < 0);
     }
-    else version (Posix)
+    ---
+*/
+long filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
+    @safe pure nothrow
+{
+    if (isDirSeparator(a) && isDirSeparator(b)) return 0;
+    static if (!cs)
     {
-        return c1 == c2;
+        import std.uni;
+        a = toLower(a);
+        b = toLower(b);
     }
-    else
-    {
-        static assert(0);
-    }
+    return (cast(long)a) - (cast(long)b);
 }
 
 
 unittest
 {
-    assert (pathCharMatch('a', 'a'));
-    version(Windows)
+    assert (filenameCharCmp!(CaseSensitive.yes)('a', 'a') == 0);
+    assert (filenameCharCmp!(CaseSensitive.yes)('a', 'b') < 0);
+    assert (filenameCharCmp!(CaseSensitive.yes)('b', 'a') > 0);
+    assert (filenameCharCmp!(CaseSensitive.yes)('A', 'a') < 0);
+    assert (filenameCharCmp!(CaseSensitive.yes)('a', 'A') > 0);
+
+    assert (filenameCharCmp!(CaseSensitive.no)('a', 'a') == 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('a', 'b') < 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('b', 'a') > 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('A', 'a') == 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('a', 'A') == 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('a', 'B') < 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('B', 'a') > 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('A', 'b') < 0);
+    assert (filenameCharCmp!(CaseSensitive.no)('b', 'A') > 0);
+
+    version (Posix)   assert (filenameCharCmp('\\', '/') != 0);
+    version (Windows) assert (filenameCharCmp('\\', '/') == 0);
+
+}
+
+
+
+
+/** Compare file names and return
+    $(D < 0) if $(D filename1 < filename2),
+    $(D 0) if $(D filename1 == filename2) and
+    $(D > 0) if $(D filename1 > filename2).
+
+    Individual characters are compared using $(D filenameCharCmp!cs),
+    where $(D cs) is an optional template parameter determining whether
+    the comparison is case sensitive or not.
+
+    Examples:
+    ---
+    assert (filenameCmp("abc", "abc") == 0);
+    assert (filenameCmp("abc", "abd") < 0);
+    assert (filenameCmp("abc", "abb") > 0);
+    assert (filenameCmp("abc", "abcd") < 0);
+    assert (filenameCmp("abcd", "abc") > 0);
+
+    version (Posix)
     {
-        assert (!pathCharMatch('a', 'b'));
-        assert (pathCharMatch('A', 'a'));
-        assert (pathCharMatch('/', '\\'));
-    }
-    version(Posix)
-    {
-        assert (!pathCharMatch('a', 'b'));
-        assert (!pathCharMatch('A', 'a'));
-        assert (!pathCharMatch('/', '\\'));
+        // Same as calling filenameCmp!(CaseSensitive.yes)(filename1, filename2)
+        assert (filenameCmp("Abc", "abc") < 0);
+        assert (filenameCmp("abc", "Abc") > 0);
     }
 
-    static assert (pathCharMatch('a', 'a'));
-    static assert (!pathCharMatch('a', 'b'));
+    version (Windows)
+    {
+        // Same as calling filenameCmp!(CaseSensitive.no)(filename1, filename2)
+        assert (filenameCmp("Abc", "abc") == 0);
+        assert (filenameCmp("abc", "Abc") == 0);
+        assert (filenameCmp("Abc", "abD") < 0);
+        assert (filenameCmp("abc", "AbB") > 0);
+    }
+    ---
+*/
+long filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
+    @safe //TODO: pure nothrow
+    if (isSomeChar!C1 && isSomeChar!C2)
+{
+    return filenameCmp!(CaseSensitive.osDefault, C1, C2)(filename1, filename2);
+}
+
+/// ditto
+long filenameCmp(CaseSensitive cs, C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
+    @safe //TODO: pure nothrow
+    if (isSomeChar!C1 && isSomeChar!C2)
+{
+    for (;;)
+    {
+        if (filename1.empty) return -(cast(long) !filename2.empty);
+        if (filename2.empty) return  (cast(long) !filename1.empty);
+        auto c = filenameCharCmp!cs(filename1.front, filename2.front);
+        if (c != 0) return c;
+        filename1.popFront();
+        filename2.popFront();
+    }
+    assert (0);
+}
+
+
+unittest
+{
+    assert (filenameCmp!(CaseSensitive.yes)("abc", "abc") == 0);
+    assert (filenameCmp!(CaseSensitive.yes)("abc", "abd") < 0);
+    assert (filenameCmp!(CaseSensitive.yes)("abc", "abb") > 0);
+    assert (filenameCmp!(CaseSensitive.yes)("abc", "abcd") < 0);
+    assert (filenameCmp!(CaseSensitive.yes)("abcd", "abc") > 0);
+    assert (filenameCmp!(CaseSensitive.yes)("Abc", "abc") < 0);
+    assert (filenameCmp!(CaseSensitive.yes)("abc", "Abc") > 0);
+
+    assert (filenameCmp!(CaseSensitive.no)("abc", "abc") == 0);
+    assert (filenameCmp!(CaseSensitive.no)("abc", "abd") < 0);
+    assert (filenameCmp!(CaseSensitive.no)("abc", "abb") > 0);
+    assert (filenameCmp!(CaseSensitive.no)("abc", "abcd") < 0);
+    assert (filenameCmp!(CaseSensitive.no)("abcd", "abc") > 0);
+    assert (filenameCmp!(CaseSensitive.no)("Abc", "abc") == 0);
+    assert (filenameCmp!(CaseSensitive.no)("abc", "Abc") == 0);
+    assert (filenameCmp!(CaseSensitive.no)("Abc", "abD") < 0);
+    assert (filenameCmp!(CaseSensitive.no)("abc", "AbB") > 0);
+
+    version (Posix)   assert (filenameCmp(`abc\def`, `abc/def`) != 0);
+    version (Windows) assert (filenameCmp(`abc\def`, `abc/def`) == 0);
 }
 
 
@@ -1738,7 +1811,7 @@ unittest
     )
 
     Internally individual character comparisons are done calling
-    $(D pathCharMatch()), so its rules apply here too. Note that directory
+    $(D filenameCharCmp()), so its rules apply here too. Note that directory
     separators and dots don't stop a meta-character from matching
     further portions of the path.
 
@@ -1822,7 +1895,7 @@ body
                     pc = pattern[pi];
                     if (pc == ']')
                         break;
-                    if (!anymatch && pathCharMatch(nc, pc))
+                    if (!anymatch && (filenameCharCmp(nc, pc) == 0))
                         anymatch = true;
                     pi++;
                 }
@@ -1879,7 +1952,7 @@ body
             default:
                 if (ni == path.length)
                     return false;
-                if (!pathCharMatch(pc, path[ni]))
+                if (filenameCharCmp(pc, path[ni]) != 0)
                     return false;
                 ni++;
                 break;
@@ -2174,6 +2247,7 @@ version(Windows) enum string linesep = "\r\n";
 version(Posix) enum string linesep = "\n";
 enum string curdir = ".";
 enum string pardir = "..";
+int fcmp(S1, S2)(S1 f1, S2 f2) { return cast(int) filenameCmp(f1, f2); }
 alias extension getExt;
 string getName(string path) { return baseName(stripExtension(path)); }
 alias baseName getBaseName;
@@ -2186,5 +2260,5 @@ alias setExtension addExt;
 alias isAbsolute isabs;
 alias absolutePath rel2abs;
 alias joinPath join;
-alias pathCharMatch fncharmatch;
+bool fncharmatch(dchar a, dchar b) { return filenameCharCmp(a, b) == 0; }
 alias globMatch fnmatch;
