@@ -167,6 +167,16 @@ version(testStdDateTime) unittest
     auto restoredTime = SysTime.fromISOExtString(timeString);
 }
 
+//Verify Examples for core.time.Duration which couldn't be in core.time.
+unittest
+{
+    assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
+           std.datetime.Date(2010, 9, 12));
+
+    assert(std.datetime.Date(2010, 9, 7) - std.datetime.Date(2010, 10, 3) ==
+           dur!"days"(-26));
+}
+
 //Note: There various functions which void as their return type and ref of the
 //      struct type which they're in as a commented out return type. Ideally,
 //      they would return the ref, but there are several dmd bugs which prevent
@@ -572,13 +582,18 @@ public:
             dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
                        internal std time. As $(D DateTime) has no concept of
                        time zone, tz is used as its time zone.
-            fsec     = The fractional seconds portion of the time.
+            fracSec  = The fractional seconds portion of the time.
             tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
                        $(D LocalTime) will be used. The given $(D DateTime) is
                        assumed to be in the given time zone.
+
+        Throws:
+            $(D DateTimeException) if $(D fracSec) is negative.
       +/
-    this(in DateTime dateTime, in FracSec fsec, immutable TimeZone tz = null) nothrow
+    this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null)
     {
+        immutable fracHNSecs = fracSec.hnsecs;
+        enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
         _timezone = tz is null ? LocalTime() : tz;
 
         try
@@ -586,7 +601,7 @@ public:
             immutable dateDiff = (dateTime.date - Date(1, 1, 1)).total!"hnsecs";
             immutable todDiff = (dateTime.timeOfDay - TimeOfDay(0, 0, 0)).total!"hnsecs";
 
-            immutable adjustedTime = dateDiff + todDiff + fsec.hnsecs;
+            immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
             immutable standardTime = _timezone.tzToUTC(adjustedTime);
 
             this(standardTime, _timezone.get);
@@ -620,6 +635,8 @@ public:
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC(), -1);
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC(), -9_999_999);
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC(), -10_000_000);
+
+        assertThrown!DateTimeException(SysTime(DateTime.init, FracSec.from!"hnsecs"(-1), UTC()));
     }
 
     /++
@@ -1944,9 +1961,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             fracSec = The fractional seconds to set this $(D SysTimes)'s
                       fractional seconds to.
+
+        Throws:
+            $(D DateTimeException) if $(D fracSec) is negative.
      +/
-    @property void fracSec(FracSec fracSec) nothrow
+    @property void fracSec(FracSec fracSec)
     {
+        immutable fracHNSecs = fracSec.hnsecs;
+        enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
+
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs);
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
@@ -1959,7 +1982,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
         immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
 
-        hnsecs = fracSec.hnsecs;
+        hnsecs = fracHNSecs;
         hnsecs += convert!("hours", "hnsecs")(hour);
         hnsecs += convert!("minutes", "hnsecs")(minute);
         hnsecs += convert!("seconds", "hnsecs")(second);
@@ -1990,6 +2013,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                 test(st, fracSec, e);
             }
         }
+
+        SysTime st = SysTime(DateTime(2011, 7, 11, 2, 51, 27));
+        assertThrown!DateTimeException(st.fracSec = FracSec.from!"hnsecs"(-1));
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
