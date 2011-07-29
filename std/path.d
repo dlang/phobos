@@ -2305,7 +2305,8 @@ unittest
 
 
 
-/** Performs tilde expansion in paths.
+/** Performs tilde expansion in paths on POSIX systems.
+    On Windows, this function does nothing.
 
     There are two ways of using tilde expansion in a path. One
     involves using the tilde alone or followed by a path separator. In
