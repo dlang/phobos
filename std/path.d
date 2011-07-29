@@ -3,7 +3,7 @@
 /** Proposal for a new $(D std._path).
 
     This module is used to parse path strings. All functions, with the
-    exception of $(D absolutePath()) and $(D expandTilde()), are pure
+    exception of $(D expandTilde()), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any I/O.
     This has the consequence that the module does not make any distinction
