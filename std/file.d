@@ -1538,9 +1538,6 @@ unittest
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
     }
-    else version(OSX)
-    {
-    }
     else version(Posix)
     {
         if("/usr/include".exists)
@@ -2508,9 +2505,6 @@ unittest
             assert(!de.isSymlink);
         }
     }
-    else version(OSX)
-    {
-    }
     else version(Posix)
     {
         if("/usr/include".exists)
@@ -2815,26 +2809,20 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
-    version(OSX)
-    {
-    }
-    else
-    {
-        auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
-        enforce(collectException(mkdir(d)));
-        mkdirRecurse(d);
-        core.sys.posix.unistd.symlink("/tmp/deleteme/a/b/c", "/tmp/deleteme/link");
-        rmdirRecurse("/tmp/deleteme/link");
-        enforce(exists(d));
-        rmdirRecurse("/tmp/deleteme");
-        enforce(!exists("/tmp/deleteme"));
+    auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    enforce(collectException(mkdir(d)));
+    mkdirRecurse(d);
+    core.sys.posix.unistd.symlink("/tmp/deleteme/a/b/c", "/tmp/deleteme/link");
+    rmdirRecurse("/tmp/deleteme/link");
+    enforce(exists(d));
+    rmdirRecurse("/tmp/deleteme");
+    enforce(!exists("/tmp/deleteme"));
 
-        d = "/tmp/deleteme/a/b/c/d/e/f/g";
-        mkdirRecurse(d);
-        std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
-        rmdirRecurse("/tmp/deleteme");
-        enforce(!exists("/tmp/deleteme"));
-    }
+    d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    mkdirRecurse(d);
+    std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
+    rmdirRecurse("/tmp/deleteme");
+    enforce(!exists("/tmp/deleteme"));
 }
 
 unittest
