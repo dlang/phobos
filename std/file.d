@@ -111,6 +111,7 @@ version (Posix)
 
         extern(C) int fstat64(int, struct_stat64*);
         extern(C) int stat64(in char*, struct_stat64*);
+        extern(C) int lstat64(in char*, struct_stat64*);
     }
     else version (FreeBSD)
     {
@@ -1189,18 +1190,10 @@ uint getLinkAttributes(in char[] name)
     {
         return getAttributes(name);
     }
-    else version(OSX)
-    {
-        struct_stat64 lstatbuf = void;
-        cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
-        return lstatbuf.st_mode;
-    }
     else version(Posix)
     {
         struct_stat64 lstatbuf = void;
-
         cenforce(lstat64(toStringz(name), &lstatbuf) == 0, name);
-
         return lstatbuf.st_mode;
     }
 }
@@ -1544,9 +1537,6 @@ unittest
 
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
-    }
-    else version(OSX)
-    {
     }
     else version(Posix)
     {
@@ -2473,16 +2463,8 @@ else version(Posix)
 
             struct_stat64 statbuf = void;
 
-            version (OSX)
-            {
-                enforce(stat64(toStringz(_name), &statbuf) == 0,
-                        "Failed to stat file `" ~ _name ~ "'");
-            }
-            else
-            {
-                enforce(lstat64(toStringz(_name), &statbuf) == 0,
-                        "Failed to stat file `" ~ _name ~ "'");
-            }
+            enforce(lstat64(toStringz(_name), &statbuf) == 0,
+                "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
 
@@ -2522,9 +2504,6 @@ unittest
             assert(!de.isDir);
             assert(!de.isSymlink);
         }
-    }
-    else version(OSX)
-    {
     }
     else version(Posix)
     {
@@ -2830,26 +2809,20 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
-    version(OSX)
-    {
-    }
-    else
-    {
-        auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
-        enforce(collectException(mkdir(d)));
-        mkdirRecurse(d);
-        core.sys.posix.unistd.symlink("/tmp/deleteme/a/b/c", "/tmp/deleteme/link");
-        rmdirRecurse("/tmp/deleteme/link");
-        enforce(exists(d));
-        rmdirRecurse("/tmp/deleteme");
-        enforce(!exists("/tmp/deleteme"));
+    auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    enforce(collectException(mkdir(d)));
+    mkdirRecurse(d);
+    core.sys.posix.unistd.symlink("/tmp/deleteme/a/b/c", "/tmp/deleteme/link");
+    rmdirRecurse("/tmp/deleteme/link");
+    enforce(exists(d));
+    rmdirRecurse("/tmp/deleteme");
+    enforce(!exists("/tmp/deleteme"));
 
-        d = "/tmp/deleteme/a/b/c/d/e/f/g";
-        mkdirRecurse(d);
-        std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
-        rmdirRecurse("/tmp/deleteme");
-        enforce(!exists("/tmp/deleteme"));
-    }
+    d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    mkdirRecurse(d);
+    std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
+    rmdirRecurse("/tmp/deleteme");
+    enforce(!exists("/tmp/deleteme"));
 }
 
 unittest
