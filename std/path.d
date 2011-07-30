@@ -1916,12 +1916,14 @@ enum CaseSensitive : bool
     /// File names are case sensitive
     yes = true,
 
-    /** The default (or most common) setting for the current platform
-        ($(D yes) on POSIX, $(D no) on Windows).
+    /** The default (or most common) setting for the current platform.
+        That is, $(D no) on Windows and Mac OS X, and $(D yes) on all
+        POSIX systems except OS X (Linux, *BSD, etc.).
     */
     osDefault = osDefaultCaseSensitivity
 }
 version (Windows)    private enum osDefaultCaseSensitivity = false;
+else version (OSX)   private enum osDefaultCaseSensitivity = false;
 else version (Posix) private enum osDefaultCaseSensitivity = true;
 else static assert (0);
 
