@@ -2,19 +2,25 @@
 
 /** Proposal for a new $(D std._path).
 
-    This module is used to parse path strings. All functions, with the
+    This module is used to parse _path strings. All functions, with the
     exception of $(D expandTilde()), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any I/O.
     This has the consequence that the module does not make any distinction
-    between a path that points to a directory and a path that points to a
+    between a _path that points to a directory and a _path that points to a
     file.  To differentiate between these cases, use $(D  std.file.isDir()).
 
-    Note that on Windows, both the backslash (\) and the slash (/) are
-    in principle valid directory separators.  This module treats them
+    Note that on Windows, both the backslash ($(D '\')) and the slash ($(D '/'))
+    are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
-    added, a backslash will be used.  Furthermore, the $(D normalize())
-    function will replace all slashes with backslashes on this platform.
+    added, a backslash will be used.  Furthermore, the $(D buildNormalizedPath)
+    and $(D normalize()) functions will replace all slashes with backslashes
+    on this platform.
+
+    In general, the functions in this module assume that the input paths
+    are well-formed.  (That is, they should not contain invalid characters,
+    they should follow the file system's _path format, etc.)  The result
+    of calling a function on an ill-formed _path is undefined.
 
     Authors:
         Lars Tandle Kyllingstad,
