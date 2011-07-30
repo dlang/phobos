@@ -4,6 +4,7 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
            character type and of any type of mutability.)
       $(LI Added symlink and readLink to std.file for Posix systems.)
+      $(LI Values for GDC and LDC were added to std.compiler.Vendor.)
      )
 
     $(LIBBUGSFIXED
