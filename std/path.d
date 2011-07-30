@@ -1384,12 +1384,12 @@ unittest
 auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
-    struct PathSplitter
+    static struct PathSplitter
     {
     @safe pure nothrow:
-        @property empty() { return _empty; }
+        @property empty() const { return _empty; }
 
-        @property front()
+        @property front() const
         {
             assert (!empty, "PathSplitter: called front() on empty range");
             return _front;
@@ -1420,7 +1420,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
         }
 
-        @property back()
+        @property back() const
         {
             assert (!empty, "PathSplitter: called back() on empty range");
             return _back;
