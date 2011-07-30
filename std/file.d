@@ -1534,8 +1534,8 @@ unittest
             assert(!fakeSymFile.isSymlink);
 
             assert(!fakeSymFile.isSymlink);
-            assert(!attrIsSymLink(getAttributes(fakeSymFile)));
-            assert(!attrIsSymLink(getLinkAttributes(fakeSymFile)));
+            assert(!attrIsSymlink(getAttributes(fakeSymFile)));
+            assert(!attrIsSymlink(getLinkAttributes(fakeSymFile)));
 
             assert(isFile(getAttributes(fakeSymFile)));
             assert(isFile(getLinkAttributes(fakeSymFile)));
