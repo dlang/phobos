@@ -220,7 +220,7 @@ private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow
+C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -240,7 +240,7 @@ C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow
 }
 
 /// ditto
-C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow
+C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow (because of chomp() and the other baseName())
     if (isSomeChar!C && isSomeChar!C1)
 {
     auto p1 = baseName(path);
@@ -321,7 +321,7 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)  @trusted //TODO: @safe pure nothrow
+C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
     if (isSomeChar!C)
 {
     if (path.empty) return to!(typeof(return))(".");
@@ -485,7 +485,7 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow
+C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow (because of stripLeft())
     if (isSomeChar!C)
 {
     version (Windows)
@@ -1741,7 +1741,7 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 */
 string absolutePath(string path, string base = getcwd())
-    // TODO: @safe pure nothrow
+    @safe // TODO: pure (because of buildPath())
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
@@ -2038,7 +2038,7 @@ unittest
     ---
 */
 long filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
-    @safe //TODO: pure nothrow
+    @safe //TODO: pure nothrow (because of the other filenameCmp)
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     return filenameCmp!(CaseSensitive.osDefault, C1, C2)(filename1, filename2);
@@ -2046,7 +2046,7 @@ long filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
 
 /// ditto
 long filenameCmp(CaseSensitive cs, C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
-    @safe //TODO: pure nothrow
+    @safe //TODO: pure nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     for (;;)
@@ -2143,7 +2143,8 @@ unittest
     }
     -----
  */
-bool globMatch(const(char)[] path, const(char)[] pattern)  @safe nothrow //TODO: pure
+bool globMatch(const(char)[] path, const(char)[] pattern)  @safe nothrow
+    //TODO: pure (because of balancedParens())
 in
 {
     // Verify that pattern[] is valid
