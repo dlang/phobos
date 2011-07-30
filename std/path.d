@@ -2143,8 +2143,9 @@ unittest
     }
     -----
  */
-bool globMatch(const(char)[] path, const(char)[] pattern)  @safe nothrow
+bool globMatch(C)(const(C)[] path, const(C)[] pattern)  @safe nothrow
     //TODO: pure (because of balancedParens())
+    if (isSomeChar!C)
 in
 {
     // Verify that pattern[] is valid
@@ -2157,7 +2158,7 @@ body
 
     foreach (pi; 0 .. pattern.length)
     {
-        char pc = pattern[pi];
+        C pc = pattern[pi];
         switch (pc)
         {
             case '*':
@@ -2267,39 +2268,39 @@ unittest
     version (Windows) assert(globMatch("foo", "Foo"));
     version (Posix) assert(!globMatch("foo", "Foo"));
     assert(globMatch("foo", "*"));
-    assert(globMatch("foo.bar", "*"));
-    assert(globMatch("foo.bar", "*.*"));
+    assert(globMatch("foo.bar"w, "*"w));
+    assert(globMatch("foo.bar"d, "*.*"d));
     assert(globMatch("foo.bar", "foo*"));
-    assert(globMatch("foo.bar", "f*bar"));
-    assert(globMatch("foo.bar", "f*b*r"));
+    assert(globMatch("foo.bar"w, "f*bar"w));
+    assert(globMatch("foo.bar"d, "f*b*r"d));
     assert(globMatch("foo.bar", "f???bar"));
-    assert(globMatch("foo.bar", "[fg]???bar"));
-    assert(globMatch("foo.bar", "[!gh]*bar"));
+    assert(globMatch("foo.bar"w, "[fg]???bar"w));
+    assert(globMatch("foo.bar"d, "[!gh]*bar"d));
 
     assert(!globMatch("foo", "bar"));
-    assert(!globMatch("foo", "*.*"));
-    assert(!globMatch("foo.bar", "f*baz"));
+    assert(!globMatch("foo"w, "*.*"w));
+    assert(!globMatch("foo.bar"d, "f*baz"d));
     assert(!globMatch("foo.bar", "f*b*x"));
     assert(!globMatch("foo.bar", "[gh]???bar"));
-    assert(!globMatch("foo.bar", "[!fg]*bar"));
-    assert(!globMatch("foo.bar", "[fg]???baz"));
+    assert(!globMatch("foo.bar"w, "[!fg]*bar"w));
+    assert(!globMatch("foo.bar"d, "[fg]???baz"d));
 
     assert(globMatch("foo.bar", "{foo,bif}.bar"));
-    assert(globMatch("bif.bar", "{foo,bif}.bar"));
+    assert(globMatch("bif.bar"w, "{foo,bif}.bar"w));
 
-    assert(globMatch("bar.foo", "bar.{foo,bif}"));
+    assert(globMatch("bar.foo"d, "bar.{foo,bif}"d));
     assert(globMatch("bar.bif", "bar.{foo,bif}"));
 
-    assert(globMatch("bar.fooz", "bar.{foo,bif}z"));
-    assert(globMatch("bar.bifz", "bar.{foo,bif}z"));
+    assert(globMatch("bar.fooz"w, "bar.{foo,bif}z"w));
+    assert(globMatch("bar.bifz"d, "bar.{foo,bif}z"d));
 
     assert(globMatch("bar.foo", "bar.{biz,,baz}foo"));
-    assert(globMatch("bar.foo", "bar.{biz,}foo"));
-    assert(globMatch("bar.foo", "bar.{,biz}foo"));
+    assert(globMatch("bar.foo"w, "bar.{biz,}foo"w));
+    assert(globMatch("bar.foo"d, "bar.{,biz}foo"d));
     assert(globMatch("bar.foo", "bar.{}foo"));
 
-    assert(globMatch("bar.foo", "bar.{ar,,fo}o"));
-    assert(globMatch("bar.foo", "bar.{,ar,fo}o"));
+    assert(globMatch("bar.foo"w, "bar.{ar,,fo}o"w));
+    assert(globMatch("bar.foo"d, "bar.{,ar,fo}o"d));
     assert(globMatch("bar.o", "bar.{,ar,fo}o"));
 
     static assert(globMatch("foo.bar", "[!gh]*bar"));
