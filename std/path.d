@@ -858,36 +858,22 @@ version (unittest)
     }
     ---
 */
-immutable(Unqual!C)[] buildPath(C, Strings...)(in C[] path, in Strings morePaths)
-    @trusted // (BUG 4850, 5304) pure  (BUG 5700) nothrow
-    if (compatibleStrings!(C[], Strings))
+immutable(C)[] buildPath(C)(const(C)[][] paths...)
+    //TODO: @safe pure nothrow (because of reduce() and to())
+    if (isSomeChar!C)
 {
-    // Exactly one path component
-    static if (Strings.length == 0)
+    static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
+        @trusted //TODO: pure nothrow (because of to())
     {
-        return to!(typeof(return))(path);
-    }
-
-    // Exactly two path components
-    else static if (Strings.length == 1)
-    {
-        alias path path1;
-        alias morePaths[0] path2;
-        if (path2.empty) return to!(typeof(return))(path1);
-        if (path1.empty) return to!(typeof(return))(path2);
-        if (isRooted(path2)) return to!(typeof(return))(path2);
-
-        if (isDirSeparator(path1[$-1]) || isDirSeparator(path2[0]))
-            return cast(typeof(return))(path1 ~ path2);
+        if (rhs.empty) return to!(typeof(return))(lhs);
+        if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
+        if (isDirSeparator(lhs[$-1]) || isDirSeparator(rhs[0]))
+            return cast(typeof(return))(lhs ~ rhs);
         else
-            return cast(typeof(return))(path1 ~ dirSeparator ~ path2);
+            return cast(typeof(return))(lhs ~ dirSeparator ~ rhs);
     }
 
-    // More than two path components
-    else
-    {
-        return buildPath(buildPath(path, morePaths[0]), morePaths[1 .. $]);
-    }
+    return to!(typeof(return))(reduce!joinPaths(paths));
 }
 
 
@@ -1741,7 +1727,7 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 */
 string absolutePath(string path, string base = getcwd())
-    @safe // TODO: pure (because of buildPath())
+    // TODO: @safe (BUG 6405) pure (because of buildPath())
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
