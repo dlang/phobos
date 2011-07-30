@@ -2498,7 +2498,7 @@ auto takeWhile(alias pred, R)(R range)
     if(isInputRange!R &&
        is(typeof(unaryFun!pred(range.front))))
 {
-    static struct Result
+    struct Result
     {
         @property bool empty()
         {
@@ -2554,6 +2554,13 @@ unittest
     assert(takeWhile!(std.uni.isWhite)("").empty);
     assert(equal(takeWhile!"a < 3"(filter!"true"([0, 2, 1, 5, 0, 3])), [0, 2, 1]));
 
+    dchar max = 'q';
+    bool del(dchar c)
+    {
+        return c < max;
+    }
+    assert(equal(takeWhile!del("hello world"), "hello "));
+
     auto r =  takeWhile!(std.uni.isAlpha)("hello world");
     static assert(isInputRange!(typeof(r)));
     static assert(isForwardRange!(typeof(r)));
@@ -2567,15 +2574,23 @@ unittest
     Pops $(D n) elements off of the given range and returns it. If the length of
     the given range is less than $(D n) than an empty range is returned.
 
-    The main reason to use this instead of $(LREF popFrontN) is so that you can
-    pop the elements off and pass the resulting range in one operation, allowing
-    for a more functional style of programming.
+    The main reason to use $(D drop) instead of $(LREF popFrontN) is so that you
+    can pop the elements off and pass the resulting range in one operation,
+    allowing for a more functional style of programming. However, this means
+    that you don't know exactly how many elements were actually popped in the
+    case where the range had fewer than $(D n) elements (unless you got its
+    length first, which isn't an effcient thing to do for all ranges). Also,
+    because it doesn't take the range by reference (unlike $(LREF popFrontN)),
+    you can pass the results of other functions to it directly. But that also
+    means that it does not affect the original range as long as it's a value
+    type.
 
     Examples:
 --------------------
 assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
 assert(drop("hello world", 6) == "world");
 assert(drop("hello world", 50).empty);
+assert(equal(drop(take("hello world", 6), 3), "lo "));
 --------------------
   +/
 R drop(R)(R range, size_t n)
@@ -2591,6 +2606,7 @@ unittest
     assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
     assert(drop("hello world", 6) == "world");
     assert(drop("hello world", 50).empty);
+    assert(equal(drop(take("hello world", 6), 3), "lo "));
 }
 
 unittest
@@ -2601,8 +2617,8 @@ unittest
 
 
 /++
-    Pops elements off of the given range until $(D pred) fails. Then the
-    resulting range is returned.
+    Pops elements off of the given range until $(D pred) fails. The resulting
+    range is returned.
 
     Examples:
 --------------------
@@ -2634,6 +2650,13 @@ unittest
 unittest
 {
     assert(dropWhile!(std.uni.isWhite)("").empty);
+
+    dchar max = 'q';
+    bool del(dchar c)
+    {
+        return c < max;
+    }
+    assert(equal(dropWhile!del("hello world"), "world"));
 }
 
 
