@@ -2117,20 +2117,28 @@ unittest
     assert (globMatch("bar.fooz", "bar.{foo,bif}z"));
     assert (globMatch("bar.bifz", "bar.{foo,bif}z"));
 
-    version (Windows)
+    version (Windows) // or version (OSX)
     {
         assert (globMatch("foo", "Foo"));
         assert (globMatch("Goo.bar", "[fg]???bar"));
     }
-    version (Posix)
+    version (linux)
     {
         assert (!globMatch("foo", "Foo"));
         assert (!globMatch("Goo.bar", "[fg]???bar"));
     }
     -----
  */
-bool globMatch(C)(const(C)[] path, const(C)[] pattern)  @safe nothrow
-    //TODO: pure (because of balancedParens())
+bool globMatch(C)(const(C)[] path, const(C)[] pattern)
+    @safe nothrow //TODO: pure (because of balancedParens())
+    if (isSomeChar!C)
+{
+    return globMatch!(CaseSensitive.osDefault, C)(path, pattern);
+}
+
+/// ditto
+bool globMatch(CaseSensitive cs, C)(const(C)[] path, const(C)[] pattern)
+    @safe nothrow //TODO: pure (because of balancedParens())
     if (isSomeChar!C)
 in
 {
@@ -2152,7 +2160,7 @@ body
                     return true;
                 foreach (j; ni .. path.length)
                 {
-                    if (globMatch(path[j .. path.length],
+                    if (globMatch!(cs, C)(path[j .. path.length],
                                     pattern[pi + 1 .. pattern.length]))
                         return true;
                 }
@@ -2182,7 +2190,7 @@ body
                     pc = pattern[pi];
                     if (pc == ']')
                         break;
-                    if (!anymatch && (filenameCharCmp(nc, pc) == 0))
+                    if (!anymatch && (filenameCharCmp!cs(nc, pc) == 0))
                         anymatch = true;
                     pi++;
                 }
@@ -2213,7 +2221,7 @@ body
 
                     if (pi0 == pi)
                     {
-                        if (globMatch(path[ni..$], pattern[piRemain..$]))
+                        if (globMatch!(cs, C)(path[ni..$], pattern[piRemain..$]))
                         {
                             return true;
                         }
@@ -2221,7 +2229,7 @@ body
                     }
                     else
                     {
-                        if (globMatch(path[ni..$],
+                        if (globMatch!(cs, C)(path[ni..$],
                                         pattern[pi0..pi-1]
                                         ~ pattern[piRemain..$]))
                         {
@@ -2239,7 +2247,7 @@ body
             default:
                 if (ni == path.length)
                     return false;
-                if (filenameCharCmp(pc, path[ni]) != 0)
+                if (filenameCharCmp!cs(pc, path[ni]) != 0)
                     return false;
                 ni++;
                 break;
