@@ -18,7 +18,7 @@
  */
 module std.compiler;
 
-const
+immutable
 {
     /// Vendor specific string naming the compiler, for example: "Digital Mars D".
     string name = __VENDOR__;
