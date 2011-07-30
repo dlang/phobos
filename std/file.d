@@ -3320,6 +3320,7 @@ unittest
     assert(de.linkAttributes == getLinkAttributes(path));
 
     auto now = Clock.currTime();
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
     assert(de.timeLastAccessed > before);
     assert(de.timeLastAccessed < now);
     assert(de.timeLastModified > before);
@@ -3369,6 +3370,7 @@ unittest
     assert(de.linkAttributes == getLinkAttributes(path));
 
     auto now = Clock.currTime();
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
     assert(de.timeLastAccessed > before);
     assert(de.timeLastAccessed < now);
     assert(de.timeLastModified > before);
@@ -3421,6 +3423,7 @@ version(linux) unittest
     assert(de.linkAttributes == getLinkAttributes(path));
 
     auto now = Clock.currTime();
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
     assert(de.timeLastAccessed > before);
     assert(de.timeLastAccessed < now);
     assert(de.timeLastModified > before);
@@ -3465,6 +3468,7 @@ version(linux) unittest
     assert(de.linkAttributes == getLinkAttributes(path));
 
     auto now = Clock.currTime();
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
     assert(de.timeLastAccessed > before);
     assert(de.timeLastAccessed < now);
     assert(de.timeLastModified > before);
