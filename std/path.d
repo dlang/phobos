@@ -587,7 +587,7 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
 
 
 
-/** Get the extension part of a file name.
+/** Get the _extension part of a file name.
 
     Examples:
     ---
