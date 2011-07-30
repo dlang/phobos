@@ -1921,10 +1921,10 @@ else static assert (0);
 
     This function can perform a case-sensitive or a case-insensitive
     comparison.  This is controlled through the $(D cs) template parameter
-    which, if not specified, defaults to $(D CaseSensitive.yes) on POSIX
-    and $(D CaseSensitive.no) on Windows.
+    which, if not specified, is given by
+    $(LINK2 #CaseSensitive,$(D CaseSensitive.osDefault)).
 
-    On Windows, the backslash and slash characters ($(D \) and $(D /))
+    On Windows, the backslash and slash characters ($(D '\') and $(D '/'))
     are considered equal.
 
     Examples:
@@ -1933,13 +1933,12 @@ else static assert (0);
     assert (filenameCharCmp('a', 'b') < 0);
     assert (filenameCharCmp('b', 'a') > 0);
 
-    version (Posix)
+    version (linux)
     {
         // Same as calling filenameCharCmp!(CaseSensitive.yes)(a, b)
         assert (filenameCharCmp('A', 'a') < 0);
         assert (filenameCharCmp('a', 'A') > 0);
     }
-
     version (Windows)
     {
         // Same as calling filenameCharCmp!(CaseSensitive.no)(a, b)
@@ -1983,7 +1982,6 @@ unittest
 
     version (Posix)   assert (filenameCharCmp('\\', '/') != 0);
     version (Windows) assert (filenameCharCmp('\\', '/') == 0);
-
 }
 
 
@@ -1996,7 +1994,9 @@ unittest
 
     Individual characters are compared using $(D filenameCharCmp!cs),
     where $(D cs) is an optional template parameter determining whether
-    the comparison is case sensitive or not.
+    the comparison is case sensitive or not.  See the
+    $(LINK2 #filenameCharCmp,$(D filenameCharCmp) documentation)
+    for details.
 
     Examples:
     ---
@@ -2006,13 +2006,12 @@ unittest
     assert (filenameCmp("abc", "abcd") < 0);
     assert (filenameCmp("abcd", "abc") > 0);
 
-    version (Posix)
+    version (linux)
     {
         // Same as calling filenameCmp!(CaseSensitive.yes)(filename1, filename2)
         assert (filenameCmp("Abc", "abc") < 0);
         assert (filenameCmp("abc", "Abc") > 0);
     }
-
     version (Windows)
     {
         // Same as calling filenameCmp!(CaseSensitive.no)(filename1, filename2)
@@ -2095,8 +2094,13 @@ unittest
          $(TD Matches either of the specified strings.))
     )
 
-    Internally individual character comparisons are done calling
-    $(D filenameCharCmp()), so its rules apply here too. Note that directory
+    Individual characters are compared using $(D filenameCharCmp!cs),
+    where $(D cs) is an optional template parameter determining whether
+    the comparison is case sensitive or not.  See the
+    $(LINK2 #filenameCharCmp,$(D filenameCharCmp) documentation)
+    for details.
+
+    Note that directory
     separators and dots don't stop a meta-character from matching
     further portions of the path.
 
@@ -2117,13 +2121,15 @@ unittest
     assert (globMatch("bar.fooz", "bar.{foo,bif}z"));
     assert (globMatch("bar.bifz", "bar.{foo,bif}z"));
 
-    version (Windows) // or version (OSX)
+    version (Windows)
     {
+        // Same as calling globMatch!(CaseSensitive.no)(path, pattern)
         assert (globMatch("foo", "Foo"));
         assert (globMatch("Goo.bar", "[fg]???bar"));
     }
     version (linux)
     {
+        // Same as calling globMatch!(CaseSensitive.yes)(path, pattern)
         assert (!globMatch("foo", "Foo"));
         assert (!globMatch("Goo.bar", "[fg]???bar"));
     }
@@ -2259,8 +2265,9 @@ body
 
 unittest
 {
-    version (Windows) assert(globMatch("foo", "Foo"));
-    version (Posix) assert(!globMatch("foo", "Foo"));
+    assert (globMatch!(CaseSensitive.no)("foo", "Foo"));
+    assert (!globMatch!(CaseSensitive.yes)("foo", "Foo"));
+
     assert(globMatch("foo", "*"));
     assert(globMatch("foo.bar"w, "*"w));
     assert(globMatch("foo.bar"d, "*.*"d));
