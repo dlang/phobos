@@ -1,6 +1,8 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Scheduled for deprecation. Please use core.cpuid instead.)
+ *
  * Identify the characteristics of the host CPU.
  *
  * Implemented according to:
@@ -45,6 +47,7 @@ module std.cpuid;
 
 import std.string;
 import std.conv;
+private import core.cpuid;
 
 version(D_InlineAsm_X86)
 {
@@ -75,41 +78,41 @@ version(D_InlineAsm_X86)
     }
 
     /// Returns vendor string
-    string vendor()             {return vendorStr.idup;} // todo: optimize
+    alias core.cpuid.vendor vendor;
     /// Returns processor string
-    string processor()          {return processorStr;}
+    alias core.cpuid.processor processor;
 
     /// Is MMX supported?
-    bool mmx()                  {return (flags&MMX_BIT)!=0;}
+    alias core.cpuid.mmx mmx;
     /// Is FXSR supported?
-    bool fxsr()                 {return (flags&FXSR_BIT)!=0;}
+    alias core.cpuid.hasFxsr fxsr;
     /// Is SSE supported?
-    bool sse()                  {return (flags&SSE_BIT)!=0;}
+    alias core.cpuid.sse sse;
     /// Is SSE2 supported?
-    bool sse2()                 {return (flags&SSE2_BIT)!=0;}
+    alias core.cpuid.sse2 sse2;
     /// Is SSE3 supported?
-    bool sse3()                 {return (misc&SSE3_BIT)!=0;}
+    alias core.cpuid.sse3 sse3;
     /// Is SSSE3 supported?
-    bool ssse3()                {return (misc&SSSE3_BIT)!=0;}
+    alias core.cpuid.ssse3 ssse3;
 
     /// Is AMD 3DNOW supported?
-    bool amd3dnow()             {return (exflags&AMD_3DNOW_BIT)!=0;}
+    alias core.cpuid.amd3dnow amd3dnow;
     /// Is AMD 3DNOW Ext supported?
-    bool amd3dnowExt()          {return (exflags&AMD_3DNOW_EXT_BIT)!=0;}
+    alias core.cpuid.amd3dnowExt amd3dnowExt;
     /// Is AMD MMX supported?
-    bool amdMmx()               {return (exflags&AMD_MMX_BIT)!=0;}
+    alias core.cpuid.amdMmx amdMmx;
 
     /// Is this an Intel Architecture IA64?
-    bool ia64()                 {return (flags&IA64_BIT)!=0;}
+    alias core.cpuid.isItanium ia64;
     /// Is this an AMD 64?
-    bool amd64()                {return (exflags&AMD64_BIT)!=0;}
+    alias core.cpuid.isX86_64 amd64;
 
     /// Is hyperthreading supported?
-    bool hyperThreading()       {return (flags&HTT_BIT)!=0;}
+    alias core.cpuid.hyperThreading hyperThreading;
     /// Returns number of threads per CPU
-    uint threadsPerCPU()        {return maxThreads;}
+    alias core.cpuid.threadsPerCPU threadsPerCPU;
     /// Returns number of cores in CPU
-    uint coresPerCPU()          {return maxCores;}
+    alias core.cpuid.coresPerCPU coresPerCPU;
 
     /// Is this an Intel processor?
     bool intel()                {return manufac==INTEL;}
@@ -117,94 +120,30 @@ version(D_InlineAsm_X86)
     bool amd()                  {return manufac==AMD;}
 
     /// Returns stepping
-    uint stepping()             {return _stepping;}
+    uint stepping()             {return core.cpuid.stepping;}
     /// Returns model
-    uint model()                {return _model;}
+    uint model()                {return core.cpuid.model;}
     /// Returns family
-    uint family()               {return _family;}
-    //uint processorType()      {return (signature>>>12)&0x3;}
+    uint family()               {return core.cpuid.family;}
 
     shared static this()
     {
-        getVendorString();
-        getProcessorString();
-        getFeatureFlags();
-
-        // stepping / family / model
-        _stepping = signature&0xF;
-        uint fbase = (signature>>>8)&0xF;
-        uint fex = (signature>>>20)&0xFF;
-        uint mbase = (signature>>>4)&0xF;
-        uint mex = (signature>>>16)&0xF;
-
-        // vendor specific
-        void function() threadFn;
-        switch(vendorStr)
+        switch (vendor())
         {
         case "GenuineIntel":
             manufac = INTEL;
-            threadFn = &getThreadingIntel;
-            if (fbase == 0xF)
-                _family = fbase+fex;
-            else
-                _family = fbase;
-            if (_family == 0x6 || _family == 0xF)
-                _model = mbase+(mex<<4);
-            else
-                _model = mbase;
             break;
 
         case "AuthenticAMD":
             manufac = AMD;
-            threadFn = &getThreadingAMD;
-            if (fbase < 0xF)
-            {
-                _family = fbase;
-                _model = mbase;
-            }
-            else
-            {
-                _family = fbase+fex;
-                _model = mbase+(mex<<4);
-            }
             break;
 
         default:
             manufac = OTHER;
         }
-
-        // threading details
-        if (hyperThreading && threadFn !is null)
-        {
-            threadFn();
-        }
     }
 
-private:
-    // feature flags
-    enum : uint
-    {
-        MMX_BIT = 1<<23,
-        FXSR_BIT = 1<<24,
-        SSE_BIT = 1<<25,
-        SSE2_BIT = 1<<26,
-        HTT_BIT = 1<<28,
-        IA64_BIT = 1<<30
-    }
-    // feature flags misc
-    enum : uint
-    {
-        SSE3_BIT = 1,
-        SSSE3_BIT = 1<<9
-    }
-    // extended feature flags
-    enum : uint
-    {
-        AMD_MMX_BIT = 1<<22,
-        AMD64_BIT = 1<<29,
-        AMD_3DNOW_EXT_BIT = 1<<30,
-        AMD_3DNOW_BIT = 1<<31
-    }
+    private:
     // manufacturer
     enum
     {
@@ -215,165 +154,7 @@ private:
 
     __gshared
     {
-    uint flags, misc, exflags, apic, signature;
-    uint _stepping, _model, _family;
-
-    char[12] vendorStr = 0;
-    string processorStr = "";
-
-    uint maxThreads=1;
-    uint maxCores=1;
     uint manufac=OTHER;
-    }
-
-    /* **
-     * fetches the cpu vendor string
-     */
-    private void getVendorString()
-    {
-        char* dst = vendorStr.ptr;
-        // puts the vendor string into dst
-        asm
-        {
-            mov EAX, 0                  ;
-            cpuid                       ;
-            mov EAX, dst                ;
-            mov [EAX], EBX              ;
-            mov [EAX+4], EDX            ;
-            mov [EAX+8], ECX            ;
-        }
-    }
-
-    private void getProcessorString()
-    {
-        char[48] buffer;
-        char* dst = buffer.ptr;
-        // puts the processor string into dst
-        asm
-        {
-            mov EAX, 0x8000_0000        ;
-            cpuid                       ;
-            cmp EAX, 0x8000_0004        ;
-            jb PSLabel                  ; // no support
-            push EDI                    ;
-            mov EDI, dst                ;
-            mov EAX, 0x8000_0002        ;
-            cpuid                       ;
-            mov [EDI], EAX              ;
-            mov [EDI+4], EBX            ;
-            mov [EDI+8], ECX            ;
-            mov [EDI+12], EDX           ;
-            mov EAX, 0x8000_0003        ;
-            cpuid                       ;
-            mov [EDI+16], EAX           ;
-            mov [EDI+20], EBX           ;
-            mov [EDI+24], ECX           ;
-            mov [EDI+28], EDX           ;
-            mov EAX, 0x8000_0004        ;
-            cpuid                       ;
-            mov [EDI+32], EAX           ;
-            mov [EDI+36], EBX           ;
-            mov [EDI+40], ECX           ;
-            mov [EDI+44], EDX           ;
-            pop EDI                     ;
-        PSLabel:                        ;
-        }
-
-        if (buffer[0] == char.init) // no support
-            return;
-
-        // seems many intel processors prepend whitespace
-        processorStr = std.string.strip(to!string(dst)).idup;
-    }
-
-    private void getFeatureFlags()
-    {
-        uint f,m,e,a,s;
-        asm
-        {
-            mov EAX, 0                  ;
-            cpuid                       ;
-            cmp EAX, 1                  ;
-            jb FeatLabel                ; // no support
-            mov EAX, 1                  ;
-            cpuid                       ;
-            mov f, EDX                  ;
-            mov m, ECX                  ;
-            mov a, EBX                  ;
-            mov s, EAX                  ;
-
-        FeatLabel:                      ;
-            mov EAX, 0x8000_0000        ;
-            cpuid                       ;
-            cmp EAX, 0x8000_0001        ;
-            jb FeatLabel2               ; // no support
-            mov EAX, 0x8000_0001        ;
-            cpuid                       ;
-            mov e, EDX                  ;
-
-        FeatLabel2:
-            ;
-        }
-        flags = f;
-        misc = m;
-        exflags = e;
-        apic = a;
-        signature = s;
-    }
-
-    private void getThreadingIntel()
-    {
-        uint n;
-        ubyte b = 0;
-        asm
-        {
-            mov EAX, 0                  ;
-            cpuid                       ;
-            cmp EAX, 4                  ;
-            jb IntelSingle              ;
-            mov EAX, 4                  ;
-            mov ECX, 0                  ;
-            cpuid                       ;
-            mov n, EAX                  ;
-            mov b, 1                    ;
-        IntelSingle:                    ;
-        }
-        if (b != 0)
-        {
-            maxCores = ((n>>>26)&0x3F)+1;
-            maxThreads = (apic>>>16)&0xFF;
-        }
-        else
-        {
-            maxCores = maxThreads = 1;
-        }
-    }
-
-    private void getThreadingAMD()
-    {
-        ubyte n;
-        ubyte b = 0;
-        asm
-        {
-            mov EAX, 0x8000_0000        ;
-            cpuid                       ;
-            cmp EAX, 0x8000_0008        ;
-            jb AMDSingle                ;
-            mov EAX, 0x8000_0008        ;
-            cpuid                       ;
-            mov n, CL                   ;
-            mov b, 1                    ;
-        AMDSingle:                      ;
-        }
-        if (b != 0)
-        {
-            maxCores = n+1;
-            maxThreads = (apic>>>16)&0xFF;
-        }
-        else
-        {
-            maxCores = maxThreads = 1;
-        }
     }
 }
 else
