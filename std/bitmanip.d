@@ -24,16 +24,18 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
+import std.traits;
 
-string myToStringx(ulong n)
+
+private string myToStringx(ulong n)
 {   enum s = "0123456789";
     if (n < 10)
-	return s[cast(size_t)n..cast(size_t)n+1];
+    return s[cast(size_t)n..cast(size_t)n+1];
     else
-	return myToStringx(n / 10) ~ myToStringx(n % 10);
+    return myToStringx(n / 10) ~ myToStringx(n % 10);
 }
 
-string myToString(ulong n)
+private string myToString(ulong n)
 {
     return myToStringx(n) ~ (n > uint.max ? "UL" : "U");
 }
@@ -1243,4 +1245,494 @@ else
         assert(c[1] == 1);
         assert(c[2] == 0);
     }
+}
+
+
+/++
+    Swaps the endianness of the given integral value or character.
+  +/
+T swapEndian(T)(T val) @safe pure nothrow
+    if(isIntegral!T || isSomeChar!T)
+{
+    static if(val.sizeof == 1)
+        return val;
+    else static if(isUnsigned!T)
+        return swapEndianImpl(val);
+    else static if(isIntegral!T)
+        return cast(T)swapEndianImpl(cast(Unsigned!T) val);
+    else static if(is(Unqual!T == wchar))
+        return cast(T)swapEndian(cast(ushort)val);
+    else static if(is(Unqual!T == dchar))
+        return cast(T)swapEndian(cast(uint)val);
+    else
+        static assert(0, T.stringof ~ " unsupported by swapEndian.");
+}
+
+private ushort swapEndianImpl(ushort val) @safe pure nothrow
+{
+    return ((val & 0xff00U) >> 8) |
+           ((val & 0x00ffU) << 8);
+}
+
+private uint swapEndianImpl(uint val) @trusted pure nothrow
+{
+    return bswap(val);
+}
+
+private ulong swapEndianImpl(ulong val) @trusted pure nothrow
+{
+    immutable ulong res = bswap(cast(uint)val);
+    return res << 32 | bswap(cast(uint)(val >> 32));
+}
+
+unittest
+{
+    import std.stdio;
+    import std.typetuple;
+
+    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    {
+        scope(failure) writefln("Failed type: %s", T.stringof);
+        T val;
+        const T cval;
+        immutable T ival;
+
+        assert(swapEndian(swapEndian(val)) == val);
+        assert(swapEndian(swapEndian(cval)) == cval);
+        assert(swapEndian(swapEndian(ival)) == ival);
+        assert(swapEndian(swapEndian(T.min)) == T.min);
+        assert(swapEndian(swapEndian(T.max)) == T.max);
+
+        foreach(i; 2 .. 10)
+        {
+            immutable T maxI = cast(T)(T.max / i);
+            immutable T minI = cast(T)(T.min / i);
+
+            assert(swapEndian(swapEndian(maxI)) == maxI);
+
+            static if(isSigned!T)
+                assert(swapEndian(swapEndian(minI)) == minI);
+        }
+
+        static if(isSigned!T)
+            assert(swapEndian(swapEndian(cast(T)0)) == 0);
+
+        static if(T.sizeof > 1 && isUnsigned!T)
+        {
+            T left = 0xffU;
+            left <<= (T.sizeof - 1) * 8;
+            T right = 0xffU;
+
+            for(size_t i = 1; i < T.sizeof; ++i)
+            {
+                assert(swapEndian(left) == right);
+                assert(swapEndian(right) == left);
+                left >>= 8;
+                right <<= 8;
+            }
+        }
+    }
+}
+
+
+private union EndianSwapper(T)
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+{
+    Unqual!T value;
+    ubyte[T.sizeof] array;
+
+    static if(is(Unqual!T == float))
+        uint  intValue;
+    else static if(is(Unqual!T == double))
+        ulong intValue;
+
+}
+
+
+/++
+    Converts the given value from the native endianness to big endian and
+    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+
+    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    as a regular one (and in the case of floating point values, it's necessary,
+    because the FPU will mess up any swapped floating point values. So, you
+    can't actually have swapped floating point values as floating point values).
+
+    $(D real) is not supported, because its size is implementation-dependent
+    and therefore could vary from machine to machine (which could make it
+    unusable if you tried to transfer it to another machine).
+
+        Examples:
+--------------------
+int i = 12345;
+ubyte[4] swappedI = nativeToBigEndian(i);
+assert(i == bigEndianToNative!int(swappedI));
+
+double d = 123.45;
+ubyte[8] swappedD = nativeToBigEndian(d);
+assert(d == bigEndianToNative!double(swappedD));
+--------------------
+  +/
+auto nativeToBigEndian(T)(T val) @safe pure nothrow
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+{
+    return nativeToBigEndianImpl(val);
+}
+
+//Verify Examples
+unittest
+{
+    int i = 12345;
+    ubyte[4] swappedI = nativeToBigEndian(i);
+    assert(i == bigEndianToNative!int(swappedI));
+
+    double d = 123.45;
+    ubyte[8] swappedD = nativeToBigEndian(d);
+    assert(d == bigEndianToNative!double(swappedD));
+}
+
+private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
+    if(isIntegral!T || isSomeChar!T)
+{
+    EndianSwapper!T es = void;
+
+    version(LittleEndian)
+        es.value = swapEndian(val);
+    else
+        es.value = val;
+
+    return es.array;
+}
+
+private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
+    if(is(Unqual!T == float) || is(Unqual!T == double))
+{
+    version(LittleEndian)
+        return floatEndianImpl!(T, true)(val);
+    else
+        return floatEndianImpl!(T, false)(val);
+}
+
+unittest
+{
+    import std.range;
+    import std.stdio;
+    import std.typetuple;
+
+    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                          char, wchar, dchar,
+                          float, double))
+    {
+        scope(failure) writefln("Failed type: %s", T.stringof);
+        T val;
+        const T cval;
+        immutable T ival;
+
+        //is instead of == because of NaN for floating point values.
+        assert(bigEndianToNative!T(nativeToBigEndian(val)) is val);
+        assert(bigEndianToNative!T(nativeToBigEndian(cval)) is cval);
+        assert(bigEndianToNative!T(nativeToBigEndian(ival)) is ival);
+        assert(bigEndianToNative!T(nativeToBigEndian(T.min)) == T.min);
+        assert(bigEndianToNative!T(nativeToBigEndian(T.max)) == T.max);
+
+        static if(isSigned!T)
+            assert(bigEndianToNative!T(nativeToBigEndian(cast(T)0)) == 0);
+
+        foreach(i; [2, 4, 6, 7, 9, 11])
+        {
+            immutable T maxI = cast(T)(T.max / i);
+            immutable T minI = cast(T)(T.min / i);
+
+            assert(bigEndianToNative!T(nativeToBigEndian(maxI)) == maxI);
+
+            static if(T.sizeof > 1)
+                assert(nativeToBigEndian(maxI) != nativeToLittleEndian(maxI));
+            else
+                assert(nativeToBigEndian(maxI) == nativeToLittleEndian(maxI));
+
+            static if(isSigned!T)
+            {
+                assert(bigEndianToNative!T(nativeToBigEndian(minI)) == minI);
+
+                static if(T.sizeof > 1)
+                    assert(nativeToBigEndian(minI) != nativeToLittleEndian(minI));
+                else
+                    assert(nativeToBigEndian(minI) == nativeToLittleEndian(minI));
+            }
+        }
+
+        static if(isUnsigned!T || T.sizeof == 1 || is(T == wchar))
+            assert(nativeToBigEndian(T.max) == nativeToLittleEndian(T.max));
+        else
+            assert(nativeToBigEndian(T.max) != nativeToLittleEndian(T.max));
+
+        static if(isUnsigned!T || T.sizeof == 1 || isSomeChar!T)
+            assert(nativeToBigEndian(T.min) == nativeToLittleEndian(T.min));
+        else
+            assert(nativeToBigEndian(T.min) != nativeToLittleEndian(T.min));
+    }
+}
+
+
+/++
+    Converts the given value from big endian to the native endianness and
+    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    of the target type. You must give the target type as a template argument,
+    because there are multiple types with the same size and so the type of the
+    argument is not enough to determine the return type.
+
+    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    as a regular one (and in the case of floating point values, it's necessary,
+    because the FPU will mess up any swapped floating point values. So, you
+    can't actually have swapped floating point values as floating point values).
+
+        Examples:
+--------------------
+ushort i = 12345;
+ubyte[2] swappedI = nativeToBigEndian(i);
+assert(i == bigEndianToNative!ushort(swappedI));
+
+dchar c = 'D';
+ubyte[4] swappedC = nativeToBigEndian(c);
+assert(c == bigEndianToNative!dchar(swappedC));
+--------------------
+  +/
+T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if((isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double)) &&
+       n == T.sizeof)
+{
+    return bigEndianToNativeImpl!(T, n)(val);
+}
+
+//Verify Examples.
+unittest
+{
+    ushort i = 12345;
+    ubyte[2] swappedI = nativeToBigEndian(i);
+    assert(i == bigEndianToNative!ushort(swappedI));
+
+    dchar c = 'D';
+    ubyte[4] swappedC = nativeToBigEndian(c);
+    assert(c == bigEndianToNative!dchar(swappedC));
+}
+
+private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if((isIntegral!T || isSomeChar!T) &&
+       n == T.sizeof)
+{
+    EndianSwapper!T es = void;
+    es.array = val;
+
+    version(LittleEndian)
+        immutable retval = swapEndian(es.value);
+    else
+        immutable retval = es.value;
+
+    return retval;
+}
+
+private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if((is(Unqual!T == float) || is(Unqual!T == double)) &&
+       n == T.sizeof)
+{
+    version(LittleEndian)
+        return floatEndianImpl!(n, true)(val);
+    else
+        return floatEndianImpl!(n, false)(val);
+}
+
+
+/++
+    Converts the given value from the native endianness to little endian and
+    returns it as a $(D ubyte[n]) where $(D n) is the size of the given type.
+
+    Returning a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    as a regular one (and in the case of floating point values, it's necessary,
+    because the FPU will mess up any swapped floating point values. So, you
+    can't actually have swapped floating point values as floating point values).
+
+        Examples:
+--------------------
+int i = 12345;
+ubyte[4] swappedI = nativeToLittleEndian(i);
+assert(i == littleEndianToNative!int(swappedI));
+
+double d = 123.45;
+ubyte[8] swappedD = nativeToLittleEndian(d);
+assert(d == littleEndianToNative!double(swappedD));
+--------------------
+  +/
+auto nativeToLittleEndian(T)(T val) @safe pure nothrow
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+{
+    return nativeToLittleEndianImpl(val);
+}
+
+//Verify Examples.
+unittest
+{
+    int i = 12345;
+    ubyte[4] swappedI = nativeToLittleEndian(i);
+    assert(i == littleEndianToNative!int(swappedI));
+
+    double d = 123.45;
+    ubyte[8] swappedD = nativeToLittleEndian(d);
+    assert(d == littleEndianToNative!double(swappedD));
+}
+
+private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
+    if(isIntegral!T || isSomeChar!T)
+{
+    EndianSwapper!T es = void;
+
+    version(BigEndian)
+        es.value = swapEndian(val);
+    else
+        es.value = val;
+
+    return es.array;
+}
+
+private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
+    if(is(Unqual!T == float) || is(Unqual!T == double))
+{
+    version(BigEndian)
+        return floatEndianImpl!(T, true)(val);
+    else
+        return floatEndianImpl!(T, false)(val);
+}
+
+unittest
+{
+    import std.stdio;
+    import std.typetuple;
+
+    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+                          char, wchar, dchar,
+                          float, double))
+    {
+        scope(failure) writefln("Failed type: %s", T.stringof);
+        T val;
+        const T cval;
+        immutable T ival;
+
+        //is instead of == because of NaN for floating point values.
+        assert(littleEndianToNative!T(nativeToLittleEndian(val)) is val);
+        assert(littleEndianToNative!T(nativeToLittleEndian(cval)) is cval);
+        assert(littleEndianToNative!T(nativeToLittleEndian(ival)) is ival);
+        assert(littleEndianToNative!T(nativeToLittleEndian(T.min)) == T.min);
+        assert(littleEndianToNative!T(nativeToLittleEndian(T.max)) == T.max);
+
+        static if(isSigned!T)
+            assert(littleEndianToNative!T(nativeToLittleEndian(cast(T)0)) == 0);
+
+        foreach(i; 2 .. 10)
+        {
+            immutable T maxI = cast(T)(T.max / i);
+            immutable T minI = cast(T)(T.min / i);
+
+            assert(littleEndianToNative!T(nativeToLittleEndian(maxI)) == maxI);
+
+            static if(isSigned!T)
+                assert(littleEndianToNative!T(nativeToLittleEndian(minI)) == minI);
+        }
+    }
+}
+
+
+/++
+    Converts the given value from little endian to the native endianness and
+    returns it. The value is given as a $(D ubyte[n]) where $(D n) is the size
+    of the target type. You must give the target type as a template argument,
+    because there are multiple types with the same size and so the type of the
+    argument is not enough to determine the return type.
+
+    Taking a $(D ubyte[n]) helps prevent accidentally using a swapped value
+    as a regular one (and in the case of floating point values, it's necessary,
+    because the FPU will mess up any swapped floating point values. So, you
+    can't actually have swapped floating point values as floating point values).
+
+    $(D real) is not supported, because its size is implementation-dependent
+    and therefore could vary from machine to machine (which could make it
+    unusable if you tried to transfer it to another machine).
+
+        Examples:
+--------------------
+ushort i = 12345;
+ubyte[2] swappedI = nativeToLittleEndian(i);
+assert(i == littleEndianToNative!ushort(swappedI));
+
+dchar c = 'D';
+ubyte[4] swappedC = nativeToLittleEndian(c);
+assert(c == littleEndianToNative!dchar(swappedC));
+--------------------
+  +/
+T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if((isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double)) &&
+       n == T.sizeof)
+{
+    return littleEndianToNativeImpl!T(val);
+}
+
+//Verify Unittest.
+unittest
+{
+    ushort i = 12345;
+    ubyte[2] swappedI = nativeToLittleEndian(i);
+    assert(i == littleEndianToNative!ushort(swappedI));
+
+    dchar c = 'D';
+    ubyte[4] swappedC = nativeToLittleEndian(c);
+    assert(c == littleEndianToNative!dchar(swappedC));
+}
+
+private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if((isIntegral!T || isSomeChar!T) &&
+       n == T.sizeof)
+{
+    EndianSwapper!T es = void;
+    es.array = val;
+
+    version(BigEndian)
+        immutable retval = swapEndian(es.value);
+    else
+        immutable retval = es.value;
+
+    return retval;
+}
+
+private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+    if(((is(Unqual!T == float) || is(Unqual!T == double)) &&
+       n == T.sizeof))
+{
+    version(BigEndian)
+        return floatEndianImpl!(n, true)(val);
+    else
+        return floatEndianImpl!(n, false)(val);
+}
+
+private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow
+    if(is(Unqual!T == float) || is(Unqual!T == double))
+{
+    EndianSwapper!T es = void;
+    es.value = val;
+
+    static if(swap)
+        es.intValue = swapEndian(es.intValue);
+
+    return es.array;
+}
+
+private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow
+    if(n == 4 || n == 8)
+{
+    static if(n == 4)       EndianSwapper!float es = void;
+    else static if(n == 8)  EndianSwapper!double es = void;
+
+    es.array = val;
+
+    static if(swap)
+        es.intValue = swapEndian(es.intValue);
+
+    return es.value;
 }
