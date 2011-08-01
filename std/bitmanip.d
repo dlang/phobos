@@ -77,17 +77,17 @@ private template createAccessors(
             static assert(len == 1);
             enum result =
             // getter
-                "bool " ~ name ~ "() const { return "
+                "@property bool " ~ name ~ "() const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"void " ~ name ~ "(bool v){"
+                ~"@property void " ~ name ~ "(bool v){"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
-            enum result = T.stringof~" "~name~"() const { auto result = "
+            enum result = "@property "~T.stringof~" "~name~"() const { auto result = "
                 "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -97,7 +97,7 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"void "~name~"("~T.stringof~" v){ "
+                ~"@property void "~name~"("~T.stringof~" v){ "
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
@@ -309,7 +309,7 @@ else version(X86_64)
 else
     static assert(false, "unknown platform");
 
-    const size_t dim()
+    @property const size_t dim()
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
@@ -390,7 +390,7 @@ else
     /**********************************************
      * Support for array.dup property for BitArray.
      */
-    BitArray dup()
+    @property BitArray dup()
     {
         BitArray ba;
 
@@ -486,7 +486,7 @@ else
      * Support for array.reverse property for BitArray.
      */
 
-    BitArray reverse()
+    @property BitArray reverse()
         out (result)
         {
             assert(result == this);
@@ -531,7 +531,7 @@ else
      * Support for array.sort property for BitArray.
      */
 
-    BitArray sort()
+    @property BitArray sort()
         out (result)
         {
             assert(result == this);
