@@ -1317,6 +1317,8 @@ unittest
         static if(isSigned!T)
             assert(swapEndian(swapEndian(cast(T)0)) == 0);
 
+        // @@@BUG6354@@@
+        /+
         static if(T.sizeof > 1 && isUnsigned!T)
         {
             T left = 0xffU;
@@ -1331,6 +1333,7 @@ unittest
                 right <<= 8;
             }
         }
+        +/
     }
 }
 
