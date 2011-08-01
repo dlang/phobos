@@ -26,8 +26,7 @@
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
-        Thomas K&uuml;hne,
-        Bill Baxter,
+        Thomas Kühne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000, the authors. All rights reserved.
@@ -535,8 +534,7 @@ unittest
 
 
 
-/** Strip the drive designation from a Windows path.
-    On POSIX, this is a noop.
+/** Strip the drive from a Windows path.  On POSIX, this is a noop.
 
     Example:
     ---
