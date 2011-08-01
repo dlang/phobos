@@ -26,11 +26,12 @@ module std.bitmanip;
 import core.bitop;
 
 string myToStringx(ulong n)
-{   enum s = "0123456789";
+{
+    enum s = "0123456789";
     if (n < 10)
-	return s[cast(size_t)n..cast(size_t)n+1];
+        return s[cast(size_t)n..cast(size_t)n+1];
     else
-	return myToStringx(n / 10) ~ myToStringx(n % 10);
+        return myToStringx(n / 10) ~ myToStringx(n % 10);
 }
 
 string myToString(ulong n)
@@ -302,46 +303,43 @@ struct BitArray
 {
     size_t len;
     size_t* ptr;
-version(X86)
-    enum bitsPerSizeT = 32;
-else version(X86_64)
-    enum bitsPerSizeT = 64;
-else
-    static assert(false, "unknown platform");
+    version(X86)
+        enum bitsPerSizeT = 32;
+    else version(X86_64)
+        enum bitsPerSizeT = 64;
+    else
+        static assert(false, "unknown platform");
 
     @property const size_t dim()
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
 
-    @property
+    @property const size_t length()
     {
-        const size_t length()
-        {
-            return len;
-        }
+        return len;
+    }
 
-        void length(size_t newlen)
+    @property void length(size_t newlen)
+    {
+        if (newlen != len)
         {
-            if (newlen != len)
+            size_t olddim = dim;
+            size_t newdim = (newlen + (bitsPerSizeT-1)) / bitsPerSizeT;
+
+            if (newdim != olddim)
             {
-                size_t olddim = dim();
-                size_t newdim = (newlen + (bitsPerSizeT-1)) / bitsPerSizeT;
-
-                if (newdim != olddim)
-                {
-                    // Create a fake array so we can use D's realloc machinery
-                    auto b = ptr[0 .. olddim];
-                    b.length = newdim;                // realloc
-                    ptr = b.ptr;
-                    if (newdim & (bitsPerSizeT-1))
-                    {   // Set any pad bits to 0
-                        ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
-                    }
+                // Create a fake array so we can use D's realloc machinery
+                auto b = ptr[0 .. olddim];
+                b.length = newdim;                // realloc
+                ptr = b.ptr;
+                if (newdim & (bitsPerSizeT-1))
+                {   // Set any pad bits to 0
+                    ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
                 }
-
-                len = newlen;
             }
+
+            len = newlen;
         }
     }
 
@@ -426,7 +424,8 @@ else
         int result;
 
         for (size_t i = 0; i < len; i++)
-        {   bool b = opIndex(i);
+        {
+            bool b = opIndex(i);
             result = dg(b);
             this[i] = b;
             if (result)
@@ -441,7 +440,8 @@ else
         int result;
 
         for (size_t i = 0; i < len; i++)
-        {   bool b = opIndex(i);
+        {
+            bool b = opIndex(i);
             result = dg(i, b);
             this[i] = b;
             if (result)
@@ -462,7 +462,8 @@ else
         foreach (b;a)
         {
             switch (i)
-            {        case 0: assert(b == true); break;
+            {
+                case 0: assert(b == true); break;
                 case 1: assert(b == false); break;
                 case 2: assert(b == true); break;
                 default: assert(0);
@@ -473,7 +474,8 @@ else
         foreach (j,b;a)
         {
             switch (j)
-            {        case 0: assert(b == true); break;
+            {
+                case 0: assert(b == true); break;
                 case 1: assert(b == false); break;
                 case 2: assert(b == true); break;
                 default: assert(0);
@@ -487,28 +489,28 @@ else
      */
 
     @property BitArray reverse()
-        out (result)
+    out (result)
+    {
+        assert(result == this);
+    }
+    body
+    {
+        if (len >= 2)
         {
-            assert(result == this);
-        }
-        body
-        {
-            if (len >= 2)
-            {
-                bool t;
-                size_t lo, hi;
+            bool t;
+            size_t lo, hi;
 
-                lo = 0;
-                hi = len - 1;
-                for (; lo < hi; lo++, hi--)
-                {
-                    t = this[lo];
-                    this[lo] = this[hi];
-                    this[hi] = t;
-                }
+            lo = 0;
+            hi = len - 1;
+            for (; lo < hi; lo++, hi--)
+            {
+                t = this[lo];
+                this[lo] = this[hi];
+                this[hi] = t;
             }
-            return this;
         }
+        return this;
+    }
 
     unittest
     {
@@ -532,49 +534,49 @@ else
      */
 
     @property BitArray sort()
-        out (result)
+    out (result)
+    {
+        assert(result == this);
+    }
+    body
+    {
+        if (len >= 2)
         {
-            assert(result == this);
-        }
-        body
-        {
-            if (len >= 2)
-            {
-                size_t lo, hi;
+            size_t lo, hi;
 
-                lo = 0;
-                hi = len - 1;
+            lo = 0;
+            hi = len - 1;
+            while (1)
+            {
                 while (1)
                 {
-                    while (1)
-                    {
-                        if (lo >= hi)
-                            goto Ldone;
-                        if (this[lo] == true)
-                            break;
-                        lo++;
-                    }
-
-                    while (1)
-                    {
-                        if (lo >= hi)
-                            goto Ldone;
-                        if (this[hi] == false)
-                            break;
-                        hi--;
-                    }
-
-                    this[lo] = false;
-                    this[hi] = true;
-
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (this[lo] == true)
+                        break;
                     lo++;
+                }
+
+                while (1)
+                {
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (this[hi] == false)
+                        break;
                     hi--;
                 }
-            Ldone:
-                ;
+
+                this[lo] = false;
+                this[hi] = true;
+
+                lo++;
+                hi--;
             }
-            return this;
+        Ldone:
+            ;
         }
+        return this;
+    }
 
     unittest
     {
@@ -595,7 +597,8 @@ else
      */
 
     const bool opEquals(const ref BitArray a2)
-    {   int i;
+    {
+        int i;
 
         if (this.length != a2.length)
             return 0;                // not equal
@@ -658,7 +661,8 @@ else
                 break;                // not equal
         }
         for (uint j = i * 8; j < len; j++)
-        {   ubyte mask = cast(ubyte)(1 << j);
+        {
+            ubyte mask = cast(ubyte)(1 << j);
             int c;
 
             c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
@@ -777,7 +781,7 @@ else
      */
     BitArray opCom()
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -816,7 +820,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -856,7 +860,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -896,7 +900,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -938,7 +942,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -978,7 +982,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= e2.ptr[i];
@@ -1014,7 +1018,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] |= e2.ptr[i];
@@ -1049,7 +1053,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] ^= e2.ptr[i];
@@ -1086,7 +1090,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= ~e2.ptr[i];
