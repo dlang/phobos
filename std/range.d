@@ -6021,3 +6021,267 @@ unittest
     assert(ok);
 }
 
+
+private template LengthType(R) { alias typeof(R.init.length) LengthType; }
+
+/**
+Construct a new range of tuples by as the cartesian product of $(D range) of
+several forward ranges, ordered lexographically.
+
+The second variant allows the same range be multiplied $(D repeat) times, which
+the parameter can be supplied at runtime. Therefore, the result in this case is
+a range of dynamic arrays, not tuples.
+
+Example:
+-------------
+auto n = cartesianProduct(["a", "b", "c"], [5, 10, 15]);
+assert(equal(n, [tuple("a", 5), tuple("a", 10), tuple("a", 15),
+                 tuple("b", 5), tuple("b", 10), tuple("b", 15),
+                 tuple("c", 5), tuple("c", 10), tuple("c", 15)]));
+
+auto m = cartesianProduct(["a", "b"], 3);
+assert(equal(m, [["a","a","a"], ["a","a","b"], ["a","b","a"], ["a","b","b"],
+                 ["b","a","a"], ["b","a","b"], ["b","b","a"], ["b","b","b"]]));
+-------------
+
+Bugs:
+    Although cartesianProduct can return a bidirectional range, mixing popFront
+    and popBack will return wrong result.
+*/
+auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardRange, R))
+{
+    static string callMemberFunction(string memfun, string mem = "ranges",
+                                     string op = "", string cl = "")
+    {
+        string res = op;
+        foreach (i; 0 .. R.length)
+        {
+            if (i != 0)
+                res ~= ", ";
+            res ~= text(mem, "[", i, "].", memfun);
+        }
+        return res ~ cl;
+    }
+
+    static struct Result
+    {
+        private R origRanges;
+        private R ranges;
+
+        @property auto front()
+        {
+            return mixin(callMemberFunction("front", "ranges", "tuple(", ")"));
+        }
+
+        @property bool empty()
+        {
+            return ranges[0].empty;
+        }
+
+        void popFront()
+        {
+            foreach_reverse (i, _; ranges)
+            {
+                ranges[i].popFront();
+                if (!ranges[i].empty || i == 0)
+                    return;
+                ranges[i] = origRanges[i].save;
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            return mixin("typeof(this)("
+                            ~ callMemberFunction("save", "origRanges")
+                            ~ "," ~ callMemberFunction("save", "ranges")
+                            ~ ")");
+        }
+
+        static if (allSatisfy!(isBidirectionalRange, R))
+        {
+            @property auto back()
+            {
+                return mixin(callMemberFunction("back", "ranges", "tuple(", ")"));
+            }
+
+            void popBack()
+            {
+                foreach_reverse (i, _; ranges)
+                {
+                    ranges[i].popBack();
+                    if (!ranges[i].empty || i == 0)
+                        return;
+                    ranges[i] = origRanges[i].save;
+                }
+            }
+        }
+
+        static if (allSatisfy!(hasLength, R))
+        {
+            @property auto length()
+            {
+                CommonType!(staticMap!(LengthType, R)) actualLength = 0;
+                foreach (i, r; ranges)
+                {
+                    actualLength *= origRanges[i].length;
+                    actualLength += r.length-1;
+                }
+                return actualLength + 1;
+            }
+        }
+
+    }
+
+    return mixin("Result(" ~ callMemberFunction("save") ~ ", ranges)");
+}
+/// ditto
+auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
+{
+    static struct Result
+    {
+        private R origRange;
+        private R[] ranges;
+
+        @property auto front()
+        {
+            return array( map!"a.front"(ranges) );
+        }
+
+        @property bool empty()
+        {
+            return ranges[0].empty;
+        }
+
+        void popFront()
+        {
+            foreach_reverse (i, ref r; ranges)
+            {
+                r.popFront();
+                if (!r.empty || i == 0)
+                    return;
+                r = origRange.save;
+            }
+        }
+
+        @property typeof(this) save() {
+            auto rangesCopy = array( map!"a.save"(ranges) );
+            return typeof(this)(origRange, rangesCopy);
+        }
+
+        static if (isBidirectionalRange!R)
+        {
+            @property auto back()
+            {
+                return array( map!"a.back"(ranges) );
+            }
+
+            void popBack()
+            {
+                foreach_reverse (i, ref r; ranges)
+                {
+                    r.popBack();
+                    if (!r.empty || i == 0)
+                        return;
+                    r = origRange.save;
+                }
+            }
+        }
+
+        static if (hasLength!R)
+        {
+            @property auto length()
+            {
+                auto baseLength = origRange.length;
+                typeof(baseLength) actualLength = 0;
+                foreach (r; ranges)
+                {
+                    actualLength *= baseLength;
+                    actualLength += r.length-1;
+                }
+                return actualLength + 1;
+            }
+        }
+    }
+
+    enforce(repeat > 0, "Please provide a positive number to 'repeat'.");
+
+    auto ranges = uninitializedArray!(R[])(repeat);
+    foreach (ref elem; ranges)
+        emplace(&elem, range.save);
+    return Result(range, ranges);
+}
+
+unittest
+{
+    auto m = map!"a*a"(iota(2, 4));
+    auto c = cartesianProduct(m, 3);
+    assert(c.length == 8);
+    assert(equal(c, [[4,4,4], [4,4,9], [4,9,4], [4,9,9],
+                     [9,4,4], [9,4,9], [9,9,4], [9,9,9]]));
+}
+unittest
+{
+    auto c = retro(cartesianProduct([4, 9], 3));
+    assert(equal(c, [[9,9,9], [9,9,4], [9,4,9], [9,4,4],
+                     [4,9,9], [4,9,4], [4,4,9], [4,4,4]]));
+}
+unittest
+{
+    auto c = cartesianProduct([0, 1], 10);
+    //assert(c[593] == [1,0,0,1,0,1,0,0,0,1]);
+    assert(c.length == 1024);
+    assert(c.back == [1,1,1,1,1,1,1,1,1,1]);
+    assert(c.length == 1024);
+    auto c2 = c.save;
+    c.popBack();
+    assert(c.back == [1,1,1,1,1,1,1,1,1,0]);
+    assert(c.length == 1023);
+    assert(c2.back == [1,1,1,1,1,1,1,1,1,1]);
+    assert(c2.length == 1024);
+    popFrontN(c2, 592);
+    assert(c2.front == [1,0,0,1,0,1,0,0,0,0]);
+    assert(c2.back == [1,1,1,1,1,1,1,1,1,1]);
+    assert(c2.length == 432);
+    //assert(c2[1] == [1,0,0,1,0,1,0,0,0,1]);
+}
+unittest
+{
+    /+
+    auto c = cartesianProduct([0, 3], 0);
+    assert(!c.empty);
+    assert(c.length == 1);
+    assert(equal(c, [(int[]).init]));
+    +/
+    auto c2 = cartesianProduct([0, 1, 2, 4], 1);
+    assert(equal(c2, [[0], [1], [2], [4]]));
+}
+
+unittest
+{
+    auto c = cartesianProduct(["1", "2"],  iota(5, 8), [3.0]);
+    auto d = retro(c.save);
+    assert(c.length == 6);
+    assert(c.front == tuple("1", 5, 3.0));
+    assert(c.back == tuple("2", 7, 3.0));
+    c.popFront();
+    assert(c.front == tuple("1", 6, 3.0));
+    assert(c.length == 5);
+    assert(equal(c, [                    tuple("1", 6, 3.0), tuple("1", 7, 3.0),
+                     tuple("2", 5, 3.0), tuple("2", 6, 3.0), tuple("2", 7, 3.0)]));
+    assert(equal(d, [tuple("2", 7, 3.0), tuple("2", 6, 3.0), tuple("2", 5, 3.0),
+                     tuple("1", 7, 3.0), tuple("1", 6, 3.0), tuple("1", 5, 3.0)]));
+}
+unittest
+{
+    auto n = cartesianProduct(["a", "b", "c"], [5, 10, 15]);
+    assert(equal(n, [tuple("a", 5), tuple("a", 10), tuple("a", 15),
+                     tuple("b", 5), tuple("b", 10), tuple("b", 15),
+                     tuple("c", 5), tuple("c", 10), tuple("c", 15)]));
+
+    auto m = cartesianProduct(["a", "b"], 3);
+    assert(equal(m, [["a","a","a"], ["a","a","b"], ["a","b","a"], ["a","b","b"],
+                     ["b","a","a"], ["b","a","b"], ["b","b","a"], ["b","b","b"]]));
+}
+
+
+
