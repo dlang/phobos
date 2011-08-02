@@ -1758,7 +1758,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
     auto app = appender!R1();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
-    subject = balance[from.length .. $];
+    app.put(balance[from.length .. $]);
 
     return app.data;
 }
