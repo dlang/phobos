@@ -1434,7 +1434,8 @@ unittest
 
 /++
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
-    array without changing the contents of $(D subject).
+    array without changing the contents of $(D subject), or the original array
+    if no match is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -1745,7 +1746,8 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
 
 /++
     Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject).
+    new array without changing the contents of $(D subject), or the original
+    array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
