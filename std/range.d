@@ -2352,7 +2352,7 @@ if (isInputRange!R && !isRandomAccessRange!R)
                 return _input.front();
             }
             void popFront() { _input.popFront(); --_n; }
-            size_t length() const { return _n; }
+            @property size_t length() const { return _n; }
 
             static if (isForwardRange!R)
                 auto save() { return this; }
@@ -2371,17 +2371,24 @@ if (isRandomAccessRange!R)
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
+
     auto b = takeExactly(a, 3);
     assert(equal(b, [1, 2, 3]));
+    static assert(is(typeof(b.length) == size_t));
+    assert(b.length == 3);
+    assert(b.front == 1);
+    assert(b.back == 3);
+
     auto c = takeExactly(b, 2);
 
     auto d = filter!"a > 0"(a);
     auto e = takeExactly(d, 3);
     assert(equal(e, [1, 2, 3]));
+    static assert(is(typeof(e.length) == size_t));
+    assert(e.length == 3);
+    assert(e.front == 1);
+
     assert(equal(takeExactly(e, 4), [1, 2, 3, 4]));
-    // assert(b.length == 3);
-    // assert(b.front == 1);
-    // assert(b.back == 3);
     // b[1]++;
 }
 
