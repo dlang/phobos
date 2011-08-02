@@ -1776,13 +1776,16 @@ unittest
         auto from = to!T("foo");
         auto into = to!T("silly");
 
-        S r1 = replace(s, from, into);
-        assert(cmp(r1, "This is a silly silly list") == 0);
+        S r1 = replaceFirst(s, from, into);
+        assert(cmp(r1, "This is a silly foo list") == 0);
 
-        S r2 = replace(s, to!T(""), into);
-        assert(cmp(r2, "This is a foo foo list") == 0);
+        S r2 = replaceFirst(r1, from, into);
+        assert(cmp(r2, "This is a silly silly list") == 0);
 
-        assert(replace(r2, to!T("won't find this"), to!T("whatever")) is r2);
+        S r3 = replaceFirst(s, to!T(""), into);
+        assert(cmp(r3, "This is a foo foo list") == 0);
+
+        assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
     }
 }
 
