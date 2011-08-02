@@ -2321,15 +2321,14 @@ n) elements. Consequently, the result of $(D takeExactly(range, n))
 always defines the $(D length) property (and initializes it to $(D n))
 even when $(D range) itself does not define $(D length).
 
-If $(D R) is a random-access range, the result of $(D takeExactly) is
-$(D R) as well because $(D takeExactly) simply returns a slice of $(D
+If $(D R) has slicing, $(D takeExactly) simply returns a slice of $(D
 range). Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
  */
 auto takeExactly(R)(R range, size_t n)
-if (isInputRange!R && !isRandomAccessRange!R)
+if (isInputRange!R && !hasSlicing!R)
 {
     static if (is(typeof(takeExactly(range._input, n)) == R))
     {
@@ -2363,7 +2362,7 @@ if (isInputRange!R && !isRandomAccessRange!R)
 }
 
 auto takeExactly(R)(R range, size_t n)
-if (isRandomAccessRange!R)
+if (hasSlicing!R)
 {
     return range[0 .. n];
 }
