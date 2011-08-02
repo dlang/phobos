@@ -2194,6 +2194,16 @@ unittest
     app2.put([ 7 ]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    app2.shrinkTo(3);
+    assert(app2.data == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
+
+    auto app3 = appender([]);
+    app3.shrinkTo(0);
+
     // Issue 5663 tests
     {
         Appender!(char[]) app5663i;
@@ -2237,6 +2247,13 @@ unittest
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
     assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    app2.shrinkTo(3);
+    assert(app2.data == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
 }
 
 /*
