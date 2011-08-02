@@ -1379,46 +1379,57 @@ unittest
     string[] words = [word1, word2, word3];
 
     auto filteredWord1    = filter!"true"(word1);
+    auto filteredLenWord1 = takeExactly(filteredWord1, word1.length);
     auto filteredWord2    = filter!"true"(word2);
+    auto filteredLenWord2 = takeExactly(filteredWord2, word2.length);
     auto filteredWord3    = filter!"true"(word3);
+    auto filteredLenWord3 = takeExactly(filteredWord3, word3.length);
     auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
+    auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
     auto filteredWords    = filter!"true"(filteredWordsArr);
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         assert(join(filteredWords, to!S(", ")) == "peter, paul, jerry");
         assert(join(filteredWordsArr, to!S(", ")) == "peter, paul, jerry");
+        assert(join(filteredLenWordsArr, to!S(", ")) == "peter, paul, jerry");
         assert(join(filter!"true"(words), to!S(", ")) == "peter, paul, jerry");
         assert(join(words, to!S(", ")) == "peter, paul, jerry");
 
         assert(join(filteredWords, to!S("")) == "peterpauljerry");
         assert(join(filteredWordsArr, to!S("")) == "peterpauljerry");
+        assert(join(filteredLenWordsArr, to!S("")) == "peterpauljerry");
         assert(join(filter!"true"(words), to!S("")) == "peterpauljerry");
         assert(join(words, to!S("")) == "peterpauljerry");
 
         assert(join(filter!"true"([word1]), to!S(", ")) == "peter");
         assert(join([filteredWord1], to!S(", ")) == "peter");
+        assert(join([filteredLenWord1], to!S(", ")) == "peter");
         assert(join(filter!"true"([filteredWord1]), to!S(", ")) == "peter");
         assert(join([word1], to!S(", ")) == "peter");
     }
 
     assert(join(filteredWords) == "peterpauljerry");
     assert(join(filteredWordsArr) == "peterpauljerry");
+    assert(join(filteredLenWordsArr) == "peterpauljerry");
     assert(join(filter!"true"(words)) == "peterpauljerry");
     assert(join(words) == "peterpauljerry");
 
     assert(join(filteredWords, filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(filteredWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
+    assert(join(filteredLenWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(filter!"true"(words), filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(words, filter!"true"(", ")) == "peter, paul, jerry");
 
     assert(join(filter!"true"(cast(typeof(filteredWordsArr))[]), ", ").empty);
     assert(join(cast(typeof(filteredWordsArr))[], ", ").empty);
+    assert(join(cast(typeof(filteredLenWordsArr))[], ", ").empty);
     assert(join(filter!"true"(cast(string[])[]), ", ").empty);
     assert(join(cast(string[])[], ", ").empty);
 
     assert(join(filter!"true"(cast(typeof(filteredWordsArr))[])).empty);
     assert(join(cast(typeof(filteredWordsArr))[]).empty);
+    assert(join(cast(typeof(filteredLenWordsArr))[]).empty);
     assert(join(filter!"true"(cast(string[])[])).empty);
     assert(join(cast(string[])[]).empty);
 
