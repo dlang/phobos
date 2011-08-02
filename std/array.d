@@ -2191,6 +2191,8 @@ unittest
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    app2.put([ 7 ]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
     // Issue 5663 tests
     {
