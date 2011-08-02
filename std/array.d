@@ -1066,6 +1066,9 @@ unittest
         debug(std_array) printf("array.split1\n");
         S s = " \t\npeter paul\tjerry \n";
         assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+
+        S s2 = " \t\npeter paul\tjerry";
+        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
 
     immutable string s = " \t\npeter paul\tjerry \n";
