@@ -2321,15 +2321,14 @@ n) elements. Consequently, the result of $(D takeExactly(range, n))
 always defines the $(D length) property (and initializes it to $(D n))
 even when $(D range) itself does not define $(D length).
 
-If $(D R) is a random-access range, the result of $(D takeExactly) is
-$(D R) as well because $(D takeExactly) simply returns a slice of $(D
+If $(D R) has slicing, $(D takeExactly) simply returns a slice of $(D
 range). Otherwise if $(D R) is an input range, the type of the result
 is an input range with length. Finally, if $(D R) is a forward range
 (including bidirectional), the type of the result is a forward range
 with length.
  */
 auto takeExactly(R)(R range, size_t n)
-if (isInputRange!R && !isRandomAccessRange!R)
+if (isInputRange!R && !hasSlicing!R)
 {
     static if (is(typeof(takeExactly(range._input, n)) == R))
     {
@@ -2352,7 +2351,7 @@ if (isInputRange!R && !isRandomAccessRange!R)
                 return _input.front();
             }
             void popFront() { _input.popFront(); --_n; }
-            size_t length() const { return _n; }
+            @property size_t length() const { return _n; }
 
             static if (isForwardRange!R)
                 auto save() { return this; }
@@ -2363,7 +2362,7 @@ if (isInputRange!R && !isRandomAccessRange!R)
 }
 
 auto takeExactly(R)(R range, size_t n)
-if (isRandomAccessRange!R)
+if (hasSlicing!R)
 {
     return range[0 .. n];
 }
@@ -2371,17 +2370,24 @@ if (isRandomAccessRange!R)
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
+
     auto b = takeExactly(a, 3);
     assert(equal(b, [1, 2, 3]));
+    static assert(is(typeof(b.length) == size_t));
+    assert(b.length == 3);
+    assert(b.front == 1);
+    assert(b.back == 3);
+
     auto c = takeExactly(b, 2);
 
     auto d = filter!"a > 0"(a);
     auto e = takeExactly(d, 3);
     assert(equal(e, [1, 2, 3]));
+    static assert(is(typeof(e.length) == size_t));
+    assert(e.length == 3);
+    assert(e.front == 1);
+
     assert(equal(takeExactly(e, 4), [1, 2, 3, 4]));
-    // assert(b.length == 3);
-    // assert(b.front == 1);
-    // assert(b.back == 3);
     // b[1]++;
 }
 
