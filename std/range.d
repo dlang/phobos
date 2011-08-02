@@ -6044,7 +6044,7 @@ assert(equal(m, [["a","a","a"], ["a","a","b"], ["a","b","a"], ["a","b","b"],
 
 Bugs:
     Although cartesianProduct can return a bidirectional range, mixing popFront
-    and popBack will return wrong result.
+    and popBack is not allowed. Attempting to mix them will throw an Exception.
 */
 auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) && allSatisfy!(isForwardRange, R[1..$]) && !anySatisfy!(isInfinite, R[1..$]))
 {
@@ -6088,6 +6088,11 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) &&
 
         void popFront()
         {
+            static if (allSatisfy!(isBidirectionalRange, R))
+            {
+                enforce(popDirection >= 0, "Cannot call popFront() when popBack() is already used.");
+                popDirection = 1;
+            }
             foreach_reverse (i, _; ranges)
             {
                 ranges[i].popFront();
@@ -6117,6 +6122,8 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) &&
 
         static if (allSatisfy!(isBidirectionalRange, R))
         {
+            private int popDirection;
+
             @property auto back()
             {
                 return mixin(callMemberFunction!("back", R)("ranges", "tuple(", ")"));
@@ -6124,6 +6131,8 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) &&
 
             void popBack()
             {
+                enforce(popDirection <= 0, "Cannot call popBack() when popFront() is already used.");
+                popDirection = -1;
                 foreach_reverse (i, _; ranges)
                 {
                     ranges[i].popBack();
@@ -6186,6 +6195,11 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R && !isInfi
 
         void popFront()
         {
+            static if (isBidirectionalRange!R)
+            {
+                enforce(popDirection >= 0, "Cannot call popFront() when popBack() is already used.");
+                popDirection = 1;
+            }
             foreach_reverse (i, ref r; ranges)
             {
                 r.popFront();
@@ -6203,6 +6217,8 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R && !isInfi
 
         static if (isBidirectionalRange!R)
         {
+            private int popDirection;
+            
             @property auto back()
             {
                 return array( map!"a.back"(ranges) );
@@ -6210,6 +6226,8 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R && !isInfi
 
             void popBack()
             {
+                enforce(popDirection <= 0, "Cannot call popBack() when popFront() is already used.");
+                popDirection = -1;
                 foreach_reverse (i, ref r; ranges)
                 {
                     r.popBack();
@@ -6277,6 +6295,8 @@ unittest
     assert(c2.back == [1,1,1,1,1,1,1,1,1,1]);
     assert(c2.length == 432);
     //assert(c2[1] == [1,0,0,1,0,1,0,0,0,1]);
+    assertThrown(c.popFront());
+    assertThrown(c2.popBack());
 }
 unittest
 {
