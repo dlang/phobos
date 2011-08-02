@@ -6022,8 +6022,6 @@ unittest
 }
 
 
-private template LengthType(R) { alias typeof(R.init.length) LengthType; }
-
 /**
 Construct a new range of tuples by as the cartesian product of $(D range) of
 several forward ranges, ordered lexographically.
@@ -6048,16 +6046,21 @@ Bugs:
     Although cartesianProduct can return a bidirectional range, mixing popFront
     and popBack will return wrong result.
 */
-auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardRange, R))
+auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) && allSatisfy!(isForwardRange, R[1..$]))
 {
-    static string callMemberFunction(string memfun, string mem = "ranges",
-                                     string op = "", string cl = "")
+    static string callMemberFunction(string memfun, RR...)
+        (string mem = "ranges", string op = "", string cl = "")
     {
         string res = op;
-        foreach (i; 0 .. R.length)
+        foreach (i, RT; RR)
         {
             if (i != 0)
                 res ~= ", ";
+            static assert (isForwardRange!RT || memfun != "save");
+            //@@@BUG6275@@@: cannot create a tuple(immutable char).
+            alias typeof(mixin("RT.init." ~ memfun)) T;
+            static if (__traits(isScalar, T) && (is(T == const) || is(T == immutable)))
+                res ~= "cast()";
             res ~= text(mem, "[", i, "].", memfun);
         }
         return res ~ cl;
@@ -6065,17 +6068,22 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardR
 
     static struct Result
     {
-        private R origRanges;
+        private R[1..$] origRanges;
         private R ranges;
 
         @property auto front()
         {
-            return mixin(callMemberFunction("front", "ranges", "tuple(", ")"));
+            return mixin(callMemberFunction!("front", R)("ranges", "tuple(", ")"));
         }
 
-        @property bool empty()
+        static if (anySatisfy!(isInfinite, R))
+            static enum empty = false;
+        else
         {
-            return ranges[0].empty;
+            @property bool empty()
+            {
+                return ranges[0].empty;
+            }
         }
 
         void popFront()
@@ -6083,25 +6091,35 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardR
             foreach_reverse (i, _; ranges)
             {
                 ranges[i].popFront();
-                if (!ranges[i].empty || i == 0)
+                if (!ranges[i].empty)
                     return;
-                ranges[i] = origRanges[i].save;
+                else
+                {
+                    static if (i > 0)
+                        ranges[i] = origRanges[i-1].save;
+                }
             }
         }
 
-        @property typeof(this) save()
+        static if (isForwardRange!(R[0]))
         {
-            return mixin("typeof(this)("
-                            ~ callMemberFunction("save", "origRanges")
-                            ~ "," ~ callMemberFunction("save", "ranges")
-                            ~ ")");
+            @property typeof(this) save()
+            {
+                static if (R.length > 1)
+                    return mixin("typeof(this)("
+                                    ~ callMemberFunction!("save", R[1..$])("origRanges")
+                                    ~ "," ~ callMemberFunction!("save", R)("ranges")
+                                    ~ ")");
+                else
+                    return typeof(this)(ranges[0].save);
+            }
         }
 
         static if (allSatisfy!(isBidirectionalRange, R))
         {
             @property auto back()
             {
-                return mixin(callMemberFunction("back", "ranges", "tuple(", ")"));
+                return mixin(callMemberFunction!("back", R)("ranges", "tuple(", ")"));
             }
 
             void popBack()
@@ -6109,9 +6127,13 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardR
                 foreach_reverse (i, _; ranges)
                 {
                     ranges[i].popBack();
-                    if (!ranges[i].empty || i == 0)
+                    if (!ranges[i].empty)
                         return;
-                    ranges[i] = origRanges[i].save;
+                    else
+                    {
+                        static if (i > 0)
+                            ranges[i] = origRanges[i-1].save;
+                    }
                 }
             }
         }
@@ -6120,24 +6142,29 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && allSatisfy!(isForwardR
         {
             @property auto length()
             {
-                CommonType!(staticMap!(LengthType, R)) actualLength = 0;
+                CommonType!(staticMap!(lengthType, R)) actualLength = 0;
                 foreach (i, r; ranges)
                 {
-                    actualLength *= origRanges[i].length;
+                    static if (i > 0)
+                        actualLength *= origRanges[i-1].length;
                     actualLength += r.length-1;
                 }
                 return actualLength + 1;
             }
         }
-
     }
 
-    return mixin("Result(" ~ callMemberFunction("save") ~ ", ranges)");
+    static if (ranges.length == 1)
+        return Result(ranges);
+    else
+        return mixin("Result(" ~ callMemberFunction!("save", R[1..$])("ranges[1..$]")
+                               ~ ", ranges)");
 }
 /// ditto
 auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
 {
-    static struct Result
+    // we call it 'Result2' because of bug 6430.
+    static struct Result2
     {
         private R origRange;
         private R[] ranges;
@@ -6147,9 +6174,14 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
             return array( map!"a.front"(ranges) );
         }
 
-        @property bool empty()
+        static if (isInfinite!R)
+            static enum empty = false;
+        else
         {
-            return ranges[0].empty;
+            @property bool empty()
+            {
+                return ranges[0].empty;
+            }
         }
 
         void popFront()
@@ -6159,7 +6191,8 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
                 r.popFront();
                 if (!r.empty || i == 0)
                     return;
-                r = origRange.save;
+                else                    // must have 'else' case here,
+                    r = origRange.save; // otherwise warn "statement not reachable"
             }
         }
 
@@ -6208,7 +6241,7 @@ auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
     auto ranges = uninitializedArray!(R[])(repeat);
     foreach (ref elem; ranges)
         emplace(&elem, range.save);
-    return Result(range, ranges);
+    return Result2(range, ranges);
 }
 
 unittest
@@ -6218,6 +6251,7 @@ unittest
     assert(c.length == 8);
     assert(equal(c, [[4,4,4], [4,4,9], [4,9,4], [4,9,9],
                      [9,4,4], [9,4,9], [9,9,4], [9,9,9]]));
+    static assert(!isInfinite!(typeof(c)));
 }
 unittest
 {
@@ -6282,6 +6316,124 @@ unittest
     assert(equal(m, [["a","a","a"], ["a","a","b"], ["a","b","a"], ["a","b","b"],
                      ["b","a","a"], ["b","a","b"], ["b","b","a"], ["b","b","b"]]));
 }
+unittest
+{
+    auto fib = recurrence!"a[n-1] + a[n-2]"(1, 1);
+    // 1, 1, 2, 3, 5, 8, ...
+    auto fib1tf = cartesianProduct(fib.save, [true, false]);
+    static assert(isInfinite!(typeof(fib1tf)));
+    static assert(!hasLength!(typeof(fib1tf)));
+    assert(equal(take(fib1tf, 13), [tuple(1,true), tuple(1,false),
+                                    tuple(1,true), tuple(1,false),
+                                    tuple(2,true), tuple(2,false),
+                                    tuple(3,true), tuple(3,false),
+                                    tuple(5,true), tuple(5,false),
+                                    tuple(8,true), tuple(8,false),
+                                    tuple(13,true)]));
 
+    auto fib2ab = cartesianProduct(fib.save, ["a", "b"]);
+    auto fib2abComposed = cartesianProduct(fib2ab, [-0.5, 0.5]);
+    static assert(isInfinite!(typeof(fib2abComposed)));
+    static assert(!hasLength!(typeof(fib2abComposed)));
+    assert(equal(take(fib2abComposed, 13), [tuple(tuple(1,"a"),-0.5),
+                                            tuple(tuple(1,"a"), 0.5),
+                                            tuple(tuple(1,"b"),-0.5),
+                                            tuple(tuple(1,"b"), 0.5),
+                                            tuple(tuple(1,"a"),-0.5),
+                                            tuple(tuple(1,"a"), 0.5),
+                                            tuple(tuple(1,"b"),-0.5),
+                                            tuple(tuple(1,"b"), 0.5),
+                                            tuple(tuple(2,"a"),-0.5),
+                                            tuple(tuple(2,"a"), 0.5),
+                                            tuple(tuple(2,"b"),-0.5),
+                                            tuple(tuple(2,"b"), 0.5),
+                                            tuple(tuple(3,"a"),-0.5)]));
 
+    auto fibSq = cartesianProduct(["a", "b", "c"], fib.save, fib.save);
+    static assert(isInfinite!(typeof(fibSq)));
+    static assert(!hasLength!(typeof(fibSq)));
+    assert(equal(take(fibSq, 9), [tuple("a", 1, 1), tuple("a", 1, 1),
+                                  tuple("a", 1, 2), tuple("a", 1, 3),
+                                  tuple("a", 1, 5), tuple("a", 1, 8),
+                                  tuple("a", 1, 13), tuple("a", 1, 21),
+                                  tuple("a", 1, 34)]));
+
+    auto fibCube = cartesianProduct(fib.save, 3);
+    static assert(isInfinite!(typeof(fibCube)));
+    static assert(!hasLength!(typeof(fibCube)));
+    assert(equal(take(fibCube, 9), [[1,1,1], [1,1,1], [1,1,2], [1,1,3], [1,1,5],
+                                    [1,1,8], [1,1,13], [1,1,21], [1,1,34]]));
+
+}
+unittest
+{
+    auto ab2 = cartesianProduct(["a","b","?"], 2);
+    auto cdef = cartesianProduct("cd"d, [5,6]);
+    auto t = cartesianProduct(ab2, cdef);
+    auto t2 = cartesianProduct(t, 2);
+    foreach (var; TypeTuple!(ab2, cdef, t, t2))
+    {
+        static assert(!isInfinite!(typeof(var)));
+        static assert(hasLength!(typeof(var)));
+    }
+    assert(t2.length == 1296);
+    assert(t2.front == [tuple(["a", "a"], tuple('c', 5)),
+                        tuple(["a", "a"], tuple('c', 5))]);
+    assert(t2.back == [tuple(["?", "?"], tuple('d', 6)),
+                       tuple(["?", "?"], tuple('d', 6))]);
+    popFrontN(t2, 1000);
+    assert(t2.length == 296);
+    assert(t2.front == [tuple(["?", "a"], tuple('d', 6)),
+                        tuple(["?", "b"], tuple('c', 5))]);
+}
+unittest
+{
+    auto k = cartesianProduct("123", "456"w, "789"d);
+    assert(!hasLength!(typeof(k)));
+    assert(equal(k, [tuple('1', '4', '7'), tuple('1', '4', '8'), tuple('1', '4', '9'),
+                     tuple('1', '5', '7'), tuple('1', '5', '8'), tuple('1', '5', '9'),
+                     tuple('1', '6', '7'), tuple('1', '6', '8'), tuple('1', '6', '9'),
+                     tuple('2', '4', '7'), tuple('2', '4', '8'), tuple('2', '4', '9'),
+                     tuple('2', '5', '7'), tuple('2', '5', '8'), tuple('2', '5', '9'),
+                     tuple('2', '6', '7'), tuple('2', '6', '8'), tuple('2', '6', '9'),
+                     tuple('3', '4', '7'), tuple('3', '4', '8'), tuple('3', '4', '9'),
+                     tuple('3', '5', '7'), tuple('3', '5', '8'), tuple('3', '5', '9'),
+                     tuple('3', '6', '7'), tuple('3', '6', '8'), tuple('3', '6', '9')]));
+}
+unittest
+{
+    static struct S
+    {
+        int x;
+        int front() @property { return x; }
+        bool empty() @property { return x == 0; }
+        void popFront() { -- x; }
+    }
+    static assert(!isForwardRange!S);
+    static assert(!isInfinite!S);
+    static assert(!hasLength!S);
+    auto s = S(4);
+    static assert(!__traits(compiles, cartesianProduct(s, 1)));
+    static assert(!__traits(compiles, cartesianProduct([1,2], s)));
+    auto k = cartesianProduct(s, ["8", "9"]);
+    static assert(!isForwardRange!(typeof(k)));
+    static assert(!isInfinite!(typeof(k)));
+    static assert(!hasLength!(typeof(k)));
+    assert(equal(k, [tuple(4, "8"), tuple(4, "9"), tuple(3, "8"), tuple(3, "9"),
+                     tuple(2, "8"), tuple(2, "9"), tuple(1, "8"), tuple(1, "9")]));
+
+    static assert(!__traits(compiles, cartesianProduct()));
+    auto l = cartesianProduct(S(4));
+    static assert(!isForwardRange!(typeof(l)));
+    static assert(!isInfinite!(typeof(l)));
+    static assert(!hasLength!(typeof(l)));
+    assert(equal(l, [tuple(4), tuple(3), tuple(2), tuple(1)]));
+
+    auto m = cartesianProduct(["8", "9"]);
+    static assert(isForwardRange!(typeof(m)));
+    static assert(!isInfinite!(typeof(m)));
+    static assert(hasLength!(typeof(m)));
+    assert(m.length == 2);
+    assert(equal(m, [tuple("8"), tuple("9")]));
+}
 
