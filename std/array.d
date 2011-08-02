@@ -1672,6 +1672,8 @@ unittest
     assert(a == [1, 2, 3, 4, 5]);
     replaceInPlace(a, 1u, 2u, cast(int[])[]);
     assert(a == [1, 3, 4, 5]);
+    replaceInPlace(a, 1u, 3u, a[2 .. 4]);
+    assert(a == [1, 4, 5, 5]);
 }
 
 unittest
