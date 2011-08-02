@@ -6046,7 +6046,7 @@ Bugs:
     Although cartesianProduct can return a bidirectional range, mixing popFront
     and popBack will return wrong result.
 */
-auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) && allSatisfy!(isForwardRange, R[1..$]))
+auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) && allSatisfy!(isForwardRange, R[1..$]) && !anySatisfy!(isInfinite, R[1..$]))
 {
     static string callMemberFunction(string memfun, RR...)
         (string mem = "ranges", string op = "", string cl = "")
@@ -6161,7 +6161,7 @@ auto cartesianProduct(R...)(R ranges) if (R.length > 0 && isInputRange!(R[0]) &&
                                ~ ", ranges)");
 }
 /// ditto
-auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R)
+auto cartesianProduct(R)(R range, size_t repeat) if (isForwardRange!R && !isInfinite!R)
 {
     // we call it 'Result2' because of bug 6430.
     static struct Result2
@@ -6348,7 +6348,8 @@ unittest
                                             tuple(tuple(2,"b"),-0.5),
                                             tuple(tuple(2,"b"), 0.5),
                                             tuple(tuple(3,"a"),-0.5)]));
-
+    
+    /+
     auto fibSq = cartesianProduct(["a", "b", "c"], fib.save, fib.save);
     static assert(isInfinite!(typeof(fibSq)));
     static assert(!hasLength!(typeof(fibSq)));
@@ -6363,6 +6364,10 @@ unittest
     static assert(!hasLength!(typeof(fibCube)));
     assert(equal(take(fibCube, 9), [[1,1,1], [1,1,1], [1,1,2], [1,1,3], [1,1,5],
                                     [1,1,8], [1,1,13], [1,1,21], [1,1,34]]));
+    +/
+    static assert(!__traits(compiles, cartesianProduct(["a", "b", "c"], fib.save)));
+    static assert(!__traits(compiles, cartesianProduct(fib.save, fib.save)));
+    static assert(!__traits(compiles, cartesianProduct(fib.save, 3)));
 
 }
 unittest
