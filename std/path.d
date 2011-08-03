@@ -591,56 +591,61 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
 
 
 
-/** Get the _extension part of a file name.
+/** Get the _extension part of a file name, including the dot.
 
     Examples:
     ---
-    assert (extension("file")           == "");
-    assert (extension("file.ext")       == "ext");
-    assert (extension("file.ext1.ext2") == "ext2");
-    assert (extension(".file")          == "");
-    assert (extension(".file.ext")      == "ext");
+    assert (extension("file").empty);
+    assert (extension("file.ext")       == ".ext");
+    assert (extension("file.ext1.ext2") == ".ext2");
+    assert (extension("file.")          == ".");
+    assert (extension(".file").empty);
+    assert (extension(".file.ext")      == ".ext");
     ---
 */
 C[] extension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return null;
-    else return path[i+1 .. $];
+    else return path[i .. $];
 }
 
 
 unittest
 {
     assert (extension("file").empty);
-    assert (extension("file.ext"w) == "ext");
-    assert (extension("file.ext1.ext2"d) == "ext2");
+    assert (extension("file.") == ".");
+    assert (extension("file.ext"w) == ".ext");
+    assert (extension("file.ext1.ext2"d) == ".ext2");
     assert (extension(".foo".dup).empty);
-    assert (extension(".foo.ext"w.dup) == "ext");
+    assert (extension(".foo.ext"w.dup) == ".ext");
 
     assert (extension("dir/file"d.dup).empty);
-    assert (extension("dir/file.ext") == "ext");
-    assert (extension("dir/file.ext1.ext2"w) == "ext2");
+    assert (extension("dir/file.") == ".");
+    assert (extension("dir/file.ext") == ".ext");
+    assert (extension("dir/file.ext1.ext2"w) == ".ext2");
     assert (extension("dir/.foo"d).empty);
-    assert (extension("dir/.foo.ext".dup) == "ext");
+    assert (extension("dir/.foo.ext".dup) == ".ext");
 
     version(Windows)
     {
-    assert (extension("dir\\file").empty);
-    assert (extension("dir\\file.ext") == "ext");
-    assert (extension("dir\\file.ext1.ext2") == "ext2");
-    assert (extension("dir\\.foo").empty);
-    assert (extension("dir\\.foo.ext") == "ext");
+        assert (extension(`dir\file`).empty);
+        assert (extension(`dir\file.`) == ".");
+        assert (extension(`dir\file.ext`) == `.ext`);
+        assert (extension(`dir\file.ext1.ext2`) == `.ext2`);
+        assert (extension(`dir\.foo`).empty);
+        assert (extension(`dir\.foo.ext`) == `.ext`);
 
-    assert (extension("d:file").empty);
-    assert (extension("d:file.ext") == "ext");
-    assert (extension("d:file.ext1.ext2") == "ext2");
-    assert (extension("d:.foo").empty);
-    assert (extension("d:.foo.ext") == "ext");
+        assert (extension(`d:file`).empty);
+        assert (extension(`d:file.`) == ".");
+        assert (extension(`d:file.ext`) == `.ext`);
+        assert (extension(`d:file.ext1.ext2`) == `.ext2`);
+        assert (extension(`d:.foo`).empty);
+        assert (extension(`d:.foo.ext`) == `.ext`);
     }
 
     static assert (extension("file").empty);
-    static assert (extension("file.ext") == "ext");
+    static assert (extension("file.ext") == ".ext");
 }
 
 
