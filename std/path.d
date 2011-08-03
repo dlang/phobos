@@ -840,34 +840,6 @@ unittest
 
 
 
-// Detects whether the given types are all string types of the same width
-private template compatibleStrings(Strings...)  if (Strings.length > 0)
-{
-    static if (Strings.length == 1)
-    {
-        enum compatibleStrings = isSomeChar!(typeof(Strings[0].init[0]));
-    }
-    else
-    {
-        enum compatibleStrings =
-            is(Unqual!(typeof(Strings[0].init[0])) == Unqual!(typeof(Strings[1].init[0])))
-            && compatibleStrings!(Strings[1 .. $]);
-    }
-}
-
-version (unittest)
-{
-    static assert (compatibleStrings!(char[], const(char)[], string));
-    static assert (compatibleStrings!(wchar[], const(wchar)[], wstring));
-    static assert (compatibleStrings!(dchar[], const(dchar)[], dstring));
-    static assert (!compatibleStrings!(int[], const(int)[], immutable(int)[]));
-    static assert (!compatibleStrings!(char[], wchar[]));
-    static assert (!compatibleStrings!(char[], dstring));
-}
-
-
-
-
 /** Joins one or more path components.
 
     The given path components are concatenated with each other,
