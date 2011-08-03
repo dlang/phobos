@@ -1290,10 +1290,30 @@ const(wchar)* toUTF16z(C)(const(C)[] str)
 
 unittest
 {
+    import std.metastrings;
     import std.typetuple;
 
+    size_t zeroLen(C)(const(C)* ptr)
+    {
+        size_t len = 0;
+
+        while(*ptr != '\0')
+        {
+            ++ptr;
+            ++len;
+        }
+
+        return len;
+    }
+
     foreach(S; TypeTuple!(string, wstring, dstring))
-        auto s = toUTF16z(to!S("hello world"));
+    {
+        auto s = to!S("hello\U00010143\u0100world\U00010143");
+        auto p = toUTF16z(s);
+
+        immutable len = zeroLen(p);
+        assert(cmp(s, p[0 .. len]) == 0, Format!("Unit test failed: %s", S.stringof));
+    }
 }
 
 
