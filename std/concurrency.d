@@ -1230,7 +1230,10 @@ private
             {
                 put( rhs.m_first );
                 while( m_last.next !is null )
-                    m_last = m_last.next, m_count++;
+                {
+                    m_last = m_last.next;
+                    m_count++;
+                }
                 rhs.m_first = null;
                 rhs.m_last  = null;
                 rhs.m_count = 0;
