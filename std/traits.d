@@ -1486,6 +1486,7 @@ template hasElaborateAssign(S)
     else
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
+                                  is(typeof(S.init.opAssign({ return S.init; }()))) ||
             anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
     }
 }
@@ -1501,6 +1502,13 @@ unittest
     static assert(!hasElaborateAssign!S2);
     struct S3 { S s; }
     static assert(hasElaborateAssign!S3);
+
+    struct S4 {
+        void opAssign(U)(auto ref U u)
+            if (!__traits(isRef, u))
+        {}
+    }
+    static assert(hasElaborateAssign!S4);
 }
 
 /**
