@@ -710,30 +710,37 @@ unittest
 /** Set the extension of a filename.
 
     If the filename already has an extension, it is replaced.   If not, the
-    extension is simply appended to the filename.
+    extension is simply appended to the filename.  Including the dot in the
+    extension is optional.
 
     This function normally allocates a new string (the possible exception
     being case when path is immutable and doesn't already have an extension).
 
     Examples:
     ---
-    assert (setExtension("file", "ext")     == "file.ext");
-    assert (setExtension("file.old", "new") == "file.new");
+    assert (setExtension("file", "ext")      == "file.ext");
+    assert (setExtension("file", ".ext")     == "file.ext");
+    assert (setExtension("file.old", "new")  == "file.new");
+    assert (setExtension("file.old", ".new") == "file.new");
     ---
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
-    return cast(typeof(return))(stripExtension(path)~'.'~ext);
+    if (ext.length > 0 && ext[0] == '.')
+        return cast(typeof(return))(stripExtension(path)~ext);
+    else
+        return cast(typeof(return))(stripExtension(path)~'.'~ext);
 }
 
 ///ditto
-immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, in C2[] ext)
+immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     // Optimised for the case where path is immutable and has no extension
+    if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
     auto i = extSeparatorPos(path);
     if (i == -1)
     {
@@ -756,12 +763,18 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, in C2[] ext)
 unittest
 {
     assert (setExtension("file", "ext") == "file.ext");
-    assert (setExtension("file.", "ext") == "file.ext");
-    assert (setExtension("file.old", "new") == "file.new");
+    assert (setExtension("file"w, ".ext"w) == "file.ext");
+    assert (setExtension("file."d, "ext"d) == "file.ext");
+    assert (setExtension("file.", ".ext") == "file.ext");
+    assert (setExtension("file.old"w, "new"w) == "file.new");
+    assert (setExtension("file.old"d, ".new"d) == "file.new");
 
     assert (setExtension("file"w.dup, "ext"w) == "file.ext");
+    assert (setExtension("file"w.dup, ".ext"w) == "file.ext");
     assert (setExtension("file."w, "ext"w.dup) == "file.ext");
+    assert (setExtension("file."w, ".ext"w.dup) == "file.ext");
     assert (setExtension("file.old"d.dup, "new"d) == "file.new");
+    assert (setExtension("file.old"d.dup, ".new"d) == "file.new");
 
     static assert (setExtension("file", "ext") == "file.ext");
     static assert (setExtension("file.old", "new") == "file.new");
@@ -776,13 +789,18 @@ unittest
 /** Set the extension of a filename, but only if it doesn't
     already have one.
 
+    Including the dot in the extension is optional.
+
     This function always allocates a new string, except in the case when
     path is immutable and already has an extension.
 
     Examples:
     ---
-    assert (defaultExtension("file", "ext")     == "file.ext");
-    assert (defaultExtension("file.old", "new") == "file.old");
+    assert (defaultExtension("file", "ext")      == "file.ext");
+    assert (defaultExtension("file", ".ext")     == "file.ext");
+    assert (defaultExtension("file.", "ext")     == "file.");
+    assert (defaultExtension("file.old", "new")  == "file.old");
+    assert (defaultExtension("file.old", ".new") == "file.old");
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
@@ -790,7 +808,13 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
-    if (i == -1) return cast(typeof(return))(path~'.'~ext);
+    if (i == -1)
+    {
+        if (ext.length > 0 && ext[0] == '.')
+            return cast(typeof(return))(path~ext);
+        else
+            return cast(typeof(return))(path~'.'~ext);
+    }
     else return to!(typeof(return))(path);
 }
 
@@ -798,7 +822,10 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
 unittest
 {
     assert (defaultExtension("file", "ext") == "file.ext");
+    assert (defaultExtension("file", ".ext") == "file.ext");
+    assert (defaultExtension("file.", "ext")     == "file.");
     assert (defaultExtension("file.old", "new") == "file.old");
+    assert (defaultExtension("file.old", ".new") == "file.old");
 
     assert (defaultExtension("file"w.dup, "ext"w) == "file.ext");
     assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
