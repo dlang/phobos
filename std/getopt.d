@@ -627,6 +627,299 @@ private void setConfig(ref configuration cfg, config option)
     }
 }
 
+unittest {
+    bool isEqual(T)(const(T) a, const(T) b) pure nothrow
+    {
+        static if (isFloatingPoint!(T)) {
+            return (std.math.isNaN(a) && std.math.isNaN(b)) || std.math.isIdentical(a, b);
+        }
+        else {
+            return a == b;
+        }
+    }
+
+    enum Timeout {
+        no,
+        yes,
+    }
+
+    import std.typetuple;
+    foreach (value; TypeTuple!(
+                               true, // Boolean
+                               cast(short) 1, cast(ushort) 1, 1, 1u, 1L, 1uL, // integral
+                               1f, 1.0, cast(real) 1.0, // floating point
+                               Timeout.yes, // enum
+                               "never", // string TODO wstring,dstring
+                               [ "1" ], // arrays
+                               [ "string" : 1.0 ], // associative arrays
+                              ))
+    {
+        alias Unqual!(typeof(value)) T;
+        debug scope(failure) writeln("unittest @", __FILE__, ":", __LINE__, " fails for type ", T.stringof);
+        T timeout;
+        static if (isAssociativeArray!(T)) {
+            auto timeoutAsString = value.keys[0] ~ "=" ~ to!string(value.values[0]);
+        }
+        else static if (isArray!(T) && !isSomeString!(T)) {
+            auto timeoutAsString = to!string(value[0]);
+        }
+        else {
+            auto timeoutAsString = to!string(value);
+        }
+
+        // mostly accepted short options
+        string[] args = (["program.name",
+                          "-t="~timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "-t"~timeoutAsString]).dup;
+        static if (isAssociativeArray!(T))
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            // due to bug bug http://d.puremagic.com/issues/show_bug.cgi?id=5683
+            // the cast is needed
+            // this occurs several times below
+            // FIX ALL
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "-timeout="~timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        // mostly non-accepted (i.e. for few types accepted) short options
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "-t", timeoutAsString]).dup;
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, ""), to!string(timeout));
+        }
+        else static if (is(T == bool))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else static if (isAssociativeArray!(T))
+        {
+            import core.exception;
+            assertThrown!RangeError(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else static if (isArray!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            // but added string is null
+            assert(isEqual(timeout, cast(T) [null]), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!ConvError(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "-timeout", timeoutAsString]).dup;
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, "imeout"), to!string(timeout));
+        }
+        else static if (is(T == bool))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else static if (isAssociativeArray!(T))
+        {
+            import core.exception;
+            assertThrown!RangeError(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else static if (isArray!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, ["imeout"]), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!ConvError(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "-timeout"~timeoutAsString]).dup;
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, "imeout" ~ value), to!string(timeout));
+        }
+        else static if (is(T == bool))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else static if (isAssociativeArray!(T))
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else static if (isArray!(T))
+        {
+            getopt(args, "t|timeout", &timeout); // no exception thrown
+            assert(isEqual(timeout, ["imeout1"]), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!ConvError(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        // long options
+        // accepted
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--timeout", timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--timeout="~timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--t", timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--t="~timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        // non-accepted
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--timeout"~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+        static if (isAssociativeArray!(T))
+        {
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else
+        {
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        static if (isAssociativeArray!(T))
+        {
+            timeout = null;
+        }
+        else
+        {
+            timeout = timeout.init;
+        }
+        args = (["program.name",
+                 "--t"~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+        static if (isAssociativeArray!(T))
+        {
+            assert(isEqual(timeout, cast(T) null), to!string(timeout));
+        }
+        else
+        {
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+    }
+}
+
 unittest
 {
     uint paranoid = 2;
