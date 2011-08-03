@@ -30,6 +30,7 @@ immutable
         DigitalMars = 1,        /// Digital Mars D (DMD)
         GNU = 2,                /// GNU D Compiler (GDC)
         LLVM = 3,               /// LLVM D Compiler (LDC)
+        DotNET = 4,             /// D.NET
     }
 
     /// Which vendor produced this compiler.
@@ -44,6 +45,10 @@ immutable
     else version (LDC)
     {
         Vendor vendor = Vendor.LLVM;
+    }
+    else version (D_NET)
+    {
+        Vendor vendor = Vendor.DotNET;
     }
     else
     {
