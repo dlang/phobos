@@ -1448,7 +1448,8 @@ unittest
 
 /++
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
-    array without changing the contents of $(D subject).
+    array without changing the contents of $(D subject), or the original array
+    if no match is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -1761,7 +1762,8 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
 
 /++
     Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject).
+    new array without changing the contents of $(D subject), or the original
+    array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
@@ -1772,7 +1774,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
     auto app = appender!R1();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
-    subject = balance[from.length .. $];
+    app.put(balance[from.length .. $]);
 
     return app.data;
 }
@@ -1790,13 +1792,16 @@ unittest
         auto from = to!T("foo");
         auto into = to!T("silly");
 
-        S r1 = replace(s, from, into);
-        assert(cmp(r1, "This is a silly silly list") == 0);
+        S r1 = replaceFirst(s, from, into);
+        assert(cmp(r1, "This is a silly foo list") == 0);
 
-        S r2 = replace(s, to!T(""), into);
-        assert(cmp(r2, "This is a foo foo list") == 0);
+        S r2 = replaceFirst(r1, from, into);
+        assert(cmp(r2, "This is a silly silly list") == 0);
 
-        assert(replace(r2, to!T("won't find this"), to!T("whatever")) is r2);
+        S r3 = replaceFirst(s, to!T(""), into);
+        assert(cmp(r3, "This is a foo foo list") == 0);
+
+        assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
     }
 }
 
