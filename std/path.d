@@ -17,8 +17,7 @@
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(D buildNormalizedPath)
-    and $(D normalize) functions will replace all slashes with backslashes
-    on this platform.
+    function will replace all slashes with backslashes on this platform.
 
     In general, the functions in this module assume that the input paths
     are well-formed.  (That is, they should not contain invalid characters,
@@ -941,6 +940,8 @@ unittest
     ---
     version (Posix)
     {
+        assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
+        assert (buildNormalizedPath("../foo/.") == "../foo");
         assert (buildNormalizedPath("/foo", "bar/baz/") == "/foo/bar/baz");
         assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
         assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
@@ -949,6 +950,8 @@ unittest
 
     version (Windows)
     {
+        assert (buildNormalizedPath(`c:\foo\.\bar/..\\baz\`) == `c:\foo\baz`);
+        assert (buildNormalizedPath(`..\foo\.`) == `..\foo`);
         assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
         assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
         assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) == `\\server\share\bar`);
@@ -1225,138 +1228,107 @@ unittest
     else static assert (0);
 }
 
-
-
-
-/** Normalize the given path.
-
-    This is just a shortcut to the one-argument version of
-    $(D buildNormalizedPath).  Please refer to the
-    $(D buildNormalizedPath) documentation
-    for details.
-
-    Examples:
-    ---
-    version (Posix)
-    {
-        assert (normalize("/foo/./bar/..//baz/") == "/foo/baz");
-        assert (normalize("../foo/.") == "../foo");
-    }
-    version (Windows)
-    {
-        assert (normalize(`c:\foo\.\bar/..\\baz\`) == `c:\foo\baz`);
-        assert (normalize(`..\foo\.`) == `..\foo`);
-    }
-    ---
-*/
-immutable(Unqual!C)[] normalize(C)(in C[] path)  @trusted pure nothrow
-    if (isSomeChar!C)
-{
-    return buildNormalizedPath(path);
-}
-
-
 unittest
 {
     version (Posix)
     {
         // Trivial
-        assert (normalize("").empty);
-        assert (normalize("foo/bar") == "foo/bar");
+        assert (buildNormalizedPath("").empty);
+        assert (buildNormalizedPath("foo/bar") == "foo/bar");
 
         // Correct handling of leading slashes
-        assert (normalize("/") == "/");
-        assert (normalize("///") == "/");
-        assert (normalize("////") == "/");
-        assert (normalize("/foo/bar") == "/foo/bar");
-        assert (normalize("//foo/bar") == "/foo/bar");
-        assert (normalize("///foo/bar") == "/foo/bar");
-        assert (normalize("////foo/bar") == "/foo/bar");
+        assert (buildNormalizedPath("/") == "/");
+        assert (buildNormalizedPath("///") == "/");
+        assert (buildNormalizedPath("////") == "/");
+        assert (buildNormalizedPath("/foo/bar") == "/foo/bar");
+        assert (buildNormalizedPath("//foo/bar") == "/foo/bar");
+        assert (buildNormalizedPath("///foo/bar") == "/foo/bar");
+        assert (buildNormalizedPath("////foo/bar") == "/foo/bar");
 
         // Correct handling of single-dot symbol (current directory)
-        assert (normalize("/./foo") == "/foo");
-        assert (normalize("/foo/./bar") == "/foo/bar");
+        assert (buildNormalizedPath("/./foo") == "/foo");
+        assert (buildNormalizedPath("/foo/./bar") == "/foo/bar");
 
-        assert (normalize("./foo") == "foo");
-        assert (normalize("././foo") == "foo");
-        assert (normalize("foo/././bar") == "foo/bar");
+        assert (buildNormalizedPath("./foo") == "foo");
+        assert (buildNormalizedPath("././foo") == "foo");
+        assert (buildNormalizedPath("foo/././bar") == "foo/bar");
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (normalize("/foo/../bar") == "/bar");
-        assert (normalize("/foo/../../bar") == "/bar");
-        assert (normalize("/../foo") == "/foo");
-        assert (normalize("/../../foo") == "/foo");
-        assert (normalize("/foo/..") == "/");
-        assert (normalize("/foo/../..") == "/");
+        assert (buildNormalizedPath("/foo/../bar") == "/bar");
+        assert (buildNormalizedPath("/foo/../../bar") == "/bar");
+        assert (buildNormalizedPath("/../foo") == "/foo");
+        assert (buildNormalizedPath("/../../foo") == "/foo");
+        assert (buildNormalizedPath("/foo/..") == "/");
+        assert (buildNormalizedPath("/foo/../..") == "/");
 
-        assert (normalize("foo/../bar") == "bar");
-        assert (normalize("foo/../../bar") == "../bar");
-        assert (normalize("../foo") == "../foo");
-        assert (normalize("../../foo") == "../../foo");
-        assert (normalize("../foo/../bar") == "../bar");
-        assert (normalize(".././../foo") == "../../foo");
-        assert (normalize("foo/bar/..") == "foo");
-        assert (normalize("/foo/../..") == "/");
+        assert (buildNormalizedPath("foo/../bar") == "bar");
+        assert (buildNormalizedPath("foo/../../bar") == "../bar");
+        assert (buildNormalizedPath("../foo") == "../foo");
+        assert (buildNormalizedPath("../../foo") == "../../foo");
+        assert (buildNormalizedPath("../foo/../bar") == "../bar");
+        assert (buildNormalizedPath(".././../foo") == "../../foo");
+        assert (buildNormalizedPath("foo/bar/..") == "foo");
+        assert (buildNormalizedPath("/foo/../..") == "/");
 
         // The ultimate path
-        assert (normalize("/foo/../bar//./../...///baz//") == "/.../baz");
-        static assert (normalize("/foo/../bar//./../...///baz//") == "/.../baz");
+        assert (buildNormalizedPath("/foo/../bar//./../...///baz//") == "/.../baz");
+        static assert (buildNormalizedPath("/foo/../bar//./../...///baz//") == "/.../baz");
     }
     else version (Windows)
     {
         // Trivial
-        assert (normalize("").empty);
-        assert (normalize(`foo\bar`) == `foo\bar`);
-        assert (normalize("foo/bar") == `foo\bar`);
+        assert (buildNormalizedPath("").empty);
+        assert (buildNormalizedPath(`foo\bar`) == `foo\bar`);
+        assert (buildNormalizedPath("foo/bar") == `foo\bar`);
 
         // Correct handling of absolute paths
-        assert (normalize("/") == `\`);
-        assert (normalize(`\`) == `\`);
-        assert (normalize(`\\\`) == `\`);
-        assert (normalize(`\\\\`) == `\`);
-        assert (normalize(`\foo\bar`) == `\foo\bar`);
-        assert (normalize(`\\foo`) == `\\foo`, normalize(`\\foo`));
-        assert (normalize(`\\foo\\`) == `\\foo`);
-        assert (normalize(`\\foo/bar`) == `\\foo\bar`);
-        assert (normalize(`\\\foo\bar`) == `\foo\bar`);
-        assert (normalize(`\\\\foo\bar`) == `\foo\bar`);
-        assert (normalize(`c:\`) == `c:\`);
-        assert (normalize(`c:\foo\bar`) == `c:\foo\bar`);
-        assert (normalize(`c:\\foo\bar`) == `c:\foo\bar`);
+        assert (buildNormalizedPath("/") == `\`);
+        assert (buildNormalizedPath(`\`) == `\`);
+        assert (buildNormalizedPath(`\\\`) == `\`);
+        assert (buildNormalizedPath(`\\\\`) == `\`);
+        assert (buildNormalizedPath(`\foo\bar`) == `\foo\bar`);
+        assert (buildNormalizedPath(`\\foo`) == `\\foo`);
+        assert (buildNormalizedPath(`\\foo\\`) == `\\foo`);
+        assert (buildNormalizedPath(`\\foo/bar`) == `\\foo\bar`);
+        assert (buildNormalizedPath(`\\\foo\bar`) == `\foo\bar`);
+        assert (buildNormalizedPath(`\\\\foo\bar`) == `\foo\bar`);
+        assert (buildNormalizedPath(`c:\`) == `c:\`);
+        assert (buildNormalizedPath(`c:\foo\bar`) == `c:\foo\bar`);
+        assert (buildNormalizedPath(`c:\\foo\bar`) == `c:\foo\bar`);
 
         // Correct handling of single-dot symbol (current directory)
-        assert (normalize(`\./foo`) == `\foo`);
-        assert (normalize(`\foo/.\bar`) == `\foo\bar`);
+        assert (buildNormalizedPath(`\./foo`) == `\foo`);
+        assert (buildNormalizedPath(`\foo/.\bar`) == `\foo\bar`);
 
-        assert (normalize(`.\foo`) == `foo`);
-        assert (normalize(`./.\foo`) == `foo`);
-        assert (normalize(`foo\.\./bar`) == `foo\bar`);
+        assert (buildNormalizedPath(`.\foo`) == `foo`);
+        assert (buildNormalizedPath(`./.\foo`) == `foo`);
+        assert (buildNormalizedPath(`foo\.\./bar`) == `foo\bar`);
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (normalize(`\foo\..\bar`) == `\bar`);
-        assert (normalize(`\foo\../..\bar`) == `\bar`);
-        assert (normalize(`\..\foo`) == `\foo`);
-        assert (normalize(`\..\..\foo`) == `\foo`);
-        assert (normalize(`\foo\..`) == `\`);
-        assert (normalize(`\foo\../..`) == `\`);
+        assert (buildNormalizedPath(`\foo\..\bar`) == `\bar`);
+        assert (buildNormalizedPath(`\foo\../..\bar`) == `\bar`);
+        assert (buildNormalizedPath(`\..\foo`) == `\foo`);
+        assert (buildNormalizedPath(`\..\..\foo`) == `\foo`);
+        assert (buildNormalizedPath(`\foo\..`) == `\`);
+        assert (buildNormalizedPath(`\foo\../..`) == `\`);
 
-        assert (normalize(`foo\..\bar`) == `bar`);
-        assert (normalize(`foo\..\../bar`) == `..\bar`);
-        assert (normalize(`..\foo`) == `..\foo`);
-        assert (normalize(`..\..\foo`) == `..\..\foo`);
-        assert (normalize(`..\foo\..\bar`) == `..\bar`);
-        assert (normalize(`..\.\..\foo`) == `..\..\foo`);
-        assert (normalize(`foo\bar\..`) == `foo`);
-        assert (normalize(`\foo\..\..`) == `\`);
-        assert (normalize(`c:\foo\..\..`) == `c:\`);
+        assert (buildNormalizedPath(`foo\..\bar`) == `bar`);
+        assert (buildNormalizedPath(`foo\..\../bar`) == `..\bar`);
+        assert (buildNormalizedPath(`..\foo`) == `..\foo`);
+        assert (buildNormalizedPath(`..\..\foo`) == `..\..\foo`);
+        assert (buildNormalizedPath(`..\foo\..\bar`) == `..\bar`);
+        assert (buildNormalizedPath(`..\.\..\foo`) == `..\..\foo`);
+        assert (buildNormalizedPath(`foo\bar\..`) == `foo`);
+        assert (buildNormalizedPath(`\foo\..\..`) == `\`);
+        assert (buildNormalizedPath(`c:\foo\..\..`) == `c:\`);
 
         // Correct handling of non-root path with drive specifier
-        assert (normalize(`c:foo`) == `c:foo`);
-        assert (normalize(`c:..\foo\.\..\bar`) == `c:..\bar`);
+        assert (buildNormalizedPath(`c:foo`) == `c:foo`);
+        assert (buildNormalizedPath(`c:..\foo\.\..\bar`) == `c:..\bar`);
 
         // The ultimate path
-        assert (normalize(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
-        static assert (normalize(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
+        assert (buildNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
+        static assert (buildNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
     }
     else static assert (false);
 }
