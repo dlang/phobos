@@ -3,18 +3,21 @@
 /** Proposal for a new $(D std._path).
 
     This module is used to parse _path strings. All functions, with the
-    exception of $(D expandTilde()), are pure
+    exception of $(D expandTilde), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any I/O.
     This has the consequence that the module does not make any distinction
     between a _path that points to a directory and a _path that points to a
-    file.  To differentiate between these cases, use $(D  std.file.isDir()).
+    file, and it does not know whether or not the object pointed to by the
+    _path actually exists in the file system.
+    To differentiate between these cases, use $(D std.file.isDir) and
+    $(D std.file.exists).
 
     Note that on Windows, both the backslash ($(D '\')) and the slash ($(D '/'))
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(D buildNormalizedPath)
-    and $(D normalize()) functions will replace all slashes with backslashes
+    and $(D normalize) functions will replace all slashes with backslashes
     on this platform.
 
     In general, the functions in this module assume that the input paths
@@ -212,7 +215,7 @@ private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
     Note:
     This function only strips away the specified suffix.  If you want
     to remove the extension from a path, regardless of what the extension
-    is, use stripExtension().
+    is, use $(D stripExtension).
     If you want the filename without leading directories and without
     an extension, combine the functions like this:
     ---
@@ -474,11 +477,11 @@ unittest
 
 
 
-/** Returns the drive of a path, or an empty string if the drive
+/** Returns the drive of a path, or $(D null) if the drive
     is not specified.  In the case of UNC paths, the network share
     is returned.
 
-    Always returns an empty string on POSIX.
+    Always returns $(D null) on POSIX.
 
     Examples:
     ---
@@ -593,6 +596,8 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
 
 /** Get the _extension part of a file name, including the dot.
 
+    If there is no _extension, $(D null) is returned.
+
     Examples:
     ---
     assert (extension("file").empty);
@@ -658,6 +663,7 @@ unittest
     assert (stripExtension("file")           == "file");
     assert (stripExtension("file.ext")       == "file");
     assert (stripExtension("file.ext1.ext2") == "file.ext1");
+    assert (stripExtension("file.")          == "file");
     assert (stripExtension(".file")          == ".file");
     assert (stripExtension(".file.ext")      == ".file");
     assert (stripExtension("dir/file.ext")   == "dir/file");
@@ -845,8 +851,7 @@ unittest
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
     them. If any of the path components are rooted (see
-    $(LINK2 #isRooted,isRooted)) the preceding path components
-    will be dropped.
+    $(D isRooted)) the preceding path components will be dropped.
 
     Examples:
     ---
@@ -924,9 +929,10 @@ unittest
 
 
 
-/** Performs the same task as $(D buildPath), while at the same
-    time resolving current/parent directory symbols ($(D ".") and
-    $(D "..")) and removing superfluous directory separators.
+/** Performs the same task as $(D buildPath),
+    while at the same time resolving current/parent directory
+    symbols ($(D ".") and $(D "..")) and removing superfluous
+    directory separators.
     On Windows, slashes are replaced with backslashes.
 
     Note that this function does not resolve symbolic links.
@@ -1225,8 +1231,9 @@ unittest
 /** Normalize the given path.
 
     This is just a shortcut to the one-argument version of
-    $(D buildNormalizedPath).  Please refer to the $(D buildNormalizedPath)
-    documentation for details.
+    $(D buildNormalizedPath).  Please refer to the
+    $(D buildNormalizedPath) documentation
+    for details.
 
     Examples:
     ---
@@ -1703,12 +1710,12 @@ unittest
 
 
 
-/** Translate path into an absolute _path.
+/** Translate $(D path) into an absolute _path.
 
     This means:
     $(UL
-        $(LI If path is empty, return an empty string.)
-        $(LI If path is already absolute, return it.)
+        $(LI If $(D path) is empty, return $(D null).)
+        $(LI If $(D path) is already absolute, return it.)
         $(LI Otherwise, append $(D path) to $(D base) and return
             the result. If $(D base) is not specified, the current
             working directory is used.)
@@ -1898,7 +1905,7 @@ unittest
 
 
 
-/** This enum is used as a template argument to functions which
+/** This $(D enum) is used as a template argument to functions which
     compare file names, and determines whether the comparison is
     case sensitive or not.
 */
@@ -1930,7 +1937,7 @@ else static assert (0);
     This function can perform a case-sensitive or a case-insensitive
     comparison.  This is controlled through the $(D cs) template parameter
     which, if not specified, is given by
-    $(LINK2 #CaseSensitive,$(D CaseSensitive.osDefault)).
+    $(D CaseSensitive.osDefault).
 
     On Windows, the backslash and slash characters ($(D '\') and $(D '/'))
     are considered equal.
@@ -2345,7 +2352,7 @@ unittest
     Returns:
     $(D inputPath) with the tilde expanded, or just $(D inputPath)
     if it could not be expanded.
-    For Windows, $(D expandTilde()) merely returns its argument $(D inputPath).
+    For Windows, $(D expandTilde) merely returns its argument $(D inputPath).
 
     Examples:
     -----
