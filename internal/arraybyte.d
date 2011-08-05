@@ -80,9 +80,7 @@ body
         {
             auto n = aptr + (a.length & ~63);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
-            l |= (l << 16);
+            uint l = cast(ubyte)value * 0x01010101;
 
             if (((cast(uint) aptr | cast(uint) bptr) & 15) != 0)
             {
@@ -157,8 +155,7 @@ body
         {
             auto n = aptr + (a.length & ~31);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
+            uint l = cast(ubyte)value * 0x0101;
 
             asm
             {
@@ -516,9 +513,7 @@ T[] _arrayExpSliceAddass_g(T[] a, T value)
         {
             auto n = aptr + (a.length & ~63);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
-            l |= (l << 16);
+            uint l = cast(ubyte)value * 0x01010101;
 
             if (((cast(uint) aptr) & 15) != 0)
             {
@@ -588,8 +583,7 @@ T[] _arrayExpSliceAddass_g(T[] a, T value)
 
             auto n = aptr + (a.length & ~31);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
+            uint l = cast(ubyte)value * 0x0101;
 
             asm
             {
@@ -903,9 +897,7 @@ body
         {
             auto n = aptr + (a.length & ~63);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
-            l |= (l << 16);
+            uint l = cast(ubyte)value * 0x01010101;
 
             if (((cast(uint) aptr | cast(uint) bptr) & 15) != 0)
             {
@@ -980,8 +972,7 @@ body
         {
             auto n = aptr + (a.length & ~31);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
+            uint l = cast(ubyte)value * 0x0101;
 
             asm
             {
@@ -1131,9 +1122,7 @@ body
         {
             auto n = aptr + (a.length & ~63);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
-            l |= (l << 16);
+            uint l = cast(ubyte)value * 0x01010101;
 
             if (((cast(uint) aptr | cast(uint) bptr) & 15) != 0)
             {
@@ -1216,8 +1205,7 @@ body
         {
             auto n = aptr + (a.length & ~31);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
+            uint l = cast(ubyte)value * 0x0101;
 
             asm
             {
@@ -1540,9 +1528,7 @@ T[] _arrayExpSliceMinass_g(T[] a, T value)
         {
             auto n = aptr + (a.length & ~63);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
-            l |= (l << 16);
+            uint l = cast(ubyte)value * 0x01010101;
 
             if (((cast(uint) aptr) & 15) != 0)
             {
@@ -1612,8 +1598,7 @@ T[] _arrayExpSliceMinass_g(T[] a, T value)
 
             auto n = aptr + (a.length & ~31);
 
-            uint l = cast(ubyte) value;
-            l |= (l << 8);
+            uint l = cast(ubyte)value * 0x0101;
 
             asm
             {
