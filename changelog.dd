@@ -7,6 +7,7 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Values for GDC and LDC were added to std.compiler.Vendor.)
       $(LI Added functions to std.bitswap for generically handling swapping
            endianness.)
+	  $(LI Added std.parallelism.TaskPool.workerIndex.)
      )
 
     $(LIBBUGSFIXED
