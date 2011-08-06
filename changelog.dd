@@ -8,6 +8,8 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Added functions to std.bitswap for generically handling swapping
            endianness.)
 	  $(LI Added std.parallelism.TaskPool.workerIndex.)
+      $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
+           equivalent functions in std.mathspecial should be used instead.)
      )
 
     $(LIBBUGSFIXED
