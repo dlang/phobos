@@ -873,7 +873,7 @@ unittest {
         }
         auto dg_xtrnC = toDelegate(&S.xtrnC);
         auto dg_xtrnD = toDelegate(&S.xtrnD);
-        static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
+        static assert( is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
 
