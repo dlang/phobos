@@ -1623,6 +1623,41 @@ unittest {
 
 }
 
+/*
+Evaluates natural log(x) at compile time, using the series
+log(x) = 2 * ( (x - 1) / (x + 1) + (1 / 3) ((x - 1) / (x + 1)) ^^ 3 +
+         (1 / 5) * ((x - 1) / (x + 1)) ^^ 5 ...)
+
+This is very inefficient compared to the C function and should not be used
+at runtime.
+*/
+private real ctfeLog(real x) pure nothrow @safe
+{
+    immutable xMinusPlus = (x - 1) / (x + 1);
+    immutable xMinusPlusSquared = xMinusPlus * xMinusPlus;
+    real xMinusPlusPow = xMinusPlus * xMinusPlusSquared;
+
+    real ret = xMinusPlus;
+    real power = 3;
+
+    while(true)
+    {
+        immutable toAdd = xMinusPlusPow / power;
+        immutable oldRet = ret;
+        ret += toAdd;
+
+        if(ret == oldRet || ret != ret)
+        {
+            return 2 * ret;
+        }
+
+        power += 2;
+        xMinusPlusPow *= xMinusPlusSquared;
+    }
+
+    assert(0);
+}
+
 /**************************************
  * Calculate the natural logarithm of x.
  *
@@ -1636,15 +1671,30 @@ unittest {
 
 real log(real x) @safe pure nothrow
 {
-    version (INLINE_YL2X)
-        return yl2x(x, LN2);
+    if(__ctfe)
+    {
+        return ctfeLog(x);
+    }
     else
-        return core.stdc.math.logl(x);
+    {
+        version (INLINE_YL2X)
+            return yl2x(x, LN2);
+        else
+            return core.stdc.math.logl(x);
+    }
 }
 
 unittest
 {
     assert(log(E) == 1);
+
+    enum ctfeLog10 = log(10);
+    enum ctfeLog2 = log(2);
+    enum ctfeLogE = log(E);
+
+    assert(approxEqual(ctfeLog10, LN10));
+    assert(approxEqual(ctfeLog2, LN2));
+    assert(approxEqual(ctfeLogE, 1));
 }
 
 /**************************************
@@ -1660,16 +1710,28 @@ unittest
 
 real log10(real x) @safe pure nothrow
 {
-    version (INLINE_YL2X)
-        return yl2x(x, LOG2);
+    if(__ctfe)
+    {
+        return ctfeLog(x) / LN10;
+    }
     else
-        return core.stdc.math.log10l(x);
+    {
+        version (INLINE_YL2X)
+            return yl2x(x, LOG2);
+        else
+            return core.stdc.math.log10l(x);
+    }
 }
 
 unittest
 {
     //printf("%Lg\n", log10(1000) - 3);
     assert(fabs(log10(1000) - 3) < .000001);
+
+    enum ctfeLog10 = log10(10);
+    enum ctfeLog2 = log10(2);
+    assert(approxEqual(ctfeLog10, 1));
+    assert(approxEqual(ctfeLog2, log10(2)));
 }
 
 /******************************************
@@ -1714,10 +1776,28 @@ real log1p(real x) @safe pure nothrow
  */
 real log2(real x) @safe pure nothrow
 {
-    version (INLINE_YL2X)
-        return yl2x(x, 1);
+    if(__ctfe)
+    {
+        return ctfeLog(x) / LN2;
+    }
     else
-        return core.stdc.math.log2l(x);
+    {
+        version (INLINE_YL2X)
+            return yl2x(x, 1);
+        else
+            return core.stdc.math.log2l(x);
+    }
+}
+
+unittest
+{
+    enum ctfeLog2 = log2(2);
+    enum ctfeLogE = log2(E);
+    enum ctfeLog10 = log2(10);
+
+    assert(approxEqual(ctfeLog2, 1));
+    assert(approxEqual(ctfeLogE, log2(E)));
+    assert(approxEqual(ctfeLog10, log2(10)));
 }
 
 /*****************************************
