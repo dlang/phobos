@@ -16,8 +16,6 @@
  * these functions are pure nothrow.
  *
  * Status:
- * The gamma and error functions have been superceded by improved versions in
- * std.mathspecial. They will be officially deprecated in std.math in DMD2.055.
  * The semantics and names of feqrel and approxEqual will be revised.
  *
  * Source: $(PHOBOSSRC std/_math.d)
@@ -1910,71 +1908,16 @@ unittest
         }
 }
 
-/**********************************
- * Returns the error function of x.
- *
- * <img src="erf.gif" alt="error function">
- */
+deprecated
+{
+// Deprecated: use std.mathspecial.erf instead
 real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
-
-/**********************************
- * Returns the complementary error function of x, which is 1 - erf(x).
- *
- * <img src="erfc.gif" alt="complementary error function">
- */
+// Deprecated: use std.mathspecial.erfc instead
 real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
-
-/***********************************
- * Natural logarithm of gamma function.
- *
- * Returns the base e (2.718...) logarithm of the absolute
- * value of the gamma function of the argument.
- *
- * For reals, lgamma is equivalent to log(fabs(gamma(x))).
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH lgamma(x)) $(TH invalid?))
- *      $(TR $(TD $(NAN))            $(TD $(NAN))    $(TD yes))
- *      $(TR $(TD integer $(LT)= 0)      $(TD +$(INFIN)) $(TD yes))
- *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
- *      )
- */
-real lgamma(real x) @trusted nothrow
-{
-    return core.stdc.math.lgammal(x);
-
-    // Use etc.gamma.lgamma for those C systems that are missing it
-}
-
-/***********************************
- *  The Gamma function, $(GAMMA)(x)
- *
- *  $(GAMMA)(x) is a generalisation of the factorial function
- *  to real and complex numbers.
- *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
- *
- *  Mathematically, if z.re > 0 then
- *   $(GAMMA)(z) = $(INTEGRATE 0, $(INFIN)) $(POWER t, z-1)$(POWER e, -t) dt
- *
- *    $(TABLE_SV
- *      $(TR $(TH x)              $(TH $(GAMMA)(x))       $(TH invalid?))
- *      $(TR $(TD $(NAN))         $(TD $(NAN))            $(TD yes))
- *      $(TR $(TD $(PLUSMN)0.0)   $(TD $(PLUSMNINF))      $(TD yes))
- *      $(TR $(TD integer $(GT)0) $(TD (x-1)!)            $(TD no))
- *      $(TR $(TD integer $(LT)0) $(TD $(NAN))            $(TD yes))
- *      $(TR $(TD +$(INFIN))      $(TD +$(INFIN))         $(TD no))
- *      $(TR $(TD -$(INFIN))      $(TD $(NAN))            $(TD yes))
- *    )
- *
- *  References:
- *      $(LINK http://en.wikipedia.org/wiki/Gamma_function),
- *      $(LINK http://www.netlib.org/cephes/ldoubdoc.html#gamma)
- */
-real tgamma(real x) @trusted nothrow
-{
-    return core.stdc.math.tgammal(x);
-
-    // Use etc.gamma.tgamma for those C systems that are missing it
+// Deprecated: use std.mathspecial.logGamma instead
+real lgamma(real x) @trusted nothrow { return core.stdc.math.lgammal(x); }
+// Deprecated: use std.mathspecial.gamma instead
+real tgamma(real x) @trusted nothrow { return core.stdc.math.tgammal(x); }
 }
 
 /**************************************
