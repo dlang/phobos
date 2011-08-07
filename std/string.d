@@ -875,7 +875,7 @@ unittest
 
 /************************************
  * $(RED Scheduled for deprecation in January 2012.
- *       Please use $(D toLower instead.)
+ *       Please use $(D toLower) instead.)
  *
  * Convert string s[] to lower case.
  */
@@ -934,7 +934,7 @@ unittest
 
 /**
    $(RED Scheduled for deprecation in January 2012.
-         Please use toLowerInPlace instead.)
+         Please use $(D toLowerInPlace) instead.)
 
    Converts $(D s) to lowercase in place.
  */
@@ -1050,7 +1050,7 @@ unittest
 
 /************************************
  * $(RED Scheduled for deprecation in January 2012.
- *       Please use toUpper instead.)
+ *       Please use $(D toUpper) instead.)
  *
  * Convert string s[] to upper case.
  */
@@ -1360,7 +1360,7 @@ unittest
 
 /********************************************
  *  $(RED Scheduled for deprecation in August 2011.
- *        Please use $(XREF array, replicate) instead.
+ *        Please use $(XREF array, replicate) instead.)
  *
  * Repeat $(D s) for $(D n) times.
  */
@@ -1447,7 +1447,7 @@ unittest
 
 /*****************************************
  *  $(RED Scheduled for deprecation in January 2012.
- *        Please use $(D stripLeft) instead.
+ *        Please use $(D stripLeft) instead.)
  *
  * Strips leading whitespace.
  */
@@ -1483,7 +1483,7 @@ S stripLeft(S)(S s) @safe pure
 
 /*****************************************
  *  $(RED Scheduled for deprecation in January 2012.
- *        Please use $(D stripRight) instead.
+ *        Please use $(D stripRight) instead.)
  *
  * Strips trailing whitespace.
  */
@@ -1871,7 +1871,7 @@ body
 
 /************************************************
  * $(RED Scheduled for deprecation in January 2012.
- *       Please use $(D detab) instead.
+ *       Please use $(D detab) instead.)
  *
  * Replace tabs with the appropriate number of spaces.
  * tabsize is the distance between tab stops.
