@@ -5483,6 +5483,7 @@ if (isRandomAccessRange!Range)
     this(Range input)
     {
         this._input = input;
+        if(!__ctfe)
         debug
         {
             // Check the sortedness of the input
