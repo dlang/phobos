@@ -1135,20 +1135,6 @@ private:
         if(!isSingleTask) waiterCondition.notifyAll();
     }
 
-    /*
-    Gets the index of the current thread relative to this pool.  Any thread
-    not in this pool will receive an index of 0.  The worker threads in
-    this pool receive indices of 1 through this.size().
-
-    The worker index is used for maintaining worker-local storage.
-    */
-    size_t workerIndex() {
-        immutable rawInd = threadIndex;
-        return (rawInd >= instanceStartIndex &&
-                rawInd < instanceStartIndex + size) ?
-                (rawInd - instanceStartIndex + 1) : 0;
-    }
-
     // Private constructor for creating dummy pools that only have one thread,
     // only execute one Task, and then terminate.  This is used for
     // Task.executeInNewThread().
@@ -2182,6 +2168,48 @@ public:
 
             return result;
         }
+    }
+
+    /**
+    Gets the index of the current thread relative to this $(D TaskPool).  Any
+    thread not in this pool will receive an index of 0.  The worker threads in
+    this pool receive unique indices of 1 through $(Dthis.size).
+
+    This function is useful for maintaining worker-local resources.
+
+    Examples:
+    ---
+    // Execute a loop that computes the greatest common divisor of every
+    // number from 0 through 999 with 42 in parallel.  Write the results out to
+    // a set of files, one for each thread.  This allows results to be written
+    // out without any synchronization.
+
+    import std.stdio, std.conv, std.range, std.numeric, std.parallelism;
+
+    void main() {
+        auto fileHandles = new File[taskPool.size + 1];
+        scope(exit) {
+            foreach(ref handle; fileHandles) {
+                handle.close();
+            }
+        }
+
+        foreach(i, ref handle; fileHandles) {
+            handle = File("workerResults" ~ to!string(i) ~ ".txt", "wb");
+        }
+
+        foreach(num; parallel(iota(1_000))) {
+            auto outHandle = fileHandles[taskPool.workerIndex];
+            outHandle.writeln(num, '\t', gcd(num, 42));
+        }
+    }
+    ---
+    */
+    size_t workerIndex() @property @safe const nothrow {
+        immutable rawInd = threadIndex;
+        return (rawInd >= instanceStartIndex &&
+                rawInd < instanceStartIndex + size) ?
+                (rawInd - instanceStartIndex + 1) : 0;
     }
 
     /**
