@@ -4630,7 +4630,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 {
     for (;; r1.popFront(), r2.popFront())
     {
-        if (r1.empty) return -r2.empty;
+        if (r1.empty) return -cast(int)r2.empty;
         if (r2.empty) return r1.empty;
         auto a = r1.front, b = r2.front;
         if (binaryFun!pred(a, b)) return -1;
