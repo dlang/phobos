@@ -120,7 +120,7 @@ private template createStoreName(Ts...)
     static if (Ts.length < 2)
         enum createStoreName = "";
     else
-        enum createStoreName = Ts[1] ~ createStoreName!(Ts[3 .. $]);
+        enum createStoreName = "_" ~ Ts[1] ~ createStoreName!(Ts[3 .. $]);
 }
 
 private template createFields(string store, size_t offset, Ts...)
@@ -200,6 +200,57 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+}
+
+unittest
+{
+    static struct Integrals {
+        bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
+
+        mixin(bitfields!(
+                  bool, "b", 1,
+                  uint, "i", 3,
+                  short, "s", 4));
+    }
+    Integrals i;
+    assert(i.checkExpectations(false, 0, 0));
+    i.b = true;
+    assert(i.checkExpectations(true, 0, 0));
+    i.i = 7;
+    assert(i.checkExpectations(true, 7, 0));
+    i.s = -8;
+    assert(i.checkExpectations(true, 7, -8));
+    i.s = 7;
+    assert(i.checkExpectations(true, 7, 7));
+
+    enum A { True, False }
+    enum B { One, Two, Three, Four }
+    static struct Enums {
+        bool checkExpectations(A ea, B eb) { return a == ea && b == eb; }
+
+        mixin(bitfields!(
+                  A, "a", 1,
+                  B, "b", 2,
+                  uint, "", 5));
+    }
+    Enums e;
+    assert(e.checkExpectations(A.True, B.One));
+    e.a = A.False;
+    assert(e.checkExpectations(A.False, B.One));
+    e.b = B.Three;
+    assert(e.checkExpectations(A.False, B.Three));
+
+    static struct SingleMember {
+        bool checkExpectations(bool eb) { return b == eb; }
+
+        mixin(bitfields!(
+                  bool, "b", 1,
+                  uint, "", 7));
+    }
+    SingleMember f;
+    assert(f.checkExpectations(false));
+    f.b = true;
+    assert(f.checkExpectations(true));
 }
 
 /**
