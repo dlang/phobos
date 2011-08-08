@@ -4630,8 +4630,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 {
     for (;; r1.popFront(), r2.popFront())
     {
-        if (r1.empty) return -cast(int)r2.empty;
-        if (r2.empty) return r1.empty;
+        if (r1.empty) return -cast(int)!r2.empty;
+        if (r2.empty) return !r1.empty;
         auto a = r1.front, b = r2.front;
         if (binaryFun!pred(a, b)) return -1;
         if (binaryFun!pred(b, a)) return 1;
@@ -4721,6 +4721,16 @@ unittest
     assert(result > 0);
     result = cmp("aaa", "aaa"d);
     assert(result == 0);
+    result = cmp(cast(int[])[], cast(int[])[]);
+    assert(result == 0);
+    result = cmp([1, 2, 3], [1, 2, 3]);
+    assert(result == 0);
+    result = cmp([1, 3, 2], [1, 2, 3]);
+    assert(result > 0);
+    result = cmp([1, 2, 3], [1L, 2, 3, 4]);
+    assert(result < 0);
+    result = cmp([1L, 2, 3], [1, 2]);
+    assert(result > 0);
 }
 
 // MinType
