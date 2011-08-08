@@ -2173,7 +2173,7 @@ public:
     /**
     Gets the index of the current thread relative to this $(D TaskPool).  Any
     thread not in this pool will receive an index of 0.  The worker threads in
-    this pool receive unique indices of 1 through $(Dthis.size).
+    this pool receive unique indices of 1 through $(D this.size).
 
     This function is useful for maintaining worker-local resources.
 
