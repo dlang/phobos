@@ -1182,7 +1182,7 @@ uint getAttributes(in char[] name)
         name = The file to get the symbolic link attributes of.
 
     Throws:
-        FileException on error.
+        $(D FileException) on error.
  +/
 uint getLinkAttributes(in char[] name)
 {
@@ -1206,7 +1206,7 @@ uint getLinkAttributes(in char[] name)
         name = The path to the file.
 
     Throws:
-        FileException if the given file does not exist.
+        $(D FileException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1504,7 +1504,7 @@ unittest
         name = The path to the file.
 
     Throws:
-        FileException if the given file does not exist.
+        $(D FileException) if the given file does not exist.
   +/
 @property bool isSymlink(C)(const(C)[] name)
 {
@@ -2650,7 +2650,7 @@ void copy(in char[] from, in char[] to)
         Set access/modified times of file $(D name).
 
         Throws:
-            $(D_PARAM FileException) on error.
+            $(D FileException) on error.
      +/
 version(StdDdoc) deprecated void setTimes(in char[] name, d_time fta, d_time ftm);
 else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
@@ -2764,7 +2764,7 @@ unittest
     recursively.
 
     Throws:
-        FileException if there is an error (including if the given
+        $(D FileException) if there is an error (including if the given
         file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
@@ -2780,7 +2780,7 @@ void rmdirRecurse(in char[] pathname)
     recursively.
 
     Throws:
-        FileException if there is an error (including if the given
+        $(D FileException) if there is an error (including if the given
         file is not a directory).
  +/
 void rmdirRecurse(ref DirEntry de)
@@ -3259,7 +3259,7 @@ unittest
         name = The file (or directory) to get a DirEntry for.
 
     Throws:
-        FileException) if the file does not exist.
+        $(D FileException) if the file does not exist.
  +/
 DirEntry dirEntry(in char[] name)
 {
@@ -3515,7 +3515,7 @@ unittest
     The names in the contents do not include the pathname.
 
     Throws:
-        FileException on error.
+        $(D FileException) on error.
 
 Examples:
     This program lists all the files and subdirectories in its
