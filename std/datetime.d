@@ -34098,7 +34098,7 @@ template _isPrintable(T...)
 
 template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.datetime.%s has been scheduled " ~
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.datetime.%s has been scheduled " ~
                               "for deprecation in %s. Please use std.datetime.%s instead.",
                               vers, oldFunc, date, newFunc);
 }

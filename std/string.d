@@ -1296,7 +1296,7 @@ unittest
  */
 S capwords(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.string.capwords has been " ~
+    pragma(msg, "Notice: As of Phobos 2.054, std.string.capwords has been " ~
                 "scheduled for deprecation in January 2012.");
 
     return _capWords!S(s);
@@ -3623,7 +3623,7 @@ unittest
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.string.%s has been scheduled " ~
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been scheduled " ~
                               "for deprecation in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }
