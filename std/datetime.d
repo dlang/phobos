@@ -31113,12 +31113,12 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Scheduled for deprecation in August 2011. This is only here to help
-          transition code which uses std.date to using std.datetime.)
+    $(RED Deprecated. It will be removed in February 2012. This is only here to
+          help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
  +/
-long sysTimeToDTime(in SysTime sysTime)
+deprecated long sysTimeToDTime(in SysTime sysTime)
 {
     return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
 }
@@ -31140,12 +31140,12 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Scheduled for deprecation in August 2011. This is only here to help
-          transition code which uses std.date to using std.datetime.)
+    $(RED Deprecated. It will be removed in February 2012. This is only here to
+          help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).
  +/
-SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
+deprecated SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
 {
     immutable hnsecs = convert!("msecs", "hnsecs")(dTime) + 621355968000000000L;
 
