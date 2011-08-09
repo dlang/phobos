@@ -1359,14 +1359,14 @@ unittest
 
 
 /********************************************
- *  $(RED Scheduled for deprecation in August 2011.
- *        Please use $(XREF array, replicate) instead.
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use $(XREF array, replicate) instead.
  *
  * Repeat $(D s) for $(D n) times.
  */
-S repeat(S)(S s, size_t n)
+deprecated S repeat(S)(S s, size_t n)
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "repeat", "std.array.replicate"));
+    pragma(msg, hardDeprec!("2.055", "February 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
@@ -1851,19 +1851,19 @@ S zfill(S)(S s, int width) if (isSomeString!S)
 
 
 /**********************************************
- * $(RED Scheduled for deprecation in August 2011.
+ * $(RED Deprecated. It will be removed in February 2012.
  *       Please use $(XREF array, insertInPlace) instead.)
  *
  * Insert sub[] into s[] at location index.
  */
-S insert(S)(S s, size_t index, S sub)
+deprecated S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
 }
 body
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "insert", "std.array.insertInPlace"));
+    pragma(msg, softDeprec!("2.055", "February 2012", "insert", "std.array.insertInPlace"));
     std.array.insertInPlace(s, index, sub);
     return s;
 }
@@ -3625,5 +3625,12 @@ private template softDeprec(string vers, string date, string oldFunc, string new
 {
     enum softDeprec = Format!("Warning: As of Phobos %s, std.string.%s has been scheduled " ~
                               "for deprecation in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
+}
+
+private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
+                              "It will be removed in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }
