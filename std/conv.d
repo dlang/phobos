@@ -1729,7 +1729,8 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) && isIntegral!Target)
+    if (isSomeChar!(ElementType!Source) &&
+        isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1995,7 +1996,8 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeString!Source && isIntegral!Target)
+    if (isSomeString!Source &&
+        isIntegral!Target)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2077,7 +2079,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == enum))
+    if (isSomeString!Source &&
+        is(Target == enum))
 {
     // TODO: BUG4744
     foreach (i, e; EnumMembers!Target)
@@ -2123,7 +2126,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
+    if (isInputRange!Source &&
+        isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2613,7 +2617,8 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Unqual!Target == bool))
+    if (isSomeString!Source &&
+        is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
     {
@@ -2660,7 +2665,8 @@ unittest
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == typedef))
+    if (isSomeString!Source &&
+        is(Target == typedef))
 {
     static if (is(Target T == typedef))
         return cast(Target) parse!T(s);
@@ -2679,7 +2685,8 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source && isDynamicArray!Target)
+    if (isSomeString!Source &&
+        isDynamicArray!Target)
 {
     Target result;
     skipWS(s);
@@ -2798,7 +2805,8 @@ unittest
  * ':')), and element seprator (by default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isSomeString!Source && isAssociativeArray!Target)
+    if (isSomeString!Source &&
+        isAssociativeArray!Target)
 {
     alias typeof(Target.keys[0]) KeyType;
     alias typeof(Target.values[0]) ValueType;
@@ -3056,7 +3064,8 @@ ulong octal(string num)()
 }
 
 /// Ditto
-template octal(alias s) if (isIntegral!(typeof(s)))
+template octal(alias s)
+    if (isIntegral!(typeof(s)))
 {
     enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
