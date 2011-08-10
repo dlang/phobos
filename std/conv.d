@@ -1838,6 +1838,86 @@ unittest
     auto a = parse!int(s);
 }
 
+// Customizable integral parse
+
+// private N parseIntegral(S, N)(ref S s)
+// {
+//     static if (N.sizeof < int.sizeof)
+//     {
+//         // smaller types are handled like integers
+//         static if (N.min < 0) // signed small integer
+//             alias int N1;
+//         else
+//             alias uint N1;
+//         auto v = parseIntegral!(S, N1)(s);
+//         auto result = cast(N) v;
+//         if (result != v)
+//         {
+//             ConvException.raise!(S, N)(s);
+//         }
+//         return result;
+//     }
+//     else
+//     {
+//         // Larger than int types
+//         immutable length = s.length;
+//         if (!length)
+//             goto Lerr;
+
+//         static if (N.min < 0)
+//             int sign = 0;
+//         else
+//             enum sign = 0;
+//         N v = 0;
+//         size_t i = 0;
+//         enum char maxLastDigit = N.min < 0 ? '7' : '5';
+//         for (; i < length; i++)
+//         {
+//             auto c = s[i];
+//             if (c >= '0' && c <= '9')
+//             {
+//                 if (v < N.max/10 || (v == N.max/10 && c + sign <= maxLastDigit))
+//                     v = cast(N) (v * 10 + (c - '0'));
+//                 else
+//                     goto Loverflow;
+//             }
+//             else static if (N.min < 0)
+//             {
+//                 if (c == '-' && i == 0)
+//                 {
+//                     sign = -1;
+//                     if (length == 1)
+//                         goto Lerr;
+//                 }
+//                 else if (c == '+' && i == 0)
+//                 {
+//                     if (length == 1)
+//                         goto Lerr;
+//                 } else
+//                       break;
+//             }
+//             else
+//                 break;
+//         }
+//         if (i == 0) goto Lerr;
+//         s = s[i .. $];
+//         static if (N.min < 0)
+//         {
+//             if (sign == -1)
+//             {
+//                 v = -v;
+//             }
+//         }
+//         return v;
+//       Loverflow:
+//         assert(false);
+//         //ConvOverflowException.raise(to!string(s));
+//       Lerr:
+//         ConvException.raise!(S, N)(s);
+//         return 0;
+//     }
+// }
+
 /*
 Tests for to!int
  */
@@ -2521,12 +2601,6 @@ unittest
     assert(parse!A(s) == A.member111 && s == "1");
 }
 
-unittest
-{
-    assert(to!float("inf") == float.infinity);
-    assert(to!float("-inf") == -float.infinity);
-}
-
 Target parse(Target, Source)(ref Source p)
     if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 {
@@ -2828,6 +2902,199 @@ Target parse(Target, Source)(ref Source p)
     return (sign) ? -ldval : ldval;
 }
 
+/*
+Tests for to!float
+ */
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug( conv ) writefln( "conv.to!float.unittest" );
+    float f;
+
+    f = to!float( "nAn" );
+    assert(isnan(f));
+    f = to!float( "123" );
+    assert( f == 123f );
+    f = to!float( "+123" );
+    assert( f == +123f );
+    f = to!float( "-123" );
+    assert( f == -123f );
+    f = to!float( "123e+2" );
+    assert( f == 123e+2f );
+
+    f = to!float( "123e-2" );
+    assert( f == 123e-2f );
+    f = to!float( "123." );
+    assert( f == 123.f );
+    f = to!float( ".456" );
+    assert( f == .456f );
+
+    assert(to!float("0") == 0f);
+    assert(to!float("-0") == -0f);
+
+    // min and max
+    try
+    {
+        f = to!float("1.17549e-38");
+        assert(feq(cast(real)f, cast(real)1.17549e-38));
+        assert(feq(cast(real)f, cast(real)float.min_normal));
+        f = to!float("3.40282e+38");
+        assert(to!string(f) == to!string(3.40282e+38));
+    }
+    catch (ConvException e) // strtof() bug on some platforms
+    {
+        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
+        printf("   (%.*s)\n", e.msg);
+    }
+
+    // nan
+    f = to!float("nan");
+    assert(to!string(f) == to!string(float.nan));
+
+    bool ok = false;
+    try
+    {
+        to!float("\x00");
+    }
+    catch (ConvException e)
+    {
+        ok = true;
+    }
+    assert(ok);
+}
+
+/*
+Tests for to!double
+ */
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug( conv ) writefln( "conv.to!double.unittest" );
+    double d;
+
+    d = to!double( "123" );
+    assert( d == 123 );
+    d = to!double( "+123" );
+    assert( d == +123 );
+    d = to!double( "-123" );
+    assert( d == -123 );
+    d = to!double( "123e2" );
+    assert( d == 123e2);
+    d = to!double( "123e-2" );
+    assert( d == 123e-2 );
+    d = to!double( "123." );
+    assert( d == 123. );
+    d = to!double( ".456" );
+    assert( d == .456 );
+    d = to!double( "1.23456E+2" );
+    assert( d == 1.23456E+2 );
+
+    assert(to!double("0") == 0.0);
+    assert(to!double("-0") == -0.0);
+
+    // min and max
+    try
+    {
+        d = to!double("2.22508e-308");
+        assert(feq(cast(real)d, cast(real)2.22508e-308));
+        assert(feq(cast(real)d, cast(real)double.min_normal));
+        d = to!double("1.79769e+308");
+        assert(to!string(d) == to!string(1.79769e+308));
+        assert(to!string(d) == to!string(double.max));
+    }
+    catch (ConvException e) // strtod() bug on some platforms
+    {
+        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
+        printf("   (%.*s)\n", e.msg);
+    }
+
+    // nan
+    d = to!double("nan");
+    assert(to!string(d) == to!string(double.nan));
+    //assert(cast(real)d == cast(real)double.nan);
+
+    bool ok = false;
+    try
+    {
+        to!double("\x00");
+    }
+    catch (ConvException e)
+    {
+        ok = true;
+    }
+    assert(ok);
+}
+
+/*
+Tests for to!real
+ */
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) writefln("conv.to!real.unittest");
+    real r;
+
+    r = to!real("123");
+    assert(r == 123L);
+    r = to!real("+123");
+    assert(r == 123L);
+    r = to!real("-123");
+    assert(r == -123L);
+    r = to!real("123e2");
+    assert(feq(r, 123e2L));
+    r = to!real("123e-2");
+    assert(feq(r, 1.23L));
+    r = to!real("123.");
+    assert(r == 123L);
+    r = to!real(".456");
+    assert(r == .456L);
+
+    r = to!real("1.23456e+2");
+    assert(feq(r,  1.23456e+2L));
+    r = to!real(to!string(real.max / 2L));
+    assert(to!string(r) == to!string(real.max / 2L));
+
+    assert(to!real("0") == 0.0L);
+    assert(to!real("-0") == -0.0L);
+
+    // min and max
+    try
+    {
+        r = to!real(to!string(real.min_normal));
+        assert(to!string(r) == to!string(real.min_normal));
+        r = to!real(to!string(real.max));
+        assert(to!string(r) == to!string(real.max));
+    }
+    catch (ConvException e) // strtold() bug on some platforms
+    {
+        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
+        printf("   (%.*s)\n", e.msg);
+    }
+
+    // nan
+    r = to!real("nan");
+    assert(to!string(r) == to!string(real.nan));
+    //assert(r == real.nan);
+
+    r = to!real(to!string(real.nan));
+    assert(to!string(r) == to!string(real.nan));
+    //assert(r == real.nan);
+
+    bool ok = false;
+    try
+    {
+        to!real("\x00");
+    }
+    catch (ConvException e)
+    {
+        ok = true;
+    }
+    assert(ok);
+}
+
 unittest
 {
     errno = 0;  // In case it was set by another unittest in a different module.
@@ -2879,6 +3146,13 @@ unittest
     auto x = parse!double(s);
     assert(s == " ");
     assert(x == 0.0);
+}
+
+// Unittest for bug 3369
+unittest
+{
+    assert(to!float("inf") == float.infinity);
+    assert(to!float("-inf") == -float.infinity);
 }
 
 /**
@@ -3095,194 +3369,6 @@ unittest
 //     ConvException.raise!(S[], F)(s);
 //     assert(0);
 // }
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!float.unittest" );
-    float f;
-
-    f = to!float( "nAn" );
-    assert(isnan(f));
-    f = to!float( "123" );
-    assert( f == 123f );
-    f = to!float( "+123" );
-    assert( f == +123f );
-    f = to!float( "-123" );
-    assert( f == -123f );
-    f = to!float( "123e+2" );
-    assert( f == 123e+2f );
-
-    f = to!float( "123e-2" );
-    assert( f == 123e-2f );
-    f = to!float( "123." );
-    assert( f == 123.f );
-    f = to!float( ".456" );
-    assert( f == .456f );
-
-    assert(to!float("0") == 0f);
-    assert(to!float("-0") == -0f);
-
-    // min and max
-    try
-    {
-        f = to!float("1.17549e-38");
-        assert(feq(cast(real)f, cast(real)1.17549e-38));
-        assert(feq(cast(real)f, cast(real)float.min_normal));
-        f = to!float("3.40282e+38");
-        assert(to!string(f) == to!string(3.40282e+38));
-    }
-    catch (ConvException e) // strtof() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    f = to!float("nan");
-    assert(to!string(f) == to!string(float.nan));
-
-    bool ok = false;
-    try
-    {
-        to!float("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
-}
-
-/*
-Tests for to!double
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!double.unittest" );
-    double d;
-
-    d = to!double( "123" );
-    assert( d == 123 );
-    d = to!double( "+123" );
-    assert( d == +123 );
-    d = to!double( "-123" );
-    assert( d == -123 );
-    d = to!double( "123e2" );
-    assert( d == 123e2);
-    d = to!double( "123e-2" );
-    assert( d == 123e-2 );
-    d = to!double( "123." );
-    assert( d == 123. );
-    d = to!double( ".456" );
-    assert( d == .456 );
-    d = to!double( "1.23456E+2" );
-    assert( d == 1.23456E+2 );
-
-    assert(to!double("0") == 0.0);
-    assert(to!double("-0") == -0.0);
-
-    // min and max
-    try
-    {
-        d = to!double("2.22508e-308");
-        assert(feq(cast(real)d, cast(real)2.22508e-308));
-        assert(feq(cast(real)d, cast(real)double.min_normal));
-        d = to!double("1.79769e+308");
-        assert(to!string(d) == to!string(1.79769e+308));
-        assert(to!string(d) == to!string(double.max));
-    }
-    catch (ConvException e) // strtod() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    d = to!double("nan");
-    assert(to!string(d) == to!string(double.nan));
-    //assert(cast(real)d == cast(real)double.nan);
-
-    bool ok = false;
-    try
-    {
-        to!double("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
-}
-
-/*
-Tests for to!real
- */
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) writefln("conv.to!real.unittest");
-    real r;
-
-    r = to!real("123");
-    assert(r == 123L);
-    r = to!real("+123");
-    assert(r == 123L);
-    r = to!real("-123");
-    assert(r == -123L);
-    r = to!real("123e2");
-    assert(feq(r, 123e2L));
-    r = to!real("123e-2");
-    assert(feq(r, 1.23L));
-    r = to!real("123.");
-    assert(r == 123L);
-    r = to!real(".456");
-    assert(r == .456L);
-
-    r = to!real("1.23456e+2");
-    assert(feq(r,  1.23456e+2L));
-    r = to!real(to!string(real.max / 2L));
-    assert(to!string(r) == to!string(real.max / 2L));
-
-    assert(to!real("0") == 0.0L);
-    assert(to!real("-0") == -0.0L);
-
-    // min and max
-    try
-    {
-        r = to!real(to!string(real.min_normal));
-        assert(to!string(r) == to!string(real.min_normal));
-        r = to!real(to!string(real.max));
-        assert(to!string(r) == to!string(real.max));
-    }
-    catch (ConvException e) // strtold() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    r = to!real("nan");
-    assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
-
-    r = to!real(to!string(real.nan));
-    assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
-
-    bool ok = false;
-    try
-    {
-        to!real("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
-}
 
 version (none)
 {   /* These are removed for the moment because of concern about
