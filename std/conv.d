@@ -3030,7 +3030,7 @@ unittest
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target==bool))
+    if (isSomeString!Source && is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
     {
@@ -3081,6 +3081,9 @@ unittest
     {
         assert (m == "maybe");  // m shouldn't change on failure
     }
+
+    auto b = parse!(const(bool))("true");
+    assert(b == true);
 }
 
 // Parsing typedefs forwards to their host types
