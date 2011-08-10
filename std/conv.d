@@ -539,11 +539,46 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBracket = "]")
+T toImpl(T, S)(S s)
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
 {
     return format!T(s);
+}
+
+T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
+    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
+        isSomeString!T)
+{
+    pragma(msg, "Schedule for deprecation");
+
+    static if (!isInputRange!S)
+    {
+        alias toImpl!(T, Unqual!S) ti;
+        return ti(s, leftBracket, separator, rightBracket);
+    }
+    else
+    {
+        alias Unqual!(typeof(T.init[0])) Char;
+        // array-to-string conversion
+        auto result = appender!(Char[])();
+        result.put(leftBracket);
+        bool first = true;
+        for (; !s.empty; s.popFront())
+        {
+            if (!first)
+            {
+                result.put(separator);
+            }
+            else
+            {
+                first = false;
+            }
+            result.put(to!T(s.front));
+        }
+        result.put(rightBracket);
+        return cast(T) result.data;
+    }
 }
 
 unittest
@@ -587,19 +622,51 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+T toImpl(T, S)(S s)
     if (isAssociativeArray!S &&
         isSomeString!T)
 {
     return format!T(s);
 }
 
+T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+    if (isAssociativeArray!S &&
+        isSomeString!T)
+{
+    pragma(msg, "Schedule for deprecation");
+
+    alias Unqual!(typeof(T.init[0])) Char;
+    auto result = appender!(Char[])();
+// hash-to-string conversion
+    result.put(leftBracket);
+    bool first = true;
+    foreach (k, v; s) {
+        if (!first) result.put(separator);
+        else first = false;
+        result.put(to!T(k));
+        result.put(keyval);
+        result.put(to!T(v));
+    }
+    result.put(rightBracket);
+    return cast(T) result.data;
+}
+
 /// ditto
-T toImpl(T, S)(S s, in T nullstr = "null")
+T toImpl(T, S)(S s)
     if (is(S : Object) &&
         isSomeString!T)
 {
     return format!T(s);
+}
+
+T toImpl(T, S)(S s, in T nullstr)
+    if (is(S : Object) &&
+        isSomeString!T)
+{
+    pragma(msg, "Schedule for deprecation");
+
+    if (!s) return nullstr;
+    return to!T(s.toString);
 }
 
 unittest
@@ -628,11 +695,40 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T right = ")")
+T toImpl(T, S)(S s)
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
     return format!T(s);
+}
+
+T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
+    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
+        isSomeString!T)
+{
+    pragma(msg, "Schedule for deprecation");
+
+    Tuple!(FieldTypeTuple!S) * t = void;
+    static if ((*t).sizeof == S.sizeof)
+    {
+        // ok, attempt to forge the tuple
+        t = cast(typeof(t)) &s;
+        alias Unqual!(typeof(T.init[0])) Char;
+        auto app = appender!(Char[])();
+        app.put(left);
+        foreach (i, e; t.field)
+        {
+            if (i > 0) app.put(to!T(separator));
+            app.put(to!T(e));
+        }
+        app.put(right);
+        return cast(T) app.data;
+    }
+    else
+    {
+        // struct with weird alignment
+        return to!T(S.stringof);
+    }
 }
 
 unittest
