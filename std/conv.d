@@ -3020,6 +3020,173 @@ unittest
     assert( ia == ia2);
 }
 
+/**
+ * Parses an asociative array from a string given the left bracket (default $(D
+ * '[')), right bracket (default $(D ']')), key-value separator (default $(D
+ * ':')), and element seprator (by default $(D ',')).
+ */
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+    if (isSomeString!Source && isAssociativeArray!Target)
+{
+    alias typeof(Target.keys[0]) KeyType;
+    alias typeof(Target.values[0]) ValueType;
+
+    Target result;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        s.popFront();
+        return result;
+    }
+    for (;; s.popFront(), skipWS(s))
+    {
+        auto key = parseElement!KeyType(s);
+        skipWS(s);
+        parseCheck!s(keyval);
+        skipWS(s);
+        auto val = parseElement!ValueType(s);
+        skipWS(s);
+        result[key] = val;
+        if (s.front != comma) break;
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+}
+
+unittest
+{
+    auto aa1 = parse!(int[int])("[1:10, 2:20, 3:30]");
+    assert(aa1 == [1:10, 2:20, 3:30]);
+    //writeln(aa1);
+
+    auto aa2 = parse!(int[string])(`["aaa":10, "bbb":20, "ccc":30]`);
+    assert(aa2 == ["aaa":10, "bbb":20, "ccc":30]);
+    //writeln(aa2);
+
+    auto aa3 = parse!(int[][string])(`["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`);
+    assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
+    //writeln(aa3);
+}
+
+private dchar parseEscape(Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+{
+    parseCheck!s('\\');
+
+    dchar getHexDigit()
+    {
+        s.popFront();
+        if (s.empty)
+            parseError("Need more input");
+        dchar c = s.front;
+        if (!isHexDigit(c))
+            parseError("Hex digit is missing");
+        return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
+    }
+
+    dchar result;
+
+    switch (s.front)
+    {
+        case 'a':   result = '\a';  break;
+        case 'b':   result = '\b';  break;
+        case 'f':   result = '\f';  break;
+        case 'n':   result = '\n';  break;
+        case 'r':   result = '\r';  break;
+        case 't':   result = '\t';  break;
+        case 'v':   result = '\v';  break;
+        case 'x':
+            result  = getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'u':
+            result  = getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'U':
+            result  = getHexDigit() << 28;
+            result |= getHexDigit() << 24;
+            result |= getHexDigit() << 20;
+            result |= getHexDigit() << 16;
+            result |= getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        default:
+            parseError("Unknown escape character " ~ to!string(s.front));
+            break;
+    }
+
+    s.popFront();
+
+    return result;
+}
+
+// Undocumented
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+{
+    static if (isSomeString!Target)
+    {
+        auto result = appender!Target();
+
+        // parse array of chars
+        if (s.front == '[')
+            return parse!Target(s);
+
+        parseCheck!s('\"');
+        if (s.front == '\"')
+        {
+            s.popFront();
+            return result.data;
+        }
+        while (true)
+        {
+            if (s.empty)
+                parseError("Need more input");
+            switch (s.front)
+            {
+                case '\"':
+                    s.popFront();
+                    return result.data;
+                case '\\':
+                    result.put(parseEscape(s));
+                    break;
+                default:
+                    result.put(s.front());
+                    s.popFront();
+                    break;
+            }
+        }
+        assert(0);
+    }
+    else static if (isSomeChar!Target)
+    {
+        Target c;
+
+        parseCheck!s('\'');
+        if (s.front != '\\')
+        {
+            c = s.front;
+            s.popFront();
+        }
+        else
+            c = parseEscape(s);
+        parseCheck!s('\'');
+
+        return c;
+    }
+    else
+        return parse!Target(s);
+}
+
+
 // feq() functions now used only in unittesting
 
 /* ***************************************
