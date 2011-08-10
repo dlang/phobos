@@ -2063,7 +2063,7 @@ unittest
 
 /** Matches a pattern against a path.
 
-    Some characters of pattern have special a meaning (they are
+    Some characters of pattern have a special meaning (they are
     $(I meta-characters)) and can't be escaped. These are:
 
     $(BOOKTABLE,
