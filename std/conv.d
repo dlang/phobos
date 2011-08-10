@@ -3341,9 +3341,8 @@ template octal(alias s) if (isIntegral!(typeof(s)))
     assert(a == 8);
 */
 T octal(T, string num)()
+    if (isOctalLiteral!num)
 {
-    static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
-
     ulong pow = 1;
     T value = 0;
 
@@ -3485,10 +3484,7 @@ unittest
 
     static assert(!__traits(compiles, octal!823));
 
-    // for some reason, this line fails, though if you try it in code,
-    // it indeed doesn't compile... weird.
-
-    // static assert(!__traits(compiles, octal!"823"));
+    static assert(!__traits(compiles, octal!"823"));
 
     static assert(!__traits(compiles, octal!"_823"));
     static assert(!__traits(compiles, octal!"spam"));
