@@ -172,12 +172,22 @@ class SocketException: Exception
                     len--;
                 if(cs[len - 1] == '\r')
                     len--;
-                msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
+
+                if (msg)
+                    msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
+                else
+                    msg = cs[0 .. len].idup;
             }
         }
 
         super(msg);
     }
+}
+
+/// Returns a $(D SocketException) for the last network error.
+SocketException getLastSocketException(string msg = null)
+{
+    return new SocketException(msg, _lasterr());
 }
 
 
