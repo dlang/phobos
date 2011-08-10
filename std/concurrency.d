@@ -1217,8 +1217,7 @@ private
          */
         void put( T val )
         {
-            appendNode( new Node( val ) );
-            m_count++;
+            put( new Node( val ) );
         }
 
 
@@ -1229,8 +1228,7 @@ private
         {
             if( !rhs.empty )
             {
-                appendNode( rhs.m_first );
-                m_count++;
+                put( rhs.m_first );
                 while( m_last.next !is null )
                 {
                     m_last = m_last.next;
@@ -1257,6 +1255,7 @@ private
          */
         void removeAt( Range r )
         {
+            assert( m_count );
             Node* n = r.m_prev;
             enforce( n && n.next );
 
@@ -1267,8 +1266,6 @@ private
             Node* todelete = n.next;
             n.next = n.next.next;
             //delete todelete;
-
-            assert( m_count > 0 );
             m_count--;
         }
 
@@ -1317,8 +1314,9 @@ private
         /*
          *
          */
-        void appendNode( Node* n )
+        void put( Node* n )
         {
+            m_count++;
             if( !empty )
             {
                 m_last.next = n;

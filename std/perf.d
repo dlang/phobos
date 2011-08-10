@@ -898,4 +898,3 @@ else
 
     static assert(platform_not_supported);
 }
- 
