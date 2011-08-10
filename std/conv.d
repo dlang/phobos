@@ -2126,7 +2126,7 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source &&
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
