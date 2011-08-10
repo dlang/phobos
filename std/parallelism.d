@@ -3267,8 +3267,6 @@ if(!randLen!Range) {
 
     static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
     is(typeof(range.doBufSwap()))) {
-        enum bool bufferTrick = true;
-    } else {
         // Make sure we don't have the buffer recycling overload of
         // asyncBuf.
         static if(is(typeof(range.range)) &&
@@ -3277,6 +3275,8 @@ if(!randLen!Range) {
                 "the buffer recycling overload of asyncBuf.");
         }
 
+        enum bool bufferTrick = true;
+    } else {
         enum bool bufferTrick = false;
     }
 
