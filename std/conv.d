@@ -34,28 +34,39 @@ import std.metastrings;
  */
 class ConvException : Exception
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(s);
+        super(s, fn, ln);
     }
 }
 
 deprecated alias ConvException ConvError;   /// ditto
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
+private void convError(S, T, string fn = __FILE__, uint ln = __LINE__)(S source)
 {
     throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" to type "~T.stringof));
+            ("Can't convert value `"~to!string(source)~"' of type "
+                    ~S.stringof~" to type "~T.stringof), fn, ln);
 }
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, int radix)
+private void convError(S, T, string fn = __FILE__, uint ln = __LINE__)(S source, int radix)
 {
     throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
+            ("Can't convert value `"~to!string(source)~"' of type "
+                    ~S.stringof~" base "~to!string(radix)~" to type "~T.stringof), fn, ln);
+}
+
+private void parseError(string fn = __FILE__, uint ln = __LINE__)(lazy string msg)
+{
+    throw new ConvException(cast(string)
+            ("Can't parse string: " ~ msg), fn, ln);
+}
+
+private void parseCheck(alias source, string fn = __FILE__, ulong ln = __LINE__)(dchar c)
+{
+    if (source.front != c)
+        parseError!(fn, ln)("\"" ~ to!string(c) ~ "\" is missing");
+    source.popFront();
 }
 
 private
@@ -496,8 +507,7 @@ T toImpl(T, S)(S s)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -583,8 +593,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
 //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
@@ -612,8 +621,7 @@ T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T right
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
@@ -781,8 +789,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
@@ -1583,8 +1590,7 @@ Target parse(Target, Source)(ref Source s)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
@@ -2284,11 +2290,11 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
+    ConvException bailOut(string fn = __FILE__, size_t ln = __LINE__)
         (string msg = null)
     {
         if (!msg) msg = "Floating point conversion error";
-        return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
+        return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
     for (;;)
@@ -2890,7 +2896,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[5 .. $];
         return false;
     }
-    convError!(Source, Target)(s);
+    parseError("bool should be case-insensive 'true' or 'false'");
     assert(0);
 }
 
