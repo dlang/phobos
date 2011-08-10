@@ -2783,6 +2783,7 @@ unittest
     // nan
     f = to!float("nan");
     assert(to!string(f) == to!string(float.nan));
+    assert(isnan(f));
 
     bool ok = false;
     try
@@ -2845,7 +2846,7 @@ unittest
     // nan
     d = to!double("nan");
     assert(to!string(d) == to!string(double.nan));
-    //assert(cast(real)d == cast(real)double.nan);
+    assert(isnan(d));
 
     bool ok = false;
     try
@@ -2909,11 +2910,11 @@ unittest
     // nan
     r = to!real("nan");
     assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
+    assert(isnan(r));
 
     r = to!real(to!string(real.nan));
     assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
+    assert(isnan(r));
 
     bool ok = false;
     try
@@ -3141,7 +3142,7 @@ unittest
 {
     int[][] a = [ [1, 2] , [3], [4, 5] ];
     auto s = to!string(a);
-    //assert(to!(int[][])(s) == a);
+    assert(to!(int[][])(s) == a);
 }
 
 unittest
