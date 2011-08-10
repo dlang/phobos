@@ -3026,6 +3026,53 @@ unittest
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
+/// ditto
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isSomeString!Source &&
+        isStaticArray!Target)
+{
+    Target result = void;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        if (result.length != 0)
+            parseError("Need more input");
+        s.popFront();
+        return result;
+    }
+    for (size_t i = 0; ; s.popFront(), skipWS(s))
+    {
+        if (i == result.length)
+            parseError("Too many input");
+        result[i++] = parseElement!(ElementType!Target)(s);
+        skipWS(s);
+        if (s.front != comma)
+        {
+            if (i != result.length)
+                parseError("Need more input");
+            break;
+        }
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+}
+
+unittest
+{
+    auto sa = parse!(int[4])("[1,2,3,4]");
+    assert(sa == [1,2,3,4]);
+
+    assertThrown!ConvException(parse!(int[4])("[1,2,3]"));
+    assertThrown!ConvException(parse!(int[4])("[1,2,3,4,5]"));
+
+    auto sa2 = parse!(int[][3])("[[1],[2,3],[4]]");
+    assert(sa2 == [[1],[2,3],[4]]);
+
+}
+
 /**
  * Parses an asociative array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
