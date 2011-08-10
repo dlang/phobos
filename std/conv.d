@@ -2679,13 +2679,11 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
+    if (isSomeString!Source && isDynamicArray!Target)
 {
     Target result;
     skipWS(s);
-    if (s.front != lbracket)
-        return result;
-    s.popFront();
+    parseCheck!s(lbracket);
     skipWS(s);
     if (s.front == rbracket)
     {
@@ -2694,15 +2692,13 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     }
     for (;; s.popFront(), skipWS(s))
     {
-        result ~= parse!(ElementType!Target)(s);
+        result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
         if (s.front != comma)
             break;
     }
-    if (s.front == rbracket)
-    {
-        s.popFront();
-    }
+    parseCheck!s(rbracket);
+
     return result;
 }
 
@@ -2738,6 +2734,15 @@ unittest
 
     ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
+}
+
+unittest
+{
+    auto a1 = parse!(string[])(`[['h', 'e', 'l', 'l', 'o'], "world"]`);
+    assert(a1 == ["hello", "world"]);
+
+    auto a2 = parse!(string[])(`["aaa", "bbb", "ccc"]`);
+    assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
 /**
