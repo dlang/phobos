@@ -1662,7 +1662,7 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
+    if (isSomeChar!(ElementType!Source) && isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
