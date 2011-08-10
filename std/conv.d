@@ -2932,6 +2932,42 @@ Target parse(Target, Source)(ref Source s)
     assert(0);
 }
 
+/*
+    Tests for to!bool and parse!bool
+*/
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) printf("conv.to!bool.unittest\n");
+
+    assert (to!bool("TruE") == true);
+    assert (to!bool("faLse"d) == false);
+    try
+    {
+        to!bool("maybe");
+        assert (false);
+    }
+    catch (ConvException e) { }
+
+    auto t = "TrueType";
+    assert (parse!bool(t) == true);
+    assert (t == "Type");
+
+    auto f = "False killer whale"d;
+    assert (parse!bool(f) == false);
+    assert (f == " killer whale"d);
+
+    auto m = "maybe";
+    try
+    {
+        parse!bool(m);
+        assert (false);
+    }
+    catch (ConvException e)
+    {
+        assert (m == "maybe");  // m shouldn't change on failure
+    }
+}
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
@@ -3012,44 +3048,6 @@ unittest
         ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
 }
-
-/*
-    Tests for to!bool and parse!bool
-*/
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!bool.unittest\n");
-
-    assert (to!bool("TruE") == true);
-    assert (to!bool("faLse"d) == false);
-    try
-    {
-        to!bool("maybe");
-        assert (false);
-    }
-    catch (ConvException e) { }
-
-    auto t = "TrueType";
-    assert (parse!bool(t) == true);
-    assert (t == "Type");
-
-    auto f = "False killer whale"d;
-    assert (parse!bool(f) == false);
-    assert (f == " killer whale"d);
-
-    auto m = "maybe";
-    try
-    {
-        parse!bool(m);
-        assert (false);
-    }
-    catch (ConvException e)
-    {
-        assert (m == "maybe");  // m shouldn't change on failure
-    }
-}
-
 
 // @@@ BUG IN COMPILER
 // lvalue of type immutable(T)[] should be implicitly convertible to
