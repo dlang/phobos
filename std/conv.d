@@ -3788,17 +3788,7 @@ private bool feq(in creal r1, in creal r2)
     return feq(r1a, r2b, 0.000001L);
 }
 
-private S textImpl(S, U...)(U args)
-{
-    S result;
-    foreach (i, arg; args)
-    {
-        result ~= to!S(args[i]);
-    }
-    return result;
-}
-
-/**
+/***************************************************************
    Convenience functions for converting any number and types of
    arguments into _text (the three character widths).
 
@@ -3814,6 +3804,16 @@ string text(T...)(T args) { return textImpl!(string, T)(args); }
 wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
 ///ditto
 dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
+
+private S textImpl(S, U...)(U args)
+{
+    S result;
+    foreach (i, arg; args)
+    {
+        result ~= to!S(args[i]);
+    }
+    return result;
+}
 
 unittest
 {
