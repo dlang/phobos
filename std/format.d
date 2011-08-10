@@ -570,6 +570,12 @@ struct FormatSpec(Char)
     static const(Char)[] seqAfter = "]";
 
     /*
+       This string is inserted after each element keys of a sequence (by
+       default $(D ":")).
+     */
+    static const(Char)[] keySeparator = ":";
+
+    /*
        This string is inserted in between elements of a sequence (by
        default $(D ", ")).
      */
@@ -1680,21 +1686,16 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
-    enum leftBracket    = "[";
-    enum keyval         = ":";
-    enum separator      = ", ";
-    enum rightBracket   = "]";
-
-    put(w, leftBracket);
+    put(w, f.seqBefore);
     bool first = true;
     foreach (k, ref v; val) {
         if (first) first = false;
-        else put(w, separator);
+        else put(w, f.seqSeparator);
         formatElement(w, k, f);
-        put(w, keyval);
+        put(w, f.keySeparator);
         formatElement(w, v, f);
     }
-    put(w, rightBracket);
+    put(w, f.seqAfter);
 }
 
 unittest
