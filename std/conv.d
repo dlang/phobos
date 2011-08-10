@@ -2996,29 +2996,36 @@ Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
 {
-    Target result = s.front;
-    s.popFront();
-    return result;
-}
-
-// Special case: okay so parse a char off a char[] or a wchar off a
-// wchar[]
-Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Source : const(Target)[]))
-{
-    Target result = s[0];
-    s = s[1 .. $];
-    return result;
+    static if (is(Source : const(Target)[]) &&
+               is(typeof(Source.init[0]).sizeof == Target.sizeof))
+    {
+        // Special case: okay so parse a Char off a Char[]
+        Target result = s[0];
+        s = s[1 .. $];
+        return result;
+    }
+    else
+    {
+        Target result = s.front;
+        s.popFront();
+        return result;
+    }
 }
 
 unittest
 {
-    string s = "aaa";
-    assert(parse!char(s) == 'a');
-    assert(s == "aa");
-    wstring s1 = "aaa";
-    assert(parse!wchar(s1) == 'a');
-    assert(s1 == "aa");
+    foreach (Str; TypeTuple!(string, wstring, dstring))
+    {
+        foreach (Char; TypeTuple!(char, wchar, dchar))
+        {
+            static if (Char.sizeof >= ElementType!Str.sizeof)
+            {
+                Str s = "aaa";
+                assert(parse!Char(s) == 'a');
+                assert(s == "aa");
+            }
+        }
+    }
 }
 
 // string to bool conversions
