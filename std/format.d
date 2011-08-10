@@ -1180,7 +1180,7 @@ unittest
    "0" with integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T : bool) && !is(T == enum))
+if (is(Unqual!T == bool))
 {
     if (f.spec == 's') {
         put(w, val ? "true" : "false");
@@ -1405,6 +1405,37 @@ if (isInputRange!T && isSomeChar!(ElementType!T))
     }
 }
 
+private void formatChar(Writer)(Writer w, dchar c)
+{
+    if (std.uni.isGraphical(c))
+    {
+        if (c == '\"' || c == '\\')
+            put(w, '\\'), put(w, c);
+        else
+            put(w, c);
+    }
+    else if (c <= 0xFF)
+    {
+        put(w, '\\');
+        switch (c)
+        {
+        case '\a':  put(w, 'a');  break;
+        case '\b':  put(w, 'b');  break;
+        case '\f':  put(w, 'f');  break;
+        case '\n':  put(w, 'n');  break;
+        case '\r':  put(w, 'r');  break;
+        case '\t':  put(w, 't');  break;
+        case '\v':  put(w, 'v');  break;
+        default:
+            formattedWrite(w, "x%02X", cast(uint)c);
+        }
+    }
+    else if (c <= 0xFFFF)
+        formattedWrite(w, "\\u%04X", cast(uint)c);
+    else
+        formattedWrite(w, "\\U%08X", cast(uint)c);
+}
+
 // string element is formatted like UTF-8 string literal.
 private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 {
@@ -1426,33 +1457,7 @@ private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char
                     if (c == 0xFFFE || c == 0xFFFF)
                         goto InvalidSeq;
 
-                    if (std.uni.isGraphical(c))
-                    {
-                        if (c == '\"' || c == '\\')
-                            put(app, '\\'), put(app, c);
-                        else
-                            put(app, c);
-                    }
-                    else if (c <= 0xFF)
-                    {
-                        put(app, '\\');
-                        switch (c)
-                        {
-                        case '\a':  put(app, 'a');  break;
-                        case '\b':  put(app, 'b');  break;
-                        case '\f':  put(app, 'f');  break;
-                        case '\n':  put(app, 'n');  break;
-                        case '\r':  put(app, 'r');  break;
-                        case '\t':  put(app, 't');  break;
-                        case '\v':  put(app, 'v');  break;
-                        default:
-                            formattedWrite(app, "x%02X", cast(uint)c);
-                        }
-                    }
-                    else if (c <= 0xFFFF)
-                        formattedWrite(app, "\\u%04X", cast(uint)c);
-                    else
-                        formattedWrite(app, "\\U%08X", cast(uint)c);
+                    formatChar(app, c);
                 }
                 put(app, '\"');
 
@@ -1474,6 +1479,12 @@ InvalidSeq:
         }
         else
             formatValue(w, val, f);
+    }
+    else static if (isSomeChar!T)
+    {
+        put(w, '\'');
+        formatChar(w, val);
+        put(w, '\'');
     }
     else
         formatValue(w, val, f);
@@ -1702,6 +1713,14 @@ unittest
     int[string] aa = ["aaa": 1, "bbb": 2, "ccc": 3];
     formatValue(a, aa, f);
     assert(a.data == `["aaa":1, "bbb":2, "ccc":3]`);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    formatValue(a, ['c':"str"], f);
+    assert(a.data == `['c':"str"]`);
 }
 
 /**
