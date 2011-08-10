@@ -345,7 +345,7 @@ unittest
 }
 
 /**
-$(RED Scheduled for deprecation in January 2012. Please use 
+$(RED Scheduled for deprecation in January 2012. Please use
       method $(D opCast) instead.)
 
 Object-_to-non-object conversions look for a method "to" of the source
@@ -488,9 +488,9 @@ unittest
     }
 
     Object oc = new C();
-    C a2 = to!C(oc);     // == new C(a)
+    C a2 = to!C(oc);    // == new C(a)
                         // Construction conversion overrides down-casting conversion
-    assert(a2 != a);    // 
+    assert(a2 != a);    //
 }
 
 /**
@@ -1883,6 +1883,14 @@ Lerr:
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
+    string s = "123";
+    auto a = parse!int(s);
+}
+
+unittest
+{
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
         // foreach (i; 2..37) {
@@ -1938,7 +1946,6 @@ unittest
     assert(to!E("b"w) == E.b);
     assert(to!E("c"d) == E.c);
 
-    
     assert(to!F("x"c) == F.x);
     assert(to!F("y"w) == F.y);
     assert(to!F("z"d) == F.z);
@@ -2322,14 +2329,6 @@ unittest
     auto x = parse!double(s);
     assert(s == " ");
     assert(x == 0.0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
-    string s = "123";
-    auto a = parse!int(s);
 }
 
 /**
