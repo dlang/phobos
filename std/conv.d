@@ -3911,53 +3911,7 @@ unittest
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
 
-//------------------------------------------------------------------------------
-// octal
-//------------------------------------------------------------------------------
-/*
-Take a look at int.max and int.max+1 in octal and the logic for this
-function follows directly.
- */
-template octalFitsInInt(string octalNum)
-{
-        // note it is important to strip the literal of all
-        // non-numbers. kill the suffix and underscores lest they mess up
-        // the number of digits here that we depend on.
-    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
-        strippedOctalLiteral(octalNum).length == 11 &&
-        strippedOctalLiteral(octalNum)[0] == '1';
-}
-
-string strippedOctalLiteral(string original)
-{
-        string stripped = "";
-        foreach (c; original)
-                if (c >= '0' && c <= '7')
-                        stripped ~= c;
-        return stripped;
-}
-
-template literalIsLong(string num)
-{
-        static if (num.length > 1)
-        // can be xxL or xxLu according to spec
-                enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
-        else
-                enum literalIsLong = false;
-}
-
-template literalIsUnsigned(string num)
-{
-        static if (num.length > 1)
-        // can be xxL or xxLu according to spec
-                enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
-            // both cases are allowed too
-            || (num[$-1] == 'U' || num[$-2] == 'U');
-        else
-        enum literalIsUnsigned = false;
-}
-
-/**
+/***************************************************************
 The $(D octal) facility is intended as an experimental facility to
 replace _octal literals starting with $(D '0'), which many find
 confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
@@ -4009,6 +3963,86 @@ ulong octal(string num)()
         return octal!(long, num);
 }
 
+/// Ditto
+template octal(alias s) if (isIntegral!(typeof(s)))
+{
+    enum auto octal = octal!(typeof(s), toStringNow!(s));
+}
+
+/*
+        Takes a string, num, which is an octal literal, and returns its
+        value, in the type T specified.
+
+        So:
+
+        int a = octal!(int, "10");
+
+        assert(a == 8);
+*/
+T octal(T, string num)()
+{
+    static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
+
+    ulong pow = 1;
+    T value = 0;
+
+    for (int pos = num.length - 1; pos >= 0; pos--) {
+        char s = num[pos];
+        if (s < '0' || s > '7') // we only care about digits; skip the rest
+        // safe to skip - this is checked out in the assert so these
+        // are just suffixes
+                continue;
+
+        value += pow * (s - '0');
+        pow *= 8;
+  }
+
+  return value;
+}
+
+/*
+Take a look at int.max and int.max+1 in octal and the logic for this
+function follows directly.
+ */
+template octalFitsInInt(string octalNum)
+{
+        // note it is important to strip the literal of all
+        // non-numbers. kill the suffix and underscores lest they mess up
+        // the number of digits here that we depend on.
+    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
+        strippedOctalLiteral(octalNum).length == 11 &&
+        strippedOctalLiteral(octalNum)[0] == '1';
+}
+
+string strippedOctalLiteral(string original)
+{
+        string stripped = "";
+        foreach (c; original)
+                if (c >= '0' && c <= '7')
+                        stripped ~= c;
+        return stripped;
+}
+
+template literalIsLong(string num)
+{
+        static if (num.length > 1)
+        // can be xxL or xxLu according to spec
+                enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
+        else
+                enum literalIsLong = false;
+}
+
+template literalIsUnsigned(string num)
+{
+        static if (num.length > 1)
+        // can be xxL or xxLu according to spec
+                enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
+            // both cases are allowed too
+            || (num[$-1] == 'U' || num[$-2] == 'U');
+        else
+        enum literalIsUnsigned = false;
+}
+
 /*
 Returns if the given string is a correctly formatted octal literal.
 
@@ -4055,43 +4089,6 @@ bool isOctalLiteralString(string num)
 template isOctalLiteral(string num)
 {
         enum bool isOctalLiteral = isOctalLiteralString(num);
-}
-
-/*
-        Takes a string, num, which is an octal literal, and returns its
-        value, in the type T specified.
-
-        So:
-
-        int a = octal!(int, "10");
-
-        assert(a == 8);
-*/
-T octal(T, string num)()
-{
-    static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
-
-    ulong pow = 1;
-    T value = 0;
-
-    for (int pos = num.length - 1; pos >= 0; pos--) {
-        char s = num[pos];
-        if (s < '0' || s > '7') // we only care about digits; skip the rest
-        // safe to skip - this is checked out in the assert so these
-        // are just suffixes
-                continue;
-
-        value += pow * (s - '0');
-        pow *= 8;
-  }
-
-  return value;
-}
-
-/// Ditto
-template octal(alias s) if (isIntegral!(typeof(s)))
-{
-    enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
 
 unittest
