@@ -2871,37 +2871,58 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isSomeString!T)
 {
-    auto app = appender!T();
-    if (spec.trailing.empty)
+    if (spec.spec == 's')
     {
-        for (; !input.empty; input.popFront())
+        auto app = appender!T();
+        if (spec.trailing.empty)
         {
-            app.put(input.front);
+            for (; !input.empty; input.popFront())
+            {
+                app.put(input.front);
+            }
         }
+        else
+        {
+            for (; !input.empty && input.front != spec.trailing.front;
+                 input.popFront())
+            {
+                app.put(input.front);
+            }
+        }
+        auto result = app.data;
+        return result;
     }
-    else
+    else if (spec.spec == '(')
     {
-        for (; !input.empty && input.front != spec.trailing.front;
-             input.popFront())
-        {
-            app.put(input.front);
-        }
+        return unformatRange!T(input, spec);
     }
-    auto result = app.data;
-    return result;
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
 }
 
 unittest
 {
+    string line;
+
     string s1, s2;
-    char[] line = "hello, world".dup;
+
+    line = "hello, world";
     formattedRead(line, "%s", &s1);
     assert(s1 == "hello, world", s1);
 
-    line = "hello, world;yah".dup;
+    line = "hello, world;yah";
     formattedRead(line, "%s;%s", &s1, &s2);
     assert(s1 == "hello, world", s1);
     assert(s2 == "yah", s2);
+
+    line = `['h','e','l','l','o']`;
+    string s3;
+    formattedRead(line, "[%(%s, %)]", &s3);
+    assert(s3 == "hello");
+
+    line = `"hello"`;
+    string s4;
+    formattedRead(line, "\"%(%c%)\"", &s4);
+    assert(s4 == "hello");
 }
 
 private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
