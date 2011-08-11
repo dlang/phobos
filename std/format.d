@@ -2925,6 +2925,43 @@ unittest
     assert(s4 == "hello");
 }
 
+/**
+ * Reads an associative array and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isAssociativeArray!T)
+{
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+    }
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    string[int] aa1;
+    line = `[1:"hello", 2:"world"]`;
+    formattedRead(line, "%s", &aa1);
+    assert(aa1 == [1:"hello", 2:"world"]);
+
+    int[string] aa2;
+    line = `{"hello"=1; "world"=2}`;
+    formattedRead(line, "{%(%s=%s; %)}", &aa2);
+    assert(aa2 == ["hello":1, "world":2]);
+
+    int[string] aa3;
+    line = `{hello=1; world=2}`;
+    formattedRead(line, "{%(%(%c%)=%s; %)}", &aa3);
+    assert(aa3 == ["hello":1, "world":2]);
+}
+
 private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
     T result;
