@@ -2767,13 +2767,25 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
     enforce(std.algorithm.find("cdosuxX", spec.spec).length,
             text("Wrong character type specifier: `", spec.spec, "'"));
-    if (spec.spec == 's')
+    if (std.algorithm.find("sc", spec.spec).length)
     {
         auto result = to!T(input.front);
         input.popFront();
         return result;
     }
     assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    char c1, c2;
+
+    line = "abc";
+    formattedRead(line, "%s%c", &c1, &c2);
+    assert(c1 == 'a' && c2 == 'b');
+    assert(line == "c");
 }
 
 /**
