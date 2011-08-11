@@ -2701,6 +2701,65 @@ unittest
 }
 
 /**
+ * Reads a boolean value and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && is(Unqual!T == bool))
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong integral type specifier: `", spec.spec, "'"));
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+	}
+    else if (spec.spec == 'd')
+    {
+        return parse!long(input) != 0;
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    bool f1;
+
+    line = "true";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "TrUE";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "false";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+    line = "fALsE";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+
+    line = "1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "-1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+
+    line = "-0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+}
+
+/**
  * Reads one character and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
