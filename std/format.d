@@ -2582,64 +2582,6 @@ private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
     }
 }
 
-/**
-   Reads an array (except for string types) and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isArray!T && !isSomeString!T)
-{
-    auto app = appender!T();
-    for (;;)
-    {
-        auto e = parse!(ElementType!(T))(input);
-        app.put(e);
-        if (!std.string.startsWith(input, spec.nested)) break; // done
-        input = input[spec.nested.length .. $];
-        if (input.empty) break; // the trailing is terminator, not
-                                // separator
-    }
-    return app.data;
-}
-
-/**
-   Reads a string and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isSomeString!T)
-{
-    auto app = appender!T();
-    if (spec.trailing.empty)
-    {
-        for (; !input.empty; input.popFront())
-        {
-            app.put(input.front);
-        }
-    }
-    else
-    {
-        for (; !input.empty && input.front != spec.trailing.front;
-             input.popFront())
-        {
-            app.put(input.front);
-        }
-    }
-    auto result = app.data;
-    return result;
-}
-
-unittest
-{
-    string s1, s2;
-    char[] line = "hello, world".dup;
-    formattedRead(line, "%s", &s1);
-    assert(s1 == "hello, world", s1);
-
-    line = "hello, world;yah".dup;
-    formattedRead(line, "%s;%s", &s1, &s2);
-    assert(s1 == "hello, world", s1);
-    assert(s2 == "yah", s2);
-}
-
 private template acceptedSpecs(T)
 {
     static if (isIntegral!T) enum acceptedSpecs = "sdu";// + "coxX" (todo)
@@ -2658,23 +2600,6 @@ if (isIntegral!T && isInputRange!Range)
     if (std.algorithm.find("dsu", spec.spec).length)
     {
         return parse!T(input);
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
-}
-
-/**
- * Reads one character.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isSomeChar!T && isInputRange!Range)
-{
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong character type specifier: `", spec.spec, "'"));
-    if (spec.spec == 's')
-    {
-        auto result = to!T(input.front);
-        input.popFront();
-        return result;
     }
     assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
 }
@@ -2753,6 +2678,81 @@ unittest
     line = "1 7643 2.125".dup;
     formattedRead(line, "%s %*u %s", &t);
     assert(t[0] == 1 && t[1] == 2.125);
+}
+
+/**
+ * Reads one character.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isSomeChar!T && isInputRange!Range)
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong character type specifier: `", spec.spec, "'"));
+    if (spec.spec == 's')
+    {
+        auto result = to!T(input.front);
+        input.popFront();
+        return result;
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+/**
+   Reads an array (except for string types) and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isArray!T && !isSomeString!T)
+{
+    auto app = appender!T();
+    for (;;)
+    {
+        auto e = parse!(ElementType!(T))(input);
+        app.put(e);
+        if (!std.string.startsWith(input, spec.nested)) break; // done
+        input = input[spec.nested.length .. $];
+        if (input.empty) break; // the trailing is terminator, not
+                                // separator
+    }
+    return app.data;
+}
+
+/**
+   Reads a string and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && isSomeString!T)
+{
+    auto app = appender!T();
+    if (spec.trailing.empty)
+    {
+        for (; !input.empty; input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    else
+    {
+        for (; !input.empty && input.front != spec.trailing.front;
+             input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    auto result = app.data;
+    return result;
+}
+
+unittest
+{
+    string s1, s2;
+    char[] line = "hello, world".dup;
+    formattedRead(line, "%s", &s1);
+    assert(s1 == "hello, world", s1);
+
+    line = "hello, world;yah".dup;
+    formattedRead(line, "%s;%s", &s1, &s2);
+    assert(s1 == "hello, world", s1);
+    assert(s2 == "yah", s2);
 }
 
 // Legacy implementation
