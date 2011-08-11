@@ -2593,7 +2593,7 @@ private template acceptedSpecs(T)
    Reads an integral value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isIntegral!T && isInputRange!Range)
+    if (isInputRange!Range && isIntegral!T)
 {
     enforce(std.algorithm.find("cdosuxX", spec.spec).length,
             text("Wrong integral type specifier: `", spec.spec, "'"));
@@ -2608,7 +2608,7 @@ if (isIntegral!T && isInputRange!Range)
    Reads a floating-point value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
     if (spec.spec == 'r')
     {
@@ -2681,10 +2681,10 @@ unittest
 }
 
 /**
- * Reads one character.
+ * Reads one character and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isSomeChar!T && isInputRange!Range)
+    if (isInputRange!Range && isSomeChar!T)
 {
     enforce(std.algorithm.find("cdosuxX", spec.spec).length,
             text("Wrong character type specifier: `", spec.spec, "'"));
@@ -2701,7 +2701,7 @@ if (isSomeChar!T && isInputRange!Range)
    Reads an array (except for string types) and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isArray!T && !isSomeString!T)
+    if (isInputRange!Range && isArray!T && !isSomeString!T)
 {
     auto app = appender!T();
     for (;;)
@@ -2720,7 +2720,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
    Reads a string and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isSomeString!T)
+    if (isInputRange!Range && isSomeString!T)
 {
     auto app = appender!T();
     if (spec.trailing.empty)
