@@ -822,7 +822,8 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(isLower(trailing[1]) || trailing[1] == '*',
+                    enforce(isLower(trailing[1]) || trailing[1] == '*' ||
+                            trailing[1] == '(',
                             text("'%", trailing[1],
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
@@ -2794,17 +2795,68 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isArray!T && !isSomeString!T)
 {
-    auto app = appender!T();
-    for (;;)
+    if (spec.spec == 's')
     {
-        auto e = parse!(ElementType!(T))(input);
-        app.put(e);
-        if (!std.string.startsWith(input, spec.nested)) break; // done
-        input = input[spec.nested.length .. $];
-        if (input.empty) break; // the trailing is terminator, not
-                                // separator
+        return parse!T(input);
     }
-    return app.data;
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "%s", &s1);
+    assert(s1 == [1,2,3]);
+}
+
+unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "[%(%s, %)]", &s1);
+    assert(s1 == [1,2,3]);
+
+    line = `["hello", "world"]`;
+    string[] s2;
+    formattedRead(line, "[%(%s, %)]", &s2);
+    assert(s2 == ["hello", "world"]);
+
+    line = "123 456";
+    int[] s3;
+    formattedRead(line, "%(%s %)", &s3);
+    assert(s3 == [123, 456]);
+
+    line = "h,e,l,l,o;w,o,r,l,d;";
+    string[] s4;
+    formattedRead(line, "%(%(%c,%);%)", &s4);
+    assert(s4 == ["hello", "world"]);
+}
+
+unittest
+{
+    string line;
+
+    int[4] sa1;
+    line = `[1,2,3,4]`;
+    formattedRead(line, "%s", &sa1);
+    assert(sa1 == [1,2,3,4]);
+
+    int[4] sa2;
+    line = `[1,2,3]`;
+    assertThrown(formattedRead(line, "%s", &sa2));
+
+    int[4] sa3;
+    line = `[1,2,3,4,5]`;
+    assertThrown(formattedRead(line, "%s", &sa3));
 }
 
 /**
