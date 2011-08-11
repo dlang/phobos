@@ -2993,21 +2993,20 @@ Parsing one character off a string returns the character and bumps the
 string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
+    if (isSomeString!Source &&
+        staticIndexOf!(Unqual!Target, dchar, Unqual!(typeof(Source.init[0]))) >= 0)
 {
-    static if (is(Source : const(Target)[]) &&
-               is(typeof(Source.init[0]).sizeof == Target.sizeof))
+    static if (is(Unqual!Target == dchar))
     {
-        // Special case: okay so parse a Char off a Char[]
-        Target result = s[0];
-        s = s[1 .. $];
+        Target result = s.front;
+        s.popFront();
         return result;
     }
     else
     {
-        Target result = s.front;
-        s.popFront();
+        // Special case: okay so parse a Char off a Char[]
+        Target result = s[0];
+        s = s[1 .. $];
         return result;
     }
 }
@@ -3018,7 +3017,8 @@ unittest
     {
         foreach (Char; TypeTuple!(char, wchar, dchar))
         {
-            static if (Char.sizeof >= ElementType!Str.sizeof)
+            static if (is(Unqual!Char == dchar) ||
+                       Char.sizeof == Str.init[0].sizeof)
             {
                 Str s = "aaa";
                 assert(parse!Char(s) == 'a');
@@ -3026,6 +3026,15 @@ unittest
             }
         }
     }
+}
+
+Target parse(Target, Source)(ref Source s)
+    if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
+{
+    Target result = s.front;
+    s.popFront();
+    return result;
 }
 
 // string to bool conversions
