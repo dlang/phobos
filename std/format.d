@@ -851,6 +851,32 @@ struct FormatSpec(Char)
         return false;
     }
 
+    private const(Char)[] headUpToNextSpec()
+    {
+        auto w = appender!(typeof(return))();
+        auto tr = trailing;
+
+        while (tr.length)
+        {
+            if (*tr.ptr == '%')
+            {
+                if (tr.length > 1 && tr.ptr[1] == '%')
+                {
+                    tr = tr[2 .. $];
+                    w.put('%');
+                }
+                else
+                    break;
+            }
+            else
+            {
+                w.put(tr.front);
+                tr.popFront();
+            }
+        }
+        return w.data;
+    }
+
     private const string getCurFmtStr()
     {
         auto w = appender!string();
@@ -2748,6 +2774,81 @@ unittest
     assert(s1 == "hello, world", s1);
     assert(s2 == "yah", s2);
 }
+
+private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+{
+    T result;
+  static if (isStaticArray!T)
+    size_t i;
+
+    auto tr = spec.headUpToNextSpec();
+
+    for (;;)
+    {
+        auto fmt = FormatSpec!Char(spec.nested);
+        fmt.readUpToNextSpec(input);
+
+        bool isRangeValue = (fmt.spec == '(');
+
+        static if (isStaticArray!T)
+        {
+            result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
+        }
+        else static if (isDynamicArray!T)
+        {
+            result ~= unformatElement!(ElementType!T)(input, fmt);
+        }
+        else static if (isAssociativeArray!T)
+        {
+            auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
+            enforce(!input.empty, "Need more input");
+            fmt.readUpToNextSpec(input);        // eat key separator
+
+            result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
+        }
+
+        if (isRangeValue)
+        {
+            fmt.readUpToNextSpec(input);        // always get trailing
+            if (input.empty)
+                break;
+            if (tr.length && std.algorithm.startsWith(input, tr))
+                break;
+        }
+        else
+        {
+            if (input.empty)
+                break;
+            if (tr.length && std.algorithm.startsWith(input, tr))
+                break;
+            fmt.readUpToNextSpec(input);
+        }
+    }
+    return result;
+}
+
+// Undocumented
+T unformatElement(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range)
+{
+    static if (isSomeString!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+    else static if (isSomeChar!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+
+    return unformatValue!T(input, spec);
+}
+
 
 // Legacy implementation
 
