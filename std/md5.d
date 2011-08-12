@@ -202,7 +202,7 @@ struct MD5_CTX
      */
     static uint ROTATE_LEFT(uint x, uint n)
     {
-        // With revently added optimization to DMD, this is translated to rol.
+        // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
         // No assembler required.
         return (x << n) | (x >> (32-n));
     }
