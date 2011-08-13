@@ -1,11 +1,11 @@
 // Written in the D programming language.
 
-/** Proposal for a new $(D std._path).
+/** This module is used to manipulate _path strings.
 
-    This module is used to parse _path strings. All functions, with the
-    exception of $(LREF expandTilde), are pure
+    All functions, with the exception of $(LREF expandTilde) (and in some
+    cases $(LREF absolutePath) and $(LREF relativePath)), are pure
     string manipulation functions; they don't depend on any state outside
-    the program, nor do they perform any I/O.
+    the program, nor do they perform any actual file system actions.
     This has the consequence that the module does not make any distinction
     between a _path that points to a directory and a _path that points to a
     file, and it does not know whether or not the object pointed to by the
@@ -17,7 +17,7 @@
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
     added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
-    function will replace all slashes with backslashes on this platform.
+    function will replace all slashes with backslashes on that platform.
 
     In general, the functions in this module assume that the input paths
     are well-formed.  (That is, they should not contain invalid characters,
@@ -201,6 +201,7 @@ private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
     ---
     assert (baseName("dir/file.ext")         == "file.ext");
     assert (baseName("dir/file.ext", ".ext") == "file");
+    assert (baseName("dir/file.ext", ".xyz") == "file.ext");
     assert (baseName("dir/filename", "name") == "file");
     assert (baseName("dir/subdir/")          == "subdir");
 
@@ -2326,24 +2327,10 @@ unittest
 
     Examples:
     -----
-    import std.path;
-
-    void process_file(string filename)
+    void processFile(string path)
     {
-        string path = expandTilde(filename);
-        ...
-    }
-    -----
-
-    -----
-    import std.path;
-
-    string RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
-    string RESOURCE_DIR;    // This gets expanded in main().
-
-    int main(string[] args)
-    {
-        RESOURCE_DIR = expandTilde(RESOURCE_DIR_TEMPLATE);
+        // Allow calling this function with paths such as ~/foo
+        auto fullPath = expandTilde(path);
         ...
     }
     -----
