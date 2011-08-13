@@ -1758,9 +1758,7 @@ Target parse(Target, Source)(ref Source s)
         auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
         auto result = cast(Target) v;
         if (result != v)
-        {
-            convError!(Source, Target)(s);
-        }
+            goto Loverflow;
         return result;
     }
     else
@@ -1822,12 +1820,13 @@ Target parse(Target, Source)(ref Source s)
             }
         }
         return v;
-      Loverflow:
-        ConvOverflowException.raise("Overflow in integral conversion");
-      Lerr:
-        convError!(Source, Target)(s);
-        return 0;
     }
+
+Loverflow:
+    ConvOverflowException.raise("Overflow in integral conversion");
+Lerr:
+    convError!(Source, Target)(s);
+    assert(0);
 }
 
 unittest
@@ -2432,11 +2431,12 @@ body
     assert(i <= s.length);
     s = s[i .. $];
     return v;
+
 Loverflow:
     ConvOverflowException.raise("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
-    return 0;
+    assert(0);
 }
 
 unittest
