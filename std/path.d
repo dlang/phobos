@@ -1931,7 +1931,7 @@ else static assert (0);
     }
     ---
 */
-long filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
+int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
     @safe pure nothrow
 {
     if (isDirSeparator(a) && isDirSeparator(b)) return 0;
@@ -1941,7 +1941,7 @@ long filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar 
         a = toLower(a);
         b = toLower(b);
     }
-    return (cast(long)a) - (cast(long)b);
+    return cast(int)(a - b);
 }
 
 
@@ -2004,7 +2004,7 @@ unittest
     }
     ---
 */
-long filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
+int filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
     @safe //TODO: pure nothrow (because of the other filenameCmp)
     if (isSomeChar!C1 && isSomeChar!C2)
 {
@@ -2012,14 +2012,14 @@ long filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
 }
 
 /// ditto
-long filenameCmp(CaseSensitive cs, C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
+int filenameCmp(CaseSensitive cs, C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
     @safe //TODO: pure nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     for (;;)
     {
-        if (filename1.empty) return -(cast(long) !filename2.empty);
-        if (filename2.empty) return  (cast(long) !filename1.empty);
+        if (filename1.empty) return -(cast(int) !filename2.empty);
+        if (filename2.empty) return  (cast(int) !filename1.empty);
         auto c = filenameCharCmp!cs(filename1.front, filename2.front);
         if (c != 0) return c;
         filename1.popFront();
