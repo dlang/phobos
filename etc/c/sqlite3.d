@@ -737,18 +737,18 @@ const(void)* sqlite3_column_database_name16(sqlite3_stmt*,int);
 /// Ditto
 const(char)* sqlite3_column_table_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_table_name16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_table_name16(sqlite3_stmt*,int);
 /// Ditto
-const (char*) sqlite3_column_origin_name(sqlite3_stmt*,int);
+const (char)* sqlite3_column_origin_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_origin_name16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_origin_name16(sqlite3_stmt*,int);
 
 /**
 ** CAPI3REF: Declared Datatype Of A Query Result
 */
-const (char*) sqlite3_column_decltype(sqlite3_stmt*,int);
+const (char)* sqlite3_column_decltype(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_decltype16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_decltype16(sqlite3_stmt*,int);
 
 /**
 ** CAPI3REF: Evaluate An SQL Statement
@@ -773,7 +773,7 @@ enum
 /**
 ** CAPI3REF: Result Values From A Query
 */
-const (void*) sqlite3_column_blob(sqlite3_stmt*, int iCol);
+const (void)* sqlite3_column_blob(sqlite3_stmt*, int iCol);
 /// Ditto
 int sqlite3_column_bytes(sqlite3_stmt*, int iCol);
 /// Ditto
@@ -785,9 +785,9 @@ int sqlite3_column_int(sqlite3_stmt*, int iCol);
 /// Ditto
 sqlite3_int64 sqlite3_column_int64(sqlite3_stmt*, int iCol);
 /// Ditto
-const (char*) sqlite3_column_text(sqlite3_stmt*, int iCol);
+const (char)* sqlite3_column_text(sqlite3_stmt*, int iCol);
 /// Ditto
-const (void*) sqlite3_column_text16(sqlite3_stmt*, int iCol);
+const (void)* sqlite3_column_text16(sqlite3_stmt*, int iCol);
 /// Ditto
 int sqlite3_column_type(sqlite3_stmt*, int iCol);
 /// Ditto
@@ -859,7 +859,7 @@ enum
 /**
 ** CAPI3REF: Obtaining SQL Function Parameter Values
 */
-const (void*) sqlite3_value_blob(sqlite3_value*);
+const (void)* sqlite3_value_blob(sqlite3_value*);
 /// Ditto
 int sqlite3_value_bytes(sqlite3_value*);
 /// Ditto
@@ -871,13 +871,13 @@ int sqlite3_value_int(sqlite3_value*);
 /// Ditto
 sqlite3_int64 sqlite3_value_int64(sqlite3_value*);
 /// Ditto
-const (char*) sqlite3_value_text(sqlite3_value*);
+const (char)* sqlite3_value_text(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16(sqlite3_value*);
+const (void)* sqlite3_value_text16(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16le(sqlite3_value*);
+const (void)* sqlite3_value_text16le(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16be(sqlite3_value*);
+const (void)* sqlite3_value_text16be(sqlite3_value*);
 /// Ditto
 int sqlite3_value_type(sqlite3_value*);
 /// Ditto
