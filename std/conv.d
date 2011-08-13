@@ -101,11 +101,11 @@ deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 The $(D_PARAM to) family of functions converts a value from type
 $(D_PARAM Source) to type $(D_PARAM Target). The source type is
 deduced and the target type must be specified, for example the
-expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
+expression $(D_PARAM to!int(42.0)) converts the number 42 from
 $(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
-it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
+it checks for overflow; $(D_PARAM to!int(4.2e10)) would throw the
 $(D_PARAM ConvOverflowException) exception. Overflow checks are only
-inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
+inserted when necessary, e.g., $(D_PARAM to!double(42)) does not do
 any checking because any int fits in a double.
 
 Converting a value to its own type (useful mostly for generic code)
@@ -113,8 +113,8 @@ simply returns its argument.
 Example:
 -------------------------
 int a = 42;
-auto b = to!(int)(a); // b is int with value 42
-auto c = to!(double)(3.14); // c is double with value 3.14
+auto b = to!int(a); // b is int with value 42
+auto c = to!double(3.14); // c is double with value 3.14
 -------------------------
 Converting among numeric types is a safe way to cast them around.
 Conversions from floating-point types to integral types allow loss of
@@ -125,19 +125,19 @@ integral, use $(D_PARAM roundTo).)
 Examples:
 -------------------------
 int a = 420;
-auto b = to!(long)(a); // same as long b = a;
-auto c = to!(byte)(a / 10); // fine, c = 42
-auto d = to!(byte)(a); // throw ConvOverflowException
+auto b = to!long(a); // same as long b = a;
+auto c = to!byte(a / 10); // fine, c = 42
+auto d = to!byte(a); // throw ConvOverflowException
 double e = 4.2e6;
-auto f = to!(int)(e); // f == 4200000
+auto f = to!int(e); // f == 4200000
 e = -3.14;
-auto g = to!(uint)(e); // fails: floating-to-integral negative overflow
+auto g = to!uint(e); // fails: floating-to-integral negative overflow
 e = 3.14;
-auto h = to!(uint)(e); // h = 3
+auto h = to!uint(e); // h = 3
 e = 3.99;
-h = to!(uint)(a); // h = 3
+h = to!uint(a); // h = 3
 e = -3.99;
-f = to!(int)(a); // f = -3
+f = to!int(a); // f = -3
 -------------------------
 
 Conversions from integral types to floating-point types always
@@ -149,10 +149,10 @@ $(D_PARAM real) is 80-bit, e.g. on Intel machines).
 Example:
 -------------------------
 int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
-assert(to!(int)(to!(float)(a)) == a);
-assert(to!(int)(to!(float)(-a)) == -a);
+assert(to!int(to!float(a)) == a);
+assert(to!int(to!float(-a)) == -a);
 a += 2;
-assert(to!(int)(to!(float)(a)) == a); // fails!
+assert(to!int(to!float(a)) == a); // fails!
 -------------------------
 
 Conversions from string to numeric types differ from the C equivalents
@@ -202,11 +202,11 @@ int[string][double[int[]]] a;
 auto b = to!(short[wstring][string[double[]]])(a);
 -------------------------
 
-This conversion works because $(D_PARAM to!(short)) applies to an
-$(D_PARAM int), $(D_PARAM to!(wstring)) applies to a $(D_PARAM
-string), $(D_PARAM to!(string)) applies to a $(D_PARAM double), and
+This conversion works because $(D_PARAM to!short) applies to an
+$(D_PARAM int), $(D_PARAM to!wstring) applies to a $(D_PARAM
+string), $(D_PARAM to!string) applies to a $(D_PARAM double), and
 $(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
-conversion might throw an exception because $(D_PARAM to!(short))
+conversion might throw an exception because $(D_PARAM to!short)
 might fail the range check.
 
 Macros: WIKI=Phobos/StdConv
@@ -371,7 +371,7 @@ unittest
 ----
  */
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
-        && is(typeof(S.init.to!(T)()) : T))
+        && is(typeof(S.init.to!T()) : T))
 {
     pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
                 "\"to\" has been scheduled for deprecation in January 2012. " ~
@@ -1370,19 +1370,19 @@ unittest
     assert(collectException(to!char(a)));
 
     dchar from0 = 'A';
-    char to0 = to!(char)(from0);
+    char to0 = to!char(from0);
 
     wchar from1 = 'A';
-    char to1 = to!(char)(from1);
+    char to1 = to!char(from1);
 
     char from2 = 'A';
-    char to2 = to!(char)(from2);
+    char to2 = to!char(from2);
 
     char from3 = 'A';
-    wchar to3 = to!(wchar)(from3);
+    wchar to3 = to!wchar(from3);
 
     char from4 = 'A';
-    dchar to4 = to!(dchar)(from4);
+    dchar to4 = to!dchar(from4);
 }
 
 /**
@@ -1400,7 +1400,7 @@ T toImpl(T, S)(S src)
         /* Temporarily cast to mutable type, so we can get it initialized,
          * this is ok because there are no other references to result[]
          */
-        cast()(result[i]) = to!(E)(e);
+        cast()(result[i]) = to!E(e);
     }
     return result;
 }
@@ -1435,7 +1435,7 @@ T toImpl(T, S)(S src)
     T result;
     foreach (k1, v1; src)
     {
-        result[to!(K2)(k1)] = to!(V2)(v1);
+        result[to!K2(k1)] = to!V2(v1);
     }
     return result;
 }
@@ -1449,13 +1449,13 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
     //hash to string conversion
-    assert(to!(string)(a) == "[0:1, 1:2]");
+    assert(to!string(a) == "[0:1, 1:2]");
 }
 
 private bool convFails(Source, Target, E)(Source src)
 {
     try {
-        auto t = to!(Target)(src);
+        auto t = to!Target(src);
     } catch (E) {
         return true;
     }
@@ -1465,21 +1465,21 @@ private bool convFails(Source, Target, E)(Source src)
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
-    auto b = to!(Floating)(a);
+    auto b = to!Floating(a);
     assert(a == b);
-    assert(a == to!(Integral)(b));
+    assert(a == to!Integral(b));
 }
 
 private void testFloatingToIntegral(Floating, Integral)()
 {
     // convert some value
     Floating a = 4.2e1;
-    auto b = to!(Integral)(a);
+    auto b = to!Integral(a);
     assert(is(typeof(b) == Integral) && b == 42);
     // convert some negative value (if applicable)
     a = -4.2e1;
     static if (Integral.min < 0) {
-        b = to!(Integral)(a);
+        b = to!Integral(a);
         assert(is(typeof(b) == Integral) && b == -42);
     } else {
         // no go for unsigned types
@@ -1493,27 +1493,27 @@ private void testFloatingToIntegral(Floating, Integral)()
                 || Floating.sizeof <= Integral.sizeof);
     }
     a = 0.0 + Integral.min;
-    assert(to!(Integral)(a) == Integral.min);
+    assert(to!Integral(a) == Integral.min);
     --a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     a = 0.0 + Integral.max;
 //   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
-//             Integral.stringof, to!(Integral)(a));
-    assert(to!(Integral)(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
+//             Integral.stringof, to!Integral(a));
+    assert(to!Integral(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
     ++a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     // convert a value with a fractional part
     a = 3.14;
-    assert(to!(Integral)(a) == 3);
+    assert(to!Integral(a) == 3);
     a = 3.99;
-    assert(to!(Integral)(a) == 3);
+    assert(to!Integral(a) == 3);
     static if (Integral.min < 0) {
         a = -3.14;
-        assert(to!(Integral)(a) == -3);
+        assert(to!Integral(a) == -3);
         a = -3.99;
-        assert(to!(Integral)(a) == -3);
+        assert(to!Integral(a) == -3);
     }
 }
 
@@ -1539,17 +1539,17 @@ unittest
     {
         // float
         int a = 16_777_215; // 2^24 - 1
-        assert(to!(int)(to!(float)(a)) == a);
-        assert(to!(int)(to!(float)(-a)) == -a);
+        assert(to!int(to!float(a)) == a);
+        assert(to!int(to!float(-a)) == -a);
         // double
         long b = 9_007_199_254_740_991; // 2^53 - 1
-        assert(to!(long)(to!(double)(b)) == b);
-        assert(to!(long)(to!(double)(-b)) == -b);
+        assert(to!long(to!double(b)) == b);
+        assert(to!long(to!double(-b)) == -b);
         // real
         // @@@ BUG IN COMPILER @@@
 //     ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
-//     assert(to!(ulong)(to!(real)(c)) == c);
-//     assert(to!(ulong)(-to!(real)(c)) == c);
+//     assert(to!ulong(to!real(c)) == c);
+//     assert(to!ulong(-to!real(c)) == c);
     }
     // test conversions floating => integral
     {
@@ -1593,14 +1593,14 @@ unittest
     {
         foreach (T; AllNumerics) {
             T a = 42;
-            assert(to!(string)(a) == "42");
-            //assert(to!(wstring)(a) == "42"w);
-            //assert(to!(dstring)(a) == "42"d);
+            assert(to!string(a) == "42");
+            //assert(to!wstring(a) == "42"w);
+            //assert(to!dstring(a) == "42"d);
             // array test
 //       T[] b = new T[2];
 //       b[0] = 42;
 //       b[1] = 33;
-//       assert(to!(string)(b) == "[42,33]");
+//       assert(to!string(b) == "[42,33]");
         }
     }
     // test array to string conversion
@@ -1611,7 +1611,7 @@ unittest
     // test enum to int conversion
     // enum Testing { Test1, Test2 };
     // Testing t;
-    // auto a = to!(string)(t);
+    // auto a = to!string(t);
     // assert(a == "0");
 }
 
@@ -1667,14 +1667,14 @@ unittest
 
 Example:
 ---------------
-  assert(roundTo!(int)(3.14) == 3);
-  assert(roundTo!(int)(3.49) == 3);
-  assert(roundTo!(int)(3.5) == 4);
-  assert(roundTo!(int)(3.999) == 4);
-  assert(roundTo!(int)(-3.14) == -3);
-  assert(roundTo!(int)(-3.49) == -3);
-  assert(roundTo!(int)(-3.5) == -4);
-  assert(roundTo!(int)(-3.999) == -4);
+  assert(roundTo!int(3.14) == 3);
+  assert(roundTo!int(3.49) == 3);
+  assert(roundTo!int(3.5) == 4);
+  assert(roundTo!int(3.999) == 4);
+  assert(roundTo!int(-3.14) == -3);
+  assert(roundTo!int(-3.49) == -3);
+  assert(roundTo!int(-3.5) == -4);
+  assert(roundTo!int(-3.999) == -4);
 ---------------
 Rounded conversions do not work with non-integral target types.
  */
@@ -1684,21 +1684,21 @@ template roundTo(Target)
     Target roundTo(Source)(Source value) {
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
-        return to!(Target)(trunc(value + (value < 0 ? -0.5L : 0.5L)));
+        return to!Target(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(roundTo!(int)(3.14) == 3);
-    assert(roundTo!(int)(3.49) == 3);
-    assert(roundTo!(int)(3.5) == 4);
-    assert(roundTo!(int)(3.999) == 4);
-    assert(roundTo!(int)(-3.14) == -3);
-    assert(roundTo!(int)(-3.49) == -3);
-    assert(roundTo!(int)(-3.5) == -4);
-    assert(roundTo!(int)(-3.999) == -4);
+    assert(roundTo!int(3.14) == 3);
+    assert(roundTo!int(3.49) == 3);
+    assert(roundTo!int(3.5) == 4);
+    assert(roundTo!int(3.999) == 4);
+    assert(roundTo!int(-3.14) == -3);
+    assert(roundTo!int(-3.49) == -3);
+    assert(roundTo!int(-3.5) == -4);
+    assert(roundTo!int(-3.999) == -4);
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
 
     // boundary values
@@ -1723,12 +1723,12 @@ unittest
  * Example:
 --------------
 string test = "123 \t  76.14";
-auto a = parse!(uint)(test);
+auto a = parse!uint(test);
 assert(a == 123);
 assert(test == " \t  76.14"); // parse bumps string
 munch(test, " \t\n\r"); // skip ws
 assert(test == "76.14");
-auto b = parse!(double)(test);
+auto b = parse!double(test);
 assert(b == 76.14);
 assert(test == "");
 --------------
@@ -3295,11 +3295,11 @@ private bool feq(in creal r1, in creal r2)
    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
    ----
 */
-string text(T...)(T args) { return textImpl!(string, T)(args); }
+string text(T...)(T args) { return textImpl!string(args); }
 ///ditto
-wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
+wstring wtext(T...)(T args) { return textImpl!wstring(args); }
 ///ditto
-dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
+dstring dtext(T...)(T args) { return textImpl!dstring(args); }
 
 private S textImpl(S, U...)(U args)
 {
