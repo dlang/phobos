@@ -518,17 +518,9 @@ unittest
     // Testing object conversions
     class A {} class B : A {} class C : A {}
     A a1 = new A, a2 = new B, a3 = new C;
-    assert(to!(B)(a2) is a2);
-    assert(to!(C)(a3) is a3);
-    try
-    {
-        to!(B)(a3);
-        assert(false);
-    }
-    catch (ConvException e)
-    {
-        //writeln(e);
-    }
+    assert(to!B(a2) is a2);
+    assert(to!C(a3) is a3);
+    assertThrown!ConvException(to!B(a3));
 }
 
 /**
@@ -1712,17 +1704,10 @@ unittest
     // boundary values
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
     {
-        try
-        {
-            assert(roundTo!Int(Int.min - 0.4L) == Int.min);
-            assert(roundTo!Int(Int.max + 0.4L) == Int.max);
-        }
-        catch (ConvOverflowException e)
-        {
-            assert(0);
-        }
-        try { roundTo!Int(Int.min - 0.5L); assert(0); } catch (ConvOverflowException e) {}
-        try { roundTo!Int(Int.max + 0.5L); assert(0); } catch (ConvOverflowException e) {}
+        assert(roundTo!Int(Int.min - 0.4L) == Int.min);
+        assert(roundTo!Int(Int.max + 0.4L) == Int.max);
+        assertThrown!ConvOverflowException(roundTo!Int(Int.min - 0.5L));
+        assertThrown!ConvOverflowException(roundTo!Int(Int.max + 0.5L));
     }
 }
 
@@ -2500,14 +2485,7 @@ unittest
     assert(to!F("y"w) == F.y);
     assert(to!F("z"d) == F.z);
 
-    try
-    {
-        to!E("d");
-        assert(0);
-    }
-    catch (ConvException e)
-    {
-    }
+    assertThrown!ConvException(to!E("d"));
 }
 
 version (none)  // TODO: BUG4744
@@ -2873,16 +2851,7 @@ unittest
     assert(to!string(f) == to!string(float.nan));
     assert(isnan(f));
 
-    bool ok = false;
-    try
-    {
-        to!float("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
+    assertThrown!ConvException(to!float("\x00"));
 }
 
 /*
@@ -2936,16 +2905,7 @@ unittest
     assert(to!string(d) == to!string(double.nan));
     assert(isnan(d));
 
-    bool ok = false;
-    try
-    {
-        to!double("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
+    assertThrown!ConvException(to!double("\x00"));
 }
 
 /*
@@ -3004,16 +2964,7 @@ unittest
     assert(to!string(r) == to!string(real.nan));
     assert(isnan(r));
 
-    bool ok = false;
-    try
-    {
-        to!real("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
+    assertThrown!ConvException(to!real("\x00"));
 }
 
 unittest
@@ -3153,12 +3104,7 @@ unittest
 
     assert (to!bool("TruE") == true);
     assert (to!bool("faLse"d) == false);
-    try
-    {
-        to!bool("maybe");
-        assert (false);
-    }
-    catch (ConvException e) { }
+    assertThrown!ConvException(to!bool("maybe"));
 
     auto t = "TrueType";
     assert (parse!bool(t) == true);
@@ -3169,15 +3115,8 @@ unittest
     assert (f == " killer whale"d);
 
     auto m = "maybe";
-    try
-    {
-        parse!bool(m);
-        assert (false);
-    }
-    catch (ConvException e)
-    {
-        assert (m == "maybe");  // m shouldn't change on failure
-    }
+    assertThrown!ConvException(parse!bool(m));
+    assert (m == "maybe");  // m shouldn't change on failure
 
     auto b = parse!(const(bool))("true");
     assert(b == true);
