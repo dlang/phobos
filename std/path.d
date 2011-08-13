@@ -3,20 +3,20 @@
 /** Proposal for a new $(D std._path).
 
     This module is used to parse _path strings. All functions, with the
-    exception of $(D expandTilde), are pure
+    exception of $(LREF expandTilde), are pure
     string manipulation functions; they don't depend on any state outside
     the program, nor do they perform any I/O.
     This has the consequence that the module does not make any distinction
     between a _path that points to a directory and a _path that points to a
     file, and it does not know whether or not the object pointed to by the
     _path actually exists in the file system.
-    To differentiate between these cases, use $(D std.file.isDir) and
-    $(D std.file.exists).
+    To differentiate between these cases, use $(XREF file,isDir) and
+    $(XREF file,exists).
 
     Note that on Windows, both the backslash ($(D '\')) and the slash ($(D '/'))
     are in principle valid directory separators.  This module treats them
     both on equal footing, but in cases where a $(I new) separator is
-    added, a backslash will be used.  Furthermore, the $(D buildNormalizedPath)
+    added, a backslash will be used.  Furthermore, the $(LREF buildNormalizedPath)
     function will replace all slashes with backslashes on this platform.
 
     In general, the functions in this module assume that the input paths
@@ -214,7 +214,7 @@ private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
     Note:
     This function only strips away the specified suffix.  If you want
     to remove the extension from a path, regardless of what the extension
-    is, use $(D stripExtension).
+    is, use $(LREF stripExtension).
     If you want the filename without leading directories and without
     an extension, combine the functions like this:
     ---
@@ -850,7 +850,7 @@ unittest
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
     them. If any of the path components are rooted (see
-    $(D isRooted)) the preceding path components will be dropped.
+    $(LREF isRooted)) the preceding path components will be dropped.
 
     Examples:
     ---
@@ -928,7 +928,7 @@ unittest
 
 
 
-/** Performs the same task as $(D buildPath),
+/** Performs the same task as $(LREF buildPath),
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
@@ -1614,7 +1614,7 @@ unittest
 
     Examples:
     On POSIX, an absolute path starts at the root directory.
-    (In fact, $(D _isAbsolute) is just an alias for $(D isRooted).)
+    (In fact, $(D _isAbsolute) is just an alias for $(LREF isRooted).)
     ---
     version (Posix)
     {
@@ -1626,8 +1626,8 @@ unittest
     ---
 
     On Windows, an absolute path starts at the root directory of
-    a specific drive.  Hence, it must start with "d:\" or "d:/",
-    where d is the drive letter.  Alternatively, it may be a
+    a specific drive.  Hence, it must start with $(D "d:\") or $(D "d:/"),
+    where $(D d) is the drive letter.  Alternatively, it may be a
     network path, i.e. a path starting with a double (back)slash.
     ---
     version (Windows)
@@ -1909,7 +1909,7 @@ else static assert (0);
     This function can perform a case-sensitive or a case-insensitive
     comparison.  This is controlled through the $(D cs) template parameter
     which, if not specified, is given by
-    $(D CaseSensitive.osDefault).
+    $(LREF CaseSensitive)$(D .osDefault).
 
     On Windows, the backslash and slash characters ($(D '\') and $(D '/'))
     are considered equal.
@@ -1982,8 +1982,7 @@ unittest
     Individual characters are compared using $(D filenameCharCmp!cs),
     where $(D cs) is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
-    $(LINK2 #filenameCharCmp,$(D filenameCharCmp) documentation)
-    for details.
+    $(LREF filenameCharCmp) documentation for details.
 
     Examples:
     ---
@@ -2084,8 +2083,7 @@ unittest
     Individual characters are compared using $(D filenameCharCmp!cs),
     where $(D cs) is an optional template parameter determining whether
     the comparison is case sensitive or not.  See the
-    $(LINK2 #filenameCharCmp,$(D filenameCharCmp) documentation)
-    for details.
+    $(LREF filenameCharCmp) documentation for details.
 
     Note that directory
     separators and dots don't stop a meta-character from matching
