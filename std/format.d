@@ -1602,12 +1602,12 @@ void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == delegate))
 {
     alias FunctionAttribute FA;
-    if (functionAttributes!T & FA.PURE)     formatValue(w, "pure ", f);
-    if (functionAttributes!T & FA.NOTHROW)  formatValue(w, "nothrow ", f);
-    if (functionAttributes!T & FA.REF)      formatValue(w, "ref ", f);
-    if (functionAttributes!T & FA.PROPERTY) formatValue(w, "@property ", f);
-    if (functionAttributes!T & FA.TRUSTED)  formatValue(w, "@trusted ", f);
-    if (functionAttributes!T & FA.SAFE)     formatValue(w, "@safe ", f);
+    if (functionAttributes!T & FA.pure_)    formatValue(w, "pure ", f);
+    if (functionAttributes!T & FA.nothrow_) formatValue(w, "nothrow ", f);
+    if (functionAttributes!T & FA.ref_)     formatValue(w, "ref ", f);
+    if (functionAttributes!T & FA.property) formatValue(w, "@property ", f);
+    if (functionAttributes!T & FA.trusted)  formatValue(w, "@trusted ", f);
+    if (functionAttributes!T & FA.safe)     formatValue(w, "@safe ", f);
     formatValue(w, ReturnType!(T).stringof,f);
     formatValue(w, " delegate",f);
     formatValue(w, ParameterTypeTuple!(T).stringof,f);
