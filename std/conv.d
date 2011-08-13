@@ -1624,28 +1624,20 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
+    if (isDynamicArray!S && isSomeString!S &&
         !isSomeString!T)
 {
-    // todo: improve performance
-    return parseString!T(toUTF8(value));
-}
+    alias ElementEncodingType!S[] SV;
+    static if (is(SV == S))
+        alias value v;
+    else
+        SV v = value;   // e.g. convert const(char[]) to const(char)[]
 
-/// ditto
-T toImpl(T, S)(S value)
-    if (isDynamicArray!S && is(S : const(char)[]) &&
-        !isSomeString!T)
-{
-    return parseString!T(value);
-}
-
-private T parseString(T)(const(char)[] v)
-{
     scope(exit)
     {
         if (v.length)
         {
-            convError!(const(char)[], T)(v);
+            convError!(SV, T)(v);
         }
     }
     return parse!T(v);
