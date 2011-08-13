@@ -1759,7 +1759,7 @@ private static:
         {
             enum varstyle = variadicFunctionStyle!(typeof(&ctor[0]));
 
-            static if (varstyle & (Variadic.C | Variadic.D))
+            static if (varstyle & (Variadic.c | Variadic.d))
             {
                 // the argptr-forwarding problem
                 pragma(msg, "Warning: AutoImplement!(", Base, ") ",
@@ -2049,7 +2049,7 @@ private static:
 
                 if (!isCtor)
                 {
-                    if (atts & FA.REF) rtype ~= "ref ";
+                    if (atts & FA.ref_) rtype ~= "ref ";
                     rtype ~= myFuncInfo ~ ".RT";
                 }
                 return rtype;
@@ -2060,11 +2060,11 @@ private static:
             static string make_postAtts()
             {
                 string poatts = "";
-                if (atts & FA.PURE    ) poatts ~= " pure";
-                if (atts & FA.NOTHROW ) poatts ~= " nothrow";
-                if (atts & FA.PROPERTY) poatts ~= " @property";
-                if (atts & FA.SAFE    ) poatts ~= " @safe";
-                if (atts & FA.TRUSTED ) poatts ~= " @trusted";
+                if (atts & FA.pure_   ) poatts ~= " pure";
+                if (atts & FA.nothrow_) poatts ~= " nothrow";
+                if (atts & FA.property) poatts ~= " @property";
+                if (atts & FA.safe    ) poatts ~= " @safe";
+                if (atts & FA.trusted ) poatts ~= " @trusted";
                 return poatts;
             }
             enum postAtts = make_postAtts();
@@ -2139,10 +2139,10 @@ private static:
             if (i > 0) params ~= ", ";
 
             // Parameter storage classes.
-            if (stc & STC.SCOPE) params ~= "scope ";
-            if (stc & STC.OUT  ) params ~= "out ";
-            if (stc & STC.REF  ) params ~= "ref ";
-            if (stc & STC.LAZY ) params ~= "lazy ";
+            if (stc & STC.scope_) params ~= "scope ";
+            if (stc & STC.out_  ) params ~= "out ";
+            if (stc & STC.ref_  ) params ~= "ref ";
+            if (stc & STC.lazy_ ) params ~= "lazy ";
 
             // Take parameter type from the FuncInfo.
             params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
@@ -2154,15 +2154,15 @@ private static:
         // Add some ellipsis part if needed.
         final switch (variadicFunctionStyle!(func))
         {
-            case Variadic.NO:
+            case Variadic.no:
                 break;
 
-            case Variadic.C, Variadic.D:
+            case Variadic.c, Variadic.d:
                 // (...) or (a, b, ...)
                 params ~= (nparams == 0) ? "..." : ", ...";
                 break;
 
-            case Variadic.TYPESAFE:
+            case Variadic.typesafe:
                 params ~= " ...";
                 break;
         }
@@ -2196,7 +2196,7 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
     static if (is(ReturnType!(func) == void))
         enum string generateEmptyFunction = q{
         };
-    else static if (functionAttributes!(func) & FunctionAttribute.REF)
+    else static if (functionAttributes!(func) & FunctionAttribute.ref_)
         enum string generateEmptyFunction = q{
             static typeof(return) dummy;
             return dummy;
@@ -2210,7 +2210,7 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
 /// ditto
 template generateAssertTrap(C, func.../+[BUG 4217]+/)
 {
-    static if (functionAttributes!(func) & FunctionAttribute.NOTHROW) //XXX
+    static if (functionAttributes!(func) & FunctionAttribute.nothrow_) //XXX
     {
         pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead "
                 "of Error for the auto-implemented nothrow function ",

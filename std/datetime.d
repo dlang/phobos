@@ -25961,8 +25961,8 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
        __traits(hasMember, TP, "dayOfWeek") &&
        !__traits(isStaticFunction, TP.dayOfWeek) &&
        is(ReturnType!(TP.dayOfWeek) == DayOfWeek) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.PROPERTY) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.NOTHROW))
+       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.property) &&
+       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.nothrow_))
 {
     TP func(in TP tp)
     {
@@ -26095,8 +26095,8 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
        __traits(hasMember, TP, "month") &&
        !__traits(isStaticFunction, TP.month) &&
        is(ReturnType!(TP.month) == Month) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.PROPERTY) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.NOTHROW))
+       (functionAttributes!(TP.month) & FunctionAttribute.property) &&
+       (functionAttributes!(TP.month) & FunctionAttribute.nothrow_))
 {
     enforceValid!"months"(month);
 
@@ -33027,9 +33027,9 @@ template hasMin(T)
     enum hasMin = __traits(hasMember, T, "min") &&
                   __traits(isStaticFunction, T.min) &&
                   is(ReturnType!(T.min) == Unqual!T) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.PROPERTY) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.NOTHROW);
-                  //(functionAttributes!(T.min) & FunctionAttribute.PURE); //Ideally this would be the case, but SysTime's min() can't currently be pure.
+                  (functionAttributes!(T.min) & FunctionAttribute.property) &&
+                  (functionAttributes!(T.min) & FunctionAttribute.nothrow_);
+                  //(functionAttributes!(T.min) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's min() can't currently be pure.
 }
 
 unittest
@@ -33060,9 +33060,9 @@ template hasMax(T)
     enum hasMax = __traits(hasMember, T, "max") &&
                   __traits(isStaticFunction, T.max) &&
                   is(ReturnType!(T.max) == Unqual!T) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.PROPERTY) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.NOTHROW);
-                  //(functionAttributes!(T.max) & FunctionAttribute.PURE); //Ideally this would be the case, but SysTime's max() can't currently be pure.
+                  (functionAttributes!(T.max) & FunctionAttribute.property) &&
+                  (functionAttributes!(T.max) & FunctionAttribute.nothrow_);
+                  //(functionAttributes!(T.max) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's max() can't currently be pure.
 }
 
 unittest
