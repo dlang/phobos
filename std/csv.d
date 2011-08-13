@@ -63,8 +63,6 @@ import std.traits;
  * the heading must be provided in the same order as the file or an exception
  * is thrown.
  *
- * The delimiter (comma), and quote can optionally be changed.
- *
  * Example for integer data:
  *
  * -------
@@ -131,13 +129,14 @@ import std.traits;
  *      Otherwise the range will return a Record range of the type.
  *
  * Throws:
- *       IncompleteCellToken When a quote is found in an unquoted field, data
+ *       IncompleteCellException When a quote is found in an unquoted field, data
  *       continues after a closing quote, or the quoted field was not closed
  *       before data was empty.
  */
 auto csvText(Contents = string, Malformed ErrorLevel 
              = Malformed.throwException, Range)(Range input)
-    if(isSomeString!Range)
+    if(isInputRange!Range && isSomeChar!(ElementType!Range)
+       && !is(Contents == class))
 {
     return RecordList!(Contents,ErrorLevel,Range,ElementType!Range)
         (input, ',', '"');
@@ -146,30 +145,11 @@ auto csvText(Contents = string, Malformed ErrorLevel
 /// Ditto
 auto csvText(Contents = string, Malformed ErrorLevel 
              = Malformed.throwException, Range)(Range input, string[] heading)
-    if(isSomeString!Range)
+    if(isInputRange!Range && isSomeChar!(ElementType!Range)
+       && !is(Contents == class))
 {
     return RecordList!(Contents,ErrorLevel,Range,ElementType!Range)
         (input, ',', '"', heading);
-}
-
-/// Ditto
-auto csvText(Contents = string, Malformed ErrorLevel 
-             = Malformed.throwException, Range)(string delimiter, string quote,
-                                                Range input)
-    if(isSomeString!Range)
-{
-    return RecordList!(Contents,ErrorLevel,Range,ElementType!Range)
-        (input, delimiter, quote);
-}
-
-/// Ditto
-auto csvText(Contents = string, Malformed ErrorLevel 
-             = Malformed.throwException, Range)(string delimiter, string quote,
-                                                Range input, string[] heading)
-    if(isSomeString!Range)
-{
-    return RecordList!(Contents,ErrorLevel,Range,ElementType!Range)
-        (input, delimiter, quote, heading);
 }
 
 // Test standard iteration over input.
@@ -378,6 +358,8 @@ unittest
  * 
  */
 struct RecordList(Contents, Malformed ErrorLevel, Range, Separator)
+    if(isSomeChar!Separator && isInputRange!Range
+       && isSomeChar!(ElementType!Range) && !is(Contents == class))
 {
 private:
     Range _input;
@@ -751,6 +733,8 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
                           (ref Range input, ref Appender!(char[]) ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
+                          if(isSomeChar!Separator && isInputRange!Range
+                             && isSomeChar!(ElementType!Range))
 {
     bool quoted = startQuoted;
     bool escQuote;
