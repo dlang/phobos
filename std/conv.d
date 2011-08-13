@@ -1560,14 +1560,14 @@ unittest
 
 Example:
 ---------------
-  assert(roundTo!int(3.14) == 3);
-  assert(roundTo!int(3.49) == 3);
-  assert(roundTo!int(3.5) == 4);
-  assert(roundTo!int(3.999) == 4);
-  assert(roundTo!int(-3.14) == -3);
-  assert(roundTo!int(-3.49) == -3);
-  assert(roundTo!int(-3.5) == -4);
-  assert(roundTo!int(-3.999) == -4);
+assert(roundTo!int(3.14) == 3);
+assert(roundTo!int(3.49) == 3);
+assert(roundTo!int(3.5) == 4);
+assert(roundTo!int(3.999) == 4);
+assert(roundTo!int(-3.14) == -3);
+assert(roundTo!int(-3.49) == -3);
+assert(roundTo!int(-3.5) == -4);
+assert(roundTo!int(-3.999) == -4);
 ---------------
 Rounded conversions do not work with non-integral target types.
  */
@@ -2636,11 +2636,11 @@ unittest
    arguments into _text (the three character widths).
 
    Example:
-   ----
-   assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-   assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-   assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-   ----
+----
+assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
+assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+----
 */
 string text(T...)(T args) { return textImpl!string(args); }
 ///ditto
