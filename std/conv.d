@@ -1353,16 +1353,6 @@ unittest
     assert(to!string(a) == "[0:1, 1:2]");
 }
 
-private bool convFails(Source, Target, E)(Source src)
-{
-    try {
-        auto t = to!Target(src);
-    } catch (E) {
-        return true;
-    }
-    return false;
-}
-
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
@@ -1373,6 +1363,16 @@ private void testIntegralToFloating(Integral, Floating)()
 
 private void testFloatingToIntegral(Floating, Integral)()
 {
+    bool convFails(Source, Target, E)(Source src)
+    {
+        try {
+            auto t = to!Target(src);
+        } catch (E) {
+            return true;
+        }
+        return false;
+    }
+
     // convert some value
     Floating a = 4.2e1;
     auto b = to!Integral(a);
@@ -2321,6 +2321,21 @@ Target parse(Target, Source)(ref Source p)
 
 unittest
 {
+    // Compare reals with given precision
+    bool feq(in real rx, in real ry, in real precision = 0.000001L)
+    {
+        if (rx == ry)
+            return 1;
+
+        if (isnan(rx))
+            return cast(bool)isnan(ry);
+
+        if (isnan(ry))
+            return 0;
+
+        return cast(bool)(fabs(rx - ry) <= precision);
+    }
+
     // Make given typed literal
     F Literal(F)(F f)
     {
@@ -2614,88 +2629,6 @@ unittest
 
     ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
-}
-
-// feq() functions now used only in unittesting
-
-/* ***************************************
- * Main function to compare reals with given precision
- */
-private bool feq(in real rx, in real ry, in real precision)
-{
-    if (rx == ry)
-        return 1;
-
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
-
-    if (isnan(ry))
-        return 0;
-
-    return cast(bool)(fabs(rx - ry) <= precision);
-}
-
-/* ***************************************
- * (Note: Copied here from std.math's mfeq() function for unittesting)
- * Simple function to compare two floating point values
- * to a specified precision.
- * Returns:
- *  1   match
- *  0   nomatch
- */
-private bool feq(in real r1, in real r2)
-{
-    if (r1 == r2)
-        return 1;
-
-    if (isnan(r1))
-        return cast(bool)isnan(r2);
-
-    if (isnan(r2))
-        return 0;
-
-    return cast(bool)(feq(r1, r2, 0.000001L));
-}
-
-/* ***************************************
- * compare ireals with given precision
- */
-private bool feq(in ireal r1, in ireal r2)
-{
-    real rx = cast(real)r1;
-    real ry = cast(real)r2;
-
-    if (rx == ry)
-        return 1;
-
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
-
-    if (isnan(ry))
-        return 0;
-
-    return feq(rx, ry, 0.000001L);
-}
-
-/* ***************************************
- * compare creals with given precision
- */
-private bool feq(in creal r1, in creal r2)
-{
-    real r1a = fabs(cast(real)r1.re - cast(real)r2.re);
-    real r2b = fabs(cast(real)r1.im - cast(real)r2.im);
-
-    if ((cast(real)r1.re == cast(real)r2.re) &&
-            (cast(real)r1.im == cast(real)r2.im))
-        return 1;
-
-    if (isnan(r1a))
-        return cast(bool)isnan(r2b);
-
-    if (isnan(r2b))
-        return 0;
-
-    return feq(r1a, r2b, 0.000001L);
 }
 
 /***************************************************************
