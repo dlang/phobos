@@ -416,7 +416,7 @@ unittest
     {
         assert (rootName(`\foo`) == `\`);
         assert (rootName(`c:\foo`) == `c:\`);
-        assert (rootName(`\\server\share\foo`) == `\\server\share\`);
+        assert (rootName(`\\server\share\foo`) == `\\server\share`);
     }
     ---
 */
@@ -432,17 +432,7 @@ C[] rootName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
     {
         if (isDirSeparator(path[0]))
         {
-            if (isUNC(path))
-            {
-                auto i = uncRootLength(path);
-                // If there is a dir separator after share, include it
-                if (i == path.length) return path[0 .. i];
-                else
-                {
-                    assert (isDirSeparator(path[i]));
-                    return path[0 .. i+1];
-                }
-            }
+            if (isUNC(path)) return path[0 .. uncRootLength(path)];
             else return path[0 .. 1];
         }
         else if (path.length >= 3 && isDriveSeparator(path[1]) &&
@@ -469,7 +459,7 @@ unittest
     {
         assert (rootName("d:foo") is null);
         assert (rootName(`d:\foo`) == `d:\`);
-        assert (rootName(`\\server\share\foo`) == `\\server\share\`);
+        assert (rootName(`\\server\share\foo`) == `\\server\share`);
         assert (rootName(`\\server\share`) == `\\server\share`);
     }
 }
