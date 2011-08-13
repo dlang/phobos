@@ -1814,553 +1814,179 @@ unittest
     auto a = parse!int(s);
 }
 
-/*
-Tests for to!int
- */
-
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!int.unittest\n");
-
-    int i;
-
-    i = to!int("0");
-    assert(i == 0);
-
-    i = to!int("+0");
-    assert(i == 0);
-
-    i = to!int("-0");
-    assert(i == 0);
-
-    i = to!int("6");
-    assert(i == 6);
-
-    i = to!int("+23");
-    assert(i == 23);
-
-    i = to!int("-468");
-    assert(i == -468);
-
-    i = to!int("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!int("-2147483648");
-    assert(i == 0x80000000);
-
-    immutable string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "2147483648",
-        "-2147483649",
-        "5656566565",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
+    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        i = 47;
-        try
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest\n", Int.stringof.length, Int.stringof.ptr);
+
         {
-            i = to!int(errors[j]);
-            //printf("i = %d\n", i);
+                assert(to!Int("0") == 0);
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+0") == 0);
+                assert(to!Int("-0") == 0);
+            }
         }
-        catch (Exception e)
+
+        static if (Int.sizeof >= byte.sizeof)
         {
-            debug(conv) writeln(e);
-            i = 3;
+                assert(to!Int("6") == 6);
+                assert(to!Int("23") == 23);
+                assert(to!Int("68") == 68);
+                assert(to!Int("127") == 0x7F);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("255") == 0xFF);
+            }
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+6") == 6);
+                assert(to!Int("+23") == 23);
+                assert(to!Int("+68") == 68);
+                assert(to!Int("+127") == 0x7F);
+
+                assert(to!Int("-6") == -6);
+                assert(to!Int("-23") == -23);
+                assert(to!Int("-68") == -68);
+                assert(to!Int("-128") == -128);
+            }
         }
-        assert(i == 3);
+
+        static if (Int.sizeof >= short.sizeof)
+        {
+                assert(to!Int("468") == 468);
+                assert(to!Int("32767") == 0x7FFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("65535") == 0xFFFF);
+            }
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+468") == 468);
+                assert(to!Int("+32767") == 0x7FFF);
+
+                assert(to!Int("-468") == -468);
+                assert(to!Int("-32768") == -32768);
+            }
+        }
+
+        static if (Int.sizeof >= int.sizeof)
+        {
+                assert(to!Int("2147483647") == 0x7FFFFFFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("4294967295") == 0xFFFFFFFF);
+            }
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+2147483647") == 0x7FFFFFFF);
+
+                assert(to!Int("-2147483648") == -2147483648);
+            }
+        }
+
+        static if (Int.sizeof >= long.sizeof)
+        {
+                assert(to!Int("9223372036854775807") == 0x7FFFFFFFFFFFFFFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("18446744073709551615") == 0xFFFFFFFFFFFFFFFF);
+            }
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+9223372036854775807") == 0x7FFFFFFFFFFFFFFF);
+
+                assert(to!Int("-9223372036854775808") == 0x8000000000000000);
+            }
+        }
     }
 }
 
-
-/*
-Tests for to!uint
- */
-
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!uint.unittest\n");
-
-    uint i;
-
-    i = to!uint("0");
-    assert(i == 0);
-
-    i = to!uint("6");
-    assert(i == 6);
-
-    i = to!uint("23");
-    assert(i == 23);
-
-    i = to!uint("468");
-    assert(i == 468);
-
-    i = to!uint("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!uint("4294967295");
-    assert(i == 0xFFFFFFFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "4294967296",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
+    // parsing error check
+    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        i = 47;
-        try
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (error)\n", Int.stringof.length, Int.stringof.ptr);
+
         {
-            i = to!uint(errors[j]);
-            //printf("i = %d\n", i);
+            immutable string[] errors1 =
+            [
+                "",
+                "-",
+                "+",
+                "-+",
+                " ",
+                " 0",
+                "0 ",
+                "- 0",
+                "1-",
+                "xx",
+                "123h",
+            ];
+            foreach (j, s; errors1)
+                assertThrown!ConvException(to!Int(s));
         }
-        catch (Exception e)
+
+        // parse!SomeUnsigned cannot parse head sign.
+        static if (isUnsigned!Int)
         {
-            debug(conv) writeln(e);
-            i = 3;
+            immutable string[] errors2 =
+            [
+                "+5",
+                "-78",
+            ];
+            foreach (j, s; errors2)
+                assertThrown!ConvException(to!Int(s));
         }
-        assert(i == 3);
     }
-}
 
-/*
-Tests for to!long
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!long.unittest\n");
-
-    long i;
-
-    i = to!long("0");
-    assert(i == 0);
-
-    i = to!long("+0");
-    assert(i == 0);
-
-    i = to!long("-0");
-    assert(i == 0);
-
-    i = to!long("6");
-    assert(i == 6);
-
-    i = to!long("+23");
-    assert(i == 23);
-
-    i = to!long("-468");
-    assert(i == -468);
-
-    i = to!long("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!long("-2147483648");
-    assert(i == -0x80000000L);
-
-    i = to!long("9223372036854775807");
-    assert(i == 0x7FFFFFFFFFFFFFFF);
-
-    i = to!long("-9223372036854775808");
-    assert(i == 0x8000000000000000);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "9223372036854775808",
-        "-9223372036854775809",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
+    // positive overflow check
+    foreach (i, Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        i = 47;
-        try
-        {
-            i = to!long(errors[j]);
-            //printf("l = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (pos overflow)\n", Int.stringof.length, Int.stringof.ptr);
+
+        immutable string[] errors =
+        [
+            "128",                  // > byte.max
+            "256",                  // > ubyte.max
+            "32768",                // > short.max
+            "65536",                // > ushort.max
+            "2147483648",           // > int.max
+            "4294967296",           // > uint.max
+            "9223372036854775808",  // > long.max
+            "18446744073709551616", // > ulong.max
+        ];
+        foreach (j, s; errors[i..$])
+            assertThrown!ConvOverflowException(to!Int(s));
     }
-}
 
-
-/*
-Tests for to!ulong
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ulong.unittest\n");
-
-    ulong i;
-
-    i = to!ulong("0");
-    assert(i == 0);
-
-    i = to!ulong("6");
-    assert(i == 6);
-
-    i = to!ulong("23");
-    assert(i == 23);
-
-    i = to!ulong("468");
-    assert(i == 468);
-
-    i = to!ulong("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!ulong("4294967295");
-    assert(i == 0xFFFFFFFF);
-
-    i = to!ulong("9223372036854775807");
-    assert(i == 0x7FFFFFFFFFFFFFFF);
-
-    i = to!ulong("18446744073709551615");
-    assert(i == 0xFFFFFFFFFFFFFFFF);
-
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "18446744073709551616",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
+    // negative overflow check
+    foreach (i, Int; TypeTuple!(byte, short, int, long))
     {
-        i = 47;
-        try
-        {
-            i = to!ulong(errors[j]);
-            //printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (neg overflow)\n", Int.stringof.length, Int.stringof.ptr);
 
-/*
-Tests for to!short
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!short.unittest\n");
-
-    short i;
-
-    i = to!short("0");
-    assert(i == 0);
-
-    i = to!short("+0");
-    assert(i == 0);
-
-    i = to!short("-0");
-    assert(i == 0);
-
-    i = to!short("6");
-    assert(i == 6);
-
-    i = to!short("+23");
-    assert(i == 23);
-
-    i = to!short("-468");
-    assert(i == -468);
-
-    i = to!short("32767");
-    assert(i == 0x7FFF);
-
-    i = to!short("-32768");
-    assert(i == cast(short)0x8000);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "32768",
-        "-32769",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!short(errors[j]);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!ushort
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ushort.unittest\n");
-
-    ushort i;
-
-    i = to!ushort("0");
-    assert(i == 0);
-
-    i = to!ushort("6");
-    assert(i == 6);
-
-    i = to!ushort("23");
-    assert(i == 23);
-
-    i = to!ushort("468");
-    assert(i == 468);
-
-    i = to!ushort("32767");
-    assert(i == 0x7FFF);
-
-    i = to!ushort("65535");
-    assert(i == 0xFFFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "65536",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!ushort(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!byte
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!byte.unittest\n");
-
-    byte i;
-
-    i = to!byte("0");
-    assert(i == 0);
-
-    i = to!byte("+0");
-    assert(i == 0);
-
-    i = to!byte("-0");
-    assert(i == 0);
-
-    i = to!byte("6");
-    assert(i == 6);
-
-    i = to!byte("+23");
-    assert(i == 23);
-
-    i = to!byte("-68");
-    assert(i == -68);
-
-    i = to!byte("127");
-    assert(i == 0x7F);
-
-    i = to!byte("-128");
-    assert(i == cast(byte)0x80);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "128",
-        "-129",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!byte(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!ubyte
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ubyte.unittest\n");
-
-    ubyte i;
-
-    i = to!ubyte("0");
-    assert(i == 0);
-
-    i = to!ubyte("6");
-    assert(i == 6);
-
-    i = to!ubyte("23");
-    assert(i == 23);
-
-    i = to!ubyte("68");
-    assert(i == 68);
-
-    i = to!ubyte("127");
-    assert(i == 0x7F);
-
-    i = to!ubyte("255");
-    assert(i == 0xFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "256",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!ubyte(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
+        immutable string[] errors =
+        [
+            "-129",                 // < byte.min
+            "-32769",               // < short.min
+            "-2147483649",          // < int.min
+            "-9223372036854775809", // < long.min
+        ];
+        foreach (j, s; errors[i..$])
+            assertThrown!ConvOverflowException(to!Int(s));
     }
 }
 
