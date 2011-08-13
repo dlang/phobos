@@ -229,7 +229,26 @@ to) simply performs the implicit conversion.
 T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T))
 {
+    alias isUnsigned isUnsignedInt;
+
+    // Conversion from integer to integer, and changing its sign
+    static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
+    {   // unsigned to signed & same size
+        enforce(value <= cast(S)T.max,
+                new ConvOverflowException("Conversion positive overflow"));
+    }
+    else static if (isSignedInt!S && isUnsignedInt!T)
+    {   // signed to unsigned
+        enforce(0 <= value,
+                new ConvOverflowException("Conversion negative overflow"));
+    }
+
     return value;
+}
+
+private template isSignedInt(T)
+{
+    enum isSignedInt = isIntegral!T && isSigned!T;
 }
 
 unittest
@@ -238,6 +257,73 @@ unittest
     int a = 42;
     auto b = to!long(a);
     assert(a == b);
+}
+
+// Tests for issue 6377
+unittest
+{
+    // Conversion between same size
+    foreach (S; TypeTuple!(byte, short, int, long))
+    {
+        alias Unsigned!S U;
+
+        foreach (Sint; TypeTuple!(S, const(S), immutable(S)))
+        foreach (Uint; TypeTuple!(U, const(U), immutable(U)))
+        {
+            // positive overflow
+            Uint un = Uint.max;
+            assertThrown!ConvOverflowException(to!Sint(un));
+
+            // negative overflow
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn));
+        }
+    }
+
+    // Conversion between different size
+    foreach (i, S1; TypeTuple!(byte, short, int, long))
+    foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
+    {
+        alias Unsigned!S1 U1;
+        alias Unsigned!S2 U2;
+
+        static assert(U1.sizeof < S2.sizeof);
+
+        // small unsigned to big signed
+        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        {
+            Uint un = Uint.max;
+            assertNotThrown(to!Sint(un));
+            assert(to!Sint(un) == un);
+        }
+
+        // big unsigned to small signed
+        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        {
+            Uint un = Uint.max;
+            assertThrown(to!Sint(un));
+        }
+
+        static assert(S1.sizeof < U2.sizeof);
+
+        // small signed to big unsigned
+        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        {
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn));
+        }
+
+        // big signed to small unsigned
+        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        {
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn));
+        }
+    }
 }
 
 /*
@@ -1383,7 +1469,7 @@ T toImpl(T, S)(S value)
     }
     static if (S.max > T.max) {
         // possible overflow
-        if (value > T.max) ConvOverflowException.raise("Conversion overflow");
+        if (value > T.max) ConvOverflowException.raise("Conversion positive overflow");
     }
     return cast(T) value;
 }
