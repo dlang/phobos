@@ -992,43 +992,15 @@ T toImpl(T, S)(S input)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(uint).unittest\n");
+    foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(ulong).unittest\n");
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
+        assert(to!string(to!Int(0)) == "0");
+        assert(to!string(to!Int(9)) == "9");
+        assert(to!string(to!Int(123)) == "123");
+    }
 }
 
 /// ditto
@@ -1088,71 +1060,19 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(long).unittest\n");
-    string r;
-    int i;
+    foreach (Int; TypeTuple!(byte, short, int, long))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
-
-    const h  = 6;
-    string s = to!string(h);
-    assert(s == "6");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(int).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123);
-    i = cmp(r, "-123");
-    assert(i == 0);
+        assert(to!string(to!Int(0)) == "0");
+        assert(to!string(to!Int(9)) == "9");
+        assert(to!string(to!Int(123)) == "123");
+        assert(to!string(to!Int(-0)) == "0");
+        assert(to!string(to!Int(-9)) == "-9");
+        assert(to!string(to!Int(-123)) == "-123");
+        assert(to!string(to!(const Int)(6)) == "6");
+    }
 }
 
 /// ditto
@@ -1194,35 +1114,25 @@ body
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(uint, uint).unittest\n");
+    foreach (Int; TypeTuple!(uint, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    size_t x = 16;
-    assert(to!string(x, 16) == "10");
-}
+        assert(to!string(to!Int(16), 16) == "10");
+        assert(to!string(to!Int(15), 2u) == "1111");
+        assert(to!string(to!Int(1), 2u) == "1");
+        assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
+    }
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("string.to!string(ulong, uint).unittest\n");
+    foreach (Int; TypeTuple!(int, long))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    string r;
-    int i;
-
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
+        assert(to!string(to!Int(-10), 10u) == "-10");
+        //assert(to!string(to!Int(-15), 2u) == (repeat("1", Int.sizeof)~"1111")[$-Int.sizeof .. $]);
+    }
 }
 
 /// ditto
@@ -1321,16 +1231,8 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("string.to!string(char*).unittest\n");
 
-    string r;
-    int i;
-
-    r = to!string(cast(char*) null);
-    i = cmp(r, "");
-    assert(i == 0);
-
-    r = to!string("foo\0".ptr);
-    i = cmp(r, "foo");
-    assert(i == 0);
+    assert(to!string(cast(char*) null) == "");
+    assert(to!string("foo\0".ptr) == "foo");
 }
 
 
