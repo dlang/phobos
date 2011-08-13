@@ -2320,40 +2320,42 @@ Target parse(Target, Source)(ref Source p)
     return (sign) ? -ldval : ldval;
 }
 
-/*
-Tests for to!float
- */
-
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!float.unittest" );
-    float f;
+    // Make given typed literal
+    F Literal(F)(F f)
+    {
+        return f;
+    }
 
-    f = to!float( "nAn" );
-    assert(isnan(f));
-    f = to!float( "123" );
-    assert( f == 123f );
-    f = to!float( "+123" );
-    assert( f == +123f );
-    f = to!float( "-123" );
-    assert( f == -123f );
-    f = to!float( "123e+2" );
-    assert( f == 123e+2f );
+    foreach (Float; TypeTuple!(float, double, real))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest\n", Float.stringof.length, Float.stringof.ptr);
 
-    f = to!float( "123e-2" );
-    assert( f == 123e-2f );
-    f = to!float( "123." );
-    assert( f == 123.f );
-    f = to!float( ".456" );
-    assert( f == .456f );
+        assert(to!Float("123") == Literal!Float(123));
+        assert(to!Float("+123") == Literal!Float(+123));
+        assert(to!Float("-123") == Literal!Float(-123));
+        assert(to!Float("123e2") == Literal!Float(123e2));
+        assert(to!Float("123e+2") == Literal!Float(123e+2));
+        assert(to!Float("123e-2") == Literal!Float(123e-2));
+        assert(to!Float("123.") == Literal!Float(123.));
+        assert(to!Float(".456") == Literal!Float(.456));
 
-    assert(to!float("0") == 0f);
-    assert(to!float("-0") == -0f);
+        assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));
+
+        assert(to!Float("0") == 0.0);
+        assert(to!Float("-0") == -0.0);
+
+        assert(isnan(to!Float("nan")));
+
+        assertThrown!ConvException(to!Float("\x00"));
+    }
 
     // min and max
     try
     {
+        float f;
         f = to!float("1.17549e-38");
         assert(feq(cast(real)f, cast(real)1.17549e-38));
         assert(feq(cast(real)f, cast(real)float.min_normal));
@@ -2366,47 +2368,10 @@ unittest
         printf("   (%.*s)\n", e.msg);
     }
 
-    // nan
-    f = to!float("nan");
-    assert(to!string(f) == to!string(float.nan));
-    assert(isnan(f));
-
-    assertThrown!ConvException(to!float("\x00"));
-}
-
-/*
-Tests for to!double
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!double.unittest" );
-    double d;
-
-    d = to!double( "123" );
-    assert( d == 123 );
-    d = to!double( "+123" );
-    assert( d == +123 );
-    d = to!double( "-123" );
-    assert( d == -123 );
-    d = to!double( "123e2" );
-    assert( d == 123e2);
-    d = to!double( "123e-2" );
-    assert( d == 123e-2 );
-    d = to!double( "123." );
-    assert( d == 123. );
-    d = to!double( ".456" );
-    assert( d == .456 );
-    d = to!double( "1.23456E+2" );
-    assert( d == 1.23456E+2 );
-
-    assert(to!double("0") == 0.0);
-    assert(to!double("-0") == -0.0);
-
     // min and max
     try
     {
+        double d;
         d = to!double("2.22508e-308");
         assert(feq(cast(real)d, cast(real)2.22508e-308));
         assert(feq(cast(real)d, cast(real)double.min_normal));
@@ -2420,50 +2385,12 @@ unittest
         printf("   (%.*s)\n", e.msg);
     }
 
-    // nan
-    d = to!double("nan");
-    assert(to!string(d) == to!string(double.nan));
-    assert(isnan(d));
-
-    assertThrown!ConvException(to!double("\x00"));
-}
-
-/*
-Tests for to!real
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) writefln("conv.to!real.unittest");
-    real r;
-
-    r = to!real("123");
-    assert(r == 123L);
-    r = to!real("+123");
-    assert(r == 123L);
-    r = to!real("-123");
-    assert(r == -123L);
-    r = to!real("123e2");
-    assert(feq(r, 123e2L));
-    r = to!real("123e-2");
-    assert(feq(r, 1.23L));
-    r = to!real("123.");
-    assert(r == 123L);
-    r = to!real(".456");
-    assert(r == .456L);
-
-    r = to!real("1.23456e+2");
-    assert(feq(r,  1.23456e+2L));
-    r = to!real(to!string(real.max / 2L));
-    assert(to!string(r) == to!string(real.max / 2L));
-
-    assert(to!real("0") == 0.0L);
-    assert(to!real("-0") == -0.0L);
+    assert(to!string(to!real(to!string(real.max / 2L))) == to!string(real.max / 2L));
 
     // min and max
     try
     {
+        real r;
         r = to!real(to!string(real.min_normal));
         assert(to!string(r) == to!string(real.min_normal));
         r = to!real(to!string(real.max));
@@ -2474,17 +2401,6 @@ unittest
         printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
         printf("   (%.*s)\n", e.msg);
     }
-
-    // nan
-    r = to!real("nan");
-    assert(to!string(r) == to!string(real.nan));
-    assert(isnan(r));
-
-    r = to!real(to!string(real.nan));
-    assert(to!string(r) == to!string(real.nan));
-    assert(isnan(r));
-
-    assertThrown!ConvException(to!real("\x00"));
 }
 
 unittest
