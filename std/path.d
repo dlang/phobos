@@ -332,7 +332,8 @@ unittest
 C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
     if (isSomeChar!C)
 {
-    if (path.empty) return to!(typeof(return))(".");
+    enum currentDir = cast(C[]) ".";
+    if (path.empty) return currentDir;
 
     auto p = rtrimDirSeparators(path);
     if (p.empty) return path[0 .. 1];
