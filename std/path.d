@@ -2164,7 +2164,7 @@ body
                 ni++;
                 break;
 
-            case '[': {
+            case '[':
                 if (ni == path.length)
                     return false;
                 auto nc = path[ni];
@@ -2188,10 +2188,9 @@ body
                 }
                 if (anymatch == not)
                     return false;
-            }
                 break;
 
-            case '{': {
+            case '{':
                 // find end of {} section
                 auto piRemain = pi;
                 for (; piRemain < pattern.length
@@ -2233,7 +2232,6 @@ body
                         break;
                     }
                 }
-            }
                 return false;
 
             default:
