@@ -22,7 +22,11 @@
     In general, the functions in this module assume that the input paths
     are well-formed.  (That is, they should not contain invalid characters,
     they should follow the file system's _path format, etc.)  The result
-    of calling a function on an ill-formed _path is undefined.
+    of calling a function on an ill-formed _path is undefined.  When there
+    is a chance that a _path or a file name is invalid (for instance, when it
+    has been input by the user), it may sometimes be desirable to use the
+    $(LREF isValidFilename) and $(LREF isValidPath) functions to check
+    this.
 
     Authors:
         Lars Tandle Kyllingstad,
@@ -2280,6 +2284,248 @@ unittest
     assert(globMatch("bar.o", "bar.{,ar,fo}o"));
 
     static assert(globMatch("foo.bar", "[!gh]*bar"));
+}
+
+
+
+
+/** Checks that the given file or directory name is valid.
+
+    This function returns $(D true) if and only if $(D filename) is not
+    empty, not too long, and does not contain invalid characters.
+
+    The maximum length of $(D filename) is given by the constant
+    $(D core.stdc.stdio.FILENAME_MAX).  (On Windows, this number is
+    defined as the maximum number of UTF-16 code points, and the
+    test will therefore only yield strictly correct results when
+    $(D filename) is a string of $(D wchar)s.)
+
+    On Windows, the following criteria must be satisfied
+    ($(LINK2 http://msdn.microsoft.com/en-us/library/aa365247(v=vs.85).aspx,source)):
+    $(UL
+        $(LI $(D filename) must not contain any characters whose integer
+            representation is in the range 0-31.)
+        $(LI $(D filename) must not contain any of the following $(I reserved
+            characters): <>:"/\|?*)
+        $(LI $(D filename) may not end with a space ($(D ' ')) or a period
+            ($(D '.')).)
+    )
+
+    On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
+    the null character ($(D '\0')).
+*/
+bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
+{
+    import core.stdc.stdio;
+    if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
+    foreach (c; filename)
+    {
+        version (Windows)
+        {
+            switch (c)
+            {
+                case 0:
+                ..
+                case 31:
+                case '<':
+                case '>':
+                case ':':
+                case '"':
+                case '/':
+                case '\\':
+                case '|':
+                case '?':
+                case '*':
+                    return false;
+                default:
+            }
+        }
+        else version (Posix)
+        {
+            if (c == 0 || c == '/') return false;
+        }
+        else static assert (0);
+    }
+    version (Windows)
+    {
+        if (filename[$-1] == '.' || filename[$-1] == ' ') return false;
+    }
+
+    // All criteria passed
+    return true;
+}
+
+
+unittest
+{
+    auto valid = ["foo"];
+    auto invalid = ["", "foo\0bar", "foo/bar"];
+    auto pfdep = [`foo\bar`, "*.txt"];
+    version (Windows) invalid ~= pfdep;
+    else version (Posix) valid ~= pfdep;
+    else static assert (0);
+
+    import std.typetuple;
+    foreach (T; TypeTuple!(char[], const(char)[], string, wchar[],
+        const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
+    {
+        foreach (fn; valid)
+            assert (isValidFilename(to!T(fn)));
+        foreach (fn; invalid)
+            assert (!isValidFilename(to!T(fn)));
+    }
+}
+
+
+
+
+/** Checks whether $(D path) is a valid _path.
+
+    Generally, this function checks that $(D path) is not empty, and that
+    each component of the path either satisfies $(LREF isValidFilename)
+    or is equal to $(D ".") or $(D "..").
+    It does $(I not) check whether the _path points to an existing file
+    or directory; use $(XREF file,exists) for this purpose.
+
+    On Windows, some special rules apply:
+    $(UL
+        $(LI If the second character of $(D path) is a colon ($(D ':')),
+            the first character is interpreted as a drive letter, and
+            must be in the range A-Z (case insensitive).)
+        $(LI If $(D path) is on the form $(D `\\$(I server)\$(I share)\...`)
+            (UNC path), $(LREF isValidFilename) is applied to $(I server)
+            and $(I share) as well.)
+        $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the
+            only requirement for the rest of the string is that it does
+            not contain the null character.)
+        $(LI If $(D path) starts with $(D `\\.\`) (Win32 device namespace)
+            this function returns $(D false); such paths are beyond the scope
+            of this module.)
+    )
+*/
+bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+{
+    if (path.empty) return false;
+
+    // Check whether component is "." or "..", or whether it satisfies
+    // isValidFilename.
+    bool isValidComponent(in C[] component)  @safe pure nothrow
+    {
+        assert (component.length > 0);
+        if (component[0] == '.')
+        {
+            if (component.length == 1) return true;
+            else if (component.length == 2 && component[1] == '.') return true;
+        }
+        return isValidFilename(component);
+    }
+
+    if (path.length == 1)
+        return isDirSeparator(path[0]) || isValidComponent(path);
+
+    const(C)[] remainder;
+    version (Windows)
+    {
+        if (isDirSeparator(path[0]) && isDirSeparator(path[1]))
+        {
+            // Some kind of UNC path
+            if (path.length < 5)
+            {
+                // All valid UNC paths must have at least 5 characters
+                return false;
+            }
+            else if (path[2] == '?')
+            {
+                // Long UNC path
+                if (!isDirSeparator(path[3])) return false;
+                foreach (c; path[4 .. $])
+                {
+                    if (c == '\0') return false;
+                }
+                return true;
+            }
+            else if (path[2] == '.')
+            {
+                // Win32 device namespace not supported
+                return false;
+            }
+            else
+            {
+                // Normal UNC path, i.e. \\server\share\...
+                size_t i = 2;
+                while (i < path.length && !isDirSeparator(path[i])) ++i;
+                if (i == path.length || !isValidFilename(path[2 .. i]))
+                    return false;
+                ++i; // Skip a single dir separator
+                size_t j = i;
+                while (j < path.length && !isDirSeparator(path[j])) ++j;
+                if (!isValidFilename(path[i .. j])) return false;
+                remainder = path[j .. $];
+            }
+        }
+        else if (isDriveSeparator(path[1]))
+        {
+            import std.ascii;
+            if (!isAlpha(path[0])) return false;
+            remainder = path[2 .. $];
+        }
+        else
+        {
+            remainder = path;
+        }
+    }
+    else version (Posix)
+    {
+        remainder = path;
+    }
+    else static assert (0);
+    assert (remainder !is null);
+    remainder = ltrimDirSeparators(remainder);
+
+    // Check that each component satisfies isValidComponent.
+    while (!remainder.empty)
+    {
+        size_t i = 0;
+        while (i < remainder.length && !isDirSeparator(remainder[i])) ++i;
+        assert (i > 0);
+        if (!isValidComponent(remainder[0 .. i])) return false;
+        remainder = ltrimDirSeparators(remainder[i .. $]);
+    }
+
+    // All criteria passed
+    return true;
+}
+
+
+unittest
+{
+    assert (isValidPath("/foo/bar"));
+    assert (!isValidPath("/foo\0/bar"));
+
+    version (Windows)
+    {
+        assert (isValidPath(`c:\`));
+        assert (isValidPath(`c:\foo`));
+        assert (isValidPath(`c:\foo\.\bar\\\..\`));
+        assert (!isValidPath(`!:\foo`));
+        assert (!isValidPath(`c::\foo`));
+        assert (!isValidPath(`c:\foo?`));
+        assert (!isValidPath(`c:\foo.`));
+
+        assert (isValidPath(`\\server\share`));
+        assert (isValidPath(`\\server\share\foo`));
+        assert (isValidPath(`\\server\share\\foo`));
+        assert (!isValidPath(`\\\server\share\foo`));
+        assert (!isValidPath(`\\server\\share\foo`));
+        assert (!isValidPath(`\\ser*er\share\foo`));
+        assert (!isValidPath(`\\server\sha?e\foo`));
+        assert (!isValidPath(`\\server\share\|oo`));
+
+        assert (isValidPath(`\\?\<>:"?*|/\..\.`));
+        assert (!isValidPath("\\\\?\\foo\0bar"));
+
+        assert (!isValidPath(`\\.\PhysicalDisk1`));
+    }
 }
 
 
