@@ -46,11 +46,11 @@ enum SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52
 /**
 ** CAPI3REF: Run-Time Library Version Numbers
 */
-const char* sqlite3_version;
+immutable(char)* sqlite3_version;
+/// Ditt
+immutable(char)* sqlite3_libversion();
 /// Ditto
-const (char*) sqlite3_libversion();
-/// Ditto
-const (char*) sqlite3_sourceid();
+immutable(char)* sqlite3_sourceid();
 /// Ditto
 int sqlite3_libversion_number();
 
@@ -59,7 +59,7 @@ int sqlite3_libversion_number();
 */
 int sqlite3_compileoption_used(const char *zOptName);
 /// Ditto
-const (char*) sqlite3_compileoption_get(int N);
+immutable(char)* sqlite3_compileoption_get(int N);
 
 /**
 ** CAPI3REF: Test To See If The Library Is Threadsafe
@@ -590,9 +590,9 @@ int sqlite3_errcode(sqlite3 *db);
 /// Ditto
 int sqlite3_extended_errcode(sqlite3 *db);
 /// Ditto
-const (char*) sqlite3_errmsg(sqlite3*);
+immutable(char)* sqlite3_errmsg(sqlite3*);
 /// Ditto
-const (void*) sqlite3_errmsg16(sqlite3*);
+immutable(void)* sqlite3_errmsg16(sqlite3*);
 
 /**
 ** CAPI3REF: SQL Statement Object
@@ -625,7 +625,7 @@ enum
 */
 int sqlite3_prepare(
   sqlite3 *db,            /** Database handle */
-  const char *zSql,       /** SQL statement, UTF-8 encoded */
+  const(char)*zSql,       /** SQL statement, UTF-8 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
   const char **pzTail     /** OUT: Pointer to unused portion of zSql */
@@ -633,7 +633,7 @@ int sqlite3_prepare(
 /// Ditto
 int sqlite3_prepare_v2(
   sqlite3 *db,            /** Database handle */
-  const char *zSql,       /** SQL statement, UTF-8 encoded */
+  const(char)*zSql,       /** SQL statement, UTF-8 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
   const char **pzTail     /** OUT: Pointer to unused portion of zSql */
@@ -641,7 +641,7 @@ int sqlite3_prepare_v2(
 /// Ditto
 int sqlite3_prepare16(
   sqlite3 *db,            /** Database handle */
-  const void *zSql,       /** SQL statement, UTF-16 encoded */
+  const(void)*zSql,       /** SQL statement, UTF-16 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
   const void **pzTail     /** OUT: Pointer to unused portion of zSql */
@@ -649,7 +649,7 @@ int sqlite3_prepare16(
 /// Ditto
 int sqlite3_prepare16_v2(
   sqlite3 *db,            /** Database handle */
-  const void *zSql,       /** SQL statement, UTF-16 encoded */
+  const(void)*zSql,       /** SQL statement, UTF-16 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
   const void **pzTail     /** OUT: Pointer to unused portion of zSql */
@@ -658,7 +658,7 @@ int sqlite3_prepare16_v2(
 /**
 ** CAPI3REF: Retrieving Statement SQL
 */
-const (char*) sqlite3_sql(sqlite3_stmt *pStmt);
+const(char)* sqlite3_sql(sqlite3_stmt *pStmt);
 
 /**
 ** CAPI3REF: Determine If An SQL Statement Writes The Database
@@ -704,7 +704,7 @@ int sqlite3_bind_parameter_count(sqlite3_stmt*);
 /**
 ** CAPI3REF: Name Of A Host Parameter
 */
-const (char*) sqlite3_bind_parameter_name(sqlite3_stmt*, int);
+const(char)* sqlite3_bind_parameter_name(sqlite3_stmt*, int);
 
 /**
 ** CAPI3REF: Index Of A Parameter With A Given Name
@@ -724,18 +724,18 @@ int sqlite3_column_count(sqlite3_stmt *pStmt);
 /**
 ** CAPI3REF: Column Names In A Result Set
 */
-const (char*) sqlite3_column_name(sqlite3_stmt*, int N);
+const(char)* sqlite3_column_name(sqlite3_stmt*, int N);
 /// Ditto
-const (void*) sqlite3_column_name16(sqlite3_stmt*, int N);
+const(void)* sqlite3_column_name16(sqlite3_stmt*, int N);
 
 /**
 ** CAPI3REF: Source Of Data In A Query Result
 */
-const (char*) sqlite3_column_database_name(sqlite3_stmt*,int);
+const(char)* sqlite3_column_database_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_database_name16(sqlite3_stmt*,int);
+const(void)* sqlite3_column_database_name16(sqlite3_stmt*,int);
 /// Ditto
-const (char*) sqlite3_column_table_name(sqlite3_stmt*,int);
+const(char)* sqlite3_column_table_name(sqlite3_stmt*,int);
 /// Ditto
 const (void*) sqlite3_column_table_name16(sqlite3_stmt*,int);
 /// Ditto
