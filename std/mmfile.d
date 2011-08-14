@@ -194,7 +194,7 @@ class MmFile
 
             switch (mode)
             {
-            case Mode.Read:
+            case Mode.read:
                 dwDesiredAccess2 = GENERIC_READ;
                 dwShareMode = FILE_SHARE_READ;
                 dwCreationDisposition = OPEN_EXISTING;
@@ -202,7 +202,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_READ;
                 break;
 
-            case Mode.ReadWriteNew:
+            case Mode.readWriteNew:
                 assert(size != 0);
                 dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
                 dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -211,7 +211,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_WRITE;
                 break;
 
-            case Mode.ReadWrite:
+            case Mode.readWrite:
                 dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
                 dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
                 dwCreationDisposition = OPEN_ALWAYS;
@@ -219,7 +219,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_WRITE;
                 break;
 
-            case Mode.ReadCopyOnWrite:
+            case Mode.readCopyOnWrite:
                 if (dwVersion & 0x80000000)
                 {
                     throw new FileException(filename,
