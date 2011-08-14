@@ -64,11 +64,11 @@ class MmFile
      */
     enum Mode
     {
-        Read,       /// read existing file
-            ReadWriteNew,   /// delete existing file, write new file
-            ReadWrite,  /// read/write existing file, create if not existing
-            ReadCopyOnWrite, /// read/write existing file, copy on write
-            }
+        read,            /// Read existing file
+        readWriteNew,    /// Delete existing file, write new file
+        readWrite,       /// Read/Write existing file, create if not existing
+        readCopyOnWrite, /// Read/Write existing file, copy on write
+    }
 
     /**
      * Open memory mapped file filename for reading.
@@ -78,10 +78,10 @@ class MmFile
      */
     this(string filename)
     {
-        this(filename, Mode.Read, 0, null);
+        this(filename, Mode.read, 0, null);
     }
 
-    version(linux) this(File file, Mode mode = Mode.Read, ulong size = 0,
+    version(linux) this(File file, Mode mode = Mode.read, ulong size = 0,
             void* address = null, size_t window = 0)
     {
         this(file.fileno, mode, size, address, window);
@@ -95,14 +95,14 @@ class MmFile
 
         switch (mode)
         {
-        case Mode.Read:
+        case Mode.read:
             flags = MAP_SHARED;
             prot = PROT_READ;
             oflag = O_RDONLY;
             fmode = 0;
             break;
 
-        case Mode.ReadWriteNew:
+        case Mode.readWriteNew:
             assert(size != 0);
             flags = MAP_SHARED;
             prot = PROT_READ | PROT_WRITE;
@@ -110,14 +110,14 @@ class MmFile
             fmode = octal!660;
             break;
 
-        case Mode.ReadWrite:
+        case Mode.readWrite:
             flags = MAP_SHARED;
             prot = PROT_READ | PROT_WRITE;
             oflag = O_CREAT | O_RDWR;
             fmode = octal!660;
             break;
 
-        case Mode.ReadCopyOnWrite:
+        case Mode.readCopyOnWrite:
             flags = MAP_PRIVATE;
             prot = PROT_READ | PROT_WRITE;
             oflag = O_RDWR;
@@ -194,7 +194,7 @@ class MmFile
 
             switch (mode)
             {
-            case Mode.Read:
+            case Mode.read:
                 dwDesiredAccess2 = GENERIC_READ;
                 dwShareMode = FILE_SHARE_READ;
                 dwCreationDisposition = OPEN_EXISTING;
@@ -202,7 +202,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_READ;
                 break;
 
-            case Mode.ReadWriteNew:
+            case Mode.readWriteNew:
                 assert(size != 0);
                 dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
                 dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -211,7 +211,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_WRITE;
                 break;
 
-            case Mode.ReadWrite:
+            case Mode.readWrite:
                 dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
                 dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
                 dwCreationDisposition = OPEN_ALWAYS;
@@ -219,7 +219,7 @@ class MmFile
                 dwDesiredAccess = FILE_MAP_WRITE;
                 break;
 
-            case Mode.ReadCopyOnWrite:
+            case Mode.readCopyOnWrite:
                 if (dwVersion & 0x80000000)
                 {
                     throw new FileException(filename,
@@ -310,14 +310,14 @@ class MmFile
 
             switch (mode)
             {
-            case Mode.Read:
+            case Mode.read:
                 flags = MAP_SHARED;
                 prot = PROT_READ;
                 oflag = O_RDONLY;
                 fmode = 0;
                 break;
 
-            case Mode.ReadWriteNew:
+            case Mode.readWriteNew:
                 assert(size != 0);
                 flags = MAP_SHARED;
                 prot = PROT_READ | PROT_WRITE;
@@ -325,14 +325,14 @@ class MmFile
                 fmode = octal!660;
                 break;
 
-            case Mode.ReadWrite:
+            case Mode.readWrite:
                 flags = MAP_SHARED;
                 prot = PROT_READ | PROT_WRITE;
                 oflag = O_CREAT | O_RDWR;
                 fmode = octal!660;
                 break;
 
-            case Mode.ReadCopyOnWrite:
+            case Mode.readCopyOnWrite:
                 flags = MAP_PRIVATE;
                 prot = PROT_READ | PROT_WRITE;
                 oflag = O_RDWR;
@@ -644,7 +644,7 @@ unittest
     } else version (linux) {
         // getpagesize() is not defined in the unix D headers so use the guess
     }
-    MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,
+    MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,
             100*K,null,win);
     ubyte[] str = cast(ubyte[])"1234567890";
     ubyte[] data = cast(ubyte[])mf[0 .. 10];
@@ -663,5 +663,5 @@ unittest
     delete mf;
     std.file.remove("testing.txt");
     // Create anonymous mapping
-    auto test = new MmFile(null, MmFile.Mode.ReadWriteNew, 1024*1024, null);
+    auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
 }

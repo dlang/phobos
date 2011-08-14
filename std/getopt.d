@@ -92,7 +92,7 @@ void main(string[] args)
   getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
- $(LI $(I Numeric options.) If an option is bound to a numeric type, a
+ )$(LI $(I Numeric options.) If an option is bound to a numeric type, a
  number is expected as the next option, or right within the option
  separated with an "=" sign:
 
@@ -118,7 +118,7 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  expects a parameter, e.g. in the command line "--paranoid 42
  --paranoid", the "42" does not set $(D paranoid) to 42;
  instead, $(D paranoid) is set to 2 and "42" is not considered
- as part of the normal program arguments.))
+ as part of the normal program arguments.)))
 
  $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as a
  string is expected as the next option, or right within the option separated
@@ -131,7 +131,7 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
 ---------
 
 To set $(D color) to $(D Color.yes), invoke the program with either $(D
---color=yes) or $(D --color yes).
+--color=yes) or $(D --color yes).)
 
  $(LI $(I String options.) If an option is bound to a string, a string
  is expected as the next option, or right within the option separated
@@ -143,9 +143,9 @@ getopt(args, "output", &outputFile);
 ---------
 
  Invoking the program with "--output=myfile.txt" or "--output
- myfile.txt" will set $(D outputFile) to "myfile.txt".) If you want to
+ myfile.txt" will set $(D outputFile) to "myfile.txt". If you want to
  pass a string containing spaces, you need to use the quoting that is
- appropriate to your shell, e.g. --output='my file.txt'.
+ appropriate to your shell, e.g. --output='my file.txt'.)
 
  $(LI $(I Array options.) If an option is bound to an array, a new
  element is appended to the array each time the option occurs:
@@ -169,7 +169,7 @@ getopt(args, "tune", &tuningParms);
 ---------
 
 Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
-set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)  In general,
+set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ]. In general,
 keys and values can be of any parsable types.)
 
 $(LI $(I Delegate options.) An option can be bound to a delegate with
@@ -180,7 +180,7 @@ $(UL $(LI In the $(D void delegate()) case, the delegate is invoked
 whenever the option is seen.) $(LI In the $(D void delegate(string
 option)) case, the option string (without the leading dash(es)) is
 passed to the delegate. After that, the option string is considered
-handled and removed from the options array.)
+handled and removed from the options array.
 
 ---------
 void main(string[] args)
@@ -202,11 +202,11 @@ void main(string[] args)
 }
 ---------
 
-$(LI In the $(D void delegate(string option, string value)) case, the
+)$(LI In the $(D void delegate(string option, string value)) case, the
 option string is handled as an option with one argument, and parsed
 accordingly. The option and its value are passed to the
 delegate. After that, whatever was passed to the delegate is
-considered handled and removed from the list.)
+considered handled and removed from the list.
 
 ---------
 void main(string[] args)

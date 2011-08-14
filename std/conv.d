@@ -18,7 +18,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 module std.conv;
 
 import core.stdc.math : ldexpl;
-import core.memory, core.stdc.errno, core.stdc.string,
+import core.stdc.errno, core.stdc.string,
     core.stdc.stdlib;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
@@ -229,7 +229,26 @@ to) simply performs the implicit conversion.
 T toImpl(T, S)(S value)
     if (isImplicitlyConvertible!(S, T))
 {
+    alias isUnsigned isUnsignedInt;
+
+    // Conversion from integer to integer, and changing its sign
+    static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
+    {   // unsigned to signed & same size
+        enforce(value <= cast(S)T.max,
+                new ConvOverflowException("Conversion positive overflow"));
+    }
+    else static if (isSignedInt!S && isUnsignedInt!T)
+    {   // signed to unsigned
+        enforce(0 <= value,
+                new ConvOverflowException("Conversion negative overflow"));
+    }
+
     return value;
+}
+
+private template isSignedInt(T)
+{
+    enum isSignedInt = isIntegral!T && isSigned!T;
 }
 
 unittest
@@ -238,6 +257,75 @@ unittest
     int a = 42;
     auto b = to!long(a);
     assert(a == b);
+}
+
+// Tests for issue 6377
+unittest
+{
+    // Conversion between same size
+    foreach (S; TypeTuple!(byte, short, int, long))
+    {
+        alias Unsigned!S U;
+
+        foreach (Sint; TypeTuple!(S, const(S), immutable(S)))
+        foreach (Uint; TypeTuple!(U, const(U), immutable(U)))
+        {
+            // positive overflow
+            Uint un = Uint.max;
+            assertThrown!ConvOverflowException(to!Sint(un), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
+
+            // negative overflow
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
+        }
+    }
+
+    // Conversion between different size
+    foreach (i, S1; TypeTuple!(byte, short, int, long))
+    foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
+    {
+        alias Unsigned!S1 U1;
+        alias Unsigned!S2 U2;
+
+        static assert(U1.sizeof < S2.sizeof);
+
+        // small unsigned to big signed
+        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        {
+            Uint un = Uint.max;
+            assertNotThrown(to!Sint(un));
+            assert(to!Sint(un) == un);
+        }
+
+        // big unsigned to small signed
+        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        {
+            Uint un = Uint.max;
+            assertThrown(to!Sint(un));
+        }
+
+        static assert(S1.sizeof < U2.sizeof);
+
+        // small signed to big unsigned
+        foreach (Sint; TypeTuple!(S1, const(S1), immutable(S1)))
+        foreach (Uint; TypeTuple!(U2, const(U2), immutable(U2)))
+        {
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn));
+        }
+
+        // big signed to small unsigned
+        foreach (Sint; TypeTuple!(S2, const(S2), immutable(S2)))
+        foreach (Uint; TypeTuple!(U1, const(U1), immutable(U1)))
+        {
+            Sint sn = -1;
+            assertThrown!ConvOverflowException(to!Uint(sn));
+        }
+    }
 }
 
 /*
@@ -285,7 +373,7 @@ unittest
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
         && is(typeof(S.init.to!(T)()) : T))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
+    pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
                 "\"to\" has been scheduled for deprecation in January 2012. " ~
                 "Please use method opCast instead.");
 
@@ -905,9 +993,7 @@ T toImpl(T, S)(S input)
         }
         else
         {
-            result = cast(Char[])
-                GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-                [0 .. Char.sizeof * maxlength];
+            result = uninitializedArray!(Char[])(maxlength);
         }
 
         uint ndigits = 0;
@@ -1385,7 +1471,7 @@ T toImpl(T, S)(S value)
     }
     static if (S.max > T.max) {
         // possible overflow
-        if (value > T.max) ConvOverflowException.raise("Conversion overflow");
+        if (value > T.max) ConvOverflowException.raise("Conversion positive overflow");
     }
     return cast(T) value;
 }
@@ -1945,6 +2031,11 @@ Target parse(Target, Source)(ref Source s)
         ~ to!string(s) ~ "'");
 }
 
+//@@@BUG4737@@@: typeid doesn't work for scoped enum with initializer
+version(unittest)
+{
+    private enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+}
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1953,7 +2044,7 @@ unittest
     assert(to!E("b"w) == E.b);
     assert(to!E("c"d) == E.c);
 
-    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+    
     assert(to!F("x"c) == F.x);
     assert(to!F("y"w) == F.y);
     assert(to!F("z"d) == F.z);

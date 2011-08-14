@@ -1954,7 +1954,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Win32) {
-      ReadFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      ReadFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1967,7 +1969,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Win32) {
-      WriteFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      WriteFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -2703,7 +2707,7 @@ class MmFileStream : TArrayStream!(MmFile) {
   this(MmFile file) {
     super (file);
     MmFile.Mode mode = file.mode;
-    writeable = mode > MmFile.Mode.Read;
+    writeable = mode > MmFile.Mode.read;
   }
 
   override void flush() {
@@ -2723,7 +2727,7 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");

@@ -1497,7 +1497,10 @@ class Socket
                 {
                         flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
-                auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
+                version( Windows )
+                        auto sent = .send(sock, buf.ptr, to!int(buf.length), cast(int)flags);
+                else
+                        auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
         }
 
@@ -1517,7 +1520,13 @@ class Socket
                 {
                         flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
-                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+                version( Windows )
+                        return .sendto(
+                            sock, buf.ptr, std.conv.to!int(buf.length), 
+                            cast(int)flags, to.name(), to.nameLen()
+                        );
+                else
+                        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
 
         /// ditto
@@ -1535,7 +1544,10 @@ class Socket
                 {
                         flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
-                return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
+                version(Windows)
+                        return .sendto(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, 0);
+                else
+                        return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
         }
 
 
@@ -1556,9 +1568,16 @@ class Socket
         //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags)
         {
-        return buf.length
-            ? .recv(sock, buf.ptr, buf.length, cast(int)flags)
-            : 0;
+                version(Win32) // Does not use size_t
+                {
+                        return buf.length
+                            ? .recv(sock, buf.ptr, to!int(buf.length), cast(int)flags)
+                            : 0;
+                } else {
+                        return buf.length
+                            ? .recv(sock, buf.ptr, buf.length, cast(int)flags)
+                            : 0;	
+                }
         }
 
         /// ditto
@@ -1581,10 +1600,18 @@ class Socket
                         return 0;
                 from = newFamilyObject();
                 socklen_t nameLen = cast(socklen_t) from.nameLen();
-                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
-                assert(from.addressFamily() == _family);
-                // if(!read) //connection closed
-                return read;
+                version(Win32)
+                {
+                        auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name(), &nameLen);
+                        assert(from.addressFamily() == _family);
+                        // if(!read) //connection closed
+                        return read;
+                } else {
+                        auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
+                        assert(from.addressFamily() == _family);
+                        // if(!read) //connection closed
+                        return read;
+                }
         }
 
 
@@ -1602,9 +1629,16 @@ class Socket
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
-                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
-                // if(!read) //connection closed
-                return read;
+                version(Win32)
+                {
+                        auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, null);
+                        // if(!read) //connection closed
+                        return read;
+                } else {
+                        auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
+                        // if(!read) //connection closed
+                        return read;
+                }
         }
 
 

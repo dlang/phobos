@@ -3599,21 +3599,33 @@ unittest
     assert(equal(r1[1], a[4 .. $]));
 }
 
-/**
-If $(D haystack) supports slicing, returns the smallest number $(D n)
-such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
-returns the smallest $(D n) such that after $(D n) calls to $(D
-haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
-number could be found, return $(D -1).
- */
-sizediff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+/++
+    Returns the number of elements which must be popped from the front of
+    $(D haystack) before reaching an element for which
+    $(D startsWith!pred(haystack, needle)) is $(D true). If
+    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
+    $(D haystack), then -1 is returned.
+
+    $(D needle) may be either an element or a range.
+
+    Examples:
+--------------------
+assert(countUntil("hello world", "world") == 6);
+assert(countUntil("hello world", 'r') == 8);
+assert(countUntil("hello world", "programming") == -1);
+assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    static if (isNarrowString!R1)
+    static if (isNarrowString!R)
     {
         // Narrow strings are handled a bit differently
         auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront)
+        for (; !haystack.empty; haystack.popFront())
         {
             if (startsWith!pred(haystack, needle))
             {
@@ -3630,6 +3642,62 @@ if (is(typeof(startsWith!pred(haystack, needle))))
         }
     }
     return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil("hello world", "world") == 6);
+    assert(countUntil("hello world", 'r') == 8);
+    assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+    assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+    assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+
+/++
+    Returns the number of elements which must be popped from $(D haystack)
+    before $(D pred(hastack.front)) is $(D true.).
+
+    Examples:
+--------------------
+assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred, R)(R haystack)
+if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+{
+    static if (isNarrowString!R)
+    {
+        // Narrow strings are handled a bit differently
+        auto length = haystack.length;
+        for (; !haystack.empty; haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front))
+            {
+                return length - haystack.length;
+            }
+        }
+    }
+    else
+    {
+        typeof(return) result;
+        for (; !haystack.empty; ++result, haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front)) return result;
+        }
+    }
+    return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
 /**
@@ -4630,8 +4698,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 {
     for (;; r1.popFront(), r2.popFront())
     {
-        if (r1.empty) return -r2.empty;
-        if (r2.empty) return r1.empty;
+        if (r1.empty) return -cast(int)!r2.empty;
+        if (r2.empty) return !r1.empty;
         auto a = r1.front, b = r2.front;
         if (binaryFun!pred(a, b)) return -1;
         if (binaryFun!pred(b, a)) return 1;
@@ -4721,6 +4789,16 @@ unittest
     assert(result > 0);
     result = cmp("aaa", "aaa"d);
     assert(result == 0);
+    result = cmp(cast(int[])[], cast(int[])[]);
+    assert(result == 0);
+    result = cmp([1, 2, 3], [1, 2, 3]);
+    assert(result == 0);
+    result = cmp([1, 3, 2], [1, 2, 3]);
+    assert(result > 0);
+    result = cmp([1, 2, 3], [1L, 2, 3, 4]);
+    assert(result < 0);
+    result = cmp([1L, 2, 3], [1, 2]);
+    assert(result > 0);
 }
 
 // MinType

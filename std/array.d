@@ -39,14 +39,8 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        // Determines whether the GC should scan the array.
-        auto blkInfo = (typeid(E).flags & 1) ?
-                       cast(GC.BlkAttr) 0 :
-                       GC.BlkAttr.NO_SCAN;
+        auto result = uninitializedArray!(E[])(r.length);
 
-        auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof, blkInfo),
-                text("Out of memory while allocating an array of ", r.length,
-                        " objects of type ", E.stringof)))[0 .. r.length];
         size_t i = 0;
         foreach (e; r)
         {
@@ -154,6 +148,9 @@ private template blockAttribute(T)
     {
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
+}
+unittest {
+    static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
 }
 
 // Returns the number of dimensions in an array T.
@@ -1069,6 +1066,9 @@ unittest
         debug(std_array) printf("array.split1\n");
         S s = " \t\npeter paul\tjerry \n";
         assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
+
+        S s2 = " \t\npeter paul\tjerry";
+        assert(equal(split(s2), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
 
     immutable string s = " \t\npeter paul\tjerry \n";
@@ -1382,46 +1382,57 @@ unittest
     string[] words = [word1, word2, word3];
 
     auto filteredWord1    = filter!"true"(word1);
+    auto filteredLenWord1 = takeExactly(filteredWord1, word1.length);
     auto filteredWord2    = filter!"true"(word2);
+    auto filteredLenWord2 = takeExactly(filteredWord2, word2.length);
     auto filteredWord3    = filter!"true"(word3);
+    auto filteredLenWord3 = takeExactly(filteredWord3, word3.length);
     auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
+    auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
     auto filteredWords    = filter!"true"(filteredWordsArr);
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         assert(join(filteredWords, to!S(", ")) == "peter, paul, jerry");
         assert(join(filteredWordsArr, to!S(", ")) == "peter, paul, jerry");
+        assert(join(filteredLenWordsArr, to!S(", ")) == "peter, paul, jerry");
         assert(join(filter!"true"(words), to!S(", ")) == "peter, paul, jerry");
         assert(join(words, to!S(", ")) == "peter, paul, jerry");
 
         assert(join(filteredWords, to!S("")) == "peterpauljerry");
         assert(join(filteredWordsArr, to!S("")) == "peterpauljerry");
+        assert(join(filteredLenWordsArr, to!S("")) == "peterpauljerry");
         assert(join(filter!"true"(words), to!S("")) == "peterpauljerry");
         assert(join(words, to!S("")) == "peterpauljerry");
 
         assert(join(filter!"true"([word1]), to!S(", ")) == "peter");
         assert(join([filteredWord1], to!S(", ")) == "peter");
+        assert(join([filteredLenWord1], to!S(", ")) == "peter");
         assert(join(filter!"true"([filteredWord1]), to!S(", ")) == "peter");
         assert(join([word1], to!S(", ")) == "peter");
     }
 
     assert(join(filteredWords) == "peterpauljerry");
     assert(join(filteredWordsArr) == "peterpauljerry");
+    assert(join(filteredLenWordsArr) == "peterpauljerry");
     assert(join(filter!"true"(words)) == "peterpauljerry");
     assert(join(words) == "peterpauljerry");
 
     assert(join(filteredWords, filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(filteredWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
+    assert(join(filteredLenWordsArr, filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(filter!"true"(words), filter!"true"(", ")) == "peter, paul, jerry");
     assert(join(words, filter!"true"(", ")) == "peter, paul, jerry");
 
     assert(join(filter!"true"(cast(typeof(filteredWordsArr))[]), ", ").empty);
     assert(join(cast(typeof(filteredWordsArr))[], ", ").empty);
+    assert(join(cast(typeof(filteredLenWordsArr))[], ", ").empty);
     assert(join(filter!"true"(cast(string[])[]), ", ").empty);
     assert(join(cast(string[])[], ", ").empty);
 
     assert(join(filter!"true"(cast(typeof(filteredWordsArr))[])).empty);
     assert(join(cast(typeof(filteredWordsArr))[]).empty);
+    assert(join(cast(typeof(filteredLenWordsArr))[]).empty);
     assert(join(filter!"true"(cast(string[])[])).empty);
     assert(join(cast(string[])[]).empty);
 
@@ -1437,7 +1448,8 @@ unittest
 
 /++
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
-    array without changing the contents of $(D subject).
+    array without changing the contents of $(D subject), or the original array
+    if no match is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -1664,6 +1676,8 @@ unittest
     assert(a == [1, 2, 3, 4, 5]);
     replaceInPlace(a, 1u, 2u, cast(int[])[]);
     assert(a == [1, 3, 4, 5]);
+    replaceInPlace(a, 1u, 3u, a[2 .. 4]);
+    assert(a == [1, 4, 5, 5]);
 }
 
 unittest
@@ -1748,7 +1762,8 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
 
 /++
     Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject).
+    new array without changing the contents of $(D subject), or the original
+    array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
@@ -1759,7 +1774,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
     auto app = appender!R1();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
-    subject = balance[from.length .. $];
+    app.put(balance[from.length .. $]);
 
     return app.data;
 }
@@ -1777,13 +1792,16 @@ unittest
         auto from = to!T("foo");
         auto into = to!T("silly");
 
-        S r1 = replace(s, from, into);
-        assert(cmp(r1, "This is a silly silly list") == 0);
+        S r1 = replaceFirst(s, from, into);
+        assert(cmp(r1, "This is a silly foo list") == 0);
 
-        S r2 = replace(s, to!T(""), into);
-        assert(cmp(r2, "This is a foo foo list") == 0);
+        S r2 = replaceFirst(r1, from, into);
+        assert(cmp(r2, "This is a silly silly list") == 0);
 
-        assert(replace(r2, to!T("won't find this"), to!T("whatever")) is r2);
+        S r3 = replaceFirst(s, to!T(""), into);
+        assert(cmp(r3, "This is a foo foo list") == 0);
+
+        assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
     }
 }
 
@@ -2181,6 +2199,18 @@ unittest
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    app2.put([ 7 ]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    app2.shrinkTo(3);
+    assert(app2.data == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
+
+    auto app3 = appender([]);
+    app3.shrinkTo(0);
 
     // Issue 5663 tests
     {
@@ -2225,6 +2255,13 @@ unittest
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
     assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+
+    app2.shrinkTo(3);
+    assert(app2.data == [ 1, 2, 3 ]);
+    assertThrown(app2.shrinkTo(5));
 }
 
 /*
