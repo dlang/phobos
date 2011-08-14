@@ -167,6 +167,16 @@ version(testStdDateTime) unittest
     auto restoredTime = SysTime.fromISOExtString(timeString);
 }
 
+//Verify Examples for core.time.Duration which couldn't be in core.time.
+unittest
+{
+    assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
+           std.datetime.Date(2010, 9, 12));
+
+    assert(std.datetime.Date(2010, 9, 7) - std.datetime.Date(2010, 10, 3) ==
+           dur!"days"(-26));
+}
+
 //Note: There various functions which void as their return type and ref of the
 //      struct type which they're in as a commented out return type. Ideally,
 //      they would return the ref, but there are several dmd bugs which prevent
@@ -572,13 +582,18 @@ public:
             dateTime = The $(D DateTime) to use to set this $(D SysTime)'s
                        internal std time. As $(D DateTime) has no concept of
                        time zone, tz is used as its time zone.
-            fsec     = The fractional seconds portion of the time.
+            fracSec  = The fractional seconds portion of the time.
             tz       = The $(D TimeZone) to use for this $(D SysTime). If null,
                        $(D LocalTime) will be used. The given $(D DateTime) is
                        assumed to be in the given time zone.
+
+        Throws:
+            $(D DateTimeException) if $(D fracSec) is negative.
       +/
-    this(in DateTime dateTime, in FracSec fsec, immutable TimeZone tz = null) nothrow
+    this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null)
     {
+        immutable fracHNSecs = fracSec.hnsecs;
+        enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
         _timezone = tz is null ? LocalTime() : tz;
 
         try
@@ -586,7 +601,7 @@ public:
             immutable dateDiff = (dateTime.date - Date(1, 1, 1)).total!"hnsecs";
             immutable todDiff = (dateTime.timeOfDay - TimeOfDay(0, 0, 0)).total!"hnsecs";
 
-            immutable adjustedTime = dateDiff + todDiff + fsec.hnsecs;
+            immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
             immutable standardTime = _timezone.tzToUTC(adjustedTime);
 
             this(standardTime, _timezone.get);
@@ -620,6 +635,8 @@ public:
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC(), -1);
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(1), UTC(), -9_999_999);
         test(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0), UTC(), -10_000_000);
+
+        assertThrown!DateTimeException(SysTime(DateTime.init, FracSec.from!"hnsecs"(-1), UTC()));
     }
 
     /++
@@ -786,7 +803,7 @@ public:
         Time zone is irrelevant when comparing $(D SysTime)s.
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -1944,9 +1961,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         Params:
             fracSec = The fractional seconds to set this $(D SysTimes)'s
                       fractional seconds to.
+
+        Throws:
+            $(D DateTimeException) if $(D fracSec) is negative.
      +/
-    @property void fracSec(FracSec fracSec) nothrow
+    @property void fracSec(FracSec fracSec)
     {
+        immutable fracHNSecs = fracSec.hnsecs;
+        enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
+
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs);
         immutable daysHNSecs = convert!("days", "hnsecs")(days);
@@ -1959,7 +1982,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
         immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
 
-        hnsecs = fracSec.hnsecs;
+        hnsecs = fracHNSecs;
         hnsecs += convert!("hours", "hnsecs")(hour);
         hnsecs += convert!("minutes", "hnsecs")(minute);
         hnsecs += convert!("seconds", "hnsecs")(second);
@@ -1990,6 +2013,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                 test(st, fracSec, e);
             }
         }
+
+        SysTime st = SysTime(DateTime(2011, 7, 11, 2, 51, 27));
+        assertThrown!DateTimeException(st.fracSec = FracSec.from!"hnsecs"(-1));
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -5853,7 +5879,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
         $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
         )
@@ -6079,7 +6105,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD +) $(TD duration) $(TD -->) $(TD SysTime))
         $(TR $(TD SysTime) $(TD -) $(TD duration) $(TD -->) $(TD SysTime))
         )
@@ -6287,7 +6313,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         The legal types of arithmetic for $(D SysTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
         )
       +/
@@ -9082,7 +9108,7 @@ public:
         Compares this $(D Date) with the given $(D Date).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -11341,7 +11367,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for Date using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
         $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
         )
@@ -11453,7 +11479,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for $(D Date) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
         $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
         )
@@ -11545,7 +11571,7 @@ assert(d == Date(2010, 1, 25));
 
         The legal types of arithmetic for Date using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
@@ -13676,7 +13702,7 @@ public:
         Compares this $(D TimeOfDay) with the given $(D TimeOfDay).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -14226,7 +14252,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
         $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
         )
@@ -14332,7 +14358,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
         $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
         )
@@ -14414,7 +14440,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
         The legal types of arithmetic for $(D TimeOfDay) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
         )
 
@@ -15098,7 +15124,7 @@ public:
         Compares this $(D DateTime) with the given $(D DateTime.).
 
         Returns:
-            $(TABLE
+            $(BOOKTABLE,
             $(TR $(TD this &lt; rhs) $(TD &lt; 0))
             $(TR $(TD this == rhs) $(TD 0))
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -16769,7 +16795,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
         $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
         )
@@ -16879,7 +16905,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
         $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
         )
@@ -16970,7 +16996,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
         The legal types of arithmetic for $(D DateTime) using this operator are
 
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
@@ -18411,7 +18437,7 @@ private:
     is therefore the time starting at the starting point up to, but not
     including, the end point. e.g.
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD [January 5th, 2010 - March 10th, 2010$(RPAREN)))
     $(TR $(TD [05:00:30 - 12:00:00$(RPAREN)))
     $(TR $(TD [1982-01-04T08:59:00 - 2010-07-04T12:00:00$(RPAREN)))
@@ -25935,8 +25961,8 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
        __traits(hasMember, TP, "dayOfWeek") &&
        !__traits(isStaticFunction, TP.dayOfWeek) &&
        is(ReturnType!(TP.dayOfWeek) == DayOfWeek) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.PROPERTY) &&
-       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.NOTHROW))
+       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.property) &&
+       (functionAttributes!(TP.dayOfWeek) & FunctionAttribute.nothrow_))
 {
     TP func(in TP tp)
     {
@@ -26069,8 +26095,8 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
        __traits(hasMember, TP, "month") &&
        !__traits(isStaticFunction, TP.month) &&
        is(ReturnType!(TP.month) == Month) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.PROPERTY) &&
-       (functionAttributes!(TP.month) & FunctionAttribute.NOTHROW))
+       (functionAttributes!(TP.month) & FunctionAttribute.property) &&
+       (functionAttributes!(TP.month) & FunctionAttribute.nothrow_))
 {
     enforceValid!"months"(month);
 
@@ -31698,7 +31724,7 @@ bool validTimeUnits(string[] units...)
     $(D "hnsecs") are the smallest.
 
     Returns:
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD this &lt; rhs) $(TD &lt; 0))
         $(TR $(TD this == rhs) $(TD 0))
         $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -31757,7 +31783,7 @@ unittest
     template constraint instead.
 
     Returns:
-        $(TABLE
+        $(BOOKTABLE,
         $(TR $(TD this &lt; rhs) $(TD &lt; 0))
         $(TR $(TD this == rhs) $(TD 0))
         $(TR $(TD this &gt; rhs) $(TD &gt; 0))
@@ -33001,9 +33027,9 @@ template hasMin(T)
     enum hasMin = __traits(hasMember, T, "min") &&
                   __traits(isStaticFunction, T.min) &&
                   is(ReturnType!(T.min) == Unqual!T) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.PROPERTY) &&
-                  (functionAttributes!(T.min) & FunctionAttribute.NOTHROW);
-                  //(functionAttributes!(T.min) & FunctionAttribute.PURE); //Ideally this would be the case, but SysTime's min() can't currently be pure.
+                  (functionAttributes!(T.min) & FunctionAttribute.property) &&
+                  (functionAttributes!(T.min) & FunctionAttribute.nothrow_);
+                  //(functionAttributes!(T.min) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's min() can't currently be pure.
 }
 
 unittest
@@ -33034,9 +33060,9 @@ template hasMax(T)
     enum hasMax = __traits(hasMember, T, "max") &&
                   __traits(isStaticFunction, T.max) &&
                   is(ReturnType!(T.max) == Unqual!T) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.PROPERTY) &&
-                  (functionAttributes!(T.max) & FunctionAttribute.NOTHROW);
-                  //(functionAttributes!(T.max) & FunctionAttribute.PURE); //Ideally this would be the case, but SysTime's max() can't currently be pure.
+                  (functionAttributes!(T.max) & FunctionAttribute.property) &&
+                  (functionAttributes!(T.max) & FunctionAttribute.nothrow_);
+                  //(functionAttributes!(T.max) & FunctionAttribute.pure_); //Ideally this would be the case, but SysTime's max() can't currently be pure.
 }
 
 unittest
@@ -33063,7 +33089,7 @@ unittest
     Whether the given type defines the overloaded opBinary operators that a time
     point is supposed to define which work with time durations. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD TimePoint opBinary"+"(duration)))
     $(TR $(TD TimePoint opBinary"-"(duration)))
     )
@@ -33104,7 +33130,7 @@ unittest
     Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
     to define. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD TimePoint opOpAssign"+"(duration)))
     $(TR $(TD TimePoint opOpAssign"-"(duration)))
     )
@@ -33145,7 +33171,7 @@ unittest
     Whether the given type defines the overloaded opBinary operator that a time point is supposed
     to define which works with itself. Namely:
 
-    $(TABLE
+    $(BOOKTABLE,
     $(TR $(TD duration opBinary"-"(Date)))
     )
   +/

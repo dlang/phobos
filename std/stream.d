@@ -2703,7 +2703,7 @@ class MmFileStream : TArrayStream!(MmFile) {
   this(MmFile file) {
     super (file);
     MmFile.Mode mode = file.mode;
-    writeable = mode > MmFile.Mode.Read;
+    writeable = mode > MmFile.Mode.read;
   }
 
   override void flush() {
@@ -2723,7 +2723,7 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");

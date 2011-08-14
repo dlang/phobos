@@ -29,17 +29,18 @@ private {
 }
 
 /**
- JSON value types
+ JSON type enumeration
 */
 enum JSON_TYPE : byte {
+        /// Indicates the type of a $(D JSONValue).
         STRING,
-        INTEGER,
-        FLOAT,
-        OBJECT,
-        ARRAY,
-        TRUE,
-        FALSE,
-        NULL
+        INTEGER, /// ditto
+        FLOAT,   /// ditto
+        OBJECT,  /// ditto
+        ARRAY,   /// ditto
+        TRUE,    /// ditto
+        FALSE,   /// ditto
+        NULL     /// ditto
 }
 
 /**
@@ -47,12 +48,18 @@ enum JSON_TYPE : byte {
 */
 struct JSONValue {
         union {
+                /// Value when $(D type) is $(D JSON_TYPE.STRING)
                 string                          str;
+                /// Value when $(D type) is $(D JSON_TYPE.INTEGER)
                 long                            integer;
+                /// Value when $(D type) is $(D JSON_TYPE.FLOAT)
                 real                            floating;
+                /// Value when $(D type) is $(D JSON_TYPE.OBJECT)
                 JSONValue[string]       object;
+                /// Value when $(D type) is $(D JSON_TYPE.ARRAY)
                 JSONValue[]                     array;
         }
+        /// Specifies the _type of the value stored in this structure.
         JSON_TYPE                               type;
 }
 

@@ -1,10 +1,23 @@
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
+      $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
+           character type and of any type of mutability.)
+      $(LI Added symlink and readLink to std.file for Posix systems.)
+      $(LI Values for GDC and LDC were added to std.compiler.Vendor.)
+      $(LI Added functions to std.bitswap for generically handling swapping
+           endianness.)
+      $(LI Added std.parallelism.TaskPool.workerIndex.)
+      $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
+           equivalent functions in std.mathspecial should be used instead.)
+      $(LI The names of the values of std.mmfile.Mode, std.traits.FunctionAttributes,
+           std.traits.ParameterStorageClass, and std.traits.Variadic were
+           changed to match Phobos' naming conventions.)
      )
 
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
+        $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
      )
  )
 
@@ -12,7 +25,7 @@ $(VERSION 054, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
         $(LI std.array.insertInPlace supports inserting of multiple ranges/elements in one go)
-		$(LI Added std.array.uninitializedArray and std.array.minimallyInitializedArray)
+        $(LI Added std.array.uninitializedArray and std.array.minimallyInitializedArray)
         $(LI Various functions in std.string were renamed to match Phobos'
              naming conventions and be properly camelcased. The old names
              are still there but have been scheduled for deprecation.)
@@ -25,11 +38,13 @@ $(VERSION 054, ddd mm, 2011, =================================================,
              are still there but have been scheduled for deprecation.)
         $(LI std.ctype has been scheduled for deprecation. std.ascii has been
              added to replace it.)
-		$(LI Major performance improvements for std.algorithm.sort)
+        $(LI Major performance improvements for std.algorithm.sort)
      )
 
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 876): std.intrinsic.bswap overloads)
         $(LI $(BUGZILLA 2108): regexp.d: The greedy dotstar isn't so greedy)
+        $(LI $(BUGZILLA 2117): Please add more byteswapping support)
         $(LI $(BUGZILLA 3136): Incorrect and strange behavior of std.regexp.RegExp if using a pattern with optional prefix and suffix longer than 1 char)
         $(LI $(BUGZILLA 3457): rdmd fails silently in a particular setup where the compiler is not the expected)
         $(LI $(BUGZILLA 3479): writef/writefln: positional precision not working)
