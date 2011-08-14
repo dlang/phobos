@@ -1307,7 +1307,7 @@ struct BitArray
     Swaps the endianness of the given integral value or character.
   +/
 T swapEndian(T)(T val) @safe pure nothrow
-    if(isIntegral!T || isSomeChar!T)
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == bool))
 {
     static if(val.sizeof == 1)
         return val;
@@ -1345,7 +1345,7 @@ unittest
     import std.stdio;
     import std.typetuple;
 
-    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -1394,7 +1394,11 @@ unittest
 
 
 private union EndianSwapper(T)
-    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+    if(isIntegral!T ||
+       isSomeChar!T ||
+       is(Unqual!T == bool) ||
+       is(Unqual!T == float) ||
+       is(Unqual!T == double))
 {
     Unqual!T value;
     ubyte[T.sizeof] array;
@@ -1432,7 +1436,11 @@ assert(d == bigEndianToNative!double(swappedD));
 --------------------
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow
-    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+    if(isIntegral!T ||
+       isSomeChar!T ||
+       is(Unqual!T == bool) ||
+       is(Unqual!T == float) ||
+       is(Unqual!T == double))
 {
     return nativeToBigEndianImpl(val);
 }
@@ -1450,7 +1458,7 @@ unittest
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
-    if(isIntegral!T || isSomeChar!T)
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == bool))
 {
     EndianSwapper!T es = void;
 
@@ -1477,7 +1485,7 @@ unittest
     import std.stdio;
     import std.typetuple;
 
-    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar,
                           float, double))
     {
@@ -1496,26 +1504,29 @@ unittest
         static if(isSigned!T)
             assert(bigEndianToNative!T(nativeToBigEndian(cast(T)0)) == 0);
 
-        foreach(i; [2, 4, 6, 7, 9, 11])
+        static if(!is(T == bool))
         {
-            immutable T maxI = cast(T)(T.max / i);
-            immutable T minI = cast(T)(T.min / i);
-
-            assert(bigEndianToNative!T(nativeToBigEndian(maxI)) == maxI);
-
-            static if(T.sizeof > 1)
-                assert(nativeToBigEndian(maxI) != nativeToLittleEndian(maxI));
-            else
-                assert(nativeToBigEndian(maxI) == nativeToLittleEndian(maxI));
-
-            static if(isSigned!T)
+            foreach(i; [2, 4, 6, 7, 9, 11])
             {
-                assert(bigEndianToNative!T(nativeToBigEndian(minI)) == minI);
+                immutable T maxI = cast(T)(T.max / i);
+                immutable T minI = cast(T)(T.min / i);
+
+                assert(bigEndianToNative!T(nativeToBigEndian(maxI)) == maxI);
 
                 static if(T.sizeof > 1)
-                    assert(nativeToBigEndian(minI) != nativeToLittleEndian(minI));
+                    assert(nativeToBigEndian(maxI) != nativeToLittleEndian(maxI));
                 else
-                    assert(nativeToBigEndian(minI) == nativeToLittleEndian(minI));
+                    assert(nativeToBigEndian(maxI) == nativeToLittleEndian(maxI));
+
+                static if(isSigned!T)
+                {
+                    assert(bigEndianToNative!T(nativeToBigEndian(minI)) == minI);
+
+                    static if(T.sizeof > 1)
+                        assert(nativeToBigEndian(minI) != nativeToLittleEndian(minI));
+                    else
+                        assert(nativeToBigEndian(minI) == nativeToLittleEndian(minI));
+                }
             }
         }
 
@@ -1556,7 +1567,11 @@ assert(c == bigEndianToNative!dchar(swappedC));
 --------------------
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
-    if((isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double)) &&
+    if((isIntegral!T ||
+        isSomeChar!T ||
+        is(Unqual!T == bool) ||
+        is(Unqual!T == float) ||
+        is(Unqual!T == double)) &&
        n == T.sizeof)
 {
     return bigEndianToNativeImpl!(T, n)(val);
@@ -1575,7 +1590,7 @@ unittest
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
-    if((isIntegral!T || isSomeChar!T) &&
+    if((isIntegral!T || isSomeChar!T || is(Unqual!T == bool)) &&
        n == T.sizeof)
 {
     EndianSwapper!T es = void;
@@ -1621,7 +1636,11 @@ assert(d == littleEndianToNative!double(swappedD));
 --------------------
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow
-    if(isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double))
+    if(isIntegral!T ||
+       isSomeChar!T ||
+       is(Unqual!T == bool) ||
+       is(Unqual!T == float) ||
+       is(Unqual!T == double))
 {
     return nativeToLittleEndianImpl(val);
 }
@@ -1639,7 +1658,7 @@ unittest
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
-    if(isIntegral!T || isSomeChar!T)
+    if(isIntegral!T || isSomeChar!T || is(Unqual!T == bool))
 {
     EndianSwapper!T es = void;
 
@@ -1665,7 +1684,7 @@ unittest
     import std.stdio;
     import std.typetuple;
 
-    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar,
                           float, double))
     {
@@ -1684,15 +1703,18 @@ unittest
         static if(isSigned!T)
             assert(littleEndianToNative!T(nativeToLittleEndian(cast(T)0)) == 0);
 
-        foreach(i; 2 .. 10)
+        static if(!is(T == bool))
         {
-            immutable T maxI = cast(T)(T.max / i);
-            immutable T minI = cast(T)(T.min / i);
+            foreach(i; 2 .. 10)
+            {
+                immutable T maxI = cast(T)(T.max / i);
+                immutable T minI = cast(T)(T.min / i);
 
-            assert(littleEndianToNative!T(nativeToLittleEndian(maxI)) == maxI);
+                assert(littleEndianToNative!T(nativeToLittleEndian(maxI)) == maxI);
 
-            static if(isSigned!T)
-                assert(littleEndianToNative!T(nativeToLittleEndian(minI)) == minI);
+                static if(isSigned!T)
+                    assert(littleEndianToNative!T(nativeToLittleEndian(minI)) == minI);
+            }
         }
     }
 }
@@ -1726,7 +1748,11 @@ assert(c == littleEndianToNative!dchar(swappedC));
 --------------------
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
-    if((isIntegral!T || isSomeChar!T || is(Unqual!T == float) || is(Unqual!T == double)) &&
+    if((isIntegral!T ||
+        isSomeChar!T ||
+        is(Unqual!T == bool) ||
+        is(Unqual!T == float) ||
+        is(Unqual!T == double)) &&
        n == T.sizeof)
 {
     return littleEndianToNativeImpl!T(val);
@@ -1745,7 +1771,7 @@ unittest
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
-    if((isIntegral!T || isSomeChar!T) &&
+    if((isIntegral!T || isSomeChar!T || is(Unqual!T == bool)) &&
        n == T.sizeof)
 {
     EndianSwapper!T es = void;

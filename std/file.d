@@ -446,7 +446,7 @@ void write(in char[] name, const void[] buffer)
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) == 1
                 && buffer.length == numwritten,
                 name);
     }
@@ -488,7 +488,7 @@ void append(in char[] name, in void[] buffer)
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
         cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) == 1
                 && buffer.length == numwritten,
                 name);
     }
@@ -1859,7 +1859,7 @@ version(Windows) string getcwd()
     if (useWfuncs)
     {
         auto buffW = cast(wchar[]) staticBuff;
-        immutable n = cenforce(GetCurrentDirectoryW(buffW.length, buffW.ptr),
+        immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
                 "getcwd");
         // we can do it because toUTFX always produces a fresh string
         if(n < buffW.length)
@@ -1878,7 +1878,7 @@ version(Windows) string getcwd()
     else
     {
         auto buffA = cast(char[]) staticBuff;
-        immutable n = cenforce(GetCurrentDirectoryA(buffA.length, buffA.ptr),
+        immutable n = cenforce(GetCurrentDirectoryA(to!DWORD(buffA.length), buffA.ptr),
                 "getcwd");
         // fromMBSz doesn't always produce a fresh string
         if(n < buffA.length)
@@ -2246,7 +2246,7 @@ else version(Windows)
 
         void _init(in char[] path, in WIN32_FIND_DATA* fd)
         {
-            auto clength = std.c.string.strlen(fd.cFileName.ptr);
+            auto clength = to!int(std.c.string.strlen(fd.cFileName.ptr));
 
             // Convert cFileName[] to unicode
             const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
