@@ -681,21 +681,8 @@ unittest {
         getopt(args, "t|timeout", &timeout);
         assert(isEqual(timeout, value), to!string(timeout));
 
-        // due to bug
-        // http://d.puremagic.com/issues/show_bug.cgi?id=5683
-        // this occurs several times below
-        // also cast(T) should be removed then
-        // FIX ALL
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
-
         // without space works only for numeric options
+        timeout = timeout.init;
         args = (["program.name",
                  "-t"~timeoutAsString]).dup;
         static if (isNumeric!(T))
@@ -706,198 +693,71 @@ unittest {
         else
         {
             assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-            static if (isAssociativeArray!(T))
-            {
-                assert(isEqual(timeout, cast(T) null), to!string(timeout));
-            }
-            else
-            {
-                assert(isEqual(timeout, timeout.init), to!string(timeout));
-            }
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
         }
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "-t", timeoutAsString]).dup;
         getopt(args, "t|timeout", &timeout);
         assert(isEqual(timeout, value), to!string(timeout));
 
         // non-accepted short options
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "-timeout="~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
-
+        timeout = timeout.init;
         args = (["program.name",
                  "-timeout", timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "-timeout"~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
         // accepted long options
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "--timeout", timeoutAsString]).dup;
         getopt(args, "t|timeout", &timeout);
         assert(isEqual(timeout, value), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "--timeout="~timeoutAsString]).dup;
         getopt(args, "t|timeout", &timeout);
         assert(isEqual(timeout, value), to!string(timeout));
 
-		// non-accepted long options
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        // non-accepted long options
+        timeout = timeout.init;
         args = (["program.name",
                  "--t", timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "--t="~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "--timeout"~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
 
-        static if (isAssociativeArray!(T))
-        {
-            timeout = null;
-        }
-        else
-        {
-            timeout = timeout.init;
-        }
+        timeout = timeout.init;
         args = (["program.name",
                  "--t"~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        static if (isAssociativeArray!(T))
-        {
-            assert(isEqual(timeout, cast(T) null), to!string(timeout));
-        }
-        else
-        {
-            assert(isEqual(timeout, timeout.init), to!string(timeout));
-        }
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
     }
 }
 
