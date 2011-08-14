@@ -18,6 +18,8 @@
  */
 module std.dateparse;
 
+deprecated:
+
 private
 {
     import std.algorithm, std.string;

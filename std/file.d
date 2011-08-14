@@ -613,11 +613,11 @@ unittest
  *       of $(D getTimes) which takes two arguments or $(D getTimesWin)
  *       (Windows-Only) instead.)
  */
-version(StdDdoc) void getTimes(in char[] name,
+version(StdDdoc) deprecated void getTimes(in char[] name,
                                out d_time ftc,
                                out d_time fta,
                                out d_time ftm);
-else version(Windows) void getTimes(C)(in C[] name,
+else version(Windows) deprecated void getTimes(C)(in C[] name,
                                        out d_time ftc,
                                        out d_time fta,
                                        out d_time ftm) if(is(Unqual!C == char))
@@ -654,7 +654,7 @@ else version(Windows) void getTimes(C)(in C[] name,
     }
     FindClose(findhndl);
 }
-else version(Posix) void getTimes(C)(in C[] name,
+else version(Posix) deprecated void getTimes(C)(in C[] name,
                                      out d_time ftc,
                                      out d_time fta,
                                      out d_time ftm) if(is(Unqual!C == char))
@@ -937,8 +937,8 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
  $(RED Scheduled for deprecation in August 2011. Please use
        $(D timeLastModified) instead.)
  +/
-version(StdDdoc) d_time lastModified(in char[] name);
-else d_time lastModified(C)(in C[] name)
+version(StdDdoc) deprecated d_time lastModified(in char[] name);
+else deprecated d_time lastModified(C)(in C[] name)
     if(is(Unqual!C == char))
 {
     pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
@@ -962,8 +962,8 @@ else d_time lastModified(C)(in C[] name)
     $(RED Scheduled for deprecation in August 2011.
           Please use $(D timeLastModified) instead.)
 +/
-version(StdDdoc) d_time lastModified(in char[] name, d_time returnIfMissing);
-else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
+version(StdDdoc) deprecated d_time lastModified(in char[] name, d_time returnIfMissing);
+else deprecated d_time lastModified(C)(in C[] name, d_time returnIfMissing)
     if(is(Unqual!C == char))
 {
     pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
@@ -1250,7 +1250,7 @@ unittest
     $(RED Scheduled for deprecation in August 2011.
           Please use $(D isDir) instead.)
  +/
-alias isDir isdir;
+deprecated alias isDir isdir;
 
 
 /++
@@ -1391,7 +1391,7 @@ unittest
     $(RED Scheduled for deprecation in August 2011.
           Please use $(D isFile) instead.)
  +/
-alias isFile isfile;
+deprecated alias isFile isfile;
 
 
 /++
@@ -1962,7 +1962,7 @@ assert(de2.isDir);
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D isDir) instead.)
           +/
-        alias isDir isdir;
+        deprecated alias isDir isdir;
 
 
         /++
@@ -1994,7 +1994,7 @@ assert(!de2.isFile);
             $(RED Scheduled for deprecation in August 2011.
                   Please use $(D isFile) instead.)
           +/
-        alias isFile isfile;
+        deprecated alias isFile isfile;
 
         /++
             Returns whether the file represented by this $(D DirEntry) is a
@@ -2027,7 +2027,7 @@ assert(!de2.isFile);
                   access to the $(D stat) struct which Posix systems use (check
                   out $(D stat)'s man page for more details.))
           +/
-        @property d_time creationTime() const;
+        deprecated @property d_time creationTime() const;
 
         /++
             $(BLUE This function is Windows-Only.)
@@ -2060,7 +2060,7 @@ assert(!de2.isFile);
             (generally for performance reasons), so there's a good chance that
             $(D lastAccessTime) will return the same value as $(D lastWriteTime).
           +/
-        @property d_time lastAccessTime();
+        deprecated @property d_time lastAccessTime();
         /++
             Returns the time that the file represented by this $(D DirEntry) was
             last accessed.
@@ -2078,7 +2078,7 @@ assert(!de2.isFile);
             Returns the time that the file represented by this $(D DirEntry) was
             last modified.
           +/
-        @property d_time lastWriteTime();
+        deprecated @property d_time lastWriteTime();
         /++
             Returns the time that the file represented by this $(D DirEntry) was
             last modified.
@@ -2139,7 +2139,7 @@ else version(Windows)
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        alias isDir isdir;
+        deprecated alias isDir isdir;
 
         @property bool isFile() const
         {
@@ -2149,7 +2149,7 @@ else version(Windows)
             return !isDir;
         }
 
-        alias isFile isfile;
+        deprecated alias isFile isfile;
 
         @property bool isSymlink() const
         {
@@ -2161,7 +2161,7 @@ else version(Windows)
             return _size;
         }
 
-        @property d_time creationTime() const
+        deprecated @property d_time creationTime() const
         {
             return sysTimeToDTime(_timeCreated);
         }
@@ -2171,7 +2171,7 @@ else version(Windows)
             return cast(SysTime)_timeCreated;
         }
 
-        @property d_time lastAccessTime() const
+        deprecated @property d_time lastAccessTime() const
         {
             return sysTimeToDTime(_timeLastAccessed);
         }
@@ -2181,7 +2181,7 @@ else version(Windows)
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property d_time lastWriteTime() const
+        deprecated @property d_time lastWriteTime() const
         {
             return sysTimeToDTime(_timeLastModified);
         }
@@ -2304,7 +2304,7 @@ else version(Posix)
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        alias isDir isdir;
+        deprecated alias isDir isdir;
 
         @property bool isFile()
         {
@@ -2313,7 +2313,7 @@ else version(Posix)
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
-        alias isFile isfile;
+        deprecated alias isFile isfile;
 
         @property bool isSymlink()
         {
@@ -2327,7 +2327,7 @@ else version(Posix)
         // so it continues to be left undocumented.
         //
         // Scheduled for deprecation in August 2011.
-        @property ubyte d_type()
+        deprecated @property ubyte d_type()
         {
             return _dType;
         }
@@ -2338,7 +2338,7 @@ else version(Posix)
             return _statBuf.st_size;
         }
 
-        @property d_time creationTime()
+        deprecated @property d_time creationTime()
         {
             _ensureStatDone();
 
@@ -2352,7 +2352,7 @@ else version(Posix)
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
 
-        @property d_time lastAccessTime()
+        deprecated @property d_time lastAccessTime()
         {
             _ensureStatDone();
 
@@ -2366,7 +2366,7 @@ else version(Posix)
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
 
-        @property d_time lastWriteTime()
+        deprecated @property d_time lastWriteTime()
         {
             _ensureStatDone();
 
@@ -2574,7 +2574,7 @@ unittest
  * }
  * ----
  */
-alias listDir listdir;
+deprecated alias listDir listdir;
 
 
 /***************************************************
@@ -2648,8 +2648,8 @@ void copy(in char[] from, in char[] to)
         Throws:
             $(D FileException) on error.
      +/
-version(StdDdoc) void setTimes(in char[] name, d_time fta, d_time ftm);
-else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
+version(StdDdoc) deprecated void setTimes(in char[] name, d_time fta, d_time ftm);
+else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
     if(is(Unqual!C == char))
 {
     pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
@@ -3530,7 +3530,7 @@ void main(string[] args)
 --------------------
  +/
 
-string[] listDir(C)(in C[] pathname)
+deprecated string[] listDir(C)(in C[] pathname)
 {
     pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
@@ -3601,7 +3601,7 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
+deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
@@ -3674,7 +3674,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
  * }
  * ----
  */
-void listDir(C, U)(in C[] pathname, U callback)
+deprecated void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
     pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
@@ -3688,7 +3688,7 @@ void listDir(C, U)(in C[] pathname, U callback)
 private:
 
 
-void _listDir(in char[] pathname, bool delegate(string filename) callback)
+deprecated void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -3701,7 +3701,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 
 version(Windows)
 {
-    void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
+    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         DirEntry de;
         auto c = std.path.join(pathname, "*.*");
@@ -3763,7 +3763,7 @@ version(Windows)
 }
 else version(Posix)
 {
-    void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
+    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         auto h = cenforce(opendir(toStringz(pathname)), pathname);
         scope(exit) closedir(h);
@@ -3798,13 +3798,13 @@ else version(Posix)
 //==============================================================================
 //
 
-alias long d_time;
-enum d_time d_time_nan = long.min;
-enum ticksPerSecond = 1000;
+deprecated alias long d_time;
+deprecated enum d_time d_time_nan = long.min;
+deprecated enum ticksPerSecond = 1000;
 
 version(Windows)
 {
-    d_time FILETIME2d_time(const FILETIME *ft)
+    deprecated d_time FILETIME2d_time(const FILETIME *ft)
     {
         auto sysTime = FILETIMEToSysTime(ft);
 
