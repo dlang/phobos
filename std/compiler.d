@@ -26,34 +26,20 @@ immutable
     /// Master list of D compiler vendors.
     enum Vendor
     {
-        Unknown = 0,            /// Compiler vendor could not be detected
-        DigitalMars = 1,        /// Digital Mars D (DMD)
-        GNU = 2,                /// GNU D Compiler (GDC)
-        LLVM = 3,               /// LLVM D Compiler (LDC)
-        DotNET = 4,             /// D.NET
+        unknown = 0,     /// Compiler vendor could not be detected
+        digitalMars = 1, /// Digital Mars D (DMD)
+        gnu = 2,         /// GNU D Compiler (GDC)
+        llvm = 3,        /// LLVM D Compiler (LDC)
+        dotNET = 4,      /// D.NET
     }
 
     /// Which vendor produced this compiler.
-    version (DigitalMars)
-    {
-        Vendor vendor = Vendor.DigitalMars;
-    }
-    else version (GNU)
-    {
-        Vendor vendor = Vendor.GNU;
-    }
-    else version (LDC)
-    {
-        Vendor vendor = Vendor.LLVM;
-    }
-    else version (D_NET)
-    {
-        Vendor vendor = Vendor.DotNET;
-    }
-    else
-    {
-        Vendor vendor = Vendor.Unknown;
-    }
+    version(StdDdoc)          Vendor vendor;
+    else version(DigitalMars) Vendor vendor = Vendor.digitalMars;
+    else version(GNU)         Vendor vendor = Vendor.gnu;
+    else version(LDC)         Vendor vendor = Vendor.llvm;
+    else version(D_NET)       Vendor vendor = Vendor.dotNET;
+    else                      Vendor vendor = Vendor.unknown;
 
 
     /**
