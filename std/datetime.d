@@ -29967,7 +29967,7 @@ else version(Windows)
             scope(exit) RegCloseKey(baseKey);
 
             char[1024] keyName;
-            auto nameLen = keyName.length;
+            auto nameLen = to!DWORD(keyName.length);
             int result;
             for(DWORD index = 0;
                 (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
@@ -29980,7 +29980,7 @@ else version(Windows)
                     {
                         scope(exit) RegCloseKey(tzKey);
                         char[1024] strVal;
-                        auto strValLen = strVal.length;
+                        auto strValLen = to!DWORD(strVal.length);
 
                         bool queryStringValue(string name, size_t lineNum = __LINE__)
                         {
@@ -30021,7 +30021,7 @@ else version(Windows)
 
                                     enum tzi = "TZI\0";
                                     REG_TZI_FORMAT binVal;
-                                    auto binValLen = REG_TZI_FORMAT.sizeof;
+                                    auto binValLen = to!DWORD(REG_TZI_FORMAT.sizeof);
 
                                     if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
                                     {
@@ -30067,7 +30067,7 @@ else version(Windows)
             scope(exit) RegCloseKey(baseKey);
 
             char[1024] keyName;
-            auto nameLen = keyName.length;
+            auto nameLen = to!DWORD(keyName.length);
             int result;
             for(DWORD index = 0;
                 (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;

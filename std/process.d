@@ -542,7 +542,7 @@ private:
             if (len == 1) return true;
 
             auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
+            GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
             value = toUTF8(buf[0 .. $-1]);
             return true;
         }
