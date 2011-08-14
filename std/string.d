@@ -3679,7 +3679,7 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     C[][] indents;
     indents.length = lines.length;
     foreach(i, line; lines)
-        indents[i] = line.strip()==""? null : leadingWhiteOf(line);
+        indents[i] = line.strip().empty? null : leadingWhiteOf(line);
 
     C[] shorterAndNonNull(C[] a, C[] b) {
         if(a is null) return b;
