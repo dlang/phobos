@@ -1521,7 +1521,10 @@ class Socket
                         flags = cast(SocketFlags)(flags | MSG_NOSIGNAL);
                 }
                 version( Windows )
-                        return .sendto(sock, buf.ptr, to!int(buf.length), cast(int)flags, to.name(), to.nameLen());
+                        return .sendto(
+                            sock, buf.ptr, std.conv.to!int(buf.length), 
+                            cast(int)flags, to.name(), to.nameLen()
+                        );
                 else
                         return .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
         }
