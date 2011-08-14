@@ -2545,8 +2545,8 @@ unittest
 
 
 /******************************************************
- * $(RED Deprecated. It will be removed in February 2012. Please use
- *       $(D dirEntries) instead.)
+ * $(RED Scheduled for deprecation in November 2011. Please use the
+ *       $(D getTimes) with two arguments instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
@@ -2578,7 +2578,7 @@ unittest
  * }
  * ----
  */
-deprecated alias listDir listdir;
+alias listDir listdir;
 
 
 /***************************************************
@@ -3507,7 +3507,7 @@ unittest
 
 
 /++
-    $(RED Deprecated. It will be removed in February 2012.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D dirEntries) instead.)
 
     Returns the contents of the given directory.
@@ -3533,7 +3533,7 @@ void main(string[] args)
 }
 --------------------
  +/
-deprecated string[] listDir(C)(in C[] pathname)
+string[] listDir(C)(in C[] pathname)
 {
     pragma(msg, hardDeprec!("2.055", "February 2012", "listDir", "dirEntries"));
     auto result = appender!(string[])();
@@ -3556,7 +3556,7 @@ unittest
 
 
 /++
-    $(RED Deprecated. It will be removed in February 2012.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
@@ -3604,10 +3604,10 @@ void main(string[] args)
 }
 --------------------
  +/
-deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
+string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "listDir", "dirEntries"));
+    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     import std.regexp;
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
@@ -3641,7 +3641,7 @@ deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink 
 }
 
 /******************************************************
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Scheduled for deprecation in November 2011.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
@@ -3677,10 +3677,10 @@ deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink 
  * }
  * ----
  */
-deprecated void listDir(C, U)(in C[] pathname, U callback)
+void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "listDir", "dirEntries"));
+    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3814,6 +3814,15 @@ version(Windows)
         return sysTimeToDTime(sysTime);
     }
 }
+
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.file.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.file.%s instead.",
+                              vers, oldFunc, date, newFunc);
+}
+
 
 template hardDeprec(string vers, string date, string oldFunc, string newFunc)
 {
