@@ -7,9 +7,12 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Values for GDC and LDC were added to std.compiler.Vendor.)
       $(LI Added functions to std.bitswap for generically handling swapping
            endianness.)
-	  $(LI Added std.parallelism.TaskPool.workerIndex.)
+      $(LI Added std.parallelism.TaskPool.workerIndex.)
       $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
            equivalent functions in std.mathspecial should be used instead.)
+      $(LI The names of the values of std.mmfile.Mode, std.traits.FunctionAttributes,
+           std.traits.ParameterStorageClass, and std.traits.Variadic were
+           changed to match Phobos' naming conventions.)
      )
 
     $(LIBBUGSFIXED

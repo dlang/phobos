@@ -212,9 +212,9 @@ private template noUnsharedAliasing(T) {
 // requirement for executing it via a TaskPool.  (See isSafeReturn).
 private template isSafeTask(F) {
     enum bool isSafeTask =
-        ((functionAttributes!(F) & FunctionAttribute.SAFE) ||
-        (functionAttributes!(F) & FunctionAttribute.TRUSTED)) &&
-        !(functionAttributes!F & FunctionAttribute.REF) &&
+        ((functionAttributes!(F) & FunctionAttribute.safe) ||
+        (functionAttributes!(F) & FunctionAttribute.trusted)) &&
+        !(functionAttributes!F & FunctionAttribute.ref_) &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
         allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
@@ -460,7 +460,7 @@ struct Task(alias fun, Args...) {
     static if(__traits(isSame, fun, run)) {
         static if(isFunctionPointer!(_args[0])) {
             private enum bool isPure =
-                functionAttributes!(Args[0]) & FunctionAttribute.PURE;
+                functionAttributes!(Args[0]) & FunctionAttribute.pure_;
         } else {
             // BUG:  Should check this for delegates too, but std.traits
             //       apparently doesn't allow this.  isPure is irrelevant
@@ -2269,7 +2269,7 @@ public:
     /**
     Gets the index of the current thread relative to this $(D TaskPool).  Any
     thread not in this pool will receive an index of 0.  The worker threads in
-    this pool receive unique indices of 1 through $(Dthis.size).
+    this pool receive unique indices of 1 through $(D this.size).
 
     This function is useful for maintaining worker-local resources.
 

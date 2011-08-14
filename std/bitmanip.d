@@ -28,11 +28,12 @@ import std.traits;
 
 
 private string myToStringx(ulong n)
-{   enum s = "0123456789";
+{
+    enum s = "0123456789";
     if (n < 10)
-    return s[cast(size_t)n..cast(size_t)n+1];
+        return s[cast(size_t)n..cast(size_t)n+1];
     else
-    return myToStringx(n / 10) ~ myToStringx(n % 10);
+        return myToStringx(n / 10) ~ myToStringx(n % 10);
 }
 
 private string myToString(ulong n)
@@ -79,17 +80,17 @@ private template createAccessors(
             static assert(len == 1);
             enum result =
             // getter
-                "bool " ~ name ~ "() const { return "
+                "@property bool " ~ name ~ "() const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"void " ~ name ~ "(bool v){"
+                ~"@property void " ~ name ~ "(bool v){"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
-            enum result = T.stringof~" "~name~"() const { auto result = "
+            enum result = "@property "~T.stringof~" "~name~"() const { auto result = "
                 "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -99,7 +100,7 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"void "~name~"("~T.stringof~" v){ "
+                ~"@property void "~name~"("~T.stringof~" v){ "
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
@@ -120,7 +121,7 @@ private template createStoreName(Ts...)
     static if (Ts.length < 2)
         enum createStoreName = "";
     else
-        enum createStoreName = Ts[1] ~ createStoreName!(Ts[3 .. $]);
+        enum createStoreName = "_" ~ Ts[1] ~ createStoreName!(Ts[3 .. $]);
 }
 
 private template createFields(string store, size_t offset, Ts...)
@@ -200,6 +201,57 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+}
+
+unittest
+{
+    static struct Integrals {
+        bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
+
+        mixin(bitfields!(
+                  bool, "b", 1,
+                  uint, "i", 3,
+                  short, "s", 4));
+    }
+    Integrals i;
+    assert(i.checkExpectations(false, 0, 0));
+    i.b = true;
+    assert(i.checkExpectations(true, 0, 0));
+    i.i = 7;
+    assert(i.checkExpectations(true, 7, 0));
+    i.s = -8;
+    assert(i.checkExpectations(true, 7, -8));
+    i.s = 7;
+    assert(i.checkExpectations(true, 7, 7));
+
+    enum A { True, False }
+    enum B { One, Two, Three, Four }
+    static struct Enums {
+        bool checkExpectations(A ea, B eb) { return a == ea && b == eb; }
+
+        mixin(bitfields!(
+                  A, "a", 1,
+                  B, "b", 2,
+                  uint, "", 5));
+    }
+    Enums e;
+    assert(e.checkExpectations(A.True, B.One));
+    e.a = A.False;
+    assert(e.checkExpectations(A.False, B.One));
+    e.b = B.Three;
+    assert(e.checkExpectations(A.False, B.Three));
+
+    static struct SingleMember {
+        bool checkExpectations(bool eb) { return b == eb; }
+
+        mixin(bitfields!(
+                  bool, "b", 1,
+                  uint, "", 7));
+    }
+    SingleMember f;
+    assert(f.checkExpectations(false));
+    f.b = true;
+    assert(f.checkExpectations(true));
 }
 
 /**
@@ -304,46 +356,43 @@ struct BitArray
 {
     size_t len;
     size_t* ptr;
-version(X86)
-    enum bitsPerSizeT = 32;
-else version(X86_64)
-    enum bitsPerSizeT = 64;
-else
-    static assert(false, "unknown platform");
+    version(X86)
+        enum bitsPerSizeT = 32;
+    else version(X86_64)
+        enum bitsPerSizeT = 64;
+    else
+        static assert(false, "unknown platform");
 
-    const size_t dim()
+    @property const size_t dim()
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
 
-    @property
+    @property const size_t length()
     {
-        const size_t length()
-        {
-            return len;
-        }
+        return len;
+    }
 
-        void length(size_t newlen)
+    @property void length(size_t newlen)
+    {
+        if (newlen != len)
         {
-            if (newlen != len)
+            size_t olddim = dim;
+            size_t newdim = (newlen + (bitsPerSizeT-1)) / bitsPerSizeT;
+
+            if (newdim != olddim)
             {
-                size_t olddim = dim();
-                size_t newdim = (newlen + (bitsPerSizeT-1)) / bitsPerSizeT;
-
-                if (newdim != olddim)
-                {
-                    // Create a fake array so we can use D's realloc machinery
-                    auto b = ptr[0 .. olddim];
-                    b.length = newdim;                // realloc
-                    ptr = b.ptr;
-                    if (newdim & (bitsPerSizeT-1))
-                    {   // Set any pad bits to 0
-                        ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
-                    }
+                // Create a fake array so we can use D's realloc machinery
+                auto b = ptr[0 .. olddim];
+                b.length = newdim;                // realloc
+                ptr = b.ptr;
+                if (newdim & (bitsPerSizeT-1))
+                {   // Set any pad bits to 0
+                    ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
                 }
-
-                len = newlen;
             }
+
+            len = newlen;
         }
     }
 
@@ -392,7 +441,7 @@ else
     /**********************************************
      * Support for array.dup property for BitArray.
      */
-    BitArray dup()
+    @property BitArray dup()
     {
         BitArray ba;
 
@@ -428,7 +477,8 @@ else
         int result;
 
         for (size_t i = 0; i < len; i++)
-        {   bool b = opIndex(i);
+        {
+            bool b = opIndex(i);
             result = dg(b);
             this[i] = b;
             if (result)
@@ -443,7 +493,8 @@ else
         int result;
 
         for (size_t i = 0; i < len; i++)
-        {   bool b = opIndex(i);
+        {
+            bool b = opIndex(i);
             result = dg(i, b);
             this[i] = b;
             if (result)
@@ -464,7 +515,8 @@ else
         foreach (b;a)
         {
             switch (i)
-            {        case 0: assert(b == true); break;
+            {
+                case 0: assert(b == true); break;
                 case 1: assert(b == false); break;
                 case 2: assert(b == true); break;
                 default: assert(0);
@@ -475,7 +527,8 @@ else
         foreach (j,b;a)
         {
             switch (j)
-            {        case 0: assert(b == true); break;
+            {
+                case 0: assert(b == true); break;
                 case 1: assert(b == false); break;
                 case 2: assert(b == true); break;
                 default: assert(0);
@@ -488,29 +541,29 @@ else
      * Support for array.reverse property for BitArray.
      */
 
-    BitArray reverse()
-        out (result)
+    @property BitArray reverse()
+    out (result)
+    {
+        assert(result == this);
+    }
+    body
+    {
+        if (len >= 2)
         {
-            assert(result == this);
-        }
-        body
-        {
-            if (len >= 2)
-            {
-                bool t;
-                size_t lo, hi;
+            bool t;
+            size_t lo, hi;
 
-                lo = 0;
-                hi = len - 1;
-                for (; lo < hi; lo++, hi--)
-                {
-                    t = this[lo];
-                    this[lo] = this[hi];
-                    this[hi] = t;
-                }
+            lo = 0;
+            hi = len - 1;
+            for (; lo < hi; lo++, hi--)
+            {
+                t = this[lo];
+                this[lo] = this[hi];
+                this[hi] = t;
             }
-            return this;
         }
+        return this;
+    }
 
     unittest
     {
@@ -533,50 +586,50 @@ else
      * Support for array.sort property for BitArray.
      */
 
-    BitArray sort()
-        out (result)
+    @property BitArray sort()
+    out (result)
+    {
+        assert(result == this);
+    }
+    body
+    {
+        if (len >= 2)
         {
-            assert(result == this);
-        }
-        body
-        {
-            if (len >= 2)
-            {
-                size_t lo, hi;
+            size_t lo, hi;
 
-                lo = 0;
-                hi = len - 1;
+            lo = 0;
+            hi = len - 1;
+            while (1)
+            {
                 while (1)
                 {
-                    while (1)
-                    {
-                        if (lo >= hi)
-                            goto Ldone;
-                        if (this[lo] == true)
-                            break;
-                        lo++;
-                    }
-
-                    while (1)
-                    {
-                        if (lo >= hi)
-                            goto Ldone;
-                        if (this[hi] == false)
-                            break;
-                        hi--;
-                    }
-
-                    this[lo] = false;
-                    this[hi] = true;
-
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (this[lo] == true)
+                        break;
                     lo++;
+                }
+
+                while (1)
+                {
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (this[hi] == false)
+                        break;
                     hi--;
                 }
-            Ldone:
-                ;
+
+                this[lo] = false;
+                this[hi] = true;
+
+                lo++;
+                hi--;
             }
-            return this;
+        Ldone:
+            ;
         }
+        return this;
+    }
 
     unittest
     {
@@ -597,7 +650,8 @@ else
      */
 
     const bool opEquals(const ref BitArray a2)
-    {   int i;
+    {
+        int i;
 
         if (this.length != a2.length)
             return 0;                // not equal
@@ -660,7 +714,8 @@ else
                 break;                // not equal
         }
         for (uint j = i * 8; j < len; j++)
-        {   ubyte mask = cast(ubyte)(1 << j);
+        {
+            ubyte mask = cast(ubyte)(1 << j);
             int c;
 
             c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
@@ -779,7 +834,7 @@ else
      */
     BitArray opCom()
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -818,7 +873,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -858,7 +913,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -898,7 +953,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -940,7 +995,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         BitArray result;
 
@@ -980,7 +1035,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= e2.ptr[i];
@@ -1016,7 +1071,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] |= e2.ptr[i];
@@ -1051,7 +1106,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] ^= e2.ptr[i];
@@ -1088,7 +1143,7 @@ else
     }
     body
     {
-        auto dim = this.dim();
+        auto dim = this.dim;
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= ~e2.ptr[i];
