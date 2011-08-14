@@ -534,16 +534,6 @@ C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow (because of stripLeft())
 {
     version (Windows)
     {
-        if (__ctfe)
-        {
-            import std.ascii;
-            while (path.length && isWhite(path[0])) path = path[1 .. $];
-        }
-        else
-        {
-            path = stripLeft(path);
-        }
-
         if (hasDrive(path))
             return path[0 .. 2];
         else if (isUNC(path))
