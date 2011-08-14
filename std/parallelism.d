@@ -3685,24 +3685,23 @@ unittest {
 
     {
         auto file = File("tempDelMe.txt", "wb");
+        scope(exit) {
+            file.close();
+            import std.file;
+            remove("tempDelMe.txt");
+        }
+        
         auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
         foreach(row; written) {
             file.writeln(join(to!(string[])(row), "\t"));
-        }
-
-        file.close();
-        scope(exit) {
-            import std.file;
-            remove("tempDelMe.txt");
         }
 
         file = File("tempDelMe.txt");
 
         void next(ref char[] buf) {
             file.readln(buf);
-            if(std.algorithm.endsWith(buf, '\n')) {
-                buf.length -= 1;
-            }
+            import std.string;
+            buf = chomp(buf);
         }
 
         double[][] read;
