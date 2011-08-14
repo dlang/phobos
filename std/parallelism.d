@@ -3174,17 +3174,6 @@ if(!randLen!Range) {
 
     static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
     is(typeof(range.doBufSwap()))) {
-<<<<<<< HEAD
-        // Make sure we don't have the buffer recycling overload of
-        // asyncBuf.
-        static if(is(typeof(range.range)) &&
-        isRoundRobin!(typeof(range.range))) {
-            static assert(0, "Cannot execute a parallel foreach loop on " ~
-                "the buffer recycling overload of asyncBuf.");
-        }
-
-=======
->>>>>>> /bad-path/
         enum bool bufferTrick = true;
     } else {
         enum bool bufferTrick = false;
