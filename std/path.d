@@ -198,8 +198,40 @@ private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
 
 
 
+/** This $(D enum) is used as a template argument to functions which
+    compare file names, and determines whether the comparison is
+    case sensitive or not.
+*/
+enum CaseSensitive : bool
+{
+    /// File names are case insensitive
+    no = false,
+
+    /// File names are case sensitive
+    yes = true,
+
+    /** The default (or most common) setting for the current platform.
+        That is, $(D no) on Windows and Mac OS X, and $(D yes) on all
+        POSIX systems except OS X (Linux, *BSD, etc.).
+    */
+    osDefault = osDefaultCaseSensitivity
+}
+version (Windows)    private enum osDefaultCaseSensitivity = false;
+else version (OSX)   private enum osDefaultCaseSensitivity = false;
+else version (Posix) private enum osDefaultCaseSensitivity = true;
+else static assert (0);
+
+
+
+
 /** Returns the name of a file, without any leading directory
     and with an optional suffix chopped off.
+
+    If $(D suffix) is specified, it will be compared to $(D path)
+    using $(D filenameCmp!cs),
+    where $(D cs) is an optional template parameter determining whether
+    the comparison is case sensitive or not.  See the
+    $(LREF filenameCmp) documentation for details.
 
     Examples:
     ---
@@ -252,13 +284,18 @@ C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
 }
 
 /// ditto
-C[] baseName(C, C1)(C[] path, C1[] suffix)  //TODO: @safe pure nothrow (because of chomp() and the other baseName())
+C[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
+    (C[] path, C1[] suffix)
+    //TODO: @safe pure nothrow (because of the other baseName())
     if (isSomeChar!C && isSomeChar!C1)
 {
-    auto p1 = baseName(path);
-    auto p2 = std.string.chomp(p1, suffix);
-    if (p2.empty) return p1;
-    else return p2;
+    auto p = baseName(path);
+    if (p.length > suffix.length
+        && filenameCmp!cs(p[$-suffix.length .. $], suffix) == 0)
+    {
+        return p[0 .. $-suffix.length];
+    }
+    else return p;
 }
 
 
@@ -277,6 +314,9 @@ unittest
     assert (baseName("/"w.dup) == "/");
     assert (baseName("//"d.dup) == "/");
     assert (baseName("///") == "/");
+
+    assert (baseName!(CaseSensitive.yes)("file.ext", ".EXT") == "file.ext");
+    assert (baseName!(CaseSensitive.no)("file.ext", ".EXT") == "file");
 
     version (Windows)
     {
@@ -1763,6 +1803,12 @@ unittest
             and return.)
     )
 
+    In the second step, path components are compared using $(D filenameCmp!cs),
+    where $(D cs) is an optional template parameter determining whether
+    the comparison is case sensitive or not.  See the
+    $(LREF filenameCmp) documentation for details.
+
+
     Examples:
     ---
     assert (relativePath("foo") == "foo");
@@ -1789,7 +1835,8 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string relativePath(string path, string base = getcwd())
+string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
+    (string path, string base = getcwd())
     //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
     if (!isAbsolute(path)) return path;
@@ -1801,13 +1848,13 @@ string relativePath(string path, string base = getcwd())
 
     auto basePS = pathSplitter(base);
     auto pathPS = pathSplitter(path);
-    if (filenameCmp(basePS.front, pathPS.front) != 0) return path;
+    if (filenameCmp!cs(basePS.front, pathPS.front) != 0) return path;
 
     basePS.popFront();
     pathPS.popFront();
 
     while (!basePS.empty && !pathPS.empty
-        && filenameCmp(basePS.front, pathPS.front) == 0)
+        && filenameCmp!cs(basePS.front, pathPS.front) == 0)
     {
         basePS.popFront();
         pathPS.popFront();
@@ -1869,32 +1916,6 @@ unittest
     }
     else static assert (0);
 }
-
-
-
-
-/** This $(D enum) is used as a template argument to functions which
-    compare file names, and determines whether the comparison is
-    case sensitive or not.
-*/
-enum CaseSensitive : bool
-{
-    /// File names are case insensitive
-    no = false,
-
-    /// File names are case sensitive
-    yes = true,
-
-    /** The default (or most common) setting for the current platform.
-        That is, $(D no) on Windows and Mac OS X, and $(D yes) on all
-        POSIX systems except OS X (Linux, *BSD, etc.).
-    */
-    osDefault = osDefaultCaseSensitivity
-}
-version (Windows)    private enum osDefaultCaseSensitivity = false;
-else version (OSX)   private enum osDefaultCaseSensitivity = false;
-else version (Posix) private enum osDefaultCaseSensitivity = true;
-else static assert (0);
 
 
 
@@ -2004,15 +2025,8 @@ unittest
     }
     ---
 */
-int filenameCmp(C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
-    @safe //TODO: pure nothrow (because of the other filenameCmp)
-    if (isSomeChar!C1 && isSomeChar!C2)
-{
-    return filenameCmp!(CaseSensitive.osDefault, C1, C2)(filename1, filename2);
-}
-
-/// ditto
-int filenameCmp(CaseSensitive cs, C1, C2)(const(C1)[] filename1, const(C2)[] filename2)
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
+    (const(C1)[] filename1, const(C2)[] filename2)
     @safe //TODO: pure nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
 {
@@ -2116,15 +2130,8 @@ unittest
     }
     -----
  */
-bool globMatch(C)(const(C)[] path, const(C)[] pattern)
-    @safe nothrow //TODO: pure (because of balancedParens())
-    if (isSomeChar!C)
-{
-    return globMatch!(CaseSensitive.osDefault, C)(path, pattern);
-}
-
-/// ditto
-bool globMatch(CaseSensitive cs, C)(const(C)[] path, const(C)[] pattern)
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
+    (const(C)[] path, const(C)[] pattern)
     @safe nothrow //TODO: pure (because of balancedParens())
     if (isSomeChar!C)
 in
