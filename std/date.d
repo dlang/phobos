@@ -28,6 +28,7 @@ module std.date;
 import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
 
+deprecated:
 pragma(msg, "Warning: As of Phobos 2.052, std.date and std.dateparse have been " ~
             "scheduled for deprecation in August 2011. Please use std.datetime instead.");
 

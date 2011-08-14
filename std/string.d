@@ -1364,7 +1364,7 @@ unittest
  *
  * Repeat $(D s) for $(D n) times.
  */
-S repeat(S)(S s, size_t n)
+deprecated S repeat(S)(S s, size_t n)
 {
     pragma(msg, softDeprec!("2.052", "August 2011", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
@@ -1856,7 +1856,7 @@ S zfill(S)(S s, int width) if (isSomeString!S)
  *
  * Insert sub[] into s[] at location index.
  */
-S insert(S)(S s, size_t index, S sub)
+deprecated S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);

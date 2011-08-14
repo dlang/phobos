@@ -19,6 +19,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.gregorian;
 
+deprecated:
 pragma(msg, "Warning: As of Phobos 2.052, std.gregorian has been scheduled for " ~
             "deprecation in August 2011. Please use std.datetime instead.");
 

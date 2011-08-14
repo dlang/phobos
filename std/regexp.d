@@ -124,6 +124,7 @@
 
 module std.regexp;
 
+deprecated:
 pragma(msg, "Warning: As of Phobos 2.054, std.regexp has been scheduled for " ~
             "deprecation in August 2011. Please use std.regex instead.");
 
