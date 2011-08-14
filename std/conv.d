@@ -272,11 +272,13 @@ unittest
         {
             // positive overflow
             Uint un = Uint.max;
-            assertThrown!ConvOverflowException(to!Sint(un));
+            assertThrown!ConvOverflowException(to!Sint(un), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
 
             // negative overflow
             Sint sn = -1;
-            assertThrown!ConvOverflowException(to!Uint(sn));
+            assertThrown!ConvOverflowException(to!Uint(sn), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
         }
     }
 
