@@ -22,7 +22,7 @@ module std.ctype;
 import std.ascii;
 
 
-pragma(msg, "Warning: As of Phobos 2.054, std.ctype has been scheduled for " ~
+pragma(msg, "Notice: As of Phobos 2.054, std.ctype has been scheduled for " ~
             "deprecation in January 2012. Please use std.ascii instead.");
 
 
