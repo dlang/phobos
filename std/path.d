@@ -86,7 +86,8 @@ else static assert (0, "unsupported platform");
 
 /** Determine whether the given character is a directory separator.
 
-    On Windows, this includes both '\' and '/'.  On POSIX, it's just '/'.
+    On Windows, this includes both $(D '\') and $(D '/').
+    On POSIX, it's just $(D '/').
 */
 bool isDirSeparator(dchar c)  @safe pure nothrow
 {
