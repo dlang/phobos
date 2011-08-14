@@ -2484,6 +2484,188 @@ unittest
     assert(s.empty);
 }
 
+
+/++
+    Returns a range which lazily iterates over the given range until $(D pred)
+    is $(D false) for $(D r.front) or $(D r) is empty;
+
+    See_Also:
+        $(XREF algorithm, until)
+
+    Examples:
+--------------------
+assert(equal(takeWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [0, 2, 1]));
+assert(equal(takeWhile!(std.uni.isAlpha)("hello world"), "hello"));
+assert(equal(takeWhile!(not!(std.ascii.isDigit))("hello world"), "hello world"));
+assert(takeWhile!(std.uni.isWhite)("hello world").empty);
+--------------------
+  +/
+auto takeWhile(alias pred, R)(R range)
+    if(isInputRange!R &&
+       is(typeof(unaryFun!pred(range.front))))
+{
+    struct Result
+    {
+        @property bool empty()
+        {
+            return _done;
+        }
+
+        @property auto ref front()
+        {
+            assert(!_done);
+            return _input.front;
+        }
+
+        void popFront()
+        {
+            _input.popFront();
+
+            if(_input.empty || !unaryFun!pred(_input.front))
+                _done = true;
+        }
+
+        static if(isForwardRange!R)
+        {
+            @property auto save()
+            {
+                return Result(_input);
+            }
+        }
+
+        this(R input)
+        {
+            _input = input;
+            _done = _input.empty || !unaryFun!pred(_input.front);
+        }
+
+        bool _done;
+        R    _input;
+    }
+
+    return Result(range);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(equal(takeWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [0, 2, 1]));
+    assert(equal(takeWhile!(std.uni.isAlpha)("hello world"), "hello"));
+    assert(equal(takeWhile!(not!(std.ascii.isDigit))("hello world"), "hello world"));
+    assert(takeWhile!(std.uni.isWhite)("hello world").empty);
+}
+
+unittest
+{
+    assert(takeWhile!(std.uni.isWhite)("").empty);
+    assert(equal(takeWhile!"a < 3"(filter!"true"([0, 2, 1, 5, 0, 3])), [0, 2, 1]));
+
+    dchar max = 'q';
+    bool del(dchar c)
+    {
+        return c < max;
+    }
+    assert(equal(takeWhile!del("hello world"), "hello "));
+
+    auto r =  takeWhile!(std.uni.isAlpha)("hello world");
+    static assert(isInputRange!(typeof(r)));
+    static assert(isForwardRange!(typeof(r)));
+    static assert(!isBidirectionalRange!(typeof(r)));
+    static assert(!isRandomAccessRange!(typeof(r)));
+    static assert(!isOutputRange!(typeof(r), ElementType!(typeof(r))));
+}
+
+
+/++
+    Pops $(D n) elements off of the given range and returns it. If the length of
+    the given range is less than $(D n) than an empty range is returned.
+
+    The main reason to use $(D drop) instead of $(LREF popFrontN) is so that you
+    can pop the elements off and pass the resulting range in one operation,
+    allowing for a more functional style of programming. However, this means
+    that you don't know exactly how many elements were actually popped in the
+    case where the range had fewer than $(D n) elements (unless you got its
+    length first, which isn't an effcient thing to do for all ranges). Also,
+    because it doesn't take the range by reference (unlike $(LREF popFrontN)),
+    you can pass the results of other functions to it directly. But that also
+    means that it does not affect the original range as long as it's a value
+    type.
+
+    Examples:
+--------------------
+assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+assert(drop("hello world", 6) == "world");
+assert(drop("hello world", 50).empty);
+assert(equal(drop(take("hello world", 6), 3), "lo "));
+--------------------
+  +/
+R drop(R)(R range, size_t n)
+    if(isInputRange!R)
+{
+    popFrontN(range, n);
+    return range;
+}
+
+//Verify Examples
+unittest
+{
+    assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+    assert(drop("hello world", 6) == "world");
+    assert(drop("hello world", 50).empty);
+    assert(equal(drop(take("hello world", 6), 3), "lo "));
+}
+
+unittest
+{
+    assert(drop("", 5).empty);
+    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
+}
+
+
+/++
+    Pops elements off of the given range until $(D pred) fails. The resulting
+    range is returned.
+
+    Examples:
+--------------------
+assert(dropWhile!"a < 3"([0, 2, 1, 5, 0, 3]), [5, 0, 3]));
+assert(dropWhile!(std.uni.isAlpha)("hello world"), " world"));
+assert(dropWhile!(not!(std.ascii.isDigit))("hello world").empty);
+assert(dropWhile!(std.uni.isWhite)("hello world") == "hello world");
+--------------------
+  +/
+R dropWhile(alias pred, R)(R range)
+    if(isInputRange!R &&
+       is(typeof(unaryFun!pred(range.front))))
+{
+    while(!range.empty && unaryFun!pred(range.front))
+        range.popFront();
+
+    return range;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(dropWhile!"a < 3"([0, 2, 1, 5, 0, 3]) == [5, 0, 3]);
+    assert(dropWhile!(std.uni.isAlpha)("hello world") == " world");
+    assert(dropWhile!(not!(std.ascii.isDigit))("hello world").empty);
+    assert(dropWhile!(std.uni.isWhite)("hello world") == "hello world");
+}
+
+unittest
+{
+    assert(dropWhile!(std.uni.isWhite)("").empty);
+
+    dchar max = 'q';
+    bool del(dchar c)
+    {
+        return c < max;
+    }
+    assert(equal(dropWhile!del("hello world"), "world"));
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
