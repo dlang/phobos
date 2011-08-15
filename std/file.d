@@ -3832,7 +3832,7 @@ version(Windows)
 
 template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.file.%s has been scheduled " ~
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been scheduled " ~
                               "for deprecation in %s. Please use std.file.%s instead.",
                               vers, oldFunc, date, newFunc);
 }

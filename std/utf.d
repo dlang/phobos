@@ -1286,7 +1286,7 @@ version(StdDdoc) const(wchar)* toUTF16z(in char[] s);
 else const(wchar)* toUTF16z(C)(in C[] s)
     if(is(Unqual!C == char))
 {
-    pragma(msg, softDeprec!("2.055", "Februaray 2012", "toUTF16z", "toUTFz"));
+    pragma(msg, softDeprec!("2.055", "February 2012", "toUTF16z", "toUTFz"));
 
     wchar[] r;
     size_t slen = s.length;
@@ -1706,9 +1706,10 @@ unittest
 
 
 
+import std.metastrings;
 template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.utf.%s has been scheduled " ~
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.utf.%s has been scheduled " ~
                               "for deprecation in %s. Please use std.utf.%s instead.",
                               vers, oldFunc, date, newFunc);
 }
