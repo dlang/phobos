@@ -29597,29 +29597,17 @@ private:
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
-        if(is(T == int))
+        if((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
     {
+        import std.bitmanip;
         T[1] buff;
 
         _enforceValidTZFile(!tzFile.eof());
         tzFile.rawRead(buff);
 
-        return cast(int)ntohl(buff[0]);
-    }
-
-
-    /+
-        Reads a long from a TZ file.
-      +/
-    static T readVal(T)(ref File tzFile)
-        if(is(T == long))
-    {
-        T[1] buff;
-
-        _enforceValidTZFile(!tzFile.eof());
-        tzFile.rawRead(buff);
-
-        return cast(long)ntoh64(buff[0]);
+        // @@@BUG@@@ 4414 forces us to save the result rather than use it directly.
+        auto bigEndian = cast(ubyte[T.sizeof])buff;
+        return bigEndianToNative!T(bigEndian);
     }
 
     /+
@@ -29646,55 +29634,6 @@ private:
         return TempTTInfo(readVal!int(tzFile),
                           readVal!bool(tzFile),
                           readVal!ubyte(tzFile));
-    }
-
-
-    /+
-        Reads a value from a TZ file.
-      +/
-    static T readVal(T)(ref File tzFile)
-        if(!is(T == int) &&
-           !is(T == long) &&
-           !is(T == char[]) &&
-           !is(T == TempTTInfo))
-    {
-        T[1] buff;
-
-        _enforceValidTZFile(!tzFile.eof());
-        tzFile.rawRead(buff);
-
-        return buff[0];
-    }
-
-    /+
-        64 bit version of $(D ntoh). Unfortunately, for some reason, most
-        systems provide only 16 and 32 bit versions of this, so we need to
-        provide it ourselves. We really should declare a version of this in core
-        somewhere.
-      +/
-    static ulong ntoh64(ulong val)
-    {
-        static if(endian == Endian.LittleEndian)
-            return endianSwap64(val);
-        else
-            return val;
-    }
-
-
-    /+
-        Swaps the endianness of a 64-bit value. We really should declare a
-        version of this in core somewhere.
-      +/
-    static ulong endianSwap64(ulong val)
-    {
-        return ((val & 0xff00000000000000UL) >> 56) |
-               ((val & 0x00ff000000000000UL) >> 40) |
-               ((val & 0x0000ff0000000000UL) >> 24) |
-               ((val & 0x000000ff00000000UL) >> 8) |
-               ((val & 0x00000000ff000000UL) << 8) |
-               ((val & 0x0000000000ff0000UL) << 24) |
-               ((val & 0x000000000000ff00UL) << 40) |
-               ((val & 0x00000000000000ffUL) << 56);
     }
 
 
