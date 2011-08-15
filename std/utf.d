@@ -1225,8 +1225,6 @@ body
 
 /****************
  * Encodes string $(D_PARAM s) into UTF-16 and returns the encoded string.
- * toUTF16z() is suitable for calling the 'W' functions in the Win32 API that take
- * an LPWSTR or LPCWSTR argument.
  */
 wstring toUTF16(in char[] s)
 {
@@ -1254,33 +1252,6 @@ wstring toUTF16(in char[] s)
 }
 
 /// ditto
-const(wchar)* toUTF16z(in char[] s)
-{
-    wchar[] r;
-    size_t slen = s.length;
-
-    r.length = slen + 1;
-    r.length = 0;
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c <= 0x7F)
-        {
-            i++;
-            r ~= cast(wchar)c;
-        }
-        else
-        {
-            c = decode(s, i);
-            encode(r, c);
-        }
-    }
-    r ~= "\000";
-
-    return r.ptr;
-}
-
-/// ditto
 wstring toUTF16(in wchar[] s)
 {
     validate(s);
@@ -1301,6 +1272,48 @@ pure wstring toUTF16(in dchar[] s)
     }
 
     return r.assumeUnique();  // ok because r is unique
+}
+
+/++
+    Converts the string to UTF-16 and zero-terminates it. The result is suitable
+    for calling the $(D 'W') functions in the Win32 API that take an $(D LPWSTR)
+    or an $(D LPCWSTR) argument.
+
+    See_Also:
+        $(LREF toUTFz)
+  +/
+const(wchar)* toUTF16z(C)(const(C)[] str)
+    if(isSomeChar!C)
+{
+    return toUTFz!(const(wchar)*)(str);
+}
+
+unittest
+{
+    import std.metastrings;
+    import std.typetuple;
+
+    size_t zeroLen(C)(const(C)* ptr)
+    {
+        size_t len = 0;
+
+        while(*ptr != '\0')
+        {
+            ++ptr;
+            ++len;
+        }
+
+        return len;
+    }
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        auto s = to!S("hello\U00010143\u0100world\U00010143");
+        auto p = toUTF16z(s);
+
+        immutable len = zeroLen(p);
+        assert(cmp(s, p[0 .. len]) == 0, Format!("Unit test failed: %s", S.stringof));
+    }
 }
 
 
