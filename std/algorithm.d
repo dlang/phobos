@@ -3655,51 +3655,6 @@ unittest
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 }
 
-/++
-    Returns the number of elements which must be popped from $(D haystack)
-    before $(D pred(hastack.front)) is $(D true.).
-
-    Examples:
---------------------
-assert(countUntil!(std.uni.isWhite)("hello world") == 5);
-assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
-assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
---------------------
-  +/
-sizediff_t countUntil(alias pred, R)(R haystack)
-if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
-{
-    static if (isNarrowString!R)
-    {
-        // Narrow strings are handled a bit differently
-        auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront())
-        {
-            if (unaryFun!pred(haystack.front))
-            {
-                return length - haystack.length;
-            }
-        }
-    }
-    else
-    {
-        typeof(return) result;
-        for (; !haystack.empty; ++result, haystack.popFront())
-        {
-            if (unaryFun!pred(haystack.front)) return result;
-        }
-    }
-    return -1;
-}
-
-//Verify Examples.
-unittest
-{
-    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
-    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
-    assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
-}
-
 /**
  * Same as $(D countUntil). This symbol has been scheduled for
  * deprecation because it is easily confused with the homonym function
