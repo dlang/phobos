@@ -1224,9 +1224,7 @@ body
 }
 
 /****************
- * Encodes string $(D_PARAM s) into UTF-16 and returns the encoded string.
- * toUTF16z() is suitable for calling the 'W' functions in the Win32 API that take
- * an LPWSTR or LPCWSTR argument.
+ * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
 wstring toUTF16(in char[] s)
 {
@@ -1254,8 +1252,42 @@ wstring toUTF16(in char[] s)
 }
 
 /// ditto
-const(wchar)* toUTF16z(in char[] s)
+wstring toUTF16(in wchar[] s)
 {
+    validate(s);
+    return s.idup;
+}
+
+/// ditto
+pure wstring toUTF16(in dchar[] s)
+{
+    wchar[] r;
+    size_t slen = s.length;
+
+    r.length = slen;
+    r.length = 0;
+    for (size_t i = 0; i < slen; i++)
+    {
+        encode(r, s[i]);
+    }
+
+    return r.assumeUnique();  // ok because r is unique
+}
+
+/++
+    $(RED Scheduled for deprecation in February 2012.
+          Please use $(LREF toUTFz) instead.)
+
+    Encodes string $(D s) into UTF-16 and returns the encoded string.
+    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
+    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
+  +/
+version(StdDdoc) const(wchar)* toUTF16z(in char[] s);
+else const(wchar)* toUTF16z(C)(in C[] s)
+    if(is(Unqual!C == char))
+{
+    pragma(msg, softDeprec!("2.055", "Februaray 2012", "toUTF16z", "toUTFz"));
+
     wchar[] r;
     size_t slen = s.length;
 
@@ -1278,29 +1310,6 @@ const(wchar)* toUTF16z(in char[] s)
     r ~= "\000";
 
     return r.ptr;
-}
-
-/// ditto
-wstring toUTF16(in wchar[] s)
-{
-    validate(s);
-    return s.idup;
-}
-
-/// ditto
-pure wstring toUTF16(in dchar[] s)
-{
-    wchar[] r;
-    size_t slen = s.length;
-
-    r.length = slen;
-    r.length = 0;
-    for (size_t i = 0; i < slen; i++)
-    {
-        encode(r, s[i]);
-    }
-
-    return r.assumeUnique();  // ok because r is unique
 }
 
 
@@ -1695,3 +1704,11 @@ unittest
     assert(count("\u20AC100") == 4);
 }
 
+
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Warning: As of Phobos %s, std.utf.%s has been scheduled " ~
+                              "for deprecation in %s. Please use std.utf.%s instead.",
+                              vers, oldFunc, date, newFunc);
+}
