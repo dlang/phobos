@@ -44,6 +44,9 @@ version(unittest)
     import std.string;
 }
 
+//Remove when softDeprec and hardDeprec have been removed.
+import std.metastrings;
+
 
 /**********************************
  * Exception class that is thrown upon any errors.
@@ -1705,8 +1708,6 @@ unittest
 }
 
 
-
-import std.metastrings;
 template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
     enum softDeprec = Format!("Notice: As of Phobos %s, std.utf.%s has been scheduled " ~

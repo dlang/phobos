@@ -846,7 +846,7 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(2);
+    enum leeway = dur!"seconds"(3);
 
     {
         auto diffc = creationTime1 - currTime;
@@ -854,8 +854,8 @@ version(Windows) unittest
         auto diffm = modificationTime1 - currTime;
         scope(failure)
         {
-            writefln("[%s] [%s] [%s] [%s] [%s] [%s]",
-                     accessTime1, modificationTime1, currTime, diffc, diffa, diffm);
+            writefln("[%s] [%s] [%s] [%s] [%s] [%s] [%s]",
+                     creationTime1, accessTime1, modificationTime1, currTime, diffc, diffa, diffm);
         }
 
         assert(abs(diffc) <= leeway);
@@ -887,7 +887,7 @@ version(Windows) unittest
         assert(abs(diffm) <= leeway);
     }
 
-    assert(creationTime1 <= creationTime2);
+    assert(creationTime1 == creationTime2);
     assert(accessTime1 <= accessTime2);
     assert(modificationTime1 <= modificationTime2);
 }
