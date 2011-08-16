@@ -2673,7 +2673,7 @@ private void destroy(T)(T obj) if (is(T == class))
     }
     static if (!is(T == Object) && is(T Base == super))
     {
-        Base b = obj;
+        Base[0] b = obj;
         destroy(b);
     }
 }
@@ -2741,6 +2741,29 @@ unittest
 
     a1.a = a1;
     assert(a1.check());
+}
+
+unittest
+{
+    static class A
+    {
+        static int sdtor;
+
+        this() { ++sdtor; assert(sdtor == 1); }
+        ~this() { assert(sdtor == 1); --sdtor; }
+    }
+
+    interface Bob {}
+
+    static class ABob : A, Bob
+    {
+        this() { ++sdtor; assert(sdtor == 2); }
+        ~this() { assert(sdtor == 2); --sdtor; }
+    }
+
+    A.sdtor = 0;
+    scope(exit) assert(A.sdtor == 0);
+    auto abob = scoped!ABob();
 }
 
 /**
