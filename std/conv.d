@@ -272,11 +272,13 @@ unittest
         {
             // positive overflow
             Uint un = Uint.max;
-            assertThrown!ConvOverflowException(to!Sint(un));
+            assertThrown!ConvOverflowException(to!Sint(un), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
 
             // negative overflow
             Sint sn = -1;
-            assertThrown!ConvOverflowException(to!Uint(sn));
+            assertThrown!ConvOverflowException(to!Uint(sn), text(
+                Sint.stringof, ' ', Uint.stringof, ' ', un));
         }
     }
 
@@ -371,7 +373,7 @@ unittest
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
         && is(typeof(S.init.to!(T)()) : T))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.conv.toImpl using method " ~
+    pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
                 "\"to\" has been scheduled for deprecation in January 2012. " ~
                 "Please use method opCast instead.");
 

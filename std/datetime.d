@@ -29597,29 +29597,17 @@ private:
         Reads an int from a TZ file.
       +/
     static T readVal(T)(ref File tzFile)
-        if(is(T == int))
+        if((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
     {
+        import std.bitmanip;
         T[1] buff;
 
         _enforceValidTZFile(!tzFile.eof());
         tzFile.rawRead(buff);
 
-        return cast(int)ntohl(buff[0]);
-    }
-
-
-    /+
-        Reads a long from a TZ file.
-      +/
-    static T readVal(T)(ref File tzFile)
-        if(is(T == long))
-    {
-        T[1] buff;
-
-        _enforceValidTZFile(!tzFile.eof());
-        tzFile.rawRead(buff);
-
-        return cast(long)ntoh64(buff[0]);
+        // @@@BUG@@@ 4414 forces us to save the result rather than use it directly.
+        auto bigEndian = cast(ubyte[T.sizeof])buff;
+        return bigEndianToNative!T(bigEndian);
     }
 
     /+
@@ -29646,55 +29634,6 @@ private:
         return TempTTInfo(readVal!int(tzFile),
                           readVal!bool(tzFile),
                           readVal!ubyte(tzFile));
-    }
-
-
-    /+
-        Reads a value from a TZ file.
-      +/
-    static T readVal(T)(ref File tzFile)
-        if(!is(T == int) &&
-           !is(T == long) &&
-           !is(T == char[]) &&
-           !is(T == TempTTInfo))
-    {
-        T[1] buff;
-
-        _enforceValidTZFile(!tzFile.eof());
-        tzFile.rawRead(buff);
-
-        return buff[0];
-    }
-
-    /+
-        64 bit version of $(D ntoh). Unfortunately, for some reason, most
-        systems provide only 16 and 32 bit versions of this, so we need to
-        provide it ourselves. We really should declare a version of this in core
-        somewhere.
-      +/
-    static ulong ntoh64(ulong val)
-    {
-        static if(endian == Endian.LittleEndian)
-            return endianSwap64(val);
-        else
-            return val;
-    }
-
-
-    /+
-        Swaps the endianness of a 64-bit value. We really should declare a
-        version of this in core somewhere.
-      +/
-    static ulong endianSwap64(ulong val)
-    {
-        return ((val & 0xff00000000000000UL) >> 56) |
-               ((val & 0x00ff000000000000UL) >> 40) |
-               ((val & 0x0000ff0000000000UL) >> 24) |
-               ((val & 0x000000ff00000000UL) >> 8) |
-               ((val & 0x00000000ff000000UL) << 8) |
-               ((val & 0x0000000000ff0000UL) << 24) |
-               ((val & 0x000000000000ff00UL) << 40) |
-               ((val & 0x00000000000000ffUL) << 56);
     }
 
 
@@ -29967,7 +29906,7 @@ else version(Windows)
             scope(exit) RegCloseKey(baseKey);
 
             char[1024] keyName;
-            auto nameLen = keyName.length;
+            auto nameLen = to!DWORD(keyName.length);
             int result;
             for(DWORD index = 0;
                 (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
@@ -29980,7 +29919,7 @@ else version(Windows)
                     {
                         scope(exit) RegCloseKey(tzKey);
                         char[1024] strVal;
-                        auto strValLen = strVal.length;
+                        auto strValLen = to!DWORD(strVal.length);
 
                         bool queryStringValue(string name, size_t lineNum = __LINE__)
                         {
@@ -30021,7 +29960,7 @@ else version(Windows)
 
                                     enum tzi = "TZI\0";
                                     REG_TZI_FORMAT binVal;
-                                    auto binValLen = REG_TZI_FORMAT.sizeof;
+                                    auto binValLen = to!DWORD(REG_TZI_FORMAT.sizeof);
 
                                     if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
                                     {
@@ -30067,7 +30006,7 @@ else version(Windows)
             scope(exit) RegCloseKey(baseKey);
 
             char[1024] keyName;
-            auto nameLen = keyName.length;
+            auto nameLen = to!DWORD(keyName.length);
             int result;
             for(DWORD index = 0;
                 (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
@@ -31113,12 +31052,12 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Scheduled for deprecation in August 2011. This is only here to help
-          transition code which uses std.date to using std.datetime.)
+    $(RED Deprecated. It will be removed in February 2012. This is only here to
+          help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
  +/
-long sysTimeToDTime(in SysTime sysTime)
+deprecated long sysTimeToDTime(in SysTime sysTime)
 {
     return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
 }
@@ -31140,12 +31079,12 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Scheduled for deprecation in August 2011. This is only here to help
-          transition code which uses std.date to using std.datetime.)
+    $(RED Deprecated. It will be removed in February 2012. This is only here to
+          help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).
  +/
-SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
+deprecated SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
 {
     immutable hnsecs = convert!("msecs", "hnsecs")(dTime) + 621355968000000000L;
 
@@ -34098,7 +34037,7 @@ template _isPrintable(T...)
 
 template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.datetime.%s has been scheduled " ~
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.datetime.%s has been scheduled " ~
                               "for deprecation in %s. Please use std.datetime.%s instead.",
                               vers, oldFunc, date, newFunc);
 }
