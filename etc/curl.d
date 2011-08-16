@@ -3231,7 +3231,6 @@ private static void _spawnAsyncRequest(Proto,Unit,Terminator = void)() {
     try {
         code = client._perform(false);
     } catch (Exception ex) {
-        writeln("Error is ", ex.msg);
         prioritySend(fromTid, cast(immutable(Exception)) ex);
         fromTid.send(thisTid(), message(true)); // signal done
         return;
