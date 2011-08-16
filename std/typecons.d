@@ -2620,18 +2620,20 @@ unittest
 
 unittest
 {
-    static class A {
-    static int sdtor;
+    static class A
+    {
+        static int sdtor;
 
-    this() { ++sdtor; assert(sdtor == 1); }
-    ~this() { assert(sdtor == 1); --sdtor; }
+        this() { ++sdtor; assert(sdtor == 1); }
+        ~this() { assert(sdtor == 1); --sdtor; }
     }
 
     interface Bob {}
 
-    static class ABob : A, Bob {
-    this() { ++sdtor; assert(sdtor == 2); }
-    ~this() { assert(sdtor == 2); --sdtor; }
+    static class ABob : A, Bob
+    {
+        this() { ++sdtor; assert(sdtor == 2); }
+        ~this() { assert(sdtor == 2); --sdtor; }
     }
 
     A.sdtor = 0;
