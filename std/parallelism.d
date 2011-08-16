@@ -212,9 +212,9 @@ private template noUnsharedAliasing(T) {
 // requirement for executing it via a TaskPool.  (See isSafeReturn).
 private template isSafeTask(F) {
     enum bool isSafeTask =
-        ((functionAttributes!(F) & FunctionAttribute.SAFE) ||
-        (functionAttributes!(F) & FunctionAttribute.TRUSTED)) &&
-        !(functionAttributes!F & FunctionAttribute.REF) &&
+        ((functionAttributes!(F) & FunctionAttribute.safe) ||
+        (functionAttributes!(F) & FunctionAttribute.trusted)) &&
+        !(functionAttributes!F & FunctionAttribute.ref_) &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
         allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
@@ -376,6 +376,22 @@ private template ElementsCompatible(R, A) {
     }
 }
 
+private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2) {
+    enum isRoundRobin = true;
+}
+
+private template isRoundRobin(T) {
+    enum isRoundRobin = false;
+}
+
+unittest{
+    static assert(isRoundRobin!(
+        RoundRobinBuffer!(void delegate(char[]), bool delegate())
+    ));
+
+    static assert(!isRoundRobin!uint);
+}
+
 /**
 $(D Task) represents the fundamental unit of work.  A $(D Task) may be
 executed in parallel with any other $(D Task).  Using this struct directly
@@ -444,7 +460,7 @@ struct Task(alias fun, Args...) {
     static if(__traits(isSame, fun, run)) {
         static if(isFunctionPointer!(_args[0])) {
             private enum bool isPure =
-                functionAttributes!(Args[0]) & FunctionAttribute.PURE;
+                functionAttributes!(Args[0]) & FunctionAttribute.pure_;
         } else {
             // BUG:  Should check this for delegates too, but std.traits
             //       apparently doesn't allow this.  isPure is irrelevant
@@ -1618,7 +1634,7 @@ public:
                     }
 
                     amapImpl.__ctor(pool, workUnitSize, FromType.init, buf1);
-                    fillBuf(buf1);
+                    buf1 = fillBuf(buf1);
                     submitBuf2();
                 }
 
@@ -1707,7 +1723,8 @@ public:
                 } else {
 
                     bool empty() @property {
-                        return buf1 is null;  // popFront() sets this when range is empty
+                        // popFront() sets this when range is empty
+                        return buf1.length == 0;
                     }
                 }
             }
@@ -1727,17 +1744,24 @@ public:
 
     Examples:
     ---
-    auto lines = File("foo.txt").byLine();
-    auto duped = std.algorithm.map!"a.idup"(lines);
+    import std.conv, std.stdio;
 
-    // Fetch more lines in the background while we process the lines already
-    // read into memory into a matrix of doubles.
-    double[][] matrix;
-    auto asyncReader = taskPool.asyncBuf(duped);
+    void main() {
+        // Fetch lines of a file in a background thread while processing
+        // prevously fetched lines, dealing with byLine's buffer recycling by
+        // eagerly duplicating every line.
+        auto lines = File("foo.txt").byLine();
+        auto duped = std.algorithm.map!"a.idup"(lines);
 
-    foreach(line; asyncReader) {
-        auto ls = line.split("\t");
-        matrix ~= to!(double[])(ls);
+        // Fetch more lines in the background while we process the lines already
+        // read into memory into a matrix of doubles.
+        double[][] matrix;
+        auto asyncReader = taskPool.asyncBuf(duped);
+
+        foreach(line; asyncReader) {
+            auto ls = line.split("\t");
+            matrix ~= to!(double[])(ls);
+        }
     }
     ---
 
@@ -1746,7 +1770,7 @@ public:
     Any exceptions thrown while iterating over $(D range) are re-thrown on a
     call to $(D popFront).
     */
-    auto asyncBuf(R)(R range, size_t bufSize = 100) {
+    auto asyncBuf(R)(R range, size_t bufSize = 100) if(isInputRange!R) {
         static final class AsyncBuf {
             // This is a class because the task and the range both need to be on
             // the heap.
@@ -1782,7 +1806,7 @@ public:
                     _length = range.length;
                 }
 
-                fillBuf(buf1);
+                buf1 = fillBuf(buf1);
                 submitBuf2();
             }
 
@@ -1853,11 +1877,83 @@ public:
 
                 ///
                 bool empty() @property {
-                    return buf1 is null;  // popFront() sets this when range is empty
+                    // popFront() sets this when range is empty:
+                    return buf1.length == 0;
                 }
             }
         }
         return new AsyncBuf(range, bufSize, this);
+    }
+
+    /**
+    Given a callable object $(D next) that writes to a user-provided buffer and
+    a second callable object $(D empty) that determines whether more data is
+    available to write via $(D next), returns an input range that
+    asynchronously calls $(D next) with a set of size $(D nBuffers) of buffers
+    and makes the results available in the order they were obtained via the
+    input range interface of the returned object.  Similarly to the
+    input range overload of $(D asyncBuf), the first half of the buffers
+    are made available via the range interface while the second half are
+    filled and vice-versa.
+
+    Params:
+
+    next = A callable object that takes a single argument that must be an array
+           with mutable elements.  When called, $(D next) writes data to
+           the array provided by the caller.
+
+    empty = A callable object that takes no arguments and returns a type
+            implicitly convertible to $(D bool).  This is used to signify
+            that no more data is available to be obtained by calling $(D next).
+
+    initialBufSize = The initial size of each buffer.  If $(D next) takes its
+                     array by reference, it may resize the buffers.
+
+    nBuffers = The number of buffers to cycle through when calling $(D next).
+
+    Examples:
+    ---
+    // Fetch lines of a file in a background thread while processing prevously
+    // fetched lines, without duplicating any lines.
+    auto file = File("foo.txt");
+
+    void next(ref char[] buf) {
+        file.readln(buf);
+    }
+
+    // Fetch more lines in the background while we process the lines already
+    // read into memory into a matrix of doubles.
+    double[][] matrix;
+    auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
+
+    foreach(line; asyncReader) {
+        auto ls = line.split("\t");
+        matrix ~= to!(double[])(ls);
+    }
+    ---
+
+    $(B Exception Handling):
+
+    Any exceptions thrown while iterating over $(D range) are re-thrown on a
+    call to $(D popFront).
+
+    Warning:
+
+    Using the range returned by this function in a parallel foreach loop
+    will not work because buffers may be overwritten while the task that
+    processes them is in queue.  This is checked for at compile time
+    and will result in a static assertion failure.
+    */
+    auto asyncBuf(C1, C2)
+    (C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
+    if(is(typeof(C2.init()) : bool) &&
+       ParameterTypeTuple!(C1).length == 1 &&
+       ParameterTypeTuple!(C2).length == 0 &&
+       isArray!(ParameterTypeTuple!(C1)[0])
+    ) {
+        auto roundRobin = RoundRobinBuffer!(C1, C2)
+            (next, empty, initialBufSize, nBuffers);
+        return asyncBuf(roundRobin, nBuffers / 2);
     }
 
     /**
@@ -2184,10 +2280,10 @@ public:
     // a set of files, one for each thread.  This allows results to be written
     // out without any synchronization.
 
-    import std.stdio, std.conv, std.range, std.numeric, std.parallelism;
+    import std.stdio, std.conv, std.range, std.numeric;
 
     void main() {
-        auto fileHandles = new File[taskPool.size + 1];
+        auto filesHandles = new File[taskPool.size + 1];
         scope(exit) {
             foreach(ref handle; fileHandles) {
                 handle.close();
@@ -2195,7 +2291,7 @@ public:
         }
 
         foreach(i, ref handle; fileHandles) {
-            handle = File("workerResults" ~ to!string(i) ~ ".txt", "wb");
+            handle = File("workerResults" ~ to!string(i) ~ ".txt");
         }
 
         foreach(num; parallel(iota(1_000))) {
@@ -2704,15 +2800,12 @@ Calling the setter after the first call to $(D taskPool) does not changes
 number of worker threads in the instance returned by $(D taskPool).
 */
 @property uint defaultPoolThreads() @trusted {
-    // Kludge around lack of atomic load.
-//    return atomicLoad(_defaultPoolThreads);
-    return atomicOp!"+"(_defaultPoolThreads, 0U);
+    return atomicLoad(_defaultPoolThreads);
 }
 
 /// Ditto
 @property void defaultPoolThreads(uint newVal) @trusted {
-   // atomicStore(_defaultPoolThreads, newVal);
-   cas(cast(shared) &_defaultPoolThreads, _defaultPoolThreads, newVal);
+    atomicStore(_defaultPoolThreads, newVal);
 }
 
 /**
@@ -3174,6 +3267,14 @@ if(!randLen!Range) {
 
     static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
     is(typeof(range.doBufSwap()))) {
+        // Make sure we don't have the buffer recycling overload of
+        // asyncBuf.
+        static if(is(typeof(range.range)) &&
+        isRoundRobin!(typeof(range.range))) {
+            static assert(0, "Cannot execute a parallel foreach loop on " ~
+                "the buffer recycling overload of asyncBuf.");
+        }
+
         enum bool bufferTrick = true;
     } else {
         enum bool bufferTrick = false;
@@ -3320,6 +3421,73 @@ private struct ParallelForeach(R) {
 
     int opApply(scope int delegate(ref size_t, ref E) dg) {
         mixin(parallelApplyMixin);
+    }
+}
+
+/*
+This struct buffers the output of a callable that outputs data into a
+user-supplied buffer into a set of buffers of some fixed size.  It allows these
+buffers to be accessed with an input range interface.  This is used internally
+in the buffer-recycling overload of TaskPool.asyncBuf, which creates an
+instance and forwards it to the input range overload of asyncBuf.
+*/
+private struct RoundRobinBuffer(C1, C2) {
+    // No need for constraints because they're already checked for in asyncBuf.
+
+    alias ParameterTypeTuple!(C1.init)[0] Array;
+    alias typeof(Array.init[0]) T;
+
+    T[][] bufs;
+    size_t index;
+    C1 nextDel;
+    C2 emptyDel;
+    bool _empty;
+    bool primed;
+
+    this(
+        C1 nextDel,
+        C2 emptyDel,
+        size_t initialBufSize,
+        size_t nBuffers
+    ) {
+        this.nextDel = nextDel;
+        this.emptyDel = emptyDel;
+        bufs.length = nBuffers;
+
+        foreach(ref buf; bufs) {
+            buf.length = initialBufSize;
+        }
+    }
+
+    void prime()
+    in {
+        assert(!empty);
+    } body {
+        scope(success) primed = true;
+        nextDel(bufs[index]);
+    }
+
+
+    T[] front() @property
+    in {
+        assert(!empty);
+    } body {
+        if(!primed) prime();
+        return bufs[index];
+    }
+
+    void popFront() {
+        if(empty || emptyDel()) {
+            _empty = true;
+            return;
+        }
+
+        index = (index + 1) % bufs.length;
+        primed = false;
+    }
+
+    bool empty() @property const pure nothrow @safe {
+        return _empty;
     }
 }
 
@@ -3514,6 +3682,40 @@ unittest {
         iota(1_000_002),
         poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
     ));
+
+    {
+        auto file = File("tempDelMe.txt", "wb");
+        scope(exit) {
+            file.close();
+            import std.file;
+            remove("tempDelMe.txt");
+        }
+        
+        auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
+        foreach(row; written) {
+            file.writeln(join(to!(string[])(row), "\t"));
+        }
+
+        file = File("tempDelMe.txt");
+
+        void next(ref char[] buf) {
+            file.readln(buf);
+            import std.string;
+            buf = chomp(buf);
+        }
+
+        double[][] read;
+        auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
+
+        foreach(line; asyncReader) {
+            if(line.length == 0) continue;
+            auto ls = line.split("\t");
+            read ~= to!(double[])(ls);
+        }
+
+        assert(read == written);
+        file.close();
+    }
 
     // Test Map/AsyncBuf chaining.
 
