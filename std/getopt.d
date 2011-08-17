@@ -352,19 +352,23 @@ void getopt(T...)(ref string[] args, T opts) {
  */
 
 enum config {
-    /// Turns case sensitivity on
+    /// Turns case sensitivity on.
     caseSensitive,
-    /// Turns case sensitivity off
+    /// Turns case sensitivity off. Set by default.
     caseInsensitive,
-    /// Turns bundling on
+    /// Turns short options with no space on for all types. Set by default.
+    noSpaceForShortOptions,
+    /// Turns short options with no space on for numeric types only.
+    noSpaceOnlyForShortNumericOptions,
+    /// Turns bundling on.
     bundling,
-    /// Turns bundling off
+    /// Turns bundling off. Set by default.
     noBundling,
-    /// Pass unrecognized arguments through
+    /// Pass unrecognized arguments through.
     passThrough,
-    /// Signal unrecognized arguments as errors
+    /// Signal unrecognized arguments as errors. Set by default.
     noPassThrough,
-    /// Stop at first argument that does not look like an option
+    /// Stop at first argument that does not look like an option.
     stopOnFirstNonOption,
 };
 
@@ -439,7 +443,12 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             continue;
         }
         string val;
-        if (!optMatch(a, option, val, cfg, is(typeof(*receiver) : real)))
+        bool numericOption;
+        static if (!isDelegate!(typeof(receiver)))
+        {
+            numericOption = isNumeric!(typeof(*receiver));
+        }
+        if (!optMatch(a, option, val, cfg, numericOption))
         {
             ++i;
             continue;
@@ -451,6 +460,8 @@ void handleOption(R)(string option, R receiver, ref string[] args,
 
         static if (is(typeof(*receiver) == bool))
         {
+            // enforce that no value was given
+            enforce(val is null);
             *receiver = true;
             break;
         }
@@ -556,9 +567,10 @@ private struct configuration
     mixin(bitfields!(
                 bool, "caseSensitive",  1,
                 bool, "bundling", 1,
+                bool, "noSpaceForShortNumericOptionsOnly", 1,
                 bool, "passThrough", 1,
                 bool, "stopOnFirstNonOption", 1,
-                ubyte, "", 4));
+                ubyte, "", 3));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -570,18 +582,31 @@ private bool optMatch(string arg, string optPattern, ref string value,
     // yank the leading '-'
     arg = arg[1 .. $];
     // long options have two '--' and at least two additional chars
-    immutable isLong = arg.length > 2 && arg[0] == optionChar && arg[2] != assignChar;
+    immutable isLong = arg.length >= 3 && arg[0] == optionChar;
     //writeln("isLong: ", isLong);
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    // -long is not supported but -l=c and -l<numeric> is
-    if (!isLong && arg.length > 1 && arg[1] != assignChar && !isDigit(arg[1])) return false;
+
+    // --l= is invalid for long options
+    if (isLong && arg[1] == assignChar) return false;
+
     immutable eqPos = std.string.indexOf(arg, assignChar);
     if (eqPos >= 1)
     {
-        // argument looks like --opt=value
-        value = arg[eqPos + 1 .. $];
-        arg = arg[0 .. eqPos];
+        // argument looks like --opt=value or -okey=value
+        if (!isLong && eqPos != 1)
+        {
+            value = arg[1 .. $];
+            arg = arg[0 .. 1];
+
+            // reject if non-numeric option and numeric-only is configured
+            if (!isNumeric && cfg.noSpaceForShortNumericOptionsOnly) return false;
+        }
+        else
+        {
+            value = arg[eqPos + 1 .. $];
+            arg = arg[0 .. eqPos];
+        }
     }
     else
     {
@@ -592,8 +617,8 @@ private bool optMatch(string arg, string optPattern, ref string value,
             arg = arg[0 .. 1];
             // short option with space in between
             if (value.length == 0) value = null;
-            // only numeric options can be directly appended
-            if (value.length > 0 && !isNumeric) return false;
+            // reject if non-numeric option and numeric-only is configured
+            if (value.length > 0 && !isNumeric && cfg.noSpaceForShortNumericOptionsOnly) return false;
         }
         else
         {
@@ -625,6 +650,10 @@ private void setConfig(ref configuration cfg, config option)
     {
     case config.caseSensitive: cfg.caseSensitive = true; break;
     case config.caseInsensitive: cfg.caseSensitive = false; break;
+    case config.noSpaceForShortOptions:
+        cfg.noSpaceForShortNumericOptionsOnly = false; break;
+    case config.noSpaceOnlyForShortNumericOptions:
+        cfg.noSpaceForShortNumericOptionsOnly = true; break;
     case config.bundling: cfg.bundling = true; break;
     case config.noBundling: cfg.bundling = false; break;
     case config.passThrough: cfg.passThrough = true; break;
@@ -655,40 +684,73 @@ unittest {
     foreach (value; TypeTuple!(
                                true, // Boolean
                                cast(short) 1, cast(ushort) 1, 1, 1u, 1L, 1uL, // integral
-                               1f, 1.0, cast(real) 1.0, .1, // floating point
+                               1f, 1.0, cast(real) 1.0, .1, .1f, // floating point
                                Timeout.yes, // enum
-                               "never", "imeout", // strings TODO wstring,dstring
-                               [ "1" ], [ 1 ], // arrays
-                               [ "string" : 1.0 ], [ "imeout" : 1], // associative arrays
+                               "never", // strings TODO wstring,dstring
+                               [ 1 ], // arrays
+                               [ "string" : 1.0 ], // associative arrays
                               ))
     {
         alias Unqual!(typeof(value)) T;
-        debug scope(failure) writeln("unittest @", __FILE__, ":", __LINE__, " fails for type ", T.stringof);
         T timeout;
-        static if (isAssociativeArray!(T)) {
+        static if (isAssociativeArray!(T))
+        {
             auto timeoutAsString = value.keys[0] ~ "=" ~ to!string(value.values[0]);
         }
-        else static if (isArray!(T) && !isSomeString!(T)) {
+        else static if (isArray!(T) && !isSomeString!(T))
+        {
             auto timeoutAsString = to!string(value[0]);
         }
-        else {
+        else static if (is(T == bool))
+        {
+            auto timeoutAsString = "";
+        }
+        else
+        {
             auto timeoutAsString = to!string(value);
         }
+
+        debug scope(failure) writeln("unittest@", __FILE__, ":", __LINE__, " fails for type ", T.stringof);
 
         // accepted short options
         string[] args = (["program.name",
                           "-t="~timeoutAsString]).dup;
-        getopt(args, "t|timeout", &timeout);
-        assert(isEqual(timeout, value), to!string(timeout));
-
-        // without space works only for numeric options
-        timeout = timeout.init;
-        args = (["program.name",
-                 "-t"~timeoutAsString]).dup;
-        static if (isNumeric!(T))
+        static if (is(T == bool))
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+        else
         {
             getopt(args, "t|timeout", &timeout);
             assert(isEqual(timeout, value), to!string(timeout));
+        }
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-t"~timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-t", timeoutAsString]).dup;
+        getopt(args, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        // mostly non-accepted short options
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-timeout="~timeoutAsString]).dup;
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, "imeout=never"), to!string(timeout));
+        }
+        else static if (isAssociativeArray!(T))
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, [ "imeout" : 0.0 ]), to!string(timeout));
         }
         else
         {
@@ -698,28 +760,36 @@ unittest {
 
         timeout = timeout.init;
         args = (["program.name",
-                 "-t", timeoutAsString]).dup;
-        getopt(args, "t|timeout", &timeout);
-        assert(isEqual(timeout, value), to!string(timeout));
-
-        // non-accepted short options
-        timeout = timeout.init;
-        args = (["program.name",
-                 "-timeout="~timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        assert(isEqual(timeout, timeout.init), to!string(timeout));
-
-        timeout = timeout.init;
-        args = (["program.name",
                  "-timeout", timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        assert(isEqual(timeout, timeout.init), to!string(timeout));
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, "imeout"), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
 
         timeout = timeout.init;
         args = (["program.name",
                  "-timeout"~timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        assert(isEqual(timeout, timeout.init), to!string(timeout));
+        static if (isSomeString!(T))
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, "imeoutnever"), to!string(timeout));
+        }
+        else static if (isAssociativeArray!(T))
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, [ "imeoutstring" : 1.0 ]), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
 
         // accepted long options
         timeout = timeout.init;
@@ -731,8 +801,16 @@ unittest {
         timeout = timeout.init;
         args = (["program.name",
                  "--timeout="~timeoutAsString]).dup;
-        getopt(args, "t|timeout", &timeout);
-        assert(isEqual(timeout, value), to!string(timeout));
+        static if (is(T == bool))
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+        else
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
 
         // non-accepted long options
         timeout = timeout.init;
@@ -750,13 +828,179 @@ unittest {
         timeout = timeout.init;
         args = (["program.name",
                  "--timeout"~timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, "t|timeout", &timeout));
-        assert(isEqual(timeout, timeout.init), to!string(timeout));
+        static if (is(T == bool))
+        {
+            getopt(args, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
 
         timeout = timeout.init;
         args = (["program.name",
                  "--t"~timeoutAsString]).dup;
         assertThrown!Exception(getopt(args, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+    }
+}
+
+// with no space only for short numeric options, i.e. config.noSpaceOnlyForShortNumericOptions
+unittest {
+    bool isEqual(T)(const(T) a, const(T) b) pure nothrow
+    {
+        static if (isFloatingPoint!(T)) {
+            return (std.math.isNaN(a) && std.math.isNaN(b)) || std.math.isIdentical(a, b);
+        }
+        else {
+            return a == b;
+        }
+    }
+
+    enum Timeout {
+        no,
+        yes,
+    }
+
+    import std.typetuple;
+    foreach (value; TypeTuple!(
+                               true, // Boolean
+                               cast(short) 1, cast(ushort) 1, 1, 1u, 1L, 1uL, // integral
+                               1f, 1.0, cast(real) 1.0, .1, 1f, .1f, // floating point
+                               Timeout.yes, // enum
+                               "never", "imeout", // strings TODO wstring,dstring
+                               [ 1 ], [ "1" ], // arrays
+                               [ "string" : 1.0 ], [ "imeout" : 1], // associative arrays
+                              ))
+    {
+        alias Unqual!(typeof(value)) T;
+        T timeout;
+        static if (isAssociativeArray!(T))
+        {
+            auto timeoutAsString = value.keys[0] ~ "=" ~ to!string(value.values[0]);
+        }
+        else static if (isArray!(T) && !isSomeString!(T))
+        {
+            auto timeoutAsString = to!string(value[0]);
+        }
+        else static if (is(T == bool))
+        {
+            auto timeoutAsString = "";
+        }
+        else
+        {
+            auto timeoutAsString = to!string(value);
+        }
+
+        debug scope(failure) writeln("unittest@", __FILE__, ":", __LINE__, " fails for type ", T.stringof);
+
+        // accepted short options
+        string[] args = (["program.name",
+                          "-t="~timeoutAsString]).dup;
+        static if (is(T == bool))
+        {
+            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+        else
+        {
+            getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-t"~timeoutAsString]).dup;
+        static if (isNumeric!(T) || is(T == bool))
+        {
+            getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-t", timeoutAsString]).dup;
+        getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        // mostly non-accepted short options
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-timeout="~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-timeout", timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "-timeout"~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+
+        // accepted long options
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--timeout", timeoutAsString]).dup;
+        getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+        assert(isEqual(timeout, value), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--timeout="~timeoutAsString]).dup;
+        static if (is(T == bool))
+        {
+            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+        else
+        {
+            getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+
+        // non-accepted long options
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--t", timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--t="~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assert(isEqual(timeout, timeout.init), to!string(timeout));
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--timeout"~timeoutAsString]).dup;
+        static if (is(T == bool))
+        {
+            getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout);
+            assert(isEqual(timeout, value), to!string(timeout));
+        }
+        else
+        {
+            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assert(isEqual(timeout, timeout.init), to!string(timeout));
+        }
+
+        timeout = timeout.init;
+        args = (["program.name",
+                 "--t"~timeoutAsString]).dup;
+        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
         assert(isEqual(timeout, timeout.init), to!string(timeout));
     }
 }
