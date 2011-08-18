@@ -4836,6 +4836,262 @@ unittest
 }
 
 /**
+This struct takes two ranges, $(D base) and $(D indices), and creates a view
+of $(D base) as if its elements were reordered according to $(D indices).
+$(D indices) may include only a subset of the elements of $(D base) and
+may also repeat elements.
+
+$(D Base) must be a random access range.  The returned range will be
+bidirectional or random-access if $(D Indices) is bidirectional or 
+random-access, respectively.
+
+Examples:
+---
+auto base = [1, 2, 3, 4, 5];
+auto indices = [4, 3, 1, 2, 0, 4];
+auto reindexed = reindex(base, indices);
+assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
+
+// When elements of indices are duplicated and Base has lvalue elements,
+// these are aliased in reindexed.
+reindexed[0]++;
+assert(reindexed[0] == 6);
+assert(reindexed[5] == 6);
+*/
+struct Reindex(Base, Indices)
+if(isRandomAccessRange!Base && isInputRange!Indices &&
+  is(typeof(Base.init[ElementType!(Indices).init])))
+{
+    this(Base base, Indices indices)
+    {
+        this._base = base;
+        this._indices = indices;
+    }
+    
+    /**
+    Alias for ElementType!(Base).
+    */
+    alias ElementType!Base E;
+    
+    /// Range primitives
+    @property auto ref front() 
+    {
+        assert(!empty);
+        return _base[_indices.front];
+    }
+    
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _indices.popFront();
+    }
+    
+    static if(isInfinite!Indices)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        /// Ditto
+        @property bool empty() 
+        {
+            return _indices.empty;
+        }
+    }
+    
+    static if(isForwardRange!Indices)
+    {
+        /// Ditto
+        @property typeof(this) save() 
+        {
+            // Don't need to save _base because it's never consumed.
+            return typeof(this)(_base, _indices.save);
+        }
+    }
+    
+    /// Ditto
+    static if(hasAssignableElements!Base)
+    {
+        @property auto front(ElementType!Base newVal)
+        {
+            assert(!empty);
+            return _base[_indices.front] = newVal;
+        }
+    }
+    
+    
+    static if(hasMobileElements!Base)
+    {
+        /// Ditto
+        auto moveFront()
+        {
+            assert(!empty);
+            return .moveAt(_base, _indices.front);
+        }
+    }
+    
+    static if(isBidirectionalRange!Indices)
+    {
+        /// Ditto
+        @property auto ref back() 
+        {
+            assert(!empty);
+            return _base[_indices.back];
+        }
+        
+        /// Ditto
+        void popBack()
+        {
+           assert(!empty);
+           _base.popBack();
+        }
+
+        /// Ditto
+        static if(hasAssignableElements!Base)
+        {
+            @property auto back(E newVal)
+            {
+                assert(!empty);
+                return _base[_indices.back] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Base)
+        {
+            /// Ditto
+            auto moveBack()
+            {
+                assert(!empty);
+                return .moveAt(_base, _indices.back);
+            }
+        }
+    }
+
+    static if(hasLength!Indices)
+    {
+        /// Ditto
+         @property size_t length()
+        {
+            return _indices.length;
+        }
+    }
+    
+    static if(isRandomAccessRange!Indices)
+    {
+        /// Ditto
+        auto ref opIndex(size_t index)
+        {
+            return _base[_indices[index]];
+        }
+    
+        /// Ditto
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            return typeof(this)(_base, _indices[a..b]);
+        }
+        
+        
+        static if(hasAssignableElements!Base)
+        {   
+            /// Ditto
+            auto opIndexAssign(E newVal, size_t index)
+            {
+                return _base[_indices[index]] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Base)
+        {
+            /// Ditto
+            auto moveAt(size_t index)
+            {
+                return .moveAt(_base, _indices[index]);
+            }
+        }
+    }
+    
+    // All this stuff is useful if someone wants to reindex a Reindex 
+    // without adding a layer of indirection.
+    
+    /**
+    Returns the base range.
+    */
+    @property Base base()
+    {
+        return _base;
+    }
+    
+    /**
+    Returns the indices range.
+    */
+     @property Indices indices()
+    {
+        return _indices;
+    }
+   
+    static if(isRandomAccessRange!Indices)
+    {
+        /**
+        Returns the physical index into the base range corresponding to a
+        given logical index.  This is useful, for example, when reindexing
+        a $(D Reindex) without adding another layer of indirection.
+        
+        Examples:
+        ---
+        auto reindexed = reindex([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(reindexed.physicalIndex(0) == 1);
+        ---
+        */
+        size_t physicalIndex(size_t logicalIndex)
+        {
+            return _indices[logicalIndex];
+        }
+    }
+    
+private:
+    Base _base;
+    Indices _indices;
+
+}
+
+/// Ditto
+Reindex!(Base, Indices) reindex(Base, Indices)(Base base, Indices indices)
+{
+    return typeof(return)(base, indices);
+}
+
+unittest
+{
+    {
+        // Test examples.
+        auto reindexed = reindex([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(reindexed.physicalIndex(0) == 1);
+    }
+    
+    auto base = [1, 2, 3, 4, 5];
+    auto indices = [4, 3, 1, 2, 0, 4];
+    auto reindexed = reindex(base, indices);
+    assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
+
+    // When elements of indices are duplicated and Base has lvalue elements,
+    // these are aliased in reindexed.
+    reindexed[0]++;
+    assert(reindexed[0] == 6);
+    assert(reindexed[5] == 6);
+    
+    foreach(DummyType; AllDummyRanges)
+    {
+        auto d = DummyType.init;
+        auto r = reindex([1, 2, 3, 4, 5], d);
+        static assert(propagatesRangeType!(DummyType, typeof(r)));
+        static assert(propagatesLength!(DummyType, typeof(r)));
+    }
+}
+
+/**
    Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
