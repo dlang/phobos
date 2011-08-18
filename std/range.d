@@ -4857,6 +4857,7 @@ assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
 reindexed[0]++;
 assert(reindexed[0] == 6);
 assert(reindexed[5] == 6);
+---
 */
 struct Reindex(Base, Indices)
 if(isRandomAccessRange!Base && isInputRange!Indices &&
