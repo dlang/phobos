@@ -60,7 +60,7 @@ version (unittest)
         if(_first)
         {
             version(Windows)
-                _deleteme = std.path.join(std.process.getenv("TEMP"), _deleteme);
+                _deleteme = buildPath(std.process.getenv("TEMP"), _deleteme);
             else version(Posix)
                 _deleteme = "/tmp/" ~ _deleteme;
 
@@ -1691,7 +1691,7 @@ void mkdir(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
-    const left = dirname(pathname);
+    const left = dirName(pathname);
     if (!exists(left))
     {
         version (Windows)
@@ -1703,7 +1703,7 @@ void mkdirRecurse(in char[] pathname)
         }
         mkdirRecurse(left);
     }
-    if (!basename(pathname).empty)
+    if (!baseName(pathname).empty)
     {
         mkdir(pathname);
     }
@@ -2272,7 +2272,7 @@ else version(Windows)
             const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
             assert(n == wlength);
             // toUTF8() returns a new buffer
-            _name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2284,7 +2284,7 @@ else version(Windows)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
             _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
-            _name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2433,7 +2433,7 @@ else version(Posix)
         void _init(in char[] path, core.sys.posix.dirent.dirent* fd)
         {
             immutable len = std.c.string.strlen(fd.d_name.ptr);
-            _name = std.path.join(path, fd.d_name[0 .. len]);
+            _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
             _didStat = false;
@@ -2940,7 +2940,7 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            string search_pattern = std.path.join(directory, "*.*");
+            string search_pattern = buildPath(directory, "*.*");
             if(useWfuncs)
             {
                 WIN32_FIND_DATAW findinfo;
@@ -3233,19 +3233,19 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 unittest
 {
     string testdir = "deleteme.dmd.unittest.std.file"; // needs to be relative
-    mkdirRecurse(std.path.join(testdir, "somedir"));
+    mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
-    write(std.path.join(testdir, "somefile"), null);
-    write(std.path.join(testdir, "somedir", "somedeepfile"), null);
+    write(buildPath(testdir, "somefile"), null);
+    write(buildPath(testdir, "somedir", "somedeepfile"), null);
 
     // testing range interface
     size_t equalEntries(string relpath, SpanMode mode)
     {
-        auto len = enforce(walkLength(dirEntries(std.path.rel2abs(relpath), mode)));
+        auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(q{std.path.rel2abs(a.name)})(dirEntries(relpath, mode)),
-                   map!(q{a.name})(dirEntries(std.path.rel2abs(relpath), mode))));
+                   map!(q{std.path.absolutePath(a.name)})(dirEntries(relpath, mode)),
+                   map!(q{a.name})(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
 
@@ -3259,7 +3259,7 @@ unittest
         //writeln(name);
         assert(name.startsWith(testdir));
     }
-    foreach (DirEntry e; dirEntries(std.path.rel2abs(testdir), SpanMode.breadth))
+    foreach (DirEntry e; dirEntries(absolutePath(testdir), SpanMode.breadth))
     {
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
@@ -3680,7 +3680,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
  *
  *    bool listing(string filename)
  *    {
- *      result ~= std.path.join(pathname, filename);
+ *      result ~= buildPath(pathname, filename);
  *      return true; // continue
  *    }
  *
@@ -3709,7 +3709,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
-        return callback(de.name.basename);
+        return callback(de.name.baseName);
     }
 
     _listDir(pathname, &listing);
@@ -3721,7 +3721,7 @@ version(Windows)
     void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         DirEntry de;
-        auto c = std.path.join(pathname, "*.*");
+        auto c = buildPath(pathname, "*.*");
 
         if(useWfuncs)
         {
