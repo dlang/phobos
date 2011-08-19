@@ -4945,7 +4945,7 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
         void popBack()
         {
            assert(!empty);
-           _base.popBack();
+           _indices.popBack();
         }
 
         /// Ditto
@@ -5076,6 +5076,7 @@ unittest
     auto indices = [4, 3, 1, 2, 0, 4];
     auto reindexed = reindex(base, indices);
     assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
+    assert(equal(retro(reindexed), [5, 1, 3, 2, 4, 5]));    
 
     // When elements of indices are duplicated and Base has lvalue elements,
     // these are aliased in reindexed.
