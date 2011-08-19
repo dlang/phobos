@@ -4836,49 +4836,44 @@ unittest
 }
 
 /**
-This struct takes two ranges, $(D base) and $(D indices), and creates a view
-of $(D base) as if its elements were reordered according to $(D indices).
-$(D indices) may include only a subset of the elements of $(D base) and
+This struct takes two ranges, $(D source) and $(D indices), and creates a view
+of $(D source) as if its elements were reordered according to $(D indices).
+$(D indices) may include only a subset of the elements of $(D source) and
 may also repeat elements.
 
-$(D Base) must be a random access range.  The returned range will be
+$(D Source) must be a random access range.  The returned range will be
 bidirectional or random-access if $(D Indices) is bidirectional or 
 random-access, respectively.
 
 Examples:
 ---
-auto base = [1, 2, 3, 4, 5];
+auto source = [1, 2, 3, 4, 5];
 auto indices = [4, 3, 1, 2, 0, 4];
-auto reindexed = reindex(base, indices);
-assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
+auto ind = indexed(source, indices);
+assert(equal(ind, [5, 4, 2, 3, 1, 5]));
 
-// When elements of indices are duplicated and Base has lvalue elements,
+// When elements of indices are duplicated and Source has lvalue elements,
 // these are aliased in reindexed.
 reindexed[0]++;
-assert(reindexed[0] == 6);
-assert(reindexed[5] == 6);
+assert(ind[0] == 6);
+assert(ind[5] == 6);
 ---
 */
-struct Reindex(Base, Indices)
-if(isRandomAccessRange!Base && isInputRange!Indices &&
-  is(typeof(Base.init[ElementType!(Indices).init])))
+struct Indexed(Source, Indices)
+if(isRandomAccessRange!Source && isInputRange!Indices &&
+  is(typeof(Source.init[ElementType!(Indices).init])))
 {
-    this(Base base, Indices indices)
+    this(Source source, Indices indices)
     {
-        this._base = base;
+        this._source = source;
         this._indices = indices;
     }
-    
-    /**
-    Alias for ElementType!(Base).
-    */
-    alias ElementType!Base E;
     
     /// Range primitives
     @property auto ref front() 
     {
         assert(!empty);
-        return _base[_indices.front];
+        return _source[_indices.front];
     }
     
     /// Ditto
@@ -4906,29 +4901,29 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
         /// Ditto
         @property typeof(this) save() 
         {
-            // Don't need to save _base because it's never consumed.
-            return typeof(this)(_base, _indices.save);
+            // Don't need to save _source because it's never consumed.
+            return typeof(this)(_source, _indices.save);
         }
     }
     
     /// Ditto
-    static if(hasAssignableElements!Base)
+    static if(hasAssignableElements!Source)
     {
-        @property auto front(ElementType!Base newVal)
+        @property auto ref front(ElementType!Source newVal)
         {
             assert(!empty);
-            return _base[_indices.front] = newVal;
+            return _source[_indices.front] = newVal;
         }
     }
     
     
-    static if(hasMobileElements!Base)
+    static if(hasMobileElements!Source)
     {
         /// Ditto
         auto moveFront()
         {
             assert(!empty);
-            return .moveAt(_base, _indices.front);
+            return .moveAt(_source, _indices.front);
         }
     }
     
@@ -4938,7 +4933,7 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
         @property auto ref back() 
         {
             assert(!empty);
-            return _base[_indices.back];
+            return _source[_indices.back];
         }
         
         /// Ditto
@@ -4949,23 +4944,23 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
         }
 
         /// Ditto
-        static if(hasAssignableElements!Base)
+        static if(hasAssignableElements!Source)
         {
-            @property auto back(E newVal)
+            @property auto ref back(ElementType!Source newVal)
             {
                 assert(!empty);
-                return _base[_indices.back] = newVal;
+                return _source[_indices.back] = newVal;
             }
         }
         
         
-        static if(hasMobileElements!Base)
+        static if(hasMobileElements!Source)
         {
             /// Ditto
             auto moveBack()
             {
                 assert(!empty);
-                return .moveAt(_base, _indices.back);
+                return .moveAt(_source, _indices.back);
             }
         }
     }
@@ -4984,32 +4979,32 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
         /// Ditto
         auto ref opIndex(size_t index)
         {
-            return _base[_indices[index]];
+            return _source[_indices[index]];
         }
     
         /// Ditto
         typeof(this) opSlice(size_t a, size_t b)
         {
-            return typeof(this)(_base, _indices[a..b]);
+            return typeof(this)(_source, _indices[a..b]);
         }
         
         
-        static if(hasAssignableElements!Base)
+        static if(hasAssignableElements!Source)
         {   
             /// Ditto
-            auto opIndexAssign(E newVal, size_t index)
+            auto opIndexAssign(ElementType!Source newVal, size_t index)
             {
-                return _base[_indices[index]] = newVal;
+                return _source[_indices[index]] = newVal;
             }
         }
         
         
-        static if(hasMobileElements!Base)
+        static if(hasMobileElements!Source)
         {
             /// Ditto
             auto moveAt(size_t index)
             {
-                return .moveAt(_base, _indices[index]);
+                return .moveAt(_source, _indices[index]);
             }
         }
     }
@@ -5018,11 +5013,11 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
     // without adding a layer of indirection.
     
     /**
-    Returns the base range.
+    Returns the source range.
     */
-    @property Base base()
+    @property Source source()
     {
-        return _base;
+        return _source;
     }
     
     /**
@@ -5036,14 +5031,14 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
     static if(isRandomAccessRange!Indices)
     {
         /**
-        Returns the physical index into the base range corresponding to a
-        given logical index.  This is useful, for example, when reindexing
-        a $(D Reindex) without adding another layer of indirection.
+        Returns the physical index into the source range corresponding to a
+        given logical index.  This is useful, for example, when indexing
+        an $(D Indexed) without adding another layer of indirection.
         
         Examples:
         ---
-        auto reindexed = reindex([1, 2, 3, 4, 5], [1, 3, 4]);
-        assert(reindexed.physicalIndex(0) == 1);
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
         ---
         */
         size_t physicalIndex(size_t logicalIndex)
@@ -5053,41 +5048,42 @@ if(isRandomAccessRange!Base && isInputRange!Indices &&
     }
     
 private:
-    Base _base;
+    Source _source;
     Indices _indices;
 
 }
 
 /// Ditto
-Reindex!(Base, Indices) reindex(Base, Indices)(Base base, Indices indices)
+Indexed!(Source, Indices) indexed(Source, Indices)
+(Source source, Indices indices)
 {
-    return typeof(return)(base, indices);
+    return typeof(return)(source, indices);
 }
 
 unittest
 {
     {
         // Test examples.
-        auto reindexed = reindex([1, 2, 3, 4, 5], [1, 3, 4]);
-        assert(reindexed.physicalIndex(0) == 1);
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
     }
     
-    auto base = [1, 2, 3, 4, 5];
+    auto source = [1, 2, 3, 4, 5];
     auto indices = [4, 3, 1, 2, 0, 4];
-    auto reindexed = reindex(base, indices);
-    assert(equal(reindexed, [5, 4, 2, 3, 1, 5]));
-    assert(equal(retro(reindexed), [5, 1, 3, 2, 4, 5]));    
+    auto ind = indexed(source, indices);
+    assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));    
 
-    // When elements of indices are duplicated and Base has lvalue elements,
-    // these are aliased in reindexed.
-    reindexed[0]++;
-    assert(reindexed[0] == 6);
-    assert(reindexed[5] == 6);
+    // When elements of indices are duplicated and Source has lvalue elements,
+    // these are aliased in ind.
+    ind[0]++;
+    assert(ind[0] == 6);
+    assert(ind[5] == 6);
     
     foreach(DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
-        auto r = reindex([1, 2, 3, 4, 5], d);
+        auto r = indexed([1, 2, 3, 4, 5], d);
         static assert(propagatesRangeType!(DummyType, typeof(r)));
         static assert(propagatesLength!(DummyType, typeof(r)));
     }
