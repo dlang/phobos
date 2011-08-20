@@ -29423,7 +29423,7 @@ assert(tz.dstName == "PDT");
             {
                 auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
-                if(!tzName.getExt().empty() ||
+                if(!tzName.extension().empty() ||
                    !tzName.startsWith(subName) ||
                    tzName == "+VERSION")
                 {

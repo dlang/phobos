@@ -2484,6 +2484,42 @@ unittest
     assert(s.empty);
 }
 
+
+/++
+    Convenience function which calls $(D $(LREF popFrontN)(range, n)) and
+    returns $(D range).
+
+    Examples:
+--------------------
+assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+assert(drop("hello world", 6) == "world");
+assert(drop("hello world", 50).empty);
+assert(equal(drop(take("hello world", 6), 3), "lo "));
+--------------------
+  +/
+R drop(R)(R range, size_t n)
+    if(isInputRange!R)
+{
+    popFrontN(range, n);
+    return range;
+}
+
+//Verify Examples
+unittest
+{
+    assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+    assert(drop("hello world", 6) == "world");
+    assert(drop("hello world", 50).empty);
+    assert(equal(drop(take("hello world", 6), 3), "lo "));
+}
+
+unittest
+{
+    assert(drop("", 5).empty);
+    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
