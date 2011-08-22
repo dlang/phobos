@@ -141,6 +141,53 @@ class SocketException: Exception
     }
 }
 
+private string formatSocketError(int err)
+{
+    version(Posix)
+    {
+        char[80] buf;
+        const(char)* cs;
+        version (linux)
+        {
+            cs = strerror_r(errorCode, buf.ptr, buf.length);
+        }
+        else version (OSX)
+        {
+            auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+            if (errs == 0)
+                cs = buf.ptr;
+            else
+                return "Socket error " ~ to!string(err);
+        }
+        else version (FreeBSD)
+        {
+            auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+            if (errs == 0)
+                cs = buf.ptr;
+            else
+                return "Socket error " ~ to!string(err);
+        }
+        else
+            static assert(0);
+
+        auto len = strlen(cs);
+
+        if(cs[len - 1] == '\n')
+            len--;
+        if(cs[len - 1] == '\r')
+            len--;
+        return cs[0 .. len].idup;
+    }
+    else
+        return "Socket error " ~ to!string(err);
+}
+
+/// Retreive the error message for the most recently encountered network error.
+@property string lastSocketError()
+{
+    return formatSocketError(_lasterr());
+}
+
 /// Socket exceptions representing network errors reported by the operating
 /// system.
 class SocketOSException: SocketException
@@ -151,52 +198,10 @@ class SocketOSException: SocketException
     {
         errorCode = err;
 
-        version(Posix)
-        {
-            if(errorCode > 0)
-            {
-                char[80] buf;
-                const(char)* cs;
-                version (linux)
-                {
-                    cs = strerror_r(errorCode, buf.ptr, buf.length);
-                }
-                else version (OSX)
-                {
-                    auto errs = strerror_r(errorCode, buf.ptr, buf.length);
-                    if (errs == 0)
-                        cs = buf.ptr;
-                    else
-                    {
-                        cs = "Unknown error";
-                    }
-                }
-                else version (FreeBSD)
-                {
-                    auto errs = strerror_r(errorCode, buf.ptr, buf.length);
-                    if (errs == 0)
-                        cs = buf.ptr;
-                    else
-                    {
-                        cs = "Unknown error";
-                    }
-                }
-                else
-                {
-                    static assert(0);
-                }
-
-                auto len = strlen(cs);
-
-                if(cs[len - 1] == '\n')
-                    len--;
-                if(cs[len - 1] == '\r')
-                    len--;
-                msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
-            }
-        }
-
-        super(msg);
+        if (msg.length)
+            super(msg ~ ": " ~ formatSocketError(err));
+        else
+            super(formatSocketError(err));
     }
 }
 
