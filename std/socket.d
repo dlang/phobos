@@ -60,7 +60,7 @@ version(Win32)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import std.c.windows.windows, std.c.windows.winsock;
+    private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
     private alias std.c.windows.winsock.timeval _ctimeval;
 
     typedef SOCKET socket_t = INVALID_SOCKET;
@@ -177,6 +177,11 @@ private string formatSocketError(int err)
         if(cs[len - 1] == '\r')
             len--;
         return cs[0 .. len].idup;
+    }
+    else
+    version(Windows)
+    {
+        return sysErrorString(err);
     }
     else
         return "Socket error " ~ to!string(err);
