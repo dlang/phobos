@@ -257,8 +257,8 @@ enum AddressFamily: int
     UNIX =       AF_UNIX,       /// local communication
     INET =       AF_INET,       /// internet protocol version 4
     IPX =        AF_IPX,        /// novell IPX
-    APPLETALK =  AF_APPLETALK,          /// appletalk
-    INET6 =      AF_INET6,      // internet protocol version 6
+    APPLETALK =  AF_APPLETALK,  /// appletalk
+    INET6 =      AF_INET6,      /// internet protocol version 6
 }
 
 
@@ -293,7 +293,7 @@ enum ProtocolType: int
 
 
 /**
- * Protocol is a class for retrieving protocol information.
+ * $(D Protocol) is a class for retrieving protocol information.
  */
 class Protocol
 {
@@ -329,7 +329,7 @@ class Protocol
         }
     }
 
-    /** Returns false on failure */
+    /** Returns: false on failure */
     bool getProtocolByName(string name)
     {
         protoent* proto;
@@ -341,7 +341,7 @@ class Protocol
     }
 
 
-    /** Returns false on failure */
+    /** Returns: false on failure */
     // Same as getprotobynumber().
     bool getProtocolByType(ProtocolType type)
     {
@@ -378,7 +378,7 @@ unittest
 
 
 /**
- * Service is a class for retrieving service information.
+ * $(D Service) is a class for retrieving service information.
  */
 class Service
 {
@@ -498,7 +498,7 @@ unittest
 
 
 /**
- * Base exception thrown from an InternetHost.
+ * Base exception thrown from an $(D InternetHost).
  */
 class HostException: SocketOSException
 {
@@ -509,7 +509,7 @@ class HostException: SocketOSException
 }
 
 /**
- * InternetHost is a class for resolving IPv4 addresses.
+ * $(D InternetHost) is a class for resolving IPv4 addresses.
  */
 class InternetHost
 {
@@ -576,7 +576,8 @@ class InternetHost
     }
 
     /**
-     * Resolve host name. Returns false if unable to resolve.
+     * Resolve host name.
+     * Returns: false if unable to resolve.
      */
     bool getHostByName(string name)
     {
@@ -607,10 +608,12 @@ class InternetHost
 
 
     /**
-     * Resolve IPv4 address number. Returns false if unable to resolve.
+     * Resolve IPv4 address number.
      *
      * Params:
      *   addr = The IPv4 address to resolve, in network byte order.
+     * Returns:
+     *   false if unable to resolve.
      */
     bool getHostByAddr(uint addr)
     {
@@ -644,7 +647,7 @@ class InternetHost
     /**
      * Same as previous, but addr is an IPv4 address string in the
      * dotted-decimal form $(I a.b.c.d).
-     * Returns false if unable to resolve.
+     * Returns: false if unable to resolve.
      */
     bool getHostByAddr(string addr)
     {
@@ -712,7 +715,7 @@ unittest
 
 
 /**
- * Base exception thrown from an Address.
+ * Base exception thrown from an $(D Address).
  */
 class AddressException: SocketOSException
 {
@@ -724,7 +727,7 @@ class AddressException: SocketOSException
 
 
 /**
- * Address is an abstract class for representing a network addresses.
+ * $(D Address) is an abstract class for representing a network addresses.
  */
 abstract class Address
 {
@@ -770,8 +773,8 @@ public:
 
 
 /**
- * InternetAddress is a class that represents an IPv4 (internet protocol version
- * 4) address and port.
+ * $(D InternetAddress) is a class that represents an IPv4 (internet protocol
+ * version 4) address and port.
  */
 class InternetAddress: Address
 {
@@ -801,7 +804,7 @@ public:
     enum uint ADDR_NONE = INADDR_NONE;         /// An invalid IPv4 address number.
     enum ushort PORT_ANY = 0;                  /// Any IPv4 port number.
 
-    /// Overridden to return AddressFamily.INET.
+    /// Overridden to return $(D AddressFamily.INET).
     override AddressFamily addressFamily()
     {
         return cast(AddressFamily)AddressFamily.INET;
@@ -822,9 +825,9 @@ public:
     /**
      * Params:
      *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
-     *          or a host name that will be resolved using an InternetHost
+     *          or a host name that will be resolved using an $(D InternetHost)
      *          object.
-     *   port = may be PORT_ANY as stated below.
+     *   port = may be $(D PORT_ANY) as stated below.
      */
     this(string addr, ushort port)
     {
@@ -844,9 +847,9 @@ public:
     }
 
     /**
-     * Construct a new Address. addr may be ADDR_ANY (default) and port may
-     * be PORT_ANY, and the actual numbers may not be known until a connection
-     * is made.
+     * Construct a new $(D Address). $(D addr) may be $(D ADDR_ANY) (default)
+     * and $(D port) may be $(D PORT_ANY), and the actual numbers may not be
+     * known until a connection is made.
      */
     this(uint addr, ushort port)
     {
@@ -875,7 +878,7 @@ public:
         return std.conv.to!string(port());
     }
 
-    /*
+    /**
      * Returns the host name as a fully qualified domain name, if
      * available, or the IP address in dotted-decimal notation otherwise.
      */
@@ -913,8 +916,8 @@ public:
     /**
      * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
      * and return the number.
-     * If the string is not a legitimate IPv4 address,
-     * ADDR_NONE is returned.
+     * Returns: If the string is not a legitimate IPv4 address,
+     * $(D ADDR_NONE) is returned.
      */
     static uint parse(string addr)
     {
@@ -983,11 +986,11 @@ extern(C) struct timeval
 }
 
 
-/// A collection of sockets for use with Socket.select.
+/// A collection of sockets for use with $(D Socket.select).
 class SocketSet
 {
 private:
-    uint maxsockets;     /// max desired sockets, the fd_set might be capable of holding more
+    uint maxsockets;     /// max desired sockets, the $(D fd_set) might be capable of holding more
     fd_set set;
 
 
@@ -1020,7 +1023,7 @@ public:
         this(FD_SETSIZE);
     }
 
-    /// Reset the SocketSet so that there are 0 Sockets in the collection.
+    /// Reset the $(D SocketSet) so that there are 0 $(D Socket)s in the collection.
     void reset()
     {
         FD_ZERO(&set);
@@ -1051,7 +1054,7 @@ public:
         }
     }
 
-    /// Add a Socket to the collection. Adding more than the maximum has dangerous side affects.
+    /// Add a $(D Socket) to the collection. Adding more than the maximum has dangerous side affects.
     void add(Socket s)
     {
         add(s.sock);
@@ -1068,7 +1071,7 @@ public:
     }
 
 
-    /// Remove this Socket from the collection.
+    /// Remove this $(D Socket) from the collection.
     void remove(Socket s)
     {
         remove(s.sock);
@@ -1080,14 +1083,14 @@ public:
     }
 
 
-    /// Returns nonzero if this Socket is in the collection.
+    /// Returns nonzero if this $(D Socket) is in the collection.
     int isSet(Socket s)
     {
         return isSet(s.sock);
     }
 
 
-    /// Return maximum amount of sockets that can be added, like FD_SETSIZE.
+    /// Return maximum amount of sockets that can be added, like $(D FD_SETSIZE).
     uint max()
     {
         return maxsockets;
@@ -1180,8 +1183,8 @@ enum SocketOption: int
 
 
 /**
- *  Socket is a class that creates a network communication endpoint using the
- * Berkeley sockets interface.
+ * $(D Socket) is a class that creates a network communication endpoint using
+ * the Berkeley sockets interface.
  */
 class Socket
 {
@@ -1222,7 +1225,7 @@ public:
 
     /**
      * Create a blocking socket. If a single protocol type exists to support
-     * this socket type within the address family, the ProtocolType may be
+     * this socket type within the address family, the $(D ProtocolType) may be
      * omitted.
      */
     this(AddressFamily af, SocketType type, ProtocolType protocol)
@@ -1370,9 +1373,9 @@ public:
     }
 
     /**
-     * Listen for an incoming connection. bind must be called before you can
-     * listen. The backlog is a request of how many pending incoming
-     * connections are queued until accept'ed.
+     * Listen for an incoming connection. $(D bind) must be called before you
+     * can $(D listen). The $(D backlog) is a request of how many pending
+     * incoming connections are queued until $(D accept)'ed.
      */
     void listen(int backlog)
     {
@@ -1381,10 +1384,11 @@ public:
     }
 
     /**
-     * Called by accept when a new Socket must be created for a new
+     * Called by $(D accept) when a new $(D Socket) must be created for a new
      * connection. To use a derived class, override this method and return an
-     * instance of your class. The returned Socket's handle must not be set;
-     * Socket has a protected constructor this() to use in this situation.
+     * instance of your class. The returned $(D Socket)'s handle must not be
+     * set; $(D Socket) has a protected constructor $(D this()) to use in this
+     * situation.
      */
     // Override to use a derived class.
     // The returned socket's handle must not be set.
@@ -1394,9 +1398,9 @@ public:
     }
 
     /**
-     * Accept an incoming connection. If the socket is blocking, accept
-     * waits for a connection request. Throws SocketAcceptException if unable
-     * to accept. See accepting for use with derived classes.
+     * Accept an incoming connection. If the socket is blocking, $(D accept)
+     * waits for a connection request. Throws $(D SocketAcceptException) if
+     * unable to _accept. See $(D accepting) for use with derived classes.
      */
     Socket accept()
     {
@@ -1446,8 +1450,9 @@ public:
 
     /**
      * Immediately drop any connections and release socket resources.
-     * Calling shutdown before close is recommended for connection-oriented
-     * sockets. The Socket object is no longer usable after close.
+     * Calling $(D shutdown) before $(D close) is recommended for
+     * connection-oriented sockets. The $(D Socket) object is no longer
+     * usable after $(D close).
      */
     //calling shutdown() before this is recommended
     //for connection-oriented sockets
@@ -1474,7 +1479,8 @@ public:
     }
 
 
-    /// Returns the local machine's host name. Idea from mango.
+    /// Returns the local machine's host name.
+    // Idea from mango.
     static string hostName()     // getter
     {
         char[256] result;         // Host names are limited to 255 chars.
@@ -1483,7 +1489,7 @@ public:
         return to!string(cast(char*)result).idup;
     }
 
-    /// Remote endpoint Address.
+    /// Remote endpoint $(D Address).
     Address remoteAddress()
     {
         Address addr = newFamilyObject();
@@ -1494,7 +1500,7 @@ public:
         return addr;
     }
 
-    /// Local endpoint Address.
+    /// Local endpoint $(D Address).
     Address localAddress()
     {
         Address addr = newFamilyObject();
@@ -1509,9 +1515,9 @@ public:
     enum int ERROR = _SOCKET_ERROR;
 
     /**
-     * Send data on the connection. Returns the number of bytes actually
-     * sent, or ERROR on failure. If the socket is blocking and there is no
-     * buffer space left, send waits.
+     * Send data on the connection. If the socket is blocking and there is no
+     * buffer space left, $(D send) waits.
+     * Returns: The number of bytes actually sent, or $(D ERROR) on failure.
      */
     //returns number of bytes actually sent, or -1 on error
     Select!(size_t.sizeof > 4, long, int)
@@ -1535,7 +1541,9 @@ public:
     }
 
     /**
-     * Send data to a specific destination Address. If the destination address is not specified, a connection must have been made and that address is used. If the socket is blocking and there is no buffer space left, sendTo waits.
+     * Send data to a specific destination Address. If the destination address is
+     * not specified, a connection must have been made and that address is used.
+     * If the socket is blocking and there is no buffer space left, $(D sendTo) waits.
      */
     Select!(size_t.sizeof > 4, long, int)
     sendTo(const(void)[] buf, SocketFlags flags, Address to)
@@ -1584,10 +1592,10 @@ public:
 
 
     /**
-     * Receive data on the connection. Returns the number of bytes actually
-     * received, 0 if the remote side has closed the connection, or ERROR on
-     * failure. If the socket is blocking, receive waits until there is data
-     * to be received.
+     * Receive data on the connection. If the socket is blocking, $(D receive)
+     * waits until there is data to be received.
+     * Returns: The number of bytes actually received, $(D 0) if the remote side
+     * has closed the connection, or $(D ERROR) on failure.
      */
     //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags)
@@ -1611,11 +1619,11 @@ public:
     }
 
     /**
-     * Receive data and get the remote endpoint Address.
-     * If the socket is blocking, receiveFrom waits until there is data to
+     * Receive data and get the remote endpoint $(D Address).
+     * If the socket is blocking, $(D receiveFrom) waits until there is data to
      * be received.
-     * Returns: the number of bytes actually received,
-     * 0 if the remote side has closed the connection, or ERROR on failure.
+     * Returns: The number of bytes actually received, $(D 0) if the remote side
+     * has closed the connection, or $(D ERROR) on failure.
      */
     Select!(size_t.sizeof > 4, long, int)
     receiveFrom(void[] buf, SocketFlags flags, out Address from)
@@ -1674,7 +1682,8 @@ public:
     }
 
 
-    /// Get a socket option. Returns the number of bytes written to result.
+    /// Get a socket option.
+    /// Returns: The number of bytes written to $(D result).
     //returns the length, in bytes, of the actual result - very different from getsockopt()
     int getOption(SocketOptionLevel level, SocketOption option, void[] result)
     {
@@ -1747,8 +1756,8 @@ public:
     }
 
     /**
-     * Sets a timeout (duration) option, i.e. SocketOption.SNDTIMEO or
-     * RCVTIMEO. Zero indicates no timeout.
+     * Sets a timeout (duration) option, i.e. $(D SocketOption.SNDTIMEO) or
+     * $(D RCVTIMEO). Zero indicates no timeout.
      *
      * In a typical application, you might also want to consider using
      * a non-blocking socket instead of setting a timeout on a blocking one.
@@ -1757,7 +1766,7 @@ public:
      * on *nix systems even for smaller durations, there are two issues to
      * be aware of on Windows: First, although undocumented, the effective
      * timeout duration seems to be the one set on the socket plus half
-     * a second. setOption() tries to compensate for that, but still,
+     * a second. $(D setOption()) tries to compensate for that, but still,
      * timeouts under 500ms are not possible on Windows. Second, be aware
      * that the actual amount of time spent until a blocking call returns
      * randomly varies on the order of 10ms.
@@ -1765,7 +1774,7 @@ public:
      * Params:
      *   value = The timeout duration to set. Must not be negative.
      *
-     * Throws: SocketException if setting the options fails.
+     * Throws: $(D SocketException) if setting the options fails.
      *
      * Example:
      * ---
@@ -1816,7 +1825,17 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout timeval or int microseconds may be specified; if a timeout is not specified or the timeval is null, the maximum timeout is used. The timeval timeout has an unspecified value when select returns. Returns the number of sockets with status changes, 0 on timeout, or -1 on interruption. If the return value is greater than 0, the SocketSets are updated to only contain the sockets having status changes. For a connecting socket, a write status change means the connection is established and it's able to send. For a listening socket, a read status change means there is an incoming connection request and it's able to accept.
+     * Wait for a socket to change status. A wait timeout $(D timeval) or
+     * $(D int) microseconds may be specified; if a timeout is not specified
+     * or the $(D timeval) is $(D null), the maximum timeout is used. The
+     * $(D timeval) timeout has an unspecified value when $(D select) returns.
+     * Returns: The number of sockets with status changes, $(D 0) on timeout,
+     * or $(D -1) on interruption. If the return value is greater than $(D 0),
+     * the $(D SocketSets) are updated to only contain the sockets having status
+     * changes. For a connecting socket, a write status change means the
+     * connection is established and it's able to send. For a listening socket,
+     * a read status change means there is an incoming connection request and
+     * it's able to accept.
      */
     //SocketSet's updated to include only those sockets which an event occured
     //returns the number of events, 0 on timeout, or -1 on interruption
@@ -1940,7 +1959,7 @@ public:
 }
 
 
-/// TcpSocket is a shortcut class for a TCP Socket.
+/// $(D TcpSocket) is a shortcut class for a TCP Socket.
 class TcpSocket: Socket
 {
     /// Constructs a blocking TCP Socket.
@@ -1957,7 +1976,7 @@ class TcpSocket: Socket
 
 
     //shortcut
-    /// Constructs a blocking TCP Socket and connects to an InternetAddress.
+    /// Constructs a blocking TCP Socket and connects to an $(D InternetAddress).
     this(Address connectTo)
     {
         this(connectTo.addressFamily());
@@ -1966,7 +1985,7 @@ class TcpSocket: Socket
 }
 
 
-/// UdpSocket is a shortcut class for a UDP Socket.
+/// $(D UdpSocket) is a shortcut class for a UDP Socket.
 class UdpSocket: Socket
 {
     /// Constructs a blocking UDP Socket.
@@ -1988,7 +2007,7 @@ class UdpSocket: Socket
  *
  * The two sockets are indistinguishable.
  *
- * Throws: SocketException if creation of the sockets fails.
+ * Throws: $(D SocketException) if creation of the sockets fails.
  *
  * Example:
  * ---
