@@ -195,15 +195,20 @@ enum: int
 }
 
 
+/// Default FD_SETSIZE value.
+/// In C/C++, it is redefinable by #define-ing the macro before #include-ing
+/// winsock.h. In D, use the $(D FD_CREATE) function to allocate a $(D fd_set)
+/// of an arbitrary size.
 const uint FD_SETSIZE = 64;
 
 
-struct fd_set
+struct fd_set_custom(uint SETSIZE)
 {
     UINT fd_count;
-    SOCKET[FD_SETSIZE] fd_array;
+    SOCKET[SETSIZE] fd_array;
 }
 
+alias fd_set_custom!FD_SETSIZE fd_set;
 
 // Removes.
 void FD_CLR(SOCKET fd, fd_set* set)
@@ -259,6 +264,17 @@ void FD_ZERO(fd_set* set)
     set.fd_count = 0;
 }
 
+
+/// Creates a new $(D fd_set) with the specified capacity.
+fd_set* FD_CREATE(uint capacity)
+{
+    // Take into account alignment (SOCKET may be 64-bit and require 64-bit alignment on 64-bit systems)
+    size_t size = (fd_set_custom!1).sizeof - SOCKET.sizeof + (SOCKET.sizeof * capacity);
+    auto data = new ubyte[size];
+    auto set = cast(fd_set*)data.ptr;
+    FD_ZERO(set);
+    return set;
+}
 
 struct linger
 {
