@@ -576,21 +576,26 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg, bool isNumeric)
 {
-    //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
-    //scope(success) writeln("optMatch result: ", value);
+    //import std.stdio;
+    //debug writeln("isValidOption:\n  ", arg, "\n  ", optPattern, "\n  ", value);
+    //debug scope(success) writeln("isValidOption result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
     // long options have two '--' and at least two additional chars
     immutable isLong = arg.length >= 3 && arg[0] == optionChar;
-    //writeln("isLong: ", isLong);
+    //debug writeln("isLong: ", isLong);
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
 
     // --l= is invalid for long options
     if (isLong && arg[1] == assignChar) return false;
 
+    //debug writeln("isNumeric: ", isNumeric);
+    //debug writeln("cfg.noSpaceForShortNumericOptionsOnly: ", cfg.noSpaceForShortNumericOptionsOnly);
+
     immutable eqPos = std.string.indexOf(arg, assignChar);
+    //debug writeln("eqPos: ", eqPos);
     if (eqPos >= 1)
     {
         // argument looks like --opt=value or -okey=value
@@ -626,18 +631,18 @@ private bool optMatch(string arg, string optPattern, ref string value,
             value = null;
         }
     }
-    //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
+    //debug writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
     const variants = split(optPattern, "|");
     foreach (v ; variants)
     {
-        //writeln("Trying variant: ", v, " against ", arg);
+        //debug writeln("Trying variant: ", v, " against ", arg);
         if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
                 && std.string.indexOf(arg, v) >= 0)
         {
-            //writeln("success");
+            //debug writeln("success");
             return true;
         }
     }
