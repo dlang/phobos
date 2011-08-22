@@ -998,18 +998,17 @@ class SocketSet
 {
 private:
     uint maxsockets;     /// max desired sockets, the $(D fd_set) might be capable of holding more
-    fd_set set;
 
 
     version(Win32)
     {
-        uint count()
-        {
-            return set.fd_count;
-        }
+        fd_set* set;
+        @property uint count() { return set.fd_count; }
     }
     else version(Posix)
     {
+        fd_set setData;
+        final @property fd_set* set() { return &setData; }
         int maxfd;
         uint count;
     }
@@ -1021,6 +1020,10 @@ public:
     this(uint max)
     {
         maxsockets = max;
+        version(Win32)
+        {
+            set = FD_CREATE(max);
+        }
         reset();
     }
 
@@ -1033,7 +1036,7 @@ public:
     /// Reset the $(D SocketSet) so that there are 0 $(D Socket)s in the collection.
     void reset()
     {
-        FD_ZERO(&set);
+        FD_ZERO(set);
 
         version(Posix)
         {
@@ -1051,7 +1054,7 @@ public:
     }
     body
     {
-        FD_SET(s, &set);
+        FD_SET(s, set);
 
         version(Posix)
         {
@@ -1069,7 +1072,7 @@ public:
 
     void remove(socket_t s)
     {
-        FD_CLR(s, &set);
+        FD_CLR(s, set);
         version(Posix)
         {
             --count;
@@ -1086,7 +1089,7 @@ public:
 
     int isSet(socket_t s)
     {
-        return FD_ISSET(s, &set);
+        return FD_ISSET(s, set);
     }
 
 
@@ -1106,7 +1109,7 @@ public:
 
     fd_set* toFd_set()
     {
-        return &set;
+        return set;
     }
 
 
