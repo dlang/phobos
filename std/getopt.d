@@ -443,12 +443,12 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             continue;
         }
         string val;
-        bool numericOption;
+        bool isNumericOption;
         static if (!isDelegate!(typeof(receiver)))
         {
-            numericOption = isNumeric!(typeof(*receiver));
+            isNumericOption = isNumeric!(typeof(*receiver));
         }
-        if (!optMatch(a, option, val, cfg, numericOption))
+        if (!isValidOption(a, option, val, cfg, isNumericOption))
         {
             ++i;
             continue;
@@ -573,8 +573,8 @@ private struct configuration
                 ubyte, "", 3));
 }
 
-private bool optMatch(string arg, string optPattern, ref string value,
-    configuration cfg, bool isNumeric)
+private bool isValidOption(string arg, string optPattern, ref string value,
+    configuration cfg, bool isNumericOption)
 {
     //import std.stdio;
     //debug writeln("isValidOption:\n  ", arg, "\n  ", optPattern, "\n  ", value);
@@ -591,7 +591,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     // --l= is invalid for long options
     if (isLong && arg[1] == assignChar) return false;
 
-    //debug writeln("isNumeric: ", isNumeric);
+    //debug writeln("isNumericOption: ", isNumericOption);
     //debug writeln("cfg.noSpaceForShortNumericOptionsOnly: ", cfg.noSpaceForShortNumericOptionsOnly);
 
     immutable eqPos = std.string.indexOf(arg, assignChar);
@@ -605,7 +605,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
             arg = arg[0 .. 1];
 
             // reject if non-numeric option and numeric-only is configured
-            if (!isNumeric && cfg.noSpaceForShortNumericOptionsOnly) return false;
+            if (!isNumericOption && cfg.noSpaceForShortNumericOptionsOnly) return false;
         }
         else
         {
@@ -623,7 +623,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
             // short option with space in between
             if (value.length == 0) value = null;
             // reject if non-numeric option and numeric-only is configured
-            if (value.length > 0 && !isNumeric && cfg.noSpaceForShortNumericOptionsOnly) return false;
+            if (value.length > 0 && !isNumericOption && cfg.noSpaceForShortNumericOptionsOnly) return false;
         }
         else
         {
