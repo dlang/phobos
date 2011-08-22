@@ -121,13 +121,33 @@ else
     static assert(0);     // No socket support yet.
 }
 
-
-/// Base exception thrown from a Socket.
+/// Base exception thrown by $(D std.socket).
 class SocketException: Exception
+{
+    /// Deprecated. Provided for compatibility with older code using
+    /// $(D SocketException). Use $(D SocketOSException) instead.
+    deprecated @property int errorCode()
+    {
+        auto osException = cast(SocketOSException)this;
+        if (osException)
+            return osException.errorCode;
+        else
+            return 0;
+    }
+
+    this(string msg)
+    {
+        super(msg);
+    }
+}
+
+/// Socket exceptions representing network errors reported by the operating
+/// system.
+class SocketOSException: SocketException
 {
     int errorCode;     /// Platform-specific error code.
 
-    this(string msg, int err = 0)
+    this(string msg, int err = _lasterr)
     {
         errorCode = err;
 
@@ -180,6 +200,14 @@ class SocketException: Exception
     }
 }
 
+/// Socket exceptions representing invalid parameters specified by user code.
+class SocketParameterException: SocketException
+{
+    this(string msg)
+    {
+        super(msg);
+    }
+}
 
 private __gshared typeof(&getnameinfo) getnameinfoPointer;
 
@@ -194,7 +222,7 @@ shared static this()
         int val;
         val = WSAStartup(0x2020, &wd);
         if(val)         // Request Winsock 2.2 for IPv6.
-            throw new SocketException("Unable to initialize socket library", val);
+            throw new SocketOSException("Unable to initialize socket library", val);
 
         // See the comment in InternetAddress.toHostNameString() for
         // details on the getnameinfo() issue.
@@ -472,15 +500,11 @@ unittest
 /**
  * Base exception thrown from an InternetHost.
  */
-class HostException: Exception
+class HostException: SocketOSException
 {
-    int errorCode;      /// Platform-specific error code.
-
-
-    this(string msg, int err = 0)
+    this(string msg, int err = _lasterr())
     {
-        errorCode = err;
-        super(msg);
+        super(msg, err);
     }
 }
 
@@ -498,7 +522,7 @@ class InternetHost
     void validHostent(hostent* he)
     {
         if(he.h_addrtype != cast(int)AddressFamily.INET || he.h_length != 4)
-            throw new HostException("Address family mismatch", _lasterr());
+            throw new HostException("Address family mismatch");
     }
 
 
@@ -690,11 +714,11 @@ unittest
 /**
  * Base exception thrown from an Address.
  */
-class AddressException: Exception
+class AddressException: SocketOSException
 {
-    this(string msg)
+    this(string msg, int err = _lasterr())
     {
-        super(msg);
+        super(msg, err);
     }
 }
 
@@ -868,15 +892,15 @@ public:
         {
             auto host = new InternetHost();
             enforce(host.getHostByAddr(sin.sin_addr.s_addr),
-                    new SocketException("Could not get host name."));
+                    new SocketOSException("Could not get host name."));
             return host.name;
         }
 
         auto buf = new char[NI_MAXHOST];
         auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
                                      buf.ptr, cast(uint)buf.length, null, 0, 0);
-        enforce(rc == 0, new SocketException(
-                    "Could not get host name", _lasterr()));
+        enforce(rc == 0, new SocketOSException(
+                    "Could not get host name"));
         return assumeUnique(buf[0 .. strlen(buf.ptr)]);
     }
 
@@ -915,9 +939,9 @@ unittest
 
 
 /** */
-class SocketAcceptException: SocketException
+class SocketAcceptException: SocketOSException
 {
-    this(string msg, int err = 0)
+    this(string msg, int err = _lasterr())
     {
         super(msg, err);
     }
@@ -1206,7 +1230,7 @@ public:
         _family = af;
         auto handle = cast(socket_t) socket(af, type, protocol);
         if(handle == socket_t.init)
-            throw new SocketException("Unable to create socket", _lasterr());
+            throw new SocketOSException("Unable to create socket");
         setSock(handle);
     }
 
@@ -1226,7 +1250,7 @@ public:
         protoent* proto;
         proto = getprotobyname(toStringz(protocolName));
         if(!proto)
-            throw new SocketException("Unable to find the protocol", _lasterr());
+            throw new SocketOSException("Unable to find the protocol");
         this(af, type, cast(ProtocolType)proto.p_proto);
     }
 
@@ -1287,7 +1311,7 @@ public:
         return;         // Success.
 
  err:
-        throw new SocketException("Unable to set socket blocking", _lasterr());
+        throw new SocketOSException("Unable to set socket blocking");
     }
 
 
@@ -1309,7 +1333,7 @@ public:
     void bind(Address addr)
     {
         if(_SOCKET_ERROR == .bind(sock, addr.name(), addr.nameLen()))
-            throw new SocketException("Unable to bind socket", _lasterr());
+            throw new SocketOSException("Unable to bind socket");
     }
 
     /**
@@ -1341,7 +1365,7 @@ public:
                     static assert(0);
                 }
             }
-            throw new SocketException("Unable to connect socket", err);
+            throw new SocketOSException("Unable to connect socket", err);
         }
     }
 
@@ -1353,7 +1377,7 @@ public:
     void listen(int backlog)
     {
         if(_SOCKET_ERROR == .listen(sock, backlog))
-            throw new SocketException("Unable to listen on socket", _lasterr());
+            throw new SocketOSException("Unable to listen on socket");
     }
 
     /**
@@ -1378,7 +1402,7 @@ public:
     {
         auto newsock = cast(socket_t).accept(sock, null, null);
         if(socket_t.init == newsock)
-            throw new SocketAcceptException("Unable to accept socket connection", _lasterr());
+            throw new SocketAcceptException("Unable to accept socket connection");
 
         Socket newSocket;
         try
@@ -1455,7 +1479,7 @@ public:
     {
         char[256] result;         // Host names are limited to 255 chars.
         if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
-            throw new SocketException("Unable to obtain host name", _lasterr());
+            throw new SocketOSException("Unable to obtain host name");
         return to!string(cast(char*)result).idup;
     }
 
@@ -1465,7 +1489,7 @@ public:
         Address addr = newFamilyObject();
         socklen_t nameLen = cast(socklen_t) addr.nameLen();
         if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
-            throw new SocketException("Unable to obtain remote socket address", _lasterr());
+            throw new SocketOSException("Unable to obtain remote socket address");
         assert(addr.addressFamily() == _family);
         return addr;
     }
@@ -1476,7 +1500,7 @@ public:
         Address addr = newFamilyObject();
         socklen_t nameLen = cast(socklen_t) addr.nameLen();
         if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
-            throw new SocketException("Unable to obtain local socket address", _lasterr());
+            throw new SocketOSException("Unable to obtain local socket address");
         assert(addr.addressFamily() == _family);
         return addr;
     }
@@ -1656,7 +1680,7 @@ public:
     {
         socklen_t len = cast(socklen_t) result.length;
         if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
-            throw new SocketException("Unable to get socket option", _lasterr());
+            throw new SocketOSException("Unable to get socket option");
         return len;
     }
 
@@ -1679,7 +1703,7 @@ public:
     void getOption(SocketOptionLevel level, SocketOption option, out Duration result)
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
-                new SocketException("Not a valid timeout option: " ~ to!string(option)));
+                new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
         // WinSock returns the timeout values as a milliseconds DWORD,
         // while Linux and BSD return a timeval struct.
         version (Win32)
@@ -1704,7 +1728,7 @@ public:
     {
         if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level,
                                         cast(int)option, value.ptr, cast(uint) value.length))
-            throw new SocketException("Unable to set socket option", _lasterr());
+            throw new SocketOSException("Unable to set socket option");
     }
 
 
@@ -1764,9 +1788,9 @@ public:
     void setOption(SocketOptionLevel level, SocketOption option, Duration value)
     {
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
-                new SocketException("Not a valid timeout option: " ~ to!string(option)));
+                new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
 
-        enforce(value >= dur!"hnsecs"(0), new SocketException(
+        enforce(value >= dur!"hnsecs"(0), new SocketParameterException(
                     "Timeout duration must not be negative."));
 
         version (Win32)
@@ -1882,7 +1906,7 @@ public:
         }
 
         if(_SOCKET_ERROR == result)
-            throw new SocketException("Socket select error", _lasterr());
+            throw new SocketOSException("Socket select error");
 
         return result;
     }
@@ -1985,7 +2009,7 @@ Socket[2] socketPair()
     {
         int[2] socks;
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1)
-            throw new SocketException("Unable to create socket pair", _lasterr());
+            throw new SocketOSException("Unable to create socket pair");
 
         Socket toSocket(size_t id)
         {
