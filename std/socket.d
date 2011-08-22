@@ -219,6 +219,18 @@ class SocketParameterException: SocketException
     }
 }
 
+/// Return $(D true) if the last socket operation failed because the socket
+/// was in non-blocking mode and the operation would have blocked.
+bool wouldHaveBlocked()
+{
+    version(Win32)
+        return _lasterr() == WSAEWOULDBLOCK;
+    else version(BsdSockets)
+        return _lasterr() == EAGAIN;
+    else
+        static assert(0);
+}
+
 private __gshared typeof(&getnameinfo) getnameinfoPointer;
 
 shared static this()
