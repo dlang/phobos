@@ -50,11 +50,6 @@ version(unittest)
     private import std.c.stdio : printf;
 }
 
-version(Posix)
-{
-    version = BsdSockets;
-}
-
 version(Win32)
 {
     pragma (lib, "ws2_32.lib");
@@ -72,39 +67,37 @@ version(Win32)
         return WSAGetLastError();
     }
 }
-else version(BsdSockets)
+else version(Posix)
 {
-    version(Posix)
+    version(linux)
+        import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
+               IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
+               SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE;
+    else version(OSX)
+        private import std.c.osx.socket;
+    else version(FreeBSD)
     {
-        version(linux)
-            import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
-                   IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-                   SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE;
-        else version(OSX)
-            private import std.c.osx.socket;
-        else version(FreeBSD)
-        {
-            import core.sys.posix.sys.socket;
-            import core.sys.posix.sys.select;
-            import std.c.freebsd.socket;
-            private enum SD_RECEIVE = SHUT_RD;
-            private enum SD_SEND    = SHUT_WR;
-            private enum SD_BOTH    = SHUT_RDWR;
-        }
-        else
-            static assert(false);
-
-        import core.sys.posix.netdb;
-        private import core.sys.posix.fcntl;
-        private import core.sys.posix.unistd;
-        private import core.sys.posix.arpa.inet;
-        private import core.sys.posix.netinet.tcp;
-        private import core.sys.posix.netinet.in_;
-        private import core.sys.posix.sys.time;
-        //private import core.sys.posix.sys.select;
-        private import core.sys.posix.sys.socket;
-        private alias core.sys.posix.sys.time.timeval _ctimeval;
+        import core.sys.posix.sys.socket;
+        import core.sys.posix.sys.select;
+        import std.c.freebsd.socket;
+        private enum SD_RECEIVE = SHUT_RD;
+        private enum SD_SEND    = SHUT_WR;
+        private enum SD_BOTH    = SHUT_RDWR;
     }
+    else
+        static assert(false);
+
+    import core.sys.posix.netdb;
+    private import core.sys.posix.fcntl;
+    private import core.sys.posix.unistd;
+    private import core.sys.posix.arpa.inet;
+    private import core.sys.posix.netinet.tcp;
+    private import core.sys.posix.netinet.in_;
+    private import core.sys.posix.sys.time;
+    //private import core.sys.posix.sys.select;
+    private import core.sys.posix.sys.socket;
+    private alias core.sys.posix.sys.time.timeval _ctimeval;
+
     private import core.stdc.errno;
 
     typedef int32_t socket_t = -1;
@@ -225,7 +218,7 @@ bool wouldHaveBlocked()
 {
     version(Win32)
         return _lasterr() == WSAEWOULDBLOCK;
-    else version(BsdSockets)
+    else version(Posix)
         return _lasterr() == EAGAIN;
     else
         static assert(0);
@@ -1023,7 +1016,7 @@ private:
             return set.fd_count;
         }
     }
-    else version(BsdSockets)
+    else version(Posix)
     {
         int maxfd;
         uint count;
@@ -1050,7 +1043,7 @@ public:
     {
         FD_ZERO(&set);
 
-        version(BsdSockets)
+        version(Posix)
         {
             maxfd = -1;
             count = 0;
@@ -1068,7 +1061,7 @@ public:
     {
         FD_SET(s, &set);
 
-        version(BsdSockets)
+        version(Posix)
         {
             ++count;
             if(s > maxfd)
@@ -1085,7 +1078,7 @@ public:
     void remove(socket_t s)
     {
         FD_CLR(s, &set);
-        version(BsdSockets)
+        version(Posix)
         {
             --count;
             // note: adjusting maxfd would require scanning the set, not worth it
@@ -1131,7 +1124,7 @@ public:
         {
             return count;
         }
-        else version(BsdSockets)
+        else version(Posix)
         {
             return maxfd + 1;
         }
@@ -1163,7 +1156,7 @@ extern(C) struct linger
         uint16_t on;            /// Nonzero for on.
         uint16_t time;          /// Linger time.
     }
-    else version(BsdSockets)
+    else version(Posix)
     {
         int32_t on;
         int32_t time;
@@ -1305,7 +1298,7 @@ public:
         {
             return _blocking;
         }
-        else version(BsdSockets)
+        else version(Posix)
         {
             return !(fcntl(handle, F_GETFL, 0) & O_NONBLOCK);
         }
@@ -1321,7 +1314,7 @@ public:
                 goto err;
             _blocking = byes;
         }
-        else version(BsdSockets)
+        else version(Posix)
         {
             int x = fcntl(sock, F_GETFL, 0);
             if(-1 == x)
@@ -1463,7 +1456,7 @@ public:
         {
             .closesocket(sock);
         }
-        else version(BsdSockets)
+        else version(Posix)
         {
             .close(sock);
         }
@@ -1745,7 +1738,7 @@ public:
                 msecs += WINSOCK_TIMEOUT_SKEW;
             result = dur!"msecs"(msecs);
         }
-        else version (BsdSockets)
+        else version (Posix)
         {
             timeval tv;
             getOption(level, option, (&tv)[0..1]);
@@ -1837,7 +1830,7 @@ public:
                           max(1, msecs - WINSOCK_TIMEOUT_SKEW));
             }
         }
-        else version (BsdSockets)
+        else version (Posix)
         {
             timeval tv = { seconds: cast(int)value.total!"seconds"(),
                            microseconds: value.fracSec.usecs };
@@ -2046,7 +2039,7 @@ class UdpSocket: Socket
  */
 Socket[2] socketPair()
 {
-    version(BsdSockets)
+    version(Posix)
     {
         int[2] socks;
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == -1)
