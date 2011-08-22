@@ -31,6 +31,7 @@ immutable
         gnu = 2,         /// GNU D Compiler (GDC)
         llvm = 3,        /// LLVM D Compiler (LDC)
         dotNET = 4,      /// D.NET
+        sdc = 5,         /// Stupid D Compiler (SDC)
     }
 
     /// Which vendor produced this compiler.
@@ -39,6 +40,7 @@ immutable
     else version(GNU)         Vendor vendor = Vendor.gnu;
     else version(LDC)         Vendor vendor = Vendor.llvm;
     else version(D_NET)       Vendor vendor = Vendor.dotNET;
+    else version(SDC)         Vendor vendor = Vendor.sdc;
     else                      Vendor vendor = Vendor.unknown;
 
 
