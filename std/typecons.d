@@ -896,28 +896,34 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
                 T original;
                 U stripped;
             }
-            void opAssign(T another)
+            void opAssign(T another) pure nothrow
             {
                 stripped = cast(U) another;
             }
-            void opAssign(Rebindable another)
+            void opAssign(Rebindable another) pure nothrow
             {
                 stripped = another.stripped;
             }
             static if (is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another)
+                void opAssign(Rebindable!(immutable U) another) pure nothrow
                 {
                     stripped = another.stripped;
                 }
             }
-            this(T initializer)
+
+            this(T initializer) pure nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref T get() {
+            @property ref T get() pure nothrow
+            {
+                return original;
+            }
+            @property ref const(T) get() const pure nothrow
+            {
                 return original;
             }
 
