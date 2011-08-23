@@ -1204,7 +1204,6 @@ unittest
         debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
         assert(to!string(to!Int(-10), 10u) == "-10");
-        //assert(to!string(to!Int(-15), 2u) == (repeat("1", Int.sizeof)~"1111")[$-Int.sizeof .. $]);
     }
 }
 
