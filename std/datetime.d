@@ -7768,10 +7768,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -7910,10 +7910,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -8056,10 +8056,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -8855,7 +8855,7 @@ private:
     /+
     invariant()
     {
-        assert(_timezone.get !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
+        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
     }
     +/
 
