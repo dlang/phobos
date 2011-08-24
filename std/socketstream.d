@@ -141,6 +141,7 @@ class SocketStream: Stream
         override void close()
         {
             sock.close();
+            super.close();
         }
 }
 
