@@ -3488,7 +3488,10 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
-    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
+    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) {\n";
+    ret ~= "\t\tforeach(range; ranges)\n";
+    ret ~= "\t\t\tenforce(range.empty);\n";
+    ret ~= "\t}\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -3532,12 +3535,6 @@ private:
     alias staticMap!(Unqual, Ranges) R;
     R _ranges;
     StoppingPolicy _s;
-
-    void enforceAllEmpty() {
-        foreach(range; _ranges) {
-            enforce(range.empty);
-        }
-    }
 
 public:
     this(R ranges, StoppingPolicy s = StoppingPolicy.shortest)
