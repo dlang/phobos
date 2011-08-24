@@ -759,9 +759,9 @@ class AddressException: SocketOSException
 abstract class Address
 {
     sockaddr* name();
-    int nameLen();
-    AddressFamily addressFamily();      /// Family of this address.
-    override string toString();                 /// Human readable string representing this address.
+    int nameLen() const;
+    AddressFamily addressFamily() const;      /// Family of this address.
+    override string toString() const;         /// Human readable string representing this address.
 }
 
 /**
@@ -780,19 +780,19 @@ public:
     }
 
 
-    override int nameLen()
+    override int nameLen() const
     {
         return sa.sizeof;
     }
 
 
-    override AddressFamily addressFamily()
+    override AddressFamily addressFamily() const
     {
         return cast(AddressFamily)sa.sa_family;
     }
 
 
-    override string toString()
+    override string toString() const
     {
         return "Unknown";
     }
@@ -821,7 +821,7 @@ public:
     }
 
 
-    override int nameLen()
+    override int nameLen() const
     {
         return sin.sizeof;
     }
@@ -832,19 +832,19 @@ public:
     enum ushort PORT_ANY = 0;                  /// Any IPv4 port number.
 
     /// Overridden to return $(D AddressFamily.INET).
-    override AddressFamily addressFamily()
+    override AddressFamily addressFamily() const
     {
         return cast(AddressFamily)AddressFamily.INET;
     }
 
     /// Returns the IPv4 port number.
-    ushort port()
+    ushort port() const
     {
         return ntohs(sin.sin_port);
     }
 
     /// Returns the IPv4 address number.
-    uint addr()
+    uint addr() const
     {
         return ntohl(sin.sin_addr.s_addr);
     }
@@ -894,13 +894,13 @@ public:
     }
 
     /// Human readable string representing the IPv4 address in dotted-decimal form.
-    string toAddrString()
+    string toAddrString() const
     {
         return to!string(inet_ntoa(sin.sin_addr)).idup;
     }
 
     /// Human readable string representing the IPv4 port.
-    string toPortString()
+    string toPortString() const
     {
         return std.conv.to!string(port());
     }
@@ -909,7 +909,7 @@ public:
      * Returns the host name as a fully qualified domain name, if
      * available, or the IP address in dotted-decimal notation otherwise.
      */
-    string toHostNameString()
+    string toHostNameString() const
     {
         // getnameinfo() is the recommended way to perform a reverse (name)
         // lookup on both Posix and Windows. However, it is only available
@@ -935,7 +935,7 @@ public:
     }
 
     /// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
-    override string toString()
+    override string toString() const
     {
         return toAddrString() ~ ":" ~ toPortString();
     }
@@ -957,7 +957,7 @@ unittest
 {
     try
     {
-        InternetAddress ia = new InternetAddress("63.105.9.61", 80);
+        const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
     }
     catch (Throwable e)
