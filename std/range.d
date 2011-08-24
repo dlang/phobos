@@ -4872,6 +4872,260 @@ unittest
 }
 
 /**
+This struct takes two ranges, $(D source) and $(D indices), and creates a view
+of $(D source) as if its elements were reordered according to $(D indices).
+$(D indices) may include only a subset of the elements of $(D source) and
+may also repeat elements.
+
+$(D Source) must be a random access range.  The returned range will be
+bidirectional or random-access if $(D Indices) is bidirectional or 
+random-access, respectively.
+
+Examples:
+---
+auto source = [1, 2, 3, 4, 5];
+auto indices = [4, 3, 1, 2, 0, 4];
+auto ind = indexed(source, indices);
+assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+
+// When elements of indices are duplicated and Source has lvalue elements,
+// these are aliased in reindexed.
+reindexed[0]++;
+assert(ind[0] == 6);
+assert(ind[5] == 6);
+---
+*/
+struct Indexed(Source, Indices)
+if(isRandomAccessRange!Source && isInputRange!Indices &&
+  is(typeof(Source.init[ElementType!(Indices).init])))
+{
+    this(Source source, Indices indices)
+    {
+        this._source = source;
+        this._indices = indices;
+    }
+    
+    /// Range primitives
+    @property auto ref front() 
+    {
+        assert(!empty);
+        return _source[_indices.front];
+    }
+    
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _indices.popFront();
+    }
+    
+    static if(isInfinite!Indices)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        /// Ditto
+        @property bool empty() 
+        {
+            return _indices.empty;
+        }
+    }
+    
+    static if(isForwardRange!Indices)
+    {
+        /// Ditto
+        @property typeof(this) save() 
+        {
+            // Don't need to save _source because it's never consumed.
+            return typeof(this)(_source, _indices.save);
+        }
+    }
+    
+    /// Ditto
+    static if(hasAssignableElements!Source)
+    {
+        @property auto ref front(ElementType!Source newVal)
+        {
+            assert(!empty);
+            return _source[_indices.front] = newVal;
+        }
+    }
+    
+    
+    static if(hasMobileElements!Source)
+    {
+        /// Ditto
+        auto moveFront()
+        {
+            assert(!empty);
+            return .moveAt(_source, _indices.front);
+        }
+    }
+    
+    static if(isBidirectionalRange!Indices)
+    {
+        /// Ditto
+        @property auto ref back() 
+        {
+            assert(!empty);
+            return _source[_indices.back];
+        }
+        
+        /// Ditto
+        void popBack()
+        {
+           assert(!empty);
+           _indices.popBack();
+        }
+
+        /// Ditto
+        static if(hasAssignableElements!Source)
+        {
+            @property auto ref back(ElementType!Source newVal)
+            {
+                assert(!empty);
+                return _source[_indices.back] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Source)
+        {
+            /// Ditto
+            auto moveBack()
+            {
+                assert(!empty);
+                return .moveAt(_source, _indices.back);
+            }
+        }
+    }
+
+    static if(hasLength!Indices)
+    {
+        /// Ditto
+         @property size_t length()
+        {
+            return _indices.length;
+        }
+    }
+    
+    static if(isRandomAccessRange!Indices)
+    {
+        /// Ditto
+        auto ref opIndex(size_t index)
+        {
+            return _source[_indices[index]];
+        }
+    
+        /// Ditto
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            return typeof(this)(_source, _indices[a..b]);
+        }
+        
+        
+        static if(hasAssignableElements!Source)
+        {   
+            /// Ditto
+            auto opIndexAssign(ElementType!Source newVal, size_t index)
+            {
+                return _source[_indices[index]] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Source)
+        {
+            /// Ditto
+            auto moveAt(size_t index)
+            {
+                return .moveAt(_source, _indices[index]);
+            }
+        }
+    }
+    
+    // All this stuff is useful if someone wants to reindex a Reindex 
+    // without adding a layer of indirection.
+    
+    /**
+    Returns the source range.
+    */
+    @property Source source()
+    {
+        return _source;
+    }
+    
+    /**
+    Returns the indices range.
+    */
+     @property Indices indices()
+    {
+        return _indices;
+    }
+   
+    static if(isRandomAccessRange!Indices)
+    {
+        /**
+        Returns the physical index into the source range corresponding to a
+        given logical index.  This is useful, for example, when indexing
+        an $(D Indexed) without adding another layer of indirection.
+        
+        Examples:
+        ---
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
+        ---
+        */
+        size_t physicalIndex(size_t logicalIndex)
+        {
+            return _indices[logicalIndex];
+        }
+    }
+    
+private:
+    Source _source;
+    Indices _indices;
+
+}
+
+/// Ditto
+Indexed!(Source, Indices) indexed(Source, Indices)
+(Source source, Indices indices)
+{
+    return typeof(return)(source, indices);
+}
+
+unittest
+{
+    {
+        // Test examples.
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
+    }
+    
+    auto source = [1, 2, 3, 4, 5];
+    auto indices = [4, 3, 1, 2, 0, 4];
+    auto ind = indexed(source, indices);
+    assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));    
+
+    // When elements of indices are duplicated and Source has lvalue elements,
+    // these are aliased in ind.
+    ind[0]++;
+    assert(ind[0] == 6);
+    assert(ind[5] == 6);
+    
+    foreach(DummyType; AllDummyRanges)
+    {
+        auto d = DummyType.init;
+        auto r = indexed([1, 2, 3, 4, 5], d);
+        static assert(propagatesRangeType!(DummyType, typeof(r)));
+        static assert(propagatesLength!(DummyType, typeof(r)));
+    }
+}
+
+/**
    Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
    destroyable state that does not allocate any resources (usually equal
    to its $(D .init) value).
