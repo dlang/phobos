@@ -3635,9 +3635,13 @@ unittest {
 
     assert(arr1 == [7,9,11,13,15]);
 
+    // Make sure StoppingPolicy.requireSameLength doesn't throw.
+    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    foreach(a, b; ls) {}
+
     // Make sure StoppingPolicy.requireSameLength throws.
     arr2.popBack;
-    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
         foreach(a, b; ls) {}
