@@ -2647,7 +2647,8 @@ unittest
     assertThrown!ConvException(parse!bool(m));
     assert (m == "maybe");  // m shouldn't change on failure
 
-    auto b = parse!(const(bool))("true");
+    auto s = "true";
+    auto b = parse!(const(bool))(s);
     assert(b == true);
 }
 
