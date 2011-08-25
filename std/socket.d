@@ -1013,20 +1013,33 @@ extern(C) struct timeval
 }
 
 
-/// A collection of sockets for use with $(D Socket.select).
+/**
+ * A collection of sockets for use with $(D Socket.select).
+ *
+ * $(D SocketSet) allows specifying the capacity of the underlying
+ * $(D fd_set), however users should be aware that the exact meaning of this
+ * value varies depending on the current platform:
+ * $(UL $(LI On POSIX, $(D fd_set) is a bit array of file descriptors. The
+ * $(D SocketSet) capacity specifies the highest file descriptor which can be
+ * stored in the set.)
+ * $(LI on Windows, $(D fd_set) is an array of socket handles. Capacity
+ * indicates the actual number of sockets that can be stored in the set.))
+ */
 class SocketSet
 {
 private:
-    uint maxsockets;     /// max desired sockets, the $(D fd_set) might be capable of holding more
-
-
     version(Win32)
     {
+        // the maximum number of sockets the allocated fd_set can hold
+        uint fdsetCapacity;
+
         fd_set* set;
         @property uint count() { return set.fd_count; }
     }
     else version(Posix)
     {
+        int fdsetMax;
+
         fd_set setData;
         final @property fd_set* set() { return &setData; }
         int maxfd;
@@ -1036,18 +1049,30 @@ private:
 
 public:
 
-    /// Set the maximum amount of sockets that may be added.
+    /**
+     * Set the capacity of this $(D SocketSet). The exact meaning of the
+     * $(D max) parameter varies from platform to platform.
+     * Throws: $(D SocketParameterException) if $(D max) exceeds this
+     * platform's the maximum socket set size.
+     */
     this(uint max)
     {
-        maxsockets = max;
         version(Win32)
         {
+            fdsetCapacity = max;
             set = FD_CREATE(max);
+        }
+        else version(Posix)
+        {
+            // TODO (needs druntime changes)
+            enforce(max <= FD_SETSIZE, new SocketParameterException(
+                "Maximum socket set size exceeded for this platform"));
+            fdsetMax = max;
         }
         reset();
     }
 
-    /// Uses the default maximum for the system.
+    /// Uses the default capacity for the system.
     this()
     {
         this(FD_SETSIZE);
@@ -1067,13 +1092,19 @@ public:
 
 
     void add(socket_t s)
-    in
     {
         // Make sure too many sockets don't get added.
-        assert(count < maxsockets);
-    }
-    body
-    {
+        version(Win32)
+        {
+            enforce(count < fdsetCapacity, new SocketParameterException(
+                "SocketSet capacity exceeded"));
+        }
+        else version(Posix)
+        {
+            enforce(s < fdsetMax, new SocketParameterException(
+                "Socket descriptor index exceeds SocketSet capacity"));
+        }
+
         FD_SET(s, set);
 
         version(Posix)
@@ -1084,7 +1115,9 @@ public:
         }
     }
 
-    /// Add a $(D Socket) to the collection. Adding more than the maximum has dangerous side affects.
+    /// Add a $(D Socket) to the collection.
+    /// Throws: $(D SocketParameterException) if the capacity of this
+    /// $(D SocketSet) has been exceeded.
     void add(Socket s)
     {
         add(s.sock);
@@ -1092,6 +1125,12 @@ public:
 
     void remove(socket_t s)
     {
+        version(Posix)
+        {
+            enforce(s < fdsetMax, new SocketParameterException(
+                "Socket descriptor index exceeds SocketSet capacity"));
+        }
+
         FD_CLR(s, set);
         version(Posix)
         {
@@ -1109,6 +1148,12 @@ public:
 
     int isSet(socket_t s)
     {
+        version(Posix)
+        {
+            enforce(s < fdsetMax, new SocketParameterException(
+                "Socket descriptor index exceeds SocketSet capacity"));
+        }
+
         return FD_ISSET(s, set);
     }
 
@@ -1120,10 +1165,18 @@ public:
     }
 
 
-    /// Return maximum amount of sockets that can be added, like $(D FD_SETSIZE).
+    /// Return the capacity of this $(D SocketSet). The exact meaning of the
+    /// return value varies from platform to platform.
     uint max()
     {
-        return maxsockets;
+        version(Win32)
+        {
+            return fdsetCapacity;
+        }
+        else version(Posix)
+        {
+            return fdsetMax;
+        }
     }
 
 
