@@ -1199,6 +1199,7 @@ enum SocketOption: int
     DONTROUTE =            SO_DONTROUTE,        /// do not route
     SNDTIMEO =             SO_SNDTIMEO,         /// send timeout
     RCVTIMEO =             SO_RCVTIMEO,         /// receive timeout
+    ERROR =                SO_ERROR,            /// retrieve and clear error status
 
     // SocketOptionLevel.TCP:
     TCP_NODELAY =          .TCP_NODELAY,        /// disable the Nagle algorithm for send coalescing
@@ -1848,6 +1849,15 @@ public:
             setOption(level, option, (&tv)[0 .. 1]);
         }
         else static assert(false);
+    }
+
+    /// Get a text description of this socket's error status, and clear the
+    /// socket's error status.
+    string getErrorText()
+    {
+        int32_t error;
+        getOption(SocketOptionLevel.SOCKET, SocketOption.ERROR, error);
+        return formatSocketError(error);
     }
 
     /**
