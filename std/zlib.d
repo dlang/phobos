@@ -233,7 +233,8 @@ void arrayPrint(ubyte[] array)
 /// the header format the compressed stream is wrapped in
 enum HeaderFormat {
     deflate, /// a standard zlib header
-    gzip /// a gzip file format header
+    gzip, /// a gzip file format header
+    determineFromData /// used when decompressing. Try to automatically detect the stream format by looking at the data
 }
 
 /*********************************************
@@ -412,6 +413,8 @@ class UnCompress
     int done;
     size_t destbufsize;
 
+    HeaderFormat format;
+
     void error(int err)
     {
         if (inited)
@@ -432,8 +435,9 @@ class UnCompress
     }
 
     /** ditto */
-    this()
+    this(HeaderFormat format = HeaderFormat.determineFromData)
     {
+        this.format = format;
     }
 
     ~this()
@@ -468,7 +472,13 @@ class UnCompress
 
         if (!inited)
         {
-            err = inflateInit(&zs);
+	    int windowBits = 15;
+	    if(format == HeaderFormat.gzip)
+	        windowBits += 16;
+            else if(format == HeaderFormat.determineFromData)
+	        windowBits += 32;
+
+            err = inflateInit2(&zs, windowBits);
             if (err)
                 error(err);
             inited = 1;
