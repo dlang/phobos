@@ -3055,6 +3055,21 @@ enum string parallelApplyMixinInputRange = q{
     // The total number of elements that have been popped off range.
     // This is updated only while protected by rangeMutex;
     size_t nPopped = 0;
+
+    static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
+    is(typeof(range.doBufSwap()))) {
+        // Make sure we don't have the buffer recycling overload of
+        // asyncBuf.
+        static if(is(typeof(range.range)) &&
+        isRoundRobin!(typeof(range.range))) {
+            static assert(0, "Cannot execute a parallel foreach loop on " ~
+                "the buffer recycling overload of asyncBuf.");
+        }
+
+        enum bool bufferTrick = true;
+    } else {
+        enum bool bufferTrick = false;
+    }
     
     void doIt() {
         scope(failure) {
@@ -3087,11 +3102,12 @@ enum string parallelApplyMixinInputRange = q{
             }
             
         } else {
+            
             alias ElementType!(R)[] Temp;
             Temp temp;
             
             // Returns:  The previous value of nPopped.
-            size_t makeTemp() {
+            static if(!bufferTrick) size_t makeTemp() {
                 if(temp is null) {
                     temp = uninitializedArray!(Temp)(workUnitSize);
                 }
@@ -3105,6 +3121,28 @@ enum string parallelApplyMixinInputRange = q{
                 }
                 
                 temp = temp[0..i];
+                auto ret = nPopped;
+                nPopped += temp.length;
+                return ret;
+            }
+            
+            static if(bufferTrick) size_t makeTemp() {
+                rangeMutex.lock();
+                scope(exit) rangeMutex.unlock();
+                
+                // Elide copying by just swapping buffers.
+                temp.length = range.buf1.length;
+                swap(range.buf1, temp);
+
+                // This is necessary in case popFront() has been called on
+                // range before entering the parallel foreach loop.
+                temp = temp[range.bufPos..$];
+
+                static if(is(typeof(range._length))) {
+                    range._length -= (temp.length - range.bufPos);
+                }
+
+                range.doBufSwap();
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3509,13 +3547,19 @@ unittest {
     foreach( elem; (lmchain)) {
         if(!approxEqual(elem, ii)) {
             stderr.writeln(ii, '\t', elem);
-//            lmchain.printBuffers();
-//            temp.printBuffers();
-//            abuf.printBuffers();
-            assert(0);
         }
         ii++;
     }
+    
+    // Test buffer trick in parallel foreach.
+    abuf = poolInstance.asyncBuf(iota(-1, 1_000_000), 100);
+    abuf.popFront();
+    auto bufTrickTest = new int[abuf.length];
+    foreach(i, elem; parallel(abuf)) {
+        bufTrickTest[i] = i;
+    }
+    
+    assert(equal(iota(1_000_000), bufTrickTest));
 
     auto myTask = task!(std.math.abs)(-1);
     taskPool.put(myTask);
