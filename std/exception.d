@@ -469,6 +469,58 @@ unittest
     }
 }
 
+/**
+Equivalent to $(D assert) except that it is not compiled out by the 
+-release compiler flag or any other compiler flag.  This function differes from
+$(D enforce) in two ways:
+
+1.  $(D alwaysAssert) documents that, if the predicate fails, it is a bug
+    in the program.  $(D enforce) documents that, if the predicate fails,
+    it is due to an external factor and may be recoverable.
+    
+2.  $(D alwaysAssert) throws a $(D AssertError), which is derived from 
+    $(D Error) and not meant to be caught under normal circumstances.
+    $(D enforce) throws an $(D Exception) which is meant to be caught
+    and handled if possible.
+*/
+void alwaysAssert(T, string file = __FILE__, int line = __LINE__)
+(T value, lazy string msg = null) @safe 
+{
+    if(value) return;
+
+    string msgEval = msg;
+    if(msgEval.length) 
+    {
+        throw new AssertError(msgEval, file, line);
+    } 
+    else 
+    {
+        throw new AssertError(file, line);
+    }
+}
+
+unittest 
+{
+    try 
+    {
+        alwaysAssert(0);
+        enforce(0);
+    } catch(AssertError) {}
+    
+    alwaysAssert(1);
+    
+    try 
+    {
+        alwaysAssert(0, "msg");
+        enforce(0);
+    } 
+    catch(AssertError e) 
+    {
+        assert(e.msg == "msg");
+        assert(e.line == __LINE__ - 6);
+    }
+}
+
 /++
     Catches and returns the exception thrown from the given expression.
     If no exception is thrown, then null is returned and $(D result) is
