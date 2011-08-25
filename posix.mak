@@ -160,7 +160,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
-        regexp signals socket socketstream stdint stdio stdiobase		\
+        regexp sha1 signals socket socketstream stdint stdio stdiobase	\
         stream string syserror system traits typecons typetuple uni		\
         uri utf variant xml zip zlib)
 
@@ -182,7 +182,9 @@ endif
 EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
-EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+EXTRA_MODULES_DIGEST += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/digest/, sha1_SSSE3)
+EXTRA_MODULES += $(EXTRA_MODULES_DIGEST) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction)
 
