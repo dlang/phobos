@@ -504,7 +504,7 @@ unittest
     try 
     {
         alwaysAssert(0);
-        assert(0);
+        enforce(0);
     } catch(AssertError) {}
     
     alwaysAssert(1);
@@ -512,7 +512,7 @@ unittest
     try 
     {
         alwaysAssert(0, "msg");
-        assert(0);
+        enforce(0);
     } 
     catch(AssertError e) 
     {
