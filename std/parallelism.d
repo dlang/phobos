@@ -1555,6 +1555,14 @@ public:
                     }
 
                 } else static if(bufferTrick) {
+                    
+                    // Make sure we don't have the buffer recycling overload of
+                    // asyncBuf.
+                    static if(is(typeof(range.range)) &&
+                    isRoundRobin!(typeof(range.range))) {
+                        static assert(0, "Cannot execute a parallel map on " ~
+                            "the buffer recycling overload of asyncBuf.");
+                    }
 
                     alias typeof(range.buf1) FromType;
                     FromType from;
@@ -1937,12 +1945,17 @@ public:
     Any exceptions thrown while iterating over $(D range) are re-thrown on a
     call to $(D popFront).
 
-    Warning:
-
+    Warnings:
+    
+    The buffers used by this range are recycled across iterations as a
+    performance optimization.  Calls to $(D popFront) may invalidate elements
+    previously returned by $(D front).  Therefore, elements returned by
+    $(D front) should be consumed one at a time and not stored.
+    
     Using the range returned by this function in a parallel foreach loop
-    will not work because buffers may be overwritten while the task that
-    processes them is in queue.  This is checked for at compile time
-    and will result in a static assertion failure.
+    or $(D map) will not work because buffers may be overwritten while the task 
+    that processes them is in queue or running.  This is checked for at compile 
+    time and will result in a static assertion failure.
     */
     auto asyncBuf(C1, C2)
     (C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
