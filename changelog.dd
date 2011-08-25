@@ -21,6 +21,7 @@ $(VERSION 055, ddd mm, 2011, =================================================,
      )
 
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 5645): std.range.drop())
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
         $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
      )
