@@ -123,6 +123,7 @@ import std.stdio;
 import std.string;
 import std.system;
 import std.traits;
+import std.typecons;
 
 version(Windows)
 {
@@ -604,7 +605,7 @@ public:
             immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
             immutable standardTime = _timezone.tzToUTC(adjustedTime);
 
-            this(standardTime, _timezone.get);
+            this(standardTime, _timezone);
         }
         catch(Exception e)
         {
@@ -657,7 +658,7 @@ public:
             immutable adjustedTime = (date - Date(1, 1, 1)).total!"hnsecs";
             immutable standardTime = _timezone.tzToUTC(adjustedTime);
 
-            this(standardTime, _timezone.get);
+            this(standardTime, _timezone);
         }
         catch(Exception e)
             assert(0, "Date's constructor through when it shouldn't have.");
@@ -725,7 +726,7 @@ public:
     ref SysTime opAssign(const ref SysTime rhs) pure nothrow
     {
         _stdTime = rhs._stdTime;
-        _timezone = rhs._timezone.get;
+        _timezone = rhs._timezone;
 
         return this;
     }
@@ -737,7 +738,7 @@ public:
     ref SysTime opAssign(SysTime rhs) pure nothrow
     {
         _stdTime = rhs._stdTime;
-        _timezone = rhs._timezone.get;
+        _timezone = rhs._timezone;
 
         return this;
     }
@@ -2092,7 +2093,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
       +/
     @property immutable(TimeZone) timezone() const pure nothrow
     {
-        return _timezone.get;
+        return _timezone;
     }
 
 
@@ -5893,7 +5894,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
-        SysTime retval = SysTime(this._stdTime, this._timezone.get);
+        SysTime retval = SysTime(this._stdTime, this._timezone);
 
         static if(is(Unqual!D == Duration))
             immutable hnsecs = duration.total!"hnsecs";
@@ -7306,7 +7307,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(newDays);
 
-        auto retval = SysTime(this._stdTime, this._timezone.get);
+        auto retval = SysTime(this._stdTime, this._timezone);
         retval.adjTime = newDaysHNSecs + theTimeHNSecs;
 
         return retval;
@@ -7706,7 +7707,7 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     SysTime opCast(T)() const pure nothrow
         if(is(Unqual!T == SysTime))
     {
-        return SysTime(_stdTime, _timezone.get);
+        return SysTime(_stdTime, _timezone);
     }
 
 
@@ -7767,10 +7768,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -7909,10 +7910,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -8055,10 +8056,10 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
             auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is LocalTime())
+            if(_timezone is LocalTime())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs);
 
-            if(_timezone.get is UTC())
+            if(_timezone is UTC())
                 return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = cast(int)convert!("hnsecs", "minutes")(adjustedTime - stdTime);
@@ -8260,7 +8261,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         {
             auto dateTime = DateTime.fromISOString(dateTimeStr);
             auto fracSec = fracSecFromISOString(fracSecStr);
-            DTRebindable!(immutable TimeZone) parsedZone;
+            Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
                 parsedZone = LocalTime();
@@ -8269,7 +8270,7 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
             else
                 parsedZone = SimpleTimeZone.fromISOString(zoneStr);
 
-            auto retval = SysTime(dateTime, fracSec, parsedZone.get);
+            auto retval = SysTime(dateTime, fracSec, parsedZone);
 
             if(tz !is null)
                 retval.timezone = tz;
@@ -8458,7 +8459,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         {
             auto dateTime = DateTime.fromISOExtString(dateTimeStr);
             auto fracSec = fracSecFromISOString(fracSecStr);
-            DTRebindable!(immutable TimeZone) parsedZone;
+            Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
                 parsedZone = LocalTime();
@@ -8467,7 +8468,7 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
             else
                 parsedZone = SimpleTimeZone.fromISOString(zoneStr);
 
-            auto retval = SysTime(dateTime, fracSec, parsedZone.get);
+            auto retval = SysTime(dateTime, fracSec, parsedZone);
 
             if(tz !is null)
                 retval.timezone = tz;
@@ -8670,7 +8671,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
         {
             auto dateTime = DateTime.fromSimpleString(dateTimeStr);
             auto fracSec = fracSecFromISOString(fracSecStr);
-            DTRebindable!(immutable TimeZone) parsedZone;
+            Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
                 parsedZone = LocalTime();
@@ -8679,7 +8680,7 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
             else
                 parsedZone = SimpleTimeZone.fromISOString(zoneStr);
 
-            auto retval = SysTime(dateTime, fracSec, parsedZone.get);
+            auto retval = SysTime(dateTime, fracSec, parsedZone);
 
             if(tz !is null)
                 retval.timezone = tz;
@@ -8854,13 +8855,13 @@ private:
     /+
     invariant()
     {
-        assert(_timezone.get !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
+        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
     }
     +/
 
 
     long  _stdTime;
-    DTRebindable!(immutable TimeZone) _timezone;
+    Rebindable!(immutable TimeZone) _timezone;
 }
 
 
@@ -33177,79 +33178,6 @@ string numToString(long value) pure nothrow
         assert(0, "Something threw when nothing can throw.");
 }
 
-
-/+
-    A temporary replacement for Rebindable!() until bug http://d.puremagic.com/issues/show_bug.cgi?id=4977
-    is fixed.
- +/
-template DTRebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
-{
-    static if(!is(T X == const(U), U) && !is(T X == immutable(U), U))
-    {
-        alias T DTRebindable;
-    }
-    else static if(isArray!(T))
-    {
-        alias const(ElementType!(T))[] DTRebindable;
-    }
-    else
-    {
-        struct DTRebindable
-        {
-            private union
-            {
-                T original;
-                U stripped;
-            }
-
-            void opAssign(T another) pure nothrow
-            {
-                stripped = cast(U) another;
-            }
-
-            void opAssign(DTRebindable another) pure nothrow
-            {
-                stripped = another.stripped;
-            }
-
-            static if(is(T == const U))
-            {
-                // safely assign immutable to const
-                void opAssign(DTRebindable!(immutable U) another) pure nothrow
-                {
-                    stripped = another.stripped;
-                }
-            }
-
-            this(T initializer) pure nothrow
-            {
-                opAssign(initializer);
-            }
-
-            @property ref T get() pure nothrow
-            {
-                return original;
-            }
-
-            @property ref T get() const pure nothrow
-            {
-                return original;
-            }
-
-            alias get this;
-
-            T opDot() pure nothrow
-            {
-                return original;
-            }
-
-            T opDot() const pure nothrow
-            {
-                return original;
-            }
-        }
-    }
-}
 
 version(unittest)
 {
