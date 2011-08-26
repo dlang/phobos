@@ -3861,7 +3861,10 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     C[][] indents;
     indents.length = lines.length;
     foreach(i, line; lines)
-        indents[i] = line.strip().empty? null : leadingWhiteOf(line);
+    {
+        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
+        indents[i] = stripped.empty? null : leadingWhiteOf(line);
+    }
 
     C[] shorterAndNonNull(C[] a, C[] b) {
         if(a is null) return b;
@@ -3889,9 +3892,52 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     return lines;
 }
 
+// TODO: Remove this and use std.string.strip when BUG6558 is fixed
+//       AND retro() becomes ctfe-able.
+private C[] ctfe_strip(C)(C[] str) if(isSomeChar!C)
+{
+    return str.ctfe_stripLeft().ctfe_stripRight();
+}
+
+// TODO: Remove this and use std.string.stripLeft when BUG6558 is fixed.
+private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
+{
+    size_t startIndex = str.length;
+    
+    foreach(i, C ch; str)
+    if(!std.uni.isWhite(ch))
+    {
+        startIndex = i;
+        break;
+    }
+    
+    return str[startIndex..$];
+}
+
+// TODO: Remove this and use std.string.stripRight when BUG6558 is fixed
+//       AND retro() becomes ctfe-able.
+private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
+{
+    size_t endIndex = 0;
+    
+    foreach_reverse(i, C ch; str)
+    if(!std.uni.isWhite(ch))
+    {
+        endIndex = i+1;
+        break;
+    }
+    
+    return str[0..endIndex];
+}
+
 unittest
 {
     debug(string) printf("string.outdent.unittest\n");
+    
+    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+    static assert(ctfe_strip("Hi")         == "Hi");
+    static assert(ctfe_strip(" \t \r\n")   == "");
+    static assert(ctfe_strip("")           == "");
 
     enum testStr =
 "
