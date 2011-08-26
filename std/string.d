@@ -3852,7 +3852,7 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     if(lines.empty)
         return null;
         
-    C[] leadingWhiteOf(C[] str)
+    static C[] leadingWhiteOf(C[] str)
     {
         return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
     }
@@ -3866,7 +3866,7 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
         indents[i] = stripped.empty? null : leadingWhiteOf(line);
     }
 
-    C[] shorterAndNonNull(C[] a, C[] b) {
+    static C[] shorterAndNonNull(C[] a, C[] b) {
         if(a is null) return b;
         if(b is null) return a;
         
