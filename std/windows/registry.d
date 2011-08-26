@@ -49,8 +49,6 @@ pragma(lib, "advapi32.lib");
  * Imports
  */
 
-import core.bitop : bswap;
-import std.array : join, split;
 import std.system : Endian, endian;
 import std.exception;
 import std.c.windows.windows;
@@ -570,13 +568,13 @@ version(LittleEndian)
                 value = to!string(u.dw);
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-                value = to!string(bswap(u.dw));
+                value = to!string(core.bitop.bswap(u.dw));
                 break;
 }
 version(BigEndian)
 {
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-                value = to!string(bswap(u.dw));
+                value = to!string(core.bitop.bswap(u.dw));
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
                 value = to!string(u.dw);
@@ -648,7 +646,7 @@ body
     // Now need to tokenise it
     auto last = result.length-1;
     while (last > 0 && result[last] == cast(wchar) 0) last--;
-    wstring[] wvalue = split(cast(wstring) result[0 .. last+1], "\0");
+    wstring[] wvalue = std.array.split(cast(wstring) result[0 .. last+1], "\0");
     value.length = wvalue.length;
     foreach (i, ref v; value)
     {
@@ -693,7 +691,7 @@ version(BigEndian)
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
 } // version(BigEndian)
-                value = bswap(value);
+                value = core.bitop.bswap(value);
                 break;
         }
     }
@@ -1120,7 +1118,7 @@ public:
     ///
     /// \param name The name of the value to set. If null, or the empty string, sets the default value
     /// \param value The 32-bit unsigned value to set
-    /// \param endian Can be Endian.Big or Endian.Little
+    /// \param endian Can be Endian.BigEndian or Endian.LittleEndian
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, uint value, Endian endian)
     {
@@ -1181,28 +1179,7 @@ public:
             else
                 s = "\0";
         }
-<<<<<<< HEAD
-
-        // Allocate
-
-        char[]  cs      =   new char[total];
-        size_t  base    =   0;
-
-        // Slice the individual strings into the new array
-
-        foreach(string s; value)
-        {
-            size_t top = base + s.length;
-
-            cs[base .. top] = s;
-            cs[top] = 0;
-
-            base = 1 + top;
-        }
-
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, to!DWORD(cs.length));
-=======
-        auto ws = join!(wstring[],wstring)(data, "\0"w);
+        auto ws = std.array.join(data, "\0"w);
         char[] result;
         int readLen;
         result.length = WideCharToMultiByte(/*CP_ACP*/ 0, 0, ws.ptr, ws.length, null, 0, null, null);
@@ -1217,7 +1194,6 @@ public:
 
 
         Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, result.ptr, result.length);
->>>>>>> Cleanup of registry access
     }
 
     /// Sets the named value with the given binary value
@@ -2104,9 +2080,9 @@ unittest
             assert(v.value_SZ() == "China");
         }
     }
-    assert(foundCologne);
     // Won't work with the *A API
     // During conversion to ANSI, the foreign letters are replaced with a question mark
+    //assert(foundCologne);
     //assert(foundMinsk);
     //assert(foundBeijing);
     Key stateKey = unittestKey.createKey("StateCollection");
