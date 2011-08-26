@@ -443,23 +443,10 @@ class Service
      * If a protocol name is omitted, any protocol will be matched.
      * Returns: false on failure.
      */
-    bool getServiceByName(string name, string protocolName)
+    bool getServiceByName(string name, string protocolName = null)
     {
         servent* serv;
-        serv = getservbyname(toStringz(name), toStringz(protocolName));
-        if(!serv)
-            return false;
-        populate(serv);
-        return true;
-    }
-
-
-    // Any protocol name will be matched.
-    /// ditto
-    bool getServiceByName(string name)
-    {
-        servent* serv;
-        serv = getservbyname(toStringz(name), null);
+        serv = getservbyname(toStringz(name), protocolName !is null ? toStringz(protocolName) : null);
         if(!serv)
             return false;
         populate(serv);
@@ -468,23 +455,10 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(ushort port, string protocolName)
+    bool getServiceByPort(ushort port, string protocolName = null)
     {
         servent* serv;
-        serv = getservbyport(port, toStringz(protocolName));
-        if(!serv)
-            return false;
-        populate(serv);
-        return true;
-    }
-
-
-    // Any protocol name will be matched.
-    /// ditto
-    bool getServiceByPort(ushort port)
-    {
-        servent* serv;
-        serv = getservbyport(port, null);
+        serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
         if(!serv)
             return false;
         populate(serv);
