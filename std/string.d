@@ -3837,8 +3837,10 @@ unittest
 
 C[] outdent(C)(C[] str) if(isSomeChar!C)
 {
-    if(str.empty)
+    if (str.empty)
+	{
         return "";
+	}
     
     C[] nl = "\n";
     C[][] lines = str.split(nl);
@@ -3849,8 +3851,10 @@ C[] outdent(C)(C[] str) if(isSomeChar!C)
 /// ditto
 C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
 {
-    if(lines.empty)
+    if (lines.empty)
+	{
         return null;
+	}
         
     static C[] leadingWhiteOf(C[] str)
     {
@@ -3860,32 +3864,48 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     // Apply leadingWhiteOf, but emit null instead for whitespace-only lines
     C[][] indents;
     indents.length = lines.length;
-    foreach(i, line; lines)
+    foreach (i, line; lines)
     {
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
         indents[i] = stripped.empty? null : leadingWhiteOf(line);
     }
 
-    static C[] shorterAndNonNull(C[] a, C[] b) {
-        if(a is null) return b;
-        if(b is null) return a;
+    static C[] shorterAndNonNull(C[] a, C[] b)
+	{
+        if (a is null)
+		{
+			return b;
+		}
+		
+        if (b is null)
+		{
+			return a;
+		}
         
         return (a.length < b.length)? a : b;
     };
     auto shortestIndent = std.algorithm.reduce!shorterAndNonNull(indents);
     
-    foreach(i; 0..lines.length)
+    foreach (i; 0..lines.length)
     {
-        if(indents[i] is null)
+        if (indents[i] is null)
+		{
             lines[i] = "";
-        else if(indents[i].startsWith(shortestIndent))
+		}
+        else if (indents[i].startsWith(shortestIndent))
+		{
             lines[i] = lines[i][shortestIndent.length..$];
+		}
         else
         {
-            if(__ctfe)
+            if (__ctfe)
+			{
                 assert(false, "Inconsistent indentation");
+			}
             else
+			{
                 throw new Exception("Inconsistent indentation");
+			}
         }
     }
     
@@ -3904,12 +3924,14 @@ private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
 {
     size_t startIndex = str.length;
     
-    foreach(i, C ch; str)
-    if(!std.uni.isWhite(ch))
-    {
-        startIndex = i;
-        break;
-    }
+    foreach (i, C ch; str)
+	{
+		if (!std.uni.isWhite(ch))
+		{
+			startIndex = i;
+			break;
+		}
+	}
     
     return str[startIndex..$];
 }
@@ -3920,12 +3942,14 @@ private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
 {
     size_t endIndex = 0;
     
-    foreach_reverse(i, C ch; str)
-    if(!std.uni.isWhite(ch))
-    {
-        endIndex = i+1;
-        break;
-    }
+    foreach_reverse (i, C ch; str)
+	{
+		if (!std.uni.isWhite(ch))
+		{
+			endIndex = i+1;
+			break;
+		}
+	}
     
     return str[0..endIndex];
 }
