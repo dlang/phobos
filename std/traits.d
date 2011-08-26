@@ -22,7 +22,7 @@
  */
 module std.traits;
 import std.typetuple;
-import std.typecons : Rebindable;
+import std.typecons;
 import core.vararg;
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://

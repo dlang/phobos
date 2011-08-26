@@ -103,7 +103,9 @@ unittest
 
 
 
-/** A complex number parametrised by a type T. */
+/** A complex number parametrised by a type $(D T), which must be either
+    $(D float), $(D double) or $(D real).
+*/
 struct Complex(T)  if (isFloatingPoint!T)
 {
     /** The real part of the number. */
@@ -328,8 +330,8 @@ struct Complex(T)  if (isFloatingPoint!T)
         FPTemporary!T ab = r^^z.re * exp(-t*z.im);
         FPTemporary!T ar = t*z.re + log(r)*z.im;
 
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = ab*std.math.cos(ar);
+        im = ab*std.math.sin(ar);
         return this;
     }
 
@@ -359,8 +361,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     {
         FPTemporary!T ab = abs^^r;
         FPTemporary!T ar = arg*r;
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = ab*std.math.cos(ar);
+        im = ab*std.math.sin(ar);
         return this;
     }
 
@@ -439,7 +441,7 @@ unittest
 
     // Check abs() and arg()
     auto c1 = Complex!double(1.0, 1.0);
-    assert (approxEqual(c1.abs, sqrt(2.0), EPS));
+    assert (approxEqual(c1.abs, std.math.sqrt(2.0), EPS));
     assert (approxEqual(c1.arg, PI_4, EPS));
 
     auto c1c = c1.conj;
@@ -523,7 +525,7 @@ unittest
         assert (approxEqual(cei.abs, c1.abs^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert (approxEqual(cos(cei.arg), cos(c1.arg*i), EPS));
+        assert (approxEqual(std.math.cos(cei.arg), std.math.cos(c1.arg*i), EPS));
     }
 
 
@@ -632,13 +634,96 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow
 {
     return Complex!(CommonType!(T,U))
-        (modulus*cos(argument), modulus*sin(argument));
+        (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
 }
-
 
 unittest
 {
-    auto z = fromPolar(sqrt(2.0), PI_4);
+    auto z = fromPolar(std.math.sqrt(2.0), PI_4);
     assert (approxEqual(z.re, 1.0L, real.epsilon));
     assert (approxEqual(z.im, 1.0L, real.epsilon));
+}
+
+
+
+
+/** Trigonometric functions. */
+Complex!T sin(T)(Complex!T z)  @safe pure nothrow
+{
+    auto cs = expi(z.re);
+    auto csh = coshisinh(z.im);
+    return typeof(return)(cs.im * csh.re, cs.re * csh.im);
+}
+
+unittest
+{
+  assert(sin(complex(0.0)) == 0.0);
+  assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+}
+
+
+/// ditto
+Complex!T cos(T)(Complex!T z)  @safe pure nothrow
+{
+    auto cs = expi(z.re);
+    auto csh = coshisinh(z.im);
+    return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
+}
+
+unittest{
+    assert(cos(complex(0.0)) == 1.0);
+    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+}
+
+
+/** Square root. */
+Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow
+{
+    typeof(return) c;
+    real x,y,w,r;
+
+    if (z == 0)
+    {
+        c = typeof(return)(0, 0);
+    }
+    else
+    {
+        real z_re = z.re;
+        real z_im = z.im;
+
+        x = fabs(z_re);
+        y = fabs(z_im);
+        if (x >= y)
+        {
+            r = y / x;
+            w = std.math.sqrt(x)
+                * std.math.sqrt(0.5 * (1 + std.math.sqrt(1 + r * r)));
+        }
+        else
+        {
+            r = x / y;
+            w = std.math.sqrt(y)
+                * std.math.sqrt(0.5 * (r + std.math.sqrt(1 + r * r)));
+        }
+
+        if (z_re >= 0)
+        {
+            c = typeof(return)(w, z_im / (w + w));
+        }
+        else
+        {
+            if (z_im < 0)
+                w = -w;
+            c = typeof(return)(z_im / (w + w), w);
+        }
+    }
+    return c;
+}
+
+unittest
+{
+    assert (sqrt(complex(0.0)) == 0.0);
+    assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
+    assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
 }

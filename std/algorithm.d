@@ -5359,11 +5359,29 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    for (; !source.empty; source.popFront())
+    static if(isArray!Range1 && isArray!Range2 && 
+    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        put(target, source.front);
+        // Array specialization.  This uses optimized memory copying routines
+        // under the hood and is about 10-20x faster than the generic 
+        // implementation.
+        enforce(target.length >= source.length, 
+            "Cannot copy a source array into a smaller target array.");
+        target[0..source.length] = source;
+        
+        return target[source.length..$];
     }
-    return target;
+    else
+    {   
+        // Generic implementation.    
+        for (; !source.empty; source.popFront())
+        {
+            put(target, source.front);
+        }
+        
+        return target;
+    }
+    
 }
 
 unittest

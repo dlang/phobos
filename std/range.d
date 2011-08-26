@@ -2484,6 +2484,42 @@ unittest
     assert(s.empty);
 }
 
+
+/++
+    Convenience function which calls $(D $(LREF popFrontN)(range, n)) and
+    returns $(D range).
+
+    Examples:
+--------------------
+assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+assert(drop("hello world", 6) == "world");
+assert(drop("hello world", 50).empty);
+assert(equal(drop(take("hello world", 6), 3), "lo "));
+--------------------
+  +/
+R drop(R)(R range, size_t n)
+    if(isInputRange!R)
+{
+    popFrontN(range, n);
+    return range;
+}
+
+//Verify Examples
+unittest
+{
+    assert(drop([0, 2, 1, 5, 0, 3], 3) == [5, 0, 3]);
+    assert(drop("hello world", 6) == "world");
+    assert(drop("hello world", 50).empty);
+    assert(equal(drop(take("hello world", 6), 3), "lo "));
+}
+
+unittest
+{
+    assert(drop("", 5).empty);
+    assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
+}
+
+
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) at most $(D n) times). The pass of $(D r) into $(D
@@ -3488,7 +3524,10 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
-    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
+    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) {\n";
+    ret ~= "\t\tforeach(range; ranges)\n";
+    ret ~= "\t\t\tenforce(range.empty);\n";
+    ret ~= "\t}\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -3532,12 +3571,6 @@ private:
     alias staticMap!(Unqual, Ranges) R;
     R _ranges;
     StoppingPolicy _s;
-
-    void enforceAllEmpty() {
-        foreach(range; _ranges) {
-            enforce(range.empty);
-        }
-    }
 
 public:
     this(R ranges, StoppingPolicy s = StoppingPolicy.shortest)
@@ -3635,9 +3668,13 @@ unittest {
 
     assert(arr1 == [7,9,11,13,15]);
 
+    // Make sure StoppingPolicy.requireSameLength doesn't throw.
+    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    foreach(a, b; ls) {}
+
     // Make sure StoppingPolicy.requireSameLength throws.
     arr2.popBack;
-    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
         foreach(a, b; ls) {}
