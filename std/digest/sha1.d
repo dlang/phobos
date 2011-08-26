@@ -17,7 +17,7 @@
  *      $(LINK2 http://csrc.nist.gov/publications/fips/fips180-2/fips180-2withchangenotice.pdf, FIPS PUB180-2)
  *      $(LINK2 http://software.intel.com/en-us/articles/improving-the-performance-of-the-secure-hash-algorithm-1/, Fast implementation of SHA1)
  *
- * Source: $(PHOBOSSRC std/_sha1.d)
+ * Source: $(PHOBOSSRC std/digest/_sha1.d)
  *
  * Macros:
  *      WIKI = Phobos/StdSha1
@@ -27,7 +27,7 @@
  Example:
 
 --------------------
-import std.sha1;
+import std.digest.sha1;
 
 private import std.exception;
 private import std.stdio;
@@ -56,7 +56,7 @@ void SHA1File(string filename)
 --------------------
  +/
 
-module std.sha1;
+module std.digest.sha1;
 
 //debug=sha1;            // uncomment to turn on debugging printf's
 

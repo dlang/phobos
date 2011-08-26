@@ -119,7 +119,7 @@ SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\contracts.d std\exception.d \
     std\compiler.d std\cpuid.d \
     std\process.d std\system.d std\concurrency.d \
-    std\sha1.d std\internal\digest\sha1_SSSE3.d
+    std\digest\md5.d std\digest\sha1.d std\internal\digest\sha1_SSSE3.d
 
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \

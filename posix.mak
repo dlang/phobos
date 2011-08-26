@@ -160,11 +160,12 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
-        regexp sha1 signals socket socketstream stdint stdio stdiobase	\
+        regexp signals socket socketstream stdint stdio stdiobase	    \
         stream string syserror system traits typecons typetuple uni		\
         uri utf variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail)
+STD_DIGEST_MODULES = $(addprefix std/digest/, md5 sha1)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -189,7 +190,7 @@ EXTRA_MODULES += $(EXTRA_MODULES_DIGEST) $(addprefix			\
 	gammafunction errorfunction)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
