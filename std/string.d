@@ -3838,9 +3838,9 @@ unittest
 C[] outdent(C)(C[] str) if(isSomeChar!C)
 {
     if (str.empty)
-	{
+    {
         return "";
-	}
+    }
     
     C[] nl = "\n";
     C[][] lines = str.split(nl);
@@ -3852,9 +3852,9 @@ C[] outdent(C)(C[] str) if(isSomeChar!C)
 C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
 {
     if (lines.empty)
-	{
+    {
         return null;
-	}
+    }
         
     static C[] leadingWhiteOf(C[] str)
     {
@@ -3871,16 +3871,16 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     }
 
     static C[] shorterAndNonNull(C[] a, C[] b)
-	{
+    {
         if (a is null)
-		{
-			return b;
-		}
-		
+        {
+            return b;
+        }
+        
         if (b is null)
-		{
-			return a;
-		}
+        {
+            return a;
+        }
         
         return (a.length < b.length)? a : b;
     };
@@ -3889,23 +3889,23 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     foreach (i; 0..lines.length)
     {
         if (indents[i] is null)
-		{
+        {
             lines[i] = "";
-		}
+        }
         else if (indents[i].startsWith(shortestIndent))
-		{
+        {
             lines[i] = lines[i][shortestIndent.length..$];
-		}
+        }
         else
         {
             if (__ctfe)
-			{
+            {
                 assert(false, "Inconsistent indentation");
-			}
+            }
             else
-			{
+            {
                 throw new Exception("Inconsistent indentation");
-			}
+            }
         }
     }
     
@@ -3925,13 +3925,13 @@ private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
     size_t startIndex = str.length;
     
     foreach (i, C ch; str)
-	{
-		if (!std.uni.isWhite(ch))
-		{
-			startIndex = i;
-			break;
-		}
-	}
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            startIndex = i;
+            break;
+        }
+    }
     
     return str[startIndex..$];
 }
@@ -3943,13 +3943,13 @@ private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
     size_t endIndex = 0;
     
     foreach_reverse (i, C ch; str)
-	{
-		if (!std.uni.isWhite(ch))
-		{
-			endIndex = i+1;
-			break;
-		}
-	}
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            endIndex = i+1;
+            break;
+        }
+    }
     
     return str[0..endIndex];
 }
