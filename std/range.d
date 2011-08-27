@@ -3524,10 +3524,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
-    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) {\n";
-    ret ~= "\t\tforeach(range; ranges)\n";
-    ret ~= "\t\t\tenforce(range.empty);\n";
-    ret ~= "\t}\n";
+    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -3571,6 +3568,12 @@ private:
     alias staticMap!(Unqual, Ranges) R;
     R _ranges;
     StoppingPolicy _s;
+
+    void enforceAllEmpty() {
+        foreach(range; _ranges) {
+            enforce(range.empty);
+        }
+    }
 
 public:
     this(R ranges, StoppingPolicy s = StoppingPolicy.shortest)
@@ -3668,13 +3671,9 @@ unittest {
 
     assert(arr1 == [7,9,11,13,15]);
 
-    // Make sure StoppingPolicy.requireSameLength doesn't throw.
-    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
-    foreach(a, b; ls) {}
-
     // Make sure StoppingPolicy.requireSameLength throws.
     arr2.popBack;
-    ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
         foreach(a, b; ls) {}
@@ -4721,6 +4720,15 @@ struct Transversal(Ror,
                 _input[n][_n] = val;
             }
         }
+        
+        /// Ditto
+        static if(hasLength!RangeOfRanges)
+        {
+            @property size_t length() 
+            {
+                return _input.length;
+            }
+        }
 
 /**
    Slicing if offered if $(D RangeOfRanges) supports slicing and all the
@@ -4760,6 +4768,7 @@ unittest
     uint i;
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
+    assert(ror.length == 2);
 
     static assert(is(Transversal!(immutable int[][])));
 
