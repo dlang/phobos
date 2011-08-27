@@ -41,27 +41,27 @@ class ConvException : Exception
 
 deprecated alias ConvException ConvError;   /// ditto
 
-private void convError(S, T, string fn = __FILE__, uint ln = __LINE__)(S source)
+private void convError(S, T, string fn = __FILE__, size_t ln = __LINE__)(S source)
 {
     throw new ConvException(cast(string)
             ("Can't convert value `"~to!string(source)~"' of type "
                     ~S.stringof~" to type "~T.stringof), fn, ln);
 }
 
-private void convError(S, T, string fn = __FILE__, uint ln = __LINE__)(S source, int radix)
+private void convError(S, T, string fn = __FILE__, size_t ln = __LINE__)(S source, int radix)
 {
     throw new ConvException(cast(string)
             ("Can't convert value `"~to!string(source)~"' of type "
                     ~S.stringof~" base "~to!string(radix)~" to type "~T.stringof), fn, ln);
 }
 
-private void parseError(string fn = __FILE__, uint ln = __LINE__)(lazy string msg)
+private void parseError(string fn = __FILE__, size_t ln = __LINE__)(lazy string msg)
 {
     throw new ConvException(cast(string)
             ("Can't parse string: " ~ msg), fn, ln);
 }
 
-private void parseCheck(alias source, string fn = __FILE__, ulong ln = __LINE__)(dchar c)
+private void parseCheck(alias source, string fn = __FILE__, size_t ln = __LINE__)(dchar c)
 {
     if (source.front != c)
         parseError!(fn, ln)("\"" ~ to!string(c) ~ "\" is missing");
@@ -2800,7 +2800,7 @@ unittest
 }
 
 /**
- * Parses an asociative array from a string given the left bracket (default $(D
+ * Parses an associative array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
  * ':')), and element seprator (by default $(D ',')).
  */

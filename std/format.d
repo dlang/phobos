@@ -2718,7 +2718,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (spec.spec == 's')
     {
         return parse!T(input);
-	}
+    }
     else if (spec.spec == 'd')
     {
         return parse!long(input) != 0;
@@ -2965,8 +2965,10 @@ unittest
 private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
     T result;
-  static if (isStaticArray!T)
-    size_t i;
+    static if (isStaticArray!T)
+    {
+        size_t i;
+    }
 
     auto tr = spec.headUpToNextSpec();
 
