@@ -337,7 +337,8 @@ shared static this()
 {
     //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
     //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
-    extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
+    extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = 
+        GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
     BOOL bIsWow64;
     isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
     
@@ -375,7 +376,7 @@ void freeAdvapi32()
         if(hAdvapi32) {
             RegDeleteKeyExA = null;
             hAdvapi32 = null;
-            enforce(FreeLibrary(hAdvapi32), `FreeLibrary(hAdvapi32)`);
+            enforce(FreeLibrary(cast(void*) hAdvapi32), `FreeLibrary(hAdvapi32)`);
         }
 }
 
@@ -517,8 +518,14 @@ body
         if(!RegDeleteKeyExA)
             synchronized(advapi32Mutex)
             {
-                hAdvapi32 = enforce(LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`);
-                RegDeleteKeyExA = enforce(GetProcAddress(hAdvapi32 , "RegDeleteKeyExA"), `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`);
+                hAdvapi32 = cast(shared) enforce(
+                    LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`
+                );
+                
+                RegDeleteKeyExA = enforce(GetProcAddress(
+                    cast(void*) hAdvapi32 , "RegDeleteKeyExA"), 
+                    `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`
+                );
             }
         return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
     }
