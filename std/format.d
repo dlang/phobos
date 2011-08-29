@@ -1623,7 +1623,7 @@ unittest
 /*
    Formatting a $(D typedef) is deprecated but still kept around for a while.
  */
-deprecated void formatValue(Writer, T, Char)
+void formatValue(Writer, T, Char)
 (Writer w, T val, ref FormatSpec!Char f)
 if (is(T == typedef))
 {
