@@ -56,8 +56,8 @@ shared static this()
 
 private:
 // Limits for when to switch between algorithms.
-immutable int CACHELIMIT;   // Half the size of the data cache.
-immutable int FASTDIVLIMIT; // crossover to recursive division
+immutable size_t CACHELIMIT;   // Half the size of the data cache.
+immutable size_t FASTDIVLIMIT; // crossover to recursive division
 
 
 // These constants are used by shift operations
@@ -286,7 +286,7 @@ char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, c
                 buff[frontExtraBytes + (extraPad & 7)] = (padChar == ' ' ? ' ' : separator);
                 start += (extraPad & 7) + 1;
             }
-            for (int i=0; i< (extraPad >> 3); ++i)
+            for (size_t i=0; i< (extraPad >> 3); ++i)
             {
                 buff[start .. start + 8] = padChar;
                 buff[start + 8] = (padChar == ' ' ? ' ' : separator);
@@ -298,7 +298,7 @@ char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, c
             buff[frontExtraBytes .. frontExtraBytes + extraPad]=padChar;
         }
     }
-    int z = frontExtraBytes;
+    size_t z = frontExtraBytes;
     if (lenBytes > minPadding)
     {
         // Strip leading zeros.
@@ -324,8 +324,8 @@ char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, c
 bool fromHexString(string s)
 {
     //Strip leading zeros
-    int firstNonZero = 0;
-    while ((firstNonZero < s.length - 1) &&
+    size_t firstNonZero = 0;
+    while ((firstNonZero + 1 < s.length) &&
         (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
     {
             ++firstNonZero;
@@ -333,19 +333,20 @@ bool fromHexString(string s)
     auto len = (s.length - firstNonZero + 15)/4;
     data = new BigDigit[len+1];
     uint part = 0;
-    uint sofar = 0;
+    size_t sofar = 0;
     uint partcount = 0;
     assert(s.length>0);
-    for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
+    for (size_t i = s.length; i!=firstNonZero; --i)
     {
-        assert(i>=0);
-        char c = s[i];
-        if (s[i]=='_') continue;
+        assert(i > 0);
+        char c = s[i-1];
+        if (s[i-1] == '_') continue;
         uint x = (c>='0' && c<='9') ? c - '0'
                : (c>='A' && c<='F') ? c - 'A' + 10
                : (c>='a' && c<='f') ? c - 'a' + 10
                : 100;
-        if (x==100) return false;
+        if (x == 100)
+            return false;
         part >>= 4;
         part |= (x<<(32-4));
         ++partcount;
@@ -372,7 +373,7 @@ bool fromHexString(string s)
 bool fromDecimalString(string s)
 {
     //Strip leading zeros
-    int firstNonZero = 0;
+    size_t firstNonZero = 0;
     while ((firstNonZero < s.length) &&
         (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
     {
@@ -424,7 +425,7 @@ BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
     uint words = cast(uint)(y >> LG2BIGDIGITBITS);
     BigDigit [] result = new BigDigit[data.length + words+1];
     result[0..words] = 0;
-    if (bits==0)
+    if (bits == 0)
     {
         result[words..words+data.length] = data[];
         return BigUint(result[0..words+data.length]);
@@ -432,7 +433,8 @@ BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
     else
     {
         uint c = multibyteShl(result[words..words+data.length], data, bits);
-        if (c==0) return BigUint(result[0..words+data.length]);
+        if (c == 0)
+            return BigUint(result[0..words+data.length]);
         result[$-1] = c;
         return BigUint(result);
     }
@@ -813,10 +815,10 @@ BigDigit[] removeLeadingZeros(BigDigit [] x)
 
 unittest
 {
-   BigUint r = BigUint([5]);
-   BigUint t = BigUint([7]);
-   BigUint s = BigUint.mod(r, t);
-   assert(s==5);
+    BigUint r = BigUint([5]);
+    BigUint t = BigUint([7]);
+    BigUint s = BigUint.mod(r, t);
+    assert(s==5);
 }
 
 
@@ -940,25 +942,28 @@ int highestPowerBelowUlongMax(uint x)
      return 2;
 }
 
-version(unittest) {
+version(unittest)
+{
 
 int slowHighestPowerBelowUintMax(uint x)
 {
-     int pwr = 1;
-     for (ulong q = x;x*q < cast(ulong)uint.max; ) {
-         q*=x; ++pwr;
-     }
-     return pwr;
+    int pwr = 1;
+    for (ulong q = x; x*q < cast(ulong)uint.max; )
+    {
+        q*=x;
+        ++pwr;
+    }
+    return pwr;
 }
 
 unittest
 {
-  assert(highestPowerBelowUintMax(10)==9);
-  for (int k=82; k<88; ++k) {assert(highestPowerBelowUintMax(k)== slowHighestPowerBelowUintMax(k)); }
+    assert(highestPowerBelowUintMax(10)==9);
+    for (int k=82; k<88; ++k)
+        assert(highestPowerBelowUintMax(k) == slowHighestPowerBelowUintMax(k));
 }
 
 }
-
 
 /*  General unsigned subtraction routine for bigints.
  *  Sets result = x - y. If the result is negative, negative will be true.
@@ -984,7 +989,6 @@ BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
         {
             result = result[0..$-1];
         }
-//        if (result.length >1 && result[$-1]==0) return result[0..$-1];
         return result;
     }
     // Lengths are different
@@ -1398,15 +1402,15 @@ body
     // TODO: This is inefficient for very large strings (it is O(n^^2)).
     // We should take advantage of fast multiplication once the numbers exceed
     // Karatsuba size.
-    uint lo = 0; // number of powers of digits, 0..18
+    int lo = 0; // number of powers of digits, 0..18
     uint x = 0;
     ulong y = 0;
-    uint hi = 0; // number of base 1e19 digits
+    size_t hi = 0; // number of base 1e19 digits
     data[0] = 0; // initially number is 0.
     if (data.length > 1)
         data[1] = 0;
 
-    for (int i= (s[0]=='-' || s[0]=='+')? 1 : 0; i<s.length; ++i)
+    for (size_t i = (s[0]=='-' || s[0]=='+')? 1 : 0; i < s.length; ++i)
     {
         if (s[i] == '_')
             continue;
@@ -2166,8 +2170,8 @@ unittest
     uint [] a, b;
     a = new uint[43];
     b = new uint[179];
-    for (int i=0; i<a.length; ++i) a[i] = 0x1234_B6E9 + i;
-    for (int i=0; i<b.length; ++i) b[i] = 0x1BCD_8763 - i*546;
+    for (size_t i=0; i<a.length; ++i) a[i] = 0x1234_B6E9 + i;
+    for (size_t i=0; i<b.length; ++i) b[i] = 0x1BCD_8763 - i*546;
 
     a[$-1] |= 0x8000_0000;
     uint [] r = new uint[a.length];
