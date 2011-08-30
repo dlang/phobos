@@ -3849,10 +3849,10 @@ unittest
     r = std.string.format("%.*d", -3, 7);
     assert(r == "7");
 
-    typedef int myint;
-    myint m = -7;
-    r = std.string.format(m);
-    assert(r == "-7");
+    //typedef int myint;
+    //myint m = -7;
+    //r = std.string.format(m);
+    //assert(r == "-7");
 
     r = std.string.format("abc"c);
     assert(r == "abc");

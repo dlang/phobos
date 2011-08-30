@@ -114,7 +114,7 @@ public enum Endian
 /+ + These are borrowed from synsoft.win32.types for the moment, but will not be
  + needed once I've convinced Walter to use strong typedefs for things like HKEY +
  +/
-private typedef uint Reserved;
+private alias uint Reserved;
 
 //import synsoft.text.token;
 /+ ++++++ This is borrowed from synsoft.text.token, until such time as something
