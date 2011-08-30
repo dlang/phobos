@@ -1409,8 +1409,6 @@ public:
             // Effectively -1:  chunkIndex + 1 == 0:
             size_t workUnitIndex = size_t.max;  
             
-            // False iff an exception has been thrown and the threads should 
-            // bail.
             bool shouldContinue = true;
                 
             void doIt() {              
@@ -2939,7 +2937,6 @@ private void submitAndExecute(
             task.yieldForce();
         } catch(Throwable e) {
             addToChain(e, firstException, lastException);
-            firstException = e;
             continue;
         }
     }
@@ -2994,7 +2991,6 @@ private enum string parallelApplyMixinRandomAccess = q{
     immutable len = range.length;
     if(!len) return 0;
     
-    // False iff an exception has been thrown and the threads should bail.
     bool shouldContinue = true;
         
     void doIt() {
@@ -3049,7 +3045,6 @@ enum string parallelApplyMixinInputRange = q{
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
     
-    // False iff an exception has been thrown and the threads should bail.
     bool shouldContinue = true;
     
     // The total number of elements that have been popped off range.
