@@ -1091,7 +1091,7 @@ version (Posix)
 /***
  * Type representing the DOS file date/time format.
  */
-typedef uint DosFileTime;
+alias uint DosFileTime;
 
 /************************************
  * Convert from DOS file date/time to d_time.

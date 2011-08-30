@@ -929,7 +929,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
     }
 }
 
-unittest
+version(none) unittest
 {
     debug(conv) scope(success) writeln("unittest @",
             __FILE__, ":", __LINE__, " succeeded.");
@@ -2700,7 +2700,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 }
 
-unittest
+version(none) unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef uint Testing;

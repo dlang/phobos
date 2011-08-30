@@ -31542,7 +31542,7 @@ else version(Windows)
 /++
     Type representing the DOS file date/time format.
   +/
-typedef uint DosFileTime;
+alias uint DosFileTime;
 
 /++
     Converts from DOS file date/time to $(D SysTime).
