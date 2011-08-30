@@ -375,7 +375,7 @@ void freeAdvapi32()
         if(hAdvapi32) {
             RegDeleteKeyExA = null;
             hAdvapi32 = null;
-            enforce(FreeLibrary(hAdvapi32), `FreeLibrary(hAdvapi32)`);
+            enforce(FreeLibrary(cast(void*) hAdvapi32), `FreeLibrary(hAdvapi32)`);
         }
 }
 
