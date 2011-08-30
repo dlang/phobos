@@ -4902,7 +4902,7 @@ assert(equal(ind, [5, 4, 2, 3, 1, 5]));
 
 // When elements of indices are duplicated and Source has lvalue elements,
 // these are aliased in reindexed.
-reindexed[0]++;
+ind[0]++;
 assert(ind[0] == 6);
 assert(ind[5] == 6);
 ---
