@@ -3738,7 +3738,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else
                 {   if (!isValidDchar(vdchar))
-                        throw new UtfException("invalid dchar in format", 0);
+                        throw new UtfException("invalid dchar in format");
                     char[4] vbuf;
                     putstr(toUTF8(vbuf, vdchar));
                 }
