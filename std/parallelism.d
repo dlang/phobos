@@ -1500,8 +1500,9 @@ public:
     $(B Exception Handling):
 
     Any exceptions thrown while iterating over $(D range)
-    or computing the map function are re-thrown on a call to $(D popFront).
-    In the case of exceptions thrown while computing the map function,
+    or computing the map function are re-thrown on a call to $(D popFront) or,
+    if thrown during construction, are simply allowed to propagate to the 
+    caller.  In the case of exceptions thrown while computing the map function,
     the exceptions are chained as in $(D TaskPool.amap).
     */
     template map(functions...) {
@@ -1758,7 +1759,8 @@ public:
     $(B Exception Handling):
 
     Any exceptions thrown while iterating over $(D range) are re-thrown on a
-    call to $(D popFront).
+    call to $(D popFront) or, if thrown during construction, simply
+    allowed to propagate to the caller.
     */
     auto asyncBuf(R)(R range, size_t bufSize = 100) if(isInputRange!R) {
         static final class AsyncBuf {
@@ -3570,6 +3572,46 @@ unittest {
     foreach(i; poolInstance.parallel(iota(1000), 1)) {
         assert(taskPool.workerIndex == 0);
     }
+    
+    // Test exception handling.
+    static void parallelForeachThrow() {
+        foreach(elem; parallel(iota(10))) {
+            throw new Exception("");
+        }
+    }
+    
+    assertThrown!Exception(parallelForeachThrow());
+    
+    static int reduceException(int a, int b) {
+        throw new Exception("");
+    }
+    
+    assertThrown!Exception(
+        taskPool.reduce!reduceException(iota(3))
+    );
+    
+    static int mapException(int a) {
+        throw new Exception("");
+    }
+    
+    assertThrown!Exception(
+        taskPool.amap!mapException(iota(3))
+    );
+    
+    static void mapThrow() {
+        auto m = taskPool.map!mapException(iota(3));
+        m.popFront();
+    }
+    
+    assertThrown!Exception(mapThrow());
+    
+    struct ThrowingRange {
+        @property int front() { return 1; }
+        void popFront() { throw new Exception(""); }
+        enum bool empty = false;
+    }
+    
+    assertThrown!Exception(taskPool.asyncBuf(ThrowingRange.init));
 }
 
 //version = parallelismStressTest;
