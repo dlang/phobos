@@ -4901,7 +4901,7 @@ auto ind = indexed(source, indices);
 assert(equal(ind, [5, 4, 2, 3, 1, 5]));
 
 // When elements of indices are duplicated and Source has lvalue elements,
-// these are aliased in reindexed.
+// these are aliased in ind.
 ind[0]++;
 assert(ind[0] == 6);
 assert(ind[5] == 6);
@@ -5057,7 +5057,7 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
         }
     }
     
-    // All this stuff is useful if someone wants to reindex a Reindex 
+    // All this stuff is useful if someone wants to index an Indexed 
     // without adding a layer of indirection.
     
     /**
@@ -5141,7 +5141,7 @@ unittest
 This range iterates over fixed-sized chunks of size $(D chunkSize) of a 
 $(D source) range.  $(D Source) must be an input range with slicing and length.  
 If $(D source.length) is not evenly divisible by $(D chunkSize), the back
-element of this range will contain less than $(D chunkSize) elements.
+element of this range will contain fewer than $(D chunkSize) elements.
 
 Examples:
 ---
