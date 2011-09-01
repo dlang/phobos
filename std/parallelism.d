@@ -811,7 +811,7 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
 /// Ditto
 @trusted auto scopedTask(F, Args...)(F fun, Args args)
 if(is(typeof(fun(args))) && isSafeTask!F) {
-    auto ret = typeof(return)(fun, args);
+    auto ret = Task!(run, TypeTuple!(F, Args))(fun, args);
     ret.isScoped = true;
     return ret;
 }
