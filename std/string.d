@@ -60,7 +60,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
-    std.ascii, std.conv, std.exception, std.format, std.functional,
+    std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
 
@@ -3802,6 +3802,207 @@ unittest
     assert(wrap("u u") == "u u\n");
 }
 
+/******************************************
+ * Removes indentation from a multi-line string or an array of single-line strings.
+ *
+ * This uniformly outdents the text as much as possible.
+ * Whitespace-only lines are always converted to blank lines.
+ *
+ * The indentation style must be consistent (except for whitespace-only lines)
+ * or else this will throw an Exception.
+ * 
+ * Works at compile-time.
+ * 
+ * Example:
+ * ---
+ * writeln(q{
+ *     import std.stdio;
+ *     void main() {
+ *         writeln("Hello");
+ *     }
+ * }.outdent());
+ * ---
+ * 
+ * Output:
+ * ---
+ * 
+ * import std.stdio;
+ * void main() {
+ *     writeln("Hello");
+ * }
+ * 
+ * ---
+ * 
+ */
+
+C[] outdent(C)(C[] str) if(isSomeChar!C)
+{
+    if (str.empty)
+    {
+        return "";
+    }
+    
+    C[] nl = "\n";
+    C[][] lines = str.split(nl);
+    lines = outdent(lines);
+    return lines.join(nl);
+}
+
+/// ditto
+C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
+{
+    if (lines.empty)
+    {
+        return null;
+    }
+        
+    static C[] leadingWhiteOf(C[] str)
+    {
+        return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
+    }
+    
+    // Apply leadingWhiteOf, but emit null instead for whitespace-only lines
+    C[][] indents;
+    indents.length = lines.length;
+    foreach (i, line; lines)
+    {
+        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
+        indents[i] = stripped.empty? null : leadingWhiteOf(line);
+    }
+
+    static C[] shorterAndNonNull(C[] a, C[] b)
+    {
+        if (a is null)
+        {
+            return b;
+        }
+        
+        if (b is null)
+        {
+            return a;
+        }
+        
+        return (a.length < b.length)? a : b;
+    };
+    auto shortestIndent = std.algorithm.reduce!shorterAndNonNull(indents);
+    
+    foreach (i; 0..lines.length)
+    {
+        if (indents[i] is null)
+        {
+            lines[i] = "";
+        }
+        else if (indents[i].startsWith(shortestIndent))
+        {
+            lines[i] = lines[i][shortestIndent.length..$];
+        }
+        else
+        {
+            if (__ctfe)
+            {
+                assert(false, "Inconsistent indentation");
+            }
+            else
+            {
+                throw new Exception("Inconsistent indentation");
+            }
+        }
+    }
+    
+    return lines;
+}
+
+// TODO: Remove this and use std.string.strip when BUG6558 is fixed
+//       AND retro() becomes ctfe-able.
+private C[] ctfe_strip(C)(C[] str) if(isSomeChar!C)
+{
+    return str.ctfe_stripLeft().ctfe_stripRight();
+}
+
+// TODO: Remove this and use std.string.stripLeft when BUG6558 is fixed.
+private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
+{
+    size_t startIndex = str.length;
+    
+    foreach (i, C ch; str)
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            startIndex = i;
+            break;
+        }
+    }
+    
+    return str[startIndex..$];
+}
+
+// TODO: Remove this and use std.string.stripRight when BUG6558 is fixed
+//       AND retro() becomes ctfe-able.
+private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
+{
+    size_t endIndex = 0;
+    
+    foreach_reverse (i, C ch; str)
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            endIndex = i+1;
+            break;
+        }
+    }
+    
+    return str[0..endIndex];
+}
+
+unittest
+{
+    debug(string) printf("string.outdent.unittest\n");
+    
+    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+    static assert(ctfe_strip("Hi")         == "Hi");
+    static assert(ctfe_strip(" \t \r\n")   == "");
+    static assert(ctfe_strip("")           == "");
+
+    enum testStr =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t "c;
+
+    enum expected =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+"c;
+    
+    immutable iblank = "";
+    
+    assert(testStr.outdent() == expected);
+    assert(to!wstring(testStr).outdent() == to!wstring(expected));
+    assert(to!dstring(testStr).outdent() == to!dstring(expected));
+    assert(""c.outdent() == ""c);
+    assert(""w.outdent() == ""w);
+    assert(""d.outdent() == ""d);
+    assert(" \n \t\n "c.outdent() == "\n\n"c);
+    assert(" \n \t\n "w.outdent() == "\n\n"w);
+    assert(" \n \t\n "d.outdent() == "\n\n"d);
+    assert(iblank.outdent() == iblank);
+
+    static assert(testStr.outdent() == expected);
+    // TODO: Uncomment these when to!w/dstring(string) works at compile-time
+    //static assert(to!wstring(testStr).outdent() == to!wstring(expected));
+    //static assert(to!dstring(testStr).outdent() == to!dstring(expected));
+
+    static assert(" \n \t\n "c.outdent() == "\n\n"c);
+    static assert(" \n \t\n "w.outdent() == "\n\n"w);
+    static assert(" \n \t\n "d.outdent() == "\n\n"d);
+}
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
