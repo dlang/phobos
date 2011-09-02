@@ -26,6 +26,7 @@
 module std.bigint;
 
 private import std.internal.math.biguintcore;
+private import std.format;
 
 /** A struct representing an arbitrary precision integer
  *
@@ -407,18 +408,54 @@ public:
      */
     void toString(void delegate(const (char)[]) sink, string formatString) const
     {
-        if (isNegative())
-            sink("-");
-        if (formatString.length>0 && formatString[$-1]=='x' || formatString[$-1]=='X')
+        auto f = FormatSpec!char(formatString);
+        f.writeUpToNextSpec(sink);
+        toString(sink, f);
+    }
+    void toString(void delegate(const(char)[]) sink, ref FormatSpec!char f) const
+    {
+        import std.exception;
+        import std.conv;
+
+        auto hex = (f.spec == 'x' || f.spec == 'X');
+        enforceEx!FormatError(f.spec == 's' || f.spec == 'd' || hex,
+            text("Format specifier not understood: %", f.spec));
+
+        char[] buff =
+            hex ? data.toHexString(0, '_', 0, f.flZero ? '0' : ' ')
+                : data.toDecimalString(0);
+        assert(buff.length > 0);
+
+        char sign = isNegative() ? '-' : 0;
+        auto minw = buff.length + (sign ? 1 : 0);
+
+        if (!hex && !sign && (f.width == 0 || minw < f.width))
         {
-            char[] buff = data.toHexString(0, '_');
-            sink(buff);
+            if (f.flPlus)
+                sign = '+', ++minw;
+            else if (f.flSpace)
+                sign = ' ', ++minw;
         }
-        else
-        {
-            char [] buff = data.toDecimalString(0);
-            sink(buff);
-        }
+
+        auto maxw = minw < f.width ? f.width : minw;
+        auto difw = maxw - minw;
+
+        if (!f.flDash && !f.flZero)
+            foreach (i; 0 .. difw)
+                sink(" ");
+
+        if (sign)
+            sink((&sign)[0..1]);
+
+        if (!f.flDash && f.flZero)
+            foreach (i; 0 .. difw)
+                sink("0");
+
+        sink(buff);
+
+        if (f.flDash)
+            foreach (i; 0 .. difw)
+                sink(" ");
     }
 /+
 private:
@@ -519,4 +556,104 @@ unittest // Recursive division, bug 5568
     BigInt c = (BigInt(1) << (4846*2 + 4843*2)) - 1;
     BigInt w =  c - b + a;
     assert(w % m == 0);
+}
+
+unittest
+{
+    import std.array;
+
+    immutable string[][] table = [
+    /*  fmt,        +10     -10 */
+        ["%d",      "10",   "-10"],
+        ["%+d",     "+10",  "-10"],
+        ["%-d",     "10",   "-10"],
+        ["%+-d",    "+10",  "-10"],
+
+        ["%4d",     "  10", " -10"],
+        ["%+4d",    " +10", " -10"],
+        ["%-4d",    "10  ", "-10 "],
+        ["%+-4d",   "+10 ", "-10 "],
+
+        ["%04d",    "0010", "-010"],
+        ["%+04d",   "+010", "-010"],
+        ["%-04d",   "10  ", "-10 "],
+        ["%+-04d",  "+10 ", "-10 "],
+
+        ["% 04d",   " 010", "-010"],
+        ["%+ 04d",  "+010", "-010"],
+        ["%- 04d",  " 10 ", "-10 "],
+        ["%+- 04d", "+10 ", "-10 "],
+    ];
+
+    auto w1 = appender!(char[])();
+    auto w2 = appender!(char[])();
+
+    foreach (entry; table)
+    {
+        immutable fmt = entry[0];
+
+        formattedWrite(w1, fmt, BigInt(10));
+        formattedWrite(w2, fmt, 10);
+        assert(w1.data == w2.data);
+        assert(w1.data == entry[1]);
+        w1.clear();
+        w2.clear();
+
+        formattedWrite(w1, fmt, BigInt(-10));
+        formattedWrite(w2, fmt, -10);
+        assert(w1.data == w2.data);
+        assert(w1.data == entry[2]);
+        w1.clear();
+        w2.clear();
+    }
+}
+
+unittest
+{
+    import std.array;
+
+    immutable string[][] table = [
+    /*  fmt,        +10     -10 */
+        ["%X",      "A",    "-A"],
+        ["%+X",     "A",    "-A"],
+        ["%-X",     "A",    "-A"],
+        ["%+-X",    "A",    "-A"],
+
+        ["%4X",     "   A", "  -A"],
+        ["%+4X",    "   A", "  -A"],
+        ["%-4X",    "A   ", "-A  "],
+        ["%+-4X",   "A   ", "-A  "],
+
+        ["%04X",    "000A", "-00A"],
+        ["%+04X",   "000A", "-00A"],
+        ["%-04X",   "A   ", "-A  "],
+        ["%+-04X",  "A   ", "-A  "],
+
+        ["% 04X",   "000A", "-00A"],
+        ["%+ 04X",  "000A", "-00A"],
+        ["%- 04X",  "A   ", "-A  "],
+        ["%+- 04X", "A   ", "-A  "],
+    ];
+
+    auto w1 = appender!(char[])();
+    auto w2 = appender!(char[])();
+
+    foreach (entry; table)
+    {
+        immutable fmt = entry[0];
+
+        formattedWrite(w1, fmt, BigInt(10));
+        formattedWrite(w2, fmt, 10);
+        assert(w1.data == w2.data);     // Equal only positive BigInt
+        assert(w1.data == entry[1]);
+        w1.clear();
+        w2.clear();
+
+        formattedWrite(w1, fmt, BigInt(-10));
+        //formattedWrite(w2, fmt, -10);
+        //assert(w1.data == w2.data);
+        assert(w1.data == entry[2]);
+        w1.clear();
+        //w2.clear();
+    }
 }
