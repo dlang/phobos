@@ -3837,15 +3837,15 @@ unittest
 
 S outdent(S)(S str) if(isSomeString!(Unqual!S))
 {
-	alias immutable(ElementEncodingType!S)[] SplitArgType;
-	
+    alias immutable(ElementEncodingType!S)[] SplitArgType;
+    
     if (str.empty)
     {
         return to!S("");
     }
     
     S nl = to!S("\n");
-	// split seems limited in what it can accept
+    // split seems limited in what it can accept
     S[] lines = to!(S[])( str.split( to!SplitArgType(nl) ) );
     lines = outdent(lines);
     return lines.join(nl);
@@ -3926,7 +3926,7 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
 {
     size_t endIndex = 0;
     size_t prevIndex = str.length;
-	
+    
     foreach_reverse (i, dchar ch; str)
     {
         if (!std.uni.isWhite(ch))
@@ -3934,7 +3934,7 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
             endIndex = prevIndex;
             break;
         }
-		prevIndex = i;
+        prevIndex = i;
     }
     
     return str[0..endIndex];
@@ -3980,8 +3980,8 @@ unittest
     assert(" \n \t\n "w.outdent() == "\n\n"w);
     assert(" \n \t\n "d.outdent() == "\n\n"d);
     assert(['a','b'].outdent() == ['a','b']);
-	
-	// TODO: Uncomment this when find works on immutable(string)
+    
+    // TODO: Uncomment this when find works on immutable(string)
     //assert(iblank.outdent() == iblank);
 
     static assert(testStr.outdent() == expected);
