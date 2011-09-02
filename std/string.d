@@ -3809,7 +3809,7 @@ unittest
  * Whitespace-only lines are always converted to blank lines.
  *
  * The indentation style must be consistent (except for whitespace-only lines)
- * or else this will throw an Exception.
+ * or else this will throw a StringException.
  * 
  * Works at compile-time.
  * 
@@ -3907,7 +3907,7 @@ S[] outdent(S)(S[] lines) if(isSomeString!(Unqual!S))
             }
             else
             {
-                throw new Exception("Inconsistent indentation");
+                throw new StringException("Inconsistent indentation");
             }
         }
     }
@@ -3916,7 +3916,7 @@ S[] outdent(S)(S[] lines) if(isSomeString!(Unqual!S))
 }
 
 // TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
-/+private+/ S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
+private S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
 {
     return str.stripLeft().ctfe_stripRight();
 }
