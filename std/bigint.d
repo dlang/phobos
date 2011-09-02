@@ -461,7 +461,7 @@ string toDecimalString(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "d");
+    x.toString(&sink, "%d");
     return outbuff;
 }
 
@@ -469,7 +469,7 @@ string toHex(BigInt x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "x");
+    x.toString(&sink, "%x");
     return outbuff;
 }
 
