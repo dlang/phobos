@@ -282,14 +282,14 @@ public:
         }
         return r;
     }
-        
+
     //  integer = integer op BigInt
     T opBinaryRight(string op, T)(T x)
         if ((op=="%" || op=="/") && is(T: long))
     {
         static if (op == "%")
         {
-            checkDivByZero();            
+            checkDivByZero();
             // x%y always has the same sign as x.
             if (data.ulongLength() > 1)
                 return x;
@@ -300,13 +300,13 @@ public:
         }
         else static if (op == "/")
         {
-            checkDivByZero();            
+            checkDivByZero();
             if (data.ulongLength() > 1)
                 return 0;
             return cast(T)(x / data.peekUlong(0));
         }
     }
-	// const unary operations
+    // const unary operations
     BigInt opUnary(string op)() /*const*/ if (op=="+" || op=="-")
     {
        static if (op=="-")
@@ -317,11 +317,11 @@ public:
         }
         else static if (op=="+")
            return this;
-	}
+    }
 
-	// non-const unary operations	
+    // non-const unary operations
     BigInt opUnary(string op)() if (op=="++" || op=="--")
-	{
+    {
         static if (op=="++")
         {
             data = BigUint.addOrSubInt(data, 1UL, false, sign);
@@ -369,8 +369,8 @@ public:
     long toLong() pure const
     {
         return (sign ? -1 : 1) *
-          (data.ulongLength() == 1  && (data.peekUlong(0) <= cast(ulong)(long.max)) 
-          ? cast(long)(data.peekUlong(0)) 
+          (data.ulongLength() == 1  && (data.peekUlong(0) <= cast(ulong)(long.max))
+          ? cast(long)(data.peekUlong(0))
           : long.max);
     }
     /// Returns the value of this BigInt as an int,
@@ -378,7 +378,7 @@ public:
     long toInt() pure const
     {
         return (sign ? -1 : 1) *
-          (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max)) 
+          (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max))
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
@@ -386,13 +386,13 @@ public:
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
     @property size_t uintLength() pure const
     {
-        return data.uintLength(); 
+        return data.uintLength();
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
     @property size_t ulongLength() pure const
     {
-        return data.ulongLength(); 
+        return data.ulongLength();
     }
 
     /** Convert the BigInt to string, passing it to 'sink'.
@@ -484,7 +484,7 @@ unittest {
 
     assert(BigInt(-0x12345678).toInt() == -0x12345678);
     assert(BigInt(-0x12345678).toLong() == -0x12345678);
-    assert(BigInt(0x1234_5678_9ABC_5A5AL).ulongLength == 1); 
+    assert(BigInt(0x1234_5678_9ABC_5A5AL).ulongLength == 1);
     assert(BigInt(0x1234_5678_9ABC_5A5AL).toLong() == 0x1234_5678_9ABC_5A5AL);
     assert(BigInt(-0x1234_5678_9ABC_5A5AL).toLong() == -0x1234_5678_9ABC_5A5AL);
     assert(BigInt(0xF234_5678_9ABC_5A5AL).toLong() == long.max);
