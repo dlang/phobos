@@ -657,3 +657,17 @@ unittest
         //w2.clear();
     }
 }
+
+// 6448
+unittest
+{
+    import std.array;
+    auto w1 = appender!string();
+    auto w2 = appender!string();
+
+    int x = 100;
+    formattedWrite(w1, "%010d", x);
+    BigInt bx = x;
+    formattedWrite(w2, "%010d", bx);
+    assert(w1.data == w2.data);
+}
