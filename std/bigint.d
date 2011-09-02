@@ -414,27 +414,24 @@ public:
     }
     void toString(void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
-        import std.exception;
-        import std.conv;
-
         auto hex = (f.spec == 'x' || f.spec == 'X');
-        enforceEx!FormatError(f.spec == 's' || f.spec == 'd' || hex,
-            text("Format specifier not understood: %", f.spec));
+        if (!(f.spec == 's' || f.spec == 'd' || hex))
+            throw new FormatError("Format specifier not understood: %" ~ f.spec);
 
         char[] buff =
             hex ? data.toHexString(0, '_', 0, f.flZero ? '0' : ' ')
                 : data.toDecimalString(0);
         assert(buff.length > 0);
 
-        char sign = isNegative() ? '-' : 0;
-        auto minw = buff.length + (sign ? 1 : 0);
+        char signChar = isNegative() ? '-' : 0;
+        auto minw = buff.length + (signChar ? 1 : 0);
 
-        if (!hex && !sign && (f.width == 0 || minw < f.width))
+        if (!hex && !signChar && (f.width == 0 || minw < f.width))
         {
             if (f.flPlus)
-                sign = '+', ++minw;
+                signChar = '+', ++minw;
             else if (f.flSpace)
-                sign = ' ', ++minw;
+                signChar = ' ', ++minw;
         }
 
         auto maxw = minw < f.width ? f.width : minw;
@@ -444,8 +441,8 @@ public:
             foreach (i; 0 .. difw)
                 sink(" ");
 
-        if (sign)
-            sink((&sign)[0..1]);
+        if (signChar)
+            sink((&signChar)[0..1]);
 
         if (!f.flDash && f.flZero)
             foreach (i; 0 .. difw)
