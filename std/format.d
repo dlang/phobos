@@ -59,12 +59,12 @@ class FormatError : Error
 {
     this()
     {
-        super("std.format");
+        super("format error");
     }
 
-    this(string msg)
+    this(string msg, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super("std.format " ~ msg);
+        super(msg, fn, ln);
     }
 }
 
