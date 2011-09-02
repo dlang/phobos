@@ -3912,32 +3912,13 @@ C[][] outdent(C)(C[][] lines) if(isSomeChar!C)
     return lines;
 }
 
-// TODO: Remove this and use std.string.strip when BUG6558 is fixed
-//       AND retro() becomes ctfe-able.
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
 private C[] ctfe_strip(C)(C[] str) if(isSomeChar!C)
 {
-    return str.ctfe_stripLeft().ctfe_stripRight();
+    return str.stripLeft().ctfe_stripRight();
 }
 
-// TODO: Remove this and use std.string.stripLeft when BUG6558 is fixed.
-private C[] ctfe_stripLeft(C)(C[] str) if(isSomeChar!C)
-{
-    size_t startIndex = str.length;
-    
-    foreach (i, C ch; str)
-    {
-        if (!std.uni.isWhite(ch))
-        {
-            startIndex = i;
-            break;
-        }
-    }
-    
-    return str[startIndex..$];
-}
-
-// TODO: Remove this and use std.string.stripRight when BUG6558 is fixed
-//       AND retro() becomes ctfe-able.
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
 private C[] ctfe_stripRight(C)(C[] str) if(isSomeChar!C)
 {
     size_t endIndex = 0;
