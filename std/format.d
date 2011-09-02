@@ -460,11 +460,18 @@ unittest
     assert(isnan(z));
 }
 
+template FormatSpec(Char)
+    if (!is(Unqual!Char == Char))
+{
+    alias FormatSpec!(Unqual!Char) FormatSpec;
+}
+
 /**
  A compiled version of an individual format specifier, backwards
  compatible with $(D printf) specifiers.
  */
 struct FormatSpec(Char)
+    if (is(Unqual!Char == Char))
 {
     /**
        Minimum _width, default $(D 0).
