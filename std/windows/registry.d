@@ -337,8 +337,9 @@ shared static this()
 {
     //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
     //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
-    extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = 
-        GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
+    alias extern(Windows) BOOL function(HANDLE, PBOOL) fptr_t;
+    auto IsWow64Process =
+        cast(fptr_t)GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
     BOOL bIsWow64;
     isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
     
@@ -522,7 +523,7 @@ body
                     LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`
                 );
                 
-                RegDeleteKeyExA = enforce(GetProcAddress(
+                RegDeleteKeyExA = cast(typeof(RegDeleteKeyExA))enforce(GetProcAddress(
                     cast(void*) hAdvapi32 , "RegDeleteKeyExA"), 
                     `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`
                 );
