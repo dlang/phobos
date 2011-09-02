@@ -233,71 +233,15 @@ private template randAssignable(R) {
     enum randAssignable = isRandomAccessRange!R && hasAssignableElements!R;
 }
 
-private T* moveToHeap(T)(ref T object) {
-    GC.BlkAttr gcFlags = (typeid(T).flags & 1) ?
-                          cast(GC.BlkAttr) 0 :
-                          GC.BlkAttr.NO_SCAN;
-    T* myPtr = cast(T*) GC.malloc(T.sizeof, gcFlags);
-
-    core.stdc.string.memcpy(myPtr, &object, T.sizeof);
-    object = T.init;
-
-    return myPtr;
-}
-
 // Work around syntactic ambiguity w.r.t. address of function return vals.
 private T* addressOf(T)(ref T val) pure nothrow {
     return &val;
 }
 
-//------------------------------------------------------------------------------
-/* Various classes of task.  These use manual C-style polymorphism, the kind
- * with lots of structs and pointer casting.  This is because real classes
- * would prevent some of the allocation tricks I'm using and waste space on
- * monitors and vtbls for something that needs to be ultra-efficient.
- */
-
 private enum TaskStatus : ubyte {
     notStarted,
     inProgress,
-    done = 3
-}
-
-// This is conceptually the base class for all Task types.  The only Task type
-// that is public is the one actually named Task.
-private template BaseMixin(ubyte initTaskStatus) {
-    AbstractTask* prev;
-    AbstractTask* next;
-
-    static if(is(typeof(&impl))) {
-        void function(void*) runTask = &impl;
-    } else {
-        void function(void*) runTask;
-    }
-
-    Throwable exception;
-    ubyte taskStatus = initTaskStatus;
-
-    bool done() @property {
-        if(atomicReadUbyte(taskStatus) == TaskStatus.done) {
-            if(exception) {
-                throw exception;
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-}
-
-// This is physically base "class" for all of the other tasks.
-private struct AbstractTask {
-    mixin BaseMixin!(TaskStatus.notStarted);
-
-    void job() {
-        runTask(&this);
-    }
+    done
 }
 
 private template AliasReturn(alias fun, T...) {
@@ -361,6 +305,35 @@ unittest{
     static assert(!isRoundRobin!uint);
 }
 
+// This is the base "class" for all of the other tasks.  Using C-style
+// polymorphism to allow more direct control over memory allocation, etc.
+private struct AbstractTask {
+    AbstractTask* prev;
+    AbstractTask* next;
+
+    // Pointer to a function that executes this task.
+    void function(void*) runTask;
+
+    Throwable exception;
+    ubyte taskStatus = TaskStatus.notStarted;
+
+    bool done() @property {
+        if(atomicReadUbyte(taskStatus) == TaskStatus.done) {
+            if(exception) {
+                throw exception;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    void job() {
+        runTask(&this);
+    }
+}
+
 /**
 $(D Task) represents the fundamental unit of work.  A $(D Task) may be
 executed in parallel with any other $(D Task).  Using this struct directly
@@ -390,6 +363,13 @@ Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
        call site, only to $(D args) in this struct.
 */
 struct Task(alias fun, Args...) {
+    private AbstractTask base = {runTask : &impl};
+    private alias base this;
+
+    private @property AbstractTask* basePtr() {
+        return &base;
+    }
+
     private static void impl(void* myTask) {
         Task* myCastedTask = cast(typeof(this)*) myTask;
         static if(is(ReturnType == void)) {
@@ -400,7 +380,6 @@ struct Task(alias fun, Args...) {
             myCastedTask.returnVal = fun(myCastedTask._args);
         }
     }
-    mixin BaseMixin!(TaskStatus.notStarted) Base;
 
     private TaskPool pool;
     private bool isScoped;  // True if created with scopedTask.
@@ -487,7 +466,7 @@ struct Task(alias fun, Args...) {
     @property ref ReturnType spinForce() @trusted {
         enforcePool();
 
-        this.pool.tryDeleteExecute( cast(AbstractTask*) &this);
+        this.pool.tryDeleteExecute(basePtr);
 
         while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {}
 
@@ -511,7 +490,7 @@ struct Task(alias fun, Args...) {
      */
     @property ref ReturnType yieldForce() @trusted {
         enforcePool();
-        this.pool.tryDeleteExecute( cast(AbstractTask*) &this);
+        this.pool.tryDeleteExecute(basePtr);
 
         if(done) {
             static if(is(ReturnType == void)) {
@@ -548,7 +527,7 @@ struct Task(alias fun, Args...) {
      */
     @property ref ReturnType workForce() @trusted {
         enforcePool();
-        this.pool.tryDeleteExecute( cast(AbstractTask*) &this);
+        this.pool.tryDeleteExecute(basePtr);
 
         while(true) {
             if(done) {  // done() implicitly checks for exceptions.
@@ -604,7 +583,7 @@ struct Task(alias fun, Args...) {
     */
     @property bool done() @trusted {
         // Explicitly forwarded for documentation purposes.
-        return Base.done;
+        return base.done;
     }
 
     /**
@@ -616,12 +595,12 @@ struct Task(alias fun, Args...) {
     usage example.
     */
     void executeInNewThread() @trusted {
-        pool = new TaskPool(cast(AbstractTask*) &this);
+        pool = new TaskPool(basePtr);
     }
 
     /// Ditto
     void executeInNewThread(int priority) @trusted {
-        pool = new TaskPool(cast(AbstractTask*) &this, priority);
+        pool = new TaskPool(basePtr, priority);
     }
 
     @safe ~this() {
@@ -634,7 +613,6 @@ struct Task(alias fun, Args...) {
     // scopedTask even though the struct shouldn't be getting copied.
     //@disable this(this) {}
 }
-
 
 // Calls $(D fpOrDelegate) with $(D args).  This is an
 // adapter that makes $(D Task) work with delegates, function pointers and
@@ -707,9 +685,7 @@ void parallelSort(T)(T[] data) {
 ---
 */
 auto task(alias fun, Args...)(Args args) {
-    alias Task!(fun, Args) RetType;
-    auto stack = RetType(args);
-    return moveToHeap(stack);
+    return new Task!(fun, Args)(args);
 }
 
 /**
@@ -742,8 +718,7 @@ Notes: This function takes a non-scope delegate, meaning it can be
  */
 auto task(F, Args...)(F delegateOrFp, Args args)
 if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
-    auto stack = Task!(run, TypeTuple!(F, Args))(delegateOrFp, args);
-    return moveToHeap(stack);
+    return new Task!(run, F, Args)(delegateOrFp, args);
 }
 
 /**
@@ -769,8 +744,7 @@ identical to the non-@safe case, but safety introduces the some restrictions.
 */
 @trusted auto task(F, Args...)(F fun, Args args)
 if(is(typeof(fun(args))) && isSafeTask!F) {
-    auto stack = Task!(run, TypeTuple!(F, Args))(fun, args);
-    return moveToHeap(stack);
+    return new Task!(run, F, Args)(fun, args);
 }
 
 /**
@@ -803,7 +777,7 @@ auto scopedTask(alias fun, Args...)(Args args) {
 /// Ditto
 auto scopedTask(F, Args...)(scope F delegateOrFp, Args args)
 if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
-    auto ret = Task!(run, TypeTuple!(F, Args))(delegateOrFp, args);
+    auto ret = Task!(run, F, Args)(delegateOrFp, args);
     ret.isScoped = true;
     return ret;
 }
@@ -811,7 +785,7 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
 /// Ditto
 @trusted auto scopedTask(F, Args...)(F fun, Args args)
 if(is(typeof(fun(args))) && isSafeTask!F) {
-    auto ret = Task!(run, TypeTuple!(F, Args))(fun, args);
+    auto ret = Task!(run, F, Args)(fun, args);
     ret.isScoped = true;
     return ret;
 }
@@ -1144,7 +1118,7 @@ public:
         }
 
         immutable size_t eightSize = 4 * (this.size + 1);
-        auto ret = (rangeLen / eightSize) + 
+        auto ret = (rangeLen / eightSize) +
             ((rangeLen % eightSize == 0) ? 0 : 1);
         return max(ret, 1);
     }
@@ -1196,16 +1170,16 @@ public:
     $(D workUnitSize) parameter.  Smaller work units provide better load
     balancing, but larger work units avoid the overhead of communicating
     with other threads frequently to fetch the next work unit.  Large work
-    units also avoid false sharing in cases where the range is being modified.  
-    The less time a single iteration of the loop takes, the larger 
-    $(D workUnitSize) should be.  For very expensive loop bodies, 
-    $(D workUnitSize) should  be 1.  An overload that chooses a default work 
+    units also avoid false sharing in cases where the range is being modified.
+    The less time a single iteration of the loop takes, the larger
+    $(D workUnitSize) should be.  For very expensive loop bodies,
+    $(D workUnitSize) should  be 1.  An overload that chooses a default work
     unit size is also available.
 
     Examples:
     ---
-    // Find the logarithm of every number from 1 to 1_000_000 in parallel.
-    auto logs = new double[1_000_000];
+    // Find the logarithm of every number from 1 to 10_000_000 in parallel.
+    auto logs = new double[10_000_000];
 
     // Parallel foreach works with or without an index variable.  It can be
     // iterate by ref if range.front returns by ref.
@@ -1306,16 +1280,16 @@ public:
     ---
 
     An output range for returning the results may be provided as the last
-    argument.  If one is not provided, an array of the proper type will be 
+    argument.  If one is not provided, an array of the proper type will be
     allocated on the garbage collected heap.  If one is provided, it must be a
     random access range with assignable elements, must have reference
-    semantics with respect to assignment to its elements, and must have the 
-    same length as the input range.  Writing to adjacent elements from 
-    different threads must be safe. 
+    semantics with respect to assignment to its elements, and must have the
+    same length as the input range.  Writing to adjacent elements from
+    different threads must be safe.
 
     ---
-    // Same thing, but explicitly allocate an array to return the results in.  
-    // The element type of the array may be either the exact type returned by 
+    // Same thing, but explicitly allocate an array to return the results in.
+    // The element type of the array may be either the exact type returned by
     // functions or an implicit conversion target.
     auto squareRoots = new float[numbers.length];
     taskPool.amap!sqrt(numbers, squareRoots);
@@ -1330,12 +1304,12 @@ public:
     A memory barrier is guaranteed to be executed after all results are written
     but before returning so that results produced by all threads are visible
     in the calling thread.
-    
+
     Tips:
-    
-    To perform the mapping operation in place, provide the same range for the 
+
+    To perform the mapping operation in place, provide the same range for the
     input and output range.
-        
+
     To parallelize the copying of a range with expensive to evaluate elements
     to an array, pass an identity function (a function that just returns
     whatever argument is provided to it) to $(D amap).
@@ -1351,14 +1325,14 @@ public:
      */
     template amap(functions...) {
         ///
-        auto amap(Args...)(Args args) 
+        auto amap(Args...)(Args args)
         if(isRandomAccessRange!(Args[0])) {
             static if(functions.length == 1) {
                 alias unaryFun!(functions[0]) fun;
             } else {
                 alias adjoin!(staticMap!(unaryFun, functions)) fun;
             }
-            
+
             alias args[0] range;
             immutable len = range.length;
 
@@ -1380,7 +1354,7 @@ public:
                 alias args args2;
                 alias Args Args2;;
             }
-            
+
             if(!len) return buf;
 
             static if(isIntegral!(Args2[$ - 1])) {
@@ -1407,16 +1381,16 @@ public:
             }
 
             // Effectively -1:  chunkIndex + 1 == 0:
-            size_t workUnitIndex = size_t.max;  
-            
+            size_t workUnitIndex = size_t.max;
+
             bool shouldContinue = true;
-                
-            void doIt() {              
+
+            void doIt() {
                 scope(failure) {
                     // If an exception is thrown, all threads should bail.
                     atomicStore(shouldContinue, false);
                 }
-                        
+
                 while(atomicLoad(shouldContinue)) {
                     immutable myUnitIndex = atomicOp!"+="(workUnitIndex, 1);
                     immutable start = workUnitSize * myUnitIndex;
@@ -1424,15 +1398,15 @@ public:
                         atomicStore(shouldContinue, false);
                         break;
                     }
-                    
+
                     immutable end = min(len, start + workUnitSize);
-                    
+
                     foreach(i; start..end) {
                         buf[i] = fun(range[i]);
                     }
                 }
             }
-            
+
             submitAndExecute(this, &doIt);
             return buf;
         }
@@ -1501,7 +1475,7 @@ public:
 
     Any exceptions thrown while iterating over $(D range)
     or computing the map function are re-thrown on a call to $(D popFront) or,
-    if thrown during construction, are simply allowed to propagate to the 
+    if thrown during construction, are simply allowed to propagate to the
     caller.  In the case of exceptions thrown while computing the map function,
     the exceptions are chained as in $(D TaskPool.amap).
     */
@@ -2179,7 +2153,7 @@ public:
 
             // Can't use alloca() due to Bug 3753.  Use a fixed buffer
             // backed by malloc().
-            enum maxStack = 2_048; 
+            enum maxStack = 2_048;
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
@@ -2193,16 +2167,16 @@ public:
                         "Out of memory in std.parallelism."
                     );
                 }
-                
+
                 tasks = ptr[0..nWorkUnits];
             }
-            
+
             scope(exit) {
                 if(nBytesNeeded > maxStack) {
                     free(tasks.ptr);
                 }
             }
-            
+
             tasks[] = RTask.init;
 
             // Hack to take the address of a nested function w/o
@@ -2225,8 +2199,8 @@ public:
             }
 
             foreach(i; 1..tasks.length - 1) {
-                tasks[i].next = cast(AbstractTask*) &tasks[i + 1];
-                tasks[i + 1].prev = cast(AbstractTask*) &tasks[i];
+                tasks[i].next = tasks[i + 1].basePtr;
+                tasks[i + 1].prev = tasks[i].basePtr;
             }
 
             if(tasks.length > 1) {
@@ -2234,14 +2208,14 @@ public:
                 scope(exit) queueUnlock();
 
                 abstractPutGroupNoSync(
-                    cast(AbstractTask*) &tasks[1],
-                    cast(AbstractTask*) &tasks[$ - 1]
+                    tasks[1].basePtr,
+                    tasks[$ - 1].basePtr
                 );
             }
 
             if(tasks.length > 0) {
                 try {
-                    (cast(AbstractTask*) &tasks[0]).job();
+                    tasks[0].job();
                 } catch(Throwable e) {
                     tasks[0].exception = e;
                 }
@@ -2249,7 +2223,7 @@ public:
 
                 // Try to execute each of these in the current thread
                 foreach(ref task; tasks[1..$]) {
-                    tryDeleteExecute( cast(AbstractTask*) &task);
+                    tryDeleteExecute(task.basePtr);
                 }
             }
 
@@ -2445,8 +2419,8 @@ public:
          */
         ref T get() @property {
             assert(*stillThreadLocal,
-                   "Cannot call get() on this instance of WorkerLocalStorage because it" ~
-                   " is no longer worker-local."
+                "Cannot call get() on this instance of WorkerLocalStorage " ~
+                "because it is no longer worker-local."
             );
             return opIndex(pool.workerIndex);
         }
@@ -2457,8 +2431,8 @@ public:
         */
         void get(T val) @property {
             assert(*stillThreadLocal,
-                   "Cannot call get() on this instance of WorkerLocalStorage because it" ~
-                   " is no longer worker-local."
+                "Cannot call get() on this instance of WorkerLocalStorage " ~
+                "because it is no longer worker-local."
             );
 
             opIndexAssign(val, pool.workerIndex);
@@ -2696,7 +2670,7 @@ public:
     void put(alias fun, Args...)(ref Task!(fun, Args) task)
     if(!isSafeReturn!(typeof(task))) {
         task.pool = this;
-        abstractPut( cast(AbstractTask*) &task);
+        abstractPut(task.basePtr);
     }
 
     /// Ditto
@@ -2709,7 +2683,7 @@ public:
     @trusted void put(alias fun, Args...)(ref Task!(fun, Args) task)
     if(isSafeReturn!(typeof(task))) {
         task.pool = this;
-        abstractPut( cast(AbstractTask*) &task);
+        abstractPut(task.basePtr);
     }
 
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
@@ -2800,7 +2774,7 @@ terminating the main thread.
 
 private shared uint _defaultPoolThreads;
 shared static this() {
-    cas(&_defaultPoolThreads, _defaultPoolThreads, totalCPUs - 1U);
+    atomicStore(_defaultPoolThreads, totalCPUs - 1);
 }
 
 /**
@@ -2862,14 +2836,14 @@ private void submitAndExecute(
     scope void delegate() doIt
 ) {
     immutable nThreads = pool.size + 1;
-    
+
     alias typeof(scopedTask(doIt)) PTask;
     import core.stdc.stdlib;
-    
+
     // The logical thing to do would be to just use alloca() here, but that
-    // causes problems on Windows for reasons that I don't understand 
+    // causes problems on Windows for reasons that I don't understand
     // (tentatively a compiler bug) and definitely doesn't work on Posix due
-    // to Bug 3753.  Therefore, allocate a fixed buffer and fall back to 
+    // to Bug 3753.  Therefore, allocate a fixed buffer and fall back to
     // malloc() if someone's using a ridiculous amount of threads.  Also,
     // the using a byte array instead of a PTask array as the fixed buffer
     // is to prevent d'tors from being called on uninitialized excess PTask
@@ -2884,43 +2858,43 @@ private void submitAndExecute(
         if(!ptr) throw new OutOfMemoryError("Out of memory in std.parallelism.");
         tasks = ptr[0..nThreads];
     }
-    
+
     scope(exit) {
         if(nThreads > nBuf) {
             free(tasks.ptr);
         }
     }
-        
+
     foreach(ref t; tasks) {
         // This silly looking code is necessary to prevent d'tors from being
         // called on uninitialized objects.
-        auto temp = scopedTask(doIt);     
+        auto temp = scopedTask(doIt);
         core.stdc.string.memcpy(&t, &temp, PTask.sizeof);
-        
+
         // This has to be done to t after copying, not temp before copying.
         // Otherwise, temp's destructor will sit here and wait for the
         // task to finish.
         t.pool = pool;
-    }        
-    
-    foreach(i; 1..tasks.length - 1) {
-        tasks[i].next = cast(AbstractTask*) &tasks[i + 1];
-        tasks[i + 1].prev = cast(AbstractTask*) &tasks[i];
     }
-    
+
+    foreach(i; 1..tasks.length - 1) {
+        tasks[i].next = tasks[i + 1].basePtr;
+        tasks[i + 1].prev = tasks[i].basePtr;
+    }
+
     if(tasks.length > 1) {
         pool.queueLock();
         scope(exit) pool.queueUnlock();
 
         pool.abstractPutGroupNoSync(
-            cast(AbstractTask*) &tasks[1],
-            cast(AbstractTask*) &tasks[$ - 1]
+            tasks[1].basePtr,
+            tasks[$ - 1].basePtr
         );
     }
-        
+
     if(tasks.length > 0) {
         try {
-            (cast(AbstractTask*) &tasks[0]).job();
+            tasks[0].job();
         } catch(Throwable e) {
             tasks[0].exception = e;
         }
@@ -2928,7 +2902,7 @@ private void submitAndExecute(
 
         // Try to execute each of these in the current thread
         foreach(ref task; tasks[1..$]) {
-            pool.tryDeleteExecute( cast(AbstractTask*) &task);
+            pool.tryDeleteExecute(task.basePtr);
         }
     }
 
@@ -2946,7 +2920,7 @@ private void submitAndExecute(
     if(firstException) throw firstException;
 }
 
-static void foreachErr() { throw new ParallelForeachError(); }
+void foreachErr() { throw new ParallelForeachError(); }
 
 int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg) {
     with(p) {
@@ -2988,19 +2962,19 @@ private enum string parallelApplyMixinRandomAccess = q{
 
     // Whether iteration is with or without an index variable.
     enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
-    
+
     size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
     if(!len) return 0;
-    
+
     bool shouldContinue = true;
-        
+
     void doIt() {
         scope(failure) {
             // If an exception is thrown, all threads should bail.
             atomicStore(shouldContinue, false);
         }
-                
+
         while(atomicLoad(shouldContinue)) {
             immutable myUnitIndex = atomicOp!"+="(workUnitIndex, 1);
             immutable start = workUnitSize * myUnitIndex;
@@ -3008,9 +2982,9 @@ private enum string parallelApplyMixinRandomAccess = q{
                 atomicStore(shouldContinue, false);
                 break;
             }
-            
+
             immutable end = min(len, start + workUnitSize);
-            
+
             foreach(i; start..end) {
                 static if(hasLvalueElements!R) {
                     static if(withIndex) {
@@ -3029,9 +3003,9 @@ private enum string parallelApplyMixinRandomAccess = q{
             }
         }
     }
-    
+
     submitAndExecute(pool, &doIt);
-    
+
     return 0;
 };
 
@@ -3043,12 +3017,12 @@ enum string parallelApplyMixinInputRange = q{
 
     // Whether iteration is with or without an index variable.
     enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
-    
+
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
-    
+
     bool shouldContinue = true;
-    
+
     // The total number of elements that have been popped off range.
     // This is updated only while protected by rangeMutex;
     size_t nPopped = 0;
@@ -3067,66 +3041,66 @@ enum string parallelApplyMixinInputRange = q{
     } else {
         enum bool bufferTrick = false;
     }
-    
+
     void doIt() {
         scope(failure) {
             // If an exception is thrown, all threads should bail.
             atomicStore(shouldContinue, false);
         }
-        
+
         static if(hasLvalueElements!R) {
             alias ElementType!(R)*[] Temp;
             Temp temp;
-            
+
             // Returns:  The previous value of nPopped.
             size_t makeTemp() {
                 if(temp is null) {
                     temp = uninitializedArray!(Temp)(workUnitSize);
                 }
-                
+
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
-                
+
                 size_t i = 0;
                 for(; i < workUnitSize && !range.empty; range.popFront(), i++) {
                     temp[i] = addressOf(range.front);
                 }
-                
+
                 temp = temp[0..i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
             }
-            
+
         } else {
-            
+
             alias ElementType!(R)[] Temp;
             Temp temp;
-            
+
             // Returns:  The previous value of nPopped.
             static if(!bufferTrick) size_t makeTemp() {
                 if(temp is null) {
                     temp = uninitializedArray!(Temp)(workUnitSize);
                 }
-                
+
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
-                
+
                 size_t i = 0;
                 for(; i < workUnitSize && !range.empty; range.popFront(), i++) {
                     temp[i] = range.front;
                 }
-                
+
                 temp = temp[0..i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
             }
-            
+
             static if(bufferTrick) size_t makeTemp() {
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
-                
+
                 // Elide copying by just swapping buffers.
                 temp.length = range.buf1.length;
                 swap(range.buf1, temp);
@@ -3145,17 +3119,17 @@ enum string parallelApplyMixinInputRange = q{
                 return ret;
             }
         }
-                
-        while(atomicLoad(shouldContinue)) {           
+
+        while(atomicLoad(shouldContinue)) {
             auto overallIndex = makeTemp();
             if(temp.empty) {
                 atomicStore(shouldContinue, false);
                 break;
             }
-            
+
             foreach(i; 0..temp.length) {
                 scope(success) overallIndex++;
-                
+
                 static if(hasLvalueElements!R) {
                     static if(withIndex) {
                         if(dg(overallIndex, *temp[i])) foreachErr();
@@ -3172,9 +3146,9 @@ enum string parallelApplyMixinInputRange = q{
             }
         }
     }
-    
+
     submitAndExecute(pool, &doIt);
-    
+
     return 0;
 };
 
@@ -3360,7 +3334,7 @@ unittest {
     }
 
     auto t3 = task!makeRef(toInc);
-    taskPool.put(t3);//.submit;
+    taskPool.put(t3);
     assert(t3.args[0] == 0);
     t3.spinForce++;
     assert(t3.args[0] == 1);
@@ -3373,8 +3347,12 @@ unittest {
         auto safePool = new TaskPool(0);
         auto t = task(&bump, 1);
         taskPool.put(t);
-        assert(t.yieldForce == 2);
-        safePool.stop;
+        assert(t.yieldForce() == 2);
+
+        auto st = scopedTask(&bump, 1);
+        taskPool.put(st);
+        assert(st.yieldForce() == 2);
+        safePool.stop();
     }
 
     auto arr = [1,2,3,4,5];
@@ -3419,7 +3397,7 @@ unittest {
     assert(tupleBuf == [tuple(1, -1), tuple(4, -2), tuple(9, -3)]);
     poolInstance.amap!("a * a", "-a")([1,2,3], 5, tupleBuf);
     assert(tupleBuf == [tuple(1, -1), tuple(4, -2), tuple(9, -3)]);
-    
+
     // Test amap with a non-array buffer.
     auto toIndex = new int[5];
     auto indexed = std.range.indexed(toIndex, [3, 1, 4, 0, 2]);
@@ -3504,7 +3482,7 @@ unittest {
             import std.file;
             remove("tempDelMe.txt");
         }
-        
+
         auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
         foreach(row; written) {
             file.writeln(join(to!(string[])(row), "\t"));
@@ -3547,7 +3525,7 @@ unittest {
         }
         ii++;
     }
-    
+
     // Test buffer trick in parallel foreach.
     abuf = poolInstance.asyncBuf(iota(-1, 1_000_000), 100);
     abuf.popFront();
@@ -3555,7 +3533,7 @@ unittest {
     foreach(i, elem; parallel(abuf)) {
         bufTrickTest[i] = i;
     }
-    
+
     assert(equal(iota(1_000_000), bufTrickTest));
 
     auto myTask = task!(std.math.abs)(-1);
@@ -3572,46 +3550,46 @@ unittest {
     foreach(i; poolInstance.parallel(iota(1000), 1)) {
         assert(taskPool.workerIndex == 0);
     }
-    
+
     // Test exception handling.
     static void parallelForeachThrow() {
         foreach(elem; parallel(iota(10))) {
             throw new Exception("");
         }
     }
-    
+
     assertThrown!Exception(parallelForeachThrow());
-    
+
     static int reduceException(int a, int b) {
         throw new Exception("");
     }
-    
+
     assertThrown!Exception(
-        taskPool.reduce!reduceException(iota(3))
+        poolInstance.reduce!reduceException(iota(3))
     );
-    
+
     static int mapException(int a) {
         throw new Exception("");
     }
-    
+
     assertThrown!Exception(
-        taskPool.amap!mapException(iota(3))
+        poolInstance.amap!mapException(iota(3))
     );
-    
+
     static void mapThrow() {
-        auto m = taskPool.map!mapException(iota(3));
+        auto m = poolInstance.map!mapException(iota(3));
         m.popFront();
     }
-    
+
     assertThrown!Exception(mapThrow());
-    
+
     struct ThrowingRange {
         @property int front() { return 1; }
         void popFront() { throw new Exception(""); }
         enum bool empty = false;
     }
-    
-    assertThrown!Exception(taskPool.asyncBuf(ThrowingRange.init));
+
+    assertThrown!Exception(poolInstance.asyncBuf(ThrowingRange.init));
 }
 
 //version = parallelismStressTest;
