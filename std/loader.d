@@ -95,7 +95,7 @@ else
  * can result in the same module being loaded, which cannot be detected in
  * some operating systems
  */
-typedef void    *HXModule;
+alias void    *HXModule;
 
 /* /////////////////////////////////////////////////////////////////////////////
  * ExeModule functions

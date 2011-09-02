@@ -1106,8 +1106,8 @@ unittest
     static assert(!hasRawAliasing!(S6));
     union S7 { int a; int * b; }
     static assert(hasRawAliasing!(S7));
-    typedef int* S8;
-    static assert(hasRawAliasing!(S8));
+    //typedef int* S8;
+    //static assert(hasRawAliasing!(S8));
     enum S9 { a };
     static assert(!hasRawAliasing!(S9));
     // indirect members
@@ -1190,10 +1190,10 @@ unittest
     static assert(hasRawUnsharedAliasing!(S9));
     union S10 { int a; shared int * b; }
     static assert(!hasRawUnsharedAliasing!(S10));
-    typedef int* S11;
-    static assert(hasRawUnsharedAliasing!(S11));
-    typedef shared int* S12;
-    static assert(hasRawUnsharedAliasing!(S12));
+    //typedef int* S11;
+    //static assert(hasRawUnsharedAliasing!(S11));
+    //typedef shared int* S12;
+    //static assert(hasRawUnsharedAliasing!(S12));
     enum S13 { a };
     static assert(!hasRawUnsharedAliasing!(S13));
     // indirect members
@@ -3319,18 +3319,18 @@ private template OriginalTypeImpl(T)
 
 unittest
 {
-    typedef real T;
-    typedef T    U;
-    enum V : U { a }
-    static assert(is(OriginalType!T == real));
-    static assert(is(OriginalType!U == real));
-    static assert(is(OriginalType!V == real));
+    //typedef real T;
+    //typedef T    U;
+    //enum V : U { a }
+    //static assert(is(OriginalType!T == real));
+    //static assert(is(OriginalType!U == real));
+    //static assert(is(OriginalType!V == real));
     enum E : real { a }
     enum F : E    { a = E.a }
-    typedef const F G;
+    //typedef const F G;
     static assert(is(OriginalType!E == real));
     static assert(is(OriginalType!F == real));
-    static assert(is(OriginalType!G == const real));
+    //static assert(is(OriginalType!G == const real));
 }
 
 
@@ -3551,8 +3551,8 @@ private string removeDummyEnvelope(string s)
 
 unittest
 {
-    typedef int MyInt;
-    MyInt test() { return 0; }
+    //typedef int MyInt;
+    //MyInt test() { return 0; }
     class C { int value() @property { return 0; } }
     static assert(mangledName!(int) == int.mangleof);
     static assert(mangledName!(C) == C.mangleof);

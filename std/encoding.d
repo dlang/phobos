@@ -656,7 +656,7 @@ template EncoderInstance(E)
 //=============================================================================
 
 /** Defines various character sets. */
-typedef ubyte AsciiChar;
+enum AsciiChar : ubyte { init };
 /// Ditto
 alias immutable(AsciiChar)[] AsciiString;
 
@@ -736,7 +736,7 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-typedef ubyte Latin1Char;
+enum Latin1Char : ubyte { init };
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
@@ -812,7 +812,7 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /** Defines a Windows1252-encoded character. */
-typedef ubyte Windows1252Char;
+enum Windows1252Char : ubyte { init };
 /**
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
