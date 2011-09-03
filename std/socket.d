@@ -65,7 +65,7 @@ version(Win32)
     private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
     private alias std.c.windows.winsock.timeval _ctimeval;
 
-    typedef SOCKET socket_t = INVALID_SOCKET;
+    enum socket_t : SOCKET { INVALID_SOCKET };
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
 

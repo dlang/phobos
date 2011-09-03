@@ -18,8 +18,7 @@ Source:    $(PHOBOSSRC std/_conv.d)
 module std.conv;
 
 import core.stdc.math : ldexpl;
-import core.stdc.errno, core.stdc.string,
-    core.stdc.stdlib;
+import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
@@ -101,11 +100,11 @@ deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 The $(D_PARAM to) family of functions converts a value from type
 $(D_PARAM Source) to type $(D_PARAM Target). The source type is
 deduced and the target type must be specified, for example the
-expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
+expression $(D_PARAM to!int(42.0)) converts the number 42 from
 $(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
-it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
+it checks for overflow; $(D_PARAM to!int(4.2e10)) would throw the
 $(D_PARAM ConvOverflowException) exception. Overflow checks are only
-inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
+inserted when necessary, e.g., $(D_PARAM to!double(42)) does not do
 any checking because any int fits in a double.
 
 Converting a value to its own type (useful mostly for generic code)
@@ -113,8 +112,8 @@ simply returns its argument.
 Example:
 -------------------------
 int a = 42;
-auto b = to!(int)(a); // b is int with value 42
-auto c = to!(double)(3.14); // c is double with value 3.14
+auto b = to!int(a); // b is int with value 42
+auto c = to!double(3.14); // c is double with value 3.14
 -------------------------
 Converting among numeric types is a safe way to cast them around.
 Conversions from floating-point types to integral types allow loss of
@@ -125,19 +124,19 @@ integral, use $(D_PARAM roundTo).)
 Examples:
 -------------------------
 int a = 420;
-auto b = to!(long)(a); // same as long b = a;
-auto c = to!(byte)(a / 10); // fine, c = 42
-auto d = to!(byte)(a); // throw ConvOverflowException
+auto b = to!long(a); // same as long b = a;
+auto c = to!byte(a / 10); // fine, c = 42
+auto d = to!byte(a); // throw ConvOverflowException
 double e = 4.2e6;
-auto f = to!(int)(e); // f == 4200000
+auto f = to!int(e); // f == 4200000
 e = -3.14;
-auto g = to!(uint)(e); // fails: floating-to-integral negative overflow
+auto g = to!uint(e); // fails: floating-to-integral negative overflow
 e = 3.14;
-auto h = to!(uint)(e); // h = 3
+auto h = to!uint(e); // h = 3
 e = 3.99;
-h = to!(uint)(a); // h = 3
+h = to!uint(a); // h = 3
 e = -3.99;
-f = to!(int)(a); // f = -3
+f = to!int(a); // f = -3
 -------------------------
 
 Conversions from integral types to floating-point types always
@@ -149,10 +148,10 @@ $(D_PARAM real) is 80-bit, e.g. on Intel machines).
 Example:
 -------------------------
 int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
-assert(to!(int)(to!(float)(a)) == a);
-assert(to!(int)(to!(float)(-a)) == -a);
+assert(to!int(to!float(a)) == a);
+assert(to!int(to!float(-a)) == -a);
 a += 2;
-assert(to!(int)(to!(float)(a)) == a); // fails!
+assert(to!int(to!float(a)) == a); // fails!
 -------------------------
 
 Conversions from string to numeric types differ from the C equivalents
@@ -202,11 +201,11 @@ int[string][double[int[]]] a;
 auto b = to!(short[wstring][string[double[]]])(a);
 -------------------------
 
-This conversion works because $(D_PARAM to!(short)) applies to an
-$(D_PARAM int), $(D_PARAM to!(wstring)) applies to a $(D_PARAM
-string), $(D_PARAM to!(string)) applies to a $(D_PARAM double), and
+This conversion works because $(D_PARAM to!short) applies to an
+$(D_PARAM int), $(D_PARAM to!wstring) applies to a $(D_PARAM
+string), $(D_PARAM to!string) applies to a $(D_PARAM double), and
 $(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
-conversion might throw an exception because $(D_PARAM to!(short))
+conversion might throw an exception because $(D_PARAM to!short)
 might fail the range check.
 
 Macros: WIKI=Phobos/StdConv
@@ -219,7 +218,10 @@ Macros: WIKI=Phobos/StdConv
  */
 template to(T)
 {
-    T to(A...)(A args) { return toImpl!T(args); }
+    T to(A...)(A args)
+    {
+        return toImpl!T(args);
+    }
 }
 
 /**
@@ -345,7 +347,7 @@ unittest
 }
 
 /**
-$(RED Scheduled for deprecation in January 2012. Please use 
+$(RED Scheduled for deprecation in January 2012. Please use
       method $(D opCast) instead.)
 
 Object-_to-non-object conversions look for a method "to" of the source
@@ -371,7 +373,7 @@ unittest
 ----
  */
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
-        && is(typeof(S.init.to!(T)()) : T))
+        && is(typeof(S.init.to!T()) : T))
 {
     pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
                 "\"to\" has been scheduled for deprecation in January 2012. " ~
@@ -383,7 +385,10 @@ T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B { T to(T)() { return 43; } }
+    class B
+    {
+        T to(T)() { return 43; }
+    }
     auto b = new B;
     assert(to!int(b) == 43);
 }
@@ -401,12 +406,18 @@ T toImpl(T, S)(S value)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class B { T opCast(T)() { return 43; } }
+    class B
+    {
+        T opCast(T)() { return 43; }
+    }
     auto b = new B;
     assert(to!int(b) == 43);
 
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S { T opCast(T)() { return 43; } }
+    struct S
+    {
+        T opCast(T)() { return 43; }
+    }
     auto s = S();
     assert(to!int(s) == 43);
 }
@@ -428,13 +439,29 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
             " succeeded.");
-    struct Int { int x; }
+    struct Int
+    {
+        int x;
+    }
     Int i = to!Int(1);
 
-    static struct Int2 { int x; this(int x){ this.x = x; } }
+    static struct Int2
+    {
+        int x;
+        this(int x) { this.x = x; }
+    }
     Int2 i2 = to!Int2(1);
 
-    static struct Int3 { int x; static Int3 opCall(int x){ Int3 i; i.x = x; return i; } }
+    static struct Int3
+    {
+        int x;
+        static Int3 opCall(int x)
+        {
+            Int3 i;
+            i.x = x;
+            return i;
+        }
+    }
     Int3 i3 = to!Int3(1);
 }
 
@@ -448,13 +475,21 @@ T toImpl(T, S)(S src)
 
 unittest
 {
-    static struct S { int x; }
-    static class C { int x; this(int x){ this.x = x; } }
+    static struct S
+    {
+        int x;
+    }
+    static class C
+    {
+        int x;
+        this(int x) { this.x = x; }
+    }
 
-    static class B {
+    static class B
+    {
         int value;
-        this(S src){ value = src.x; }
-        this(C src){ value = src.x; }
+        this(S src) { value = src.x; }
+        this(C src) { value = src.x; }
     }
 
     S s = S(1);
@@ -471,8 +506,14 @@ unittest
 
 version (unittest)
 {
-    class A { this(B b){} }
-    class B : A { this(){ super(this); } }
+    class A
+    {
+        this(B b) {}
+    }
+    class B : A
+    {
+        this() { super(this); }
+    }
 }
 unittest
 {
@@ -483,14 +524,14 @@ unittest
 
     static class C : Object
     {
-        this(){}
-        this(Object o){}
+        this() {}
+        this(Object o) {}
     }
 
     Object oc = new C();
-    C a2 = to!C(oc);     // == new C(a)
+    C a2 = to!C(oc);    // == new C(a)
                         // Construction conversion overrides down-casting conversion
-    assert(a2 != a);    // 
+    assert(a2 != a);    //
 }
 
 /**
@@ -516,19 +557,13 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Testing object conversions
-    class A {} class B : A {} class C : A {}
+    class A {}
+    class B : A {}
+    class C : A {}
     A a1 = new A, a2 = new B, a3 = new C;
-    assert(to!(B)(a2) is a2);
-    assert(to!(C)(a3) is a3);
-    try
-    {
-        to!(B)(a3);
-        assert(false);
-    }
-    catch (ConvException e)
-    {
-        //writeln(e);
-    }
+    assert(to!B(a2) is a2);
+    assert(to!C(a3) is a3);
+    assertThrown!ConvException(to!B(a3));
 }
 
 /**
@@ -571,29 +606,42 @@ T toImpl(T, S)(S s)
     static if (isSomeString!S)
     {
         // string-to-string conversion
-        static if (s[0].sizeof == T[0].sizeof) {
+        static if (s[0].sizeof == T[0].sizeof)
+        {
             // same width, only qualifier conversion
             enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
                 || is(T == const(dchar)[]);
             enum tIsInvariant = is(T == immutable(char)[])
                 || is(T == immutable(wchar)[]) || is(T == immutable(dchar)[]);
-            static if (tIsConst) {
+            static if (tIsConst)
+            {
                 return s;
-            } else static if (tIsInvariant) {
+            }
+            else static if (tIsInvariant)
+            {
                 // conversion (mutable|const) -> immutable
                 return s.idup;
-            } else {
+            }
+            else
+            {
                 // conversion (immutable|const) -> mutable
                 return s.dup;
             }
-        } else {
+        }
+        else
+        {
             // width conversion
             // we can cast because toUTFX always produces a fresh string
-            static if (T[0].sizeof == 1) {
+            static if (T[0].sizeof == 1)
+            {
                 return cast(T) toUTF8(s);
-            } else static if (T[0].sizeof == 2) {
+            }
+            else static if (T[0].sizeof == 2)
+            {
                 return cast(T) toUTF16(s);
-            } else {
+            }
+            else
+            {
                 static assert(T[0].sizeof == 4);
                 return cast(T) toUTF32(s);
             }
@@ -638,8 +686,10 @@ unittest
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // string tests
     alias TypeTuple!(char, wchar, dchar) AllChars;
-    foreach (T; AllChars) {
-        foreach (U; AllChars) {
+    foreach (T; AllChars)
+    {
+        foreach (U; AllChars)
+        {
             T[] s1 = to!(T[])("Hello, world!");
             auto s2 = to!(U[])(s1);
             assert(s1 == to!(T[])(s2));
@@ -735,8 +785,10 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = 
 // hash-to-string conversion
     result.put(leftBracket);
     bool first = true;
-    foreach (k, v; s) {
-        if (!first) result.put(separator);
+    foreach (k, v; s)
+    {
+        if (!first)
+            result.put(separator);
         else first = false;
         result.put(to!T(k));
         result.put(keyval);
@@ -751,14 +803,18 @@ T toImpl(T, S)(S s, in T nullstr = "null")
     if (is(S : Object) &&
         isSomeString!T)
 {
-    if (!s) return nullstr;
+    if (!s)
+        return nullstr;
     return to!T(s.toString);
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    class A { override string toString() { return "an A"; } }
+    class A
+    {
+        override string toString() { return "an A"; }
+    }
     A a;
     assert(to!string(a) == "null");
     a = new A;
@@ -776,7 +832,10 @@ T toImpl(T, S)(S s)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S { string toString() { return "wyda"; } }
+    struct S
+    {
+        string toString() { return "wyda"; }
+    }
     assert(to!string(S()) == "wyda");
 }
 
@@ -795,7 +854,8 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T righ
         app.put(left);
         foreach (i, e; t.field)
         {
-            if (i > 0) app.put(to!T(separator));
+            if (i > 0)
+                app.put(to!T(separator));
             app.put(to!T(e));
         }
         app.put(right);
@@ -811,7 +871,11 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T righ
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    struct S { int a = 42; float b = 43.5; }
+    struct S
+    {
+        int a = 42;
+        float b = 43.5;
+    }
     S s;
     assert(to!string(s) == "S(42, 43.5)");
 }
@@ -858,13 +922,14 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
-    static if (is(S Original == typedef)) {
+    static if (is(S Original == typedef))
+    {
         // typedef
         return left ~ to!T(cast(Original) s) ~ right;
     }
 }
 
-unittest
+version(none) unittest
 {
     debug(conv) scope(success) writeln("unittest @",
             __FILE__, ":", __LINE__, " succeeded.");
@@ -930,20 +995,7 @@ unittest
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string s = "foo";
-    string s2;
-    foreach (char c; s)
-    {
-        s2 ~= to!string(c);
-    }
-    //printf("%.*s", s2);
-    assert(s2 == "foo");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(char).unittest\n");
+    debug(conv) printf("string.to!string(char).unittest\n");
 
     string s = "foo";
     string s2;
@@ -1013,82 +1065,15 @@ T toImpl(T, S)(S input)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
+    foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
+        assert(to!string(to!Int(0)) == "0");
+        assert(to!string(to!Int(9)) == "9");
+        assert(to!string(to!Int(123)) == "123");
+    }
 }
 
 /// ditto
@@ -1148,103 +1133,19 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    string r;
-    int i;
+    foreach (Int; TypeTuple!(byte, short, int, long))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
-
-    const h  = 6;
-    string s = to!string(h);
-    assert(s == "6");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(int).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(long).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
+        assert(to!string(to!Int(0)) == "0");
+        assert(to!string(to!Int(9)) == "9");
+        assert(to!string(to!Int(123)) == "123");
+        assert(to!string(to!Int(-0)) == "0");
+        assert(to!string(to!Int(-9)) == "-9");
+        assert(to!string(to!Int(-123)) == "-123");
+        assert(to!string(to!(const Int)(6)) == "6");
+    }
 }
 
 /// ditto
@@ -1286,57 +1187,24 @@ body
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    size_t x = 16;
-    assert(to!string(x, 16) == "10");
-}
+    foreach (Int; TypeTuple!(uint, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.toString(ulong, uint).unittest\n");
+        assert(to!string(to!Int(16), 16) == "10");
+        assert(to!string(to!Int(15), 2u) == "1111");
+        assert(to!string(to!Int(1), 2u) == "1");
+        assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
+    }
 
-    string r;
-    int i;
+    foreach (Int; TypeTuple!(int, long))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(ulong, uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(-10L, 10u);
-    assert(r == "-10");
-
-    r = to!string(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = to!string(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = to!string(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
+        assert(to!string(to!Int(-10), 10u) == "-10");
+    }
 }
 
 /// ditto
@@ -1433,18 +1301,10 @@ T toImpl(T, S)(S s)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(string) printf("string.to!string(char*).unittest\n");
+    debug(conv) printf("string.to!string(char*).unittest\n");
 
-    string r;
-    int i;
-
-    r = to!string(cast(char*) null);
-    i = cmp(r, "");
-    assert(i == 0);
-
-    r = to!string("foo\0".ptr);
-    i = cmp(r, "foo");
-    assert(i == 0);
+    assert(to!string(cast(char*) null) == "");
+    assert(to!string("foo\0".ptr) == "foo");
 }
 
 
@@ -1459,19 +1319,26 @@ T toImpl(T, S)(S value)
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
-    static if (sSmallest < 0) {
+    static if (sSmallest < 0)
+    {
         // possible underflow converting from a signed
-        static if (tSmallest == 0) {
+        static if (tSmallest == 0)
+        {
             immutable good = value >= 0;
-        } else {
+        }
+        else
+        {
             static assert(tSmallest < 0);
             immutable good = value >= tSmallest;
         }
-        if (!good) ConvOverflowException.raise("Conversion negative overflow");
+        if (!good)
+            ConvOverflowException.raise("Conversion negative overflow");
     }
-    static if (S.max > T.max) {
+    static if (S.max > T.max)
+    {
         // possible overflow
-        if (value > T.max) ConvOverflowException.raise("Conversion positive overflow");
+        if (value > T.max)
+            ConvOverflowException.raise("Conversion positive overflow");
     }
     return cast(T) value;
 }
@@ -1484,19 +1351,19 @@ unittest
     assert(collectException(to!char(a)));
 
     dchar from0 = 'A';
-    char to0 = to!(char)(from0);
+    char to0 = to!char(from0);
 
     wchar from1 = 'A';
-    char to1 = to!(char)(from1);
+    char to1 = to!char(from1);
 
     char from2 = 'A';
-    char to2 = to!(char)(from2);
+    char to2 = to!char(from2);
 
     char from3 = 'A';
-    wchar to3 = to!(wchar)(from3);
+    wchar to3 = to!wchar(from3);
 
     char from4 = 'A';
-    dchar to4 = to!(dchar)(from4);
+    dchar to4 = to!dchar(from4);
 }
 
 /**
@@ -1510,11 +1377,12 @@ T toImpl(T, S)(S src)
 {
     alias typeof(T.init[0]) E;
     auto result = new E[src.length];
-    foreach (i, e; src) {
+    foreach (i, e; src)
+    {
         /* Temporarily cast to mutable type, so we can get it initialized,
          * this is ok because there are no other references to result[]
          */
-        cast()(result[i]) = to!(E)(e);
+        cast()(result[i]) = to!E(e);
     }
     return result;
 }
@@ -1549,7 +1417,7 @@ T toImpl(T, S)(S src)
     T result;
     foreach (k1, v1; src)
     {
-        result[to!(K2)(k1)] = to!(V2)(v1);
+        result[to!K2(k1)] = to!V2(v1);
     }
     return result;
 }
@@ -1563,71 +1431,75 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
     //hash to string conversion
-    assert(to!(string)(a) == "[0:1, 1:2]");
-}
-
-private bool convFails(Source, Target, E)(Source src)
-{
-    try {
-        auto t = to!(Target)(src);
-    } catch (E) {
-        return true;
-    }
-    return false;
+    assert(to!string(a) == "[0:1, 1:2]");
 }
 
 private void testIntegralToFloating(Integral, Floating)()
 {
     Integral a = 42;
-    auto b = to!(Floating)(a);
+    auto b = to!Floating(a);
     assert(a == b);
-    assert(a == to!(Integral)(b));
+    assert(a == to!Integral(b));
 }
 
 private void testFloatingToIntegral(Floating, Integral)()
 {
+    bool convFails(Source, Target, E)(Source src)
+    {
+        try
+            auto t = to!Target(src);
+        catch (E)
+            return true;
+        return false;
+    }
+
     // convert some value
     Floating a = 4.2e1;
-    auto b = to!(Integral)(a);
+    auto b = to!Integral(a);
     assert(is(typeof(b) == Integral) && b == 42);
     // convert some negative value (if applicable)
     a = -4.2e1;
-    static if (Integral.min < 0) {
-        b = to!(Integral)(a);
+    static if (Integral.min < 0)
+    {
+        b = to!Integral(a);
         assert(is(typeof(b) == Integral) && b == -42);
-    } else {
+    }
+    else
+    {
         // no go for unsigned types
         assert(convFails!(Floating, Integral, ConvOverflowException)(a));
     }
     // convert to the smallest integral value
     a = 0.0 + Integral.min;
-    static if (Integral.min < 0) {
+    static if (Integral.min < 0)
+    {
         a = -a; // -Integral.min not representable as an Integral
         assert(convFails!(Floating, Integral, ConvOverflowException)(a)
                 || Floating.sizeof <= Integral.sizeof);
     }
     a = 0.0 + Integral.min;
-    assert(to!(Integral)(a) == Integral.min);
+    assert(to!Integral(a) == Integral.min);
     --a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     a = 0.0 + Integral.max;
 //   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
-//             Integral.stringof, to!(Integral)(a));
-    assert(to!(Integral)(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
+//             Integral.stringof, to!Integral(a));
+    assert(to!Integral(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
     ++a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     // convert a value with a fractional part
     a = 3.14;
-    assert(to!(Integral)(a) == 3);
+    assert(to!Integral(a) == 3);
     a = 3.99;
-    assert(to!(Integral)(a) == 3);
-    static if (Integral.min < 0) {
+    assert(to!Integral(a) == 3);
+    static if (Integral.min < 0)
+    {
         a = -3.14;
-        assert(to!(Integral)(a) == -3);
+        assert(to!Integral(a) == -3);
         a = -3.99;
-        assert(to!(Integral)(a) == -3);
+        assert(to!Integral(a) == -3);
     }
 }
 
@@ -1641,7 +1513,8 @@ unittest
     alias TypeTuple!(AllInts, AllFloats) AllNumerics;
     // test with same type
     {
-        foreach (T; AllNumerics) {
+        foreach (T; AllNumerics)
+        {
             T a = 42;
             auto b = to!T(a);
             assert(is(typeof(a) == typeof(b)) && a == b);
@@ -1653,39 +1526,44 @@ unittest
     {
         // float
         int a = 16_777_215; // 2^24 - 1
-        assert(to!(int)(to!(float)(a)) == a);
-        assert(to!(int)(to!(float)(-a)) == -a);
+        assert(to!int(to!float(a)) == a);
+        assert(to!int(to!float(-a)) == -a);
         // double
         long b = 9_007_199_254_740_991; // 2^53 - 1
-        assert(to!(long)(to!(double)(b)) == b);
-        assert(to!(long)(to!(double)(-b)) == -b);
+        assert(to!long(to!double(b)) == b);
+        assert(to!long(to!double(-b)) == -b);
         // real
         // @@@ BUG IN COMPILER @@@
 //     ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
-//     assert(to!(ulong)(to!(real)(c)) == c);
-//     assert(to!(ulong)(-to!(real)(c)) == c);
+//     assert(to!ulong(to!real(c)) == c);
+//     assert(to!ulong(-to!real(c)) == c);
     }
     // test conversions floating => integral
     {
         // AllInts[0 .. $ - 1] should be AllInts
         // @@@ BUG IN COMPILER @@@
-        foreach (Integral; AllInts[0 .. $ - 1]) {
-            foreach (Floating; AllFloats) {
+        foreach (Integral; AllInts[0 .. $ - 1])
+        {
+            foreach (Floating; AllFloats)
+            {
                 testFloatingToIntegral!(Floating, Integral);
             }
         }
     }
     // test conversion integral => floating
     {
-        foreach (Integral; AllInts[0 .. $ - 1]) {
-            foreach (Floating; AllFloats) {
+        foreach (Integral; AllInts[0 .. $ - 1])
+        {
+            foreach (Floating; AllFloats)
+            {
                 testIntegralToFloating!(Integral, Floating);
             }
         }
     }
     // test parsing
     {
-        foreach (T; AllNumerics) {
+        foreach (T; AllNumerics)
+        {
             // from type immutable(char)[2]
             auto a = to!T("42");
             assert(a == 42);
@@ -1705,27 +1583,29 @@ unittest
     }
     // test conversions to string
     {
-        foreach (T; AllNumerics) {
+        foreach (T; AllNumerics)
+        {
             T a = 42;
-            assert(to!(string)(a) == "42");
-            //assert(to!(wstring)(a) == "42"w);
-            //assert(to!(dstring)(a) == "42"d);
+            assert(to!string(a) == "42");
+            //assert(to!wstring(a) == "42"w);
+            //assert(to!dstring(a) == "42"d);
             // array test
 //       T[] b = new T[2];
 //       b[0] = 42;
 //       b[1] = 33;
-//       assert(to!(string)(b) == "[42,33]");
+//       assert(to!string(b) == "[42,33]");
         }
     }
     // test array to string conversion
-    foreach (T ; AllNumerics) {
+    foreach (T ; AllNumerics)
+    {
         auto a = [to!T(1), 2, 3];
         assert(to!string(a) == "[1, 2, 3]");
     }
     // test enum to int conversion
     // enum Testing { Test1, Test2 };
     // Testing t;
-    // auto a = to!(string)(t);
+    // auto a = to!string(t);
     // assert(a == "0");
 }
 
@@ -1738,28 +1618,20 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if ((is(S : const(wchar)[]) || is(S : const(dchar)[])) &&
+    if (isDynamicArray!S && isSomeString!S &&
         !isSomeString!T)
 {
-    // todo: improve performance
-    return parseString!T(toUTF8(value));
-}
+    alias ElementEncodingType!S[] SV;
+    static if (is(SV == S))
+        alias value v;
+    else
+        SV v = value;   // e.g. convert const(char[]) to const(char)[]
 
-/// ditto
-T toImpl(T, S)(S value)
-    if (isDynamicArray!S && is(S : const(char)[]) &&
-        !isSomeString!T)
-{
-    return parseString!T(value);
-}
-
-private T parseString(T)(const(char)[] v)
-{
     scope(exit)
     {
         if (v.length)
         {
-            convError!(const(char)[], T)(v);
+            convError!(SV, T)(v);
         }
     }
     return parse!T(v);
@@ -1781,54 +1653,48 @@ unittest
 
 Example:
 ---------------
-  assert(roundTo!(int)(3.14) == 3);
-  assert(roundTo!(int)(3.49) == 3);
-  assert(roundTo!(int)(3.5) == 4);
-  assert(roundTo!(int)(3.999) == 4);
-  assert(roundTo!(int)(-3.14) == -3);
-  assert(roundTo!(int)(-3.49) == -3);
-  assert(roundTo!(int)(-3.5) == -4);
-  assert(roundTo!(int)(-3.999) == -4);
+assert(roundTo!int(3.14) == 3);
+assert(roundTo!int(3.49) == 3);
+assert(roundTo!int(3.5) == 4);
+assert(roundTo!int(3.999) == 4);
+assert(roundTo!int(-3.14) == -3);
+assert(roundTo!int(-3.49) == -3);
+assert(roundTo!int(-3.5) == -4);
+assert(roundTo!int(-3.999) == -4);
 ---------------
 Rounded conversions do not work with non-integral target types.
  */
 
 template roundTo(Target)
 {
-    Target roundTo(Source)(Source value) {
+    Target roundTo(Source)(Source value)
+    {
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
-        return to!(Target)(trunc(value + (value < 0 ? -0.5L : 0.5L)));
+        return to!Target(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(roundTo!(int)(3.14) == 3);
-    assert(roundTo!(int)(3.49) == 3);
-    assert(roundTo!(int)(3.5) == 4);
-    assert(roundTo!(int)(3.999) == 4);
-    assert(roundTo!(int)(-3.14) == -3);
-    assert(roundTo!(int)(-3.49) == -3);
-    assert(roundTo!(int)(-3.5) == -4);
-    assert(roundTo!(int)(-3.999) == -4);
+    assert(roundTo!int(3.14) == 3);
+    assert(roundTo!int(3.49) == 3);
+    assert(roundTo!int(3.5) == 4);
+    assert(roundTo!int(3.999) == 4);
+    assert(roundTo!int(-3.14) == -3);
+    assert(roundTo!int(-3.49) == -3);
+    assert(roundTo!int(-3.5) == -4);
+    assert(roundTo!int(-3.999) == -4);
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
 
     // boundary values
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
     {
-        try
-        {
-            assert(roundTo!Int(Int.min - 0.4L) == Int.min);
-            assert(roundTo!Int(Int.max + 0.4L) == Int.max);
-        }
-        catch (ConvOverflowException e)
-        {
-            assert(0);
-        }
-        try { roundTo!Int(Int.min - 0.5L); assert(0); } catch (ConvOverflowException e) {}
-        try { roundTo!Int(Int.max + 0.5L); assert(0); } catch (ConvOverflowException e) {}
+        assert(roundTo!Int(Int.min - 0.4L) == Int.min);
+        assert(roundTo!Int(Int.max + 0.4L) == Int.max);
+        assertThrown!ConvOverflowException(roundTo!Int(Int.min - 0.5L));
+        assertThrown!ConvOverflowException(roundTo!Int(Int.max + 0.5L));
     }
 }
 
@@ -1844,19 +1710,19 @@ unittest
  * Example:
 --------------
 string test = "123 \t  76.14";
-auto a = parse!(uint)(test);
+auto a = parse!uint(test);
 assert(a == 123);
 assert(test == " \t  76.14"); // parse bumps string
 munch(test, " \t\n\r"); // skip ws
 assert(test == "76.14");
-auto b = parse!(double)(test);
+auto b = parse!double(test);
 assert(b == 76.14);
 assert(test == "");
 --------------
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
+    if (isSomeChar!(ElementType!Source) && isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1864,9 +1730,7 @@ Target parse(Target, Source)(ref Source s)
         auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
         auto result = cast(Target) v;
         if (result != v)
-        {
-            convError!(Source, Target)(s);
-        }
+            goto Loverflow;
         return result;
     }
     else
@@ -1875,7 +1739,8 @@ Target parse(Target, Source)(ref Source s)
         // immutable length = s.length;
         // if (!length)
         //     goto Lerr;
-        if (s.empty) goto Lerr;
+        if (s.empty)
+            goto Lerr;
 
         static if (Target.min < 0)
             int sign = 0;
@@ -1918,7 +1783,8 @@ Target parse(Target, Source)(ref Source s)
             else
                 break;
         }
-        if (i == 0) goto Lerr;
+        if (i == 0)
+            goto Lerr;
         //s = s[i .. $];
         static if (Target.min < 0)
         {
@@ -1928,11 +1794,196 @@ Target parse(Target, Source)(ref Source s)
             }
         }
         return v;
-      Loverflow:
-        ConvOverflowException.raise("Overflow in integral conversion");
-      Lerr:
-        convError!(Source, Target)(s);
-        return 0;
+    }
+
+Loverflow:
+    ConvOverflowException.raise("Overflow in integral conversion");
+Lerr:
+    convError!(Source, Target)(s);
+    assert(0);
+}
+
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
+    string s = "123";
+    auto a = parse!int(s);
+}
+
+unittest
+{
+    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest\n", Int.stringof.length, Int.stringof.ptr);
+
+        {
+                assert(to!Int("0") == 0);
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+0") == 0);
+                assert(to!Int("-0") == 0);
+            }
+        }
+
+        static if (Int.sizeof >= byte.sizeof)
+        {
+                assert(to!Int("6") == 6);
+                assert(to!Int("23") == 23);
+                assert(to!Int("68") == 68);
+                assert(to!Int("127") == 0x7F);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("255") == 0xFF);
+            }
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+6") == 6);
+                assert(to!Int("+23") == 23);
+                assert(to!Int("+68") == 68);
+                assert(to!Int("+127") == 0x7F);
+
+                assert(to!Int("-6") == -6);
+                assert(to!Int("-23") == -23);
+                assert(to!Int("-68") == -68);
+                assert(to!Int("-128") == -128);
+            }
+        }
+
+        static if (Int.sizeof >= short.sizeof)
+        {
+                assert(to!Int("468") == 468);
+                assert(to!Int("32767") == 0x7FFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("65535") == 0xFFFF);
+            }
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+468") == 468);
+                assert(to!Int("+32767") == 0x7FFF);
+
+                assert(to!Int("-468") == -468);
+                assert(to!Int("-32768") == -32768);
+            }
+        }
+
+        static if (Int.sizeof >= int.sizeof)
+        {
+                assert(to!Int("2147483647") == 0x7FFFFFFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("4294967295") == 0xFFFFFFFF);
+            }
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+2147483647") == 0x7FFFFFFF);
+
+                assert(to!Int("-2147483648") == -2147483648);
+            }
+        }
+
+        static if (Int.sizeof >= long.sizeof)
+        {
+                assert(to!Int("9223372036854775807") == 0x7FFFFFFFFFFFFFFF);
+
+            static if (isUnsigned!Int)
+            {
+                assert(to!Int("18446744073709551615") == 0xFFFFFFFFFFFFFFFF);
+            }
+
+            static if (isSigned!Int)
+            {
+                assert(to!Int("+9223372036854775807") == 0x7FFFFFFFFFFFFFFF);
+
+                assert(to!Int("-9223372036854775808") == 0x8000000000000000);
+            }
+        }
+    }
+}
+
+unittest
+{
+    // parsing error check
+    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (error)\n", Int.stringof.length, Int.stringof.ptr);
+
+        {
+            immutable string[] errors1 =
+            [
+                "",
+                "-",
+                "+",
+                "-+",
+                " ",
+                " 0",
+                "0 ",
+                "- 0",
+                "1-",
+                "xx",
+                "123h",
+            ];
+            foreach (j, s; errors1)
+                assertThrown!ConvException(to!Int(s));
+        }
+
+        // parse!SomeUnsigned cannot parse head sign.
+        static if (isUnsigned!Int)
+        {
+            immutable string[] errors2 =
+            [
+                "+5",
+                "-78",
+            ];
+            foreach (j, s; errors2)
+                assertThrown!ConvException(to!Int(s));
+        }
+    }
+
+    // positive overflow check
+    foreach (i, Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (pos overflow)\n", Int.stringof.length, Int.stringof.ptr);
+
+        immutable string[] errors =
+        [
+            "128",                  // > byte.max
+            "256",                  // > ubyte.max
+            "32768",                // > short.max
+            "65536",                // > ushort.max
+            "2147483648",           // > int.max
+            "4294967296",           // > uint.max
+            "9223372036854775808",  // > long.max
+            "18446744073709551616", // > ulong.max
+        ];
+        foreach (j, s; errors[i..$])
+            assertThrown!ConvOverflowException(to!Int(s));
+    }
+
+    // negative overflow check
+    foreach (i, Int; TypeTuple!(byte, short, int, long))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest (neg overflow)\n", Int.stringof.length, Int.stringof.ptr);
+
+        immutable string[] errors =
+        [
+            "-129",                 // < byte.min
+            "-32769",               // < short.min
+            "-2147483649",          // < int.min
+            "-9223372036854775809", // < long.min
+        ];
+        foreach (j, s; errors[i..$])
+            assertThrown!ConvOverflowException(to!Int(s));
     }
 }
 
@@ -1980,28 +2031,31 @@ body
     assert(i <= s.length);
     s = s[i .. $];
     return v;
+
 Loverflow:
     ConvOverflowException.raise("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
-    return 0;
+    assert(0);
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
-        // foreach (i; 2..37) {
+        // foreach (i; 2..37)
+        // {
         //      assert(parse!int("0",i) == 0);
         //      assert(parse!int("1",i) == 1);
         //      assert(parse!byte("10",i) == i);
         // }
-        foreach (i; 2..37) {
-        string s = "0";
+        foreach (i; 2..37)
+        {
+            string s = "0";
                 assert(parse!int(s,i) == 0);
-        s = "1";
+            s = "1";
                 assert(parse!int(s,i) == 1);
-        s = "10";
+            s = "10";
                 assert(parse!byte(s,i) == i);
         }
     // Same @@@BUG@@@ as above
@@ -2044,19 +2098,11 @@ unittest
     assert(to!E("b"w) == E.b);
     assert(to!E("c"d) == E.c);
 
-    
     assert(to!F("x"c) == F.x);
     assert(to!F("y"w) == F.y);
     assert(to!F("z"d) == F.z);
 
-    try
-    {
-        to!E("d");
-        assert(0);
-    }
-    catch (ConvException e)
-    {
-    }
+    assertThrown!ConvException(to!E("d"));
 }
 
 version (none)  // TODO: BUG4744
@@ -2068,12 +2114,6 @@ unittest
     assert(to!A("member111") == A.member111);
     auto s = "member1111";
     assert(parse!A(s) == A.member111 && s == "1");
-}
-
-unittest
-{
-    assert(to!float("inf") == float.infinity);
-    assert(to!float("-inf") == -float.infinity);
 }
 
 Target parse(Target, Source)(ref Source p)
@@ -2091,14 +2131,16 @@ Target parse(Target, Source)(ref Source p)
     ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
         (string msg = null)
     {
-        if (!msg) msg = "Floating point conversion error";
+        if (!msg)
+            msg = "Floating point conversion error";
         return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
     }
 
     for (;;)
     {
         enforce(!p.empty, bailOut());
-        if (!std.uni.isWhite(p.front)) break;
+        if (!std.uni.isWhite(p.front))
+            break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */
@@ -2107,7 +2149,8 @@ Target parse(Target, Source)(ref Source p)
     case '-':
         sign++;
         p.popFront();
-        if (std.ascii.toLower(p.front) == 'i') goto case 'i';
+        if (std.ascii.toLower(p.front) == 'i')
+            goto case 'i';
         enforce(!p.empty, bailOut());
         break;
     case '+':
@@ -2187,7 +2230,8 @@ Target parse(Target, Source)(ref Source p)
                 }
                 exp -= dot;
                 p.popFront();
-                if (p.empty) break;
+                if (p.empty)
+                    break;
                 i = p.front;
             }
             if (i == '.' && !dot)
@@ -2295,7 +2339,8 @@ Target parse(Target, Source)(ref Source p)
                 }
                 exp -= dot;
                 p.popFront();
-                if (p.empty) break;
+                if (p.empty)
+                    break;
                 i = p.front;
             }
             if (i == '.' && !dot)
@@ -2379,6 +2424,80 @@ Target parse(Target, Source)(ref Source p)
 
 unittest
 {
+    // Compare reals with given precision
+    bool feq(in real rx, in real ry, in real precision = 0.000001L)
+    {
+        if (rx == ry)
+            return 1;
+
+        if (isnan(rx))
+            return cast(bool)isnan(ry);
+
+        if (isnan(ry))
+            return 0;
+
+        return cast(bool)(fabs(rx - ry) <= precision);
+    }
+
+    // Make given typed literal
+    F Literal(F)(F f)
+    {
+        return f;
+    }
+
+    foreach (Float; TypeTuple!(float, double, real))
+    {
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+        debug(conv) printf("conv.to!%.*s.unittest\n", Float.stringof.length, Float.stringof.ptr);
+
+        assert(to!Float("123") == Literal!Float(123));
+        assert(to!Float("+123") == Literal!Float(+123));
+        assert(to!Float("-123") == Literal!Float(-123));
+        assert(to!Float("123e2") == Literal!Float(123e2));
+        assert(to!Float("123e+2") == Literal!Float(123e+2));
+        assert(to!Float("123e-2") == Literal!Float(123e-2));
+        assert(to!Float("123.") == Literal!Float(123.));
+        assert(to!Float(".456") == Literal!Float(.456));
+
+        assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));
+
+        assert(to!Float("0") == 0.0);
+        assert(to!Float("-0") == -0.0);
+
+        assert(isnan(to!Float("nan")));
+
+        assertThrown!ConvException(to!Float("\x00"));
+    }
+
+    // min and max
+    float f = to!float("1.17549e-38");
+    assert(feq(cast(real)f, cast(real)1.17549e-38));
+    assert(feq(cast(real)f, cast(real)float.min_normal));
+    f = to!float("3.40282e+38");
+    assert(to!string(f) == to!string(3.40282e+38));
+
+    // min and max
+    double d = to!double("2.22508e-308");
+    assert(feq(cast(real)d, cast(real)2.22508e-308));
+    assert(feq(cast(real)d, cast(real)double.min_normal));
+    d = to!double("1.79769e+308");
+    assert(to!string(d) == to!string(1.79769e+308));
+    assert(to!string(d) == to!string(double.max));
+
+    assert(to!string(to!real(to!string(real.max / 2L))) == to!string(real.max / 2L));
+
+    // min and max
+    real r = to!real(to!string(real.min_normal));
+    assert(to!string(r) == to!string(real.min_normal));
+    r = to!real(to!string(real.max));
+    assert(to!string(r) == to!string(real.max));
+}
+
+unittest
+{
+    import core.stdc.errno;
+    import core.stdc.stdlib;
+
     errno = 0;  // In case it was set by another unittest in a different module.
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
@@ -2430,12 +2549,11 @@ unittest
     assert(x == 0.0);
 }
 
+// Unittest for bug 3369
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
-    string s = "123";
-    auto a = parse!int(s);
+    assert(to!float("inf") == float.infinity);
+    assert(to!float("-inf") == -float.infinity);
 }
 
 /**
@@ -2443,7 +2561,43 @@ Parsing one character off a string returns the character and bumps the
 string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isSomeString!Source &&
+        staticIndexOf!(Unqual!Target, dchar, Unqual!(typeof(Source.init[0]))) >= 0)
+{
+    static if (is(Unqual!Target == dchar))
+    {
+        Target result = s.front;
+        s.popFront();
+        return result;
+    }
+    else
+    {
+        // Special case: okay so parse a Char off a Char[]
+        Target result = s[0];
+        s = s[1 .. $];
+        return result;
+    }
+}
+
+unittest
+{
+    foreach (Str; TypeTuple!(string, wstring, dstring))
+    {
+        foreach (Char; TypeTuple!(char, wchar, dchar))
+        {
+            static if (is(Unqual!Char == dchar) ||
+                       Char.sizeof == Str.init[0].sizeof)
+            {
+                Str s = "aaa";
+                assert(parse!Char(s) == 'a');
+                assert(s == "aa");
+            }
+        }
+    }
+}
+
+Target parse(Target, Source)(ref Source s)
+    if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
 {
     Target result = s.front;
@@ -2451,29 +2605,9 @@ Target parse(Target, Source)(ref Source s)
     return result;
 }
 
-// Special case: okay so parse a char off a char[] or a wchar off a
-// wchar[]
-Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Source : const(Target)[]))
-{
-    Target result = s[0];
-    s = s[1 .. $];
-    return result;
-}
-
-unittest
-{
-    string s = "aaa";
-    assert(parse!char(s) == 'a');
-    assert(s == "aa");
-    wstring s1 = "aaa";
-    assert(parse!wchar(s1) == 'a');
-    assert(s1 == "aa");
-}
-
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target==bool))
+    if (isSomeString!Source && is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
     {
@@ -2489,6 +2623,34 @@ Target parse(Target, Source)(ref Source s)
     assert(0);
 }
 
+/*
+    Tests for to!bool and parse!bool
+*/
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) printf("conv.to!bool.unittest\n");
+
+    assert (to!bool("TruE") == true);
+    assert (to!bool("faLse"d) == false);
+    assertThrown!ConvException(to!bool("maybe"));
+
+    auto t = "TrueType";
+    assert (parse!bool(t) == true);
+    assert (t == "Type");
+
+    auto f = "False killer whale"d;
+    assert (parse!bool(f) == false);
+    assert (f == " killer whale"d);
+
+    auto m = "maybe";
+    assertThrown!ConvException(parse!bool(m));
+    assert (m == "maybe");  // m shouldn't change on failure
+
+    auto s = "true";
+    auto b = parse!(const(bool))(s);
+    assert(b == true);
+}
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
@@ -2515,7 +2677,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 {
     Target result;
     skipWS(s);
-    if (s.front != lbracket) return result;
+    if (s.front != lbracket)
+        return result;
     s.popFront();
     skipWS(s);
     if (s.front == rbracket)
@@ -2527,7 +2690,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     {
         result ~= parse!(ElementType!Target)(s);
         skipWS(s);
-        if (s.front != comma) break;
+        if (s.front != comma)
+            break;
     }
     if (s.front == rbracket)
     {
@@ -2536,7 +2700,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     return result;
 }
 
-unittest
+version(none) unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef uint Testing;
@@ -2548,1434 +2712,52 @@ unittest
 unittest
 {
     int[] a = [1, 2, 3, 4, 5];
-        auto s = to!string(a);
+    auto s = to!string(a);
     assert(to!(int[])(s) == a);
 }
 
 unittest
 {
     int[][] a = [ [1, 2] , [3], [4, 5] ];
-        auto s = to!string(a);
-    //assert(to!(int[][])(s) == a);
+    auto s = to!string(a);
+    assert(to!(int[][])(s) == a);
 }
 
 unittest
 {
     int[][][] ia = [ [[1,2],[3,4],[5]] , [[6],[],[7,8,9]] , [[]] ];
 
-        char[] s = to!(char[])(ia);
-        int[][][] ia2;
+    char[] s = to!(char[])(ia);
+    int[][][] ia2;
 
-        ia2 = to!(typeof(ia2))(s);
+    ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
 }
 
-// Customizable integral parse
-
-// private N parseIntegral(S, N)(ref S s)
-// {
-//     static if (N.sizeof < int.sizeof)
-//     {
-//         // smaller types are handled like integers
-//         static if (N.min < 0) // signed small integer
-//             alias int N1;
-//         else
-//             alias uint N1;
-//         auto v = parseIntegral!(S, N1)(s);
-//         auto result = cast(N) v;
-//         if (result != v)
-//         {
-//             ConvException.raise!(S, N)(s);
-//         }
-//         return result;
-//     }
-//     else
-//     {
-//         // Larger than int types
-//         immutable length = s.length;
-//         if (!length)
-//             goto Lerr;
-
-//         static if (N.min < 0)
-//             int sign = 0;
-//         else
-//             enum sign = 0;
-//         N v = 0;
-//         size_t i = 0;
-//         enum char maxLastDigit = N.min < 0 ? '7' : '5';
-//         for (; i < length; i++)
-//         {
-//             auto c = s[i];
-//             if (c >= '0' && c <= '9')
-//             {
-//                 if (v < N.max/10 || (v == N.max/10 && c + sign <= maxLastDigit))
-//                     v = cast(N) (v * 10 + (c - '0'));
-//                 else
-//                     goto Loverflow;
-//             }
-//             else static if (N.min < 0)
-//             {
-//                 if (c == '-' && i == 0)
-//                 {
-//                     sign = -1;
-//                     if (length == 1)
-//                         goto Lerr;
-//                 }
-//                 else if (c == '+' && i == 0)
-//                 {
-//                     if (length == 1)
-//                         goto Lerr;
-//                 } else
-//                       break;
-//             }
-//             else
-//                 break;
-//         }
-//         if (i == 0) goto Lerr;
-//         s = s[i .. $];
-//         static if (N.min < 0)
-//         {
-//             if (sign == -1)
-//             {
-//                 v = -v;
-//             }
-//         }
-//         return v;
-//       Loverflow:
-//         assert(false);
-//         //ConvOverflowException.raise(to!string(s));
-//       Lerr:
-//         ConvException.raise!(S, N)(s);
-//         return 0;
-//     }
-// }
-
-/*
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!int.unittest\n");
-
-    int i;
-
-    i = to!int("0");
-    assert(i == 0);
-
-    i = to!int("+0");
-    assert(i == 0);
-
-    i = to!int("-0");
-    assert(i == 0);
-
-    i = to!int("6");
-    assert(i == 6);
-
-    i = to!int("+23");
-    assert(i == 23);
-
-    i = to!int("-468");
-    assert(i == -468);
-
-    i = to!int("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!int("-2147483648");
-    assert(i == 0x80000000);
-
-    immutable string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "2147483648",
-        "-2147483649",
-        "5656566565",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!int(errors[j]);
-            //printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!uint
- */
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!uint.unittest\n");
-
-    uint i;
-
-    i = to!uint("0");
-    assert(i == 0);
-
-    i = to!uint("6");
-    assert(i == 6);
-
-    i = to!uint("23");
-    assert(i == 23);
-
-    i = to!uint("468");
-    assert(i == 468);
-
-    i = to!uint("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!uint("4294967295");
-    assert(i == 0xFFFFFFFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "4294967296",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!uint(errors[j]);
-            //printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-/*
-Tests for to!long
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!long.unittest\n");
-
-    long i;
-
-    i = to!long("0");
-    assert(i == 0);
-
-    i = to!long("+0");
-    assert(i == 0);
-
-    i = to!long("-0");
-    assert(i == 0);
-
-    i = to!long("6");
-    assert(i == 6);
-
-    i = to!long("+23");
-    assert(i == 23);
-
-    i = to!long("-468");
-    assert(i == -468);
-
-    i = to!long("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!long("-2147483648");
-    assert(i == -0x80000000L);
-
-    i = to!long("9223372036854775807");
-    assert(i == 0x7FFFFFFFFFFFFFFF);
-
-    i = to!long("-9223372036854775808");
-    assert(i == 0x8000000000000000);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "9223372036854775808",
-        "-9223372036854775809",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!long(errors[j]);
-            //printf("l = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!ulong
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ulong.unittest\n");
-
-    ulong i;
-
-    i = to!ulong("0");
-    assert(i == 0);
-
-    i = to!ulong("6");
-    assert(i == 6);
-
-    i = to!ulong("23");
-    assert(i == 23);
-
-    i = to!ulong("468");
-    assert(i == 468);
-
-    i = to!ulong("2147483647");
-    assert(i == 0x7FFFFFFF);
-
-    i = to!ulong("4294967295");
-    assert(i == 0xFFFFFFFF);
-
-    i = to!ulong("9223372036854775807");
-    assert(i == 0x7FFFFFFFFFFFFFFF);
-
-    i = to!ulong("18446744073709551615");
-    assert(i == 0xFFFFFFFFFFFFFFFF);
-
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "18446744073709551616",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!ulong(errors[j]);
-            //printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-/*
-Tests for toShort
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!short.unittest\n");
-
-    short i;
-
-    i = to!short("0");
-    assert(i == 0);
-
-    i = to!short("+0");
-    assert(i == 0);
-
-    i = to!short("-0");
-    assert(i == 0);
-
-    i = to!short("6");
-    assert(i == 6);
-
-    i = to!short("+23");
-    assert(i == 23);
-
-    i = to!short("-468");
-    assert(i == -468);
-
-    i = to!short("32767");
-    assert(i == 0x7FFF);
-
-    i = to!short("-32768");
-    assert(i == cast(short)0x8000);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "32768",
-        "-32769",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!short(errors[j]);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!ushort
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ushort.unittest\n");
-
-    ushort i;
-
-    i = to!ushort("0");
-    assert(i == 0);
-
-    i = to!ushort("6");
-    assert(i == 6);
-
-    i = to!ushort("23");
-    assert(i == 23);
-
-    i = to!ushort("468");
-    assert(i == 468);
-
-    i = to!ushort("32767");
-    assert(i == 0x7FFF);
-
-    i = to!ushort("65535");
-    assert(i == 0xFFFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "65536",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!ushort(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*******************************************************
-Tests for to!byte
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!byte.unittest\n");
-
-    byte i;
-
-    i = to!byte("0");
-    assert(i == 0);
-
-    i = to!byte("+0");
-    assert(i == 0);
-
-    i = to!byte("-0");
-    assert(i == 0);
-
-    i = to!byte("6");
-    assert(i == 6);
-
-    i = to!byte("+23");
-    assert(i == 23);
-
-    i = to!byte("-68");
-    assert(i == -68);
-
-    i = to!byte("127");
-    assert(i == 0x7F);
-
-    i = to!byte("-128");
-    assert(i == cast(byte)0x80);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "xx",
-        "123h",
-        "128",
-        "-129",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!byte(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-Tests for to!ubyte
- */
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!ubyte.unittest\n");
-
-    ubyte i;
-
-    i = to!ubyte("0");
-    assert(i == 0);
-
-    i = to!ubyte("6");
-    assert(i == 6);
-
-    i = to!ubyte("23");
-    assert(i == 23);
-
-    i = to!ubyte("68");
-    assert(i == 68);
-
-    i = to!ubyte("127");
-    assert(i == 0x7F);
-
-    i = to!ubyte("255");
-    assert(i == 0xFF);
-
-    static string[] errors =
-    [
-        "",
-        "-",
-        "+",
-        "-+",
-        " ",
-        " 0",
-        "0 ",
-        "- 0",
-        "1-",
-        "+5",
-        "-78",
-        "xx",
-        "123h",
-        "256",
-    ];
-
-    for (int j = 0; j < errors.length; j++)
-    {
-        i = 47;
-        try
-        {
-            i = to!ubyte(errors[j]);
-            debug(conv) printf("i = %d\n", i);
-        }
-        catch (Exception e)
-        {
-            debug(conv) writeln(e);
-            i = 3;
-        }
-        assert(i == 3);
-    }
-}
-
-
-/*
-    Tests for to!bool and parse!bool
+/***************************************************************
+   Convenience functions for converting any number and types of
+   arguments into _text (the three character widths).
+
+   Example:
+----
+assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
+assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+----
 */
-unittest
+string text(T...)(T args)
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) printf("conv.to!bool.unittest\n");
-
-    assert (to!bool("TruE") == true);
-    assert (to!bool("faLse"d) == false);
-    try
-    {
-        to!bool("maybe");
-        assert (false);
-    }
-    catch (ConvException e) { }
-
-    auto t = "TrueType";
-    assert (parse!bool(t) == true);
-    assert (t == "Type");
-
-    auto f = "False killer whale"d;
-    assert (parse!bool(f) == false);
-    assert (f == " killer whale"d);
-
-    auto m = "maybe";
-    try
-    {
-        parse!bool(m);
-        assert (false);
-    }
-    catch (ConvException e)
-    {
-        assert (m == "maybe");  // m shouldn't change on failure
-    }
+    return textImpl!string(args);
 }
-
-
-// @@@ BUG IN COMPILER
-// lvalue of type immutable(T)[] should be implicitly convertible to
-// ref const(T)[].
-// F parseFloating(S : S[], F)(ref S[] s)
-// {
-//     //writefln("toFloat('%s')", s);
-//     auto sz = toStringz(to!(const char[])(s));
-//     if (std.ascii.isspace(*sz))
-//      goto Lerr;
-
-//     // issue 1589
-//     version (Windows)
-//     {
-//         if (icmp(s, "nan") == 0)
-//         {
-//             s = s[3 .. $];
-//             return F.nan;
-//         }
-//     }
-
-//     // BUG: should set __locale_decpoint to "." for DMC
-
-//     setErrno(0);
-//     char* endptr;
-//     static if (is(F == float))
-//         auto f = strtof(sz, &endptr);
-//     else static if (is(F == double))
-//         auto f = strtod(sz, &endptr);
-//     else static if (is(F == real))
-//         auto f = strtold(sz, &endptr);
-//     else
-//         static assert(false);
-//     if (getErrno() == ERANGE)
-//         goto Lerr;
-//     assert(endptr);
-//     if (endptr == sz)
-//     {
-//         // no progress
-//         goto Lerr;
-//     }
-//     s = s[endptr - sz .. $];
-//     return f;
-//   Lerr:
-//     ConvException.raise!(S[], F)(s);
-//     assert(0);
-// }
-
-unittest
+///ditto
+wstring wtext(T...)(T args)
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!float.unittest" );
-    float f;
-
-    f = to!float( "nAn" );
-    assert(isnan(f));
-    f = to!float( "123" );
-    assert( f == 123f );
-    f = to!float( "+123" );
-    assert( f == +123f );
-    f = to!float( "-123" );
-    assert( f == -123f );
-    f = to!float( "123e+2" );
-    assert( f == 123e+2f );
-
-    f = to!float( "123e-2" );
-    assert( f == 123e-2f );
-    f = to!float( "123." );
-    assert( f == 123.f );
-    f = to!float( ".456" );
-    assert( f == .456f );
-
-    assert(to!float("0") == 0f);
-    assert(to!float("-0") == -0f);
-
-    // min and max
-    try
-    {
-        f = to!float("1.17549e-38");
-        assert(feq(cast(real)f, cast(real)1.17549e-38));
-        assert(feq(cast(real)f, cast(real)float.min_normal));
-        f = to!float("3.40282e+38");
-        assert(to!string(f) == to!string(3.40282e+38));
-    }
-    catch (ConvException e) // strtof() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    f = to!float("nan");
-    assert(to!string(f) == to!string(float.nan));
-
-    bool ok = false;
-    try
-    {
-        to!float("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
+    return textImpl!wstring(args);
 }
-
-/*
-Tests for to!double
- */
-
-unittest
+///ditto
+dstring dtext(T...)(T args)
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug( conv ) writefln( "conv.to!double.unittest" );
-    double d;
-
-    d = to!double( "123" );
-    assert( d == 123 );
-    d = to!double( "+123" );
-    assert( d == +123 );
-    d = to!double( "-123" );
-    assert( d == -123 );
-    d = to!double( "123e2" );
-    assert( d == 123e2);
-    d = to!double( "123e-2" );
-    assert( d == 123e-2 );
-    d = to!double( "123." );
-    assert( d == 123. );
-    d = to!double( ".456" );
-    assert( d == .456 );
-    d = to!double( "1.23456E+2" );
-    assert( d == 1.23456E+2 );
-
-    assert(to!double("0") == 0.0);
-    assert(to!double("-0") == -0.0);
-
-    // min and max
-    try
-    {
-        d = to!double("2.22508e-308");
-        assert(feq(cast(real)d, cast(real)2.22508e-308));
-        assert(feq(cast(real)d, cast(real)double.min_normal));
-        d = to!double("1.79769e+308");
-        assert(to!string(d) == to!string(1.79769e+308));
-        assert(to!string(d) == to!string(double.max));
-    }
-    catch (ConvException e) // strtod() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    d = to!double("nan");
-    assert(to!string(d) == to!string(double.nan));
-    //assert(cast(real)d == cast(real)double.nan);
-
-    bool ok = false;
-    try
-    {
-        to!double("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
-}
-
-/*
-Tests for to!real
- */
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    debug(conv) writefln("conv.to!real.unittest");
-    real r;
-
-    r = to!real("123");
-    assert(r == 123L);
-    r = to!real("+123");
-    assert(r == 123L);
-    r = to!real("-123");
-    assert(r == -123L);
-    r = to!real("123e2");
-    assert(feq(r, 123e2L));
-    r = to!real("123e-2");
-    assert(feq(r, 1.23L));
-    r = to!real("123.");
-    assert(r == 123L);
-    r = to!real(".456");
-    assert(r == .456L);
-
-    r = to!real("1.23456e+2");
-    assert(feq(r,  1.23456e+2L));
-    r = to!real(to!string(real.max / 2L));
-    assert(to!string(r) == to!string(real.max / 2L));
-
-    assert(to!real("0") == 0.0L);
-    assert(to!real("-0") == -0.0L);
-
-    // min and max
-    try
-    {
-        r = to!real(to!string(real.min_normal));
-        assert(to!string(r) == to!string(real.min_normal));
-        r = to!real(to!string(real.max));
-        assert(to!string(r) == to!string(real.max));
-    }
-    catch (ConvException e) // strtold() bug on some platforms
-    {
-        printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
-        printf("   (%.*s)\n", e.msg);
-    }
-
-    // nan
-    r = to!real("nan");
-    assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
-
-    r = to!real(to!string(real.nan));
-    assert(to!string(r) == to!string(real.nan));
-    //assert(r == real.nan);
-
-    bool ok = false;
-    try
-    {
-        to!real("\x00");
-    }
-    catch (ConvException e)
-    {
-        ok = true;
-    }
-    assert(ok);
-}
-
-version (none)
-{   /* These are removed for the moment because of concern about
-     * what to do about the 'i' suffix. Should it be there?
-     * Should it not? What about 'nan', should it be 'nani'?
-     * 'infinity' or 'infinityi'?
-     * Should it match what to!string(ifloat) does with the 'i' suffix?
-     */
-
-/*******************************************************
- * ditto
- */
-
-    ifloat toIfloat(in string s)
-    {
-        return toFloat(s) * 1.0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toIfloat.unittest");
-        ifloat ift;
-
-        ift = toIfloat(to!string(123.45));
-        assert(to!string(ift) == to!string(123.45i));
-
-        ift = toIfloat(to!string(456.77i));
-        assert(to!string(ift) == to!string(456.77i));
-
-        // min and max
-        ift = toIfloat(to!string(ifloat.min_normal));
-        assert(to!string(ift) == to!string(ifloat.min_normal) );
-        assert(feq(cast(ireal)ift, cast(ireal)ifloat.min_normal));
-
-        ift = toIfloat(to!string(ifloat.max));
-        assert(to!string(ift) == to!string(ifloat.max));
-        assert(feq(cast(ireal)ift, cast(ireal)ifloat.max));
-
-        // nan
-        ift = toIfloat("nani");
-        assert(cast(real)ift == cast(real)ifloat.nan);
-
-        ift = toIfloat(to!string(ifloat.nan));
-        assert(to!string(ift) == to!string(ifloat.nan));
-        assert(feq(cast(ireal)ift, cast(ireal)ifloat.nan));
-    }
-
-/*******************************************************
- * ditto
- */
-
-    idouble toIdouble(in string s)
-    {
-        return toDouble(s) * 1.0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toIdouble.unittest");
-        idouble id;
-
-        id = toIdouble(to!string("123.45"));
-        assert(id == 123.45i);
-
-        id = toIdouble(to!string("123.45e+302i"));
-        assert(id == 123.45e+302i);
-
-        // min and max
-        id = toIdouble(to!string(idouble.min_normal));
-        assert(to!string( id ) == to!string(idouble.min_normal));
-        assert(feq(cast(ireal)id.re, cast(ireal)idouble.min_normal.re));
-        assert(feq(cast(ireal)id.im, cast(ireal)idouble.min_normal.im));
-
-        id = toIdouble(to!string(idouble.max));
-        assert(to!string(id) == to!string(idouble.max));
-        assert(feq(cast(ireal)id.re, cast(ireal)idouble.max.re));
-        assert(feq(cast(ireal)id.im, cast(ireal)idouble.max.im));
-
-        // nan
-        id = toIdouble("nani");
-        assert(cast(real)id == cast(real)idouble.nan);
-
-        id = toIdouble(to!string(idouble.nan));
-        assert(to!string(id) == to!string(idouble.nan));
-    }
-
-/*******************************************************
- * ditto
- */
-
-    ireal toIreal(in string s)
-    {
-        return toReal(s) * 1.0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toIreal.unittest");
-        ireal ir;
-
-        ir = toIreal(to!string("123.45"));
-        assert(feq(cast(real)ir.re, cast(real)123.45i));
-
-        ir = toIreal(to!string("123.45e+82i"));
-        assert(to!string(ir) == to!string(123.45e+82i));
-        //assert(ir == 123.45e+82i);
-
-        // min and max
-        ir = toIreal(to!string(ireal.min));
-        assert(to!string(ir) == to!string(ireal.min_normal));
-        assert(feq(cast(real)ir.re, cast(real)ireal.min_normal.re));
-        assert(feq(cast(real)ir.im, cast(real)ireal.min_normal.im));
-
-        ir = toIreal(to!string(ireal.max));
-        assert(to!string(ir) == to!string(ireal.max));
-        assert(feq(cast(real)ir.re, cast(real)ireal.max.re));
-        //assert(feq(cast(real)ir.im, cast(real)ireal.max.im));
-
-        // nan
-        ir = toIreal("nani");
-        assert(cast(real)ir == cast(real)ireal.nan);
-
-        ir = toIreal(to!string(ireal.nan));
-        assert(to!string(ir) == to!string(ireal.nan));
-    }
-
-
-/*******************************************************
- * ditto
- */
-    cfloat toCfloat(in string s)
-    {
-        string s1;
-        string s2;
-        real   r1;
-        real   r2;
-        cfloat cf;
-        bool    b = 0;
-        char*  endptr;
-
-        if (!s.length)
-            goto Lerr;
-
-        b = getComplexStrings(s, s1, s2);
-
-        if (!b)
-            goto Lerr;
-
-        // atof(s1);
-        endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr);
-
-        // atof(s2);
-        endptr = &s2[s2.length - 1];
-        r2 = strtold(s2, &endptr);
-
-        cf = cast(cfloat)(r1 + (r2 * 1.0i));
-
-        //writefln( "toCfloat() r1=%g, r2=%g, cf=%g, max=%g",
-        //           r1, r2, cf, cfloat.max);
-        // Currently disabled due to a posted bug where a
-        // complex float greater-than compare to .max compares
-        // incorrectly.
-        //if (cf > cfloat.max)
-        //    goto Loverflow;
-
-        return cf;
-
-      Loverflow:
-        conv_overflow(s);
-
-      Lerr:
-        convError(s);
-        return cast(cfloat)0.0e-0+0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toCfloat.unittest");
-        cfloat cf;
-
-        cf = toCfloat(to!string("1.2345e-5+0i"));
-        assert(to!string(cf) == to!string(1.2345e-5+0i));
-        assert(feq(cf, 1.2345e-5+0i));
-
-        // min and max
-        cf = toCfloat(to!string(cfloat.min));
-        assert(to!string(cf) == to!string(cfloat.min));
-
-        cf = toCfloat(to!string(cfloat.max));
-        assert(to!string(cf) == to!string(cfloat.max));
-
-        // nan ( nan+nani )
-        cf = toCfloat("nani");
-        //writefln("toCfloat() cf=%g, cf=\"%s\", nan=%s",
-        //         cf, to!string(cf), to!string(cfloat.nan));
-        assert(to!string(cf) == to!string(cfloat.nan));
-
-        cf = toCdouble("nan+nani");
-        assert(to!string(cf) == to!string(cfloat.nan));
-
-        cf = toCfloat(to!string(cfloat.nan));
-        assert(to!string(cf) == to!string(cfloat.nan));
-        assert(feq(cast(creal)cf, cast(creal)cfloat.nan));
-    }
-
-/*******************************************************
- * ditto
- */
-    cdouble toCdouble(in string s)
-    {
-        string  s1;
-        string  s2;
-        real    r1;
-        real    r2;
-        cdouble cd;
-        bool     b = 0;
-        char*   endptr;
-
-        if (!s.length)
-            goto Lerr;
-
-        b = getComplexStrings(s, s1, s2);
-
-        if (!b)
-            goto Lerr;
-
-        // atof(s1);
-        endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr);
-
-        // atof(s2);
-        endptr = &s2[s2.length - 1];
-        r2 = strtold(s2, &endptr); //atof(s2);
-
-        cd = cast(cdouble)(r1 + (r2 * 1.0i));
-
-        //Disabled, waiting on a bug fix.
-        //if (cd > cdouble.max)  //same problem the toCfloat() having
-        //    goto Loverflow;
-
-        return cd;
-
-      Loverflow:
-        conv_overflow(s);
-
-      Lerr:
-        convError(s);
-        return cast(cdouble)0.0e-0+0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toCdouble.unittest");
-        cdouble cd;
-
-        cd = toCdouble(to!string("1.2345e-5+0i"));
-        assert(to!string( cd ) == to!string(1.2345e-5+0i));
-        assert(feq(cd, 1.2345e-5+0i));
-
-        // min and max
-        cd = toCdouble(to!string(cdouble.min));
-        assert(to!string(cd) == to!string(cdouble.min));
-        assert(feq(cast(creal)cd, cast(creal)cdouble.min));
-
-        cd = toCdouble(to!string(cdouble.max));
-        assert(to!string( cd ) == to!string(cdouble.max));
-        assert(feq(cast(creal)cd, cast(creal)cdouble.max));
-
-        // nan ( nan+nani )
-        cd = toCdouble("nani");
-        assert(to!string(cd) == to!string(cdouble.nan));
-
-        cd = toCdouble("nan+nani");
-        assert(to!string(cd) == to!string(cdouble.nan));
-
-        cd = toCdouble(to!string(cdouble.nan));
-        assert(to!string(cd) == to!string(cdouble.nan));
-        assert(feq(cast(creal)cd, cast(creal)cdouble.nan));
-    }
-
-/*******************************************************
- * ditto
- */
-    creal toCreal(in string s)
-    {
-        string s1;
-        string s2;
-        real   r1;
-        real   r2;
-        creal  cr;
-        bool    b = 0;
-        char*  endptr;
-
-        if (!s.length)
-            goto Lerr;
-
-        b = getComplexStrings(s, s1, s2);
-
-        if (!b)
-            goto Lerr;
-
-        // atof(s1);
-        endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr);
-
-        // atof(s2);
-        endptr = &s2[s2.length - 1];
-        r2 = strtold(s2, &endptr); //atof(s2);
-
-        //writefln("toCreal() r1=%g, r2=%g, s1=\"%s\", s2=\"%s\", nan=%g",
-        //          r1, r2, s1, s2, creal.nan);
-
-        if (s1 =="nan" && s2 == "nani")
-            cr = creal.nan;
-        else if (r2 != 0.0)
-            cr = cast(creal)(r1 + (r2 * 1.0i));
-        else
-            cr = cast(creal)(r1 + 0.0i);
-
-        return cr;
-
-      Lerr:
-        convError(s);
-        return cast(creal)0.0e-0+0i;
-    }
-
-    unittest
-    {
-        debug(conv) writefln("conv.toCreal.unittest");
-        creal cr;
-
-        cr = toCreal(to!string("1.2345e-5+0i"));
-        assert(to!string(cr) == to!string(1.2345e-5+0i));
-        assert(feq(cr, 1.2345e-5+0i));
-
-        cr = toCreal(to!string("0.0e-0+0i"));
-        assert(to!string(cr) == to!string(0.0e-0+0i));
-        assert(cr == 0.0e-0+0i);
-        assert(feq(cr, 0.0e-0+0i));
-
-        cr = toCreal("123");
-        assert(cr == 123);
-
-        cr = toCreal("+5");
-        assert(cr == 5);
-
-        cr = toCreal("-78");
-        assert(cr == -78);
-
-        // min and max
-        cr = toCreal(to!string(creal.min));
-        assert(to!string(cr) == to!string(creal.min));
-        assert(feq(cr, creal.min));
-
-        cr = toCreal(to!string(creal.max));
-        assert(to!string(cr) == to!string(creal.max));
-        assert(feq(cr, creal.max));
-
-        // nan ( nan+nani )
-        cr = toCreal("nani");
-        assert(to!string(cr) == to!string(creal.nan));
-
-        cr = toCreal("nan+nani");
-        assert(to!string(cr) == to!string(creal.nan));
-
-        cr = toCreal(to!string(cdouble.nan));
-        assert(to!string(cr) == to!string(creal.nan));
-        assert(feq(cr, creal.nan));
-    }
-}
-
-/* **************************************************************
- * Splits a complex float (cfloat, cdouble, and creal) into two workable strings.
- * Grammar:
- * ['+'|'-'] string floating-point digit {digit}
- */
-private bool getComplexStrings(in string s, out string s1, out string s2)
-{
-    sizediff_t len = s.length;
-
-    if (!len)
-        goto Lerr;
-
-    // When "nan" or "nani" just return them.
-    if (s == "nan" || s == "nani" || s == "nan+nani")
-    {
-        s1 = "nan";
-        s2 = "nani";
-        return 1;
-    }
-
-    // Split the original string out into two strings.
-    for (int i = 1; i < len; i++)
-        if ((s[i - 1] != 'e' && s[i - 1] != 'E') && s[i] == '+')
-        {
-            //s1 = s[0..i]; should work, doesn't
-            s1 = s[0..i];
-            if (i + 1 < len - 1)
-                s2 = s[i + 1..len - 1];
-            else
-                s2 = "0e+0i";
-
-            break;
-        }
-
-    // Handle the case when there's only a single value
-    // to work with, and set the other string to zero.
-    if (!s1.length)
-    {
-        s1 = s;
-        s2 = "0e+0i";
-    }
-
-    //writefln( "getComplexStrings() s=\"%s\", s1=\"%s\", s2=\"%s\", len=%d",
-    //           s, s1, s2, len );
-
-    return 1;
-
-  Lerr:
-    // Display the original string in the error message.
-    throw new ConvException("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
-            ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
-}
-
-// feq() functions now used only in unittesting
-
-/* ***************************************
- * Main function to compare reals with given precision
- */
-private bool feq(in real rx, in real ry, in real precision)
-{
-    if (rx == ry)
-        return 1;
-
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
-
-    if (isnan(ry))
-        return 0;
-
-    return cast(bool)(fabs(rx - ry) <= precision);
-}
-
-/* ***************************************
- * (Note: Copied here from std.math's mfeq() function for unittesting)
- * Simple function to compare two floating point values
- * to a specified precision.
- * Returns:
- *  1   match
- *  0   nomatch
- */
-private bool feq(in real r1, in real r2)
-{
-    if (r1 == r2)
-        return 1;
-
-    if (isnan(r1))
-        return cast(bool)isnan(r2);
-
-    if (isnan(r2))
-        return 0;
-
-    return cast(bool)(feq(r1, r2, 0.000001L));
-}
-
-/* ***************************************
- * compare ireals with given precision
- */
-private bool feq(in ireal r1, in ireal r2)
-{
-    real rx = cast(real)r1;
-    real ry = cast(real)r2;
-
-    if (rx == ry)
-        return 1;
-
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
-
-    if (isnan(ry))
-        return 0;
-
-    return feq(rx, ry, 0.000001L);
-}
-
-/* ***************************************
- * compare creals with given precision
- */
-private bool feq(in creal r1, in creal r2)
-{
-    real r1a = fabs(cast(real)r1.re - cast(real)r2.re);
-    real r2b = fabs(cast(real)r1.im - cast(real)r2.im);
-
-    if ((cast(real)r1.re == cast(real)r2.re) &&
-            (cast(real)r1.im == cast(real)r2.im))
-        return 1;
-
-    if (isnan(r1a))
-        return cast(bool)isnan(r2b);
-
-    if (isnan(r2b))
-        return 0;
-
-    return feq(r1a, r2b, 0.000001L);
+    return textImpl!dstring(args);
 }
 
 private S textImpl(S, U...)(U args)
@@ -3988,23 +2770,6 @@ private S textImpl(S, U...)(U args)
     return result;
 }
 
-/**
-   Convenience functions for converting any number and types of
-   arguments into _text (the three character widths).
-
-   Example:
-   ----
-   assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-   assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-   assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
-   ----
-*/
-string text(T...)(T args) { return textImpl!(string, T)(args); }
-///ditto
-wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
-///ditto
-dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -4013,53 +2778,7 @@ unittest
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
 
-//------------------------------------------------------------------------------
-// octal
-//------------------------------------------------------------------------------
-/*
-Take a look at int.max and int.max+1 in octal and the logic for this
-function follows directly.
- */
-template octalFitsInInt(string octalNum)
-{
-        // note it is important to strip the literal of all
-        // non-numbers. kill the suffix and underscores lest they mess up
-        // the number of digits here that we depend on.
-    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
-        strippedOctalLiteral(octalNum).length == 11 &&
-        strippedOctalLiteral(octalNum)[0] == '1';
-}
-
-string strippedOctalLiteral(string original)
-{
-        string stripped = "";
-        foreach (c; original)
-                if (c >= '0' && c <= '7')
-                        stripped ~= c;
-        return stripped;
-}
-
-template literalIsLong(string num)
-{
-        static if (num.length > 1)
-        // can be xxL or xxLu according to spec
-                enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
-        else
-                enum literalIsLong = false;
-}
-
-template literalIsUnsigned(string num)
-{
-        static if (num.length > 1)
-        // can be xxL or xxLu according to spec
-                enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
-            // both cases are allowed too
-            || (num[$-1] == 'U' || num[$-2] == 'U');
-        else
-        enum literalIsUnsigned = false;
-}
-
-/**
+/***************************************************************
 The $(D octal) facility is intended as an experimental facility to
 replace _octal literals starting with $(D '0'), which many find
 confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
@@ -4087,28 +2806,108 @@ auto z = octal!"1_000_000u";
 int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
 {
-        return octal!(int, num);
+    return octal!(int, num);
 }
 
 /// Ditto
 long octal(string num)()
     if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
 {
-        return octal!(long, num);
+    return octal!(long, num);
 }
 
 /// Ditto
 uint octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
 {
-        return octal!(int, num);
+    return octal!(int, num);
 }
 
 /// Ditto
 ulong octal(string num)()
     if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
 {
-        return octal!(long, num);
+    return octal!(long, num);
+}
+
+/// Ditto
+template octal(alias s) if (isIntegral!(typeof(s)))
+{
+    enum auto octal = octal!(typeof(s), toStringNow!(s));
+}
+
+/*
+    Takes a string, num, which is an octal literal, and returns its
+    value, in the type T specified.
+
+    So:
+
+    int a = octal!(int, "10");
+
+    assert(a == 8);
+*/
+T octal(T, string num)()
+    if (isOctalLiteral!num)
+{
+    ulong pow = 1;
+    T value = 0;
+
+    for (int pos = num.length - 1; pos >= 0; pos--)
+    {
+        char s = num[pos];
+        if (s < '0' || s > '7') // we only care about digits; skip the rest
+        // safe to skip - this is checked out in the assert so these
+        // are just suffixes
+            continue;
+
+        value += pow * (s - '0');
+        pow *= 8;
+    }
+
+    return value;
+}
+
+/*
+Take a look at int.max and int.max+1 in octal and the logic for this
+function follows directly.
+ */
+template octalFitsInInt(string octalNum)
+{
+    // note it is important to strip the literal of all
+    // non-numbers. kill the suffix and underscores lest they mess up
+    // the number of digits here that we depend on.
+    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
+        strippedOctalLiteral(octalNum).length == 11 &&
+        strippedOctalLiteral(octalNum)[0] == '1';
+}
+
+string strippedOctalLiteral(string original)
+{
+    string stripped = "";
+    foreach (c; original)
+        if (c >= '0' && c <= '7')
+            stripped ~= c;
+    return stripped;
+}
+
+template literalIsLong(string num)
+{
+    static if (num.length > 1)
+    // can be xxL or xxLu according to spec
+        enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
+    else
+        enum literalIsLong = false;
+}
+
+template literalIsUnsigned(string num)
+{
+    static if (num.length > 1)
+    // can be xxU or xxUL according to spec
+        enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
+            // both cases are allowed too
+            || (num[$-1] == 'U' || num[$-2] == 'U');
+    else
+        enum literalIsUnsigned = false;
 }
 
 /*
@@ -4119,92 +2918,60 @@ not required.
  */
 bool isOctalLiteralString(string num)
 {
-        if (num.length == 0)
-                return false;
+    if (num.length == 0)
+        return false;
 
-        // Must start with a number. To avoid confusion, literals that
+    // Must start with a number. To avoid confusion, literals that
     // start with a '0' are not allowed
     if (num[0] == '0' && num.length > 1)
         return false;
-        if (num[0] < '0' || num[0] > '7')
-                return false;
+    if (num[0] < '0' || num[0] > '7')
+        return false;
 
-        foreach (i, c; num) {
-                if ((c < '0' || c > '7') && c != '_') // not a legal character
-                        if (i < num.length - 2)
-                                return false;
-                        else { // gotta check for those suffixes
-                                if (c != 'U' && c != 'u' && c != 'L')
-                                        return false;
-                                if (i != num.length - 1) {
+    foreach (i, c; num)
+    {
+        if ((c < '0' || c > '7') && c != '_') // not a legal character
+        {
+            if (i < num.length - 2)
+                    return false;
+            else   // gotta check for those suffixes
+            {
+                if (c != 'U' && c != 'u' && c != 'L')
+                        return false;
+                if (i != num.length - 1)
+                {
                     // if we're not the last one, the next one must
                     // also be a suffix to be valid
-                                        char c2 = num[$-1];
-                                        if (c2 != 'U' && c2 != 'u' && c2 != 'L')
-                                                return false; // spam at the end of the string
-                                        if (c2 == c)
-                                                return false; // repeats are disallowed
-                                }
-                        }
+                    char c2 = num[$-1];
+                    if (c2 != 'U' && c2 != 'u' && c2 != 'L')
+                        return false; // spam at the end of the string
+                    if (c2 == c)
+                        return false; // repeats are disallowed
+                }
+            }
         }
+    }
 
-        return true;
+    return true;
 }
 
 /*
-        Returns true if the given compile time string is an octal literal.
+    Returns true if the given compile time string is an octal literal.
 */
 template isOctalLiteral(string num)
 {
-        enum bool isOctalLiteral = isOctalLiteralString(num);
-}
-
-/*
-        Takes a string, num, which is an octal literal, and returns its
-        value, in the type T specified.
-
-        So:
-
-        int a = octal!(int, "10");
-
-        assert(a == 8);
-*/
-T octal(T, string num)()
-{
-    static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
-
-    ulong pow = 1;
-    T value = 0;
-
-    for (int pos = num.length - 1; pos >= 0; pos--) {
-        char s = num[pos];
-        if (s < '0' || s > '7') // we only care about digits; skip the rest
-        // safe to skip - this is checked out in the assert so these
-        // are just suffixes
-                continue;
-
-        value += pow * (s - '0');
-        pow *= 8;
-  }
-
-  return value;
-}
-
-/// Ditto
-template octal(alias s) if (isIntegral!(typeof(s)))
-{
-    enum auto octal = octal!(typeof(s), toStringNow!(s));
+    enum bool isOctalLiteral = isOctalLiteralString(num);
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
             " succeeded.");
-        // ensure that you get the right types, even with embedded underscores
-        auto w = octal!"100_000_000_000";
-        static assert(!is(typeof(w) == int));
-        auto w2 = octal!"1_000_000_000";
-        static assert(is(typeof(w2) == int));
+    // ensure that you get the right types, even with embedded underscores
+    auto w = octal!"100_000_000_000";
+    static assert(!is(typeof(w) == int));
+    auto w2 = octal!"1_000_000_000";
+    static assert(is(typeof(w2) == int));
 
     static assert(octal!"45" == 37);
     static assert(octal!"0" == 0);
@@ -4227,10 +2994,7 @@ unittest
 
     static assert(!__traits(compiles, octal!823));
 
-    // for some reason, this line fails, though if you try it in code,
-    // it indeed doesn't compile... weird.
-
-    // static assert(!__traits(compiles, octal!"823"));
+    static assert(!__traits(compiles, octal!"823"));
 
     static assert(!__traits(compiles, octal!"_823"));
     static assert(!__traits(compiles, octal!"spam"));
@@ -4396,7 +3160,10 @@ T* emplace(T, Args...)(void[] chunk, Args args)
 
 unittest
 {
-    struct S { int a, b; }
+    struct S
+    {
+        int a, b;
+    }
     auto p = new void[S.sizeof];
     S s;
     s.a = 42;
@@ -4416,7 +3183,12 @@ unittest
     struct S
     {
         double x = 5, y = 6;
-        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
+        this(int a, int b)
+        {
+            assert(x == 5 && y == 6);
+            x = a;
+            y = b;
+        }
     }
 
     auto s1 = new void[S.sizeof];
@@ -4432,7 +3204,11 @@ unittest
     {
         int x = 5;
         int y = 42;
-        this(int z) { assert(x == 5 && y == 42); x = y = z;}
+        this(int z)
+        {
+            assert(x == 5 && y == 42);
+            x = y = z;
+        }
     }
     static byte[__traits(classInstanceSize, A)] buf;
     auto a = emplace!A(cast(void[]) buf, 55);

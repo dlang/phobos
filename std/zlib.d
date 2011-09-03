@@ -230,6 +230,13 @@ void arrayPrint(ubyte[] array)
 }
 +/
 
+/// the header format the compressed stream is wrapped in
+enum HeaderFormat {
+    deflate, /// a standard zlib header
+    gzip, /// a gzip file format header
+    determineFromData /// used when decompressing. Try to automatically detect the stream format by looking at the data
+}
+
 /*********************************************
  * Used when the data to be compressed is not all in one buffer.
  */
@@ -240,6 +247,7 @@ class Compress
     z_stream zs;
     int level = Z_DEFAULT_COMPRESSION;
     int inited;
+    immutable bool gzip;
 
     void error(int err)
     {
@@ -253,9 +261,9 @@ class Compress
   public:
 
     /**
-     * Construct. level is the same as for D.zlib.compress().
+     * Construct. level is the same as for D.zlib.compress(). header can be used to make a gzip compatible stream.
      */
-    this(int level)
+    this(int level, HeaderFormat header = HeaderFormat.deflate)
     in
     {
         assert(1 <= level && level <= 9);
@@ -263,11 +271,13 @@ class Compress
     body
     {
         this.level = level;
+        this.gzip = header == HeaderFormat.gzip;
     }
 
     /// ditto
-    this()
+    this(HeaderFormat header = HeaderFormat.deflate)
     {
+        this.gzip = header == HeaderFormat.gzip;
     }
 
     ~this()
@@ -296,7 +306,7 @@ class Compress
 
         if (!inited)
         {
-            err = deflateInit(&zs, level);
+            err = deflateInit2(&zs, level, Z_DEFLATED, 15 + (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
             if (err)
                 error(err);
             inited = 1;
@@ -403,6 +413,8 @@ class UnCompress
     int done;
     size_t destbufsize;
 
+    HeaderFormat format;
+
     void error(int err)
     {
         if (inited)
@@ -423,8 +435,9 @@ class UnCompress
     }
 
     /** ditto */
-    this()
+    this(HeaderFormat format = HeaderFormat.determineFromData)
     {
+        this.format = format;
     }
 
     ~this()
@@ -459,7 +472,13 @@ class UnCompress
 
         if (!inited)
         {
-            err = inflateInit(&zs);
+	    int windowBits = 15;
+	    if(format == HeaderFormat.gzip)
+	        windowBits += 16;
+            else if(format == HeaderFormat.determineFromData)
+	        windowBits += 32;
+
+            err = inflateInit2(&zs, windowBits);
             if (err)
                 error(err);
             inited = 1;

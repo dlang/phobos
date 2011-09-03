@@ -211,8 +211,6 @@ private:
             REdchar,            // single UCS character
             REidchar,           // single wide character, case insensitive
             REanychar,          // any character
-            REanystar,          // ".*?"
-            REanystarg,         // ".*"
 
             REstring,           // string of characters
             REistring,          // string of characters, case insensitive
@@ -348,108 +346,7 @@ Returns the number of parenthesized captures
         debug(std_regex) writefln("error: %s", msg);
         throw new Exception(msg);
     }
-    //adjust jumps, after removing instructions at 'place'
-    void fixup(ubyte[] prog, size_t place, uint change)
-    {
-        for (size_t pc=0;pc<prog.length;)
-        {
-            switch (prog[pc])
-            {
-            case REend:
-                return;
 
-            case REcounter: //jump forward
-                if(pc < place)
-                {
-                    auto dest = cast(uint *)&prog[pc + 1 + uint.sizeof];
-                    if (pc + *dest > place)
-                        *dest -= change;
-                }
-                pc += 1 + 2*uint.sizeof;
-                break;
-
-            case REloop, REloopg: //jump back
-                if (pc > place)
-                {
-                    auto dest = cast(uint *)&prog[pc + 1 + 2*uint.sizeof];
-                    if (pc + *dest > place)
-                        *dest += change;
-                }
-                pc += 1 + 3*uint.sizeof;
-                break;
-
-            case REneglookahead://jump or call forward
-            case RElookahead:
-            case REor:
-            case REgoto:
-                if (pc < place)
-                {
-                    auto dest = cast(uint *)&prog[pc+1];
-                    if (pc + *dest > place)
-                        *dest -= change;
-                }
-                pc += 1 + uint.sizeof;
-                break;
-
-            case REret:
-            case REanychar:
-            case REanystarg:
-            case REanystar:
-            case REbol:
-            case REeol:
-            case REwordboundary:
-            case REnotwordboundary:
-            case REdigit:
-            case REnotdigit:
-            case REspace:
-            case REnotspace:
-            case REword:
-            case REnotword:
-                pc++;
-                break;
-
-            case REchar:
-            case REichar:
-            case REbackref:
-                pc += 2;
-                break;
-
-            case REdchar:
-            case REidchar:
-                pc += 1 + dchar.sizeof;
-                break;
-
-            case REstring:
-            case REistring:
-                auto len = *cast(size_t *)&prog[pc + 1];
-                assert(len % E.sizeof == 0);
-                pc += 1 + size_t.sizeof + len;
-                break;
-
-            case REtestbit:
-            case REbit:
-            case REnotbit:
-                auto pu = cast(ushort *)&prog[pc + 1];
-                auto len = pu[1];
-                pc += 1 + 2 * ushort.sizeof + len;
-                break;
-
-            case RErange:
-            case REnotrange:
-                auto len = *cast(uint *)&prog[pc + 1];
-                pc += 1 + uint.sizeof + len;
-                break;
-
-            case REsave:
-                pc += 1 + uint.sizeof;
-                break;
-
-            default:
-                writeln("%d",prog[pc]);
-                assert(0);
-            }
-        }
-    }
     //Fixup counter numbers, simplify instructions
     private void postprocess(ubyte[] prog)
     {
@@ -467,25 +364,10 @@ Returns the number of parenthesized captures
 
             case REcounter:
                 size_t offs = pc + 1 + 2*uint.sizeof;
-                bool anyloop = counter == 0 && prog[offs] == REanychar
-                    && (prog[offs+1] == REloop || prog[offs+1] == REloopg);
-                uint* puint = cast(uint*)&prog[offs+2];
-                if (anyloop && puint[0] == 0 && puint[1] == inf)
-                {
-                    prog[pc] = prog[offs+1] == REloop ? REanystar : REanystarg;
-                    uint change = 2*(1 + uint.sizeof) + 1 + 3*uint.sizeof - 1;
-                    std.array.replaceInPlace(prog, pc + 1,
-                                             pc + change + 1, cast(ubyte[])[]);
-                    fixup(prog, pc, change);
-                    pc++;
-                }
-                else
-                {
-                    *cast(uint *)&prog[pc+1] = counter;
-                    counter++;
-                    nCounters = max(nCounters, counter);
-                    pc += 1 + 2*uint.sizeof;
-                }
+                *cast(uint *)&prog[pc+1] = counter;
+                counter++;
+                nCounters = max(nCounters, counter);
+                pc += 1 + 2*uint.sizeof;
                 break;
 
             case REloop, REloopg:
@@ -1417,12 +1299,6 @@ Returns the number of parenthesized captures
                     pc += 1 + cast(uint)uint.sizeof;
                     break;
 
-                case REanystar:
-                case REanystarg:
-                    writefln("\tREanystar%s", prog[pc] == REanystarg ? "g":"");
-                    pc++;
-                    break;
-
                 case REcounter:
                     // n, len
                     puint = cast(uint *)&prog[pc + 1];
@@ -1952,9 +1828,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 return true;
             }
             // If possible match must start at beginning, we are done
-            if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanystarg)
-
-
+            if (engine.program[0] == engine.REbol)
             {
                 if (!(engine.attributes & engine.REA.multiline)) break;
                 // Scan for the next \n
@@ -2320,42 +2194,6 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 debug(std_regex) writefln("\tREgoto");
                 auto len = (cast(uint *)&engine.program[pc + 1])[0];
                 pc += 1 + cast(uint)uint.sizeof + len;
-                break;
-
-            case engine.REanystar:
-                pc++;
-                for (;;)
-                {
-                    if (src == input.length)
-                        break;
-                    if (!(engine.attributes & engine.REA.dotmatchlf)
-                            && input[src] == '\n')
-                        break;
-                    if (trymatch(pc, memory[lastState..$]))
-                        return true;
-                    src += std.utf.stride(input, src);
-                }
-                break;
-
-            case engine.REanystarg:
-                debug(std_regex) writefln("\tREanystar");
-                pc++;
-                auto ss = src;
-                if (engine.attributes & engine.REA.dotmatchlf)
-                    src = input.length;
-                else
-                {
-                    auto p = memchr(input.ptr+src,'\n', input.length-src);
-                    src = p ? p - &input[src] : input.length;
-                }
-                while (src > ss)
-                {
-                    if (trymatch(pc, memory[lastState..$]))
-                        return true;
-                    if (trymatch(pc, memory[lastState..$]))
-                        return true;
-                    src -= strideBack(input, src);
-                }
                 break;
 
             case engine.REcounter:
@@ -3602,6 +3440,12 @@ unittest
     auto re = regex("c.*|d");
     auto m = match("mm", re);
     assert(m.empty);
+    auto re2 = regex(`^(.*)\(([0-9]*)\):(.*)$`);
+    m = match("file.d(37): huhu", re2);
+    assert(!m.empty);
+    assert(m.captures[1] == "file.d");
+    assert(m.captures[2] == "37");
+    assert(m.captures[3] == " huhu");
 }
 
 //issue 6261

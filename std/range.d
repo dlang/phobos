@@ -3524,7 +3524,10 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
-    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
+    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) {\n";
+    ret ~= "\t\tforeach(range; ranges)\n";
+    ret ~= "\t\t\tenforce(range.empty);\n";
+    ret ~= "\t}\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -3568,12 +3571,6 @@ private:
     alias staticMap!(Unqual, Ranges) R;
     R _ranges;
     StoppingPolicy _s;
-
-    void enforceAllEmpty() {
-        foreach(range; _ranges) {
-            enforce(range.empty);
-        }
-    }
 
 public:
     this(R ranges, StoppingPolicy s = StoppingPolicy.shortest)
@@ -3670,10 +3667,15 @@ unittest {
     }
 
     assert(arr1 == [7,9,11,13,15]);
+    
+    // Make sure StoppingPolicy.requireSameLength doesn't throw.
+    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+
+    foreach(a, b; ls) {}
 
     // Make sure StoppingPolicy.requireSameLength throws.
     arr2.popBack;
-    auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
+    ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
         foreach(a, b; ls) {}
@@ -4720,6 +4722,15 @@ struct Transversal(Ror,
                 _input[n][_n] = val;
             }
         }
+        
+        /// Ditto
+        static if(hasLength!RangeOfRanges)
+        {
+            @property size_t length() 
+            {
+                return _input.length;
+            }
+        }
 
 /**
    Slicing if offered if $(D RangeOfRanges) supports slicing and all the
@@ -4759,6 +4770,7 @@ unittest
     uint i;
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
+    assert(ror.length == 2);
 
     static assert(is(Transversal!(immutable int[][])));
 
@@ -4869,6 +4881,409 @@ unittest
     {
         assert(array(e) == witness[i++]);
     }
+}
+
+/**
+This struct takes two ranges, $(D source) and $(D indices), and creates a view
+of $(D source) as if its elements were reordered according to $(D indices).
+$(D indices) may include only a subset of the elements of $(D source) and
+may also repeat elements.
+
+$(D Source) must be a random access range.  The returned range will be
+bidirectional or random-access if $(D Indices) is bidirectional or 
+random-access, respectively.
+
+Examples:
+---
+auto source = [1, 2, 3, 4, 5];
+auto indices = [4, 3, 1, 2, 0, 4];
+auto ind = indexed(source, indices);
+assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+
+// When elements of indices are duplicated and Source has lvalue elements,
+// these are aliased in ind.
+ind[0]++;
+assert(ind[0] == 6);
+assert(ind[5] == 6);
+---
+*/
+struct Indexed(Source, Indices)
+if(isRandomAccessRange!Source && isInputRange!Indices &&
+  is(typeof(Source.init[ElementType!(Indices).init])))
+{
+    this(Source source, Indices indices)
+    {
+        this._source = source;
+        this._indices = indices;
+    }
+    
+    /// Range primitives
+    @property auto ref front() 
+    {
+        assert(!empty);
+        return _source[_indices.front];
+    }
+    
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _indices.popFront();
+    }
+    
+    static if(isInfinite!Indices)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        /// Ditto
+        @property bool empty() 
+        {
+            return _indices.empty;
+        }
+    }
+    
+    static if(isForwardRange!Indices)
+    {
+        /// Ditto
+        @property typeof(this) save() 
+        {
+            // Don't need to save _source because it's never consumed.
+            return typeof(this)(_source, _indices.save);
+        }
+    }
+    
+    /// Ditto
+    static if(hasAssignableElements!Source)
+    {
+        @property auto ref front(ElementType!Source newVal)
+        {
+            assert(!empty);
+            return _source[_indices.front] = newVal;
+        }
+    }
+    
+    
+    static if(hasMobileElements!Source)
+    {
+        /// Ditto
+        auto moveFront()
+        {
+            assert(!empty);
+            return .moveAt(_source, _indices.front);
+        }
+    }
+    
+    static if(isBidirectionalRange!Indices)
+    {
+        /// Ditto
+        @property auto ref back() 
+        {
+            assert(!empty);
+            return _source[_indices.back];
+        }
+        
+        /// Ditto
+        void popBack()
+        {
+           assert(!empty);
+           _indices.popBack();
+        }
+
+        /// Ditto
+        static if(hasAssignableElements!Source)
+        {
+            @property auto ref back(ElementType!Source newVal)
+            {
+                assert(!empty);
+                return _source[_indices.back] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Source)
+        {
+            /// Ditto
+            auto moveBack()
+            {
+                assert(!empty);
+                return .moveAt(_source, _indices.back);
+            }
+        }
+    }
+
+    static if(hasLength!Indices)
+    {
+        /// Ditto
+         @property size_t length()
+        {
+            return _indices.length;
+        }
+    }
+    
+    static if(isRandomAccessRange!Indices)
+    {
+        /// Ditto
+        auto ref opIndex(size_t index)
+        {
+            return _source[_indices[index]];
+        }
+    
+        /// Ditto
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            return typeof(this)(_source, _indices[a..b]);
+        }
+        
+        
+        static if(hasAssignableElements!Source)
+        {   
+            /// Ditto
+            auto opIndexAssign(ElementType!Source newVal, size_t index)
+            {
+                return _source[_indices[index]] = newVal;
+            }
+        }
+        
+        
+        static if(hasMobileElements!Source)
+        {
+            /// Ditto
+            auto moveAt(size_t index)
+            {
+                return .moveAt(_source, _indices[index]);
+            }
+        }
+    }
+    
+    // All this stuff is useful if someone wants to index an Indexed 
+    // without adding a layer of indirection.
+    
+    /**
+    Returns the source range.
+    */
+    @property Source source()
+    {
+        return _source;
+    }
+    
+    /**
+    Returns the indices range.
+    */
+     @property Indices indices()
+    {
+        return _indices;
+    }
+   
+    static if(isRandomAccessRange!Indices)
+    {
+        /**
+        Returns the physical index into the source range corresponding to a
+        given logical index.  This is useful, for example, when indexing
+        an $(D Indexed) without adding another layer of indirection.
+        
+        Examples:
+        ---
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
+        ---
+        */
+        size_t physicalIndex(size_t logicalIndex)
+        {
+            return _indices[logicalIndex];
+        }
+    }
+    
+private:
+    Source _source;
+    Indices _indices;
+
+}
+
+/// Ditto
+Indexed!(Source, Indices) indexed(Source, Indices)
+(Source source, Indices indices)
+{
+    return typeof(return)(source, indices);
+}
+
+unittest
+{
+    {
+        // Test examples.
+        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+        assert(ind.physicalIndex(0) == 1);
+    }
+    
+    auto source = [1, 2, 3, 4, 5];
+    auto indices = [4, 3, 1, 2, 0, 4];
+    auto ind = indexed(source, indices);
+    assert(equal(ind, [5, 4, 2, 3, 1, 5]));
+    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));    
+
+    // When elements of indices are duplicated and Source has lvalue elements,
+    // these are aliased in ind.
+    ind[0]++;
+    assert(ind[0] == 6);
+    assert(ind[5] == 6);
+    
+    foreach(DummyType; AllDummyRanges)
+    {
+        auto d = DummyType.init;
+        auto r = indexed([1, 2, 3, 4, 5], d);
+        static assert(propagatesRangeType!(DummyType, typeof(r)));
+        static assert(propagatesLength!(DummyType, typeof(r)));
+    }
+}
+
+/**
+This range iterates over fixed-sized chunks of size $(D chunkSize) of a 
+$(D source) range.  $(D Source) must be an input range with slicing and length.  
+If $(D source.length) is not evenly divisible by $(D chunkSize), the back
+element of this range will contain fewer than $(D chunkSize) elements.
+
+Examples:
+---
+auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+auto chunks = chunks(source, 4);
+assert(chunks[0] == [1, 2, 3, 4]);
+assert(chunks[1] == [5, 6, 7, 8]);
+assert(chunks[2] == [9, 10]);
+assert(chunks.back == chunks[2]);
+assert(chunks.front == chunks[0]);
+assert(chunks.length == 3);
+---
+*/
+struct Chunks(Source) if(hasSlicing!Source && hasLength!Source) 
+{
+    /// 
+    this(Source source, size_t chunkSize) 
+    {
+        this._source = source;
+        this._chunkSize = chunkSize;
+    }
+    
+    /// Range primitives.
+    @property auto front()
+    {
+        assert(!empty);
+        return _source[0..min(_chunkSize, _source.length)];
+    }
+    
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        popFrontN(_source, _chunkSize);
+    }
+    
+    /// Ditto
+    @property bool empty()
+    {
+        return _source.empty;
+    }
+    
+    static if(isForwardRange!Source)
+    {
+        /// Ditto
+        @property typeof(this) save()
+        {
+            return typeof(this)(_source.save, _chunkSize);
+        }
+    }
+
+    /// Ditto
+    auto opIndex(size_t index)
+    {
+        immutable end = min(_source.length, (index + 1) * _chunkSize);
+        return _source[index * _chunkSize..end];
+    }
+    
+    /// Ditto
+    typeof(this) opSlice(size_t lower, size_t upper)
+    {
+        immutable start = lower * _chunkSize;
+        immutable end = min(_source.length, upper * _chunkSize);
+        return typeof(this)(_source[start..end], _chunkSize);
+    }
+    
+    /// Ditto
+    @property size_t length()
+    {
+        return (_source.length / _chunkSize) + 
+            (_source.length % _chunkSize > 0);
+    }
+    
+    /// Ditto
+    @property auto back()
+    {
+        assert(!empty);
+        
+        immutable remainder = _source.length % _chunkSize;
+        immutable len = _source.length;
+        
+        if(remainder == 0)
+        {
+            // Return a full chunk.
+            return _source[len - _chunkSize..len];
+        }
+        else
+        {
+            return _source[len - remainder..len];
+        }
+    }
+    
+    /// Ditto
+    void popBack()
+    {
+        assert(!empty);
+        
+        immutable remainder = _source.length % _chunkSize;
+        immutable len = _source.length;
+        
+        if(remainder == 0)
+        {
+            _source = _source[0..len - _chunkSize];
+        }
+        else
+        {
+            _source = _source[0..len - remainder];
+        }
+    }
+   
+private:
+    Source _source;
+    size_t _chunkSize;
+}
+
+/// Ditto
+Chunks!(Source) chunks(Source)(Source source, size_t chunkSize)
+{
+    return typeof(return)(source, chunkSize);
+}
+
+unittest
+{
+    auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto chunks = chunks(source, 4);
+    assert(chunks[0] == [1, 2, 3, 4]);
+    assert(chunks[1] == [5, 6, 7, 8]);
+    assert(chunks[2] == [9, 10]);
+    assert(chunks.back == chunks[2]);
+    assert(chunks.front == chunks[0]);
+    assert(chunks.length == 3);
+    assert(equal(retro(array(chunks)), array(retro(chunks))));
+    
+    auto chunks2 = chunks.save;
+    chunks.popFront();
+    assert(chunks[0] == [5, 6, 7, 8]);
+    assert(chunks[1] == [9, 10]);
+    chunks2.popBack();
+    assert(chunks2[1] == [5, 6, 7, 8]);
+    assert(chunks2.length == 2);
+    
+    static assert(isRandomAccessRange!(typeof(chunks)));
 }
 
 /**
@@ -6063,4 +6478,3 @@ unittest
     }
     assert(ok);
 }
-

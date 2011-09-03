@@ -706,7 +706,7 @@ double tanh(double x) @safe pure nothrow { return tanh(cast(real)x); }
 /// ditto
 float tanh(float x) @safe pure nothrow { return tanh(cast(real)x); }
 
-private:
+package:
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
  */
