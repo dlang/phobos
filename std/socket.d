@@ -577,37 +577,39 @@ class InternetHost
         }
     }
 
+    private bool getHostNoSync(string opMixin, T)(T param)
+    {
+        mixin(opMixin);
+        if (!he)
+            return false;
+        validHostent(he);
+        populate(he);
+        return true;
+    }
+
+    version(Windows)
+        alias getHostNoSync getHost;
+    else
+    {
+        // posix systems use global state for return value, so we
+        // must synchronize across all threads
+        private bool getHost(string opMixin, T)(T param)
+        {
+            synchronized(this.classinfo)
+                return getHostNoSync!(opMixin, T)(param);
+        }
+    }
+
     /**
      * Resolve host name.
      * Returns: false if unable to resolve.
      */
     bool getHostByName(string name)
     {
-        version(Windows)
-        {
-            // TODO gethostbyname is deprecated in windows, use getaddrinfo
-            auto he = gethostbyname(toStringz(name));
-            if(!he)
-                return false;
-            validHostent(he);
-            populate(he);
-        }
-        else
-        {
-            // posix systems use global state for return value, so we
-            // must synchronize across all threads
-            synchronized(this.classinfo)
-            {
-                auto he = gethostbyname(toStringz(name));
-                if(!he)
-                    return false;
-                validHostent(he);
-                populate(he);
-            }
-        }
-        return true;
+        return getHost!q{
+            auto he = gethostbyname(toStringz(param));
+        }(name);
     }
-
 
     /**
      * Resolve IPv4 address number.
@@ -619,32 +621,11 @@ class InternetHost
      */
     bool getHostByAddr(uint addr)
     {
-        uint x = htonl(addr);
-        version(Windows)
-        {
-            // TODO gethostbyaddr is deprecated in windows, use getnameinfo
+        return getHost!q{
+            uint x = htonl(param);
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-            if(!he)
-                return false;
-            validHostent(he);
-            populate(he);
-        }
-        else
-        {
-            // posix systems use global state for return value, so we
-            // must synchronize across all threads
-            synchronized(this.classinfo)
-            {
-                auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-                if(!he)
-                    return false;
-                validHostent(he);
-                populate(he);
-            }
-        }
-        return true;
+        }(addr);
     }
-
 
     /**
      * Same as previous, but addr is an IPv4 address string in the
@@ -653,39 +634,25 @@ class InternetHost
      */
     bool getHostByAddr(string addr)
     {
-        uint x = inet_addr(std.string.toStringz(addr));
-        version(Windows)
-        {
-            // TODO gethostbyaddr is deprecated in windows, use getnameinfo
+        return getHost!q{
+            uint x = inet_addr(std.string.toStringz(param));
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-            if(!he)
-                return false;
-            validHostent(he);
-            populate(he);
-        }
-        else
-        {
-            // posix systems use global state for return value, so we
-            // must synchronize across all threads
-            synchronized(this.classinfo)
-            {
-                auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-                if(!he)
-                    return false;
-                validHostent(he);
-                populate(he);
-            }
-        }
-        return true;
+        }(addr);
     }
 }
 
 
 unittest
 {
+    InternetHost ih = new InternetHost;
+
+    ih.getHostByAddr(0x7F000001);
+    assert(ih.addrList[0] == 0x7F000001);
+    ih.getHostByAddr("127.0.0.1");
+    assert(ih.addrList[0] == 0x7F000001);
+
     try
     {
-        InternetHost ih = new InternetHost;
         if (!ih.getHostByName("www.digitalmars.com"))
             return;             // don't fail if not connected to internet
         //printf("addrList.length = %d\n", ih.addrList.length);
