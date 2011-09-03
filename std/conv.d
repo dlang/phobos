@@ -41,30 +41,29 @@ class ConvException : Exception
 
 deprecated alias ConvException ConvError;   /// ditto
 
-private void convError(S, T, string fn = __FILE__, size_t ln = __LINE__)(S source)
+private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("Can't convert value `"~to!string(source)~"' of type "
-                    ~S.stringof~" to type "~T.stringof), fn, ln);
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" to type "~T.stringof), fn, ln);
 }
 
-private void convError(S, T, string fn = __FILE__, size_t ln = __LINE__)(S source, int radix)
+private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("Can't convert value `"~to!string(source)~"' of type "
-                    ~S.stringof~" base "~to!string(radix)~" to type "~T.stringof), fn, ln);
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" base ", radix, " to type "~T.stringof), fn, ln);
 }
 
-private void parseError(string fn = __FILE__, size_t ln = __LINE__)(lazy string msg)
+private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("Can't parse string: " ~ msg), fn, ln);
+    throw new ConvException(text("Can't parse string: ", msg), fn, ln);
 }
 
-private void parseCheck(alias source, string fn = __FILE__, size_t ln = __LINE__)(dchar c)
+private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
 {
     if (source.front != c)
-        parseError!(fn, ln)("\"" ~ to!string(c) ~ "\" is missing");
+        parseError(text("\"", c, "\" is missing"), fn, ln);
     source.popFront();
 }
 
