@@ -371,14 +371,9 @@ unittest
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(2))));
 
-    // @@ dmd BUG @@
-    // segfaults in ctfe code
-    version (none)
-    {
-        enum xe = 5;
-        enum fe = &curry!(f2, xe);
-        static assert(fe(6) == 11);
-    }
+    enum xe = 5;
+    alias curry!(f2, xe) fe;
+    static assert(fe(6) == 11);
 }
 
 // tests for currying templated/overloaded callables
@@ -433,7 +428,7 @@ unittest
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(1))));
 
-    // @@ dmd BUG @@
+    // @@ dmd BUG 6600 @@
     // breaks completely unrelated unittest for toDelegate
     // static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
     version (none)
