@@ -323,9 +323,19 @@ template curry(alias fun, alias arg)
     }
     else
     {
-        auto curry(T)(T arg2) if (is(typeof(fun(arg, T.init))))
+        auto curry(T)(T arg2)
         {
-            return fun(arg, arg2);
+            static if (is(typeof(fun(arg, T.init))))
+            {
+                return fun(arg, arg2);
+            }
+            else
+            {
+                enum string msg = "Cannot call '" ~ fun.stringof ~ "' with arguments " ~
+                    "(" ~ arg.stringof ~ ", " ~ T.stringof ~ ")" ~
+                    ".";
+                static assert(0, msg);
+            }
         }
     }
 }
@@ -364,7 +374,7 @@ unittest
     }
 }
 
-// tests for currying templated callables
+// tests for currying templated/overloaded callables
 unittest
 {
     static auto add(A, B)(A x, B y)
@@ -379,31 +389,35 @@ unittest
     auto dg = &add5!(int);
     assert(dg(6) == 11);
 
+    int x = 5;
+    alias curry!(add, x) addX;
+    assert(addX(6) == 11);
+
+    static struct Callable
+    {
+        static string opCall(string a, string b) { return a ~ b; }
+        int opCall(int a, int b) { return a * b; }
+        double opCall(double a, double b) { return a + b; }
+    }
+    Callable callable;
+    assert(curry!(Callable, "5")("6") == "56");
+    assert(curry!(callable, 5)(6) == 30);
+    assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+
+    static struct TCallable
+    {
+        auto opCall(A, B)(A a, B b)
+        {
+            return a + b;
+        }
+    }
+    TCallable tcallable;
+    assert(curry!(tcallable, 5)(6) == 11);
+    static assert(!is(typeof(curry!(tcallable, "5")(6))));
+
     // currently failing
     version (none)
     {
-        int x = 5;
-        alias curry!(add, x) addX;
-        assert(addX(6) == 11);
-
-        static struct Callable
-        {
-            int opCall(int a, int b) { return a * b; }
-            double opCall(double a, double b) { return a + b; }
-        }
-        Callable callable;
-        assert(curry!(callable, 5)(6) == 30);
-        assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
-
-        static struct TCallable
-        {
-            auto opCall(A, B)(A a, B b)
-            {
-                return a + b;
-            }
-        }
-        TCallable tcallable;
-        assert(curry!(tcallable, 5)(6) == 11);
 
         static A funOneArg(A)(A a) { return a; }
         alias curry!(funOneArg, 1) funOneArg1;
