@@ -330,27 +330,90 @@ template curry(alias fun, alias arg)
     }
 }
 
-private auto add(A, B)(A x, B y)
-{
-    return x + y;
-}
-
+// tests for currying callables
 unittest
 {
-    alias curry!(add, 5) add5;
-    assert(add5(6) == 11);
-}
+    static int f1(int a, int b) { return a + b; }
+    assert(curry!(f1, 5)(6) == 11);
 
-unittest
-{
-    // static int f1(int a, int b) { return a + b; }
-    // assert(curry!(f1, 5)(6) == 11);
-    int x = 5;
     int f2(int a, int b) { return a + b; }
+    int x = 5;
     assert(curry!(f2, x)(6) == 11);
+    x = 7;
+    assert(curry!(f2, x)(6) == 13);
+
     auto dg = &f2;
     auto f3 = &curry!(dg, x);
-    assert(f3(6) == 11);
+    assert(f3(6) == 13);
+
+    static assert(curry!(f2, 5)(6) == 11);
+
+    // currently failing
+    version (none)
+    {
+        // segfaults in ctfe code
+        enum xe = 5;
+        enum fe = &curry!(f2, xe);
+        static assert(fe(6) == 11);
+
+        static int funOneArg(int a) { return a; }
+        assert(curry!(funOneArg, 1)() == 1);
+
+        static int funThreeArgs(int a, int b, int c) { return a + b + c; }
+        assert(curry!(funThreeArgs, 1)(2, 3) == 6);
+    }
+}
+
+// tests for currying templated callables
+unittest
+{
+    static auto add(A, B)(A x, B y)
+    {
+        return x + y;
+    }
+
+    alias curry!(add, 5) add5;
+    assert(add5(6) == 11);
+
+    // taking address of templated curry needs explicit type
+    auto dg = &add5!(int);
+    assert(dg(6) == 11);
+
+    // currently failing
+    version (none)
+    {
+        int x = 5;
+        alias curry!(add, x) addX;
+        assert(addX(6) == 11);
+
+        static struct Callable
+        {
+            int opCall(int a, int b) { return a * b; }
+            double opCall(double a, double b) { return a + b; }
+        }
+        Callable callable;
+        assert(curry!(callable, 5)(6) == 30);
+        assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+
+        static struct TCallable
+        {
+            auto opCall(A, B)(A a, B b)
+            {
+                return a + b;
+            }
+        }
+        TCallable tcallable;
+        assert(curry!(tcallable, 5)(6) == 11);
+
+        static A funOneArg(A)(A a) { return a; }
+        alias curry!(funOneArg, 1) funOneArg1;
+        assert(funOneArg1() == 1);
+        auto dg2 = &funOneArg1!();
+        assert(dg2() == 1);
+
+        static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
+        assert(curry!(funThreeArgs, 1)(2, 3) == 6);
+    }
 }
 
 /**
