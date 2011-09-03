@@ -59,12 +59,12 @@ class FormatError : Error
 {
     this()
     {
-        super("std.format");
+        super("format error");
     }
 
-    this(string msg)
+    this(string msg, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super("std.format " ~ msg);
+        super(msg, fn, ln);
     }
 }
 
@@ -460,11 +460,18 @@ unittest
     assert(isnan(z));
 }
 
+template FormatSpec(Char)
+    if (!is(Unqual!Char == Char))
+{
+    alias FormatSpec!(Unqual!Char) FormatSpec;
+}
+
 /**
  A compiled version of an individual format specifier, backwards
  compatible with $(D printf) specifiers.
  */
 struct FormatSpec(Char)
+    if (is(Unqual!Char == Char))
 {
     /**
        Minimum _width, default $(D 0).
