@@ -26,7 +26,7 @@
 module std.bigint;
 
 private import std.internal.math.biguintcore;
-private import std.format;
+private import std.format : FormatSpec, FormatError;
 
 /** A struct representing an arbitrary precision integer
  *
@@ -558,6 +558,7 @@ unittest // Recursive division, bug 5568
 unittest
 {
     import std.array;
+    import std.format;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -608,6 +609,7 @@ unittest
 unittest
 {
     import std.array;
+    import std.format;
 
     immutable string[][] table = [
     /*  fmt,        +10     -10 */
@@ -659,6 +661,8 @@ unittest
 unittest
 {
     import std.array;
+    import std.format;
+
     auto w1 = appender!string();
     auto w2 = appender!string();
 
