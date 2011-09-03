@@ -289,6 +289,14 @@ private template reduceFinish(functions...) {
     }
 }
 
+private template isAssignable(T) {
+    enum isAssignable = is(typeof({
+        T a;
+        T b;
+        a = b;
+    }));
+}
+
 private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2) {
     enum isRoundRobin = true;
 }
@@ -450,6 +458,21 @@ struct Task(alias fun, Args...) {
     private this(Args args) {
         static if(args.length > 0) {
             _args = args;
+        }
+    }
+
+    // Work around DMD bug 6588, allow immutable elements.
+    static if(allSatisfy!(isAssignable, Args)) {
+        typeof(this) opAssign(typeof(this) rhs) {
+            foreach(i, Type; typeof(this.tupleof)) {
+                this.tupleof[i] = rhs.tupleof[i];
+            }
+
+            return this;
+        }
+    } else {
+        @disable typeof(this) opAssign(typeof(this) rhs) {
+            assert(0);
         }
     }
 
@@ -3368,6 +3391,17 @@ unittest {
     assert(nums == [2,3,4,5,6], text(nums));
     assert(nums2 == nums, text(nums2));
     assert(arr == nums, text(arr));
+
+    // Test const/immutable arguments.
+    static int add(int lhs, int rhs) { return lhs + rhs; }
+    immutable addLhs = 1;
+    immutable addRhs = 2;
+    auto addTask = task(&add, addLhs, addRhs);
+    auto addScopedTask = scopedTask(&add, addLhs, addRhs);
+    poolInstance.put(addTask);
+    poolInstance.put(addScopedTask);
+    assert(addTask.yieldForce() == 3);
+    assert(addScopedTask.yieldForce() == 3);
 
     // Test parallel foreach with non-random access range.
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
