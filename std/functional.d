@@ -316,25 +316,31 @@ template curry(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun curry(ParameterTypeTuple!fun[1] arg2)
+        ReturnType!fun curry(ParameterTypeTuple!fun[1..$] args2)
         {
-            return fun(arg, arg2);
+            return fun(arg, args2);
         }
     }
     else
     {
-        auto curry(T)(T arg2)
+        auto curry(Ts...)(Ts args2)
         {
-            static if (is(typeof(fun(arg, T.init))))
+            static if (is(typeof(fun(arg, args2))))
             {
-                return fun(arg, arg2);
+                return fun(arg, args2);
             }
             else
             {
-                enum string msg = "Cannot call '" ~ fun.stringof ~ "' with arguments " ~
-                    "(" ~ arg.stringof ~ ", " ~ T.stringof ~ ")" ~
-                    ".";
-                static assert(0, msg);
+                static string errormsg()
+                {
+                    string msg = "Cannot call '" ~ fun.stringof ~ "' with arguments " ~
+                        "(" ~ arg.stringof;
+                    foreach(T; Ts)
+                        msg ~= ", " ~ T.stringof;
+                    msg ~= ").";
+                    return msg;
+                }
+                static assert(0, errormsg());
             }
         }
     }
@@ -351,26 +357,27 @@ unittest
     assert(curry!(f2, x)(6) == 11);
     x = 7;
     assert(curry!(f2, x)(6) == 13);
+    static assert(curry!(f2, 5)(6) == 11);
 
     auto dg = &f2;
     auto f3 = &curry!(dg, x);
     assert(f3(6) == 13);
 
-    static assert(curry!(f2, 5)(6) == 11);
+    static int funOneArg(int a) { return a; }
+    assert(curry!(funOneArg, 1)() == 1);
 
-    // currently failing
+    static int funThreeArgs(int a, int b, int c) { return a + b + c; }
+    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    assert(funThreeArgs1(2, 3) == 6);
+    static assert(!is(typeof(funThreeArgs1(2))));
+
+    // @@ dmd BUG @@
+    // segfaults in ctfe code
     version (none)
     {
-        // segfaults in ctfe code
         enum xe = 5;
         enum fe = &curry!(f2, xe);
         static assert(fe(6) == 11);
-
-        static int funOneArg(int a) { return a; }
-        assert(curry!(funOneArg, 1)() == 1);
-
-        static int funThreeArgs(int a, int b, int c) { return a + b + c; }
-        assert(curry!(funThreeArgs, 1)(2, 3) == 6);
     }
 }
 
@@ -384,6 +391,8 @@ unittest
 
     alias curry!(add, 5) add5;
     assert(add5(6) == 11);
+    static assert(!is(typeof(add5())));
+    static assert(!is(typeof(add5(6, 7))));
 
     // taking address of templated curry needs explicit type
     auto dg = &add5!(int);
@@ -415,18 +424,22 @@ unittest
     assert(curry!(tcallable, 5)(6) == 11);
     static assert(!is(typeof(curry!(tcallable, "5")(6))));
 
-    // currently failing
+    static A funOneArg(A)(A a) { return a; }
+    alias curry!(funOneArg, 1) funOneArg1;
+    assert(funOneArg1() == 1);
+
+    static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
+    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    assert(funThreeArgs1(2, 3) == 6);
+    static assert(!is(typeof(funThreeArgs1(1))));
+
+    // @@ dmd BUG @@
+    // breaks completely unrelated unittest for toDelegate
+    // static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
     version (none)
     {
-
-        static A funOneArg(A)(A a) { return a; }
-        alias curry!(funOneArg, 1) funOneArg1;
-        assert(funOneArg1() == 1);
         auto dg2 = &funOneArg1!();
         assert(dg2() == 1);
-
-        static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
-        assert(curry!(funThreeArgs, 1)(2, 3) == 6);
     }
 }
 
