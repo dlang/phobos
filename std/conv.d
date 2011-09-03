@@ -2859,7 +2859,7 @@ private dchar parseEscape(Source)(ref Source s)
     {
         s.popFront();
         if (s.empty)
-            parseError("Need more input");
+            parseError("Unterminated escape sequence");
         dchar c = s.front;
         if (!isHexDigit(c))
             parseError("Hex digit is missing");
@@ -2928,7 +2928,7 @@ Target parseElement(Target, Source)(ref Source s)
         while (true)
         {
             if (s.empty)
-                parseError("Need more input");
+                parseError("Unterminated quoted string");
             switch (s.front)
             {
                 case '\"':
