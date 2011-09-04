@@ -467,7 +467,6 @@ struct Task(alias fun, Args...) {
             foreach(i, Type; typeof(this.tupleof)) {
                 this.tupleof[i] = rhs.tupleof[i];
             }
-
             return this;
         }
     } else {
