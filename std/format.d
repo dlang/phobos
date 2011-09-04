@@ -1004,8 +1004,8 @@ if (isIntegral!T)
     {
         // raw write, skip all else and write the thing
         auto begin = cast(const char*) &arg;
-        if (std.system.endian == Endian.LittleEndian && fs.flPlus
-            || std.system.endian == Endian.BigEndian && fs.flDash)
+        if (std.system.endian == Endian.littleEndian && f.flPlus
+            || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. arg.sizeof)
@@ -1135,8 +1135,8 @@ if (isFloatingPoint!D)
     {
         // raw write, skip all else and write the thing
         auto begin = cast(const char*) &obj;
-        if (std.system.endian == Endian.LittleEndian && fs.flPlus
-            || std.system.endian == Endian.BigEndian && fs.flDash)
+        if (std.system.endian == Endian.littleEndian && f.flPlus
+            || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. obj.sizeof)
