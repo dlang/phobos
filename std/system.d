@@ -1,91 +1,71 @@
 // Written in the D programming language.
 
 /**
- * Information about the target operating system, environment, and CPU
+ * Information about the target operating system, environment, and CPU.
  *
  * Macros:
  *      WIKI = Phobos/StdSystem
  *
- * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
- * Source:    $(PHOBOSSRC std/_system.d)
- */
-/*          Copyright Digital Mars 2000 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
+ *  Copyright: Copyright Digital Mars 2000 - 2011
+ *  License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *  Authors:   $(WEB digitalmars.com, Walter Bright) and Jonathan M Davis
+ *  Source:    $(PHOBOSSRC std/_system.d)
  */
 module std.system;
 
-const
+immutable
 {
+    /++
+        Operating system.
 
-    // Operating system family
-    enum Family
-    {
-        Win32 = 1,              // Microsoft 32 bit Windows systems
-        linux,                  // all linux systems
-        OSX,
-    }
+        Note:
+            This is for cases where you need a value representing the OS at
+            runtime. If you're doing something which should compile differently
+            on different OSes, then please use $(D version(Win32)),
+            $(D version(linux)), etc.
 
-    version (Win32)
-    {
-        Family family = Family.Win32;
-    }
-    else version (Posix)
-    {
-        Family family = Family.linux;
-    }
-    else version (OSX)
-    {
-        Family family = Family.OSX;
-    }
-    else
-    {
-        static assert(0);
-    }
-
-    // More specific operating system name
+        See_Also:
+            <a href="../version.html#PredefinedVersions">Predefined Versions</a>
+      +/
     enum OS
     {
-        Windows95 = 1,
-        Windows98,
-        WindowsME,
-        WindowsNT,
-        Windows2000,
-        WindowsXP,
-
-        RedHatLinux,
-        OSX,
+        win32 = 1, /// Microsoft 32 bit Windows systems
+        linux,     /// All Linux Systems
+        osx,       /// Mac OS X
+        freeBSD,   /// FreeBSD
+        solaris,   /// Solaris
+        otherPosix /// Other Posix Systems
     }
 
-    /// Byte order endianness
+    /// The OS that the program was compiled for.
+    version(Win32)        OS os = OS.win32;
+    else version(linux)   OS os = OS.linux;
+    else version(OSX)     OS os = OS.osx;
+    else version(FreeBSD) OS os = OS.freeBSD;
+    else version(Posix)   OS os = OS.otherPosix;
+    else static assert(0, "Unknown OS.");
 
+    /++
+        Byte order endianness.
+
+        Note:
+            This is intended for cases where you need to deal with endianness at
+            runtime. If you're doing something which should compile differently
+            depending on whether you're compiling on a big endian or little
+            endian machine, then please use $(D version(BigEndian)) and
+            $(D version(LittleEndian)).
+
+        See_Also:
+            <a href="../version.html#PredefinedVersions">Predefined Versions</a>
+      +/
     enum Endian
     {
-        BigEndian,      /// big endian byte order
-        LittleEndian    /// little endian byte order
+        bigEndian,   /// Big endian byte order
+        littleEndian /// Little endian byte order
     }
 
-    version(LittleEndian)
-    {
-        /// Native system endianness
-        Endian endian = Endian.LittleEndian;
-    }
-    else
-    {
-        Endian endian = Endian.BigEndian;
-    }
+    /// The endianness that the program was compiled for.
+    version(LittleEndian) Endian endian = Endian.littleEndian;
+    else                  Endian endian = Endian.bigEndian;
 }
-
-// The rest should get filled in dynamically at runtime
-
-OS os = OS.WindowsXP;
-
-// Operating system version as in
-// os_major.os_minor
-uint os_major = 4;
-uint os_minor = 0;
-
 
