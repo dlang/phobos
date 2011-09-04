@@ -3579,7 +3579,7 @@ unittest {
     // Test buffer trick in parallel foreach.
     abuf = poolInstance.asyncBuf(iota(-1, 1_000_000), 100);
     abuf.popFront();
-    auto bufTrickTest = new int[abuf.length];
+    auto bufTrickTest = new size_t[abuf.length];
     foreach(i, elem; parallel(abuf)) {
         bufTrickTest[i] = i;
     }
