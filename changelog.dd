@@ -1,6 +1,8 @@
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
+      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved 
+           performance.)
       $(LI std.path has been rewritten from scratch and has a completely new API.)
       $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
            character type and of any type of mutability.)
@@ -9,11 +11,13 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Added functions to std.bitswap for generically handling swapping
            endianness.)
       $(LI Added std.parallelism.TaskPool.workerIndex.)
+      $(LI Added buffer recycling overload of std.parallelism.asyncBuf)
       $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
            equivalent functions in std.mathspecial should be used instead.)
       $(LI The names of the values of std.mmfile.Mode, std.system.Endian,
            std.traits.FunctionAttributes, std.traits.ParameterStorageClass,
            and std.traits.Variadic were changed to match Phobos' naming conventions.)
+      $(LI std.range:  Added indexed and chunks)
       $(LI std.string.translate has been updated to work with unicode. As a
            result, its signature has been changed. The old version and
            std.string.maketrans have been scheduled for deprecation.)
@@ -21,9 +25,11 @@ $(VERSION 055, ddd mm, 2011, =================================================,
      )
 
     $(LIBBUGSFIXED
+        $(LI Unlisted bug:  std.range.transversal should have length)
         $(LI $(BUGZILLA 5645): std.range.drop())
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
         $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
+        $(LI $(BUGZILLA 6587): std.parallelism's Task cannot handle immutable values)
      )
  )
 
