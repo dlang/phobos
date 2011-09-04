@@ -64,6 +64,7 @@ version(Win32)
 
     private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
     private alias std.c.windows.winsock.timeval _ctimeval;
+    private alias std.c.windows.winsock.linger _clinger;
 
     enum socket_t : SOCKET { INVALID_SOCKET };
     private const int _SOCKET_ERROR = SOCKET_ERROR;
@@ -104,6 +105,7 @@ else version(Posix)
     //private import core.sys.posix.sys.select;
     private import core.sys.posix.sys.socket;
     private alias core.sys.posix.sys.time.timeval _ctimeval;
+    private alias core.sys.posix.sys.socket.linger _clinger;
 
     private import core.stdc.errno;
 
@@ -1178,20 +1180,14 @@ enum SocketOptionLevel: int
     IPV6 =    ProtocolType.IPV6,        /// internet protocol version 6 level
 }
 
-/// Linger information for use with SocketOption.LINGER.
-extern(C) struct linger
+/// _Linger information for use with SocketOption.LINGER.
+extern(C) struct Linger
 {
-    // D interface
-    version(Win32)
-    {
-        uint16_t on;            /// Nonzero for on.
-        uint16_t time;          /// Linger time.
-    }
-    else version(Posix)
-    {
-        int32_t on;
-        int32_t time;
-    }
+    private alias typeof(_clinger.init.l_onoff ) t_onoff;
+    private alias typeof(_clinger.init.l_linger) t_linger;
+
+    t_onoff  on;   /// Nonzero for _on.
+    t_linger time; /// Linger _time.
 
     // C interface
     deprecated
@@ -1201,6 +1197,8 @@ extern(C) struct linger
     }
 }
 
+/// $(RED Scheduled for deprecation. Please use $(D Linger) instead.)
+alias Linger linger;
 
 /// Specifies a socket option:
 enum SocketOption: int
@@ -1744,7 +1742,7 @@ public:
 
 
     /// Get the linger option.
-    int getOption(SocketOptionLevel level, SocketOption option, out linger result)
+    int getOption(SocketOptionLevel level, SocketOption option, out Linger result)
     {
         //return getOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
         return getOption(level, option, (&result)[0 .. 1]);
@@ -1792,7 +1790,7 @@ public:
 
 
     /// Set the linger option.
-    void setOption(SocketOptionLevel level, SocketOption option, linger value)
+    void setOption(SocketOptionLevel level, SocketOption option, Linger value)
     {
         //setOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
         setOption(level, option, (&value)[0 .. 1]);
