@@ -2909,60 +2909,68 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeString!Target)
 {
-    static if (isSomeString!Target)
+    auto result = appender!Target();
+
+    // parse array of chars
+    if (s.front == '[')
+        return parse!Target(s);
+
+    parseCheck!s('\"');
+    if (s.front == '\"')
     {
-        auto result = appender!Target();
-
-        // parse array of chars
-        if (s.front == '[')
-            return parse!Target(s);
-
-        parseCheck!s('\"');
-        if (s.front == '\"')
-        {
-            s.popFront();
-            return result.data;
-        }
-        while (true)
-        {
-            if (s.empty)
-                parseError("Unterminated quoted string");
-            switch (s.front)
-            {
-                case '\"':
-                    s.popFront();
-                    return result.data;
-                case '\\':
-                    result.put(parseEscape(s));
-                    break;
-                default:
-                    result.put(s.front());
-                    s.popFront();
-                    break;
-            }
-        }
-        assert(0);
+        s.popFront();
+        return result.data;
     }
-    else static if (isSomeChar!Target)
+    while (true)
     {
-        Target c;
-
-        parseCheck!s('\'');
-        if (s.front != '\\')
+        if (s.empty)
+            parseError("Unterminated quoted string");
+        switch (s.front)
         {
-            c = s.front;
-            s.popFront();
+            case '\"':
+                s.popFront();
+                return result.data;
+            case '\\':
+                result.put(parseEscape(s));
+                break;
+            default:
+                result.put(s.front());
+                s.popFront();
+                break;
         }
-        else
-            c = parseEscape(s);
-        parseCheck!s('\'');
+    }
+    assert(0);
+}
 
-        return c;
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target)
+{
+    Target c;
+
+    parseCheck!s('\'');
+    if (s.front != '\\')
+    {
+        c = s.front;
+        s.popFront();
     }
     else
-        return parse!Target(s);
+        c = parseEscape(s);
+    parseCheck!s('\'');
+
+    return c;
+}
+
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        !isSomeString!Target && !isSomeChar!Target)
+{
+    return parse!Target(s);
 }
 
 
