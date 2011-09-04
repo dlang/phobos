@@ -11,9 +11,9 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Added std.parallelism.TaskPool.workerIndex.)
       $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
            equivalent functions in std.mathspecial should be used instead.)
-      $(LI The names of the values of std.mmfile.Mode, std.traits.FunctionAttributes,
-           std.traits.ParameterStorageClass, and std.traits.Variadic were
-           changed to match Phobos' naming conventions.)
+      $(LI The names of the values of std.mmfile.Mode, std.system.Endian,
+           std.traits.FunctionAttributes, std.traits.ParameterStorageClass,
+           and std.traits.Variadic were changed to match Phobos' naming conventions.)
       $(LI std.string.translate has been updated to work with unicode. As a
            result, its signature has been changed. The old version and
            std.string.maketrans have been scheduled for deprecation.)
