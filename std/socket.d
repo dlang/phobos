@@ -407,14 +407,14 @@ class Service
     /** These members are populated when one of the following functions are called without failure: */
     string name;
     string[] aliases;           /// ditto
-    ushort port;                /// ditto
+    uint16_t port;              /// ditto
     string protocolName;        /// ditto
 
 
     void populate(servent* serv)
     {
         name = to!string(serv.s_name);
-        port = ntohs(cast(ushort)serv.s_port);
+        port = ntohs(serv.s_port);
         protocolName = to!string(serv.s_proto);
 
         int i;
@@ -455,7 +455,7 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(ushort port, string protocolName = null)
+    bool getServiceByPort(uint16_t port, string protocolName = null)
     {
         servent* serv;
         serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
@@ -641,10 +641,10 @@ class InternetHost
      * Returns:
      *   false if unable to resolve.
      */
-    bool getHostByAddr(uint addr)
+    bool getHostByAddr(uint32_t addr)
     {
         return getHost!q{
-            uint x = htonl(param);
+            auto x = htonl(param);
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
         }(addr);
     }
@@ -657,7 +657,7 @@ class InternetHost
     bool getHostByAddr(string addr)
     {
         return getHost!q{
-            uint x = inet_addr(std.string.toStringz(param));
+            auto x = inet_addr(std.string.toStringz(param));
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
         }(addr);
     }
@@ -790,9 +790,9 @@ public:
     }
 
 
-    enum uint ADDR_ANY = INADDR_ANY;           /// Any IPv4 address number.
-    enum uint ADDR_NONE = INADDR_NONE;         /// An invalid IPv4 address number.
-    enum ushort PORT_ANY = 0;                  /// Any IPv4 port number.
+    enum uint32_t ADDR_ANY = INADDR_ANY;         /// Any IPv4 address number.
+    enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 address number.
+    enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
 
     /// Overridden to return $(D AddressFamily.INET).
     override AddressFamily addressFamily() const
@@ -801,13 +801,13 @@ public:
     }
 
     /// Returns the IPv4 port number.
-    ushort port() const
+    uint16_t port() const
     {
         return ntohs(sin.sin_port);
     }
 
     /// Returns the IPv4 address number.
-    uint addr() const
+    uint32_t addr() const
     {
         return ntohl(sin.sin_addr.s_addr);
     }
@@ -819,9 +819,9 @@ public:
      *          object.
      *   port = may be $(D PORT_ANY) as stated below.
      */
-    this(string addr, ushort port)
+    this(string addr, uint16_t port)
     {
-        uint uiaddr = parse(addr);
+        uint32_t uiaddr = parse(addr);
         if(ADDR_NONE == uiaddr)
         {
             InternetHost ih = new InternetHost;
@@ -841,7 +841,7 @@ public:
      * and $(D port) may be $(D PORT_ANY), and the actual numbers may not be
      * known until a connection is made.
      */
-    this(uint addr, ushort port)
+    this(uint32_t addr, uint16_t port)
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = htonl(addr);
@@ -849,7 +849,7 @@ public:
     }
 
     /// ditto
-    this(ushort port)
+    this(uint16_t port)
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = 0;         //any, "0.0.0.0"
@@ -909,7 +909,7 @@ public:
      * Returns: If the string is not a legitimate IPv4 address,
      * $(D ADDR_NONE) is returned.
      */
-    static uint parse(string addr)
+    static uint32_t parse(string addr)
     {
         return ntohl(inet_addr(std.string.toStringz(addr)));
     }
