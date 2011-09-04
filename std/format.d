@@ -12,7 +12,7 @@
    License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
    Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.com,
-   Andrei Alexandrescu) and Kenji Hara
+   Andrei Alexandrescu), and Kenji Hara
 
    Source: $(PHOBOSSRC std/_format.d)
  */

@@ -19,7 +19,7 @@
 
     Copyright: Copyright 2000 -
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   $(WEB digitalmars.com, Walter Bright), Jonathan M Davis and Kenji Hara
+    Authors:   $(WEB digitalmars.com, Walter Bright), Jonathan M Davis, and Kenji Hara
     Source:    $(PHOBOSSRC std/_uni.d)
   +/
 module std.uni;
