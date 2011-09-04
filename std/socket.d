@@ -606,9 +606,31 @@ class InternetHost
      */
     bool getHostByName(string name)
     {
-        return getHost!q{
-            auto he = gethostbyname(toStringz(param));
-        }(name);
+        static if (is(typeof(gethostbyname_r)))
+        {
+            return getHostNoSync!q{
+                hostent he_v;
+                hostent* he;
+                ubyte[256] buffer_v = void;
+                auto buffer = buffer_v[];
+                auto param_z = std.string.toStringz(param);
+                while (true)
+                {
+                    he = &he_v;
+                    int errno;
+                    if (gethostbyname_r(param_z, he, buffer.ptr, buffer.length, &he, &errno) == ERANGE)
+                        buffer.length = buffer.length * 2;
+                    else
+                        break;
+                }
+            }(name);
+        }
+        else
+        {
+            return getHost!q{
+                auto he = gethostbyname(toStringz(param));
+            }(name);
+        }
     }
 
     /**
@@ -646,10 +668,10 @@ unittest
 {
     InternetHost ih = new InternetHost;
 
-    ih.getHostByAddr(0x7F000001);
-    assert(ih.addrList[0] == 0x7F000001);
+    ih.getHostByAddr(0x7F_00_00_01);
+    assert(ih.addrList[0] == 0x7F_00_00_01);
     ih.getHostByAddr("127.0.0.1");
-    assert(ih.addrList[0] == 0x7F000001);
+    assert(ih.addrList[0] == 0x7F_00_00_01);
 
     try
     {
