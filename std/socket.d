@@ -107,7 +107,7 @@ else version(BsdSockets)
     }
     private import core.stdc.errno;
 
-    typedef int32_t socket_t = -1;
+    enum socket_t : int32_t { init = -1 }
     private const int _SOCKET_ERROR = -1;
 
 
