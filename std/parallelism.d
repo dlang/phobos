@@ -1359,18 +1359,19 @@ public:
             alias args[0] range;
             immutable len = range.length;
 
-            static if(Args.length > 1 && randAssignable!(Args[$ - 1]) &&
-                is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))) {
+            static if(
+                Args.length > 1 &&
+                randAssignable!(Args[$ - 1]) &&
+                is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))
+            ) {
                 alias args[$ - 1] buf;
                 alias args[0..$ - 1] args2;
                 alias Args[0..$ - 1] Args2;
                 enforce(buf.length == len,
-                    text("Can't use a user supplied buffer that's the wrong ",
+                    text("Can't use a user supplied buffer that's the wrong "
                         "size.  (Expected  :", len, " Got:  ", buf.length));
             } else static if(randAssignable!(Args[$ - 1]) && Args.length > 1) {
-                static assert(0, "Wrong buffer type.  Expected a " ~
-                    MapType!(Args[0], functions).stringof ~ "[].  Got a " ~
-                    Args[$ - 1].stringof ~ ".");
+                static assert(0, "Wrong buffer type.");
             } else {
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])
                     (len);
@@ -1452,7 +1453,7 @@ public:
 
     Params:
 
-    range = The input range to be mapped.  If $(D range) is not random
+    source = The input range to be mapped.  If $(D source) is not random
     access it will be lazily buffered to an array of size $(D bufSize) before
     the map function is evaluated.  (For an exception to this rule, see Notes.)
 
@@ -1465,7 +1466,7 @@ public:
     the pool-wide default.
 
     Returns:  An input range representing the results of the map.  This range
-              has a length iff $(D range) has a length.
+              has a length iff $(D source) has a length.
 
     Notes:
 
@@ -1475,7 +1476,7 @@ public:
     though the ranges returned by $(D map) and $(D asyncBuf) are non-random
     access ranges.  This means that the $(D bufSize) parameter passed to the
     current call to $(D map) will be ignored and the size of the buffer
-    will be the buffer size of $(D range).
+    will be the buffer size of $(D source).
 
     Examples:
     ---
@@ -1496,7 +1497,7 @@ public:
 
     $(B Exception Handling):
 
-    Any exceptions thrown while iterating over $(D range)
+    Any exceptions thrown while iterating over $(D source)
     or computing the map function are re-thrown on a call to $(D popFront) or,
     if thrown during construction, are simply allowed to propagate to the
     caller.  In the case of exceptions thrown while computing the map function,
@@ -1506,8 +1507,8 @@ public:
 
         ///
         auto
-        map(R)(R range, size_t bufSize = 100, size_t workUnitSize = size_t.max)
-        if(isInputRange!R) {
+        map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
+        if(isInputRange!S) {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                 "Work unit size must be smaller than buffer size.");
             static if(functions.length == 1) {
@@ -1518,64 +1519,75 @@ public:
 
             static final class Map {
                 // This is a class because the task needs to be located on the heap
-                // and in the non-random access case the range needs to be on the
+                // and in the non-random access case source needs to be on the
                 // heap, too.
 
             private:
-                enum bufferTrick = is(typeof(range.buf1)) &&
-                                   is(typeof(range.bufPos)) &&
-                                   is(typeof(range.doBufSwap()));
+                enum bufferTrick = is(typeof(source.buf1)) &&
+                                   is(typeof(source.bufPos)) &&
+                                   is(typeof(source.doBufSwap()));
 
-                alias MapType!(R, functions) E;
+                alias MapType!(S, functions) E;
                 E[] buf1, buf2;
-                R range;
+                S source;
                 TaskPool pool;
                 Task!(run, E[] delegate(E[]), E[]) nextBufTask;
                 size_t workUnitSize;
                 size_t bufPos;
                 bool lastTaskWaited;
 
-                static if(isRandomAccessRange!R) {
-                    alias R FromType;
+                static if(isRandomAccessRange!S) {
+                    alias S FromType;
 
-                    void popRange() {
-                        static if(__traits(compiles, range[0..range.length])) {
-                            range = range[min(buf1.length, range.length)..range.length];
-                        } else static if(__traits(compiles, range[0..$])) {
-                            range = range[min(buf1.length, range.length)..$];
+                    void popSource() {
+                        static if(__traits(compiles, source[0..source.length])) {
+                            source = source[min(buf1.length, source.length)..source.length];
+                        } else static if(__traits(compiles, source[0..$])) {
+                            source = source[min(buf1.length, source.length)..$];
                         } else {
-                            static assert(0, "R must have slicing for Map."
+                            static assert(0, "S must have slicing for Map."
                                 ~ "  " ~ R.stringof ~ " doesn't.");
                         }
                     }
 
                 } else static if(bufferTrick) {
 
-                    alias typeof(range.buf1) FromType;
+                    // Make sure we don't have the buffer recycling overload of
+                    // asyncBuf.
+                    static if(
+                        is(typeof(source.source)) &&
+                        isRoundRobin!(typeof(source.source))
+                    ) {
+                        static assert(0, "Cannot execute a parallel map on " ~
+                            "the buffer recycling overload of asyncBuf."
+                        );
+                    }
+
+                    alias typeof(source.buf1) FromType;
                     FromType from;
 
-                    // Just swap our input buffer with range's output buffer and get
-                    // range mapping again.  No need to copy element by element.
+                    // Just swap our input buffer with source's output buffer.
+                    // No need to copy element by element.
                     FromType dumpToFrom() {
-                        assert(range.buf1.length <= from.length);
-                        from.length = range.buf1.length;
-                        swap(range.buf1, from);
+                        assert(source.buf1.length <= from.length);
+                        from.length = source.buf1.length;
+                        swap(source.buf1, from);
 
-                        // Just in case this range has been popped before
+                        // Just in case this source has been popped before
                         // being sent to map:
-                        from = from[range.bufPos..$];
+                        from = from[source.bufPos..$];
 
-                        static if(is(typeof(range._length))) {
-                            range._length -= (from.length - range.bufPos);
+                        static if(is(typeof(source._length))) {
+                            source._length -= (from.length - source.bufPos);
                         }
 
-                        range.doBufSwap();
+                        source.doBufSwap();
 
                         return from;
                     }
 
                 } else {
-                    alias ElementType!(R)[] FromType;
+                    alias ElementType!(S)[] FromType;
 
                     // The temporary array that data is copied to before being
                     // mapped.
@@ -1585,8 +1597,8 @@ public:
                         assert(from !is null);
 
                         size_t i;
-                        for(; !range.empty && i < from.length; range.popFront()) {
-                            from[i++] = range.front;
+                        for(; !source.empty && i < from.length; source.popFront()) {
+                            from[i++] = source.front;
                         }
 
                         from = from[0..i];
@@ -1594,7 +1606,7 @@ public:
                     }
                 }
 
-                static if(hasLength!R) {
+                static if(hasLength!S) {
                     size_t _length;
 
                     public @property size_t length() const pure nothrow @safe {
@@ -1602,25 +1614,25 @@ public:
                     }
                 }
 
-                this(R range, size_t bufSize, size_t workUnitSize, TaskPool pool) {
+                this(S source, size_t bufSize, size_t workUnitSize, TaskPool pool) {
                     static if(bufferTrick) {
-                        bufSize = range.buf1.length;
+                        bufSize = source.buf1.length;
                     }
 
                     buf1.length = bufSize;
                     buf2.length = bufSize;
 
-                    static if(!isRandomAccessRange!R) {
+                    static if(!isRandomAccessRange!S) {
                         from.length = bufSize;
                     }
 
                     this.workUnitSize = (workUnitSize == size_t.max) ?
                             pool.defaultWorkUnitSize(bufSize) : workUnitSize;
-                    this.range = range;
+                    this.source = source;
                     this.pool = pool;
 
-                    static if(hasLength!R) {
-                        _length = range.length;
+                    static if(hasLength!S) {
+                        _length = source.length;
                     }
 
                     buf1 = fillBuf(buf1);
@@ -1630,9 +1642,9 @@ public:
                 // The from parameter is a dummy and ignored in the random access
                 // case.
                 E[] fillBuf(E[] buf) {
-                    static if(isRandomAccessRange!R) {
-                        auto toMap = take(range, buf.length);
-                        scope(success) popRange();
+                    static if(isRandomAccessRange!S) {
+                        auto toMap = take(source, buf.length);
+                        scope(success) popSource();
                     } else {
                         auto toMap = dumpToFrom();
                     }
@@ -1668,11 +1680,11 @@ public:
 
                 void doBufSwap() {
                     if(lastTaskWaited) {
-                        // Then the range is empty.  Signal it here.
+                        // Then the source is empty.  Signal it here.
                         buf1 = null;
                         buf2 = null;
 
-                        static if(!isRandomAccessRange!R) {
+                        static if(!isRandomAccessRange!S) {
                             from = null;
                         }
 
@@ -1683,7 +1695,7 @@ public:
                     buf1 = nextBufTask.yieldForce();
                     bufPos = 0;
 
-                    if(range.empty) {
+                    if(source.empty) {
                         lastTaskWaited = true;
                     } else {
                         submitBuf2();
@@ -1691,12 +1703,12 @@ public:
                 }
 
             public:
-                MapType!(R, functions) front() @property {
+                @property auto front() {
                     return buf1[bufPos];
                 }
 
                 void popFront() {
-                    static if(hasLength!R) {
+                    static if(hasLength!S) {
                         _length--;
                     }
 
@@ -1706,27 +1718,27 @@ public:
                     }
                 }
 
-                static if(std.range.isInfinite!R) {
+                static if(std.range.isInfinite!S) {
                     enum bool empty = false;
                 } else {
 
                     bool empty() @property {
-                        // popFront() sets this when range is empty
+                        // popFront() sets this when source is empty
                         return buf1.length == 0;
                     }
                 }
             }
-            return new Map(range, bufSize, workUnitSize, this);
+            return new Map(source, bufSize, workUnitSize, this);
         }
     }
 
     /**
-    Given an input range that is expensive to iterate over, returns an
+    Given a $(D source) range that is expensive to iterate over, returns an
     input range that asynchronously buffers the contents of
-    $(D range) into a buffer of $(D bufSize) elements in a worker thread,
+    $(D source) into a buffer of $(D bufSize) elements in a worker thread,
     while making prevously buffered elements from a second buffer, also of size
     $(D bufSize), available via the range interface of the returned
-    object.  The returned range has a length iff $(D hasLength!(R)).
+    object.  The returned range has a length iff $(D hasLength!(S)).
     $(D asyncBuf) is useful, for example, when performing expensive operations
     on the elements of ranges that represent data on a disk or network.
 
@@ -1755,44 +1767,44 @@ public:
 
     $(B Exception Handling):
 
-    Any exceptions thrown while iterating over $(D range) are re-thrown on a
+    Any exceptions thrown while iterating over $(D source) are re-thrown on a
     call to $(D popFront) or, if thrown during construction, simply
     allowed to propagate to the caller.
     */
-    auto asyncBuf(R)(R range, size_t bufSize = 100) if(isInputRange!R) {
+    auto asyncBuf(S)(S source, size_t bufSize = 100) if(isInputRange!S) {
         static final class AsyncBuf {
-            // This is a class because the task and the range both need to be on
+            // This is a class because the task and source both need to be on
             // the heap.
 
-            // The element type of R.
-            alias ElementType!R E;  // Needs to be here b/c of forward ref bugs.
+            // The element type of S.
+            alias ElementType!S E;  // Needs to be here b/c of forward ref bugs.
 
         private:
             E[] buf1, buf2;
-            R range;
+            S source;
             TaskPool pool;
             Task!(run, E[] delegate(E[]), E[]) nextBufTask;
             size_t bufPos;
             bool lastTaskWaited;
 
-            static if(hasLength!R) {
+            static if(hasLength!S) {
                 size_t _length;
 
-                // Available if hasLength!(R).
+                // Available if hasLength!(S).
                 public @property size_t length() const pure nothrow @safe {
                     return _length;
                 }
             }
 
-            this(R range, size_t bufSize, TaskPool pool) {
+            this(S source, size_t bufSize, TaskPool pool) {
                 buf1.length = bufSize;
                 buf2.length = bufSize;
 
-                this.range = range;
+                this.source = source;
                 this.pool = pool;
 
-                static if(hasLength!R) {
-                    _length = range.length;
+                static if(hasLength!S) {
+                    _length = source.length;
                 }
 
                 buf1 = fillBuf(buf1);
@@ -1803,8 +1815,8 @@ public:
                 assert(buf !is null);
 
                 size_t i;
-                for(; !range.empty && i < buf.length; range.popFront()) {
-                    buf[i++] = range.front;
+                for(; !source.empty && i < buf.length; source.popFront()) {
+                    buf[i++] = source.front;
                 }
 
                 buf = buf[0..i];
@@ -1826,7 +1838,7 @@ public:
 
             void doBufSwap() {
                 if(lastTaskWaited) {
-                    // Then the range is empty.  Signal it here.
+                    // Then source is empty.  Signal it here.
                     buf1 = null;
                     buf2 = null;
                     return;
@@ -1836,7 +1848,7 @@ public:
                 buf1 = nextBufTask.yieldForce();
                 bufPos = 0;
 
-                if(range.empty) {
+                if(source.empty) {
                     lastTaskWaited = true;
                 } else {
                     submitBuf2();
@@ -1850,7 +1862,7 @@ public:
             }
 
             void popFront() {
-                static if(hasLength!R) {
+                static if(hasLength!S) {
                     _length--;
                 }
 
@@ -1860,18 +1872,18 @@ public:
                 }
             }
 
-            static if(std.range.isInfinite!R) {
+            static if(std.range.isInfinite!S) {
                 enum bool empty = false;
             } else {
 
                 ///
                 bool empty() @property {
-                    // popFront() sets this when range is empty:
+                    // popFront() sets this when source is empty:
                     return buf1.length == 0;
                 }
             }
         }
-        return new AsyncBuf(range, bufSize, this);
+        return new AsyncBuf(source, bufSize, this);
     }
 
     /**
@@ -3050,12 +3062,17 @@ enum string parallelApplyMixinInputRange = q{
     // This is updated only while protected by rangeMutex;
     size_t nPopped = 0;
 
-    static if(is(typeof(range.buf1)) && is(typeof(range.bufPos)) &&
-    is(typeof(range.doBufSwap()))) {
+    static if(
+        is(typeof(range.buf1)) &&
+        is(typeof(range.bufPos)) &&
+        is(typeof(range.doBufSwap()))
+    ) {
         // Make sure we don't have the buffer recycling overload of
         // asyncBuf.
-        static if(is(typeof(range.range)) &&
-        isRoundRobin!(typeof(range.range))) {
+        static if(
+            is(typeof(range.source)) &&
+            isRoundRobin!(typeof(range.source))
+        ) {
             static assert(0, "Cannot execute a parallel foreach loop on " ~
                 "the buffer recycling overload of asyncBuf.");
         }
