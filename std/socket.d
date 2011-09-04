@@ -886,7 +886,7 @@ public:
         if (getnameinfoPointer is null)
         {
             auto host = new InternetHost();
-            enforce(host.getHostByAddr(sin.sin_addr.s_addr),
+            enforce(host.getHostByAddr(ntohl(sin.sin_addr.s_addr)),
                     new SocketOSException("Could not get host name."));
             return host.name;
         }
@@ -924,6 +924,24 @@ unittest
     {
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+
+        // test reverse lookup
+        auto ih = new InternetHost;
+        if (ih.getHostByName("digitalmars.com"))
+        {
+            const ia2 = new InternetAddress(ih.addrList[0], 80);
+            assert(ia2.toHostNameString() == "digitalmars.com");
+
+            if (getnameinfoPointer)
+            {
+                // test reverse lookup, via gethostbyaddr
+                auto getnameinfoPointerBackup = getnameinfoPointer;
+                getnameinfoPointer = null;
+                scope(exit) getnameinfoPointer = getnameinfoPointerBackup;
+
+                assert(ia2.toHostNameString() == "digitalmars.com");
+            }
+        }
     }
     catch (Throwable e)
     {
