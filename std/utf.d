@@ -44,7 +44,21 @@ import std.metastrings;
   +/
 class UtfException : Exception
 {
-    uint[] sequence;
+    uint[4] sequence;
+    size_t  len;
+
+
+    UtfException setSequence(uint[] data...) @safe pure nothrow
+    {
+        import std.algorithm;
+
+        assert(data.length <= 4);
+
+        len = min(data.length, 4);
+        sequence[0 .. len] = data[0 .. len];
+
+        return this;
+    }
 
 
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
@@ -60,25 +74,14 @@ class UtfException : Exception
     }
 
 
-    this(string msg, uint[] data, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
-    {
-        import std.algorithm;
-
-        assert(data.length <= 4);
-        sequence.length = min(data.length, 4);
-        sequence[] = data[0 .. sequence.length];
-        super(msg, file, line, next);
-    }
-
-
     override string toString()
     {
-        if(sequence.length == 0)
+        if(len == 0)
             return super.toString();
 
         string result = "Invalid UTF sequence:";
 
-        foreach(i; sequence)
+        foreach(i; sequence[0 .. len])
             result ~= " " ~ to!string(i, 16);
 
         if(super.msg.length > 0)
@@ -502,7 +505,7 @@ size_t toUTFindex(in char[] s, size_t n) @safe pure
     {
         uint j = utf8Stride[s[i]];
         if (j == 0xFF)
-            throw new UtfException("Invalid UTF-8 sequence", [cast(uint)s[i]]);
+            throw (new UtfException("Invalid UTF-8 sequence")).setSequence(s[i]);
         i += j;
     }
 
@@ -553,7 +556,7 @@ body
     if(index >= str.length)
         throw new UtfException("Attempted to decode past the end of a string");
 
-    size_t len = str.length;
+    immutable len = str.length;
     dchar V;
     size_t i = index;
     char u = str[i];
@@ -624,7 +627,12 @@ body
     return V;
 
   Lerr:
-    throw new UtfException("Invalid UTF-8 sequence", i);
+    uint[4] sequence;
+    size_t seqLen = 0;
+    for(size_t i = index; seqLen < 4 && i < len && (str[i] & 0x80) && !(str[i] & 0xC0); ++i, ++seqLen)
+        sequence[i] = str[i];
+
+    throw (new UtfException("Invalid UTF-8 sequence", i)).setSequence(sequence[0 .. seqLen]);
 }
 
 unittest
@@ -753,7 +761,7 @@ body
     return cast(dchar)u;
 
   Lerr:
-    throw new UtfException(msg, [cast(uint)str[i]]);
+    throw (new UtfException(msg)).setSequence(str[i]);
 }
 
 unittest
@@ -780,7 +788,7 @@ dchar decode(in dchar[] str, ref size_t index) @safe pure
     return c;
 
   Lerr:
-    throw new UtfException("Invalid UTF-32 value", [cast(uint)c]);
+    throw (new UtfException("Invalid UTF-32 value")).setSequence(c);
 }
 
 
@@ -813,7 +821,7 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException("Encoding a surrogate code point in UTF-8", [cast(uint)c]);
+            throw (new UtfException("Encoding a surrogate code point in UTF-8")).setSequence(c);
 
         assert(isValidDchar(c));
         buf[0] = cast(char)(0xE0 | (c >> 12));
@@ -832,7 +840,7 @@ size_t encode(ref char[4] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw new UtfException("Encoding an invalid code point in UTF-8", [cast(uint)c]);
+    throw (new UtfException("Encoding an invalid code point in UTF-8")).setSequence(c);
 }
 
 unittest
@@ -865,7 +873,7 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException("Encoding an isolated surrogate code point in UTF-16", [cast(uint)c]);
+            throw (new UtfException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
 
         assert(isValidDchar(c));
         buf[0] = cast(wchar)c;
@@ -880,7 +888,7 @@ size_t encode(ref wchar[2] buf, dchar c) @safe pure
     }
 
     assert(!isValidDchar(c));
-    throw new UtfException("Encoding an invalid code point in UTF-16", [cast(uint)c]);
+    throw (new UtfException("Encoding an invalid code point in UTF-16")).setSequence(c);
 }
 
 unittest
@@ -933,7 +941,7 @@ void encode(ref char[] str, dchar c) @safe pure
         else if (c <= 0xFFFF)
         {
             if (0xD800 <= c && c <= 0xDFFF)
-                throw new UtfException("Encoding a surrogate code point in UTF-8", [cast(uint)c]);
+                throw (new UtfException("Encoding a surrogate code point in UTF-8")).setSequence(c);
 
             assert(isValidDchar(c));
             buf[0] = cast(char)(0xE0 | (c >> 12));
@@ -953,7 +961,7 @@ void encode(ref char[] str, dchar c) @safe pure
         else
         {
             assert(!isValidDchar(c));
-            throw new UtfException("Encoding an invalid code point in UTF-8", [cast(uint)c]);
+            throw (new UtfException("Encoding an invalid code point in UTF-8")).setSequence(c);
         }
         r ~= buf[0 .. L];
     }
@@ -1010,7 +1018,7 @@ void encode(ref wchar[] str, dchar c) @safe pure
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException("Encoding an isolated surrogate code point in UTF-16", [cast(uint)c]);
+            throw (new UtfException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
 
         assert(isValidDchar(c));
         r ~= cast(wchar)c;
@@ -1027,7 +1035,7 @@ void encode(ref wchar[] str, dchar c) @safe pure
     else
     {
         assert(!isValidDchar(c));
-        throw new UtfException("Encoding an invalid code point in UTF-16", [cast(uint)c]);
+        throw (new UtfException("Encoding an invalid code point in UTF-16")).setSequence(c);
     }
 
     str = r;
@@ -1056,7 +1064,7 @@ unittest
 void encode(ref dchar[] str, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
-        throw new UtfException("Encoding an invalid code point in UTF-32", [cast(uint)c]);
+        throw (new UtfException("Encoding an invalid code point in UTF-32")).setSequence(c);
 
     assert(isValidDchar(c));
     str ~= c;
