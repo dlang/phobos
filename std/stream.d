@@ -2195,8 +2195,8 @@ enum BOM {
 private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
-  Endian.LittleEndian, Endian.BigEndian,
-  Endian.LittleEndian, Endian.BigEndian
+  Endian.littleEndian, Endian.bigEndian,
+  Endian.littleEndian, Endian.bigEndian
   ];
 
 immutable ubyte[][NBOMS] ByteOrderMarks =
@@ -2425,7 +2425,7 @@ class EndianStream : FilterStream {
   unittest {
     MemoryStream m;
     m = new MemoryStream ();
-    EndianStream em = new EndianStream(m,Endian.BigEndian);
+    EndianStream em = new EndianStream(m,Endian.bigEndian);
     uint x = 0x11223344;
     em.write(x);
     assert( m.data[0] == 0x11 );
@@ -2440,7 +2440,7 @@ class EndianStream : FilterStream {
     em.position(0);
     static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.LittleEndian) {
+    if (std.system.endian == Endian.littleEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2452,7 +2452,7 @@ class EndianStream : FilterStream {
       assert( x3[10] == 2 );
       assert( x3[11] == 1 );
     }
-    em.endian = Endian.LittleEndian;
+    em.endian = Endian.littleEndian;
     em.write(x);
     assert( m.data[0] == 0x44 );
     assert( m.data[1] == 0x33 );
@@ -2464,7 +2464,7 @@ class EndianStream : FilterStream {
     assert( m.data[1] == 0x55 );
     em.position(0);
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.BigEndian) {
+    if (std.system.endian == Endian.bigEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
