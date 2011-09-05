@@ -206,14 +206,15 @@ class SocketOSException: SocketException
 {
     int errorCode;     /// Platform-specific error code.
 
-    this(string msg, int err = _lasterr)
+    this(string msg, int err = _lasterr,
+        string function(int) errorFormatter = &formatSocketError)
     {
         errorCode = err;
 
         if (msg.length)
-            super(msg ~ ": " ~ formatSocketError(err));
+            super(msg ~ ": " ~ errorFormatter(err));
         else
-            super(formatSocketError(err));
+            super(errorFormatter(err));
     }
 }
 
@@ -250,6 +251,8 @@ bool wouldHaveBlocked()
 }
 
 private __gshared typeof(&getnameinfo) getnameinfoPointer;
+private __gshared typeof(&getaddrinfo) getaddrinfoPointer;
+private __gshared typeof(&freeaddrinfo) freeaddrinfoPointer;
 
 shared static this()
 {
@@ -264,18 +267,24 @@ shared static this()
         if(val)         // Request Winsock 2.2 for IPv6.
             throw new SocketOSException("Unable to initialize socket library", val);
 
-        // See the comment in InternetAddress.toHostNameString() for
-        // details on the getnameinfo() issue.
+        // These functions may not be present on older Windows versions.
+        // See the comment in InternetAddress.toHostNameString() for details.
         auto ws2Lib = GetModuleHandleA("ws2_32.dll");
         if (ws2Lib)
         {
             getnameinfoPointer = cast(typeof(getnameinfoPointer))
                                  GetProcAddress(ws2Lib, "getnameinfo");
+            getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
+                                 GetProcAddress(ws2Lib, "getaddrinfo");
+            freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
+                                 GetProcAddress(ws2Lib, "freeaddrinfo");
         }
     }
     else version(Posix)
     {
         getnameinfoPointer = &getnameinfo;
+        getaddrinfoPointer = &getaddrinfo;
+        freeaddrinfoPointer = &freeaddrinfo;
     }
 }
 
@@ -530,6 +539,9 @@ class HostException: SocketOSException
 
 /**
  * $(D InternetHost) is a class for resolving IPv4 addresses.
+ *
+ * If your target systems support it, consider using $(D getAddressInfo)
+ * and $(D Address) methods instead.
  */
 class InternetHost
 {
@@ -713,6 +725,146 @@ unittest
         // {
         //      printf("aliases[%d] = %.*s\n", i, s);
         // }
+    }
+    catch (Throwable e)
+    {
+        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
+        printf(" (%.*s)\n", e.toString());
+    }
+}
+
+
+/// Holds information about an address retrieved by $(D getAddressInfo).
+struct AddressInfo
+{
+    AddressFamily family;   /// Address _family
+    SocketType type;        /// Socket _type
+    ProtocolType protocol;  /// Protocol
+    Address address;        /// Socket _address
+    string canonicalName;   /// Canonical name, when $(D AddressInfoHints.Flags.CANONNAME) is used.
+}
+
+// A subset of flags supported on all platforms with getaddrinfo.
+/// Specifies option flags for $(D getAddressInfo).
+enum AddressInfoHintFlags: int
+{
+    /// The resulting addresses will be used in a call to $(D Socket.bind).
+    PASSIVE = AI_PASSIVE,
+
+    /// The canonical name is returned in $(D canonicalName) member in the first $(D AddressInfo).
+    CANONNAME = AI_CANONNAME,
+
+    /// The $(D node) parameter passed to $(D getAddressInfo) must be a numeric string.
+    /// This will suppress any potentially lengthy network host address lookups.
+    NUMERICHOST = AI_NUMERICHOST,
+}
+
+
+/// Specifies options for $(D getAddressInfo).
+struct AddressInfoHints
+{
+    AddressInfoHintFlags flags;                  /// Option flags
+    AddressFamily family = AddressFamily.UNSPEC; /// Filter by address _family
+    SocketType type;                             /// Filter by socket _type
+    ProtocolType protocol;                       /// Filter by _protocol
+}
+
+/// On POSIX, getaddrinfo uses its own error codes, and thus has its own
+/// formatting function.
+private string formatGaiError(int err)
+{
+    version(Windows)
+    {
+        return sysErrorString(err);
+    }
+    else
+    {
+        synchronized
+            return to!string(gai_strerror(err)).idup;
+    }
+}
+
+/**
+ * Provides protocol-independent translation from host names to addresses.
+ *
+ * Returns: array with one $(D AddressInfo) per address.
+ *
+ * Throws: $(D SocketOSException) on failure, or $(D SocketFeatureException)
+ * if this functionality is not available on the current system.
+ */
+AddressInfo[] getAddressInfo(string node, string service = null,
+    AddressInfoHints hints = AddressInfoHints.init)
+{
+    if (getaddrinfoPointer && freeaddrinfoPointer)
+    {
+        addrinfo ai_hints =
+        {
+            ai_flags    : hints.flags,
+            ai_family   : hints.family,
+            ai_socktype : hints.type,
+            ai_protocol : hints.protocol,
+        };
+
+        addrinfo* ai_res;
+
+        int ret = getaddrinfoPointer(
+            node is null ? null : std.string.toStringz(node),
+            service is null ? null : std.string.toStringz(service),
+            &ai_hints, &ai_res);
+        scope(exit) if (ai_res) freeaddrinfoPointer(ai_res);
+        enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
+
+        AddressInfo[] result;
+        // Use const to force UnknownAddressReference to copy the sockaddr.
+        for (const(addrinfo)* ai = ai_res; ai; ai = ai.ai_next)
+            result ~= AddressInfo(
+                cast(AddressFamily) ai.ai_family,
+                cast(SocketType   ) ai.ai_socktype,
+                cast(ProtocolType ) ai.ai_protocol,
+                new UnknownAddressReference(ai.ai_addr, ai.ai_addrlen),
+                ai.ai_canonname ? to!string(ai.ai_canonname).idup : null);
+
+        return result;
+    }
+
+    throw new SocketFeatureException("Address info lookup is not available " ~
+        "on this system.");
+}
+
+
+unittest
+{
+    try
+    {
+        if (getaddrinfoPointer)
+        {
+            // Roundtrip DNS resolution
+            auto results = getAddressInfo("www.digitalmars.com");
+            assert(results[0].address.toHostNameString() == "digitalmars.com");
+
+            // Canonical name
+            results = getAddressInfo("www.digitalmars.com", null,
+                AddressInfoHints(AddressInfoHintFlags.CANONNAME));
+            assert(results[0].canonicalName == "digitalmars.com");
+
+            // IPv6 resolution
+            //results = getAddressInfo("ipv6.google.com");
+            //assert(results[0].family == AddressFamily.INET6);
+
+            // Multihomed resolution
+            //results = getAddressInfo("google.com");
+            //assert(results.length > 1);
+
+            // Parsing IPv4
+            results = getAddressInfo("127.0.0.1", null,
+                AddressInfoHints(AddressInfoHintFlags.NUMERICHOST));
+            assert(results.length && results[0].family == AddressFamily.INET);
+
+            // Parsing IPv6
+            results = getAddressInfo("::1", null,
+                AddressInfoHints(AddressInfoHintFlags.NUMERICHOST));
+            assert(results.length && results[0].family == AddressFamily.INET6);
+        }
     }
     catch (Throwable e)
     {
