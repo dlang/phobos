@@ -22,6 +22,7 @@ import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
+import std.format;
 import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
@@ -88,8 +89,6 @@ private
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
-        import std.format;
-
         auto w = appender!T();
         FormatSpec!(typeof(T.init[0])) f;
         formatValue(w, src, f);
