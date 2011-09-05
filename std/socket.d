@@ -890,6 +890,53 @@ public:
 
 
 /**
+ * $(D UnknownAddressReference) encapsulates a reference to an arbitrary
+ * network address.
+ */
+class UnknownAddressReference: Address
+{
+protected:
+    sockaddr* sa;
+    int len;
+
+public:
+    this(sockaddr* sa, int len)
+    {
+        this.sa  = sa;
+        this.len = len;
+    }
+
+    this(const(sockaddr)* sa, int len)
+    {
+        this.sa = cast(sockaddr*) (cast(ubyte*)sa)[0..len].dup.ptr;
+        this.len = len;
+    }
+
+    override sockaddr* name()
+    {
+        return sa;
+    }
+
+    override const(sockaddr)* name() const
+    {
+        return sa;
+    }
+
+
+    override int nameLen() const
+    {
+        return len;
+    }
+
+
+    override string toString() const
+    {
+        return "Unknown";
+    }
+}
+
+
+/**
  * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4) address.
  */
 class InternetAddress: Address
