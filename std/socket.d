@@ -730,8 +730,13 @@ abstract class Address
     sockaddr* name();
     const(sockaddr)* name() const;
     int nameLen() const;
-    AddressFamily addressFamily() const;      /// Family of this address.
     override string toString() const;         /// Human readable string representing this address.
+
+    /// Family of this address.
+    AddressFamily addressFamily() const
+    {
+        return cast(AddressFamily) name().sa_family;
+    }
 }
 
 /**
@@ -758,12 +763,6 @@ public:
     override int nameLen() const
     {
         return sa.sizeof;
-    }
-
-
-    override AddressFamily addressFamily() const
-    {
-        return cast(AddressFamily)sa.sa_family;
     }
 
 
@@ -810,12 +809,6 @@ public:
     enum uint32_t ADDR_ANY = INADDR_ANY;         /// Any IPv4 address number.
     enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 address number.
     enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
-
-    /// Overridden to return $(D AddressFamily.INET).
-    override AddressFamily addressFamily() const
-    {
-        return cast(AddressFamily)AddressFamily.INET;
-    }
 
     /// Returns the IPv4 port number.
     uint16_t port() const
