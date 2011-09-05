@@ -37,7 +37,8 @@
  * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See /dmd/samples/d/listener.d and /dmd/samples/d/htmlget.d
  * License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger)
+ * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
+ *      $(WEB thecybershadow.net, Vladimir Panteleev)
  * Source:  $(PHOBOSSRC std/_socket.d)
  * Macros:
  *      WIKI=Phobos/StdSocket
