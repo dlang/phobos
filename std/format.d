@@ -55,7 +55,7 @@ else
 /**********************************************************************
  * Signals a mismatch between a format and its corresponding argument.
  */
-class FormatError : Error
+class FormatException : Exception
 {
     this()
     {
@@ -67,6 +67,11 @@ class FormatError : Error
         super(msg, fn, ln);
     }
 }
+
+/**
+$(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
+ */
+/*deprecated*/ alias FormatException FormatError;
 
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
@@ -81,7 +86,7 @@ class FormatError : Error
    specification, and the characters are passed to $(D w). As many
    arguments as specified in the format string are consumed and
    formatted. If there are fewer arguments than format specifiers, a
-   $(D FormatError) is thrown. If there are more remaining arguments
+   $(D FormatException) is thrown. If there are more remaining arguments
    than needed by the format specification, they are ignored but only
    if at least one argument was formatted.
 
@@ -95,7 +100,7 @@ class FormatError : Error
    args = Variadic argument list.
 
    Throws: Mismatched arguments and formats result in a $(D
-   FormatError) being thrown.
+   FormatException) being thrown.
 
    Format_String: <a name="format-string">$(I Format strings)</a>
    consist of characters interspersed with $(I format
@@ -319,7 +324,7 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         if (currentArg == funs.length && !spec.indexStart)
         {
             // leftover spec?
-            enforce(fmt.length == 0, new FormatError(
+            enforce(fmt.length == 0, new FormatException(
                     cast(string) ("Orphan format specifier: %" ~ fmt)));
             break;
         }
@@ -713,7 +718,7 @@ struct FormatSpec(Char)
                     width = -.parse!(typeof(width))(trailing);
                     i = 0;
                     enforce(trailing[i++] == '$',
-                            new FormatError("$ expected"));
+                            new FormatException("$ expected"));
                 }
                 else
                 {
@@ -725,7 +730,7 @@ struct FormatSpec(Char)
                 auto tmp = trailing[i .. $];
                 const widthOrArgIndex = .parse!(uint)(tmp);
                 enforce(tmp.length,
-                        new FormatError(text("Incorrect format specifier %",
+                        new FormatException(text("Incorrect format specifier %",
                                         trailing[i .. $])));
                 i = tmp.ptr - trailing.ptr;
                 if (tmp.startsWith('$'))
@@ -748,7 +753,8 @@ struct FormatSpec(Char)
                         indexEnd = .parse!(typeof(indexEnd))(tmp);
                     }
                     i = tmp.ptr - trailing.ptr;
-                    enforce(trailing[i++] == '$', new FormatError("$ expected"));
+                    enforce(trailing[i++] == '$',
+                            new FormatException("$ expected"));
                 }
                 else
                 {
@@ -768,7 +774,7 @@ struct FormatSpec(Char)
                         i = 0;
                         precision = -.parse!int(trailing);
                         enforce(trailing[i++] == '$',
-                                new FormatError("$ expected"));
+                                new FormatException("$ expected"));
                     }
                     else
                     {
@@ -1069,7 +1075,8 @@ if (isIntegral!T)
         fs.spec == 'b' ? 2 :
         fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
         0;
-    if (base == 0) throw new FormatError("integral");
+    if (base == 0)
+        throw new FormatException("integral");
     // figure out sign and continue in unsigned mode
     char forcedPrefix = void;
     if (fs.flPlus) forcedPrefix = '+';
@@ -1177,7 +1184,7 @@ if (isFloatingPoint!D)
         return;
     }
     if (std.string.indexOf("fgFGaAeEs", fs.spec) < 0) {
-        throw new FormatError("floating");
+        throw new FormatException("floating");
     }
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
@@ -1202,7 +1209,8 @@ if (isFloatingPoint!D)
             // negative precision is same as no precision specified
             fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
             obj);
-    if (n < 0) throw new FormatError("floating point formatting failure");
+    if (n < 0)
+        throw new FormatException("floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
@@ -2014,12 +2022,12 @@ private int getNthInt(A...)(uint index, A args)
         }
         else
         {
-            throw new FormatError("int expected");
+            throw new FormatException("int expected");
         }
     }
     else
     {
-        throw new FormatError("int expected");
+        throw new FormatException("int expected");
     }
 }
 
@@ -3122,7 +3130,7 @@ private TypeInfo primitiveTypeInfo(Mangle m)
  * arguments as specified in the format string are consumed and
  * formatted according to the format specifications in that string and
  * passed to putc. If there are too few remaining arguments, a
- * FormatError is thrown. If there are more remaining arguments than
+ * $(D FormatException) is thrown. If there are more remaining arguments than
  * needed by the format specification, the default processing of
  * arguments resumes until they are all consumed.
  *
@@ -3132,7 +3140,7 @@ private TypeInfo primitiveTypeInfo(Mangle m)
  *        argptr = Points to variadic argument list.
  *
  * Throws:
- *        Mismatched arguments and formats result in a $(D FormatError) being thrown.
+ *        Mismatched arguments and formats result in a $(D FormatException) being thrown.
  *
  * Format_String:
  *        <a name="format-string">$(I Format strings)</a>
@@ -3471,7 +3479,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 default:
                     //printf("fc = '%c'\n", fc);
                 Lerror:
-                    throw new FormatError("floating");
+                    throw new FormatException("floating");
             }
             version (DigitalMarsC)
             {
@@ -3842,7 +3850,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                             s = toUTF8(sd);
                         Lputstr:
                             if (fc != 's')
-                                throw new FormatError("string");
+                                throw new FormatException("string");
                             if (flags & FLprecision && precision < s.length)
                                 s = s[0 .. precision];
                             putstr(s);
@@ -3879,7 +3887,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             case Mangle.Tstruct:
             {        TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
                 if (tis.xtoString is null)
-                    throw new FormatError("Can't convert " ~ tis.toString()
+                    throw new FormatException("Can't convert " ~ tis.toString()
                             ~ " to string: \"string toString()\" not defined");
                 version(X86)
                 {
@@ -4041,7 +4049,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         return;
 
     Lerror:
-        throw new FormatError("formatArg");
+        throw new FormatException("formatArg");
     }
 
     for (int j = 0; j < arguments.length; )
@@ -4126,7 +4134,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 dchar getFmtChar()
                 {   // Valid format specifier characters will never be UTF
                     if (i == fmt.length)
-                        throw new FormatError("invalid specifier");
+                        throw new FormatException("invalid specifier");
                     return fmt[i++];
                 }
 
@@ -4137,7 +4145,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     {
                         n = n * 10 + (c - '0');
                         if (n < 0)        // overflow
-                            throw new FormatError("int overflow");
+                            throw new FormatException("int overflow");
                         c = getFmtChar();
                         if (c < '0' || c > '9')
                             break;
@@ -4150,11 +4158,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     TypeInfo ti;
 
                     if (j == arguments.length)
-                        throw new FormatError("too few arguments");
+                        throw new FormatException("too few arguments");
                     ti = arguments[j++];
                     m = cast(Mangle)ti.classinfo.name[9];
                     if (m != Mangle.Tint)
-                        throw new FormatError("int argument expected");
+                        throw new FormatException("int argument expected");
                     return va_arg!(int)(argptr);
                 }
 
@@ -4256,7 +4264,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
     return;
 
   Lerror:
-    throw new FormatError();
+    throw new FormatException();
 }
 
 /* ======================== Unit Tests ====================================== */
