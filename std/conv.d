@@ -452,8 +452,7 @@ T toImpl(T, S)(S src)
 // Bugzilla 3961
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct Int
     {
         int x;
@@ -3211,8 +3210,7 @@ template isOctalLiteral(string num)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // ensure that you get the right types, even with embedded underscores
     auto w = octal!"100_000_000_000";
     static assert(!is(typeof(w) == int));
@@ -3428,8 +3426,7 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a;
     int b = 42;
     assert(*emplace!int(&a, b) == 42);
