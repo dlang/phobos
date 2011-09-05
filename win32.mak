@@ -41,7 +41,7 @@ DFLAGS=-O -release -nofloat -w -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -nofloat -d
+UDFLAGS=-O -nofloat -w -d
 
 ## C compiler
 
