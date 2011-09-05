@@ -68,6 +68,9 @@ class FormatException : Exception
     }
 }
 
+/**
+$(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
+ */
 /*deprecated*/ alias FormatException FormatError;
 
 /**********************************************************************
