@@ -68,6 +68,16 @@ protoent* getprotobyname(const char* name);
 protoent* getprotobynumber(int number);
 servent* getservbyname(const char* name, const char* proto);
 servent* getservbyport(int port, const char* proto);
+
+enum: int
+{
+    NI_NOFQDN =          0x01,
+    NI_NUMERICHOST =     0x02,
+    NI_NAMEREQD =        0x04,
+    NI_NUMERICSERV =     0x08,
+    NI_DGRAM  =          0x10,
+}
+
 int gethostname(const char* name, int namelen);
 int getaddrinfo(const(char)* nodename, const(char)* servname, const(addrinfo)* hints, addrinfo** res);
 void freeaddrinfo(addrinfo* ai);

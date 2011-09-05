@@ -780,7 +780,7 @@ abstract class Address
             enforce(getnameinfoPointer(
                         name(), nameLen(),
                         buf.ptr, cast(uint)buf.length,
-                        null, 0, 0
+                        null, 0, NI_NAMEREQD
                     ) == 0, new AddressException("Could not get host name"));
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
