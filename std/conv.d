@@ -844,7 +844,7 @@ unittest
 }
 
 // Converting arrays of void
-T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T rightBracket = "]")
+T toImpl(T, S)(ref S s)
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
 {
@@ -857,6 +857,15 @@ T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T right
     auto result = new Char[raw.length / Char.sizeof];
     memcpy(result.ptr, s.ptr, s.length);
     return cast(T) result;
+}
+
+T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
+    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
+        isSomeString!T)
+{
+    pragma(msg, "Schedule for deprecation");
+
+    return toImpl(s);
 }
 
 unittest
