@@ -722,7 +722,25 @@ T toImpl(T, S)(S s)
         isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
         isSomeString!T)
 {
-    return toStr!T(s);
+    static if (isSomeString!S && s[0].sizeof == T.init[0].sizeof)
+    {
+        // string-to-string with incompatible qualifier conversion
+        static if (is(typeof(T.init[0]) == immutable))
+        {
+            // conversion (mutable|const) -> immutable
+            return s.idup;
+        }
+        else
+        {
+            // conversion (immutable|const) -> mutable
+            return s.dup;
+        }
+    }
+    else
+    {
+        // other conversions always run decode/encode
+        return toStr!T(s);
+    }
 }
 
 unittest
