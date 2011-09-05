@@ -194,7 +194,7 @@ private string formatSocketError(int err)
         return "Socket error " ~ to!string(err);
 }
 
-/// Retreive the error message for the most recently encountered network error.
+/// Retrieve the error message for the most recently encountered network error.
 @property string lastSocketError()
 {
     return formatSocketError(_lasterr());
