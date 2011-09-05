@@ -1762,36 +1762,21 @@ unittest
    Structs are formatted using by calling toString member function
    of the struct. toString must have one of the following signatures:
    ---
-   void toString(void delegate(const(char)[]) sink, FormatSpec fmt);
-   void toString(void delegate(const(char)[]) sink, string fmt);
+   void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
+   void toString(scope void delegate(const(char)[]) sink, string fmt);
    ---
 
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    // @@@ BUG @@@
-    // Workaround for a closure scoped destruction problem.
-    static struct WriterSink
-    {
-        Writer* w;
-        void sink(const(char)[] s) { put(*w, s); }
-    }
-
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
-        WriterSink sinker;
-        sinker.w = &w;
-        string outbuff = "";
-        void sink(const(char)[] s) { outbuff ~= s; }
-        val.toString(&sink, f);
-        put(w, outbuff);
+        val.toString((const(char)[] s) { put(w, s); }, f);
     }
     else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
-        WriterSink sinker;
-        sinker.w = &w;
-        val.toString(&sinker.sink, f.getCurFmtStr());
+        val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {

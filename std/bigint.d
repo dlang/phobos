@@ -406,13 +406,13 @@ public:
      * $(TR $(TD null) $(TD Default formatting (same as "d") ))
      * )
      */
-    void toString(void delegate(const (char)[]) sink, string formatString) const
+    void toString(scope void delegate(const (char)[]) sink, string formatString) const
     {
         auto f = FormatSpec!char(formatString);
         f.writeUpToNextSpec(sink);
         toString(sink, f);
     }
-    void toString(void delegate(const(char)[]) sink, ref FormatSpec!char f) const
+    void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
         auto hex = (f.spec == 'x' || f.spec == 'X');
         if (!(f.spec == 's' || f.spec == 'd' || hex))
