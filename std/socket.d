@@ -728,6 +728,7 @@ class AddressException: SocketOSException
 abstract class Address
 {
     sockaddr* name();
+    const(sockaddr)* name() const;
     int nameLen() const;
     AddressFamily addressFamily() const;      /// Family of this address.
     override string toString() const;         /// Human readable string representing this address.
@@ -744,6 +745,11 @@ protected:
 
 public:
     override sockaddr* name()
+    {
+        return &sa;
+    }
+
+    override const(sockaddr)* name() const
     {
         return &sa;
     }
@@ -787,6 +793,11 @@ public:
     override sockaddr* name()
     {
         return cast(sockaddr*)&sin;
+    }
+
+    override const(sockaddr)* name() const
+    {
+        return cast(const(sockaddr)*)&sin;
     }
 
 
