@@ -2764,10 +2764,13 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     skipWS(s);
     if (s.front == rbracket)
     {
-        if (result.length != 0)
+        static if (result.length != 0)
             goto Lmanyerr;
-        s.popFront();
-        return result;
+        else
+        {
+            s.popFront();
+            return result;
+        }
     }
     for (size_t i = 0; ; s.popFront(), skipWS(s))
     {
