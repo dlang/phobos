@@ -738,10 +738,15 @@ class AddressException: SocketOSException
  */
 abstract class Address
 {
+    /// Returns pointer to underlying $(D sockaddr) structure.
     sockaddr* name();
-    const(sockaddr)* name() const;
+    const(sockaddr)* name() const; /// ditto
+
+    /// Returns actual size of underlying $(D sockaddr) structure.
     int nameLen() const;
-    override string toString() const;         /// Human readable string representing this address.
+
+    /// Human readable string representing this address.
+    override string toString() const;
 
     /// Family of this address.
     AddressFamily addressFamily() const
@@ -785,7 +790,7 @@ abstract class Address
 }
 
 /**
- *
+ * $(D UnknownAddress) encapsulates an arbitrary network address.
  */
 class UnknownAddress: Address
 {
@@ -819,8 +824,7 @@ public:
 
 
 /**
- * $(D InternetAddress) is a class that represents an IPv4 (internet protocol
- * version 4) address and port.
+ * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4) address.
  */
 class InternetAddress: Address
 {
