@@ -2744,10 +2744,12 @@ unittest
 
 unittest
 {
-    auto a1 = parse!(string[])(`[['h', 'e', 'l', 'l', 'o'], "world"]`);
+    auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
+    auto a1 = parse!(string[])(s1);
     assert(a1 == ["hello", "world"]);
 
-    auto a2 = parse!(string[])(`["aaa", "bbb", "ccc"]`);
+    auto s2 = `["aaa", "bbb", "ccc"]`;
+    auto a2 = parse!(string[])(s2);
     assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
@@ -2787,15 +2789,19 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
 unittest
 {
-    auto sa = parse!(int[4])("[1,2,3,4]");
-    assert(sa == [1,2,3,4]);
+    auto s1 = "[1,2,3,4]";
+    auto sa1 = parse!(int[4])(s1);
+    assert(sa1 == [1,2,3,4]);
 
-    assertThrown!ConvException(parse!(int[4])("[1,2,3]"));
-    assertThrown!ConvException(parse!(int[4])("[1,2,3,4,5]"));
-
-    auto sa2 = parse!(int[][3])("[[1],[2,3],[4]]");
+    auto s2 = "[[1],[2,3],[4]]";
+    auto sa2 = parse!(int[][3])(s2);
     assert(sa2 == [[1],[2,3],[4]]);
 
+    auto s3 = "[1,2,3]";
+    assertThrown!ConvException(parse!(int[4])(s3));
+
+    auto s4 = "[1,2,3,4,5]";
+    assertThrown!ConvException(parse!(int[4])(s4));
 }
 
 /**
@@ -2837,17 +2843,17 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
 unittest
 {
-    auto aa1 = parse!(int[int])("[1:10, 2:20, 3:30]");
+    auto s1 = "[1:10, 2:20, 3:30]";
+    auto aa1 = parse!(int[int])(s1);
     assert(aa1 == [1:10, 2:20, 3:30]);
-    //writeln(aa1);
 
-    auto aa2 = parse!(int[string])(`["aaa":10, "bbb":20, "ccc":30]`);
+    auto s2 = `["aaa":10, "bbb":20, "ccc":30]`;
+    auto aa2 = parse!(int[string])(s2);
     assert(aa2 == ["aaa":10, "bbb":20, "ccc":30]);
-    //writeln(aa2);
 
-    auto aa3 = parse!(int[][string])(`["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`);
+    auto s3 = `["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`;
+    auto aa3 = parse!(int[][string])(s3);
     assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
-    //writeln(aa3);
 }
 
 private dchar parseEscape(Source)(ref Source s)
