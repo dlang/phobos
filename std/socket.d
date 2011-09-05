@@ -225,6 +225,17 @@ class SocketParameterException: SocketException
     }
 }
 
+/// Socket exceptions representing attempts to use network capabilities not
+/// available on the current system.
+class SocketFeatureException: SocketException
+{
+    this(string msg)
+    {
+        super(msg);
+    }
+}
+
+
 /// Return $(D true) if the last socket operation failed because the socket
 /// was in non-blocking mode and the operation would have blocked.
 bool wouldHaveBlocked()
@@ -737,6 +748,40 @@ abstract class Address
     {
         return cast(AddressFamily) name().sa_family;
     }
+
+    /**
+     * Attempts to retrieve the host name as a fully qualified domain name.
+     *
+     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * if host name lookup for this address family is not available on the
+     * current system.
+     */
+    string toHostNameString() const
+    {
+        // getnameinfo() is the recommended way to perform a reverse (name)
+        // lookup on both Posix and Windows. However, it is only available
+        // on Windows XP and above, and not included with the WinSock import
+        // libraries shipped with DMD. Thus, we check for getnameinfo at
+        // runtime in the shared module constructor, and use it if it's
+        // available in the base class method. Classes for specific network
+        // families (e.g. InternetHost) override this method and use a
+        // deprecated, albeit commonly-available method when getnameinfo()
+        // is not available.
+        // http://technet.microsoft.com/en-us/library/aa450403.aspx
+        if (getnameinfoPointer)
+        {
+            auto buf = new char[NI_MAXHOST];
+            enforce(getnameinfoPointer(
+                        name(), nameLen(),
+                        buf.ptr, cast(uint)buf.length,
+                        null, 0, 0
+                    ) == 0, new AddressException("Could not get host name"));
+            return assumeUnique(buf[0 .. strlen(buf.ptr)]);
+        }
+
+        throw new SocketFeatureException("Host name lookup for this " ~
+            "address family is not available on this system.");
+    }
 }
 
 /**
@@ -879,10 +924,11 @@ public:
     }
 
     /**
-     * Returns the host name as a fully qualified domain name, if
-     * available, or the IP address in dotted-decimal notation otherwise.
+     * Attempts to retrieve the host name as a fully qualified domain name.
+     *
+     * Throws: $(D AddressException) on failure.
      */
-    string toHostNameString() const
+    override string toHostNameString() const
     {
         // getnameinfo() is the recommended way to perform a reverse (name)
         // lookup on both Posix and Windows. However, it is only available
@@ -891,20 +937,16 @@ public:
         // runtime in the shared module constructor, and fall back to the
         // deprecated getHostByAddr() if it could not be found. See also:
         // http://technet.microsoft.com/en-us/library/aa450403.aspx
-        if (getnameinfoPointer is null)
+
+        if (getnameinfoPointer)
+            return super.toHostNameString();
+        else
         {
             auto host = new InternetHost();
             enforce(host.getHostByAddr(ntohl(sin.sin_addr.s_addr)),
-                    new SocketOSException("Could not get host name."));
+                    new AddressException("Could not get host name."));
             return host.name;
         }
-
-        auto buf = new char[NI_MAXHOST];
-        auto rc = getnameinfoPointer(cast(sockaddr*)&sin, sin.sizeof,
-                                     buf.ptr, cast(uint)buf.length, null, 0, 0);
-        enforce(rc == 0, new SocketOSException(
-                    "Could not get host name"));
-        return assumeUnique(buf[0 .. strlen(buf.ptr)]);
     }
 
     /// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
