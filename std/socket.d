@@ -126,9 +126,13 @@ else
 /// Base exception thrown by $(D std.socket).
 class SocketException: Exception
 {
-    /// Deprecated. Provided for compatibility with older code using
-    /// $(D SocketException). Use $(D SocketOSException) instead.
-    deprecated @property int errorCode()
+    /**
+     * $(RED Scheduled for deprecation. Please use $(D SocketOSException)
+     * instead.)
+     *
+     * Provided for compatibility with older code using $(D SocketException).
+     */
+    @property int errorCode()
     {
         auto osException = cast(SocketOSException)this;
         if (osException)
