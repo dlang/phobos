@@ -755,14 +755,8 @@ abstract class Address
         return cast(AddressFamily) name().sa_family;
     }
 
-    /**
-     * Attempts to retrieve the host name as a fully qualified domain name.
-     *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
-     * if host name lookup for this address family is not available on the
-     * current system.
-     */
-    string toHostNameString() const
+    // Common code for toAddrString and toHostNameString
+    private final string toHostString(bool numeric) const
     {
         // getnameinfo() is the recommended way to perform a reverse (name)
         // lookup on both Posix and Windows. However, it is only available
@@ -780,13 +774,84 @@ abstract class Address
             enforce(getnameinfoPointer(
                         name(), nameLen(),
                         buf.ptr, cast(uint)buf.length,
-                        null, 0, NI_NAMEREQD
-                    ) == 0, new AddressException("Could not get host name"));
+                        null, 0,
+                        numeric ? NI_NUMERICHOST : NI_NAMEREQD
+                    ) == 0, new AddressException("Could not get " ~
+                        (numeric ? "host address" : "host name")));
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
-        throw new SocketFeatureException("Host name lookup for this " ~
-            "address family is not available on this system.");
+        throw new SocketFeatureException((numeric ? "Host address" : "Host name") ~
+            " lookup for this address family is not available on this system.");
+    }
+
+    // Common code for toPortString and toServiceNameString
+    private final string toServiceString(bool numeric) const
+    {
+        // See toHostNameString() for details about getnameinfo().
+        if (getnameinfoPointer)
+        {
+            auto buf = new char[NI_MAXSERV];
+            enforce(getnameinfoPointer(
+                        name(), nameLen(),
+                        null, 0,
+                        buf.ptr, cast(uint)buf.length,
+                        numeric ? NI_NUMERICSERV : NI_NAMEREQD
+                    ) == 0, new AddressException("Could not get " ~
+                        (numeric ? "port number" : "service name")));
+            return assumeUnique(buf[0 .. strlen(buf.ptr)]);
+        }
+
+        throw new SocketFeatureException((numeric ? "Port number" : "Service name") ~
+            " lookup for this address family is not available on this system.");
+    }
+
+    /**
+     * Attempts to retrieve the host address as a human-readable string.
+     *
+     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * if address retrieval for this address family is not available on the
+     * current system.
+     */
+    string toAddrString() const
+    {
+        return toHostString(true);
+    }
+
+    /**
+     * Attempts to retrieve the host name as a fully qualified domain name.
+     *
+     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * if host name lookup for this address family is not available on the
+     * current system.
+     */
+    string toHostNameString() const
+    {
+        return toHostString(false);
+    }
+
+    /**
+     * Attempts to retrieve the numeric port number as a string.
+     *
+     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * if port number retrieval for this address family is not available on the
+     * current system.
+     */
+    string toPortString() const
+    {
+        return toServiceString(true);
+    }
+
+    /**
+     * Attempts to retrieve the service name as a string.
+     *
+     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * if service name lookup for this address family is not available on the
+     * current system.
+     */
+    string toServiceNameString() const
+    {
+        return toServiceString(false);
     }
 }
 
@@ -917,13 +982,13 @@ public:
     }
 
     /// Human readable string representing the IPv4 address in dotted-decimal form.
-    string toAddrString() const
+    override string toAddrString() const
     {
         return to!string(inet_ntoa(sin.sin_addr)).idup;
     }
 
     /// Human readable string representing the IPv4 port.
-    string toPortString() const
+    override string toPortString() const
     {
         return std.conv.to!string(port());
     }
