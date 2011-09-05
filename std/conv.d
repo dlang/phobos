@@ -2763,26 +2763,34 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (s.front == rbracket)
     {
         if (result.length != 0)
-            parseError("Need more input");
+            goto Lmanyerr;
         s.popFront();
         return result;
     }
     for (size_t i = 0; ; s.popFront(), skipWS(s))
     {
         if (i == result.length)
-            parseError("Too many input");
+            goto Lmanyerr;
         result[i++] = parseElement!(ElementType!Target)(s);
         skipWS(s);
         if (s.front != comma)
         {
             if (i != result.length)
-                parseError("Need more input");
+                goto Lfewerr;
             break;
         }
     }
     parseCheck!s(rbracket);
 
     return result;
+
+Lmanyerr:
+    parseError(text("Too many elements in input, ", result.length, " elements expected."));
+    assert(0);
+
+Lfewerr:
+    parseError(text("Too few elements in input, ", result.length, " elements expected."));
+    assert(0);
 }
 
 unittest
