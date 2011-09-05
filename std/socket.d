@@ -862,7 +862,7 @@ public:
     this(uint16_t port)
     {
         sin.sin_family = AddressFamily.INET;
-        sin.sin_addr.s_addr = 0;         //any, "0.0.0.0"
+        sin.sin_addr.s_addr = INADDR_ANY;
         sin.sin_port = htons(port);
     }
 
