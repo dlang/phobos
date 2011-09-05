@@ -829,7 +829,8 @@ struct FormatSpec(Char)
                 }
                 else
                 {
-                    enforce(isLower(trailing[1]) || trailing[1] == '*',
+                    enforce(isLower(trailing[1]) || trailing[1] == '*' ||
+                            trailing[1] == '(',
                             text("'%", trailing[1],
                                     "' not supported with formatted read"));
                     trailing = trailing[1 .. $];
@@ -888,6 +889,32 @@ struct FormatSpec(Char)
         assert(f.spec == 'f');
         auto fmt = f.getCurFmtStr();
         assert(fmt == "%.16f");
+    }
+
+    private const(Char)[] headUpToNextSpec()
+    {
+        auto w = appender!(typeof(return))();
+        auto tr = trailing;
+
+        while (tr.length)
+        {
+            if (*tr.ptr == '%')
+            {
+                if (tr.length > 1 && tr.ptr[1] == '%')
+                {
+                    tr = tr[2 .. $];
+                    w.put('%');
+                }
+                else
+                    break;
+            }
+            else
+            {
+                w.put(tr.front);
+                tr.popFront();
+            }
+        }
+        return w.data;
     }
 
     string toString()
@@ -2582,64 +2609,6 @@ private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
     }
 }
 
-/**
-   Reads an array (except for string types) and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isArray!T && !isSomeString!T)
-{
-    auto app = appender!T();
-    for (;;)
-    {
-        auto e = parse!(ElementType!(T))(input);
-        app.put(e);
-        if (!std.string.startsWith(input, spec.nested)) break; // done
-        input = input[spec.nested.length .. $];
-        if (input.empty) break; // the trailing is terminator, not
-                                // separator
-    }
-    return app.data;
-}
-
-/**
-   Reads a string and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isSomeString!T)
-{
-    auto app = appender!T();
-    if (spec.trailing.empty)
-    {
-        for (; !input.empty; input.popFront())
-        {
-            app.put(input.front);
-        }
-    }
-    else
-    {
-        for (; !input.empty && input.front != spec.trailing.front;
-             input.popFront())
-        {
-            app.put(input.front);
-        }
-    }
-    auto result = app.data;
-    return result;
-}
-
-unittest
-{
-    string s1, s2;
-    char[] line = "hello, world".dup;
-    formattedRead(line, "%s", &s1);
-    assert(s1 == "hello, world", s1);
-
-    line = "hello, world;yah".dup;
-    formattedRead(line, "%s;%s", &s1, &s2);
-    assert(s1 == "hello, world", s1);
-    assert(s2 == "yah", s2);
-}
-
 private template acceptedSpecs(T)
 {
     static if (isIntegral!T) enum acceptedSpecs = "sdu";// + "coxX" (todo)
@@ -2651,7 +2620,7 @@ private template acceptedSpecs(T)
    Reads an integral value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isIntegral!T && isInputRange!Range)
+    if (isInputRange!Range && isIntegral!T)
 {
     enforce(std.algorithm.find("cdosuxX", spec.spec).length,
             text("Wrong integral type specifier: `", spec.spec, "'"));
@@ -2663,27 +2632,10 @@ if (isIntegral!T && isInputRange!Range)
 }
 
 /**
- * Reads one character.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isSomeChar!T && isInputRange!Range)
-{
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong character type specifier: `", spec.spec, "'"));
-    if (spec.spec == 's')
-    {
-        auto result = to!T(input.front);
-        input.popFront();
-        return result;
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
-}
-
-/**
    Reads a floating-point value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
     if (spec.spec == 'r')
     {
@@ -2754,6 +2706,338 @@ unittest
     formattedRead(line, "%s %*u %s", &t);
     assert(t[0] == 1 && t[1] == 2.125);
 }
+
+/**
+ * Reads a boolean value and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && is(Unqual!T == bool))
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong integral type specifier: `", spec.spec, "'"));
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+    }
+    else if (spec.spec == 'd')
+    {
+        return parse!long(input) != 0;
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    bool f1;
+
+    line = "true";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "TrUE";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "false";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+    line = "fALsE";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+
+    line = "1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "-1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+
+    line = "-0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+}
+
+/**
+ * Reads one character and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isSomeChar!T)
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong character type specifier: `", spec.spec, "'"));
+    if (std.algorithm.find("sc", spec.spec).length)
+    {
+        auto result = to!T(input.front);
+        input.popFront();
+        return result;
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    char c1, c2;
+
+    line = "abc";
+    formattedRead(line, "%s%c", &c1, &c2);
+    assert(c1 == 'a' && c2 == 'b');
+    assert(line == "c");
+}
+
+/**
+   Reads an array (except for string types) and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isArray!T && !isSomeString!T)
+{
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+    }
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "%s", &s1);
+    assert(s1 == [1,2,3]);
+}
+
+unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "[%(%s, %)]", &s1);
+    assert(s1 == [1,2,3]);
+
+    line = `["hello", "world"]`;
+    string[] s2;
+    formattedRead(line, "[%(%s, %)]", &s2);
+    assert(s2 == ["hello", "world"]);
+
+    line = "123 456";
+    int[] s3;
+    formattedRead(line, "%(%s %)", &s3);
+    assert(s3 == [123, 456]);
+
+    line = "h,e,l,l,o;w,o,r,l,d;";
+    string[] s4;
+    formattedRead(line, "%(%(%c,%);%)", &s4);
+    assert(s4 == ["hello", "world"]);
+}
+
+unittest
+{
+    string line;
+
+    int[4] sa1;
+    line = `[1,2,3,4]`;
+    formattedRead(line, "%s", &sa1);
+    assert(sa1 == [1,2,3,4]);
+
+    int[4] sa2;
+    line = `[1,2,3]`;
+    assertThrown(formattedRead(line, "%s", &sa2));
+
+    int[4] sa3;
+    line = `[1,2,3,4,5]`;
+    assertThrown(formattedRead(line, "%s", &sa3));
+}
+
+/**
+   Reads a string and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isSomeString!T)
+{
+    if (spec.spec == 's')
+    {
+        auto app = appender!T();
+        if (spec.trailing.empty)
+        {
+            for (; !input.empty; input.popFront())
+            {
+                app.put(input.front);
+            }
+        }
+        else
+        {
+            for (; !input.empty && input.front != spec.trailing.front;
+                 input.popFront())
+            {
+                app.put(input.front);
+            }
+        }
+        auto result = app.data;
+        return result;
+    }
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    string s1, s2;
+
+    line = "hello, world";
+    formattedRead(line, "%s", &s1);
+    assert(s1 == "hello, world", s1);
+
+    line = "hello, world;yah";
+    formattedRead(line, "%s;%s", &s1, &s2);
+    assert(s1 == "hello, world", s1);
+    assert(s2 == "yah", s2);
+
+    line = `['h','e','l','l','o']`;
+    string s3;
+    formattedRead(line, "[%(%s, %)]", &s3);
+    assert(s3 == "hello");
+
+    line = `"hello"`;
+    string s4;
+    formattedRead(line, "\"%(%c%)\"", &s4);
+    assert(s4 == "hello");
+}
+
+/**
+ * Reads an associative array and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isAssociativeArray!T)
+{
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+    }
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    string[int] aa1;
+    line = `[1:"hello", 2:"world"]`;
+    formattedRead(line, "%s", &aa1);
+    assert(aa1 == [1:"hello", 2:"world"]);
+
+    int[string] aa2;
+    line = `{"hello"=1; "world"=2}`;
+    formattedRead(line, "{%(%s=%s; %)}", &aa2);
+    assert(aa2 == ["hello":1, "world":2]);
+
+    int[string] aa3;
+    line = `{hello=1; world=2}`;
+    formattedRead(line, "{%(%(%c%)=%s; %)}", &aa3);
+    assert(aa3 == ["hello":1, "world":2]);
+}
+
+private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+{
+    T result;
+    static if (isStaticArray!T)
+    {
+        size_t i;
+    }
+
+    auto tr = spec.headUpToNextSpec();
+
+    for (;;)
+    {
+        auto fmt = FormatSpec!Char(spec.nested);
+        fmt.readUpToNextSpec(input);
+
+        bool isRangeValue = (fmt.spec == '(');
+
+        static if (isStaticArray!T)
+        {
+            result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
+        }
+        else static if (isDynamicArray!T)
+        {
+            result ~= unformatElement!(ElementType!T)(input, fmt);
+        }
+        else static if (isAssociativeArray!T)
+        {
+            auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
+            enforce(!input.empty, "Need more input");
+            fmt.readUpToNextSpec(input);        // eat key separator
+
+            result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
+        }
+
+        if (isRangeValue)
+        {
+            fmt.readUpToNextSpec(input);        // always get trailing
+            if (input.empty)
+                break;
+            if (tr.length && std.algorithm.startsWith(input, tr))
+                break;
+        }
+        else
+        {
+            if (input.empty)
+                break;
+            if (tr.length && std.algorithm.startsWith(input, tr))
+                break;
+            fmt.readUpToNextSpec(input);
+        }
+    }
+    return result;
+}
+
+// Undocumented
+T unformatElement(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range)
+{
+    static if (isSomeString!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+    else static if (isSomeChar!T)
+    {
+        if (spec.spec == 's')
+        {
+            return parseElement!T(input);
+        }
+    }
+
+    return unformatValue!T(input, spec);
+}
+
 
 // Legacy implementation
 
