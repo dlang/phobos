@@ -29,6 +29,7 @@ $(VERSION 055, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 5645): std.range.drop())
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
         $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
+        $(LI $(BUGZILLA 6377): std.conv.to should check range when changing signedness)
         $(LI $(BUGZILLA 6587): std.parallelism's Task cannot handle immutable values)
         $(LI $(BUGZILLA 6606): RefCounted doesn't work with unions due to use of format)
         $(LI $(BUGZILLA 6608): Tuple field is not escaped)
