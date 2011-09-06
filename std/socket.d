@@ -894,6 +894,89 @@ unittest
 
 
 /**
+ * Provides _protocol-independent translation from host names to addresses.
+ * Uses $(D getAddressInfo) if the current system supports it, and
+ * $(D InternetHost) otherwise.
+ *
+ * Returns: Array with one $(D Address) instance per address.
+ *
+ * Throws: $(D SocketOSException) on failure.
+ */
+Address[] getAddress(string hostname, string service = null)
+{
+    Address[] results;
+    if (getaddrinfoPointer && freeaddrinfoPointer)
+    {
+        // use getAddressInfo
+        auto infos = getAddressInfo(hostname, service);
+        foreach (ref info; infos)
+            results ~= info.address;
+    }
+    else
+    {
+        if (service == "")
+            return getAddress(hostname, InternetAddress.PORT_ANY);
+        else
+        if (isNumeric(service))
+            return getAddress(hostname, to!uint16_t(service));
+        else
+        {
+            auto s = new Service();
+            s.getServiceByName(service);
+            return getAddress(hostname, s.port);
+        }
+    }
+    return results;
+}
+
+/// ditto
+Address[] getAddress(string hostname, uint16_t port)
+{
+    Address[] results;
+    if (getaddrinfoPointer && freeaddrinfoPointer)
+        return getAddress(hostname, to!string(port));
+    else
+    {
+        // use getHostByName
+        auto ih = new InternetHost;
+        if (!ih.getHostByName(hostname))
+            throw new AddressException(
+                        "Unable to resolve host '" ~ hostname ~ "'");
+
+        foreach (uint32_t addr; ih.addrList)
+            results ~= new InternetAddress(addr, port);
+    }
+    return results;
+}
+
+
+unittest
+{
+    try
+    {
+        auto addresses = getAddress("63.105.9.61");
+        assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
+
+        if (getaddrinfoPointer)
+        {
+            // test via gethostbyname
+            auto getaddrinfoPointerBackup = getaddrinfoPointer;
+            getaddrinfoPointer = null;
+            scope(exit) getaddrinfoPointer = getaddrinfoPointerBackup;
+
+            addresses = getAddress("63.105.9.61");
+            assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
+        }
+    }
+    catch (Throwable e)
+    {
+        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
+        printf(" (%.*s)\n", e.toString());
+    }
+}
+
+
+/**
  * Base exception thrown from an $(D Address).
  */
 class AddressException: SocketOSException
