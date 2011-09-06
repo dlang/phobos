@@ -1767,16 +1767,19 @@ unittest
 }
 
 /**
-   Structs are formatted using by calling toString member function
-   of the struct. toString must have one of the following signatures:
-   ---
-   void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
-   void toString(scope void delegate(const(char)[]) sink, string fmt);
-   ---
+   Structs and unions are formatted using by calling $(D toString) member
+   function of the object. $(D toString) should have one of the following
+   signatures:
+
+---
+const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
+const void toString(scope void delegate(const(char)[]) sink, string fmt);
+const string toString();
+---
 
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == struct) && !isInputRange!T)
+if ((is(T == struct) || is(T == union)) && !isInputRange!T)
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
@@ -1790,30 +1793,24 @@ if (is(T == struct) && !isInputRange!T)
     {
         put(w, val.toString());
     }
-    else
+    else static if (is(T == struct))
     {
         enum left = T.stringof~"(";
         enum separator = ", ";
         enum right = ")";
 
-        Tuple!(FieldTypeTuple!T) * t = void;
-        static if ((*t).sizeof == T.sizeof)
+        put(w, left);
+        foreach (i, e; val.tupleof)
         {
-            // ok, attempt to forge the tuple
-            t = cast(typeof(t)) &val;
-            put(w, left);
-            foreach (i, e; t.field)
-            {
-                if (i > 0) put(w, separator);
-                formatElement(w, e, f);
-            }
-            put(w, right);
+            static if (i > 0)
+                put(w, separator);
+            formatElement(w, e, f);
         }
-        else
-        {
-            // struct with weird alignment
-            put(w, T.stringof);
-        }
+        put(w, right);
+    }
+    else
+    {
+        put(w, T.stringof);
     }
 }
 
@@ -1846,26 +1843,10 @@ unittest
     assert(w.data() == `Pair("hello", Int(5))`);
 }
 
-/**
-   Union object cannnot format except it has toString function.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == union) && !isInputRange!T)
-{
-    static if (is(typeof(val.toString())))
-    {
-        formatValue(w, val.toString(), f);
-    }
-    else
-    {
-        static assert(0, "unable to format union object because it does not have toString");
-    }
-}
-
 unittest
 {
     FormatSpec!char f;
-    auto a = appender!string();
+    auto a = appender!(char[])();
 
     union U1
     {
@@ -1873,7 +1854,10 @@ unittest
         string s;
     }
     U1 u1;
-    static assert(!__traits(compiles, formatValue(a, u1, f)));
+    formatValue(a, u1, f);
+    assert(a.data == "U1");
+
+    a.clear();
 
     union U2
     {
