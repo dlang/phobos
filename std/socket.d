@@ -1002,9 +1002,6 @@ abstract class Address
     /// Returns actual size of underlying $(D sockaddr) structure.
     int nameLen() const;
 
-    /// Human readable string representing this address.
-    override string toString() const;
-
     /// Family of this address.
     AddressFamily addressFamily() const
     {
@@ -1109,6 +1106,22 @@ abstract class Address
     {
         return toServiceString(false);
     }
+
+    /// Human readable string representing this address.
+    override string toString() const
+    {
+        try
+        {
+            string host = toAddrString();
+            string port = toPortString();
+            if (host.indexOf(':') >= 0)
+                return "[" ~ host ~ "]:" ~ port;
+            else
+                return host ~ ":" ~ port;
+        }
+        catch (SocketException)
+            return "Unknown";
+    }
 }
 
 /**
@@ -1137,11 +1150,6 @@ public:
         return sa.sizeof;
     }
 
-
-    override string toString() const
-    {
-        return "Unknown";
-    }
 }
 
 
@@ -1184,12 +1192,6 @@ public:
     override int nameLen() const
     {
         return len;
-    }
-
-
-    override string toString() const
-    {
-        return "Unknown";
     }
 }
 
@@ -1324,12 +1326,6 @@ public:
                     new AddressException("Could not get host name."));
             return host.name;
         }
-    }
-
-    /// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
-    override string toString() const
-    {
-        return toAddrString() ~ ":" ~ toPortString();
     }
 
     /**
@@ -1484,12 +1480,6 @@ public:
         sin6.sin6_family = AddressFamily.INET6;
         sin6.sin6_addr = ADDR_ANY;
         sin6.sin6_port = htons(port);
-    }
-
-    /// Human readable string representing the IPv6 address and port.
-    override string toString() const
-    {
-        return "[" ~ toAddrString() ~ "]:" ~ toPortString();
     }
 
     /**
