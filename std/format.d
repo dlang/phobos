@@ -1484,58 +1484,66 @@ private void formatChar(Writer)(Writer w, dchar c)
         formattedWrite(w, "\\U%08X", cast(uint)c);
 }
 
+// undocumented
 // string element is formatted like UTF-8 string literal.
-private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (isSomeString!T)
 {
-    static if (isSomeString!T)
+    if (f.spec == 's')
     {
-        if (f.spec == 's')
+        try
         {
-            try
+            // ignore other specifications and quote
+            auto app = appender!(typeof(T[0])[])();
+
+            put(app, '\"');
+            for (size_t i = 0; i < val.length; )
             {
-                // ignore other specifications and quote
-                auto app = appender!(typeof(T[0])[])();
+                auto c = std.utf.decode(val, i);
+                // \uFFFE and \uFFFF are considered valid by isValidDchar,
+                // so need checking for interchange.
+                if (c == 0xFFFE || c == 0xFFFF)
+                    goto InvalidSeq;
 
-                put(app, '\"');
-                for (size_t i = 0; i < val.length; )
-                {
-                    auto c = std.utf.decode(val, i);
-                    // \uFFFE and \uFFFF are considered valid by isValidDchar,
-                    // so need checking for interchange.
-                    if (c == 0xFFFE || c == 0xFFFF)
-                        goto InvalidSeq;
-
-                    formatChar(app, c);
-                }
-                put(app, '\"');
-
-                put(w, app.data());
+                formatChar(app, c);
             }
-            catch (UtfException e)
-            {
-InvalidSeq:
-                // If val contains invalid UTF sequence, formatted like HexString literalx
-              static if (is(typeof(val[0]) : const(char)))
-                enum postfix = 'c';
-              else static if (is(typeof(val[0]) : const(wchar)))
-                enum postfix = 'w';
-              else static if (is(typeof(val[0]) : const(dchar)))
-                enum postfix = 'd';
+            put(app, '\"');
 
-                formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
-            }
+            put(w, app.data());
         }
-        else
-            formatValue(w, val, f);
-    }
-    else static if (isSomeChar!T)
-    {
-        put(w, '\'');
-        formatChar(w, val);
-        put(w, '\'');
+        catch (UtfException e)
+        {
+InvalidSeq:
+            // If val contains invalid UTF sequence, formatted like HexString literalx
+          static if (is(typeof(val[0]) : const(char)))
+            enum postfix = 'c';
+          else static if (is(typeof(val[0]) : const(wchar)))
+            enum postfix = 'w';
+          else static if (is(typeof(val[0]) : const(dchar)))
+            enum postfix = 'd';
+
+            formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
+        }
     }
     else
         formatValue(w, val, f);
+}
+
+// undocumented
+// character element is formatted like UTF-8 character literal.
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (isSomeChar!T)
+{
+    put(w, '\'');
+    formatChar(w, val);
+    put(w, '\'');
+}
+
+// undocumented
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (!isSomeString!T && !isSomeChar!T)
+{
+    formatValue(w, val, f);
 }
 
 unittest
@@ -1767,16 +1775,19 @@ unittest
 }
 
 /**
-   Structs are formatted using by calling toString member function
-   of the struct. toString must have one of the following signatures:
-   ---
-   void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
-   void toString(scope void delegate(const(char)[]) sink, string fmt);
-   ---
+   Structs and unions are formatted using by calling $(D toString) member
+   function of the object. $(D toString) should have one of the following
+   signatures:
+
+---
+const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
+const void toString(scope void delegate(const(char)[]) sink, string fmt);
+const string toString();
+---
 
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == struct) && !isInputRange!T)
+if ((is(T == struct) || is(T == union)) && !isInputRange!T)
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
     {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
@@ -1790,30 +1801,24 @@ if (is(T == struct) && !isInputRange!T)
     {
         put(w, val.toString());
     }
-    else
+    else static if (is(T == struct))
     {
         enum left = T.stringof~"(";
         enum separator = ", ";
         enum right = ")";
 
-        Tuple!(FieldTypeTuple!T) * t = void;
-        static if ((*t).sizeof == T.sizeof)
+        put(w, left);
+        foreach (i, e; val.tupleof)
         {
-            // ok, attempt to forge the tuple
-            t = cast(typeof(t)) &val;
-            put(w, left);
-            foreach (i, e; t.field)
-            {
-                if (i > 0) put(w, separator);
-                formatElement(w, e, f);
-            }
-            put(w, right);
+            static if (i > 0)
+                put(w, separator);
+            formatElement(w, e, f);
         }
-        else
-        {
-            // struct with weird alignment
-            put(w, T.stringof);
-        }
+        put(w, right);
+    }
+    else
+    {
+        put(w, T.stringof);
     }
 }
 
@@ -1846,26 +1851,10 @@ unittest
     assert(w.data() == `Pair("hello", Int(5))`);
 }
 
-/**
-   Union object cannnot format except it has toString function.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == union) && !isInputRange!T)
-{
-    static if (is(typeof(val.toString())))
-    {
-        formatValue(w, val.toString(), f);
-    }
-    else
-    {
-        static assert(0, "unable to format union object because it does not have toString");
-    }
-}
-
 unittest
 {
     FormatSpec!char f;
-    auto a = appender!string();
+    auto a = appender!(char[])();
 
     union U1
     {
@@ -1873,7 +1862,10 @@ unittest
         string s;
     }
     U1 u1;
-    static assert(!__traits(compiles, formatValue(a, u1, f)));
+    formatValue(a, u1, f);
+    assert(a.data == "U1");
+
+    a.clear();
 
     union U2
     {
