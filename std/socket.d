@@ -1293,6 +1293,158 @@ unittest
 }
 
 
+/**
+ * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6) address.
+ */
+class Internet6Address: Address
+{
+protected:
+    sockaddr_in6 sin6;
+
+
+    this()
+    {
+    }
+
+
+public:
+    override sockaddr* name()
+    {
+        return cast(sockaddr*)&sin6;
+    }
+
+    override const(sockaddr)* name() const
+    {
+        return cast(const(sockaddr)*)&sin6;
+    }
+
+
+    override int nameLen() const
+    {
+        return sin6.sizeof;
+    }
+
+
+    static if (is(typeof(IN6ADDR_ANY)))
+        alias IN6ADDR_ANY ADDR_ANY;        /// Any IPv6 address number.
+    else
+    static if (is(typeof(in6addr_any)))
+        alias in6addr_any ADDR_ANY;        /// Any IPv6 address number.
+
+    static if (is(typeof(IN6ADDR_ANY)))
+        alias IN6ADDR_ANY ADDR_NONE;       /// An invalid IPv6 address number.
+    else
+    static if (is(typeof(in6addr_any)))
+        alias in6addr_any ADDR_NONE;       /// An invalid IPv6 address number.
+
+    enum uint16_t PORT_ANY = 0;            /// Any IPv6 port number.
+
+    /// Returns the IPv6 port number.
+    uint16_t port() const
+    {
+        return ntohs(sin6.sin6_port);
+    }
+
+    /// Returns the IPv6 address.
+    in6_addr addr() const
+    {
+        return sin6.sin6_addr;
+    }
+
+    /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   node = an IPv6 address string in the form described in RFC 2373,
+     *          or a host name which will be resolved using $(D getAddressInfo).
+     *   port = (optional) service name or port number.
+     */
+    this(string node, string service = null)
+    {
+        auto results = getAddressInfo(node, service, AddressFamily.INET6);
+        assert(results.length && results[0].family == AddressFamily.INET6);
+        sin6 = *cast(sockaddr_in6*)results[0].address.name();
+    }
+
+    /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   addr = an IPv6 address string in the form described in RFC 2373,
+     *          or a host name which will be resolved using $(D getAddressInfo).
+     *   port = port number, may be $(D PORT_ANY).
+     */
+    this(string node, uint16_t port)
+    {
+        if (port == PORT_ANY)
+            this(node);
+        else
+            this(node, to!string(port));
+    }
+
+    /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   addr = (optional) an IPv6 address in host byte order, or $(D ADDR_ANY).
+     *   port = port number, may be $(D PORT_ANY).
+     */
+    this(in6_addr addr, uint16_t port)
+    {
+        sin6.sin6_family = AddressFamily.INET6;
+        sin6.sin6_addr = addr;
+        sin6.sin6_port = htons(port);
+    }
+
+    /// ditto
+    this(uint16_t port)
+    {
+        sin6.sin6_family = AddressFamily.INET6;
+        sin6.sin6_addr = ADDR_ANY;
+        sin6.sin6_port = htons(port);
+    }
+
+    /// Human readable string representing the IPv6 address and port.
+    override string toString() const
+    {
+        return "[" ~ toAddrString() ~ "]:" ~ toPortString();
+    }
+
+    /**
+     * Parse an IPv6 address string as described in RFC 2373, and return the
+     * address.
+     * Returns: If the string is not a legitimate IPv6 address,
+     * $(D ADDR_NONE) is returned.
+     */
+    static in6_addr parse(string addr)
+    {
+        // Although we could use inet_pton here, it's only available on Windows
+        // versions starting with Vista, so use getAddressInfo with NUMERICHOST
+        // instead.
+        try
+        {
+            auto results = getAddressInfo(addr, AddressInfoFlags.NUMERICHOST);
+            if (results.length && results[0].family == AddressFamily.INET6)
+                return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr;
+        }
+        catch (SocketException) {}
+        return ADDR_NONE;
+    }
+}
+
+
+unittest
+{
+    try
+    {
+        const Internet6Address ia = new Internet6Address("::1", 80);
+        assert(ia.toString() == "[::1]:80");
+    }
+    catch (Throwable e)
+    {
+        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
+        printf(" (%.*s)\n", e.toString());
+    }
+}
+
+
 /** */
 class SocketAcceptException: SocketOSException
 {
