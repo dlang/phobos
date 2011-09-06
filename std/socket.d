@@ -1158,11 +1158,12 @@ public:
     }
 
     /**
+     * Construct a new $(D InternetAddress).
      * Params:
      *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
-     *          or a host name that will be resolved using an $(D InternetHost)
+     *          or a host name which will be resolved using an $(D InternetHost)
      *          object.
-     *   port = may be $(D PORT_ANY) as stated below.
+     *   port = port number, may be $(D PORT_ANY).
      */
     this(string addr, uint16_t port)
     {
@@ -1182,9 +1183,10 @@ public:
     }
 
     /**
-     * Construct a new $(D Address). $(D addr) may be $(D ADDR_ANY) (default)
-     * and $(D port) may be $(D PORT_ANY), and the actual numbers may not be
-     * known until a connection is made.
+     * Construct a new $(D InternetAddress).
+     * Params:
+     *   addr = (optional) an IPv4 address in host byte order, may be $(D ADDR_ANY).
+     *   port = port number, may be $(D PORT_ANY).
      */
     this(uint32_t addr, uint16_t port)
     {
@@ -1197,7 +1199,7 @@ public:
     this(uint16_t port)
     {
         sin.sin_family = AddressFamily.INET;
-        sin.sin_addr.s_addr = INADDR_ANY;
+        sin.sin_addr.s_addr = ADDR_ANY;
         sin.sin_port = htons(port);
     }
 
