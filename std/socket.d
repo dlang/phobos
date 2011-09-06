@@ -346,7 +346,8 @@ enum ProtocolType: int
  */
 class Protocol
 {
-    ProtocolType type;          /// These members are populated when one of the following functions are called without failure:
+    /// These members are populated when one of the following functions are called successfully:
+    ProtocolType type;
     string name;                /// ditto
     string[] aliases;           /// ditto
 
@@ -431,7 +432,7 @@ unittest
  */
 class Service
 {
-    /** These members are populated when one of the following functions are called without failure: */
+    /// These members are populated when one of the following functions are called successfully:
     string name;
     string[] aliases;           /// ditto
     uint16_t port;              /// ditto
@@ -545,7 +546,7 @@ class HostException: SocketOSException
  */
 class InternetHost
 {
-    /** These members are populated when one of the following functions are called without failure: */
+    /// These members are populated when one of the following functions are called successfully:
     string name;
     string[] aliases;           /// ditto
     uint32_t[] addrList;        /// ditto
@@ -741,12 +742,12 @@ struct AddressInfo
     SocketType type;        /// Socket _type
     ProtocolType protocol;  /// Protocol
     Address address;        /// Socket _address
-    string canonicalName;   /// Canonical name, when $(D AddressInfoHints.Flags.CANONNAME) is used.
+    string canonicalName;   /// Canonical name, when $(D AddressInfoFlags.CANONNAME) is used.
 }
 
 // A subset of flags supported on all platforms with getaddrinfo.
 /// Specifies option flags for $(D getAddressInfo).
-enum AddressInfoHintFlags: int
+enum AddressInfoFlags: int
 {
     /// The resulting addresses will be used in a call to $(D Socket.bind).
     PASSIVE = AI_PASSIVE,
@@ -759,15 +760,6 @@ enum AddressInfoHintFlags: int
     NUMERICHOST = AI_NUMERICHOST,
 }
 
-
-/// Specifies options for $(D getAddressInfo).
-struct AddressInfoHints
-{
-    AddressInfoHintFlags flags;                  /// Option flags
-    AddressFamily family = AddressFamily.UNSPEC; /// Filter by address _family
-    SocketType type;                             /// Filter by socket _type
-    ProtocolType protocol;                       /// Filter by _protocol
-}
 
 /// On POSIX, getaddrinfo uses its own error codes, and thus has its own
 /// formatting function.
@@ -785,24 +777,35 @@ private string formatGaiError(int err)
 }
 
 /**
- * Provides protocol-independent translation from host names to addresses.
+ * Provides _protocol-independent translation from host names to addresses.
  *
- * Returns: array with one $(D AddressInfo) per address.
+ * Returns: Array with one $(D AddressInfo) per address.
  *
  * Throws: $(D SocketOSException) on failure, or $(D SocketFeatureException)
  * if this functionality is not available on the current system.
+ *
+ * Params:
+ *  node     = string containing host name or numeric address
+ *  service  = (optional) string containing _service name or port number
+ *  flags    = (optional) retrieval options
+ *  family   = (optional) address _family to filter by
+ *  type     = (optional) socket _type to filter by
+ *  protocol = (optional) _protocol to filter by
  */
 AddressInfo[] getAddressInfo(string node, string service = null,
-    AddressInfoHints hints = AddressInfoHints.init)
+    AddressInfoFlags flags = cast(AddressInfoFlags) 0,
+    AddressFamily family   = AddressFamily.UNSPEC,
+    SocketType type        = cast(SocketType) 0,
+    ProtocolType protocol  = cast(ProtocolType) 0)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         addrinfo ai_hints =
         {
-            ai_flags    : hints.flags,
-            ai_family   : hints.family,
-            ai_socktype : hints.type,
-            ai_protocol : hints.protocol,
+            ai_flags    : flags,
+            ai_family   : family,
+            ai_socktype : type,
+            ai_protocol : protocol,
         };
 
         addrinfo* ai_res;
@@ -844,7 +847,7 @@ unittest
 
             // Canonical name
             results = getAddressInfo("www.digitalmars.com", null,
-                AddressInfoHints(AddressInfoHintFlags.CANONNAME));
+                AddressInfoFlags.CANONNAME);
             assert(results[0].canonicalName == "digitalmars.com");
 
             // IPv6 resolution
@@ -857,12 +860,12 @@ unittest
 
             // Parsing IPv4
             results = getAddressInfo("127.0.0.1", null,
-                AddressInfoHints(AddressInfoHintFlags.NUMERICHOST));
+                AddressInfoFlags.NUMERICHOST);
             assert(results.length && results[0].family == AddressFamily.INET);
 
             // Parsing IPv6
             results = getAddressInfo("::1", null,
-                AddressInfoHints(AddressInfoHintFlags.NUMERICHOST));
+                AddressInfoFlags.NUMERICHOST);
             assert(results.length && results[0].family == AddressFamily.INET6);
         }
     }
@@ -1008,7 +1011,7 @@ abstract class Address
 }
 
 /**
- * $(D UnknownAddress) encapsulates an arbitrary network address.
+ * $(D UnknownAddress) encapsulates an unknown network address.
  */
 class UnknownAddress: Address
 {
@@ -1052,12 +1055,14 @@ protected:
     int len;
 
 public:
+    /// Constructs an $(D Address) with a reference to the specified $(D sockaddr).
     this(sockaddr* sa, int len)
     {
         this.sa  = sa;
         this.len = len;
     }
 
+    /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
     this(const(sockaddr)* sa, int len)
     {
         this.sa = cast(sockaddr*) (cast(ubyte*)sa)[0..len].dup.ptr;
@@ -1124,7 +1129,7 @@ public:
     enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 address number.
     enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
 
-    /// Returns the IPv4 port number.
+    /// Returns the IPv4 _port number.
     uint16_t port() const
     {
         return ntohs(sin.sin_port);
