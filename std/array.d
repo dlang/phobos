@@ -765,7 +765,7 @@ private auto makeRangeTuple(E, U...)(E[] place, U stuff)
 {
     enum toPack = staticFrontConvertible!(E, U);
     foreach(i, v; stuff[0..toPack])
-        static if(is(E == class))
+        static if(!is(E == struct))
             place[i] = v;
         else
             emplace!E(&place[i], v);
