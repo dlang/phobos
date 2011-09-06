@@ -27,7 +27,7 @@
  * For Win32 systems, link with <tt>ws2_32.lib</tt>.
  *
  * Example:
- *      See <tt>/dmd/samples/d/htmlget.d</tt>
+ *      See $(SAMPLESRC htmlget.d)
  * Authors: Christopher E. Miller
  * References:
  *      $(LINK2 std_stream.html, std.stream)
