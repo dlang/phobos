@@ -528,7 +528,7 @@ unittest
 
 
 /**
- * Base exception thrown from an $(D InternetHost).
+ * Class for exceptions thrown from an $(D InternetHost).
  */
 class HostException: SocketOSException
 {
@@ -979,7 +979,7 @@ unittest
 
 
 /**
- * Base exception thrown from an $(D Address).
+ * Class for exceptions thrown from an $(D Address).
  */
 class AddressException: SocketOSException
 {
@@ -1520,7 +1520,9 @@ unittest
 }
 
 
-/** */
+/**
+ * Class for exceptions thrown by $(D Socket.accept).
+ */
 class SocketAcceptException: SocketOSException
 {
     this(string msg, int err = _lasterr())
