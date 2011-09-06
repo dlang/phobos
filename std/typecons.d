@@ -496,6 +496,7 @@ assert(s[0] == "abc" && s[1] == 4.5);
         enum header = typeof(this).stringof ~ "(",
              footer = ")",
              separator = ", ";
+
         Appender!string app;
         app.put(header);
         foreach (i, Unused; Types)
@@ -508,7 +509,10 @@ assert(s[0] == "abc" && s[1] == 4.5);
             static if (is(Unused == class) && is(Unused == shared))
                 formattedWrite(app, "%s", field[i].stringof);
             else
-                formattedWrite(app, "%s", field[i]);
+            {
+                FormatSpec!char f;  // "%s"
+                formatElement(app, field[i], f);
+            }
         }
         app.put(footer);
         return app.data;
