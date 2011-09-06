@@ -689,6 +689,8 @@ class InternetHost
     {
         return getHost!q{
             auto x = inet_addr(std.string.toStringz(param));
+            enforce(x != INADDR_NONE,
+                new SocketParameterException("Invalid IPv4 address"));
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
         }(addr);
     }
