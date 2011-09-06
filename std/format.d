@@ -1484,58 +1484,66 @@ private void formatChar(Writer)(Writer w, dchar c)
         formattedWrite(w, "\\U%08X", cast(uint)c);
 }
 
+// undocumented
 // string element is formatted like UTF-8 string literal.
-private void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (isSomeString!T)
 {
-    static if (isSomeString!T)
+    if (f.spec == 's')
     {
-        if (f.spec == 's')
+        try
         {
-            try
+            // ignore other specifications and quote
+            auto app = appender!(typeof(T[0])[])();
+
+            put(app, '\"');
+            for (size_t i = 0; i < val.length; )
             {
-                // ignore other specifications and quote
-                auto app = appender!(typeof(T[0])[])();
+                auto c = std.utf.decode(val, i);
+                // \uFFFE and \uFFFF are considered valid by isValidDchar,
+                // so need checking for interchange.
+                if (c == 0xFFFE || c == 0xFFFF)
+                    goto InvalidSeq;
 
-                put(app, '\"');
-                for (size_t i = 0; i < val.length; )
-                {
-                    auto c = std.utf.decode(val, i);
-                    // \uFFFE and \uFFFF are considered valid by isValidDchar,
-                    // so need checking for interchange.
-                    if (c == 0xFFFE || c == 0xFFFF)
-                        goto InvalidSeq;
-
-                    formatChar(app, c);
-                }
-                put(app, '\"');
-
-                put(w, app.data());
+                formatChar(app, c);
             }
-            catch (UtfException e)
-            {
-InvalidSeq:
-                // If val contains invalid UTF sequence, formatted like HexString literalx
-              static if (is(typeof(val[0]) : const(char)))
-                enum postfix = 'c';
-              else static if (is(typeof(val[0]) : const(wchar)))
-                enum postfix = 'w';
-              else static if (is(typeof(val[0]) : const(dchar)))
-                enum postfix = 'd';
+            put(app, '\"');
 
-                formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
-            }
+            put(w, app.data());
         }
-        else
-            formatValue(w, val, f);
-    }
-    else static if (isSomeChar!T)
-    {
-        put(w, '\'');
-        formatChar(w, val);
-        put(w, '\'');
+        catch (UtfException e)
+        {
+InvalidSeq:
+            // If val contains invalid UTF sequence, formatted like HexString literalx
+          static if (is(typeof(val[0]) : const(char)))
+            enum postfix = 'c';
+          else static if (is(typeof(val[0]) : const(wchar)))
+            enum postfix = 'w';
+          else static if (is(typeof(val[0]) : const(dchar)))
+            enum postfix = 'd';
+
+            formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
+        }
     }
     else
         formatValue(w, val, f);
+}
+
+// undocumented
+// character element is formatted like UTF-8 character literal.
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (isSomeChar!T)
+{
+    put(w, '\'');
+    formatChar(w, val);
+    put(w, '\'');
+}
+
+// undocumented
+void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (!isSomeString!T && !isSomeChar!T)
+{
+    formatValue(w, val, f);
 }
 
 unittest
