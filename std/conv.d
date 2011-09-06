@@ -3299,6 +3299,14 @@ T* emplace(T)(T* chunk)
     memcpy(result, &i, T.sizeof);
     return result;
 }
+///ditto
+T* emplace(T)(T* chunk)
+    if (is(T == class))
+{
+    *chunk = null;
+    return chunk;
+}
+
 
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
@@ -3312,7 +3320,7 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T, Args...)(T* chunk, Args args)
-    if (!is(T == class) && !is(T == struct) && Args.length == 1)
+    if (!is(T == struct) && Args.length == 1)
 {
     *chunk = args[0];
     return chunk;
@@ -3491,6 +3499,26 @@ unittest
     Foo foo;
     emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace!K(&k);
+    assert(k is null);
+    K k2 = new K;
+    assert(k2 !is null);
+    emplace!K(&k, k2);
+    assert(k is k2);
+
+    I i = void;
+    emplace!I(&i);
+    assert(i is null);
+    emplace!I(&i, k);
+    assert(i is k);
 }
 
 // Undocumented for the time being
