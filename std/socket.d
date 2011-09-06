@@ -786,34 +786,52 @@ private string formatGaiError(int err)
  *
  * Params:
  *  node     = string containing host name or numeric address
- *  service  = (optional) string containing _service name or port number
- *  flags    = (optional) retrieval options
- *  family   = (optional) address _family to filter by
- *  type     = (optional) socket _type to filter by
- *  protocol = (optional) _protocol to filter by
+ *  options  = optional additional parameters, identified by type:
+ *             $(UL $(LI $(D string) - service name or port number)
+ *                  $(LI $(D AddressInfoFlags) - option flags)
+ *                  $(LI $(D AddressFamily) - address family to filter by)
+ *                  $(LI $(D SocketType) - socket type to filter by)
+ *                  $(LI $(D ProtocolType) - protocol to filter by))
  */
-AddressInfo[] getAddressInfo(string node, string service = null,
-    AddressInfoFlags flags = cast(AddressInfoFlags) 0,
-    AddressFamily family   = AddressFamily.UNSPEC,
-    SocketType type        = cast(SocketType) 0,
-    ProtocolType protocol  = cast(ProtocolType) 0)
+AddressInfo[] getAddressInfo(T...)(string node, T options)
+{
+    string service = null;
+    addrinfo hints;
+    hints.ai_family = AF_UNSPEC;
+
+    foreach (option; options)
+    {
+        static if (is(typeof(option) == string))
+            service = option;
+        else
+        static if (is(typeof(option) == AddressInfoFlags))
+            hints.ai_flags |= option;
+        else
+        static if (is(typeof(option) == AddressFamily))
+            hints.ai_family = option;
+        else
+        static if (is(typeof(option) == SocketType))
+            hints.ai_socktype = option;
+        else
+        static if (is(typeof(option) == ProtocolType))
+            hints.ai_protocol = option;
+        else
+            static assert(0, "Unknown getAddressInfo option type: " ~ typeof(option).stringof);
+    }
+
+    return getAddressInfoImpl(node, service, &hints);
+}
+
+private AddressInfo[] getAddressInfoImpl(string node, string service, addrinfo* hints)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
-        addrinfo ai_hints =
-        {
-            ai_flags    : flags,
-            ai_family   : family,
-            ai_socktype : type,
-            ai_protocol : protocol,
-        };
-
         addrinfo* ai_res;
 
         int ret = getaddrinfoPointer(
             node is null ? null : std.string.toStringz(node),
             service is null ? null : std.string.toStringz(service),
-            &ai_hints, &ai_res);
+            hints, &ai_res);
         scope(exit) if (ai_res) freeaddrinfoPointer(ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
 
@@ -846,7 +864,7 @@ unittest
             assert(results[0].address.toHostNameString() == "digitalmars.com");
 
             // Canonical name
-            results = getAddressInfo("www.digitalmars.com", null,
+            results = getAddressInfo("www.digitalmars.com",
                 AddressInfoFlags.CANONNAME);
             assert(results[0].canonicalName == "digitalmars.com");
 
@@ -859,13 +877,11 @@ unittest
             //assert(results.length > 1);
 
             // Parsing IPv4
-            results = getAddressInfo("127.0.0.1", null,
-                AddressInfoFlags.NUMERICHOST);
+            results = getAddressInfo("127.0.0.1", AddressInfoFlags.NUMERICHOST);
             assert(results.length && results[0].family == AddressFamily.INET);
 
             // Parsing IPv6
-            results = getAddressInfo("::1", null,
-                AddressInfoFlags.NUMERICHOST);
+            results = getAddressInfo("::1", AddressInfoFlags.NUMERICHOST);
             assert(results.length && results[0].family == AddressFamily.INET6);
         }
     }
