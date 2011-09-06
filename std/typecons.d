@@ -2603,6 +2603,21 @@ unittest
     }
 }
 
+// 6606
+unittest
+{
+    union U {
+       size_t i;
+       void* p;
+    }
+
+    struct S {
+       U u;
+    }
+
+    alias RefCounted!S SRC;
+}
+
 /**
 Allocates a $(D class) object right inside the current scope,
 therefore avoiding the overhead of $(D new). This facility is unsafe;
