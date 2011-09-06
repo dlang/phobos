@@ -555,6 +555,13 @@ unittest
         nosh = yessh;
     }
     {
+        Tuple!(int, string) t;
+        t[0] = 10;
+        t[1] = "str";
+        assert(t[0] == 10 && t[1] == "str");
+        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
+    }
+    {
         Tuple!(int, "a", double, "b") x;
         static assert(x.a.offsetof == x[0].offsetof);
         static assert(x.b.offsetof == x[1].offsetof);
