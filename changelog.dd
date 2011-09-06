@@ -22,12 +22,21 @@ $(VERSION 055, ddd mm, 2011, =================================================,
            result, its signature has been changed. The old version and
            std.string.maketrans have been scheduled for deprecation.)
       $(LI std.string.tr has been updated so that it works with any string type.)
+      $(LI std.conv.parse works for associative array and static array)
+      $(LI std.format: Improvement of formatValue and unformatValue.
+           They now works for associative array, consider element escaping,
+           and treat range format spec more properly.)
      )
 
     $(LIBBUGSFIXED
         $(LI Unlisted bug:  std.range.transversal should have length)
+        $(LI $(BUGZILLA 3890): Bad writeln of a nested struct)
+        $(LI $(BUGZILLA 4977): cannot use nothrow or pure with Rebindable)
+        $(LI $(BUGZILLA 5237): writefln doesn't respect Complex.toString)
         $(LI $(BUGZILLA 5645): std.range.drop())
+        $(LI $(BUGZILLA 5825): write is calling a deprecated function)
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
+        $(LI $(BUGZILLA 6194): [GSoC] Destructor gets called on object before it is copied when calling writeln())
         $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
         $(LI $(BUGZILLA 6377): std.conv.to should check range when changing signedness)
         $(LI $(BUGZILLA 6587): std.parallelism's Task cannot handle immutable values)
