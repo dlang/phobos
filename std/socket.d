@@ -2172,8 +2172,10 @@ public:
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
+        if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
             throw new SocketOSException("Unable to obtain remote socket address");
+        if(nameLen > addr.nameLen())
+            throw new SocketParameterException("Not enough socket address storage");
         assert(addr.addressFamily() == _family);
         return addr;
     }
@@ -2183,8 +2185,10 @@ public:
     {
         Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
+        if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
             throw new SocketOSException("Unable to obtain local socket address");
+        if(nameLen > addr.nameLen())
+            throw new SocketParameterException("Not enough socket address storage");
         assert(addr.addressFamily() == _family);
         return addr;
     }
