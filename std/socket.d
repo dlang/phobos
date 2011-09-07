@@ -2684,10 +2684,10 @@ class TcpSocket: Socket
         super(family, SocketType.STREAM, ProtocolType.TCP);
     }
 
-    /// Constructs a blocking TCP Socket.
+    /// Constructs a blocking IPv4 TCP Socket.
     this()
     {
-        this(cast(AddressFamily)AddressFamily.INET);
+        this(AddressFamily.INET);
     }
 
 
@@ -2711,10 +2711,10 @@ class UdpSocket: Socket
     }
 
 
-    /// Constructs a blocking UDP Socket.
+    /// Constructs a blocking IPv4 UDP Socket.
     this()
     {
-        this(cast(AddressFamily)AddressFamily.INET);
+        this(AddressFamily.INET);
     }
 }
 
