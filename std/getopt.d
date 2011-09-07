@@ -61,69 +61,74 @@ void main(string[] args)
     "file",    &data,      // string
     "verbose", &verbose,   // flag
     "color",   &color);    // enum
-  ...
+    ...
 }
 ---------
 
- The $(D getopt) function takes a reference to the command line
- (as received by $(D main)) as its first argument, and an
- unbounded number of pairs of strings and pointers. Each string is an
- option meant to "fill" the value pointed-to by the pointer to its
- right (the "bound" pointer). The option string in the call to
- $(D getopt) should not start with a dash.
+The $(D getopt) function takes a reference to the command line
+(as received by $(D main)) as its first argument, and an
+unbounded number of pairs of strings and pointers. Each string is an
+option meant to "fill" the value pointed-to by the pointer to its
+right (the "bound" pointer). The option string in the call to
+$(D getopt) should not start with a dash.
 
- In all cases, the command-line options that were parsed and used by
- $(D getopt) are removed from $(D args). Whatever in the
- arguments did not look like an option is left in $(D args) for
- further processing by the program. Values that were unaffected by the
- options are not touched, so a common idiom is to initialize options
- to their defaults and then invoke $(D getopt). If a
- command-line argument is recognized as an option with a parameter and
- the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D ConvException) exception is thrown.
+In all cases, the command-line options that were parsed and used by
+$(D getopt) are removed from $(D args). Whatever in the
+arguments did not look like an option is left in $(D args) for
+further processing by the program. Values that were unaffected by the
+options are not touched, so a common idiom is to initialize options
+to their defaults and then invoke $(D getopt). If a
+command-line argument is recognized as an option with a parameter and
+the parameter cannot be parsed properly (e.g. a number is expected
+but not present), a $(D ConvException) exception is thrown.
 
- Depending on the type of the pointer being bound, $(D getopt)
- recognizes the following kinds of options:
+Depending on the type of the pointer being bound, $(D getopt)
+recognizes the following kinds of options:
 
- $(OL $(LI $(I Boolean options). These are the simplest options; all
- they do is set a Boolean to $(D true):
+$(OL
+
+  $(LI $(I Boolean options). These are the simplest options; all
+  they do is set a Boolean to $(D true):
 
 ---------
 bool verbose, debugging;
 getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
+  )
 
- )$(LI $(I Numeric options.) If an option is bound to a numeric type, a
- number is expected as the next option, or right within the option
- separated with an "=" sign:
+  $(LI $(I Numeric options.) If an option is bound to a numeric type, a
+  number is expected as the next option, or right within the option
+  separated with an "=" sign:
 
 ---------
 uint timeout;
 getopt(args, "timeout", &timeout);
 ---------
 
-To set $(D timeout) to $(D 5), invoke the program with either $(D
---timeout=5) or $(D --timeout 5).
+  To set $(D timeout) to $(D 5), invoke the program with either $(D
+  --timeout=5) or $(D --timeout 5).
+  )
 
- $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
- is bound to a numeric type, then the option's value tracks the number
- of times the option occurred on the command line:
+  $(LI $(I Incremental options.) If an option name has a "+" suffix and
+  is bound to a numeric type, then the option's value tracks the number
+  of times the option occurred on the command line:
 
 ---------
 uint paranoid;
 getopt(args, "paranoid+", &paranoid);
 ---------
 
- Invoking the program with "--paranoid --paranoid --paranoid" will set
- $(D paranoid) to 3. Note that an incremental option never
- expects a parameter, e.g. in the command line "--paranoid 42
- --paranoid", the "42" does not set $(D paranoid) to 42;
- instead, $(D paranoid) is set to 2 and "42" is not considered
- as part of the normal program arguments.)))
+  Invoking the program with "--paranoid --paranoid --paranoid" will set
+  $(D paranoid) to 3. Note that an incremental option never
+  expects a parameter, e.g. in the command line "--paranoid 42
+  --paranoid", the "42" does not set $(D paranoid) to 42;
+  instead, $(D paranoid) is set to 2 and "42" is not considered
+  as part of the normal program arguments.
+  )
 
- $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as a
- string is expected as the next option, or right within the option separated
- with an "=" sign:
+  $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as a
+  string is expected as the next option, or right within the option separated
+  with an "=" sign:
 
 ---------
 enum Color { no, yes };
@@ -131,57 +136,65 @@ Color color; // default initialized to Color.no
 getopt(args, "color", &color);
 ---------
 
-To set $(D color) to $(D Color.yes), invoke the program with either $(D
---color=yes) or $(D --color yes).)
+  To set $(D color) to $(D Color.yes), invoke the program with either $(D
+  --color=yes) or $(D --color yes).
+  )
 
- $(LI $(I String options.) If an option is bound to a string, a string
- is expected as the next option, or right within the option separated
- with an "=" sign:
+  $(LI $(I String options.) If an option is bound to a string, a string
+  is expected as the next option, or right within the option separated
+  with an "=" sign:
 
 ---------
 string outputFile;
 getopt(args, "output", &outputFile);
 ---------
 
- Invoking the program with "--output=myfile.txt" or "--output
- myfile.txt" will set $(D outputFile) to "myfile.txt". If you want to
- pass a string containing spaces, you need to use the quoting that is
- appropriate to your shell, e.g. --output='my file.txt'.)
+  Invoking the program with "--output=myfile.txt" or "--output
+  myfile.txt" will set $(D outputFile) to "myfile.txt". If you want to
+  pass a string containing spaces, you need to use the quoting that is
+  appropriate to your shell, e.g. --output='my file.txt'.
+  )
 
- $(LI $(I Array options.) If an option is bound to an array, a new
- element is appended to the array each time the option occurs:
+  $(LI $(I Array options.) If an option is bound to an array, a new
+  element is appended to the array each time the option occurs:
 
 ---------
 string[] outputFiles;
 getopt(args, "output", &outputFiles);
 ---------
 
- Invoking the program with "--output=myfile.txt --output=yourfile.txt"
- or "--output myfile.txt --output yourfile.txt" will set $(D
- outputFiles) to [ "myfile.txt", "yourfile.txt" ] .)
+  Invoking the program with "--output=myfile.txt --output=yourfile.txt"
+  or "--output myfile.txt --output yourfile.txt" will set $(D
+  outputFiles) to [ "myfile.txt", "yourfile.txt" ].
+  )
 
- $(LI $(I Hash options.) If an option is bound to an associative
- array, a string of the form "name=value" is expected as the next
- option, or right within the option separated with an "=" sign:
+  $(LI $(I Hash options.) If an option is bound to an associative
+  array, a string of the form "name=value" is expected as the next
+  option, or right within the option separated with an "=" sign:
 
 ---------
 double[string] tuningParms;
 getopt(args, "tune", &tuningParms);
 ---------
 
-Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
-set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ]. In general,
-keys and values can be of any parsable types.)
+  Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
+  set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ]. In general,
+  keys and values can be of any parsable types.
+  )
 
-$(LI $(I Delegate options.) An option can be bound to a delegate with
-the signature $(D void delegate()), $(D void delegate(string option))
-or $(D void delegate(string option, string value)).
+  $(LI $(I Delegate options.) An option can be bound to a delegate with
+  the signature $(D void delegate()), $(D void delegate(string option))
+  or $(D void delegate(string option, string value)).
 
-$(UL $(LI In the $(D void delegate()) case, the delegate is invoked
-whenever the option is seen.) $(LI In the $(D void delegate(string
-option)) case, the option string (without the leading dash(es)) is
-passed to the delegate. After that, the option string is considered
-handled and removed from the options array.
+  $(UL
+
+    $(LI In the $(D void delegate()) case, the delegate is invoked
+    whenever the option is seen.
+    )
+
+    $(LI In the $(D void delegate(string option)) case, the option string (without
+    the leading dash(es)) is passed to the delegate. After that, the option string
+    is considered handled and removed from the options array.
 
 ---------
 void main(string[] args)
@@ -202,12 +215,13 @@ void main(string[] args)
   getopt(args, "verbose", &myHandler, "quiet", &myHandler);
 }
 ---------
+    )
 
-)$(LI In the $(D void delegate(string option, string value)) case, the
-option string is handled as an option with one argument, and parsed
-accordingly. The option and its value are passed to the
-delegate. After that, whatever was passed to the delegate is
-considered handled and removed from the list.
+    $(LI In the $(D void delegate(string option, string value)) case, the
+    option string is handled as an option with one argument, and parsed
+    accordingly. The option and its value are passed to the
+    delegate. After that, whatever was passed to the delegate is
+    considered handled and removed from the list.
 
 ---------
 void main(string[] args)
@@ -229,7 +243,9 @@ void main(string[] args)
   getopt(args, "verbosity", &myHandler);
 }
 ---------
-))))
+    )
+  ))
+)
 
 $(B Options with multiple names)
 
