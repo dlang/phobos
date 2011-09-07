@@ -428,7 +428,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
         }
         // Unbundle bundled arguments if necessary
         if (cfg.bundling && a.length > 2 && a[0] == optionChar &&
-                a[1] != optionChar)
+                a[1] != optionChar && a[2] != assignChar)
         {
             string[] expanded;
             foreach (dchar c; a[1 .. $])
@@ -625,6 +625,68 @@ private void setConfig(ref configuration cfg, config option)
         cfg.stopOnFirstNonOption = true; break;
     default: assert(false);
     }
+}
+
+unittest
+{
+    bool verbose;
+    string filename;
+
+    auto args = ["program.name",
+                 "-fzv"];
+    getopt(args, config.bundling,
+                 "f", &filename,
+                 "v", &verbose);
+    assert(verbose, to!string(verbose));
+    assert(filename == "-z", to!string(filename)); // due to unbundling
+
+    verbose = verbose.init;
+    filename = filename.init;
+    args = ["program.name",
+            "-vf", "filename"].dup;
+    getopt(args, config.bundling,
+                 "f", &filename,
+                 "v", &verbose);
+    assert(verbose, to!string(verbose));
+    assert(filename == "filename", to!string(filename));
+
+    verbose = verbose.init;
+    filename = filename.init;
+    args = ["program.name",
+            "-fvz", "filename"].dup;
+    assertThrown!Exception(getopt(args, config.bundling,
+                                        "f", &filename,
+                                        "v", &verbose));
+    assert(!verbose, to!string(verbose));
+    assert(filename == "-v", to!string(filename));
+
+    string str;
+    args = ["program.name",
+            "--a=-0x12"].dup;
+    getopt(args, config.bundling, "a|addr", &str);
+    assert(str == "-0x12", to!string(str));
+
+    str = str.init;
+    args = ["program.name",
+            "-a=-0x12"].dup;
+    getopt(args, config.bundling,
+                 "a|addr", &str);
+    assert(str == "-0x12", to!string(str));
+
+    str = str.init;
+    args = ["program.name",
+            "-a=-0x12"].dup;
+    getopt(args, "a|addr", &str);
+    assert(str == "-0x12", to!string(str));
+}
+
+unittest
+{
+    bool verbose;
+    auto args = ["program.name",
+                 "--", "-v"]; // stop processing at --
+    getopt(args, "v", &verbose);
+    assert(verbose == verbose.init, to!string(verbose));
 }
 
 unittest
