@@ -206,7 +206,7 @@ class SocketOSException: SocketException
 {
     int errorCode;     /// Platform-specific error code.
 
-    this(string msg, int err = _lasterr,
+    this(string msg, int err = _lasterr(),
         string function(int) errorFormatter = &formatSocketError)
     {
         errorCode = err;
@@ -1962,7 +1962,7 @@ public:
      * will block and wait for data/action.
      * A non-blocking socket will immediately return instead of blocking.
      */
-    bool blocking()
+    @property bool blocking()
     {
         version(Win32)
         {
@@ -1975,7 +1975,7 @@ public:
     }
 
     /// ditto
-    void blocking(bool byes)
+    @property void blocking(bool byes)
     {
         version(Win32)
         {
