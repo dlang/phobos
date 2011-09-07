@@ -541,8 +541,8 @@ class HostException: SocketOSException
 /**
  * $(D InternetHost) is a class for resolving IPv4 addresses.
  *
- * If your target systems support it, consider using $(D getAddressInfo)
- * and $(D Address) methods instead.
+ * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * instead of using this class directly.
  */
 class InternetHost
 {
@@ -1263,6 +1263,9 @@ public:
 /**
  * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4)
  * socket address.
+ *
+ * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * instead of using this class directly.
  */
 class InternetAddress: Address
 {
