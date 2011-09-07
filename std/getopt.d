@@ -3,25 +3,26 @@
 /**
 Processing of command line options.
 
-The getopt module implements a $(D getopt) function, which adheres to
-the POSIX syntax for command line options. GNU extensions are
-supported in the form of long options introduced by a double dash
-("--"). Support for bundling of command line options, as was the case
-with the more traditional single-letter approach, is provided but not
-enabled by default.
+The getopt module implements a $(D getopt) function, which adheres to the POSIX
+syntax for command line options. GNU extensions are supported in the form of
+long options introduced by a double dash ("--"). Values can separated by space/s
+and additionally by the $(LREF assignChar) character which defaults to '='.
+Short options with the value directly attached (i.e.  without intervening space)
+are allowed but configurable to work only for short numeric options. Support for
+bundling of command line options, as was the case with the more traditional
+single-letter approach, is provided but not enabled by default.
 
 Macros:
 
 WIKI = Phobos/StdGetopt
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-Credits:   This module and its documentation are inspired by Perl's $(WEB
-                   perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
-                   D's $(D getopt) is simpler than its Perl counterpart because $(D
-                   getopt) infers the expected parameter types from the static types of
-                   the passed-in pointers.
+Credits:   This module and its documentation are inspired by Perl's $(WEB perldoc.perl.org/Getopt/Long.html, Getopt::Long)
+		   module. The syntax of D's $(D getopt) is simpler than its Perl
+		   counterpart because $(D getopt) infers the expected parameter types
+		   from the static types of the passed-in pointers.
 Source:    $(PHOBOSSRC std/_getopt.d)
 */
 /*
@@ -88,8 +89,8 @@ void main(string[] args)
  they do is set a Boolean to $(D true):
 
 ---------
-  bool verbose, debugging;
-  getopt(args, "verbose", &verbose, "debug", &debugging);
+bool verbose, debugging;
+getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
  )$(LI $(I Numeric options.) If an option is bound to a numeric type, a
@@ -97,8 +98,8 @@ void main(string[] args)
  separated with an "=" sign:
 
 ---------
-  uint timeout;
-  getopt(args, "timeout", &timeout);
+uint timeout;
+getopt(args, "timeout", &timeout);
 ---------
 
 To set $(D timeout) to $(D 5), invoke the program with either $(D
@@ -109,8 +110,8 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  of times the option occurred on the command line:
 
 ---------
-  uint paranoid;
-  getopt(args, "paranoid+", &paranoid);
+uint paranoid;
+getopt(args, "paranoid+", &paranoid);
 ---------
 
  Invoking the program with "--paranoid --paranoid --paranoid" will set
@@ -125,9 +126,9 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
  with an "=" sign:
 
 ---------
-  enum Color { no, yes };
-  Color color; // default initialized to Color.no
-  getopt(args, "color", &color);
+enum Color { no, yes };
+Color color; // default initialized to Color.no
+getopt(args, "color", &color);
 ---------
 
 To set $(D color) to $(D Color.yes), invoke the program with either $(D
@@ -276,24 +277,55 @@ option "bar" was parsed.
 
 $(B "Short" versus "long" options)
 
-Traditionally, programs accepted single-letter options preceded by
-only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
-seamlessly. When used with a double-dash (e.g. $(D --t)), a
-single-letter option behaves the same as a multi-letter option. When
-used with a single dash, a single-letter option is accepted. If the
-option has a parameter, that must be "stuck" to the option without
-any intervening space or "=":
+Single-letter options preceded by only one dash (e.g. $(D -t)) are accepted.
+These options are called short options. If a double-dash is used a multi-letter
+option must follow, e.g. $(D --timeout). This kind of option is called a long
+option. A multi-letter option with a single dash (e.g. $(D -timeout)) will not
+be accepted and a single-letter option with a double-dash (e.g. $(D --t)) will
+not be accepted as well. If the option has a parameter, that option must be
+passed with an intervening space or "=":
 
 ---------
 uint timeout;
 getopt(args, "timeout|t", &timeout);
 ---------
 
-To set $(D timeout) to $(D 5), use either of the following: $(D --timeout=5),
-$(D --timeout 5), $(D --t=5), $(D --t 5), or $(D -t5). Forms such as $(D -t 5)
-and $(D -timeout=5) will be not accepted.
+To set $(D timeout) to $(D 5), use either the long options $(D --timeout=5) or
+$(D --timeout 5) or the short options $(D -t=5) or $(D -t 5). Also the short
+option with no space $(D -t5) is accepted (see next section).
 
-For more details about short options, refer also to the next section.
+The forms $(D -timeout=5), $(D -timeout 5), $(D --t=5), $(D --t 5), $(D --t5),
+$(D --timeout5), and $(D -timeout5) are not accepted. Beware though that $(D
+-timeout=5), $(D -timeout 5), and $(D -timeout5) would be accepted with values
+$(D imeout=5), $(D imeout), and $(D imeout5), respectively, if -t was an option
+of type string. For more details about short options with no space, refer also
+to the next section.
+
+$(B Omitting spaces for short options)
+
+By default omitting space/s for short options is enabled for all types, i.e. $(D
+std.getopt.config.noSpaceForShortOptions) is set.
+
+If you happen to have a short string option and a long string option starting
+with the same letter like the short option, the behavior may be surprising.
+Since whenever the value passed to a short option is convertible to its type
+(via $(XREF conv, to)) the option will be accepted. This is e.g. the case for
+strings as pointed out in the above section. As this behavior is usually
+confusing, it can be enabled for numeric short options only using the
+configuration option $(D std.getopt.config.noSpaceOnlyForShortNumericOptions).
+Given
+
+---------
+string timeout;
+getopt(args, std.getopt.config.noSpaceOnlyForShortNumericOptions,
+             "timeout|t", &timeout);
+---------
+
+$(D -timeout=whatever), $(D -timeout whatever), and $(D -timeoutwhatever) will
+throw an exception.
+
+Specifying $(D std.getopt.config.noSpaceOnlyForShortNumericOptions) is strongly
+recommended in cases like above.
 
 $(B Bundling)
 
@@ -312,11 +344,31 @@ getopt(args,
 In case you want to only enable bundling for some of the parameters,
 bundling can be turned off with $(D std.getopt.config.noBundling).
 
+Note, when using bundling together with short options the unbundling happens
+before the short options are handled. E.g.
+
+---------
+bool verbose;
+string filename;
+
+auto args = ["program.name",
+             "-fzv"];
+getopt(args, config.bundling,
+             "f", &filename,
+             "v", &verbose);
+assert(verbose, to!string(verbose));
+assert(filename == "-z", to!string(filename)); // due to unbundling
+---------
+
+But "-vf filename" works as expected.
+
 $(B Passing unrecognized options through)
 
 If an application needs to do its own processing of whichever arguments
 $(D getopt) did not understand, it can pass the
-$(D std.getopt.config.passThrough) directive to $(D getopt):
+$(D std.getopt.config.passThrough) directive to $(D getopt). As $(D
+std.getopt.config.passThrough) is only used in these cases the default is $(D
+std.getopt.config.noPassThrough).
 
 ---------
 bool foo, bar;
@@ -573,6 +625,8 @@ private struct configuration
                 ubyte, "", 3));
 }
 
+// Returns true, if arg is considered a valid argument for given option.
+// Otherwise false.
 private bool isValidOption(string arg, string optPattern, ref string value,
     configuration cfg, bool isNumericOption)
 {
