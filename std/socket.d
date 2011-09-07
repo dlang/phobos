@@ -2157,12 +2157,6 @@ public:
     }
 
 
-    private Address newFamilyObject()
-    {
-        return createAddress();
-    }
-
-
     /// Returns the local machine's host name.
     // Idea from mango.
     static string hostName()     // getter
@@ -2176,7 +2170,7 @@ public:
     /// Remote endpoint $(D Address).
     Address remoteAddress()
     {
-        Address addr = newFamilyObject();
+        Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
         if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
             throw new SocketOSException("Unable to obtain remote socket address");
@@ -2187,7 +2181,7 @@ public:
     /// Local endpoint $(D Address).
     Address localAddress()
     {
-        Address addr = newFamilyObject();
+        Address addr = createAddress();
         socklen_t nameLen = addr.nameLen();
         if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
             throw new SocketOSException("Unable to obtain local socket address");
@@ -2320,7 +2314,7 @@ public:
     {
         if(!buf.length)         //return 0 and don't think the connection closed
             return 0;
-        from = newFamilyObject();
+        from = createAddress();
         socklen_t nameLen = from.nameLen();
         version(Win32)
         {
