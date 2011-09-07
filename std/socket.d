@@ -1551,20 +1551,52 @@ enum SocketFlags: int
 }
 
 
-/// Duration timeout value.
-extern(C) struct timeval
+private mixin template FieldProxy(string target, string field)
 {
-    // D interface
-    c_long seconds;                /// Number of seconds.
-    c_long microseconds;           /// Number of additional microseconds.
+    mixin(`
+        @property typeof(`~target~`) `~field~`()
+        {
+            return `~target~`;
+        }
 
-    // C interface
-    deprecated
+        /// ditto
+        @property typeof(`~target~`) `~field~`(typeof(`~target~`) value)
+        {
+            return `~target~` = value;
+        }
+    `);
+}
+
+
+/// Duration timeout value.
+struct TimeVal
+{
+    _ctimeval ctimeval;
+
+    version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
     {
-        alias seconds tv_sec;
-        alias microseconds tv_usec;
+        alias typeof(ctimeval.tv_sec) tv_sec_t;
+        alias typeof(ctimeval.tv_usec) tv_usec_t;
+        tv_sec_t seconds;           /// Number of _seconds.
+        tv_usec_t microseconds;     /// Number of additional _microseconds.
+    }
+    else
+    {
+        // D interface
+        mixin FieldProxy!(`ctimeval.tv_sec`, `seconds`);
+        mixin FieldProxy!(`ctimeval.tv_usec`, `microseconds`);
+
+        // C interface
+        deprecated
+        {
+            alias seconds tv_sec;
+            alias microseconds tv_usec;
+        }
     }
 }
+
+/// $(RED Scheduled for deprecation. Please use $(D TimeVal) instead.)
+alias TimeVal timeval;
 
 
 /**
@@ -1770,19 +1802,29 @@ enum SocketOptionLevel: int
 }
 
 /// _Linger information for use with SocketOption.LINGER.
-extern(C) struct Linger
+struct Linger
 {
-    private alias typeof(_clinger.init.l_onoff ) t_onoff;
-    private alias typeof(_clinger.init.l_linger) t_linger;
+    _clinger clinger;
 
-    t_onoff  on;   /// Nonzero for _on.
-    t_linger time; /// Linger _time.
-
-    // C interface
-    deprecated
+    version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
     {
-        alias on l_onoff;
-        alias time l_linger;
+        private alias typeof(_clinger.init.l_onoff ) l_onoff_t;
+        private alias typeof(_clinger.init.l_linger) l_linger_t;
+        l_onoff_t  on;   /// Nonzero for _on.
+        l_linger_t time; /// Linger _time.
+    }
+    else
+    {
+        // D interface
+        mixin FieldProxy!(`clinger.l_onoff`, `on`);
+        mixin FieldProxy!(`clinger.l_linger`, `time`);
+
+        // C interface
+        deprecated
+        {
+            alias on l_onoff;
+            alias time l_linger;
+        }
     }
 }
 
@@ -2334,7 +2376,7 @@ public:
     int getOption(SocketOptionLevel level, SocketOption option, out Linger result)
     {
         //return getOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
-        return getOption(level, option, (&result)[0 .. 1]);
+        return getOption(level, option, (&result.clinger)[0 .. 1]);
     }
 
     /// Get a timeout (duration) option.
@@ -2355,8 +2397,8 @@ public:
         }
         else version (Posix)
         {
-            timeval tv;
-            getOption(level, option, (&tv)[0..1]);
+            TimeVal tv;
+            getOption(level, option, (&tv.ctimeval)[0..1]);
             result = dur!"seconds"(tv.seconds) + dur!"usecs"(tv.microseconds);
         }
         else static assert(false);
@@ -2382,7 +2424,7 @@ public:
     void setOption(SocketOptionLevel level, SocketOption option, Linger value)
     {
         //setOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
-        setOption(level, option, (&value)[0 .. 1]);
+        setOption(level, option, (&value.clinger)[0 .. 1]);
     }
 
     /**
@@ -2447,7 +2489,7 @@ public:
         }
         else version (Posix)
         {
-            timeval tv = { seconds: cast(int)value.total!"seconds"(),
+            TimeVal tv = { seconds: cast(int)value.total!"seconds"(),
                            microseconds: value.fracSec.usecs };
             setOption(level, option, (&tv)[0 .. 1]);
         }
@@ -2464,10 +2506,10 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout $(D timeval) or
+     * Wait for a socket to change status. A wait timeout $(D TimeVal) or
      * $(D int) microseconds may be specified; if a timeout is not specified
-     * or the $(D timeval) is $(D null), the maximum timeout is used. The
-     * $(D timeval) timeout has an unspecified value when $(D select) returns.
+     * or the $(D TimeVal) is $(D null), the maximum timeout is used. The
+     * $(D TimeVal) timeout has an unspecified value when $(D select) returns.
      * Returns: The number of sockets with status changes, $(D 0) on timeout,
      * or $(D -1) on interruption. If the return value is greater than $(D 0),
      * the $(D SocketSets) are updated to only contain the sockets having status
@@ -2481,7 +2523,7 @@ public:
     //for a connect()ing socket, writeability means connected
     //for a listen()ing socket, readability means listening
     //Winsock: possibly internally limited to 64 sockets per set
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, timeval* tv)
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, TimeVal* tv)
     in
     {
         //make sure none of the SocketSet's are the same object
@@ -2546,7 +2588,7 @@ public:
             }
         }
 
-        int result = .select(n, fr, fw, fe, cast(_ctimeval*)tv);
+        int result = .select(n, fr, fw, fe, &tv.ctimeval);
 
         version(Win32)
         {
@@ -2573,7 +2615,7 @@ public:
     /// ditto
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, int microseconds)
     {
-        timeval tv;
+        TimeVal tv;
         tv.seconds = microseconds / 1_000_000;
         tv.microseconds = microseconds % 1_000_000;
         return select(checkRead, checkWrite, checkError, &tv);
