@@ -2178,7 +2178,7 @@ public:
     {
         Address addr = newFamilyObject();
         socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
+        if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
             throw new SocketOSException("Unable to obtain remote socket address");
         assert(addr.addressFamily() == _family);
         return addr;
@@ -2189,7 +2189,7 @@ public:
     {
         Address addr = newFamilyObject();
         socklen_t nameLen = addr.nameLen();
-        if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
+        if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen) || nameLen > addr.nameLen())
             throw new SocketOSException("Unable to obtain local socket address");
         assert(addr.addressFamily() == _family);
         return addr;
