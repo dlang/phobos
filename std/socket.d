@@ -2520,10 +2520,11 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout $(D TimeVal) or
-     * $(D long) microseconds may be specified; if a timeout is not specified
-     * or the $(D TimeVal) is $(D null), the maximum timeout is used. The
-     * $(D TimeVal) timeout has an unspecified value when $(D select) returns.
+     * Wait for a socket to change status. A wait timeout $(D TimeVal),
+     * $(D Duration) or $(D long) microseconds may be specified; if a timeout
+     * is not specified or the $(D TimeVal) is $(D null), the maximum timeout
+     * is used. The $(D TimeVal) timeout has an unspecified value when
+     * $(D select) returns.
      * Returns: The number of sockets with status changes, $(D 0) on timeout,
      * or $(D -1) on interruption. If the return value is greater than $(D 0),
      * the $(D SocketSets) are updated to only contain the sockets having status
@@ -2632,6 +2633,16 @@ public:
         TimeVal tv;
         tv.seconds      = to!(tv.tv_sec_t )(microseconds / 1_000_000);
         tv.microseconds = to!(tv.tv_usec_t)(microseconds % 1_000_000);
+        return select(checkRead, checkWrite, checkError, &tv);
+    }
+
+
+    /// ditto
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration duration)
+    {
+        TimeVal tv;
+        tv.seconds      = to!(tv.tv_sec_t )(duration.total!"seconds"());
+        tv.microseconds = to!(tv.tv_usec_t)(duration.fracSec.usecs);
         return select(checkRead, checkWrite, checkError, &tv);
     }
 
