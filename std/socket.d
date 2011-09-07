@@ -2660,8 +2660,12 @@ public:
         Address result;
         switch(_family)
         {
-        case cast(AddressFamily)AddressFamily.INET:
+        case AddressFamily.INET:
             result = new InternetAddress;
+            break;
+
+        case AddressFamily.INET6:
+            result = new Internet6Address;
             break;
 
         default:
