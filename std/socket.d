@@ -1572,11 +1572,11 @@ private mixin template FieldProxy(string target, string field)
 struct TimeVal
 {
     _ctimeval ctimeval;
+    alias typeof(ctimeval.tv_sec) tv_sec_t;
+    alias typeof(ctimeval.tv_usec) tv_usec_t;
 
     version (StdDdoc) // no DDoc for string mixins, can't forward individual fields
     {
-        alias typeof(ctimeval.tv_sec) tv_sec_t;
-        alias typeof(ctimeval.tv_usec) tv_usec_t;
         tv_sec_t seconds;           /// Number of _seconds.
         tv_usec_t microseconds;     /// Number of additional _microseconds.
     }
@@ -2521,7 +2521,7 @@ public:
 
     /**
      * Wait for a socket to change status. A wait timeout $(D TimeVal) or
-     * $(D int) microseconds may be specified; if a timeout is not specified
+     * $(D long) microseconds may be specified; if a timeout is not specified
      * or the $(D TimeVal) is $(D null), the maximum timeout is used. The
      * $(D TimeVal) timeout has an unspecified value when $(D select) returns.
      * Returns: The number of sockets with status changes, $(D 0) on timeout,
@@ -2627,11 +2627,11 @@ public:
 
 
     /// ditto
-    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, int microseconds)
+    static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, long microseconds)
     {
         TimeVal tv;
-        tv.seconds = microseconds / 1_000_000;
-        tv.microseconds = microseconds % 1_000_000;
+        tv.seconds      = to!(tv.tv_sec_t )(microseconds / 1_000_000);
+        tv.microseconds = to!(tv.tv_usec_t)(microseconds % 1_000_000);
         return select(checkRead, checkWrite, checkError, &tv);
     }
 
