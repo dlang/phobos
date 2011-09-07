@@ -1607,7 +1607,7 @@ public:
      * Set the capacity of this $(D SocketSet). The exact meaning of the
      * $(D max) parameter varies from platform to platform.
      * Throws: $(D SocketParameterException) if $(D max) exceeds this
-     * platform's the maximum socket set size.
+     * platform's maximum socket set size.
      */
     this(uint max)
     {
