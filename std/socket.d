@@ -737,7 +737,7 @@ unittest
 }
 
 
-/// Holds information about an address retrieved by $(D getAddressInfo).
+/// Holds information about a socket _address retrieved by $(D getAddressInfo).
 struct AddressInfo
 {
     AddressFamily family;   /// Address _family
@@ -779,9 +779,10 @@ private string formatGaiError(int err)
 }
 
 /**
- * Provides _protocol-independent translation from host names to addresses.
+ * Provides _protocol-independent translation from host names to socket
+ * addresses.
  *
- * Returns: Array with one $(D AddressInfo) per address.
+ * Returns: Array with one $(D AddressInfo) per socket address.
  *
  * Throws: $(D SocketOSException) on failure, or $(D SocketFeatureException)
  * if this functionality is not available on the current system.
@@ -896,11 +897,11 @@ unittest
 
 
 /**
- * Provides _protocol-independent translation from host names to addresses.
- * Uses $(D getAddressInfo) if the current system supports it, and
- * $(D InternetHost) otherwise.
+ * Provides _protocol-independent translation from host names to socket
+ * addresses. Uses $(D getAddressInfo) if the current system supports it,
+ * and $(D InternetHost) otherwise.
  *
- * Returns: Array with one $(D Address) instance per address.
+ * Returns: Array with one $(D Address) instance per socket address.
  *
  * Throws: $(D SocketOSException) on failure.
  */
@@ -991,7 +992,7 @@ class AddressException: SocketOSException
 
 
 /**
- * $(D Address) is an abstract class for representing a network addresses.
+ * $(D Address) is an abstract class for representing a socket addresses.
  */
 abstract class Address
 {
@@ -1125,7 +1126,7 @@ abstract class Address
 }
 
 /**
- * $(D UnknownAddress) encapsulates an unknown network address.
+ * $(D UnknownAddress) encapsulates an unknown socket address.
  */
 class UnknownAddress: Address
 {
@@ -1155,7 +1156,7 @@ public:
 
 /**
  * $(D UnknownAddressReference) encapsulates a reference to an arbitrary
- * network address.
+ * socket address.
  */
 class UnknownAddressReference: Address
 {
@@ -1197,7 +1198,8 @@ public:
 
 
 /**
- * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4) address.
+ * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4)
+ * socket address.
  */
 class InternetAddress: Address
 {
@@ -1228,8 +1230,8 @@ public:
     }
 
 
-    enum uint32_t ADDR_ANY = INADDR_ANY;         /// Any IPv4 address number.
-    enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 address number.
+    enum uint32_t ADDR_ANY = INADDR_ANY;         /// Any IPv4 host address.
+    enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 host address.
     enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
 
     /// Returns the IPv4 _port number.
@@ -1375,7 +1377,8 @@ unittest
 
 
 /**
- * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6) address.
+ * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6)
+ * socket address.
  */
 class Internet6Address: Address
 {
@@ -1407,16 +1410,16 @@ public:
 
 
     static if (is(typeof(IN6ADDR_ANY)))
-        alias IN6ADDR_ANY ADDR_ANY;        /// Any IPv6 address number.
+        alias IN6ADDR_ANY ADDR_ANY;        /// Any IPv6 host address.
     else
     static if (is(typeof(in6addr_any)))
-        alias in6addr_any ADDR_ANY;        /// Any IPv6 address number.
+        alias in6addr_any ADDR_ANY;        /// Any IPv6 host address.
 
     static if (is(typeof(IN6ADDR_ANY)))
-        alias IN6ADDR_ANY ADDR_NONE;       /// An invalid IPv6 address number.
+        alias IN6ADDR_ANY ADDR_NONE;       /// An invalid IPv6 host address.
     else
     static if (is(typeof(in6addr_any)))
-        alias in6addr_any ADDR_NONE;       /// An invalid IPv6 address number.
+        alias in6addr_any ADDR_NONE;       /// An invalid IPv6 host address.
 
     enum uint16_t PORT_ANY = 0;            /// Any IPv6 port number.
 
@@ -1435,7 +1438,7 @@ public:
     /**
      * Construct a new $(D Internet6Address).
      * Params:
-     *   node = an IPv6 address string in the form described in RFC 2373,
+     *   node = an IPv6 host address string in the form described in RFC 2373,
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = (optional) service name or port number.
      */
@@ -1449,7 +1452,7 @@ public:
     /**
      * Construct a new $(D Internet6Address).
      * Params:
-     *   addr = an IPv6 address string in the form described in RFC 2373,
+     *   addr = an IPv6 host address string in the form described in RFC 2373,
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = port number, may be $(D PORT_ANY).
      */
@@ -1464,7 +1467,8 @@ public:
     /**
      * Construct a new $(D Internet6Address).
      * Params:
-     *   addr = (optional) an IPv6 address in host byte order, or $(D ADDR_ANY).
+     *   addr = (optional) an IPv6 host address in host byte order, or
+                $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
     this(in6_addr addr, uint16_t port)
@@ -1483,9 +1487,9 @@ public:
     }
 
     /**
-     * Parse an IPv6 address string as described in RFC 2373, and return the
+     * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
-     * Returns: If the string is not a legitimate IPv6 address,
+     * Returns: If the string is not a legitimate IPv6 host address,
      * $(D ADDR_NONE) is returned.
      */
     static in6_addr parse(string addr)
@@ -2069,7 +2073,7 @@ public:
     /**
      * Listen for an incoming connection. $(D bind) must be called before you
      * can $(D listen). The $(D backlog) is a request of how many pending
-     * incoming connections are queued until $(D accept)'ed.
+     * incoming connections are queued until $(D accept)ed.
      */
     void listen(int backlog)
     {
