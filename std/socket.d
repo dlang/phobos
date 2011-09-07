@@ -848,6 +848,7 @@ private AddressInfo[] getAddressInfoImpl(string node, string service, addrinfo* 
                 new UnknownAddressReference(ai.ai_addr, ai.ai_addrlen),
                 ai.ai_canonname ? to!string(ai.ai_canonname).idup : null);
 
+        assert(result.length > 0);
         return result;
     }
 
@@ -896,6 +897,21 @@ unittest
 }
 
 
+private uint16_t serviceToPort(string service)
+{
+    if (service == "")
+        return InternetAddress.PORT_ANY;
+    else
+    if (isNumeric(service))
+        return to!uint16_t(service);
+    else
+    {
+        auto s = new Service();
+        s.getServiceByName(service);
+        return s.port;
+    }
+}
+
 /**
  * Provides _protocol-independent translation from host names to socket
  * addresses. Uses $(D getAddressInfo) if the current system supports it,
@@ -907,35 +923,22 @@ unittest
  */
 Address[] getAddress(string hostname, string service = null)
 {
-    Address[] results;
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         // use getAddressInfo
+        Address[] results;
         auto infos = getAddressInfo(hostname, service);
         foreach (ref info; infos)
             results ~= info.address;
+        return results;
     }
     else
-    {
-        if (service == "")
-            return getAddress(hostname, InternetAddress.PORT_ANY);
-        else
-        if (isNumeric(service))
-            return getAddress(hostname, to!uint16_t(service));
-        else
-        {
-            auto s = new Service();
-            s.getServiceByName(service);
-            return getAddress(hostname, s.port);
-        }
-    }
-    return results;
+        return getAddress(hostname, serviceToPort(service));
 }
 
 /// ditto
 Address[] getAddress(string hostname, uint16_t port)
 {
-    Address[] results;
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddress(hostname, to!string(port));
     else
@@ -946,10 +949,11 @@ Address[] getAddress(string hostname, uint16_t port)
             throw new AddressException(
                         "Unable to resolve host '" ~ hostname ~ "'");
 
+        Address[] results;
         foreach (uint32_t addr; ih.addrList)
             results ~= new InternetAddress(addr, port);
+        return results;
     }
-    return results;
 }
 
 
@@ -969,6 +973,65 @@ unittest
 
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
+        }
+    }
+    catch (Throwable e)
+    {
+        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
+        printf(" (%.*s)\n", e.toString());
+    }
+}
+
+
+/**
+ * Provides _protocol-independent parsing of network addresses. Does not
+ * attempt name resolution. Uses $(D getAddressInfo) with
+ * $(D AddressInfoFlags.NUMERICHOST) if the current system supports it, and
+ * $(D InternetAddress) otherwise.
+ *
+ * Returns: An $(D Address) instance representing specified address.
+ *
+ * Throws: $(D SocketException) on failure.
+ */
+Address parseAddress(string hostaddr, string service = null)
+{
+    if (getaddrinfoPointer && freeaddrinfoPointer)
+        return getAddressInfo(hostaddr, service, AddressInfoFlags.NUMERICHOST)[0].address;
+    else
+        return parseAddress(hostaddr, serviceToPort(service));
+}
+
+/// ditto
+Address parseAddress(string hostaddr, uint16_t port)
+{
+    if (getaddrinfoPointer && freeaddrinfoPointer)
+        return parseAddress(hostaddr, to!string(port));
+    else
+    {
+        auto in4_addr = InternetAddress.parse(hostaddr);
+        enforce(in4_addr != InternetAddress.ADDR_NONE,
+            new SocketParameterException("Invalid IP address"));
+        return new InternetAddress(in4_addr, port);
+    }
+}
+
+
+unittest
+{
+    try
+    {
+        auto address = parseAddress("63.105.9.61");
+        assert(address.toAddrString() == "63.105.9.61");
+
+        if (getaddrinfoPointer)
+        {
+            // test via inet_addr
+            auto getaddrinfoPointerBackup = getaddrinfoPointer;
+            getaddrinfoPointer = null;
+            scope(exit) getaddrinfoPointer = getaddrinfoPointerBackup;
+
+            address = parseAddress("63.105.9.61");
+            assert(address.toAddrString() == "63.105.9.61");
         }
     }
     catch (Throwable e)
