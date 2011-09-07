@@ -1934,6 +1934,15 @@ public:
     }
 
 
+    /**
+     * Create a blocking socket using the parameters from the specified
+     * $(D AddressInfo) structure.
+     */
+    this(in AddressInfo info)
+    {
+        this(info.family, info.type, info.protocol);
+    }
+
     /// Use an existing socket handle.
     this(socket_t sock, AddressFamily af)
     {
