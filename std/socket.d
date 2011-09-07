@@ -1000,7 +1000,7 @@ abstract class Address
     const(sockaddr)* name() const; /// ditto
 
     /// Returns actual size of underlying $(D sockaddr) structure.
-    int nameLen() const;
+    socklen_t nameLen() const;
 
     /// Family of this address.
     AddressFamily addressFamily() const
@@ -1145,9 +1145,9 @@ public:
     }
 
 
-    override int nameLen() const
+    override socklen_t nameLen() const
     {
-        return sa.sizeof;
+        return cast(socklen_t) sa.sizeof;
     }
 
 }
@@ -1161,18 +1161,18 @@ class UnknownAddressReference: Address
 {
 protected:
     sockaddr* sa;
-    int len;
+    socklen_t len;
 
 public:
     /// Constructs an $(D Address) with a reference to the specified $(D sockaddr).
-    this(sockaddr* sa, int len)
+    this(sockaddr* sa, socklen_t len)
     {
         this.sa  = sa;
         this.len = len;
     }
 
     /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
-    this(const(sockaddr)* sa, int len)
+    this(const(sockaddr)* sa, socklen_t len)
     {
         this.sa = cast(sockaddr*) (cast(ubyte*)sa)[0..len].dup.ptr;
         this.len = len;
@@ -1189,9 +1189,9 @@ public:
     }
 
 
-    override int nameLen() const
+    override socklen_t nameLen() const
     {
-        return len;
+        return cast(socklen_t) len;
     }
 }
 
@@ -1222,9 +1222,9 @@ public:
     }
 
 
-    override int nameLen() const
+    override socklen_t nameLen() const
     {
-        return sin.sizeof;
+        return cast(socklen_t) sin.sizeof;
     }
 
 
@@ -1400,9 +1400,9 @@ public:
     }
 
 
-    override int nameLen() const
+    override socklen_t nameLen() const
     {
-        return sin6.sizeof;
+        return cast(socklen_t) sin6.sizeof;
     }
 
 
@@ -2170,14 +2170,14 @@ public:
         char[256] result;         // Host names are limited to 255 chars.
         if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
             throw new SocketOSException("Unable to obtain host name");
-        return to!string(cast(char*)result).idup;
+        return to!string(result.ptr).idup;
     }
 
     /// Remote endpoint $(D Address).
     Address remoteAddress()
     {
         Address addr = newFamilyObject();
-        socklen_t nameLen = cast(socklen_t) addr.nameLen();
+        socklen_t nameLen = addr.nameLen();
         if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
             throw new SocketOSException("Unable to obtain remote socket address");
         assert(addr.addressFamily() == _family);
@@ -2188,7 +2188,7 @@ public:
     Address localAddress()
     {
         Address addr = newFamilyObject();
-        socklen_t nameLen = cast(socklen_t) addr.nameLen();
+        socklen_t nameLen = addr.nameLen();
         if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
             throw new SocketOSException("Unable to obtain local socket address");
         assert(addr.addressFamily() == _family);
@@ -2312,7 +2312,7 @@ public:
         if(!buf.length)         //return 0 and don't think the connection closed
             return 0;
         from = newFamilyObject();
-        socklen_t nameLen = cast(socklen_t) from.nameLen();
+        socklen_t nameLen = from.nameLen();
         version(Win32)
         {
             auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name(), &nameLen);
