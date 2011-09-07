@@ -2408,9 +2408,8 @@ public:
         {
             int msecs;
             getOption(level, option, (&msecs)[0 .. 1]);
-            if (option == SocketOption.RCVTIMEO) {
+            if (option == SocketOption.RCVTIMEO)
                 msecs += WINSOCK_TIMEOUT_SKEW;
-            }
             result = dur!"msecs"(msecs);
         }
         else version (Posix)
@@ -2494,21 +2493,18 @@ public:
 
         version (Win32)
         {
-            auto msecs = cast(int)value.total!"msecs"();
-            if (msecs == 0 || option != SocketOption.RCVTIMEO)
-            {
-                setOption(level, option, msecs);
-            }
-            else
-            {
-                setOption(level, option, cast(int)
-                          max(1, msecs - WINSOCK_TIMEOUT_SKEW));
-            }
+            auto msecs = to!int(value.total!"msecs"());
+            if (msecs != 0 && option == SocketOption.RCVTIMEO)
+                msecs = max(1, msecs - WINSOCK_TIMEOUT_SKEW);
+            setOption(level, option, msecs);
         }
         else version (Posix)
         {
-            TimeVal tv = { seconds: cast(int)value.total!"seconds"(),
-                           microseconds: value.fracSec.usecs };
+            _ctimeval tv =
+            {
+                tv_sec : to!(typeof(tv.tv_sec ))(value.total!"seconds"()),
+                tv_usec: to!(typeof(tv.tv_usec))(value.fracSec.usecs)
+            };
             setOption(level, option, (&tv)[0 .. 1]);
         }
         else static assert(false);
