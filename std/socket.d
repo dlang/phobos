@@ -133,7 +133,7 @@ class SocketException: Exception
      *
      * Provided for compatibility with older code using $(D SocketException).
      */
-    @property int errorCode()
+    @property int errorCode() const
     {
         auto osException = cast(SocketOSException)this;
         if (osException)
@@ -1554,7 +1554,7 @@ enum SocketFlags: int
 private mixin template FieldProxy(string target, string field)
 {
     mixin(`
-        @property typeof(`~target~`) `~field~`()
+        @property typeof(`~target~`) `~field~`() const
         {
             return `~target~`;
         }
@@ -1620,7 +1620,7 @@ private:
         uint fdsetCapacity;
 
         fd_set* set;
-        @property uint count() { return set.fd_count; }
+        @property uint count() const { return set.fd_count; }
     }
     else version(Posix)
     {
@@ -1732,7 +1732,7 @@ public:
         remove(s.sock);
     }
 
-    int isSet(socket_t s)
+    int isSet(socket_t s) const
     {
         version(Posix)
         {
@@ -1745,7 +1745,7 @@ public:
 
 
     /// Returns nonzero if this $(D Socket) is in the collection.
-    int isSet(Socket s)
+    int isSet(Socket s) const
     {
         return isSet(s.sock);
     }
@@ -1753,7 +1753,7 @@ public:
 
     /// Return the capacity of this $(D SocketSet). The exact meaning of the
     /// return value varies from platform to platform.
-    uint max()
+    uint max() const
     {
         version(Win32)
         {
@@ -1772,7 +1772,7 @@ public:
     }
 
 
-    int selectn()
+    int selectn() const
     {
         version(Win32)
         {
@@ -1971,7 +1971,7 @@ public:
      * will block and wait for data/action.
      * A non-blocking socket will immediately return instead of blocking.
      */
-    @property bool blocking()
+    @property bool blocking() const
     {
         version(Win32)
         {
@@ -2019,7 +2019,7 @@ public:
     }
 
     /// Property that indicates if this is a valid, alive socket.
-    bool isAlive()     // getter
+    bool isAlive() const    // getter
     {
         int type;
         socklen_t typesize = cast(socklen_t) type.sizeof;

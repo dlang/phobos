@@ -245,10 +245,10 @@ void FD_CLR(SOCKET fd, fd_set* set)
 
 
 // Tests.
-int FD_ISSET(SOCKET fd, fd_set* set)
+int FD_ISSET(SOCKET fd, const(fd_set)* set)
 {
-    SOCKET* start = set.fd_array.ptr;
-    SOCKET* stop = start + set.fd_count;
+    const(SOCKET)* start = set.fd_array.ptr;
+    const(SOCKET)* stop = start + set.fd_count;
 
     for(; start != stop; start++)
     {
