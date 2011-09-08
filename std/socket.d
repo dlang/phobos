@@ -2044,11 +2044,12 @@ enum SocketOption: int
     TCP_NODELAY =          .TCP_NODELAY,        /// disable the Nagle algorithm for send coalescing
 
     // SocketOptionLevel.IPV6:
-    IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          ///
-    IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          ///
-    IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        ///
-    IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            ///
-    IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           ///
+    IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit.
+    IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface.
+    IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback.
+    IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership.
+    IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership.
+    IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only.
 }
 
 
