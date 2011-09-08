@@ -34,7 +34,6 @@
  */
 
 /**
- * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
  * License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),

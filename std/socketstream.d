@@ -24,8 +24,6 @@
  * $(D SocketStream) is a stream for a blocking,
  * connected $(D Socket).
  *
- * For Win32 systems, link with <tt>ws2_32.lib</tt>.
- *
  * Example:
  *      See $(SAMPLESRC htmlget.d)
  * Authors: Christopher E. Miller
