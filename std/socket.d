@@ -2230,15 +2230,18 @@ public:
         return addr;
     }
 
-    /// Send or receive error code.
+    /**
+     * Send or receive error code. See $(D wouldHaveBlocked),
+     * $(D lastSocketError) and $(D Socket.getErrorText) for obtaining more
+     * information about the error.
+     */
     enum int ERROR = _SOCKET_ERROR;
 
     /**
      * Send data on the connection. If the socket is blocking and there is no
      * buffer space left, $(D send) waits.
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
-     * failure. See $(D lastSocketError), $(D wouldHaveBlocked) and
-     * $(D Socket.getErrorText) for obtaining more information about the error.
+     * failure.
      */
     //returns number of bytes actually sent, or -1 on error
     ptrdiff_t send(const(void)[] buf, SocketFlags flags)
@@ -2265,8 +2268,7 @@ public:
      * not specified, a connection must have been made and that address is used.
      * If the socket is blocking and there is no buffer space left, $(D sendTo) waits.
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
-     * failure. See $(D lastSocketError), $(D wouldHaveBlocked) and
-     * $(D Socket.getErrorText) for obtaining more information about the error.
+     * failure.
      */
     ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to)
     {
@@ -2317,9 +2319,7 @@ public:
      * Receive data on the connection. If the socket is blocking, $(D receive)
      * waits until there is data to be received.
      * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure. See
-     * $(D lastSocketError), $(D wouldHaveBlocked) and $(D Socket.getErrorText)
-     * for obtaining more information about the error.
+     * has closed the connection, or $(D Socket.ERROR) on failure.
      */
     //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags)
@@ -2347,9 +2347,7 @@ public:
      * If the socket is blocking, $(D receiveFrom) waits until there is data to
      * be received.
      * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure. See
-     * $(D lastSocketError), $(D wouldHaveBlocked) and $(D Socket.getErrorText)
-     * for obtaining more information about the error.
+     * has closed the connection, or $(D Socket.ERROR) on failure.
      */
     ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, out Address from)
     {
