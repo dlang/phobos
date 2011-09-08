@@ -233,10 +233,10 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
     final switch(endian)
     {
-        case    Endian.BigEndian:
+        case    Endian.bigEndian:
             return REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN;
 
-        case    Endian.LittleEndian:
+        case    Endian.littleEndian:
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
     }
 }
