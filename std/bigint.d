@@ -26,7 +26,7 @@
 module std.bigint;
 
 private import std.internal.math.biguintcore;
-private import std.format : FormatSpec, FormatError;
+private import std.format : FormatSpec, FormatException;
 
 /** A struct representing an arbitrary precision integer
  *
@@ -406,17 +406,17 @@ public:
      * $(TR $(TD null) $(TD Default formatting (same as "d") ))
      * )
      */
-    void toString(void delegate(const (char)[]) sink, string formatString) const
+    void toString(scope void delegate(const (char)[]) sink, string formatString) const
     {
         auto f = FormatSpec!char(formatString);
         f.writeUpToNextSpec(sink);
         toString(sink, f);
     }
-    void toString(void delegate(const(char)[]) sink, ref FormatSpec!char f) const
+    void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
         auto hex = (f.spec == 'x' || f.spec == 'X');
         if (!(f.spec == 's' || f.spec == 'd' || hex))
-            throw new FormatError("Format specifier not understood: %" ~ f.spec);
+            throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
         char[] buff =
             hex ? data.toHexString(0, '_', 0, f.flZero ? '0' : ' ')

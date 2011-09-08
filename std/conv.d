@@ -33,28 +33,38 @@ import std.metastrings;
  */
 class ConvException : Exception
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(s);
+        super(s, fn, ln);
     }
 }
 
 deprecated alias ConvException ConvError;   /// ditto
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
+private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" to type "~T.stringof));
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" to type "~T.stringof), fn, ln);
 }
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, int radix)
+private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" base ", radix, " to type "~T.stringof), fn, ln);
+}
+
+private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
+{
+    throw new ConvException(text("Can't parse string: ", msg), fn, ln);
+}
+
+private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
+{
+    if (source.front != c)
+        parseError(text("\"", c, "\" is missing"), fn, ln);
+    source.popFront();
 }
 
 private
@@ -657,8 +667,7 @@ T toImpl(T, S)(S s)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -737,8 +746,7 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBra
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
 //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
@@ -766,8 +774,7 @@ T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T right
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
@@ -931,8 +938,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
 
 version(none) unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
@@ -1722,7 +1728,8 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) && isIntegral!Target)
+    if (isSomeChar!(ElementType!Source) &&
+        isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1805,8 +1812,7 @@ Lerr:
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
@@ -1989,7 +1995,8 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeString!Source && isIntegral!Target)
+    if (isSomeString!Source &&
+        isIntegral!Target)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2071,7 +2078,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == enum))
+    if (isSomeString!Source &&
+        is(Target == enum))
 {
     // TODO: BUG4744
     foreach (i, e; EnumMembers!Target)
@@ -2117,7 +2125,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2128,12 +2137,12 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
+    ConvException bailOut(string fn = __FILE__, size_t ln = __LINE__)
         (string msg = null)
     {
         if (!msg)
             msg = "Floating point conversion error";
-        return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
+        return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
     for (;;)
@@ -2607,7 +2616,8 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Unqual!Target == bool))
+    if (isSomeString!Source &&
+        is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
     {
@@ -2619,7 +2629,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[5 .. $];
         return false;
     }
-    convError!(Source, Target)(s);
+    parseError("bool should be case-insensive 'true' or 'false'");
     assert(0);
 }
 
@@ -2654,7 +2664,8 @@ unittest
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == typedef))
+    if (isSomeString!Source &&
+        is(Target == typedef))
 {
     static if (is(Target T == typedef))
         return cast(Target) parse!T(s);
@@ -2673,13 +2684,12 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
+    if (isSomeString!Source &&
+        isDynamicArray!Target)
 {
     Target result;
-    skipWS(s);
-    if (s.front != lbracket)
-        return result;
-    s.popFront();
+
+    parseCheck!s(lbracket);
     skipWS(s);
     if (s.front == rbracket)
     {
@@ -2688,15 +2698,13 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     }
     for (;; s.popFront(), skipWS(s))
     {
-        result ~= parse!(ElementType!Target)(s);
+        result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
         if (s.front != comma)
             break;
     }
-    if (s.front == rbracket)
-    {
-        s.popFront();
-    }
+    parseCheck!s(rbracket);
+
     return result;
 }
 
@@ -2733,6 +2741,255 @@ unittest
     ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
 }
+
+unittest
+{
+    auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
+    auto a1 = parse!(string[])(s1);
+    assert(a1 == ["hello", "world"]);
+
+    auto s2 = `["aaa", "bbb", "ccc"]`;
+    auto a2 = parse!(string[])(s2);
+    assert(a2 == ["aaa", "bbb", "ccc"]);
+}
+
+/// ditto
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isSomeString!Source &&
+        isStaticArray!Target)
+{
+    Target result = void;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        static if (result.length != 0)
+            goto Lmanyerr;
+        else
+        {
+            s.popFront();
+            return result;
+        }
+    }
+    for (size_t i = 0; ; s.popFront(), skipWS(s))
+    {
+        if (i == result.length)
+            goto Lmanyerr;
+        result[i++] = parseElement!(ElementType!Target)(s);
+        skipWS(s);
+        if (s.front != comma)
+        {
+            if (i != result.length)
+                goto Lfewerr;
+            break;
+        }
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+
+Lmanyerr:
+    parseError(text("Too many elements in input, ", result.length, " elements expected."));
+    assert(0);
+
+Lfewerr:
+    parseError(text("Too few elements in input, ", result.length, " elements expected."));
+    assert(0);
+}
+
+unittest
+{
+    auto s1 = "[1,2,3,4]";
+    auto sa1 = parse!(int[4])(s1);
+    assert(sa1 == [1,2,3,4]);
+
+    auto s2 = "[[1],[2,3],[4]]";
+    auto sa2 = parse!(int[][3])(s2);
+    assert(sa2 == [[1],[2,3],[4]]);
+
+    auto s3 = "[1,2,3]";
+    assertThrown!ConvException(parse!(int[4])(s3));
+
+    auto s4 = "[1,2,3,4,5]";
+    assertThrown!ConvException(parse!(int[4])(s4));
+}
+
+/**
+ * Parses an associative array from a string given the left bracket (default $(D
+ * '[')), right bracket (default $(D ']')), key-value separator (default $(D
+ * ':')), and element seprator (by default $(D ',')).
+ */
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+    if (isSomeString!Source &&
+        isAssociativeArray!Target)
+{
+    alias typeof(Target.keys[0]) KeyType;
+    alias typeof(Target.values[0]) ValueType;
+
+    Target result;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        s.popFront();
+        return result;
+    }
+    for (;; s.popFront(), skipWS(s))
+    {
+        auto key = parseElement!KeyType(s);
+        skipWS(s);
+        parseCheck!s(keyval);
+        skipWS(s);
+        auto val = parseElement!ValueType(s);
+        skipWS(s);
+        result[key] = val;
+        if (s.front != comma) break;
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+}
+
+unittest
+{
+    auto s1 = "[1:10, 2:20, 3:30]";
+    auto aa1 = parse!(int[int])(s1);
+    assert(aa1 == [1:10, 2:20, 3:30]);
+
+    auto s2 = `["aaa":10, "bbb":20, "ccc":30]`;
+    auto aa2 = parse!(int[string])(s2);
+    assert(aa2 == ["aaa":10, "bbb":20, "ccc":30]);
+
+    auto s3 = `["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`;
+    auto aa3 = parse!(int[][string])(s3);
+    assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
+}
+
+private dchar parseEscape(Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+{
+    parseCheck!s('\\');
+
+    dchar getHexDigit()
+    {
+        s.popFront();
+        if (s.empty)
+            parseError("Unterminated escape sequence");
+        dchar c = s.front;
+        if (!isHexDigit(c))
+            parseError("Hex digit is missing");
+        return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
+    }
+
+    dchar result;
+
+    switch (s.front)
+    {
+        case 'a':   result = '\a';  break;
+        case 'b':   result = '\b';  break;
+        case 'f':   result = '\f';  break;
+        case 'n':   result = '\n';  break;
+        case 'r':   result = '\r';  break;
+        case 't':   result = '\t';  break;
+        case 'v':   result = '\v';  break;
+        case 'x':
+            result  = getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'u':
+            result  = getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'U':
+            result  = getHexDigit() << 28;
+            result |= getHexDigit() << 24;
+            result |= getHexDigit() << 20;
+            result |= getHexDigit() << 16;
+            result |= getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        default:
+            parseError("Unknown escape character " ~ to!string(s.front));
+            break;
+    }
+
+    s.popFront();
+
+    return result;
+}
+
+// Undocumented
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeString!Target)
+{
+    auto result = appender!Target();
+
+    // parse array of chars
+    if (s.front == '[')
+        return parse!Target(s);
+
+    parseCheck!s('\"');
+    if (s.front == '\"')
+    {
+        s.popFront();
+        return result.data;
+    }
+    while (true)
+    {
+        if (s.empty)
+            parseError("Unterminated quoted string");
+        switch (s.front)
+        {
+            case '\"':
+                s.popFront();
+                return result.data;
+            case '\\':
+                result.put(parseEscape(s));
+                break;
+            default:
+                result.put(s.front());
+                s.popFront();
+                break;
+        }
+    }
+    assert(0);
+}
+
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target)
+{
+    Target c;
+
+    parseCheck!s('\'');
+    if (s.front != '\\')
+    {
+        c = s.front;
+        s.popFront();
+    }
+    else
+        c = parseEscape(s);
+    parseCheck!s('\'');
+
+    return c;
+}
+
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        !isSomeString!Target && !isSomeChar!Target)
+{
+    return parse!Target(s);
+}
+
 
 /***************************************************************
    Convenience functions for converting any number and types of
@@ -2831,7 +3088,8 @@ ulong octal(string num)()
 }
 
 /// Ditto
-template octal(alias s) if (isIntegral!(typeof(s)))
+template octal(alias s)
+    if (isIntegral!(typeof(s)))
 {
     enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
