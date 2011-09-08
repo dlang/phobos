@@ -355,6 +355,20 @@ enum ProtocolType: int
 
 /**
  * $(D Protocol) is a class for retrieving protocol information.
+ *
+ * Example:
+ * ---
+ * auto proto = new Protocol;
+ * writeln("About protocol TCP:");
+ * if (proto.getProtocolByType(ProtocolType.TCP))
+ * {
+ *     writefln("  Name: %s", proto.name);
+ *     foreach(string s; proto.aliases)
+ *          writefln("  Alias: %s", s);
+ * }
+ * else
+ *     writeln("  No information found");
+ * ---
  */
 class Protocol
 {
@@ -436,6 +450,22 @@ unittest
 
 /**
  * $(D Service) is a class for retrieving service information.
+ *
+ * Example:
+ * ---
+ * auto serv = new Service;
+ * writeln("About service epmap:");
+ * if (serv.getServiceByName("epmap", "tcp"))
+ * {
+ *     writefln("  Service: %s", serv.name);
+ *     writefln("  Port: %d", serv.port);
+ *     writefln("  Protocol: %s", serv.protocolName);
+ *     foreach (string s; serv.aliases)
+ *          writefln("  Alias: %s", s);
+ * }
+ * else
+ *     writefln("  No service for epmap.");
+ * ---
  */
 class Service
 {
@@ -545,6 +575,37 @@ class HostException: SocketOSException
  *
  * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
  * instead of using this class directly.
+ *
+ * Example:
+ * ---
+ * auto ih = new InternetHost;
+ *
+ * // Forward lookup
+ * writeln("About www.digitalmars.com:");
+ * if (ih.getHostByName("www.digitalmars.com"))
+ * {
+ *     writefln("  Name: %s", ih.name);
+ *     auto ia = new InternetAddress(ih.addrList[0],
+ *         InternetAddress.PORT_ANY);
+ *     writefln("  IP address: %s", ia.toAddrString());
+ *     foreach (string s; ih.aliases)
+ *          writefln("  Alias: %s", s);
+ *     writeln("---");
+ *
+ *     // Reverse lookup
+ *     writefln("About IP %s:", ia.toAddrString());
+ *     if (ih.getHostByAddr(ih.addrList[0]))
+ *     {
+ *         writefln("  Name: %s", ih.name);
+ *         foreach (string s; ih.aliases)
+ *              writefln("  Alias: %s", s);
+ *     }
+ *     else
+ *         writeln("  Reverse lookup failed");
+ * }
+ * else
+ *     writeln("  Can't resolve www.digitalmars.com");
+ * ---
  */
 class InternetHost
 {
@@ -777,7 +838,8 @@ private string formatGaiError(int err)
 
 /**
  * Provides _protocol-independent translation from host names to socket
- * addresses.
+ * addresses. If advanced functionality is not required, consider using
+ * $(D getAddress) for compatibility with older systems.
  *
  * Returns: Array with one $(D AddressInfo) per socket address.
  *
@@ -792,6 +854,39 @@ private string formatGaiError(int err)
  *                  $(LI $(D AddressFamily) - address family to filter by)
  *                  $(LI $(D SocketType) - socket type to filter by)
  *                  $(LI $(D ProtocolType) - protocol to filter by))
+ *
+ * Example:
+ * ---
+ * // Roundtrip DNS resolution
+ * auto results = getAddressInfo("www.digitalmars.com");
+ * assert(results[0].address.toHostNameString() ==
+ *     "digitalmars.com");
+ *
+ * // Canonical name
+ * results = getAddressInfo("www.digitalmars.com",
+ *     AddressInfoFlags.CANONNAME);
+ * assert(results[0].canonicalName == "digitalmars.com");
+ *
+ * // IPv6 resolution
+ * results = getAddressInfo("ipv6.google.com");
+ * assert(results[0].family == AddressFamily.INET6);
+ *
+ * // Multihomed resolution
+ * results = getAddressInfo("google.com");
+ * assert(results.length > 1);
+ *
+ * // Parsing IPv4
+ * results = getAddressInfo("127.0.0.1",
+ *     AddressInfoFlags.NUMERICHOST);
+ * assert(results.length && results[0].family ==
+ *     AddressFamily.INET);
+ *
+ * // Parsing IPv6
+ * results = getAddressInfo("::1",
+ *     AddressInfoFlags.NUMERICHOST);
+ * assert(results.length && results[0].family ==
+ *     AddressFamily.INET6);
+ * ---
  */
 AddressInfo[] getAddressInfo(T...)(string node, T options)
 {
@@ -911,6 +1006,19 @@ private uint16_t serviceToPort(string service)
  * Returns: Array with one $(D Address) instance per socket address.
  *
  * Throws: $(D SocketOSException) on failure.
+ *
+ * Example:
+ * ---
+ * writeln("Resolving www.digitalmars.com:");
+ * try
+ * {
+ *     auto addresses = getAddress("www.digitalmars.com");
+ *     foreach (address; addresses)
+ *         writefln("  IP: %s", address.toAddrString());
+ * }
+ * catch (SocketException e)
+ *     writefln("  Lookup failed: %s", e.msg);
+ * ---
  */
 Address[] getAddress(string hostname, string service = null)
 {
@@ -977,6 +1085,19 @@ unittest
  * Returns: An $(D Address) instance representing specified address.
  *
  * Throws: $(D SocketException) on failure.
+ *
+ * Example:
+ * ---
+ * writeln("Looking up reverse of 8.8.8.8:");
+ * try
+ * {
+ *     auto address = parseAddress("8.8.8.8");
+ *     writefln("  Reverse name: %s",
+ *         address.toHostNameString());
+ * }
+ * catch (SocketException e)
+ *     writefln("  Lookup failed: %s", e.msg);
+ * ---
  */
 Address parseAddress(string hostaddr, string service = null)
 {
@@ -1035,6 +1156,27 @@ class AddressException: SocketOSException
 
 /**
  * $(D Address) is an abstract class for representing a socket addresses.
+ *
+ * Example:
+ * ---
+ * writeln("About www.google.com port 80:");
+ * try
+ * {
+ *     Address[] addresses = getAddress("www.google.com", 80);
+ *     writefln("  %d addresses found.", addresses.length);
+ *     foreach (int i, Address a; addresses)
+ *     {
+ *         writefln("  Address %d:", i+1);
+ *         writefln("    IP address: %s", a.toAddrString());
+ *         writefln("    Hostname: %s", a.toHostNameString());
+ *         writefln("    Port: %s", a.toPortString());
+ *         writefln("    Service name: %s",
+ *             a.toServiceNameString());
+ *     }
+ * }
+ * catch (SocketException e)
+ *     writefln("  Lookup error: %s", e.msg);
+ * ---
  */
 abstract class Address
 {
@@ -1418,6 +1560,9 @@ unittest
 /**
  * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6)
  * socket address.
+ *
+ * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * instead of using this class directly.
  */
 class Internet6Address: Address
 {
@@ -2729,7 +2874,7 @@ class TcpSocket: Socket
 
 
     //shortcut
-    /// Constructs a blocking TCP Socket and connects to an $(D InternetAddress).
+    /// Constructs a blocking TCP Socket and connects to an $(D Address).
     this(Address connectTo)
     {
         this(connectTo.addressFamily());
