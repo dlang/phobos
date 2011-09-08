@@ -75,7 +75,8 @@ else version(Posix)
     version(linux)
         import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-               SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE;
+               SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE,
+               TCP_KEEPIDLE, TCP_KEEPINTVL;
     else version(OSX)
         private import std.c.osx.socket;
     else version(FreeBSD)
@@ -2037,6 +2038,7 @@ enum SocketOption: int
     SNDTIMEO =             SO_SNDTIMEO,         /// send timeout
     RCVTIMEO =             SO_RCVTIMEO,         /// receive timeout
     ERROR =                SO_ERROR,            /// retrieve and clear error status
+    KEEPALIVE =            SO_KEEPALIVE,        /// enable keep-alive packets
 
     // SocketOptionLevel.TCP:
     TCP_NODELAY =          .TCP_NODELAY,        /// disable the Nagle algorithm for send coalescing
@@ -2703,6 +2705,46 @@ public:
         int32_t error;
         getOption(SocketOptionLevel.SOCKET, SocketOption.ERROR, error);
         return formatSocketError(error);
+    }
+
+    /**
+     * Enables TCP keep-alive with the specified parameters.
+     *
+     * Params:
+     *   time     = Number of seconds with no activity until the first
+     *              keep-alive packet is sent.
+     *   interval = Number of seconds between when successive keep-alive
+     *              packets are sent if no acknowledgement is received.
+     *
+     * Throws: $(D SocketOSException) if setting the options fails, or
+     * $(D SocketFeatureException) if setting keep-alive parameters is
+     * unsupported on the current platform.
+     */
+    void setKeepAlive(int time, int interval)
+    {
+        version(Windows)
+        {
+            tcp_keepalive options;
+            options.onoff = 1;
+            options.keepalivetime = time * 1000;
+            options.keepaliveinterval = interval * 1000;
+            uint cbBytesReturned;
+            enforce(WSAIoctl(sock, SIO_KEEPALIVE_VALS,
+                             &options, options.sizeof,
+                             null, 0,
+                             &cbBytesReturned, null, null) == 0,
+                    new SocketOSException("Error setting keep-alive"));
+        }
+        else
+        static if (is(typeof(TCP_KEEPIDLE)) && is(typeof(TCP_KEEPINTVL)))
+        {
+            setOption(SocketOptionLevel.TCP, cast(SocketOption)TCP_KEEPIDLE, time);
+            setOption(SocketOptionLevel.TCP, cast(SocketOption)TCP_KEEPINTVL, interval);
+            setOption(SocketOptionLevel.SOCKET, SocketOption.KEEPALIVE, true);
+        }
+        else
+            throw new SocketFeatureException("Setting keep-alive options " ~
+                "is not supported on this platform");
     }
 
     /**

@@ -569,3 +569,23 @@ struct hostent
     }
 }
 
+struct WSAOVERLAPPED;
+alias WSAOVERLAPPED* LPWSAOVERLAPPED;
+alias void function(DWORD, DWORD, LPWSAOVERLAPPED, DWORD) LPWSAOVERLAPPED_COMPLETION_ROUTINE;
+int WSAIoctl(SOCKET s, DWORD dwIoControlCode,
+    LPVOID lpvInBuffer, DWORD cbInBuffer,
+    LPVOID lpvOutBuffer, DWORD cbOutBuffer,
+    LPDWORD lpcbBytesReturned,
+    LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+
+
+const int IOC_VENDOR = 0x18000000;
+const int SIO_KEEPALIVE_VALS = IOC_IN | IOC_VENDOR | 4;
+
+/* Argument structure for SIO_KEEPALIVE_VALS */
+struct tcp_keepalive
+{
+    uint32_t onoff;
+    uint32_t keepalivetime;
+    uint32_t keepaliveinterval;
+}
