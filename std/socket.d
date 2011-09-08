@@ -167,11 +167,11 @@ private string formatSocketError(int err)
         const(char)* cs;
         version (linux)
         {
-            cs = strerror_r(errorCode, buf.ptr, buf.length);
+            cs = strerror_r(err, buf.ptr, buf.length);
         }
         else version (OSX)
         {
-            auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+            auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -179,7 +179,7 @@ private string formatSocketError(int err)
         }
         else version (FreeBSD)
         {
-            auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+            auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -478,7 +478,7 @@ class Service
     void populate(servent* serv)
     {
         name = to!string(serv.s_name);
-        port = ntohs(serv.s_port);
+        port = ntohs(cast(uint16_t)serv.s_port);
         protocolName = to!string(serv.s_proto);
 
         int i;
@@ -1809,6 +1809,7 @@ private:
 
         fd_set setData;
         final @property fd_set* set() { return &setData; }
+        final @property const(fd_set)* set() const { return &setData; }
         int maxfd;
         uint count;
     }
@@ -2140,7 +2141,7 @@ public:
 
 
     /// Get underlying socket handle.
-    socket_t handle()
+    socket_t handle() const
     {
         return sock;
     }
@@ -2677,11 +2678,9 @@ public:
         }
         else version (Posix)
         {
-            _ctimeval tv =
-            {
-                tv_sec : to!(typeof(tv.tv_sec ))(value.total!"seconds"()),
-                tv_usec: to!(typeof(tv.tv_usec))(value.fracSec.usecs)
-            };
+            _ctimeval tv;
+            tv.tv_sec  = to!(typeof(tv.tv_sec ))(value.total!"seconds"());
+            tv.tv_usec = to!(typeof(tv.tv_usec))(value.fracSec.usecs);
             setOption(level, option, (&tv)[0 .. 1]);
         }
         else static assert(false);
