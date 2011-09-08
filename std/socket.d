@@ -584,15 +584,14 @@ class HostException: SocketOSException
  * if (ih.getHostByName("www.digitalmars.com"))
  * {
  *     writefln("  Name: %s", ih.name);
- *     auto ia = new InternetAddress(ih.addrList[0],
- *         InternetAddress.PORT_ANY);
- *     writefln("  IP address: %s", ia.toAddrString());
+ *     auto ip = InternetAddress.toString(ih.addrList[0]);
+ *     writefln("  IP address: %s", ip);
  *     foreach (string s; ih.aliases)
  *          writefln("  Alias: %s", s);
  *     writeln("---");
  *
  *     // Reverse lookup
- *     writefln("About IP %s:", ia.toAddrString());
+ *     writefln("About IP %s:", ip);
  *     if (ih.getHostByAddr(ih.addrList[0]))
  *     {
  *         writefln("  Name: %s", ih.name);
@@ -1420,13 +1419,13 @@ public:
     enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 host address.
     enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
 
-    /// Returns the IPv4 _port number.
+    /// Returns the IPv4 _port number (in host byte order).
     uint16_t port() const
     {
         return ntohs(sin.sin_port);
     }
 
-    /// Returns the IPv4 address number.
+    /// Returns the IPv4 address number (in host byte order).
     uint32_t addr() const
     {
         return ntohl(sin.sin_addr.s_addr);
@@ -1525,6 +1524,17 @@ public:
     static uint32_t parse(string addr)
     {
         return ntohl(inet_addr(std.string.toStringz(addr)));
+    }
+
+    /**
+     * Convert an IPv4 address number in host byte order to a human readable
+     * string representing the IPv4 address in dotted-decimal form.
+     */
+    static string toString(uint32_t addr)
+    {
+        in_addr sin_addr;
+        sin_addr.s_addr = htonl(addr);
+        return to!string(inet_ntoa(sin_addr)).idup;
     }
 }
 
