@@ -53,11 +53,6 @@ import core.time : dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce;
 
-version(unittest)
-{
-    private import std.c.stdio : printf;
-}
-
 version(Win32)
 {
     pragma (lib, "ws2_32.lib");
@@ -122,6 +117,23 @@ else version(Posix)
 else
 {
     static assert(0);     // No socket support yet.
+}
+
+version(unittest)
+{
+    private import std.stdio : writefln;
+
+    // Print a message on exception instead of failing the unittest.
+    private void softUnittest(void delegate() test, int line = __LINE__)
+    {
+        try
+            test();
+        catch (Throwable e)
+        {
+            writefln(" --- std.socket(%d) test fails depending on environment ---", line);
+            writefln(" (%s)", e);
+        }
+    }
 }
 
 /// Base exception thrown by $(D std.socket).
@@ -407,23 +419,18 @@ class Protocol
 
 unittest
 {
-    try
-    {
+    softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
-        //printf("About protocol TCP:\n\tName: %.*s\n", proto.name);
+        //writeln("About protocol TCP:");
+        //writefln("\tName: %s", proto.name);
         // foreach(string s; proto.aliases)
         // {
-        //      printf("\tAlias: %.*s\n", s);
+        //      writefln("\tAlias: %s", s);
         // }
         assert(proto.name == "tcp");
         assert(proto.aliases.length == 1 && proto.aliases[0] == "TCP");
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -497,17 +504,17 @@ class Service
 
 unittest
 {
-    try
-    {
+    softUnittest({
         Service serv = new Service;
         if(serv.getServiceByName("epmap", "tcp"))
         {
-            // printf("About service epmap:\n\tService: %.*s\n"
-            //         "\tPort: %d\n\tProtocol: %.*s\n",
-            //         serv.name, serv.port, serv.protocolName);
+            // writefln("About service epmap:");
+            // writefln("\tService: %s", serv.name);
+            // writefln("\tPort: %d", serv.port);
+            // writefln("\tProtocol: %s", serv.protocolName);
             // foreach(string s; serv.aliases)
             // {
-            //      printf("\tAlias: %.*s\n", s);
+            //      writefln("\tAlias: %s", s);
             // }
             // For reasons unknown this is loc-srv on Wine and epmap on Windows
             assert(serv.name == "loc-srv" || serv.name == "epmap", serv.name);
@@ -516,14 +523,9 @@ unittest
         }
         else
         {
-            printf("No service for epmap.\n");
+            writefln("No service for epmap.");
         }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -706,34 +708,29 @@ unittest
     ih.getHostByAddr("127.0.0.1");
     assert(ih.addrList[0] == 0x7F_00_00_01);
 
-    try
-    {
+    softUnittest({
         if (!ih.getHostByName("www.digitalmars.com"))
             return;             // don't fail if not connected to internet
-        //printf("addrList.length = %d\n", ih.addrList.length);
+        //writefln("addrList.length = %d", ih.addrList.length);
         assert(ih.addrList.length);
         InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
         assert(ih.name == "www.digitalmars.com" || ih.name == "digitalmars.com",
                ih.name);
-        // printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
+        // writefln("IP address = %s", ia.toAddrString());
+        // writefln("name = %s", ih.name);
         // foreach(int i, string s; ih.aliases)
         // {
-        //      printf("aliases[%d] = %.*s\n", i, s);
+        //      writefln("aliases[%d] = %s", i, s);
         // }
-        // printf("---\n");
+        // writefln("---");
 
         //assert(ih.getHostByAddr(ih.addrList[0]));
-        // printf("name = %.*s\n", ih.name);
+        // writefln("name = %s", ih.name);
         // foreach(int i, string s; ih.aliases)
         // {
-        //      printf("aliases[%d] = %.*s\n", i, s);
+        //      writefln("aliases[%d] = %s", i, s);
         // }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -859,8 +856,7 @@ private AddressInfo[] getAddressInfoImpl(string node, string service, addrinfo* 
 
 unittest
 {
-    try
-    {
+    softUnittest({
         if (getaddrinfoPointer)
         {
             // Roundtrip DNS resolution
@@ -888,12 +884,7 @@ unittest
             results = getAddressInfo("::1", AddressInfoFlags.NUMERICHOST);
             assert(results.length && results[0].family == AddressFamily.INET6);
         }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -959,8 +950,7 @@ Address[] getAddress(string hostname, uint16_t port)
 
 unittest
 {
-    try
-    {
+    softUnittest({
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
@@ -974,12 +964,7 @@ unittest
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
         }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -1018,8 +1003,7 @@ Address parseAddress(string hostaddr, uint16_t port)
 
 unittest
 {
-    try
-    {
+    softUnittest({
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
@@ -1033,12 +1017,7 @@ unittest
             address = parseAddress("63.105.9.61");
             assert(address.toAddrString() == "63.105.9.61");
         }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -1411,8 +1390,7 @@ public:
 
 unittest
 {
-    try
-    {
+    softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
 
@@ -1433,12 +1411,7 @@ unittest
                 assert(ia2.toHostNameString() == "digitalmars.com");
             }
         }
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
@@ -1577,16 +1550,10 @@ public:
 
 unittest
 {
-    try
-    {
+    softUnittest({
         const Internet6Address ia = new Internet6Address("::1", 80);
         assert(ia.toString() == "[::1]:80");
-    }
-    catch (Throwable e)
-    {
-        printf(" --- std.socket(%u) test fails depending on environment ---\n", __LINE__);
-        printf(" (%.*s)\n", e.toString());
-    }
+    });
 }
 
 
