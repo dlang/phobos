@@ -798,7 +798,8 @@ else version (Posix)
             args[0] = browser;
         }
         else
-            args[0] = "x-www-browser".ptr;
+            //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
+            args[0] = "xdg-open".ptr;
 
         args[1] = toStringz(url);
         args[2] = null;
