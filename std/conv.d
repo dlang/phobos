@@ -3371,7 +3371,8 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
     enforce(chunk.length >= __traits(classInstanceSize, T),
            new ConvException("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
+    enforce(a % 16 == 0, 
+           new ConvException("emplace: chunk not 16-byte aligned"));
     auto result = cast(typeof(return)) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
