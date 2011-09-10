@@ -586,7 +586,7 @@ class InternetHost
      * Resolve IPv4 address number. Returns false if unable to resolve.
      *
      * Params:
-     *   addr = The IPv4 address to resolve, in network byte order.
+     *   addr = The IPv4 address to resolve, in host byte order.
      */
     bool getHostByAddr(uint addr)
     {
