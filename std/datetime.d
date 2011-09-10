@@ -106,6 +106,7 @@ import core.stdc.time;
 
 import std.array;
 import std.algorithm;
+import std.benchmark;
 import std.conv;
 import std.ctype;
 import std.exception;

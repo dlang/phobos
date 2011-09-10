@@ -7,13 +7,8 @@
     Source:    $(PHOBOSSRC std/_benchmark.d)
  */
 module std.benchmark;
-import std.algorithm, std.array, std.conv, std.datetime,
-    std.functional, std.traits, std.typecons;
-import core.exception;
-
-//==============================================================================
-// Section with StopWatch and Benchmark Code.
-//==============================================================================
+import std.array, std.datetime, std.stdio, std.traits, std.typecons;
+version(unittest) import std.conv;
 
 /++
    Used by StopWatch to indicate whether it should start immediately upon
@@ -171,6 +166,7 @@ public:
 
     @safe unittest
     {
+        import core.exception;
         StopWatch sw;
         sw.start();
         auto t1 = sw.peek();
@@ -197,6 +193,7 @@ public:
 
     @safe unittest
     {
+        import core.exception;
         StopWatch sw;
         sw.start();
         sw.stop();
@@ -266,7 +263,7 @@ private:
     TickDuration _timeMeasured;
 }
 
-
+__EOF__
 // workaround for bug4886
 @safe size_t lengthof(aliases...)() pure nothrow
 {
@@ -515,7 +512,7 @@ void benchmark_append_builtin(uint n)
 
 void benchmark_append_appender(uint n)
 {
-    auto s = appender!string();
+    auto a = appender!string();
     foreach (i; 0 .. n)
     {
         put(a, 'x');
@@ -557,6 +554,8 @@ $(D append_builtin)'s speed).
  */
 void benchmarkModule(string mod)(File target = stdout)
 {
+    import std.algorithm;
+
     struct TestResult
     {
         string name;
@@ -660,8 +659,8 @@ void benchmarkModule(string mod)(File target = stdout)
     if (results.length)
     {
         target.writeln(
-                "========================================================="
-                "======================");
+            "========================================================="
+            "======================");
     }
 }
 
@@ -709,7 +708,13 @@ version(StdRunBenchmarks)
     {
         benchmarkModule!"std.benchmark"();
     }
-}
+
+    unittest
+    {
+        // Make sure this compiles
+        if (false) benchmarkModule!"std.benchmark"();
+        version(StdRunBenchmarks) benchmarkModule!"std.benchmark"();
+    }
 
 // One benchmark stopwatch
 private StopWatch theStopWatch;
@@ -916,6 +921,7 @@ else
     {
         struct Result
         {
+            import std.functional;
             private StopWatch _sw = void;
             this(AutoStart as)
             {
@@ -934,6 +940,7 @@ else
     {
         struct Result
         {
+            import std.functional;
             private StopWatch _sw = void;
             this(AutoStart as)
             {
