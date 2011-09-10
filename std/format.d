@@ -1261,10 +1261,11 @@ if (isSomeChar!T)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
+    Unqual!(StringTypeOf!T) str = val;  // for `alias this`, see bug5371
+
     if (f.spec == 's')
     {
-        StringTypeOf!T val2 = val;          // for `alias this`
-        auto s = val2[0 .. f.precision < $ ? f.precision : $];
+        auto s = str[0 .. f.precision < $ ? f.precision : $];
         if (!f.flDash)
         {
             // right align
@@ -1282,17 +1283,17 @@ if (isSomeString!T && !isStaticArray!T && !is(T == enum))
     }
     else
     {
-        static if (is(typeof(val[0]) : const(char)))
+        static if (is(typeof(str[0]) : const(char)))
         {
-            formatRange(w, val, f);
+            formatRange(w, str, f);
         }
-        else static if (is(typeof(val[0]) : const(wchar)))
+        else static if (is(typeof(str[0]) : const(wchar)))
         {
-            formatRange(w, val, f);
+            formatRange(w, str, f);
         }
-        else static if (is(typeof(val[0]) : const(dchar)))
+        else static if (is(typeof(str[0]) : const(dchar)))
         {
-            formatRange(w, val, f);
+            formatRange(w, str, f);
         }
     }
 }
@@ -1304,6 +1305,28 @@ unittest
     string s = "abc";
     formatValue(w, s, f);
     assert(w.data == "abc");
+}
+
+unittest
+{
+    // 5371
+    class C1
+    {
+        const(string) var = "C1";
+        alias var this;
+    }
+    class C2
+    {
+        string var = "C2";
+        alias var this;
+    }
+    auto c1 = new C1();
+    auto c2 = new C2();
+
+    FormatSpec!char f;
+    auto a = appender!string();
+    formatValue(a, c1, f);
+    formatValue(a, c2, f);
 }
 
 /**
