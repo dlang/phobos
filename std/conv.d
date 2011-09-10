@@ -2080,7 +2080,8 @@ unittest
         assert(parse!int(s, 16) == 0xfcde);
 
     // 6609
-    assert(parse!int("-42", 10) == -42);
+    s = "-42";
+    assert(parse!int(s, 10) == -42);
 }
 
 Target parse(Target, Source)(ref Source s)
