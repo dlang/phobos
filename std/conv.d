@@ -2003,6 +2003,9 @@ in
 }
 body
 {
+    if (radix == 10)
+        return parse!Target(s);
+
     immutable length = s.length;
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
@@ -2075,6 +2078,9 @@ unittest
         assert(parse!int(s, 8) == octal!765);
     s = "fCDe";
         assert(parse!int(s, 16) == 0xfcde);
+
+    // 6609
+    assert(parse!int("-42", 10) == -42);
 }
 
 Target parse(Target, Source)(ref Source s)
