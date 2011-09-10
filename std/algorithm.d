@@ -6714,6 +6714,60 @@ unittest
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
 }
 
+/*
+Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
+"a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
+and sorts elements that have the same $(D id) by $(D date)
+descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
+< b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
+does fewer comparisons (in addition to being more convenient).
+
+Example:
+----
+static struct Point { int x, y; }
+auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+assert(pts1 == pts2);
+----
+ */
+template multiSort(less...) //if (less.length > 1)
+{
+    void multiSort(Range)(Range r)
+    {
+        static if (is(typeof(less[$ - 1]) == SwapStrategy))
+        {
+            enum ss = less[$ - 1];
+            alias less[0 .. $ - 1] funs;
+        }
+        else
+        {
+            alias SwapStrategy.unstable ss;
+            alias less funs;
+        }
+        alias binaryFun!(funs[0]) lessFun;
+        static if (funs.length > 1)
+        {
+            auto p = getPivot!lessFun(r);
+            auto t = partition3!(less[0], ss)(r, r[p]);
+            .multiSort!(less[1 .. $])(t[1]);
+        }
+        else
+        {
+            sort!(lessFun, ss)(r);
+        }
+    }
+}
+
+unittest
+{
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+}
+
 // @@@BUG1904
 /*private*/
 size_t getPivot(alias less, Range)(Range r)
