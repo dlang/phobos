@@ -24,8 +24,8 @@ splitter) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
-partition) $(MYREF schwartzSort) $(MYREF sort) $(MYREF topN) $(MYREF
-topNCopy) )
+partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
+$(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
@@ -5359,29 +5359,29 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    static if(isArray!Range1 && isArray!Range2 && 
+    static if(isArray!Range1 && isArray!Range2 &&
     is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
         // Array specialization.  This uses optimized memory copying routines
-        // under the hood and is about 10-20x faster than the generic 
+        // under the hood and is about 10-20x faster than the generic
         // implementation.
-        enforce(target.length >= source.length, 
+        enforce(target.length >= source.length,
             "Cannot copy a source array into a smaller target array.");
         target[0..source.length] = source;
-        
+
         return target[source.length..$];
     }
     else
-    {   
-        // Generic implementation.    
+    {
+        // Generic implementation.
         for (; !source.empty; source.popFront())
         {
             put(target, source.front);
         }
-        
+
         return target;
     }
-    
+
 }
 
 unittest
@@ -6342,6 +6342,109 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
     assert(isPartitioned!("a & 1")(r));
+}
+
+// partition3
+/**
+Rearranges elements in $(D r) in three adjacent ranges and returns
+them. The first and leftmost range only contains elements in $(D r)
+less than $(D pivot). The second and middle range only contains
+elements in $(D r) that are equal to $(D pivot). Finally, the third
+and rightmost range only contains elements in $(D r) that are greater
+than $(D pivot). The less-than test is defined by the binary function
+$(D less).
+
+Example:
+----
+auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+auto pieces = partition3(a, 4);
+assert(a == [ 1, 3, 4, 4, 4, 7, 8 ];
+assert(pieces[0] == [ 1, 3 ]);
+assert(pieces[1] == [ 4, 4, 4 ]);
+assert(pieces[2] == [ 7, 8 ]);
+----
+
+BUGS: stable $(D partition3) has not been implemented yet.
+ */
+auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
+(Range r, E pivot)
+    if (ss == SwapStrategy.unstable && isRandomAccessRange!Range)
+{
+    alias binaryFun!less lessFun;
+    size_t i, j, k = r.length, l = k;
+
+ bigloop:
+    for (;;)
+    {
+        for (;; ++j)
+        {
+            if (j == k) break bigloop;
+            assert(j < r.length);
+            if (lessFun(r[j], pivot)) continue;
+            if (lessFun(pivot, r[j])) break;
+            swap(r[i++], r[j]);
+        }
+        assert(j < k);
+        for (;;)
+        {
+            assert(k > 0);
+            if (!lessFun(pivot, r[--k]))
+            {
+                if (lessFun(r[k], pivot)) break;
+                swap(r[k], r[--l]);
+            }
+            if (j == k) break bigloop;
+        }
+        // Here we know r[j] > pivot && r[k] < pivot
+        swap(r[j++], r[k]);
+    }
+
+    // Swap the equal ranges from the extremes into the middle
+    auto strictlyLess = j - i, strictlyGreater = l - k;
+    auto swapLen = min(i, strictlyLess);
+    swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
+    swapLen = min(r.length - l, strictlyGreater);
+    swapRanges(r[k .. k + swapLen], r[$ - swapLen .. $]);
+    return tuple(r[0 .. strictlyLess],
+            r[strictlyLess .. $ - strictlyGreater],
+            r[$ - strictlyGreater .. $]);
+}
+
+unittest
+{
+    auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+    auto pieces = partition3(a, 4);
+    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
+    assert(pieces[0] == [ 1, 3 ]);
+    assert(pieces[1] == [ 4, 4, 4 ]);
+    assert(pieces[2] == [ 8, 7 ]);
+
+    a = null;
+    pieces = partition3(a, 4);
+    assert(a.empty);
+    assert(pieces[0].empty);
+    assert(pieces[1].empty);
+    assert(pieces[2].empty);
+
+    a.length = uniform(0, 100);
+    foreach (ref e; a)
+    {
+        e = uniform(0, 50);
+    }
+    pieces = partition3(a, 25);
+    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+    foreach (e; pieces[0])
+    {
+        assert(e < 25);
+    }
+    foreach (e; pieces[1])
+    {
+        assert(e == 25);
+    }
+    foreach (e; pieces[2])
+    {
+        assert(e > 25);
+    }
 }
 
 // topN
