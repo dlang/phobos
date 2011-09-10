@@ -51,7 +51,7 @@ pragma(lib, "advapi32.lib");
 
 //import std.windows.error_codes;
 //import std.windows.types;
-private import std.string;
+private import std.string, std.exception;
 private import std.c.windows.windows;
 import std.c.stdio;
 //private import std.windows.exceptions;
@@ -114,7 +114,7 @@ public enum Endian
 /+ + These are borrowed from synsoft.win32.types for the moment, but will not be
  + needed once I've convinced Walter to use strong typedefs for things like HKEY +
  +/
-private typedef uint Reserved;
+private alias uint Reserved;
 
 //import synsoft.text.token;
 /+ ++++++ This is borrowed from synsoft.text.token, until such time as something
@@ -300,6 +300,9 @@ private extern (Windows)
                         ,   in REGSAM samDesired
                         ,   in LPSECURITY_ATTRIBUTES lpsa
                         ,   out HKEY hkeyResult, out DWORD disposition);
+    LONG    function(in HKEY hkey, in LPCSTR lpSubKey
+                        ,   in REGSAM samDesired, in Reserved) RegDeleteKeyExA;
+    
     LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REGSAM samDesired, out HKEY hkeyResult);
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
@@ -329,6 +332,54 @@ private extern (Windows)
 /* /////////////////////////////////////////////////////////////////////////////
  * Private utility functions
  */
+
+shared static this()
+{
+    //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
+    //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
+    alias extern(Windows) BOOL function(HANDLE, PBOOL) fptr_t;
+    auto IsWow64Process =
+        cast(fptr_t)GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
+    BOOL bIsWow64;
+    isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
+    
+    advapi32Mutex = new shared(Object)();
+}
+
+shared static ~this()
+{
+    freeAdvapi32();
+}
+
+private {
+    immutable bool isWow64;
+    shared Object advapi32Mutex;
+    shared HMODULE hAdvapi32 = null;
+    
+    ///Returns samDesired but without WoW64 flags if not in WoW64 mode
+    ///for compatibility with Windows 2000
+    REGSAM compatibleRegsam(in REGSAM samDesired)
+    {
+        return isWow64 ? samDesired : cast(REGSAM)(samDesired & ~REGSAM.KEY_WOW64_RES);
+    }
+    
+    ///Returns true, if we are in WoW64 mode and have WoW64 flags
+    bool haveWoW64Job(in REGSAM samDesired)
+    {
+        return isWow64 && (samDesired & REGSAM.KEY_WOW64_RES);
+    }
+}
+
+///It will free Advapi32.dll, which may be loaded for RegDeleteKeyEx function
+void freeAdvapi32()
+{
+    synchronized(advapi32Mutex)
+        if(hAdvapi32) {
+            RegDeleteKeyExA = null;
+            hAdvapi32 = null;
+            enforce(FreeLibrary(cast(void*) hAdvapi32), `FreeLibrary(hAdvapi32)`);
+        }
+}
 
 private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 {
@@ -451,11 +502,11 @@ in
 body
 {
     return RegCreateKeyExA( hkey, toStringz(subKey), RESERVED, RESERVED
-                        ,   dwOptions, samDesired, lpsa, hkeyResult
+                        ,   dwOptions, compatibleRegsam(samDesired), lpsa, hkeyResult
                         ,   disposition);
 }
 
-private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey)
+private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey, in REGSAM samDesired)
 in
 {
     assert(!(null is hkey));
@@ -463,6 +514,22 @@ in
 }
 body
 {
+    if(haveWoW64Job(samDesired))
+    {
+        if(!RegDeleteKeyExA)
+            synchronized(advapi32Mutex)
+            {
+                hAdvapi32 = cast(shared) enforce(
+                    LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`
+                );
+                
+                RegDeleteKeyExA = cast(typeof(RegDeleteKeyExA))enforce(GetProcAddress(
+                    cast(void*) hAdvapi32 , "RegDeleteKeyExA"), 
+                    `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`
+                );
+            }
+        return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
+    }
     return RegDeleteKeyA(hkey, toStringz(subKey));
 }
 
@@ -538,7 +605,7 @@ body
     // more if it does.
     for(;;)
     {
-        cchName = name.length;
+        cchName = to!DWORD(name.length);
 
         res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
 
@@ -621,7 +688,7 @@ in
 }
 body
 {
-    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, samDesired, hkeyResult);
+    return RegOpenKeyExA(hkey, toStringz(subKey), RESERVED, compatibleRegsam(samDesired), hkeyResult);
 }
 
 private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
@@ -1057,7 +1124,7 @@ public:
     /// \param name The name of the subkey to create. May not be null
     /// \return The created key
     /// \note If the key cannot be created, a RegistryException is thrown.
-    Key createKey(string name, REGSAM access)
+    Key createKey(string name, REGSAM access = REGSAM.KEY_ALL_ACCESS)
     {
         if( null is name ||
             0 == name.length)
@@ -1069,7 +1136,7 @@ public:
             HKEY    hkey;
             DWORD   disposition;
             LONG    lRes    =   Reg_CreateKeyExA_(  m_hkey, name, 0
-                                                ,   REGSAM.KEY_ALL_ACCESS
+                                                ,   access
                                                 ,   null, hkey, disposition);
 
             if(ERROR_SUCCESS != lRes)
@@ -1104,22 +1171,11 @@ public:
 
     /// Returns the named sub-key of this key
     ///
-    /// \param name The name of the subkey to create. May not be null
-    /// \return The created key
-    /// \note If the key cannot be created, a RegistryException is thrown.
-    /// \note This function is equivalent to calling CreateKey(name, REGSAM.KEY_ALL_ACCESS), and returns a key with all access
-    Key createKey(string name)
-    {
-        return createKey(name, cast(REGSAM)REGSAM.KEY_ALL_ACCESS);
-    }
-
-    /// Returns the named sub-key of this key
-    ///
     /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
     /// \param access The desired access; one of the REGSAM enumeration
     /// \return The aquired key.
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
-    Key getKey(string name, REGSAM access)
+    Key getKey(string name, REGSAM access = REGSAM.KEY_READ)
     {
         if( null is name ||
             0 == name.length)
@@ -1129,7 +1185,7 @@ public:
         else
         {
             HKEY    hkey;
-            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, REGSAM.KEY_ALL_ACCESS, hkey);
+            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, access, hkey);
 
             if(ERROR_SUCCESS != lRes)
             {
@@ -1161,21 +1217,10 @@ public:
         }
     }
 
-    /// Returns the named sub-key of this key
-    ///
-    /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
-    /// \return The aquired key.
-    /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
-    /// \note This function is equivalent to calling GetKey(name, REGSAM.KEY_READ), and returns a key with read/enum access
-    Key getKey(string name)
-    {
-        return getKey(name, cast(REGSAM)(REGSAM.KEY_READ));
-    }
-
     /// Deletes the named key
     ///
     /// \param name The name of the key to delete. May not be null
-    void deleteKey(string name)
+    void deleteKey(string name, REGSAM access = cast(REGSAM)0)
     {
         if( null is name ||
             0 == name.length)
@@ -1184,7 +1229,7 @@ public:
         }
         else
         {
-            LONG    res =   Reg_DeleteKeyA_(m_hkey, name);
+            LONG    res =   Reg_DeleteKeyA_(m_hkey, name, access);
 
             if(ERROR_SUCCESS != res)
             {
@@ -1269,7 +1314,7 @@ public:
         Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
                                             : REG_VALUE_TYPE.REG_SZ, value.ptr
-                        , value.length);
+                        , to!DWORD(value.length));
     }
 
     /// Sets the named value with the given multiple-strings value
@@ -1291,13 +1336,13 @@ public:
         // Allocate
 
         char[]  cs      =   new char[total];
-        int     base    =   0;
+        size_t  base    =   0;
 
         // Slice the individual strings into the new array
 
         foreach(string s; value)
         {
-            int top = base + s.length;
+            size_t top = base + s.length;
 
             cs[base .. top] = s;
             cs[top] = 0;
@@ -1305,7 +1350,7 @@ public:
             base = 1 + top;
         }
 
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, to!DWORD(cs.length));
     }
 
     /// Sets the named value with the given binary value
@@ -1315,7 +1360,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, to!DWORD(value.length));
     }
 
     /// Deletes the named value
@@ -1438,7 +1483,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
 
-        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, newValue.length))
+        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, to!DWORD(newValue.length)))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }

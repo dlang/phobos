@@ -73,6 +73,7 @@ enum SeekPos {
 
 private {
   import std.conv;
+  import std.ascii;
   import std.format;
   import std.system;    // for Endian enumeration
   import std.utf;
@@ -730,7 +731,7 @@ class Stream : InputStream, OutputStream {
         }
         // read field width
         int width = 0;
-        while (isdigit(fmt[i])) {
+        while (isDigit(fmt[i])) {
           width = width * 10 + (fmt[i] - '0');
           i++;
         }
@@ -752,7 +753,7 @@ class Stream : InputStream, OutputStream {
         case 'i':
         case 'I':
           {
-            while (iswhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -786,7 +787,7 @@ class Stream : InputStream, OutputStream {
             {
                 case 'd':       // decimal
                 case 'u': {
-                  while (isdigit(c) && width) {
+                  while (isDigit(c) && width) {
                     n = n * 10 + (c - '0');
                     width--;
                     c = getc();
@@ -795,7 +796,7 @@ class Stream : InputStream, OutputStream {
                 } break;
 
                 case 'o': {     // octal
-                  while (isoctdigit(c) && width) {
+                  while (isOctalDigit(c) && width) {
                     n = n * 8 + (c - '0');
                     width--;
                     c = getc();
@@ -804,9 +805,9 @@ class Stream : InputStream, OutputStream {
                 } break;
 
                 case 'x': {     // hexadecimal
-                  while (ishexdigit(c) && width) {
+                  while (isHexDigit(c) && width) {
                     n *= 0x10;
-                    if (isdigit(c))
+                    if (isDigit(c))
                       n += c - '0';
                     else
                       n += 0xA + (c | 0x20) - 'a';
@@ -857,7 +858,7 @@ class Stream : InputStream, OutputStream {
         case 'g':
         case 'G':
           {
-            while (iswhite(c)) {
+            while (isWhite(c)) {
               c = getc();
               count++;
             }
@@ -871,7 +872,7 @@ class Stream : InputStream, OutputStream {
               count++;
             }
             real n = 0;
-            while (isdigit(c) && width) {
+            while (isDigit(c) && width) {
               n = n * 10 + (c - '0');
               width--;
               c = getc();
@@ -882,7 +883,7 @@ class Stream : InputStream, OutputStream {
               c = getc();
               count++;
               double frac = 1;
-              while (isdigit(c) && width) {
+              while (isDigit(c) && width) {
                 n = n * 10 + (c - '0');
                 frac *= 10;
                 width--;
@@ -908,7 +909,7 @@ class Stream : InputStream, OutputStream {
                   count++;
                 }
                 real exp = 0;
-                while (isdigit(c) && width) {
+                while (isDigit(c) && width) {
                   exp = exp * 10 + (c - '0');
                   width--;
                   c = getc();
@@ -940,7 +941,7 @@ class Stream : InputStream, OutputStream {
           } break;
 
         case 's': {     // string
-          while (iswhite(c)) {
+          while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -951,7 +952,7 @@ class Stream : InputStream, OutputStream {
             p = va_arg!(char[]*)(args);
             s = *p;
           }
-          while (!iswhite(c) && c != char.init) {
+          while (!isWhite(c) && c != char.init) {
             if (strlen < s.length) {
               s[strlen] = c;
             } else {
@@ -984,7 +985,7 @@ class Stream : InputStream, OutputStream {
           if (width < 0)
             width = 1;
           else
-            while (iswhite(c)) {
+            while (isWhite(c)) {
             c = getc();
             count++;
           }
@@ -1007,8 +1008,8 @@ class Stream : InputStream, OutputStream {
         default:        // read character as is
           goto nws;
         }
-      } else if (iswhite(fmt[i])) {     // skip whitespace
-        while (iswhite(c))
+      } else if (isWhite(fmt[i])) {     // skip whitespace
+        while (isWhite(c))
           c = getc();
         i++;
       } else {  // read character as is
@@ -1953,7 +1954,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Win32) {
-      ReadFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      ReadFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1966,7 +1969,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Win32) {
-      WriteFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      WriteFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -2190,8 +2195,8 @@ enum BOM {
 private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
-  Endian.LittleEndian, Endian.BigEndian,
-  Endian.LittleEndian, Endian.BigEndian
+  Endian.littleEndian, Endian.bigEndian,
+  Endian.littleEndian, Endian.bigEndian
   ];
 
 immutable ubyte[][NBOMS] ByteOrderMarks =
@@ -2420,7 +2425,7 @@ class EndianStream : FilterStream {
   unittest {
     MemoryStream m;
     m = new MemoryStream ();
-    EndianStream em = new EndianStream(m,Endian.BigEndian);
+    EndianStream em = new EndianStream(m,Endian.bigEndian);
     uint x = 0x11223344;
     em.write(x);
     assert( m.data[0] == 0x11 );
@@ -2435,7 +2440,7 @@ class EndianStream : FilterStream {
     em.position(0);
     static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.LittleEndian) {
+    if (std.system.endian == Endian.littleEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2447,7 +2452,7 @@ class EndianStream : FilterStream {
       assert( x3[10] == 2 );
       assert( x3[11] == 1 );
     }
-    em.endian = Endian.LittleEndian;
+    em.endian = Endian.littleEndian;
     em.write(x);
     assert( m.data[0] == 0x44 );
     assert( m.data[1] == 0x33 );
@@ -2459,7 +2464,7 @@ class EndianStream : FilterStream {
     assert( m.data[1] == 0x55 );
     em.position(0);
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.BigEndian) {
+    if (std.system.endian == Endian.bigEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2702,7 +2707,7 @@ class MmFileStream : TArrayStream!(MmFile) {
   this(MmFile file) {
     super (file);
     MmFile.Mode mode = file.mode;
-    writeable = mode > MmFile.Mode.Read;
+    writeable = mode > MmFile.Mode.read;
   }
 
   override void flush() {
@@ -2722,7 +2727,7 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");
@@ -2933,21 +2938,4 @@ class SliceStream : FilterStream {
     assert (m.size () == 29);
     assert (m.toString() == "HellVrooorld\nBlaho, etcetera.");
   }
-}
-
-// helper functions
-private bool iswhite(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-
-private bool isdigit(char c) {
-  return c >= '0' && c <= '9';
-}
-
-private bool isoctdigit(char c) {
-  return c >= '0' && c <= '7';
-}
-
-private bool ishexdigit(char c) {
-  return isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }

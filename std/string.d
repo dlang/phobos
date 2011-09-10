@@ -14,8 +14,9 @@ Copyright: Copyright Digital Mars 2007-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
-Andrei Alexandrescu)
+Authors: $(WEB digitalmars.com, Walter Bright),
+         $(WEB erdani.org, Andrei Alexandrescu),
+         and Jonathan M Davis
 
 Source:    $(PHOBOSSRC std/_string.d)
 
@@ -37,11 +38,9 @@ predicate.))
 $(TR $(TD $(D count)) $(TD Moved to $(XREF algorithm, count) and
 generalized to accept a custom predicate.))
 
-$(TR $(TD $(D replace)) $(TD Moved to $(XREF array, replace).))
-
 $(TR $(TD $(D ByCodeUnit)) $(TD Removed.))
 
-$(TR $(TD $(D insert)) $(TD Use $(XREF array, insert) instead.))
+$(TR $(TD $(D insert)) $(TD Use $(XREF array, insertInPlace) instead.))
 
 $(TR $(TD $(D join)) $(TD Use $(XREF array, join) instead.))
 
@@ -60,153 +59,296 @@ module std.string;
 //debug=string;                 // uncomment to turn on debugging printf's
 
 import core.exception : onRangeError;
-import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string, std.conv, std.ctype, std.exception, std.format,
-    std.functional, std.metastrings, std.range, std.regex, std.stdio,
-    std.traits, std.typetuple, std.uni, std.utf;
+import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
+    std.ascii, std.conv, std.exception, std.format, std.functional,
+    std.metastrings, std.range, std.regex, std.stdio, std.traits,
+    std.typetuple, std.uni, std.utf;
+
+//Remove when repeat is finally removed. They're only here as part of the
+//deprecation of these functions in std.string.
 public import std.algorithm : startsWith, endsWith, cmp, count;
 public import std.array : join, split;
 
 version(Windows) extern (C)
-    {
-        size_t wcslen(in wchar *);
-        int wcscmp(in wchar *, in wchar *);
-    }
+{
+    size_t wcslen(in wchar *);
+    int wcscmp(in wchar *, in wchar *);
+}
+
+version(unittest) import std.algorithm : filter;
 
 /* ************* Exceptions *************** */
 
-/// Thrown on errors in string functions.
-typedef Exception StringException;
+/++
+    Exception thrown on errors in std.string functions.
+  +/
+class StringException : Exception
+{
+    /++
+        Params:
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    this(string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        super(msg, file, line, next);
+    }
+}
 
 /* ************* Constants *************** */
 
-immutable char[16] hexdigits = "0123456789ABCDEF";          /// 0..9A..F
-immutable char[10] digits    = "0123456789";                /// 0..9
-immutable char[8]  octdigits = "01234567";                  /// 0..7
-immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";/// a..z
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, hexDigits) instead.)
+
+    0..9A..F
+  +/
+immutable char[16] hexdigits = "0123456789ABCDEF";
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _digits) instead.)
+
+    0..9
+  +/
+alias std.ascii.digits digits;
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, octDigits) instead.)
+
+    0..7
+  +/
+immutable char[8]  octdigits = "01234567";
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _lowercase) instead.)
+
+    a..z
+  +/
+immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _letters) instead.)
+
+    A..Za..z
+  +/
 immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";                           /// A..Za..z
-immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";/// A..Z
-immutable char[6] whitespace = " \t\v\r\n\f";               /// ASCII whitespace
+    "abcdefghijklmnopqrstuvwxyz";
 
-enum dchar LS = '\u2028';                                   /// UTF line separator
-enum dchar PS = '\u2029';                                   /// UTF paragraph separator
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _uppercase) instead.)
 
-                                                            /// Newline sequence for this system
-version (Windows)
-    immutable char[2] newline = "\r\n";
-else version (Posix)
-    immutable char[1] newline = "\n";
+    A..Z
+  +/
+immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _whitespace) instead.)
+
+    ASCII whitespace.
+  +/
+alias std.ascii.whitespace whitespace;
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF uni, lineSep) instead.)
+
+    UTF line separator.
+  +/
+enum dchar LS = '\u2028';
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF uni, paraSep) instead.)
+
+    UTF paragraph separator.
+  +/
+enum dchar PS = '\u2029';
+
+/++
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(XREF ascii, _newline) instead.)
+
+    Newline sequence for this system.
+  +/
+alias std.ascii.newline newline;
 
 /**********************************
- * Returns true if c is whitespace
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
+ *
+ * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
-
-bool iswhite(dchar c)
+version(StdDdoc) bool iswhite(dchar c);
+else bool iswhite(C)(C c)
+    if(is(Unqual!C : dchar))
 {
+    pragma(msg, softDeprec!("2.054", "January 2012", "iswhite",
+                            "std.ascii.isWhite or std.uni.isWhite"));
+
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
-        : (c == PS || c == LS);
+        : (c == paraSep || c == lineSep);
 }
 
-/**********************************
-Compare two ranges of characters lexicographically. $(D _cmp) is case
-sensitive, $(D icmp) is case insensitive. $(D cmp) is aliased from
-$(XREF algorithm, _cmp). $(D icmp) works like $(D cmp) but converts
-both characters to lowercase prior to applying $(D pred). Technically
-$(D icmp(r1, r2)) is equivalent to $(D cmp!"toUniLower(a) <
-toUniLower(b)"(r1, r2)).
 
-Returns (for $(D pred = "a < b")):
+/++
+    Compares two ranges of characters lexicographically. The comparison is
+    case insensitive. Use $(D XREF algorithm, cmp) for a case sensitive
+    comparison. $(D icmp) works like $(D XREF algorithm, cmp) except that it
+    converts characters to lowercase prior to applying ($D pred). Technically,
+    $(D icmp(r1, r2)) is equivalent to
+    $(D cmp!"std.uni.toLower(a) < std.uni.toLower(b)"(r1, r2)).
 
-$(BOOKTABLE,
-$(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
-$(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
-$(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
-)
-
- */
-
+    $(BOOKTABLE,
+        $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
+        $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
+        $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
+     )
+  +/
 int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
-if (is(Unqual!(ElementType!S1) == dchar) && is(Unqual!(ElementType!S2) == dchar))
+    if(isSomeString!S1 && isSomeString!S2)
 {
     static if(is(typeof(pred) : string))
         enum isLessThan = pred == "a < b";
     else
         enum isLessThan = false;
 
-    foreach (e; zip(s1, s2))
+    size_t i, j;
+    while(i < s1.length && j < s2.length)
     {
-        dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
-        static if (isLessThan)
+        immutable c1 = std.uni.toLower(decode(s1, i));
+        immutable c2 = std.uni.toLower(decode(s2, j));
+
+        static if(isLessThan)
         {
-            if (c1 != c2) return cast(int) c1 - cast(int) c2;
+            if(c1 != c2)
+            {
+                if(c1 < c2) return -1;
+                if(c1 > c2) return 1;
+            }
         }
         else
         {
-            if (binaryFun!pred(c1, c2)) return -1;
-            if (binaryFun!pred(c2, c1)) return 1;
+            if(binaryFun!pred(c1, c2)) return -1;
+            if(binaryFun!pred(c2, c1)) return 1;
         }
     }
 
-    static if (s1.length.sizeof == int.sizeof)
-        return s1.length - s2.length;
+    if(i < s1.length) return 1;
+    if(j < s2.length) return -1;
+
+    return 0;
+}
+
+int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
+    if(!(isSomeString!S1 && isSomeString!S2) &&
+       isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar) &&
+       isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+{
+    static if(is(typeof(pred) : string))
+        enum isLessThan = pred == "a < b";
     else
-        return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
+        enum isLessThan = false;
+
+    for(;; s1.popFront(), s2.popFront())
+    {
+        if(s1.empty) return s2.empty ? 0 : -1;
+        if(s2.empty) return 1;
+
+        immutable c1 = std.uni.toLower(s1.front);
+        immutable c2 = std.uni.toLower(s2.front);
+
+        static if(isLessThan)
+        {
+            if(c1 != c2)
+            {
+                if(c1 < c2) return -1;
+                if(c1 > c2) return 1;
+            }
+        }
+        else
+        {
+            if(binaryFun!pred(c1, c2)) return -1;
+            if(binaryFun!pred(c2, c1)) return 1;
+        }
+    }
 }
 
 unittest
 {
-    assert(icmp("Ü", "ü") == 0, "Über failure");
-
-    sizediff_t result;
-
     debug(string) printf("string.icmp.unittest\n");
-    result = icmp("abc", "abc");
-    assert(result == 0);
-    result = icmp("ABC", "abc");
-    assert(result == 0);
-    //    result = icmp(null, null);// Commented out since icmp()
-    //    assert(result == 0);      // has become templated.
-    result = icmp("", "");
-    assert(result == 0);
-    result = icmp("abc", "abcd");
-    assert(result < 0);
-    result = icmp("abcd", "abc");
-    assert(result > 0);
-    result = icmp("abc", "abd");
-    assert(result < 0);
-    result = icmp("bbc", "abc");
-    assert(result > 0);
-    result = icmp("abc", "abc"w);
-    assert (result == 0);
-    result = icmp("ABC"w, "abc");
-    assert (result == 0);
-    result = icmp("", ""w);
-    assert (result == 0);
-    result = icmp("abc"w, "abcd");
-    assert(result < 0);
-    result = icmp("abcd", "abc"w);
-    assert(result > 0);
-    result = icmp("abc", "abd");
-    assert(result < 0);
-    result = icmp("bbc"w, "abc");
-    assert(result > 0);
-    result = icmp("aaa", "aaaa"d);
-    assert(result < 0);
-    result = icmp("aaaa"w, "aaa"d);
-    assert(result > 0);
-    result = icmp("aaa"d, "aaa"w);
-    assert(result == 0);
+
+    assert(icmp("Ü", "ü") == 0, "Über failure");
+    assert(icmp("abc", "abc") == 0);
+    assert(icmp("ABC", "abc") == 0);
+    assert(icmp("abc"w, "abc") == 0);
+    assert(icmp("ABC", "abc"w) == 0);
+    assert(icmp("abc"d, "abc") == 0);
+    assert(icmp("ABC", "abc"d) == 0);
+    assert(icmp(cast(char[])"abc", "abc") == 0);
+    assert(icmp("ABC", cast(char[])"abc") == 0);
+    assert(icmp(cast(wchar[])"abc"w, "abc") == 0);
+    assert(icmp("ABC", cast(wchar[])"abc"w) == 0);
+    assert(icmp(cast(dchar[])"abc"d, "abc") == 0);
+    assert(icmp("ABC", cast(dchar[])"abc"d) == 0);
+    assert(icmp(cast(string)null, cast(string)null) == 0);
+    assert(icmp("", "") == 0);
+    assert(icmp("abc", "abcd") < 0);
+    assert(icmp("abcd", "abc") > 0);
+    assert(icmp("abc", "abd") < 0);
+    assert(icmp("bbc", "abc") > 0);
+    assert(icmp("abc", "abc"w) == 0);
+    assert(icmp("ABC"w, "abc") == 0);
+    assert(icmp("", ""w) == 0);
+    assert(icmp("abc"w, "abcd") < 0);
+    assert(icmp("abcd", "abc"w) > 0);
+    assert(icmp("abc", "abd") < 0);
+    assert(icmp("bbc"w, "abc") > 0);
+    assert(icmp("aaa", "aaaa"d) < 0);
+    assert(icmp("aaaa"w, "aaa"d) > 0);
+    assert(icmp("aaa"d, "aaa"w) == 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0430\u0411\u0543") == 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0431\u0410\u0544") < 0);
+    assert(icmp("\u0431\u0411\u0544"d, "\u0431\u0410\u0543") > 0);
+    assert(icmp("\u0430\u0410\u0543"d, "\u0430\u0410\u0544") < 0);
+    assert(icmp("\u0430\u0411\u0543"d, "\u0430\u0411\u0543\u0237") < 0);
+    assert(icmp("\u0430\u0411\u0543\u0237"d, "\u0430\u0411\u0543") > 0);
+
+    assert(icmp("aaa", filter!"true"("aaa")) == 0);
+    assert(icmp(filter!"true"("aaa"), "aaa") == 0);
+    assert(icmp(filter!"true"("aaa"), filter!"true"("aaa")) == 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), "\u0430\u0411\u0543") == 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), "\u0431\u0410\u0544"w) < 0);
+    assert(icmp("\u0431\u0411\u0544"d, filter!"true"("\u0431\u0410\u0543"w)) > 0);
+    assert(icmp("\u0430\u0410\u0543"d, filter!"true"("\u0430\u0410\u0544")) < 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543"d), filter!"true"("\u0430\u0411\u0543\u0237")) < 0);
+    assert(icmp(filter!"true"("\u0430\u0411\u0543\u0237"d), filter!"true"("\u0430\u0411\u0543")) > 0);
 }
 
-/*********************************
- * Convert array of chars $(D s[]) to a C-style 0-terminated string.
- * $(D s[]) must not contain embedded 0's. If $(D s) is $(D null) or
- * empty, a string containing only $(D '\0') is returned.
- */
 
-immutable(char)* toStringz(const(char)[] s)
+/++
+    Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
+    contain embedded $(D 0)'s as any C functions will treat the first $(D 0)
+    that it sees a the end of the string. I $(D s) is $(D null) or empty, then
+    a string containing only $(D '\0') is returned.
+
+    $(RED Important Note:) When passing a $(D char*) to a C function, and the C
+    function keeps it around for any reason, make sure that you keep a reference
+    to it in your D code. Otherwise, it may go away during a garbage collection
+    cycle and cause a nasty bug when the C code tries to use it.
+  +/
+immutable(char)* toStringz(const(char)[] s) pure nothrow
 in
 {
     // The assert below contradicts the unittests!
@@ -248,8 +390,8 @@ body
     return assumeUnique(copy).ptr;
 }
 
-/// Ditto
-immutable(char)* toStringz(string s)
+/++ Ditto +/
+immutable(char)* toStringz(string s) pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -291,27 +433,28 @@ unittest
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
 }
 
+
 /**
    Flag indicating whether a search is case-sensitive.
 */
 enum CaseSensitive { no, yes }
 
-/**
-   $(D indexOf): find first occurrence of c in string s.  $(D
-   lastIndexOf): find last occurrence of c in string s. $(D
-   CaseSensitive.yes) means the searches are case sensitive.
+/++
+    Returns the index of the first occurence of $(D c) in $(D s). If $(D c)
+    is not found, then $(D -1) is returned.
 
-   Returns: Index in $(D s) where $(D c) is found, -1 if not found.
-*/
-sizediff_t
-indexOf(Char)(in Char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
-if (isSomeChar!Char)
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t indexOf(Char)(in Char[] s,
+                         dchar c,
+                         CaseSensitive cs = CaseSensitive.yes) pure
+    if(isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
     {
         static if (Char.sizeof == 1)
         {
-            if (c <= 0x7F)
+            if (std.ascii.isASCII(c))
             {                                               // Plain old ASCII
                 auto p = cast(char*)memchr(s.ptr, c, s.length);
                 if (p)
@@ -322,7 +465,7 @@ if (isSomeChar!Char)
         }
 
         // c is a universal character
-        foreach (int i, dchar c2; s)
+        foreach (sizediff_t i, dchar c2; s)
         {
             if (c == c2)
                 return i;
@@ -330,24 +473,24 @@ if (isSomeChar!Char)
     }
     else
     {
-        if (c <= 0x7F)
+        if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ctype.tolower(c);
+            auto c1 = cast(char) std.ascii.toLower(c);
 
-            foreach (int i, Char c2; s)
+            foreach (sizediff_t i, c2; s)
             {
-                auto c3 = cast(Char)std.ctype.tolower(c2);
+                auto c3 = std.ascii.toLower(c2);
                 if (c1 == c3)
                     return i;
             }
         }
         else
         {                                                   // c is a universal character
-            auto c1 = std.uni.toUniLower(c);
+            auto c1 = std.uni.toLower(c);
 
-            foreach (int i, dchar c2; s)
+            foreach (sizediff_t i, dchar c2; s)
             {
-                auto c3 = std.uni.toUniLower(c2);
+                auto c3 = std.uni.toLower(c2);
                 if (c1 == c3)
                     return i;
             }
@@ -355,34 +498,6 @@ if (isSomeChar!Char)
     }
     return -1;
 }
-
-unittest
-{
-    debug(string) printf("string.find.unittest\n");
-
-    sizediff_t i;
-
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = null;
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == -1);
-        s = "def";
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == -1);
-        s = "abba";
-        i = indexOf(s, cast(dchar)'a');
-        assert(i == 0);
-        s = "def";
-        i = indexOf(s, cast(dchar)'f');
-        assert(i == 2);
-    }
-}
-
-
-/******************************************
- * ditto
- */
 
 unittest
 {
@@ -390,127 +505,309 @@ unittest
 
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
-        S s = null;
-        auto i = indexOf(s, cast(dchar)'a', CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("def", cast(dchar)'a', CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("Abba", cast(dchar)'a', CaseSensitive.no);
-        assert(i == 0);
-        i = indexOf("def", cast(dchar)'F', CaseSensitive.no);
-        assert(i == 2);
+        assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
+        assert(indexOf(to!S("abba"), cast(dchar)'a') == 0);
+        assert(indexOf(to!S("def"), cast(dchar)'f') == 2);
 
-        string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+        assert(indexOf(to!S("def"), cast(dchar)'a', CaseSensitive.no) == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a', CaseSensitive.no) == -1);
+        assert(indexOf(to!S("Abba"), cast(dchar)'a', CaseSensitive.no) == 0);
+        assert(indexOf(to!S("def"), cast(dchar)'F', CaseSensitive.no) == 2);
 
-        i = indexOf("def", cast(char)'f', CaseSensitive.no);
-        assert(i == 2);
+        S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+        assert(indexOf("def", cast(char)'f', CaseSensitive.no) == 2);
+        assert(indexOf(sPlts, cast(char)'P', CaseSensitive.no) == 23);
+        assert(indexOf(sPlts, cast(char)'R', CaseSensitive.no) == 2);
+    }
 
-        i = indexOf(sPlts, cast(char)'P', CaseSensitive.no);
-        assert(i == 23);
-        i = indexOf(sPlts, cast(char)'R', CaseSensitive.no);
-        assert(i == 2);
+    foreach(cs; EnumMembers!CaseSensitive)
+    {
+        assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', cs) == 9);
+        assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', cs) == 7);
+        assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', cs) == 6);
     }
 }
 
-// @@@BUG@@@ This declaration shouldn't be needed
-//int lastIndexOf(in char[] s, in char[] c, CaseSensitive cs = CaseSensitive.yes);
+/++
+    Returns the index of the first occurence of $(D sub) in $(D s). If $(D sub)
+    is not found, then $(D -1) is returned.
 
-/******************************************
- * ditto
- */
-
-sizediff_t lastIndexOf(Char)(const(Char)[] s, dchar c,
-        CaseSensitive cs = CaseSensitive.yes)
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t indexOf(Char1, Char2)(const(Char1)[] s,
+                                 const(Char2)[] sub,
+                                 CaseSensitive cs = CaseSensitive.yes)
+    if(isSomeChar!Char1 && isSomeChar!Char2)
 {
+    const(Char1)[] balance;
     if (cs == CaseSensitive.yes)
     {
-        if (c <= 0x7F || Char.sizeof == 4)
+        balance = std.algorithm.find(s, sub);
+    }
+    else
+    {
+        balance = std.algorithm.find!
+            ((dchar a, dchar b){return std.uni.toLower(a) == std.uni.toLower(b);})
+            (s, sub);
+    }
+    return balance.empty ? -1 : balance.ptr - s.ptr;
+}
+
+unittest
+{
+    debug(string) printf("string.indexOf.unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(string, wstring, dstring))
         {
-            // Plain old ASCII or UTF32
-            auto i = s.length;
-            while (i-- != 0)
-            {
-                if (s[i] == c)
-                    break;
-            }
-            return i;
+            assert(indexOf(cast(S)null, to!T("a")) == -1);
+            assert(indexOf(to!S("def"), to!T("a")) == -1);
+            assert(indexOf(to!S("abba"), to!T("a")) == 0);
+            assert(indexOf(to!S("def"), to!T("f")) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff")) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff")) == 6);
+
+            assert(indexOf(to!S("dfeffgfff"), to!T("a"), CaseSensitive.no) == -1);
+            assert(indexOf(to!S("def"), to!T("a"), CaseSensitive.no) == -1);
+            assert(indexOf(to!S("abba"), to!T("a"), CaseSensitive.no) == 0);
+            assert(indexOf(to!S("def"), to!T("f"), CaseSensitive.no) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff"), CaseSensitive.no) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), CaseSensitive.no) == 6);
+
+            S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+            S sMars = "Who\'s \'My Favorite Maritian?\'";
+
+            assert(indexOf(sMars, to!T("MY fAVe"), CaseSensitive.no) == -1);
+            assert(indexOf(sMars, to!T("mY fAVOriTe"), CaseSensitive.no) == 7);
+            assert(indexOf(sPlts, to!T("mArS:"), CaseSensitive.no) == 0);
+            assert(indexOf(sPlts, to!T("rOcK"), CaseSensitive.no) == 17);
+            assert(indexOf(sPlts, to!T("Un."), CaseSensitive.no) == 41);
+            assert(indexOf(sPlts, to!T(sPlts), CaseSensitive.no) == 0);
+
+            assert(indexOf("\u0100", to!T("\u0100"), CaseSensitive.no) == 0);
+
+            // Thanks to Carlos Santander B. and zwang
+            assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
+                           to!T("page-break-before"), CaseSensitive.no) == -1);
         }
 
-        // c is a universal character
-        auto sInit = s;
-        for (; !s.empty; s.popBack())
+        foreach(cs; EnumMembers!CaseSensitive)
         {
-            if (s.back == c) return s.ptr - sInit.ptr;
+            assert(indexOf("hello\U00010143\u0100\U00010143", to!S("\u0100"), cs) == 9);
+            assert(indexOf("hello\U00010143\u0100\U00010143"w, to!S("\u0100"), cs) == 7);
+            assert(indexOf("hello\U00010143\u0100\U00010143"d, to!S("\u0100"), cs) == 6);
+        }
+    }
+}
+
+
+/++
+    Returns the index of the last occurence of $(D c) in $(D s). If $(D c)
+    is not found, then $(D -1) is returned.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t lastIndexOf(Char)(const(Char)[] s,
+                             dchar c,
+                             CaseSensitive cs = CaseSensitive.yes)
+    if(isSomeChar!Char)
+{
+    if(cs == CaseSensitive.yes)
+    {
+        if(cast(dchar)(cast(Char)c) == c)
+        {
+            for(auto i = s.length; i-- != 0;)
+            {
+                if(s[i] == c)
+                    return cast(sizediff_t)i;
+            }
+        }
+        else
+        {
+            for(size_t i = s.length; !s.empty;)
+            {
+                if(s.back == c)
+                    return cast(sizediff_t)i - codeLength!Char(c);
+
+                i -= strideBack(s, i);
+                s = s[0 .. i];
+            }
         }
     }
     else
     {
-        if (c <= 0x7F)
-        {                                                   // Plain old ASCII
-            immutable c1 = cast(char) std.ctype.tolower(c);
+        if(std.ascii.isASCII(c))
+        {
+            immutable c1 = std.ascii.toLower(c);
 
-            for (auto i = s.length; i-- != 0;)
+            for(auto i = s.length; i-- != 0;)
             {
-                immutable c2 = cast(char) std.ctype.tolower(s[i]);
-                if (c1 == c2)
-                    return i;
+                immutable c2 = std.ascii.toLower(s[i]);
+                if(c1 == c2)
+                    return cast(sizediff_t)i;
             }
         }
         else
-        {                                                   // c is a universal character
-            immutable c1 = std.uni.toUniLower(c);
+        {
+            immutable c1 = std.uni.toLower(c);
 
-            auto sInit = s;
-            for (; !s.empty; s.popBack())
+            for(size_t i = s.length; !s.empty;)
             {
-                if (toUniLower(s.back) == c1) return s.ptr - sInit.ptr;
+                if(std.uni.toLower(s.back) == c1)
+                    return cast(sizediff_t)i - codeLength!Char(c);
+
+                i -= strideBack(s, i);
+                s = s[0 .. i];
             }
         }
     }
+
     return -1;
 }
 
 unittest
 {
-    debug(string) printf("string.rfind.unittest\n");
+    debug(string) printf("string.lastIndexOf.unittest\n");
 
-    sizediff_t i;
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        assert(lastIndexOf(cast(S) null, 'a') == -1);
+        assert(lastIndexOf(to!S("def"), 'a') == -1);
+        assert(lastIndexOf(to!S("abba"), 'a') == 3);
+        assert(lastIndexOf(to!S("def"), 'f') == 2);
 
-    i = lastIndexOf(cast(string) null, cast(dchar)'a');
-    assert(i == -1);
-    i = lastIndexOf("def", cast(dchar)'a');
-    assert(i == -1);
-    i = lastIndexOf("abba", cast(dchar)'a');
-    assert(i == 3);
-    i = lastIndexOf("def", cast(dchar)'f');
-    assert(i == 2);
+        assert(lastIndexOf(cast(S) null, 'a', CaseSensitive.no) == -1);
+        assert(lastIndexOf(to!S("def"), 'a', CaseSensitive.no) == -1);
+        assert(lastIndexOf(to!S("AbbA"), 'a', CaseSensitive.no) == 3);
+        assert(lastIndexOf(to!S("def"), 'F', CaseSensitive.no) == 2);
+
+        S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+
+        assert(lastIndexOf(to!S("def"), 'f', CaseSensitive.no) == 2);
+        assert(lastIndexOf(sPlts, 'M', CaseSensitive.no) == 34);
+        assert(lastIndexOf(sPlts, 'S', CaseSensitive.no) == 40);
+    }
+
+    foreach(cs; EnumMembers!CaseSensitive)
+    {
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello", '\u0100', cs) == 4);
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, '\u0100', cs) == 2);
+        assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, '\u0100', cs) == 1);
+    }
+}
+
+/++
+    Returns the index of the last occurence of $(D sub) in $(D s). If $(D sub)
+    is not found, then $(D -1) is returned.
+
+    $(D cs) indicates whether the comparisons are case sensitive.
+  +/
+sizediff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
+                                     const(Char2)[] sub,
+                                     CaseSensitive cs = CaseSensitive.yes)
+    if(isSomeChar!Char1 && isSomeChar!Char2)
+{
+    if(sub.empty)
+        return s.length;
+
+    if(walkLength(sub) == 1)
+        return lastIndexOf(s, sub.front, cs);
+
+    if(cs == CaseSensitive.yes)
+    {
+        static if(is(Unqual!Char1 == Unqual!Char2))
+        {
+            immutable c = sub[0];
+
+            for(sizediff_t i = s.length - sub.length; i >= 0; --i)
+            {
+                if(s[i] == c && memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                    return i;
+            }
+        }
+        else
+        {
+            for(size_t i = s.length; !s.empty;)
+            {
+                if(s.endsWith(sub))
+                    return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+
+                i -= strideBack(s, i);
+                s = s[0 .. i];
+            }
+        }
+    }
+    else
+    {
+        for(size_t i = s.length; !s.empty;)
+        {
+            if(endsWith!((dchar a, dchar b) {return std.uni.toLower(a) == std.uni.toLower(b);})
+                        (s, sub))
+            {
+                return cast(sizediff_t)i - to!(const(Char1)[])(sub).length;
+            }
+
+            i -= strideBack(s, i);
+            s = s[0 .. i];
+        }
+    }
+
+    return -1;
 }
 
 unittest
 {
-    debug(string) printf("string.irfind.unittest\n");
+    debug(string) printf("string.lastIndexOf.unittest\n");
 
-    sizediff_t i;
+    foreach(S; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(string, wstring, dstring))
+        {
+            enum typeStr = S.stringof ~ " " ~ T.stringof;
 
-    i = lastIndexOf(cast(string) null, cast(dchar)'a', CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("def", cast(dchar)'a', CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("AbbA", cast(dchar)'a', CaseSensitive.no);
-    assert(i == 3);
-    i = lastIndexOf("def", cast(dchar)'F', CaseSensitive.no);
-    assert(i == 2);
+            assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c")) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd")) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("ef")) == 8, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c")) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cd")) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x")) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy")) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == 10, typeStr);
 
-    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+            assert(lastIndexOf(cast(S)null, to!T("a"), CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), CaseSensitive.no) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == 10, typeStr);
 
-    i = lastIndexOf("def", cast(char)'f', CaseSensitive.no);
-    assert(i == 2);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), CaseSensitive.no) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), CaseSensitive.no) == 7, typeStr);
 
-    i = lastIndexOf(sPlts, cast(char)'M', CaseSensitive.no);
-    assert(i == 34);
-    i = lastIndexOf(sPlts, cast(char)'S', CaseSensitive.no);
-    assert(i == 40);
+            S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+            S sMars = "Who\'s \'My Favorite Maritian?\'";
+
+            assert(lastIndexOf(sMars, to!T("RiTE maR"), CaseSensitive.no) == 14, typeStr);
+            assert(lastIndexOf(sPlts, to!T("FOuRTh"), CaseSensitive.no) == 10, typeStr);
+            assert(lastIndexOf(sMars, to!T("whO\'s \'MY"), CaseSensitive.no) == 0, typeStr);
+            assert(lastIndexOf(sMars, to!T(sMars), CaseSensitive.no) == 0, typeStr);
+        }
+
+        foreach(cs; EnumMembers!CaseSensitive)
+        {
+            enum csString = to!string(cs);
+
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello", to!S("\u0100"), cs) == 4, csString);
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello"w, to!S("\u0100"), cs) == 2, csString);
+            assert(lastIndexOf("\U00010143\u0100\U00010143hello"d, to!S("\u0100"), cs) == 1, csString);
+        }
+    }
 }
+
 
 /**
  * Returns the representation type of a string, which is the same type
@@ -523,7 +820,8 @@ string s = "hello";
 static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
 ----
  */
-/*private*/ auto representation(Char)(Char[] s) if (isSomeChar!Char)
+auto representation(Char)(Char[] s) pure nothrow
+    if(isSomeChar!Char)
 {
     // Get representation type
     static if (Char.sizeof == 1) enum t = "ubyte";
@@ -546,246 +844,64 @@ static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
 
 unittest
 {
+    auto c = to!(char[])("hello");
+    static assert(is(typeof(representation(c)) == ubyte[]));
+
+    auto w = to!(wchar[])("hello");
+    static assert(is(typeof(representation(w)) == ushort[]));
+
+    auto d = to!(dchar[])("hello");
+    static assert(is(typeof(representation(d)) == uint[]));
+
+    const(char[]) cc = "hello";
+    static assert(is(typeof(representation(cc)) == const(ubyte)[]));
+
+    const(wchar[]) cw = "hello"w;
+    static assert(is(typeof(representation(cw)) == const(ushort)[]));
+
+    const(dchar[]) cd = "hello"d;
+    static assert(is(typeof(representation(cd)) == const(uint)[]));
+
     string s = "hello";
     static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
-}
 
-/**
-$(D indexOf) find first occurrence of $(D sub[]) in string $(D s[]).
-lastIndexOf find last occurrence of $(D sub[]) in string $(D s[]).
+    wstring iw = "hello"w;
+    static assert(is(typeof(representation(iw)) == immutable(ushort)[]));
 
-$(D CaseSensitive cs) controls whether the comparisons are case
-sensitive or not.
-
-Returns:
-
-Index in $(D s) where $(D sub) is found, $(D -1) if not found.
- */
-
-sizediff_t
-indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        CaseSensitive cs = CaseSensitive.yes)
-if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    const(Char1)[] balance;
-    if (cs == CaseSensitive.yes)
-    {
-        balance = std.algorithm.find(s, sub);
-    }
-    else
-    {
-        balance = std.algorithm.find!
-            ((dchar a, dchar b){return toUniLower(a) == toUniLower(b);})
-            (s, sub);
-    }
-    return balance.empty ? -1 : balance.ptr - s.ptr;
-}
-
-unittest
-{
-    debug(string) printf("string.find.unittest\n");
-
-    sizediff_t i;
-
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = null;
-        i = indexOf(s, "a");
-        assert(i == -1);
-        i = indexOf("def", "a");
-        assert(i == -1);
-        i = indexOf("abba", "a");
-        assert(i == 0);
-        i = indexOf("def", "f");
-        assert(i == 2);
-        i = indexOf("dfefffg", "fff");
-        assert(i == 3);
-        i = indexOf("dfeffgfff", "fff");
-        assert(i == 6);
-    }
-}
-
-unittest
-{
-    debug(string) printf("string.ifind.unittest\n");
-
-    sizediff_t i;
-
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = null;
-        i = indexOf(s, "a", CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("def", "a", CaseSensitive.no);
-        assert(i == -1);
-        i = indexOf("abba", "a", CaseSensitive.no);
-        assert(i == 0, text(i));
-        i = indexOf("def", "f", CaseSensitive.no);
-        assert(i == 2);
-        i = indexOf("dfefffg", "fff", CaseSensitive.no);
-        assert(i == 3);
-        i = indexOf("dfeffgfff", "fff", CaseSensitive.no);
-        assert(i == 6);
-    }
-
-    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-    string sMars = "Who\'s \'My Favorite Maritian?\'";
-
-    i = indexOf(sMars, "MY fAVe", CaseSensitive.no);
-    assert(i == -1);
-    i = indexOf(sMars, "mY fAVOriTe", CaseSensitive.no);
-    assert(i == 7);
-    i = indexOf(sPlts, "mArS:", CaseSensitive.no);
-    assert(i == 0);
-    i = indexOf(sPlts, "rOcK", CaseSensitive.no);
-    assert(i == 17);
-    i = indexOf(sPlts, "Un.", CaseSensitive.no);
-    assert(i == 41);
-    i = indexOf(sPlts, sPlts, CaseSensitive.no);
-    assert(i == 0);
-
-    i = indexOf("\u0100", "\u0100", CaseSensitive.no);
-    assert(i == 0);
-
-    // Thanks to Carlos Santander B. and zwang
-    i = indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-            "page-break-before", CaseSensitive.no);
-    assert(i == -1);
-}
-
-/******************************************
- * ditto
- */
-
-sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
-        CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (cs == CaseSensitive.yes)
-    {
-        char c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return lastIndexOf(s, c);
-        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-        {
-            if (s[i] == c)
-            {
-                if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
-    else
-    {
-        dchar c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return lastIndexOf(s, c, cs);
-        if (c <= 0x7F)
-        {
-            c = std.ctype.tolower(c);
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (std.ctype.tolower(s[i]) == c)
-                {
-                    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-                        return i;
-                }
-            }
-        }
-        else
-        {
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (icmp(s[i .. i + sub.length], sub) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
-}
-
-unittest
-{
-    sizediff_t i;
-
-    debug(string) printf("string.lastIndexOf.unittest\n");
-    i = lastIndexOf("abcdefcdef", "c");
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "cd");
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "x");
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "xy");
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "");
-    assert(i == 10);
-}
-
-
-/******************************************
- * ditto
- */
-
-unittest
-{
-    sizediff_t i;
-
-    debug(string) printf("string.lastIndexOf.unittest\n");
-    i = lastIndexOf("abcdefCdef", "c", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefCdef", "cD", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "x", CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "xy", CaseSensitive.no);
-    assert(i == -1);
-    i = lastIndexOf("abcdefcdef", "", CaseSensitive.no);
-    assert(i == 10);
-
-    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-    string sMars = "Who\'s \'My Favorite Maritian?\'";
-
-    i = lastIndexOf("abcdefcdef", "c", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf("abcdefcdef", "cd", CaseSensitive.no);
-    assert(i == 6);
-    i = lastIndexOf( "abcdefcdef", "def", CaseSensitive.no);
-    assert(i == 7);
-
-    i = lastIndexOf(sMars, "RiTE maR", CaseSensitive.no);
-    assert(i == 14);
-    i = lastIndexOf(sPlts, "FOuRTh", CaseSensitive.no);
-    assert(i == 10);
-    i = lastIndexOf(sMars, "whO\'s \'MY", CaseSensitive.no);
-    assert(i == 0);
-    i = lastIndexOf(sMars, sMars, CaseSensitive.no);
-    assert(i == 0);
+    dstring id = "hello"d;
+    static assert(is(typeof(representation(id)) == immutable(uint)[]));
 }
 
 
 /************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(D toLower) instead.)
+ *
  * Convert string s[] to lower case.
  */
-
 S tolower(S)(S s) if (isSomeString!S)
+{
+    pragma(msg, softDeprec!("2.054", "January 2012", "tolower", "std.string.toLower"));
+    return toLower!S(s);
+}
+
+/++
+    Returns a string which is identical to $(D s) except that all of its
+    characters are lowercase (in unicode, not just ASCII). If $(D s) does not
+    have any uppercase characters, then $(D s) is returned.
+  +/
+S toLower(S)(S s) @trusted pure
+    if(isSomeString!S)
 {
     foreach (i, dchar cOuter; s)
     {
-        if (!std.uni.isUniUpper(cOuter)) continue;
+        if (!std.uni.isUpper(cOuter)) continue;
         auto result = s[0.. i].dup;
         foreach (dchar c; s[i .. $])
         {
-            if (std.uni.isUniUpper(c))
+            if (std.uni.isUpper(c))
             {
-                c = std.uni.toUniLower(c);
+                c = std.uni.toLower(c);
             }
             result ~= c;
         }
@@ -794,31 +910,66 @@ S tolower(S)(S s) if (isSomeString!S)
     return s;
 }
 
+unittest
+{
+    debug(string) printf("string.toLower.unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {
+        S s = cast(S)"hello world\u0101";
+        assert(toLower(s) is s);
+        const S sc = "hello world\u0101";
+        assert(toLower(sc) is sc);
+        immutable S si = "hello world\u0101";
+        assert(toLower(si) is si);
+
+        S t = cast(S)"Hello World\u0100";
+        assert(toLower(t) == s);
+        const S tc = "hello world\u0101";
+        assert(toLower(tc) == s);
+        immutable S ti = "hello world\u0101";
+        assert(toLower(ti) == s);
+    }
+}
+
 /**
+   $(RED Scheduled for deprecation in January 2012.
+         Please use $(D toLowerInPlace) instead.)
+
    Converts $(D s) to lowercase in place.
  */
-
 void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
+{
+    pragma(msg, softDeprec!("2.054", "January 2012", "tolowerInPlace", "std.string.toLowerInPlace"));
+    toLowerInPlace!C(s);
+}
+
+/++
+    Converts $(D s) to lowercase (in unicode, not just ASCII) in place.
+    If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
+ +/
+void toLowerInPlace(C)(ref C[] s)
+    if(is(C == char) || is(C == wchar))
 {
     for (size_t i = 0; i < s.length; )
     {
         immutable c = s[i];
-        if ('A' <= c && c <= 'Z')
+        if (std.ascii.isUpper(c))
         {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
         }
-        else if (c > 0x7F)
+        else if (!std.ascii.isASCII(c))
         {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
             assert(j > i);
-            if (!std.uni.isUniUpper(dc))
+            if (!std.uni.isUpper(dc))
             {
                 i = j;
                 continue;
             }
-            auto toAdd = to!(C[])(std.uni.toUniLower(dc));
+            auto toAdd = to!(C[])(std.uni.toLower(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
         }
@@ -829,105 +980,152 @@ void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
     }
 }
 
+void toLowerInPlace(C)(ref C[] s) @safe pure nothrow
+    if(is(C == dchar))
+{
+    foreach(ref c; s)
+    {
+        if(std.uni.isUpper(c))
+            c = std.uni.toLower(c);
+    }
+}
+
 unittest
 {
-    debug(string) printf("string.tolower.unittest\n");
+    debug(string) printf("string.toLowerInPlace.unittest\n");
+
+    foreach(S; TypeTuple!(char[], wchar[], dchar[]))
+    {
+        S s = to!S("hello world\u0101");
+        toLowerInPlace(s);
+        assert(s == "hello world\u0101");
+
+        S t = to!S("Hello World\u0100");
+        toLowerInPlace(t);
+        assert(t == "hello world\u0101");
+    }
+}
+
+unittest
+{
+    debug(string) printf("string.toLower/toLowerInPlace.unittest\n");
 
     string s1 = "FoL";
-    string s2;
-
-    s2 = tolower(s1);
+    string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
     assert(s2 != s1);
 
     char[] s3 = s1.dup;
-    tolowerInPlace(s3);
+    toLowerInPlace(s3);
     assert(s3 == s2, s3);
 
     s1 = "A\u0100B\u0101d";
-    s2 = tolower(s1);
+    s2 = toLower(s1);
     s3 = s1.dup;
     assert(cmp(s2, "a\u0101b\u0101d") == 0);
     assert(s2 !is s1);
-    tolowerInPlace(s3);
+    toLowerInPlace(s3);
     assert(s3 == s2, s3);
 
     s1 = "A\u0460B\u0461d";
-    s2 = tolower(s1);
+    s2 = toLower(s1);
     s3 = s1.dup;
     assert(cmp(s2, "a\u0461b\u0461d") == 0);
     assert(s2 !is s1);
-    tolowerInPlace(s3);
+    toLowerInPlace(s3);
     assert(s3 == s2, s3);
 
     s1 = "\u0130";
-    s2 = tolower(s1);
+    s2 = toLower(s1);
     s3 = s1.dup;
     assert(s2 == "i");
     assert(s2 !is s1);
-    tolowerInPlace(s3);
+    toLowerInPlace(s3);
     assert(s3 == s2, s3);
 
     // Test on wchar and dchar strings.
-    assert(tolower("Some String"w) == "some string"w);
-    assert(tolower("Some String"d) == "some string"d);
+    assert(toLower("Some String"w) == "some string"w);
+    assert(toLower("Some String"d) == "some string"d);
 }
 
 /************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(D toUpper) instead.)
+ *
  * Convert string s[] to upper case.
  */
-
 S toupper(S)(S s) if (isSomeString!S)
 {
-    alias typeof(s[0]) Char;
-    int changed;
-    Unqual!(Char)[] r;
+    pragma(msg, softDeprec!("2.054", "January 2012", "toupper", "std.string.toUpper"));
+    return toUpper!S(s);
+}
 
-    foreach (i; 0 .. s.length)
+/++
+    Returns a string which is identical to $(D s) except that all of its
+    characters are uppercase (in unicode, not just ASCII). If $(D s) does not
+    have any lowercase characters, then $(D s) is returned.
+  +/
+S toUpper(S)(S s) @trusted pure
+    if(isSomeString!S)
+{
+    foreach (i, dchar cOuter; s)
     {
-        immutable c = s[i];
-        if ('a' <= c && c <= 'z')
+        if (!std.uni.isLower(cOuter)) continue;
+        auto result = s[0.. i].dup;
+        foreach (dchar c; s[i .. $])
         {
-            if (!changed)
+            if (std.uni.isLower(c))
             {
-                r = to!(typeof(r))(s);
-                changed = 1;
+                c = std.uni.toUpper(c);
             }
-            r[i] = cast(Unqual!(Char)) (c - ('a' - 'A'));
+            result ~= c;
         }
-        else if (c > 0x7F)
-        {
-            foreach (size_t j, dchar dc; s[i .. $])
-            {
-                if (std.uni.isUniLower(dc))
-                {
-                    dc = std.uni.toUniUpper(dc);
-                    if (!changed)
-                    {
-                        r = s[0 .. i + j].dup;
-                        changed = 2;
-                    }
-                }
-                if (changed)
-                {
-                    if (changed == 1)
-                    {   r = r[0 .. i + j];
-                        changed = 2;
-                    }
-                    std.utf.encode(r, dc);
-                }
-            }
-            break;
-        }
+        return cast(S) result;
     }
-    return changed ? assumeUnique(r) : s;
+    return s;
+}
+
+unittest
+{
+    debug(string) printf("string.toUpper.unittest\n");
+
+    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {
+        S s = cast(S)"HELLO WORLD\u0100";
+        assert(toUpper(s) is s);
+        const S sc = "HELLO WORLD\u0100";
+        assert(toUpper(sc) is sc);
+        immutable S si = "HELLO WORLD\u0100";
+        assert(toUpper(si) is si);
+
+        S t = cast(S)"hello world\u0101";
+        assert(toUpper(t) == s);
+        const S tc = "HELLO WORLD\u0100";
+        assert(toUpper(tc) == s);
+        immutable S ti = "HELLO WORLD\u0100";
+        assert(toUpper(ti) == s);
+    }
 }
 
 /**
+    $(RED Scheduled for deprecation in January 2012.
+          Please use $(D toUpperInPlace) instead.)
+
    Converts $(D s) to uppercase in place.
  */
-
 void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
+{
+    pragma(msg, softDeprec!("2.054", "January 2012", "toupperInPlace", "std.string.toUpperInPlace"));
+    toUpperInPlace!C(s);
+}
+
+/++
+    Converts $(D s) to uppercase (in unicode, not just ASCII) in place.
+    If $(D s) does not have any lowercase characters, then $(D s) is unaltered.
+ +/
+void toUpperInPlace(C)(ref C[] s)
+    if(isSomeChar!C &&
+       (is(C == char) || is(C == wchar)))
 {
     for (size_t i = 0; i < s.length; )
     {
@@ -936,18 +1134,18 @@ void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
         {
             s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
         }
-        else if (c > 0x7F)
+        else if (!std.ascii.isASCII(c))
         {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
             assert(j > i);
-            if (!std.uni.isUniLower(dc))
+            if (!std.uni.isLower(dc))
             {
                 i = j;
                 continue;
             }
-            auto toAdd = to!(C[])(std.uni.toUniUpper(dc));
+            auto toAdd = to!(C[])(std.uni.toUpper(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
         }
@@ -958,78 +1156,105 @@ void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
     }
 }
 
+void toUpperInPlace(C)(ref C[] s) @safe pure nothrow
+    if(is(C == dchar))
+{
+    foreach(ref c; s)
+    {
+        if(std.uni.isLower(c))
+            c = std.uni.toUpper(c);
+    }
+}
+
 unittest
 {
-    debug(string) printf("string.toupper.unittest\n");
+    debug(string) printf("string.toUpperInPlace.unittest\n");
+
+    foreach(S; TypeTuple!(char[], wchar[], dchar[]))
+    {
+        S s = to!S("HELLO WORLD\u0100");
+        toUpperInPlace(s);
+        assert(s == "HELLO WORLD\u0100");
+
+        S t = to!S("Hello World\u0101");
+        toUpperInPlace(t);
+        assert(t == "HELLO WORLD\u0100");
+    }
+}
+
+unittest
+{
+    debug(string) printf("string.toUpper/toUpperInPlace.unittest\n");
 
     string s1 = "FoL";
     string s2;
     char[] s3;
 
-    s2 = toupper(s1);
-    s3 = s1.dup; toupperInPlace(s3);
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
     assert(s3 == s2, s3);
     assert(cmp(s2, "FOL") == 0);
     assert(s2 !is s1);
 
     s1 = "a\u0100B\u0101d";
-    s2 = toupper(s1);
-    s3 = s1.dup; toupperInPlace(s3);
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
     assert(s3 == s2);
     assert(cmp(s2, "A\u0100B\u0100D") == 0);
     assert(s2 !is s1);
 
     s1 = "a\u0460B\u0461d";
-    s2 = toupper(s1);
-    s3 = s1.dup; toupperInPlace(s3);
+    s2 = toUpper(s1);
+    s3 = s1.dup; toUpperInPlace(s3);
     assert(s3 == s2);
     assert(cmp(s2, "A\u0460B\u0460D") == 0);
     assert(s2 !is s1);
 }
 
-/********************************************
- * Capitalize first character of string s[], convert rest of string s[]
- * to lower case.
- */
 
-S capitalize(S)(S s) if (isSomeString!S)
+/++
+    Capitalize the first character of $(D s) and conver the rest of $(D s)
+    to lowercase.
+ +/
+S capitalize(S)(S s) @trusted pure
+    if(isSomeString!S)
 {
-    Unqual!(typeof(s[0]))[] r;
-    bool changed = 0;
+    Unqual!(typeof(s[0]))[] retval;
+    bool changed = false;
 
-    foreach (size_t i, dchar c; s)
+    foreach(i, dchar c; s)
     {
         dchar c2;
 
-        if (i == 0)
+        if(i == 0)
         {
-            c2 = std.uni.toUniUpper(c);
-            if (c != c2)
-            {
-                changed = 1;
-                r = null;
-            }
+            c2 = std.uni.toUpper(c);
+            if(c != c2)
+                changed = true;
         }
         else
         {
-            c2 = std.uni.toUniLower(c);
-            if (c != c2)
+            c2 = std.uni.toLower(c);
+            if(c != c2)
             {
-                if (!changed)
-                {   changed = 1;
-                    r = s[0 .. i].dup;
+                if(!changed)
+                {
+                    changed = true;
+                    retval = s[0 .. i].dup;
                 }
             }
         }
-        if (changed)
-            std.utf.encode(r, c2);
+
+        if(changed)
+            std.utf.encode(retval, c2);
     }
-    return changed ? cast(S) r : s;
+
+    return changed ? cast(S)retval : s;
 }
 
 unittest
 {
-    debug(string) printf("string.toupper.capitalize\n");
+    debug(string) printf("string.capitalize.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
@@ -1048,59 +1273,69 @@ unittest
         s2 = capitalize(s1);
         assert(cmp(s2, "Fol") == 0);
         assert(s2 !is s1);
+
+        s1 = to!S("\u0131 \u0130");
+        s2 = capitalize(s1);
+        assert(cmp(s2, "\u0049 \u0069") == 0);
+        assert(s2 !is s1);
+
+        s1 = to!S("\u017F \u0049");
+        s2 = capitalize(s1);
+        assert(cmp(s2, "\u0053 \u0069") == 0);
+        assert(s2 !is s1);
     }
 }
 
 
 /********************************************
+ *  $(RED Scheduled for deprecation in January 2012.)
+ *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
  * Replace all sequences of whitespace with a single space.
  */
-
 S capwords(S)(S s) if (isSomeString!S)
 {
-    Unqual!(typeof(s[0]))[] r;
-    bool inword = false;
-    size_t istart = 0;
-    size_t i;
+    pragma(msg, "Notice: As of Phobos 2.054, std.string.capwords has been " ~
+                "scheduled for deprecation in January 2012.");
 
-    for (i = 0; i < s.length; i++)
-    {
-        switch (s[i])
-        {
-        case ' ':
-        case '\t':
-        case '\f':
-        case '\r':
-        case '\n':
-        case '\v':
-            if (inword)
-            {
-                r ~= capitalize(s[istart .. i]);
-                inword = false;
-            }
-            break;
-
-        default:
-            if (!inword)
-            {
-                if (r.length)
-                    r ~= ' ';
-                istart = i;
-                inword = true;
-            }
-            break;
-        }
-    }
-    if (inword)
-    {
-        r ~= capitalize(s[istart .. i]);
-    }
-
-    return cast(S) r;
+    return _capWords!S(s);
 }
 
+// This is purely so that capwords can be unit tested without spitting
+// out the deprecation message.
+private S _capWords(S)(S s) if (isSomeString!S)
+{
+    alias typeof(s[0]) C;
+    auto retval = appender!(C[])();
+    bool inWord = false;
+    size_t wordStart = 0;
+
+    foreach(i, dchar c; s)
+    {
+        if(std.uni.isWhite(s[i]))
+        {
+            if(inWord)
+            {
+                retval.put(capitalize(s[wordStart .. i]));
+                inWord = false;
+            }
+        }
+        else if(!inWord)
+        {
+            if(!retval.data.empty)
+                retval.put(' ');
+
+            wordStart = i;
+            inWord = true;
+        }
+    }
+
+    if(inWord)
+        retval.put(capitalize(s[wordStart .. $]));
+
+    return cast(S)retval.data;
+}
 
 unittest
 {
@@ -1111,267 +1346,249 @@ unittest
         auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
         S s2;
 
-        s2 = capwords(s1);
-        //writefln("s2 = '%s'", s2);
+        s2 = _capWords(s1);
         assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
+
+        s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
+                  "\u017F\u0053\u0131\u0130");
+        s2 = _capWords(s1);
+        assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
+                       "\u0053\u0053\u0131\u0069"));
     }
 }
 
+
 /********************************************
- * Repeat $(D s) for $(D n) times. This function is scheduled for
- * deprecation - use $(XREF array, replicate) instead.
+ * $(RED Deprecated. It will be removed in February 2012.
+ *        Please use $(XREF array, replicate) instead.)
+ *
+ * Repeat $(D s) for $(D n) times.
  */
-S repeat(S)(S s, size_t n)
+deprecated S repeat(S)(S s, size_t n)
 {
+    pragma(msg, hardDeprec!("2.055", "February 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
-unittest
-{
-    debug(string) printf("string.repeat.unittest\n");
-
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
-    {
-        S s;
-
-        s = repeat(to!S("1234"), 0);
-        assert(s is null);
-        s = repeat(to!S("1234"), 1);
-        assert(cmp(s, "1234") == 0);
-        s = repeat(to!S("1234"), 2);
-        assert(cmp(s, "12341234") == 0);
-        s = repeat(to!S("1"), 4);
-        assert(cmp(s, "1111") == 0);
-        s = repeat(cast(S) null, 4);
-        assert(s is null);
-    }
-}
 
 /**************************************
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
  * The delimiter is not included in the line.
  */
-
 S[] splitlines(S)(S s)
 {
-    size_t istart;
-    auto result = appender!(S[])();
+    pragma(msg, softDeprec!("2.054", "January 2012", "splitlines", "std.string.splitLines"));
+    return splitLines!S(s);
+}
 
-    foreach (i; 0 .. s.length)
+/++
+    Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
+    The delimiter is not included in the strings returned.
+  +/
+S[] splitLines(S)(S s)
+    if(isSomeString!S)
+{
+    size_t iStart = 0;
+    size_t nextI = 0;
+    auto retval = appender!(S[])();
+
+    for(size_t i; i < s.length; i = nextI)
     {
-        immutable c = s[i];
-        if (c == '\r' || c == '\n')
+        immutable c = decode(s, nextI);
+
+        if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            result.put(s[istart .. i]);
-            istart = i + 1;
-            if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            retval.put(s[iStart .. i]);
+            iStart = nextI;
+
+            if(c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
             {
-                i++;
-                istart++;
+                ++nextI;
+                ++iStart;
             }
         }
     }
-    if (istart != s.length)
-    {
-        result.put(s[istart .. $]);
-    }
 
-    return result.data;
+    if(iStart != nextI)
+        retval.put(s[iStart .. $]);
+
+    return retval.data;
 }
 
 unittest
 {
-    debug(string) printf("string.splitlines\n");
+    debug(string) printf("string.splitLines.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        S s = "\rpeter\n\rpaul\r\njerry\n";
-        S[] lines;
-        int i;
+        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
 
-        lines = splitlines(s);
-        //printf("lines.length = %d\n", lines.length);
-        assert(lines.length == 5);
-        //printf("lines[0] = %llx, '%.*s'\n", lines[0], lines[0]);
-        assert(lines[0].length == 0);
-        i = cmp(lines[1], "peter");
-        assert(i == 0);
-        assert(lines[2].length == 0);
-        i = cmp(lines[3], "paul");
-        assert(i == 0);
-        i = cmp(lines[4], "jerry");
-        assert(i == 0);
+        auto lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[0] == "");
+        assert(lines[1] == "peter");
+        assert(lines[2] == "");
+        assert(lines[3] == "paul");
+        assert(lines[4] == "jerry");
+        assert(lines[5] == "ice");
+        assert(lines[6] == "cream");
+        assert(lines[7] == "");
+        assert(lines[8] == "sunday");
 
-        s = s[0 .. s.length - 1];   // lop off trailing \n
-        lines = splitlines(s);
-        //printf("lines.length = %d\n", lines.length);
-        assert(lines.length == 5);
-        i = cmp(lines[4], "jerry");
-        assert(i == 0);
+        s.popBack(); // Lop-off trailing \n
+        lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[8] == "sunday");
     }
+}
+
+
+/*****************************************
+ *  $(RED Scheduled for deprecation in January 2012.
+ *        Please use $(D stripLeft) instead.)
+ *
+ * Strips leading whitespace.
+ */
+String stripl(String)(String s)
+{
+    pragma(msg, softDeprec!("2.054", "January 2012", "stripl", "std.string.stripLeft"));
+    return stripLeft!String(s);
+}
+
+/++
+    Strips leading whitespace.
+  +/
+S stripLeft(S)(S s) @safe pure
+    if(isSomeString!S)
+{
+    bool foundIt;
+    size_t nonWhite;
+    foreach(i, dchar c; s)
+    {
+        if(!std.uni.isWhite(c))
+        {
+            foundIt = true;
+            nonWhite = i;
+            break;
+        }
+    }
+
+    if(foundIt)
+        return s[nonWhite .. $];
+
+    return s[0 .. 0]; //Empty string with correct type.
 }
 
 /*****************************************
- * Strips leading or trailing whitespace, or both.
+ *  $(RED Scheduled for deprecation in January 2012.
+ *        Please use $(D stripRight) instead.)
+ *
+ * Strips trailing whitespace.
  */
-
-String stripl(String)(String s)
+String stripr(String)(String s)
 {
-    uint i;
-    for (i = 0; i < s.length; i++)
+    pragma(msg, softDeprec!("2.054", "January 2012", "stripr", "std.string.stripRight"));
+    return stripRight!String(s);
+}
+
+/++
+    Strips trailing whitespace.
+  +/
+S stripRight(S)(S s)
+    if(isSomeString!S)
+{
+    alias typeof(s[0]) C;
+    size_t codeLen;
+    foreach(dchar c; retro(s))
     {
-        if (!std.ctype.isspace(s[i]))
+        if(std.uni.isWhite(c))
+            codeLen += codeLength!C(c);
+        else
             break;
     }
-    return s[i .. s.length];
+
+    return s[0 .. $ - codeLen];
 }
 
-String stripr(String)(String s) /// ditto
+/++
+    Strips both leading and trailing whitespace.
+  +/
+S strip(S)(S s)
+    if(isSomeString!S)
 {
-    for (auto i = s.length;;)
-    {
-        if (i == 0) return null;
-        --i;
-        if (!std.ctype.isspace(s[i]))
-            return s[0 .. i + 1];
-    }
-}
-
-String strip(String)(String s) /// ditto
-{
-    return stripr(stripl(s));
+    return stripRight(stripLeft(s));
 }
 
 unittest
 {
+    debug(string) printf("string.strip.unittest\n");
+
+    assert(stripLeft("  foo\t ") == "foo\t ");
+    assert(stripLeft("\u2008  foo\t \u2007") == "foo\t \u2007");
+    assert(stripLeft("1") == "1");
+
+    assert(stripRight("  foo\t ") == "  foo");
+    assert(stripRight("\u2008  foo\t \u2007") == "\u2008  foo");
+    assert(stripRight("1") == "1");
+
     assert(strip("  foo\t ") == "foo");
+    assert(strip("\u2008  foo\t \u2007") == "foo");
     assert(strip("1") == "1");
 }
 
-// Too slow for release mode
-debug unittest
-{
-    // fails to compile with: Error: array equality comparison type
-    // mismatch, immutable(char)[] vs ubyte[]
-    version(none)
-    {
-        alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-            StringTypes;
-        alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
-        foreach (T1 ; StringTypes)
-        {
-            foreach (T2 ; StringTypes)
-            {
-                foreach (T3 ; OtherTypes)
-                {
-                    auto a = to!(T1)("abcde"), b = to!(T2)("abcdefgh"),
-                        c = to!(T2)("");
-                    auto d = to!(T3)([2, 3]);
-                    assert(startsWith(b, a));
-                    assert(!startsWith(a, b));
-                    assert(startsWith(b, c));
-                    assert(startsWith(a, c));
-                    assert(!startsWith(c, b));
-                    assert(!startsWith(c, a));
-                    assert(!startsWith(a, d));
-                    assert(!startsWith(d, a));
-                    assert(!startsWith(b, d));
-                    assert(!startsWith(d, b));
-                    assert(!startsWith(c, d));
-                    assert(startsWith(d, c));
-                }
-            }
-        }
-    }
-}
 
-// Too slow for release mode
-debug unittest
+/++
+    Returns $(D s) sans the trailing $(D delimiter), if any. If no $(D delimiter)
+    is given, then any trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
+    $(XREF uni, lineSep), or $(XREF uni, paraSep)s are removed.
+  +/
+S chomp(S)(S s)
+    if(isSomeString!S)
 {
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-    alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
-     // fails to compile with: Error: array equality comparison type
-     // mismatch, immutable(char)[] vs ubyte[]
-    version(none)
-    {
-        foreach (T1 ; TestTypes)
-        {
-            foreach (T2 ; TestTypes)
-            {
-                foreach (T3 ; OtherTypes)
-                {
-                    auto a = to!(T1)("efgh"), b = to!(T2)("abcdefgh"),
-                        c = to!(T2)(""), d = to!(T3)([1, 2]);
-                    assert(endsWith(a, a));
-                    assert(endsWith(b, b));
-                    // writeln(T2.stringof);
-                    // writeln(T1.stringof);
-                    assert(endsWith(b, a));
-                    assert(!endsWith(a, b));
-                    assert(endsWith(b, c));
-                    assert(endsWith(a, c));
-                    assert(!endsWith(c, b));
-                    assert(!endsWith(c, a));
-                    assert(!endsWith(a, d));
-                    assert(!endsWith(d, a));
-                    assert(!endsWith(b, d));
-                    assert(!endsWith(d, b));
-                    assert(!endsWith(c, d));
-                    assert(endsWith(d, c));
-                }
-            }
-        }
-        foreach (T1; OtherTypes)
-        {
-            foreach (T2; OtherTypes)
-            {
-                auto a = to!(T1)([1, 2]);
-                auto b = to!(T2)([0, 1, 2]);
-                //assert(!std.string.endsWith(a, b));
-                // assert(endsWith(b, a));
-            }
-        }
-    }
-}
-
-/*******************************************
- * Returns s[] sans trailing delimiter[], if any.
- * If delimiter[] is null, removes trailing CR, LF, or CRLF, if any.
- */
-
-C[] chomp(C)(C[] s)
-{
-    auto len = s.length;
-    if (!len)
-    {
+    if(s.empty)
         return s;
-    }
-    auto c = s[len - 1];
-    if (c == '\r')          // if ends in CR
-        len--;
-    else if (c == '\n')         // if ends in LF
+
+    switch(s.back)
     {
-        len--;
-        if (len && s[len - 1] == '\r')
-            len--;          // remove CR-LF
+        case '\n':
+        {
+            s.popBack();
+
+            if(!s.empty && s.back == '\r')
+                s.popBack();
+
+            break;
+        }
+        case '\r':
+        case lineSep:
+        case paraSep:
+        {
+            s.popBack();
+            break;
+        }
+        default:
+            break;
     }
-    else
-    {
-        // no change
-        return s;
-    }
-    return s[0 .. len];
+
+    return s;
 }
 
 /// Ditto
-C[] chomp(C, C1)(C[] s, const(C1)[] delimiter)
+S chomp(S, C)(S s, const(C)[] delimiter)
+    if(isSomeString!S && isSomeString!(C[]))
 {
-    if (endsWith(s, delimiter))
+    if(delimiter.empty)
+        return chomp(s);
+    else if(endsWith(s, delimiter))
     {
-        return s[0 .. $ - delimiter.length];
+        static if(is(Unqual!(typeof(s[0])) == Unqual!C))
+            return s[0 .. $ - delimiter.length];
+        else
+            return s[0 .. $ - to!S(delimiter).length];
     }
+
     return s;
 }
 
@@ -1380,60 +1597,64 @@ unittest
     debug(string) printf("string.chomp.unittest\n");
     string s;
 
-//     s = chomp(null);
-//     assert(s is null);
-    s = chomp("hello");
-    assert(s == "hello");
-    s = chomp("hello\n");
-    assert(s == "hello");
-    s = chomp("hello\r");
-    assert(s == "hello");
-    s = chomp("hello\r\n");
-    assert(s == "hello");
-    s = chomp("hello\n\r");
-    assert(s == "hello\n");
-    s = chomp("hello\n\n");
-    assert(s == "hello\n");
-    s = chomp("hello\r\r");
-    assert(s == "hello\r");
-    s = chomp("hello\nxxx\n");
-    assert(s == "hello\nxxx");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        // @@@ BUG IN COMPILER, MUST INSERT CAST
+        assert(chomp(cast(S)null) is null);
+        assert(chomp(to!S("hello")) == "hello");
+        assert(chomp(to!S("hello\n")) == "hello");
+        assert(chomp(to!S("hello\r")) == "hello");
+        assert(chomp(to!S("hello\r\n")) == "hello");
+        assert(chomp(to!S("hello\n\r")) == "hello\n");
+        assert(chomp(to!S("hello\n\n")) == "hello\n");
+        assert(chomp(to!S("hello\r\r")) == "hello\r");
+        assert(chomp(to!S("hello\nxxx\n")) == "hello\nxxx");
+        assert(chomp(to!S("hello\u2028")) == "hello");
+        assert(chomp(to!S("hello\u2029")) == "hello");
+        assert(chomp(to!S("hello\u2028\u2028")) == "hello\u2028");
+        assert(chomp(to!S("hello\u2029\u2029")) == "hello\u2029");
 
-//     s = chomp(null, null);
-//     assert(s is null);
-    s = chomp("hello", "o");
-    assert(s == "hell");
-    s = chomp("hello", "p");
-    assert(s == "hello");
-    // @@@ BUG IN COMPILER, MUST INSERT CAST
-    s = chomp("hello", cast(string) null);
-    assert(s == "hello");
-    s = chomp("hello", "llo");
-    assert(s == "he");
+        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
+            // @@@ BUG IN COMPILER, MUST INSERT CAST
+            assert(chomp(cast(S)null, cast(T)null) is null);
+            assert(chomp("hello\n", cast(T)null) == "hello");
+            assert(chomp(to!S("hello"), to!T("o")) == "hell");
+            assert(chomp(to!S("hello"), to!T("p")) == "hello");
+            // @@@ BUG IN COMPILER, MUST INSERT CAST
+            assert(chomp(to!S("hello"), cast(T) null) == "hello");
+            assert(chomp(to!S("hello"), to!T("llo")) == "he");
+            assert(chomp(to!S("\uFF28ello"), to!T("llo")) == "\uFF28e");
+            assert(chomp(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")) == "\uFF28e");
+        }
+    }
 }
 
-/**
- * If $(D_PARAM longer.startsWith(shorter)), returns $(D_PARAM
- * longer[shorter.length .. $]). Otherwise, returns $(D_PARAM longer).
- */
 
+/++
+    If $(D longer.startsWith(shorter)), returns $(D longer[shorter.length .. $]).
+    Otherwise, returns $(D longer).
+ +/
 C1[] chompPrefix(C1, C2)(C1[] longer, C2[] shorter)
+    if(isSomeString!(C1[]) && isSomeString!(C2[]))
 {
-    return startsWith(longer, shorter) ? longer[shorter.length .. $]
-        : longer;
+    return startsWith(longer, shorter) ? longer[shorter.length .. $] : longer;
 }
 
 unittest
 {
-    auto a = "abcde", b = "abcdefgh";
-    assert(chompPrefix(b, a) == "fgh");
-    assert(chompPrefix(a, b) == "abcde");
+    assert(chompPrefix("abcdefgh", "abcde") == "fgh");
+    assert(chompPrefix("abcde", "abcdefgh") == "abcde");
+    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el\uFF4co") == "");
+    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el") == "\uFF4co");
+    assert(chompPrefix("\uFF28el", "\uFF28el\uFF4co") == "\uFF28el");
 }
 
-/***********************************************
- * Returns s[] sans trailing character, if there is one.
- * If last two characters are CR-LF, then both are removed.
- */
+
+/++
+    Returns $(D s) sans its last character, if there is one.
+    If $(D s) ends in "\r\n", then both are removed.
+ +/
 S chop(S)(S s) if (isSomeString!S)
 {
     auto len = s.length;
@@ -1447,171 +1668,248 @@ S chop(S)(S s) if (isSomeString!S)
 unittest
 {
     debug(string) printf("string.chop.unittest\n");
-    string s;
 
-    s = chop(cast(string) null);
-    assert(s is null);
-    s = chop("hello");
-    assert(s == "hell");
-    s = chop("hello\r\n");
-    assert(s == "hello");
-    s = chop("hello\n\r");
-    assert(s == "hello\n");
+    assert(chop(cast(string) null) is null);
+    assert(chop("hello") == "hell");
+    assert(chop("hello\r\n") == "hello");
+    assert(chop("hello\n\r") == "hello\n");
 }
+
 
 /*******************************************
- * Left justify, right justify, or center string s[]
- * in field width chars wide.
+ *  $(RED Scheduled for deprecation in January 2012.
+ *        Please use $(D leftJustify) instead.)
+ *
+ * Left justify string s[] in field width chars wide.
  */
-
 S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0..s.length] = s;
-    r[s.length .. $] = ' ';
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "January 2012", "ljustify", "std.string.leftJustify"));
+    return leftJustify!S(s, width);
 }
 
-/// ditto
+/++
+    Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
+{
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        retval[0 .. s.length] = s[];
+        retval[s.length .. $] = cast(C)fillChar;
+        return cast(S)retval;
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        retval[0 .. dstr.length] = dstr[];
+        retval[dstr.length .. $] = fillChar;
+        return to!S(retval);
+    }
+}
+
+
+/*******************************************
+ *  $(RED Scheduled for deprecation in January 2012.
+ *        Please use $(D rightJustify) instead.)
+ *
+ * Left right string s[] in field width chars wide.
+ */
 S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0 .. $ - s.length] = ' ';
-    r[$ - s.length .. $] = s;
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "January 2012", "rjustify", "std.string.rightJustify"));
+    return rightJustify!S(s, width);
 }
 
-/// ditto
-S center(S)(S s, size_t width) if (isSomeString!S)
+/++
+    Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    immutable left = (r.length - s.length) / 2;
-    r[0 .. left] = ' ';
-    r[left .. left + s.length] = s;
-    r[left + s.length .. $] = ' ';
-    return cast(S) r;
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        retval[0 .. $ - s.length] = cast(C)fillChar;
+        retval[$ - s.length .. $] = s[];
+        return cast(S)retval;
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        retval[0 .. $ - dstr.length] = fillChar;
+        retval[$ - dstr.length .. $] = dstr[];
+        return to!S(retval);
+    }
+}
+
+
+/++
+    Center $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+  +/
+S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+    if(isSomeString!S)
+{
+    alias typeof(S[0]) C;
+
+    if(cast(dchar)(cast(C)fillChar) == fillChar)
+    {
+        immutable len = s.walkLength();
+        if(len >= width)
+            return s;
+
+        auto retval = new Unqual!(C)[width - len + s.length];
+        immutable left = (retval.length - s.length) / 2;
+        retval[0 .. left] = cast(C)fillChar;
+        retval[left .. left + s.length] = s[];
+        retval[left + s.length .. $] = cast(C)fillChar;
+        return to!S(retval);
+    }
+    else
+    {
+        auto dstr = to!dstring(s);
+        if(dstr.length >= width)
+            return s;
+
+        auto retval = new dchar[](width);
+        immutable left = (retval.length - dstr.length) / 2;
+        retval[0 .. left] = fillChar;
+        retval[left .. left + dstr.length] = dstr[];
+        retval[left + dstr.length .. $] = fillChar;
+        return to!S(retval);
+    }
 }
 
 unittest
 {
     debug(string) printf("string.justify.unittest\n");
 
-    string s = "hello";
-    string r;
-    int i;
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        S s = to!S("hello");
 
-    r = ljustify(s, 8);
-    i = cmp(r, "hello   ");
-    assert(i == 0);
+        assert(leftJustify(s, 2) == "hello");
+        assert(rightJustify(s, 2) == "hello");
+        assert(center(s, 2) == "hello");
 
-    r = rjustify(s, 8);
-    i = cmp(r, "   hello");
-    assert(i == 0);
+        assert(leftJustify(s, 7) == "hello  ");
+        assert(rightJustify(s, 7) == "  hello");
+        assert(center(s, 7) == " hello ");
 
-    r = center(s, 8);
-    i = cmp(r, " hello  ");
-    assert(i == 0);
+        assert(leftJustify(s, 8) == "hello   ");
+        assert(rightJustify(s, 8) == "   hello");
+        assert(center(s, 8) == " hello  ");
 
-    r = zfill(s, 8);
-    i = cmp(r, "000hello");
-    assert(i == 0);
+        assert(leftJustify(s, 8, '\u0100') == "hello\u0100\u0100\u0100");
+        assert(rightJustify(s, 8, '\u0100') == "\u0100\u0100\u0100hello");
+        assert(center(s, 8, '\u0100') == "\u0100hello\u0100\u0100");
+    }
 }
 
 
 /*****************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(D rightJustify) with a fill character of '0' instead.)
+ *
  * Same as rjustify(), but fill with '0's.
  *
  */
-
 S zfill(S)(S s, int width) if (isSomeString!S)
 {
-    immutable len = s.walkLength();
-    if (len >= width)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[width + s.length - len];
-    r[0 .. $ - s.length] = '0';
-    r[$ - s.length .. $] = s;
-    return cast(S) r;
+    pragma(msg, softDeprec!("2.054", "January 2012", "zfill",
+                            "std.string.rightJustify with a fillChar of '0'"));
+    return rightJustify!S(s, width, '0');
 }
 
-/**********************************************
- * Insert sub[] into s[] at location index. Scheduled for deprecation
- * - use $(XREF array, _insert) instead.
- */
 
-S insert(S)(S s, size_t index, S sub)
+/**********************************************
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use $(XREF array, insertInPlace) instead.)
+ *
+ * Insert sub[] into s[] at location index.
+ */
+deprecated S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
 }
 body
 {
-    std.array.insert(s, index, sub);
+    pragma(msg, softDeprec!("2.055", "February 2012", "insert", "std.array.insertInPlace"));
+    std.array.insertInPlace(s, index, sub);
     return s;
 }
 
-unittest
-{
-    debug(string) printf("string.insert.unittest\n");
-
-    string r;
-    int i;
-
-    r = insert("abcd", 0, "e");
-    i = cmp(r, "eabcd");
-    assert(i == 0);
-
-    r = insert("abcd", 4, "e");
-    i = cmp(r, "abcde");
-    assert(i == 0);
-
-    r = insert("abcd", 2, "ef");
-    i = cmp(r, "abefcd");
-    assert(i == 0);
-
-    r = insert(cast(string) null, 0, "e");
-    i = cmp(r, "e");
-    assert(i == 0);
-
-    r = insert("abcd", 0, cast(string) null);
-    i = cmp(r, "abcd");
-    assert(i == 0);
-}
 
 /************************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(D detab) instead.)
+ *
  * Replace tabs with the appropriate number of spaces.
  * tabsize is the distance between tab stops.
  */
-
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
+    pragma(msg, softDeprec!("2.054", "January 2012", "expandtabs", "std.string.detab"));
+    return detab!S(str, tabsize);
+}
+
+/++
+    Replace each tab character in $(D s) with the number of spaces necessary
+    to align the following character at the next tab stop where $(D tabSize)
+    is the distance between tab stops.
+  +/
+S detab(S)(S s, size_t tabSize = 8) @trusted pure
+    if(isSomeString!S)
+{
+    assert(tabSize > 0);
+    alias Unqual!(typeof(s[0])) C;
     bool changes = false;
-    Unqual!(typeof(str[0]))[] result;
+    C[] result;
     int column;
     size_t nspaces;
 
-    foreach (size_t i, dchar c; str)
+    foreach (size_t i, dchar c; s)
     {
         switch (c)
         {
         case '\t':
-            nspaces = tabsize - (column % tabsize);
+            nspaces = tabSize - (column % tabSize);
             if (!changes)
             {
                 changes = true;
                 result = null;
-                result.length = str.length + nspaces - 1;
+                result.length = s.length + nspaces - 1;
                 result.length = i + nspaces;
-                result[0 .. i] = str[0 .. i];
+                result[0 .. i] = s[0 .. i];
                 result[i .. i + nspaces] = ' ';
             }
             else
@@ -1625,8 +1923,8 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             column = 0;
             goto L1;
 
@@ -1635,8 +1933,8 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
         L1:
             if (changes)
             {
-                if (c <= 0x7F)
-                    result ~= cast(char)c;
+                if (cast(dchar)(cast(C)c) == c)
+                    result ~= cast(C)c;
                 else
                     std.utf.encode(result, c);
             }
@@ -1644,48 +1942,44 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
         }
     }
 
-    return changes ? cast(S) result : str;
+    return changes ? cast(S) result : s;
 }
 
 unittest
 {
-    debug(string) printf("string.expandtabs.unittest\n");
+    debug(string) printf("string.detab.unittest\n");
 
-    string s = "This \tis\t a fofof\tof list";
-    string r;
-    int i;
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        S s = to!S("This \tis\t a fofof\tof list");
+        assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
 
-    r = expandtabs(s, 8);
-    i = cmp(r, "This    is       a fofof        of list");
-    assert(i == 0);
-
-    r = expandtabs(cast(string) null);
-    assert(r == null);
-    r = expandtabs("");
-    assert(r.length == 0);
-    r = expandtabs("a");
-    assert(r == "a");
-    r = expandtabs("\t");
-    assert(r == "        ");
-    r = expandtabs(  "  ab\tasdf ");
-    //writefln("r = '%s'", r);
-    assert(r == "  ab    asdf ");
-    // TODO: need UTF test case
+        assert(detab(cast(S)null) is null);
+        assert(detab("").empty);
+        assert(detab("a") == "a");
+        assert(detab("\t") == "        ");
+        assert(detab("\t", 3) == "   ");
+        assert(detab("\t", 9) == "         ");
+        assert(detab(  "  ab\t asdf ") == "  ab     asdf ");
+        assert(detab(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
+    }
 }
 
 
-/*******************************************
- * Replace spaces in string s with the optimal number of tabs.
- * Trailing spaces or tabs in a line are removed.
- * Params:
- *  s = String to convert.
- *  tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
- */
+/++
+    Replaces spaces in $(D s) with the optimal number of tabs.
+    All spaces and tabs at the end of a line are removed.
 
-S entab(S)(S s, size_t tabsize = 8)
+    Params:
+        s       = String to convert.
+        tabSize = Tab columns are $(D tabSize) spaces apart.
+ +/
+S entab(S)(S s, size_t tabSize = 8) @trusted pure
+    if(isSomeString!S)
 {
     bool changes = false;
-    Unqual!(typeof(s[0]))[] result;
+    alias Unqual!(typeof(s[0])) C;
+    C[] result;
 
     int nspaces = 0;
     int nwhite = 0;
@@ -1713,19 +2007,19 @@ S entab(S)(S s, size_t tabsize = 8)
                     change();
 
                 sizediff_t j = result.length - nspaces;
-                auto ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+                auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;
                 nspaces = 0;
             }
-            column = (column + tabsize) / tabsize * tabsize;
+            column = (column + tabSize) / tabSize * tabSize;
             break;
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             // Truncate any trailing spaces or tabs
             if (nwhite)
             {
@@ -1736,13 +2030,13 @@ S entab(S)(S s, size_t tabsize = 8)
             break;
 
         default:
-            if (nspaces >= 2 && (column % tabsize) == 0)
+            if (nspaces >= 2 && (column % tabSize) == 0)
             {
                 if (!changes)
                     change();
 
                 auto j = result.length - nspaces;
-                auto ntabs = (nspaces + tabsize - 1) / tabsize;
+                auto ntabs = (nspaces + tabSize - 1) / tabSize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;
@@ -1761,8 +2055,8 @@ S entab(S)(S s, size_t tabsize = 8)
         }
         if (changes)
         {
-            if (c <= 0x7F)
-                result ~= cast(char)c;
+            if (cast(dchar)(cast(C)c) == c)
+                result ~= cast(C)c;
             else
                 std.utf.encode(result, c);
         }
@@ -1785,48 +2079,219 @@ unittest
 
     string r;
 
-    r = entab(cast(string) null);
-    assert(r == null);
-    r = entab("");
-    assert(r.length == 0);
-    r = entab("a");
-    assert(r == "a");
-    r = entab("        ");
-    assert(r == "");
-    r = entab("        x");
-    assert(r == "\tx");
-    r = entab("  ab    asdf ");
-    assert(r == "  ab\tasdf");
-    r = entab("  ab     asdf ");
-    assert(r == "  ab\t asdf");
-    r = entab("  ab \t   asdf ");
-    assert(r == "  ab\t   asdf");
-    r = entab("1234567 \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567  \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567   \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567    \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567     \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567      \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567       \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567        \ta");
-    assert(r == "1234567\t\ta");
-    r = entab("1234567         \ta");
-    assert(r == "1234567\t\t\ta");
-    // TODO: need UTF test case
+    assert(entab(cast(string) null) is null);
+    assert(entab("").empty);
+    assert(entab("a") == "a");
+    assert(entab("        ") == "");
+    assert(entab("        x") == "\tx");
+    assert(entab("  ab    asdf ") == "  ab\tasdf");
+    assert(entab("  ab     asdf ") == "  ab\t asdf");
+    assert(entab("  ab \t   asdf ") == "  ab\t   asdf");
+    assert(entab("1234567 \ta") == "1234567\t\ta");
+    assert(entab("1234567  \ta") == "1234567\t\ta");
+    assert(entab("1234567   \ta") == "1234567\t\ta");
+    assert(entab("1234567    \ta") == "1234567\t\ta");
+    assert(entab("1234567     \ta") == "1234567\t\ta");
+    assert(entab("1234567      \ta") == "1234567\t\ta");
+    assert(entab("1234567       \ta") == "1234567\t\ta");
+    assert(entab("1234567        \ta") == "1234567\t\ta");
+    assert(entab("1234567         \ta") == "1234567\t\t\ta");
+
+    assert(entab("a               ") == "a");
+    assert(entab("a\v") == "a\v");
+    assert(entab("a\f") == "a\f");
+    assert(entab("a\n") == "a\n");
+    assert(entab("a\n\r") == "a\n\r");
+    assert(entab("a\r\n") == "a\r\n");
+    assert(entab("a\u2028") == "a\u2028");
+    assert(entab("a\u2029") == "a\u2029");
+    assert(entab("a  ") == "a");
+    assert(entab("a\t") == "a");
+    assert(entab("\uFF28\uFF45\uFF4C\uFF4C567      \t\uFF4F \t") ==
+                 "\uFF28\uFF45\uFF4C\uFF4C567\t\t\uFF4F");
+}
+
+
+/++
+    Replaces the characters in $(D str) which are keys in $(D transTable) with
+    their corresponding values in $(D transTable). $(D transTable) is an AA
+    where its keys are $(D dchar) and its values are either $(D dchar) or some
+    type of string. Also, if $(D toRemove) is given, the characters in it are
+    removed from $(D str) prior to translation. $(D str) itself is unaltered.
+    A copy with the changes is returned.
+
+    See_Also:
+        $(LREF tr)
+        $(XREF array, replace)
+
+    Params:
+        str        = The original string.
+        transTable = The AA indicating which characters to replace and what to
+                     replace them with.
+        toRemove   = The characters to remove from the string.
+
+        Examples:
+--------------------
+dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+assert(translate("hello world", transTable3) == "h5llorange worangerld");
+--------------------
+  +/
+C1[] translate(C1, C2 = immutable char)(C1[] str,
+                                        dchar[dchar] transTable,
+                                        const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+//Verify Examples.
+unittest
+{
+    dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+    dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+    string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+    assert(translate("hello world", transTable3) == "h5llorange worangerld");
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
+               to!S("qe55o wor5d"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
+               to!S("he\U00010143\U00010143l wlr\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['h' : 'q', 'l': '5']) ==
+               to!S("qe55o \U00010143 wor5d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['o' : '0', '\U00010143' : 'o']) ==
+               to!S("hell0 o w0rld"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("r")) ==
+                   to!S("qe55o wo5d"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("q5")) ==
+                   to!S("qe55o wor5d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             cast(dchar[dchar])['o' : '0', '\U00010143' : 'o'],
+                             to!T("\U00010143 ")) ==
+                   to!S("hell0w0rld"));
+        }
+
+        auto s = to!S("hello world");
+        dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
+    }
+}
+
+/++ Ditto +/
+C1[] translate(C1, S, C2 = immutable char)(C1[] str,
+                                           S[dchar] transTable,
+                                           const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o wor42d"));
+        assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o \U00010143 wor42d"));
+        assert(translate(to!S("hello \U00010143 world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl \U00010143 wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : ""]) ==
+               to!S("ello \U00010143 world"));
+        assert(translate(to!S("hello \U00010143 world"), ['\U00010143' : ""]) ==
+               to!S("hello  world"));
+        assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("r")) ==
+                   to!S("yellowe4242o wo42d"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("y42")) ==
+                   to!S("yellowe4242o wor42d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             ['o' : "owl", '\U00010143' : "\n"],
+                             to!T("\U00010143 ")) ==
+                   to!S("hellowlwowlrld"));
+        }
+
+        auto s = to!S("hello world");
+        string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
+    }
+}
+
+private auto translateImpl(C1, T, C2)(C1[] str,
+                                      T transTable,
+                                      const(C2)[] toRemove) @trusted
+{
+    auto retval = appender!(C1[])();
+
+    bool[dchar] removeTable;
+
+    foreach(dchar c; toRemove)
+        removeTable[c] = true;
+
+    foreach(dchar c; str)
+    {
+        if(c in removeTable)
+            continue;
+
+        auto newC = c in transTable;
+
+        if(newC)
+            retval.put(*newC);
+        else
+            retval.put(c);
+    }
+
+    return retval.data;
 }
 
 
 
 /************************************
+ * $(RED Scheduled for deprecation in February 2012.)
+ *
  * Construct translation table for translate().
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
 string maketrans(in char[] from, in char[] to)
@@ -1835,13 +2300,9 @@ in
     assert(from.length == to.length);
     assert(from.length <= 128);
     foreach (char c; from)
-    {
-        assert(c <= 0x7F);
-    }
+        assert(std.ascii.isASCII(c));
     foreach (char c; to)
-    {
-        assert(c <= 0x7F);
-    }
+        assert(std.ascii.isASCII(c));
 }
 body
 {
@@ -1856,12 +2317,15 @@ body
 }
 
 /******************************************
+ * $(RED Scheduled for deprecation in February 2012.
+ *   Please use the version of $(D translate) which takes an AA instead.)
+ *
  * Translate characters in s[] using table created by maketrans().
  * Delete chars in delchars[].
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
-string translate(in char[] s, in char[] transtab, in char[] delchars)
+string translate()(in char[] s, in char[] transtab, in char[] delchars)
 in
 {
     assert(transtab.length == 256);
@@ -1916,168 +2380,6 @@ unittest
     assert(i == 0);
 }
 
-/**
-Convert to string. WARNING! This function has been deprecated. Instead
- of $(D toString(x)), you may want to import $(D std.conv) and use $(D
- to!string(x)) instead.
- */
-deprecated auto toString(T, string f = __FILE__, uint line = __LINE__)(T obj)
-    if (is(typeof(to!string(T.init))))
-{
-    pragma(msg, "toString("~T.stringof~") called from "~f~"("~ToString!(line)
-            ~") is deprecated."
-            " Instead you may want to"
-            " import std.conv and use to!string(x) instead of toString(x).");
-    return to!string(obj);
-}
-
-/**
-Convert string to integer. WARNING. This function has been
- deprecated. Instead of $(D atoi(s)), you may want to import $(D
- std.conv) and use $(D to!int(s)) instead.
- */
-deprecated auto atoi(T, string f = __FILE__, uint line = __LINE__)(T obj)
-    if (isSomeString!T)
-{
-    pragma(msg, "atoi("~T.stringof~") called from "~f~"("~ToString!(line)
-            ~") is deprecated."
-            " Instead you may want to"
-            " import std.conv and use to!int(x) instead of atoi(x).");
-    return to!int(obj);
-}
-
-unittest
-{
-    string s = "foo";
-    string s2;
-    foreach (char c; s)
-    {
-        s2 ~= to!string(c);
-    }
-    //printf("%.*s", s2);
-    assert(s2 == "foo");
-}
-
-unittest
-{
-    debug(string) printf("string.to!string(uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0u);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9u);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123u);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(string) printf("string.to!string(ulong).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0uL);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9uL);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123uL);
-    i = cmp(r, "123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(string) printf("string.to!string(int).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(string) printf("string.to!string(long).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(9L);
-    i = cmp(r, "9");
-    assert(i == 0);
-
-    r = to!string(123L);
-    i = cmp(r, "123");
-    assert(i == 0);
-
-    r = to!string(-0L);
-    i = cmp(r, "0");
-    assert(i == 0);
-
-    r = to!string(-9L);
-    i = cmp(r, "-9");
-    assert(i == 0);
-
-    r = to!string(-123L);
-    i = cmp(r, "-123");
-    assert(i == 0);
-}
-
-unittest
-{
-    debug(string) printf("string.to!string(char*).unittest\n");
-
-    string r;
-    int i;
-
-    r = to!string(cast(char*) null);
-    i = cmp(r, "");
-    assert(i == 0);
-
-    r = to!string("foo\0".ptr);
-    assert(r == "foo");
-    // i = cmp(r, "foo");
-    // assert(i == 0);
-}
 
 private:
 
@@ -2100,7 +2402,7 @@ char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
 
     void putc(dchar c)
     {
-    if (c <= 0x7F)
+    if(std.ascii.isASCII(c))
     {
         if (i >= s.length)
             onRangeError("std.string.sformat", 0);
@@ -2157,7 +2459,7 @@ char[] sformat(char[] s, ...)
 
     void putc(dchar c)
     {
-    if (c <= 0x7F)
+    if(std.ascii.isASCII(c))
     {
         if (i >= s.length)
             onRangeError("std.string.sformat", 0);
@@ -2525,7 +2827,7 @@ unittest
 
 S succ(S)(S s) if (isSomeString!S)
 {
-    if (s.length && isalnum(s[$ - 1]))
+    if (s.length && std.ascii.isAlphaNum(s[$ - 1]))
     {
         auto r = s.dup;
         size_t i = r.length - 1;
@@ -2558,7 +2860,7 @@ S succ(S)(S s) if (isSomeString!S)
                 break;
 
             default:
-                if (std.ctype.isalnum(c))
+                if (std.ascii.isAlphaNum(c))
                     r[i]++;
                 return cast(S) r;
             }
@@ -2588,41 +2890,51 @@ unittest
 }
 
 
-/***********************************************
- * Replaces characters in str[] that are in from[]
- * with corresponding characters in to[] and returns the resulting
- * string.
- * Params:
- *  modifiers = a string of modifier characters
- * Modifiers:
-        <table border=1 cellspacing=0 cellpadding=5>
-        <tr> <th>Modifier <th>Description
-        <tr> <td><b>c</b> <td>Complement the list of characters in from[]
-        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
-        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
-        </table>
+/++
+    Replaces the characters in $(D str) which are in $(D from) with the
+    the corresponding characters in $(D to) and returns the resulting string.
 
-    If modifier <b>d</b> is present, then the number of characters
-    in to[] may be only 0 or 1.
+    $(D tr) is based on
+    $(WEB pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
+    though it doesn't do everything that the Posix utility does.
 
-    If modifier <b>d</b> is not present and to[] is null,
-    then to[] is taken _to be the same as from[].
+    Params:
+        str       = The original string.
+        from      = The characters to replace.
+        to        = The characters to replace with.
+        modifiers = String containing modifiers.
 
-    If modifier <b>d</b> is not present and to[] is shorter
-    than from[], then to[] is extended by replicating the
-    last character in to[].
+    Modifiers:
+        $(BOOKTABLE,
+        $(TR $(TD Modifier) $(TD Description))
+        $(TR $(TD $(D 'c')) $(TD Complement the list of characters in $(D from)))
+        $(TR $(TD $(D 'd')) $(TD Removes matching characters with no corresponding
+                              replacement in $(D to)))
+        $(TR $(TD $(D 's')) $(TD Removes adjacent duplicates in the replaced
+                              characters))
+        )
 
-    Both from[] and to[] may contain ranges using the <b>-</b>
-    character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
-    Neither accept a leading <b>^</b> as meaning the complement of
-    the string (use the <b>c</b> modifier for that).
- */
+    If the modifier $(D 'd') is present, then the number of characters in
+    $(D to) may be only $(D 0) or $(D 1).
 
-string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[] modifiers = null)
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is empty, then
+    $(D to) is taken to be the same as $(D from).
+
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
+    $(D from), then $(D to) is extended by replicating the last charcter in
+    $(D to).
+
+    Both $(D from) and $(D to) may contain ranges using the $(D '-') character
+    (e.g. $(D "a-d") is synonymous with $(D "abcd).) Neither accept a leading
+    $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
+    for that).
+  +/
+C1[] tr(C1, C2, C3, C4 = immutable char)
+       (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
 {
-    int mod_c;
-    int mod_d;
-    int mod_s;
+    bool mod_c;
+    bool mod_d;
+    bool mod_s;
 
     foreach (char c; modifiers)
     {
@@ -2635,12 +2947,11 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         }
     }
 
-    if (to is null && !mod_d)
-        to = from;
+    if (to.empty && !mod_d)
+        to = std.conv.to!(typeof(to))(from);
 
-    char[] result = new char[str.length];
-    result.length = 0;
-    int m;
+    auto result = appender!(C1[])();
+    bool modified;
     dchar lastc;
 
     foreach (dchar c; str)
@@ -2653,11 +2964,9 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         for (size_t i = 0; i < from.length; )
         {
             dchar f = std.utf.decode(from, i);
-            //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
                 dchar nextf = std.utf.decode(from, i);
-                //writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -2685,14 +2994,12 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
       Lfound:
 
         // Find the nth character in to[]
-        //writefln("\tc = '%s', n = %d", c, n);
         dchar nextt;
         for (size_t i = 0; i < to.length; )
         {   dchar t = std.utf.decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
                 nextt = std.utf.decode(to, i);
-                //writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
                 n -= nextt - lastt;
                 if (n < 0)
                 {
@@ -2715,60 +3022,57 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         newc = nextt;
 
       Lnewc:
-        if (mod_s && m && newc == lastc)
+        if (mod_s && modified && newc == lastc)
             continue;
-        std.utf.encode(result, newc);
-        m = 1;
+        result.put(newc);
+        assert(newc != dchar.init);
+        modified = true;
         lastc = newc;
         continue;
 
       Lnotfound:
-        std.utf.encode(result, c);
+        result.put(c);
         lastc = c;
-        m = 0;
+        modified = false;
     }
-    return assumeUnique(result);
+
+    return result.data;
 }
 
 unittest
 {
     debug(string) printf("std.string.tr.unittest\n");
+    import std.algorithm;
 
-    string r;
-    //writefln("r = '%s'", r);
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            foreach(U; TypeTuple!(char[], const(char)[], immutable(char)[],
+                                  wchar[], const(wchar)[], immutable(wchar)[],
+                                  dchar[], const(dchar)[], immutable(dchar)[]))
+            {
+                assert(equal(tr(to!S("abcdef"), to!T("cd"), to!U("CD")), "abCDef"));
+                assert(equal(tr(to!S("abcdef"), to!T("b-d"), to!U("B-D")), "aBCDef"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-Dx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-CDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-BCDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U("*"), to!S("c")), "****ef"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U(""), to!T("d")), "abcd"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U(""), to!U("s")), "helo godbye"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U("x"), "s"), "hex gxdbye"));
+                assert(equal(tr(to!S("14-Jul-87"), to!T("a-zA-Z"), to!U(" "), "cs"), " Jul "));
+                assert(equal(tr(to!S("Abc"), to!T("AAA"), to!U("XYZ")), "Xbc"));
+            }
+        }
 
-    r = tr("abcdef", "cd", "CD");
-    assert(r == "abCDef");
-
-    r = tr("abcdef", "b-d", "B-D");
-    assert(r == "aBCDef");
-
-    r = tr("abcdefgh", "b-dh", "B-Dx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-CDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-BCDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdef", "ef", "*", "c");
-    assert(r == "****ef");
-
-    r = tr("abcdef", "ef", "", "d");
-    assert(r == "abcd");
-
-    r = tr("hello goodbye", "lo", null, "s");
-    assert(r == "helo godbye");
-
-    r = tr("hello goodbye", "lo", "x", "s");
-    assert(r == "hex gxdbye");
-
-    r = tr("14-Jul-87", "a-zA-Z", " ", "cs");
-    assert(r == " Jul ");
-
-    r = tr("Abc", "AAA", "XYZ");
-    assert(r == "Xbc");
+        auto s = to!S("hello world");
+        static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
+    }
 }
 
 
@@ -2825,7 +3129,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
-    auto sx = std.string.tolower(s);
+    auto sx = std.string.toLower(s);
     int    j  = 0;
     char   c;
 
@@ -2961,13 +3265,21 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
     return true;
 }
 
-/// Allow any object as a parameter
+/++
+    $(RED Scheduled for deprecation in January 2012.)
+
+    Allow any object as a parameter
+  +/
 bool isNumeric(...)
 {
     return isNumeric(_arguments, _argptr);
 }
 
-/// Check only the first parameter, all others will be ignored.
+/++
+    $(RED Scheduled for deprecation in January 2012.)
+
+    Check only the first parameter, all others will be ignored.
+  +/
 bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     auto  s = ""c;
@@ -3368,8 +3680,8 @@ size_t column(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 
         case '\r':
         case '\n':
-        case PS:
-        case LS:
+        case paraSep:
+        case lineSep:
             column = 0;
             break;
 
@@ -3425,7 +3737,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-    if (iswhite(c))
+    if (std.uni.isWhite(c))
     {
         if (inword)
         {
@@ -3490,51 +3802,17 @@ unittest
     assert(wrap("u u") == "u u\n");
 }
 
-// For backwards compatibility
 
-deprecated size_t find(in char[] s, dchar c)
+private template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    return indexOf(s, c, CaseSensitive.yes);
+    enum softDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been scheduled " ~
+                              "for deprecation in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
 }
 
-deprecated size_t find(in char[] str, in char[] sub)
+private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    return indexOf(str, sub, CaseSensitive.yes);
-}
-
-deprecated unittest
-{
-    string a = "abc";
-    string b = "bc";
-    assert(find(a, b) == 1);
-}
-
-deprecated size_t ifind(in char[] s, dchar c)
-{
-    return indexOf(s, c, CaseSensitive.no);
-}
-
-deprecated size_t rfind(in char[] s, dchar c)
-{
-    return lastIndexOf(s, c, CaseSensitive.yes);
-}
-
-deprecated size_t irfind(in char[] s, dchar c)
-{
-    return lastIndexOf(s, c, CaseSensitive.no);
-}
-
-deprecated size_t ifind(in char[] s, in char[] c)
-{
-    return indexOf(s, c, CaseSensitive.no);
-}
-
-deprecated size_t rfind(in char[] s, in char[] c)
-{
-    return lastIndexOf(s, c, CaseSensitive.yes);
-}
-
-deprecated size_t irfind(in char[] s, in char[] c)
-{
-    return lastIndexOf(s, c, CaseSensitive.no);
+    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
+                              "It will be removed in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
 }

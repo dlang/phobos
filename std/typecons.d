@@ -323,12 +323,12 @@ private:
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            auto    field = text("Identity!(field[", i, "])");
-            auto numbered = text("_", i);
-            decl ~= text("alias ", field, " ", numbered, ";");
+            enum    field = Format!("Identity!(field[%s])",i);
+            enum numbered = Format!("_%s", i);
+            decl ~= Format!("alias %s %s;", field, numbered);
             if (name.length != 0)
             {
-                decl ~= text("alias ", numbered, " ", name, ";");
+                decl ~= Format!("alias %s %s;", numbered, name);
             }
         }
         return decl;
@@ -496,6 +496,7 @@ assert(s[0] == "abc" && s[1] == 4.5);
         enum header = typeof(this).stringof ~ "(",
              footer = ")",
              separator = ", ";
+
         Appender!string app;
         app.put(header);
         foreach (i, Unused; Types)
@@ -508,7 +509,10 @@ assert(s[0] == "abc" && s[1] == 4.5);
             static if (is(Unused == class) && is(Unused == shared))
                 formattedWrite(app, "%s", field[i].stringof);
             else
-                formattedWrite(app, "%s", field[i]);
+            {
+                FormatSpec!char f;  // "%s"
+                formatElement(app, field[i], f);
+            }
         }
         app.put(footer);
         return app.data;
@@ -549,6 +553,13 @@ unittest
         assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
         Tuple!(int, int) yessh;
         nosh = yessh;
+    }
+    {
+        Tuple!(int, string) t;
+        t[0] = 10;
+        t[1] = "str";
+        assert(t[0] == 10 && t[1] == "str");
+        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -896,28 +907,34 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
                 T original;
                 U stripped;
             }
-            void opAssign(T another)
+            void opAssign(T another) pure nothrow
             {
                 stripped = cast(U) another;
             }
-            void opAssign(Rebindable another)
+            void opAssign(Rebindable another) pure nothrow
             {
                 stripped = another.stripped;
             }
             static if (is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another)
+                void opAssign(Rebindable!(immutable U) another) pure nothrow
                 {
                     stripped = another.stripped;
                 }
             }
-            this(T initializer)
+
+            this(T initializer) pure nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref T get() {
+            @property ref T get() pure nothrow
+            {
+                return original;
+            }
+            @property ref const(T) get() const pure nothrow
+            {
                 return original;
             }
 
@@ -1109,11 +1126,9 @@ unittest
     assert(y == 5);
 }
 
-/+
-
 /**
 Defines a value paired with a distinctive "null" state that denotes
-the absence of a valud value. If default constructed, a $(D
+the absence of a value. If default constructed, a $(D
 Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling $(D nullify) can nullify it again.
 
@@ -1145,7 +1160,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    bool isNull()
+    @property bool isNull() const
     {
         return _isNull;
     }
@@ -1155,8 +1170,7 @@ Forces $(D this) to the null state.
  */
     void nullify()
     {
-        // destroy
-        //static if (is(typeof(_value.__dtor()))) _value.__dtor();
+        clear(_value);
         _isNull = true;
     }
 
@@ -1175,7 +1189,14 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    ref T get()
+    @property ref T get()
+    {
+        enforce(!isNull);
+        return _value;
+    }
+    //@@@BUG3748@@@: inout does not work properly.
+    //               need to define a separate 'const' version
+    @property ref const(T) get() const
     {
         enforce(!isNull);
         return _value;
@@ -1192,9 +1213,55 @@ unittest
 {
     Nullable!int a;
     assert(a.isNull);
+    assertThrown(a.get);
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
+    //@@@BUG5188@@@
+    //assert(a != 3);
+    assert(a.get != 3);
+    a.nullify();
+    assert(a.isNull);
+    a = 3;
+    assert(a == 3);
+    a *= 6;
+    assert(a == 18);
+    a.nullify();
+    assertThrown(a += 2);
+}
+unittest
+{
+    auto k = Nullable!int(74);
+    assert(k == 74);
+    k.nullify();
+    assert(k.isNull);
+}
+unittest
+{
+    static int f(in Nullable!int x) {
+        return x.isNull ? 42 : x.get;
+    }
+    Nullable!int a;
+    assert(f(a) == 42);
+    a = 8;
+    assert(f(a) == 8);
+    a.nullify();
+    assert(f(a) == 42);
+}
+unittest
+{
+    static struct S { int x; }
+    Nullable!S s;
+    assert(s.isNull);
+    s = S(6);
+    assert(s == S(6));
+    //@@@BUG5188@@@
+    //assert(s != S(0));
+    assert(s.get != S(0));
+    s.x = 9190;
+    assert(s.x == 9190);
+    s.nullify();
+    assertThrown(s.x = 9441);
 }
 
 /**
@@ -1219,7 +1286,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    bool isNull()
+    @property bool isNull() const
     {
         return _value == nullValue;
     }
@@ -1246,7 +1313,13 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    ref T get()
+    @property ref T get()
+    {
+        enforce(!isNull);
+        return _value;
+    }
+    //@@@BUG3748@@@
+    @property ref const(T) get() const
     {
         enforce(!isNull);
         return _value;
@@ -1263,9 +1336,30 @@ unittest
 {
     Nullable!(int, int.min) a;
     assert(a.isNull);
+    assertThrown(a.get);
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
+    static assert(a.sizeof == int.sizeof);
+}
+unittest
+{
+    auto a = Nullable!(int, int.min)(8);
+    assert(a == 8);
+    a.nullify();
+    assert(a.isNull);
+}
+unittest
+{
+    static int f(in Nullable!(int, int.min) x) {
+        return x.isNull ? 42 : x.get;
+    }
+    Nullable!(int, int.min) a;
+    assert(f(a) == 42);
+    a = 8;
+    assert(f(a) == 8);
+    a.nullify();
+    assert(f(a) == 42);
 }
 
 /**
@@ -1297,7 +1391,7 @@ Binds the internal state to $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    bool isNull()
+    @property bool isNull() const
     {
         return _value is null;
     }
@@ -1324,7 +1418,13 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    ref T get()
+    @property ref T get()
+    {
+        enforce(!isNull);
+        return *_value;
+    }
+    //@@@BUG3748@@@
+    @property ref const(T) get() const
     {
         enforce(!isNull);
         return *_value;
@@ -1339,17 +1439,36 @@ the null state.
 
 unittest
 {
-    int x = 5;
+    int x = 5, y = 7;
     auto a = NullableRef!(int)(&x);
     assert(!a.isNull);
     assert(a == 5);
+    assert(x == 5);
     a = 42;
+    assert(x == 42);
     assert(!a.isNull);
     assert(a == 42);
+    a.nullify();
+    assert(x == 42);
+    assert(a.isNull);
+    assertThrown(a.get);
+    assertThrown(a = 71);
+    a.bind(&y);
+    assert(a == 7);
+    y = 135;
+    assert(a == 135);
 }
-
-+/
-
+unittest
+{
+    static int f(in NullableRef!int x) {
+        return x.isNull ? 42 : x.get;
+    }
+    int x = 5;
+    auto a = NullableRef!int(&x);
+    assert(f(a) == 5);
+    a.nullify();
+    assert(f(a) == 42);
+}
 
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
@@ -1593,7 +1712,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
     private alias AutoImplement_Helper!(
             "autoImplement_helper_", "Base", Base, how, what )
              autoImplement_helper_;
-    override mixin(autoImplement_helper_.code);
+    mixin(autoImplement_helper_.code);
 }
 
 /*
@@ -1759,7 +1878,7 @@ private static:
         {
             enum varstyle = variadicFunctionStyle!(typeof(&ctor[0]));
 
-            static if (varstyle & (Variadic.C | Variadic.D))
+            static if (varstyle & (Variadic.c | Variadic.d))
             {
                 // the argptr-forwarding problem
                 pragma(msg, "Warning: AutoImplement!(", Base, ") ",
@@ -2049,7 +2168,7 @@ private static:
 
                 if (!isCtor)
                 {
-                    if (atts & FA.REF) rtype ~= "ref ";
+                    if (atts & FA.ref_) rtype ~= "ref ";
                     rtype ~= myFuncInfo ~ ".RT";
                 }
                 return rtype;
@@ -2060,11 +2179,11 @@ private static:
             static string make_postAtts()
             {
                 string poatts = "";
-                if (atts & FA.PURE    ) poatts ~= " pure";
-                if (atts & FA.NOTHROW ) poatts ~= " nothrow";
-                if (atts & FA.PROPERTY) poatts ~= " @property";
-                if (atts & FA.SAFE    ) poatts ~= " @safe";
-                if (atts & FA.TRUSTED ) poatts ~= " @trusted";
+                if (atts & FA.pure_   ) poatts ~= " pure";
+                if (atts & FA.nothrow_) poatts ~= " nothrow";
+                if (atts & FA.property) poatts ~= " @property";
+                if (atts & FA.safe    ) poatts ~= " @safe";
+                if (atts & FA.trusted ) poatts ~= " @trusted";
                 return poatts;
             }
             enum postAtts = make_postAtts();
@@ -2081,6 +2200,8 @@ private static:
             enum storageClass = make_storageClass();
 
             //
+            if (isAbstractFunction!func)
+                code ~= "override ";
             code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
@@ -2137,10 +2258,10 @@ private static:
             if (i > 0) params ~= ", ";
 
             // Parameter storage classes.
-            if (stc & STC.SCOPE) params ~= "scope ";
-            if (stc & STC.OUT  ) params ~= "out ";
-            if (stc & STC.REF  ) params ~= "ref ";
-            if (stc & STC.LAZY ) params ~= "lazy ";
+            if (stc & STC.scope_) params ~= "scope ";
+            if (stc & STC.out_  ) params ~= "out ";
+            if (stc & STC.ref_  ) params ~= "ref ";
+            if (stc & STC.lazy_ ) params ~= "lazy ";
 
             // Take parameter type from the FuncInfo.
             params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
@@ -2152,15 +2273,15 @@ private static:
         // Add some ellipsis part if needed.
         final switch (variadicFunctionStyle!(func))
         {
-            case Variadic.NO:
+            case Variadic.no:
                 break;
 
-            case Variadic.C, Variadic.D:
+            case Variadic.c, Variadic.d:
                 // (...) or (a, b, ...)
                 params ~= (nparams == 0) ? "..." : ", ...";
                 break;
 
-            case Variadic.TYPESAFE:
+            case Variadic.typesafe:
                 params ~= " ...";
                 break;
         }
@@ -2194,7 +2315,7 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
     static if (is(ReturnType!(func) == void))
         enum string generateEmptyFunction = q{
         };
-    else static if (functionAttributes!(func) & FunctionAttribute.REF)
+    else static if (functionAttributes!(func) & FunctionAttribute.ref_)
         enum string generateEmptyFunction = q{
             static typeof(return) dummy;
             return dummy;
@@ -2208,7 +2329,7 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
 /// ditto
 template generateAssertTrap(C, func.../+[BUG 4217]+/)
 {
-    static if (functionAttributes!(func) & FunctionAttribute.NOTHROW) //XXX
+    static if (functionAttributes!(func) & FunctionAttribute.nothrow_) //XXX
     {
         pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead "
                 "of Error for the auto-implemented nothrow function ",
@@ -2489,6 +2610,21 @@ unittest
     }
 }
 
+// 6606
+unittest
+{
+    union U {
+       size_t i;
+       void* p;
+    }
+
+    struct S {
+       U u;
+    }
+
+    alias RefCounted!S SRC;
+}
+
 /**
 Allocates a $(D class) object right inside the current scope,
 therefore avoiding the overhead of $(D new). This facility is unsafe;
@@ -2508,47 +2644,49 @@ unittest
 }
 ----
  */
-@system auto scoped(T, Args...)(Args args) if (is(T == class))
+@system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
 {
-    static struct Scoped
-    {
-        private ubyte[__traits(classInstanceSize, T)] Scoped_store = void;
-        @property T Scoped_payload()
-        {
-            return cast(T) (Scoped_store.ptr);
-        }
-        alias Scoped_payload this;
+    Scoped!T result;
 
-        @disable this(this)
-        {
-            writeln("Illegal call to Scoped this(this)");
-            assert(false);
-        }
-
-        ~this()
-        {
-            destroy(Scoped_payload);
-            if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
-            {
-                _d_monitordelete(Scoped_payload, true);
-            }
-        }
-    }
-
-    byte[__traits(classInstanceSize, T)] result;
     static if (Args.length == 0)
     {
-        result[] = typeid(T).init[];
+        result.Scoped_store[] = typeid(T).init[];
         static if (is(typeof(T.init.__ctor())))
         {
-            (cast(T) result.ptr).__ctor();
+            result.Scoped_payload.__ctor();
         }
     }
     else
     {
-        emplace!T(cast(void[]) result, args);
+        emplace!T(cast(void[]) result.Scoped_store, args);
     }
-    return cast(Scoped) result;
+
+    return result;
+}
+
+private struct Scoped(T)
+{
+    private byte[__traits(classInstanceSize, T)] Scoped_store = void;
+    @property T Scoped_payload()
+    {
+        return cast(T) (Scoped_store.ptr);
+    }
+    alias Scoped_payload this;
+
+    @disable this(this)
+    {
+        writeln("Illegal call to Scoped this(this)");
+        assert(false);
+    }
+
+    ~this()
+    {
+        destroy(Scoped_payload);
+        if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
+        {
+            _d_monitordelete(Scoped_payload, true);
+        }
+    }
 }
 
 // Used by scoped() above
@@ -2567,7 +2705,7 @@ private void destroy(T)(T obj) if (is(T == class))
     }
     static if (!is(T == Object) && is(T Base == super))
     {
-        Base b = obj;
+        Base[0] b = obj;
         destroy(b);
     }
 }
@@ -2615,3 +2753,151 @@ unittest
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
 }
+
+unittest
+{
+    // bug4500
+    class A
+    {
+        this() { a = this; }
+        this(int i) { a = this; }
+        A a;
+        bool check() { return this is a; }
+    }
+
+    auto a1 = scoped!A;
+    assert(a1.check());
+
+    auto a2 = scoped!A(1);
+    assert(a2.check());
+
+    a1.a = a1;
+    assert(a1.check());
+}
+
+unittest
+{
+    static class A
+    {
+        static int sdtor;
+
+        this() { ++sdtor; assert(sdtor == 1); }
+        ~this() { assert(sdtor == 1); --sdtor; }
+    }
+
+    interface Bob {}
+
+    static class ABob : A, Bob
+    {
+        this() { ++sdtor; assert(sdtor == 2); }
+        ~this() { assert(sdtor == 2); --sdtor; }
+    }
+
+    A.sdtor = 0;
+    scope(exit) assert(A.sdtor == 0);
+    auto abob = scoped!ABob();
+}
+
+/**
+Defines a simple, self-documenting yes/no flag. This makes it easy for
+APIs to define functions accepting flags without resorting to $(D
+bool), which is opaque in calls, and without needing to define an
+enumerated type separately. Using $(D Flag!"Name") instead of $(D
+bool) makes the flag's meaning visible in calls. Each yes/no flag has
+its own type, which makes confusions and mix-ups impossible.
+
+Example:
+----
+// Before
+string getLine(bool keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine (usually far away from its definition) can't
+// be understood without looking at the documentation, even by users
+// familiar with the API. Assuming the reverse meaning
+// (i.e. "ignoreTerminator") and inserting the wrong code compiles and
+// runs with erroneous results.
+auto line = getLine(false);
+
+// After
+string getLine(Flag!"KeepTerminator" keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine can be easily read and understood even by
+// people not fluent with the API.
+auto line = getLine(Flag!"KeepTerminator".yes);
+----
+
+Passing categorical data by means of unstructured $(D bool)
+parameters is classified under "simple-data coupling" by Steve
+McConnell in the $(LUCKY Code Complete) book, along with three other
+kinds of coupling. The author argues citing several studies that
+coupling has a negative effect on code quality. $(D Flag) offers a
+simple structuring method for passing yes/no flags to APIs.
+
+As a perk, the flag's name may be any string and as such can include
+characters not normally allowed in identifiers, such as
+spaces and dashes.
+ */
+template Flag(string name) {
+    ///
+    enum Flag : bool
+    {
+        /**
+         When creating a value of type $(D Flag!"Name"), use $(D
+         Flag!"Name".no) for the negative option. When using a value
+         of type $(D Flag!"Name"), compare it against $(D
+         Flag!"Name".no) or just $(D false) or $(D 0).  */
+        no = false,
+
+        /** When creating a value of type $(D Flag!"Name"), use $(D
+         Flag!"Name".yes) for the affirmative option. When using a
+         value of type $(D Flag!"Name"), compare it against $(D
+         Flag!"Name".yes).
+        */
+        yes = true
+    }
+}
+
+/**
+Convenience names that allow using e.g. $(D yes!"encryption") instead of
+$(D Flag!"encryption".yes) and $(D no!"encryption") instead of $(D
+Flag!"encryption".no).
+*/
+struct Yes
+{
+    static auto @property opDispatch(string name)() { return
+    Flag!name.yes; }
+}
+//template yes(string name) { enum Flag!name yes = Flag!name.yes; }
+
+/// Ditto
+struct No
+{
+    static auto @property opDispatch(string name)() { return
+    Flag!name.no; }
+}
+//template no(string name) { enum Flag!name no = Flag!name.no; }
+
+unittest
+{
+    Flag!"abc" flag1;
+    assert(flag1 == Flag!"abc".no);
+    assert(flag1 == No.abc);
+    assert(!flag1);
+    if (flag1) assert(false);
+    flag1 = Yes.abc;
+    assert(flag1);
+    if (!flag1) assert(false);
+    if (flag1) {} else assert(false);
+    assert(flag1 == Yes.abc);
+}
+

@@ -16,8 +16,6 @@
  * these functions are pure nothrow.
  *
  * Status:
- * The gamma and error functions have been superceded by improved versions in
- * std.mathspecial. They will be officially deprecated in std.math in DMD2.055.
  * The semantics and names of feqrel and approxEqual will be revised.
  *
  * Source: $(PHOBOSSRC std/_math.d)
@@ -119,7 +117,7 @@ template floatTraits(T) {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
-    // RECIP_EPSILON is the value such that (smallest_denormal) * RECIP_EPSILON == T.min_normal
+    // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
     enum T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     { // float
@@ -203,21 +201,24 @@ else
 
 public:
 
-enum real E =          2.7182818284590452354L;  /** e */ // 0x1.5BF0A8B1_45769535_5FF5p+1L
-enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t
-enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 1.4427 fldl2e
-enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */ // 0.30103 fldlg2
-enum real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
-enum real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
-enum real LN10 =       2.30258509299404568402;  /** ln 10 */
-enum real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
-enum real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
-enum real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
-enum real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
-enum real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
-enum real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / $(SQRT)$(PI) */
-enum real SQRT2 =      1.41421356237309504880;  /** $(SQRT)2 */
-enum real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
+// Values obtained from Wolfram Alpha. 116 bits ought to be enough for anybody.
+// Wolfram Alpha LLC. 2011. Wolfram|Alpha. http://www.wolframalpha.com/input/?i=e+in+base+16 (access July 6, 2011).
+enum real E =          0x1.5bf0a8b1457695355fb8ac404e7a8p+1L; /** e = 2.718281... */
+enum real LOG2T =      0x1.a934f0979a3715fc9257edfe9b5fbp+1L; /** $(SUB log, 2)10 = 3.321928... */
+enum real LOG2E =      0x1.71547652b82fe1777d0ffda0d23a8p+0L; /** $(SUB log, 2)e = 1.442695... */
+enum real LOG2 =       0x1.34413509f79fef311f12b35816f92p-2L; /** $(SUB log, 10)2 = 0.301029... */
+enum real LOG10E =     0x1.bcb7b1526e50e32a6ab7555f5a67cp-2L; /** $(SUB log, 10)e = 0.434294... */
+enum real LN2 =        0x1.62e42fefa39ef35793c7673007e5fp-1L; /** ln 2  = 0.693147... */
+enum real LN10 =       0x1.26bb1bbb5551582dd4adac5705a61p+1L; /** ln 10 = 2.302585... */
+enum real PI =         0x1.921fb54442d18469898cc51701b84p+1L; /** $(_PI) = 3.141592... */
+enum real PI_2 =       PI/2;                                  /** $(PI) / 2 = 1.570796... */
+enum real PI_4 =       PI/4;                                  /** $(PI) / 4 = 0.785398... */
+enum real M_1_PI =     0x1.45f306dc9c882a53f84eafa3ea69cp-2L; /** 1 / $(PI) = 0.318309... */
+enum real M_2_PI =     2*M_1_PI;                              /** 2 / $(PI) = 0.636619... */
+enum real M_2_SQRTPI = 0x1.20dd750429b6d11ae3a914fed7fd8p+0L; /** 2 / $(SQRT)$(PI) = 1.128379... */
+enum real SQRT2 =      0x1.6a09e667f3bcc908b2fb1366ea958p+0L; /** $(SQRT)2 = 1.414213... */
+enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF) = 0.707106... */
+// Note: Make sure the magic numbers in compiler backend for x87 match these.
 
 /*
         Octal versions:
@@ -408,7 +409,7 @@ real tan(real x) @trusted pure nothrow
         fstsw   AX                      ;
         sahf                            ;
         jc      trigerr                 ; // x is NAN, infinity, or empty
-                                          // 387's can handle denormals
+                                          // 387's can handle subnormals
 SC18:   fptan                           ;
         fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
@@ -443,7 +444,7 @@ Lret:
         fstsw   AX                      ;
         test    AH,1                    ;
         jnz     trigerr                 ; // x is NAN, infinity, or empty
-                                          // 387's can handle denormals
+                                          // 387's can handle subnormals
 SC18:   fptan                           ;
         fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
@@ -705,7 +706,7 @@ double tanh(double x) @safe pure nothrow { return tanh(cast(real)x); }
 /// ditto
 float tanh(float x) @safe pure nothrow { return tanh(cast(real)x); }
 
-private:
+package:
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
  */
@@ -1355,7 +1356,7 @@ unittest
     for (int i=0; i<exptestpoints.length;++i) {
         resetIeeeFlags();
         x = exp(exptestpoints[i][0]);
-        f = ieeeFlags();
+        f = ieeeFlags;
         assert(x == exptestpoints[i][1]);
         // Check the overflow bit
         assert(f.overflow() == (fabs(x) == real.infinity));
@@ -1373,7 +1374,7 @@ unittest
     // NaN propagation. Doesn't set flags, bcos was already NaN.
     resetIeeeFlags();
     x = exp(real.nan);
-    f = ieeeFlags();
+    f = ieeeFlags;
     assert(isIdentical(x,real.nan));
     assert(f.flags == 0);
 
@@ -1467,7 +1468,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
@@ -1496,7 +1497,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
@@ -1522,7 +1523,7 @@ real frexp(real value, out int exp) @trusted pure nothrow
             // value is +-0.0
             exp = 0;
         } else {
-            // denormal
+            // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS)>> 4) - real.mant_dig + 1;
@@ -1569,7 +1570,7 @@ unittest
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                                           [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
                                           [real.min_normal,  .5,     -16381],
-                                          [real.min_normal/2.0L, .5,     -16382]    // denormal
+                                          [real.min_normal/2.0L, .5,     -16382]    // subnormal
                                            ];
 
         for (i = 0; i < extendedvals.length; i++) {
@@ -1907,71 +1908,16 @@ unittest
         }
 }
 
-/**********************************
- * Returns the error function of x.
- *
- * <img src="erf.gif" alt="error function">
- */
+deprecated
+{
+// Deprecated: use std.mathspecial.erf instead
 real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
-
-/**********************************
- * Returns the complementary error function of x, which is 1 - erf(x).
- *
- * <img src="erfc.gif" alt="complementary error function">
- */
+// Deprecated: use std.mathspecial.erfc instead
 real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
-
-/***********************************
- * Natural logarithm of gamma function.
- *
- * Returns the base e (2.718...) logarithm of the absolute
- * value of the gamma function of the argument.
- *
- * For reals, lgamma is equivalent to log(fabs(gamma(x))).
- *
- *      $(TABLE_SV
- *      $(TR $(TH x)                 $(TH lgamma(x)) $(TH invalid?))
- *      $(TR $(TD $(NAN))            $(TD $(NAN))    $(TD yes))
- *      $(TR $(TD integer $(LT)= 0)      $(TD +$(INFIN)) $(TD yes))
- *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
- *      )
- */
-real lgamma(real x) @trusted nothrow
-{
-    return core.stdc.math.lgammal(x);
-
-    // Use etc.gamma.lgamma for those C systems that are missing it
-}
-
-/***********************************
- *  The Gamma function, $(GAMMA)(x)
- *
- *  $(GAMMA)(x) is a generalisation of the factorial function
- *  to real and complex numbers.
- *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
- *
- *  Mathematically, if z.re > 0 then
- *   $(GAMMA)(z) = $(INTEGRATE 0, $(INFIN)) $(POWER t, z-1)$(POWER e, -t) dt
- *
- *    $(TABLE_SV
- *      $(TR $(TH x)              $(TH $(GAMMA)(x))       $(TH invalid?))
- *      $(TR $(TD $(NAN))         $(TD $(NAN))            $(TD yes))
- *      $(TR $(TD $(PLUSMN)0.0)   $(TD $(PLUSMNINF))      $(TD yes))
- *      $(TR $(TD integer $(GT)0) $(TD (x-1)!)            $(TD no))
- *      $(TR $(TD integer $(LT)0) $(TD $(NAN))            $(TD yes))
- *      $(TR $(TD +$(INFIN))      $(TD +$(INFIN))         $(TD no))
- *      $(TR $(TD -$(INFIN))      $(TD $(NAN))            $(TD yes))
- *    )
- *
- *  References:
- *      $(LINK http://en.wikipedia.org/wiki/Gamma_function),
- *      $(LINK http://www.netlib.org/cephes/ldoubdoc.html#gamma)
- */
-real tgamma(real x) @trusted nothrow
-{
-    return core.stdc.math.tgammal(x);
-
-    // Use etc.gamma.tgamma for those C systems that are missing it
+// Deprecated: use std.mathspecial.logGamma instead
+real lgamma(real x) @trusted nothrow { return core.stdc.math.lgammal(x); }
+// Deprecated: use std.mathspecial.gamma instead
+real tgamma(real x) @trusted nothrow { return core.stdc.math.tgammal(x); }
 }
 
 /**************************************
@@ -2147,8 +2093,8 @@ private:
             DIVBYZERO_MASK = 0x04,
             INVALID_MASK   = 0x01
         }
-        // Don't bother about denormals, they are not supported on most CPUs.
-        //  DENORMAL_MASK = 0x02;
+        // Don't bother about subnormals, they are not supported on most CPUs.
+        //  SUBNORMAL_MASK = 0x02;
     } else version (PPC) {
         // PowerPC FPSCR is a 32-bit register.
         enum : int {
@@ -2217,15 +2163,15 @@ private:
 public:
      /// The result cannot be represented exactly, so rounding occured.
      /// (example: x = sin(0.1); )
-     bool inexact() { return (flags & INEXACT_MASK) != 0; }
+     @property bool inexact() { return (flags & INEXACT_MASK) != 0; }
      /// A zero was generated by underflow (example: x = real.min*real.epsilon/2;)
-     bool underflow() { return (flags & UNDERFLOW_MASK) != 0; }
+     @property bool underflow() { return (flags & UNDERFLOW_MASK) != 0; }
      /// An infinity was generated by overflow (example: x = real.max*2;)
-     bool overflow() { return (flags & OVERFLOW_MASK) != 0; }
+     @property bool overflow() { return (flags & OVERFLOW_MASK) != 0; }
      /// An infinity was generated by division by zero (example: x = 3/0.0; )
-     bool divByZero() { return (flags & DIVBYZERO_MASK) != 0; }
+     @property bool divByZero() { return (flags & DIVBYZERO_MASK) != 0; }
      /// A machine NaN was generated. (example: x = real.infinity * 0.0; )
-     bool invalid() { return (flags & INVALID_MASK) != 0; }
+     @property bool invalid() { return (flags & INVALID_MASK) != 0; }
 }
 
 
@@ -2233,7 +2179,7 @@ public:
 void resetIeeeFlags() { IeeeFlags.resetIeeeFlags; }
 
 /// Return a snapshot of the current state of the floating-point status flags.
-IeeeFlags ieeeFlags()
+@property IeeeFlags ieeeFlags()
 {
    return IeeeFlags(IeeeFlags.getIeeeFlags());
 }
@@ -2293,16 +2239,17 @@ struct FloatingPointControl
      */
     enum : uint
     {
-        inexactException   = 0x20,
-        underflowException = 0x10,
-        overflowException  = 0x08,
-        divByZeroException = 0x04,
-        invalidException   = 0x01,
+        inexactException      = 0x20,
+        underflowException    = 0x10,
+        overflowException     = 0x08,
+        divByZeroException    = 0x04,
+        subnormalException    = 0x02,
+        invalidException      = 0x01,
         /// Severe = The overflow, division by zero, and invalid exceptions.
         severeExceptions   = overflowException | divByZeroException
                              | invalidException,
         allExceptions      = severeExceptions | underflowException
-                             | inexactException,
+                             | inexactException | subnormalException,
     };
 private:
     enum ushort EXCEPTION_MASK = 0x3F;
@@ -2321,18 +2268,18 @@ public:
         setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
     }
     //// Change the floating-point hardware rounding mode
-    void rounding(RoundingMode newMode)
+    @property void rounding(RoundingMode newMode)
     {
         ushort old = getControlState();
         setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
     /// Return the exceptions which are currently enabled (unmasked)
-    static uint enabledExceptions()
+    @property static uint enabledExceptions()
     {
         return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
     }
     /// Return the currently active rounding mode
-    static RoundingMode rounding()
+    @property static RoundingMode rounding()
     {
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
@@ -3032,7 +2979,7 @@ unittest {
         assert( nextUp(-real.infinity) == -real.max );
         assert( nextUp(-1.0L-real.epsilon) == -1.0 );
         assert( nextUp(-2.0L) == -2.0 + real.epsilon);
-        // denormals and zero
+        // subnormals and zero
         assert( nextUp(-real.min_normal) == -real.min_normal*(1-real.epsilon) );
         assert( nextUp(-real.min_normal*(1-real.epsilon)) == -real.min_normal*(1-2*real.epsilon) );
         assert( isIdentical(-0.0L, nextUp(-real.min_normal*real.epsilon)) );
@@ -3053,7 +3000,7 @@ unittest {
     assert( nextUp(-double.infinity) == -double.max );
     assert( nextUp(-1-double.epsilon) == -1.0 );
     assert( nextUp(-2.0) == -2.0 + double.epsilon);
-    // denormals and zero
+    // subnormals and zero
 
     assert( nextUp(-double.min_normal) == -double.min_normal*(1-double.epsilon) );
     assert( nextUp(-double.min_normal*(1-double.epsilon)) == -double.min_normal*(1-2*double.epsilon) );
@@ -3588,8 +3535,8 @@ int feqrel(X)(X x, X y) @trusted pure nothrow
                                - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
         }
         if (pd[F.EXPPOS_SHORT] == 0)
-        {   // Difference is denormal
-            // For denormals, we need to add the number of zeros that
+        {   // Difference is subnormal
+            // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
             diff *= F.RECIP_EPSILON;
@@ -3713,7 +3660,7 @@ body {
     m >>>= 1;
     if (c) m |= 0x4000_0000_0000_0000L; // shift carry into significand
     if (e) *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
-    else *ul = m; // ... unless exponent is 0 (denormal or zero).
+    else *ul = m; // ... unless exponent is 0 (subnormal or zero).
     ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     } else static if(T.mant_dig == 113) { //quadruple
         // This would be trivial if 'ucent' were implemented...

@@ -1,7 +1,8 @@
 // Written in the D programming language.
 
 /**
-$(RED Scheduled for deprecation. Please use std.datetime instead.)
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use std.datetime instead.)
 
 Macros:
 WIKI = Phobos/StdGregorian
@@ -19,13 +20,15 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.gregorian;
 
-pragma(msg, "std.gregorian has been scheduled for deprecation. "
-            "Please use std.datetime instead.");
+pragma(msg, "Notice: As of Phobos 2.055, std.gregorian has been deprecated. " ~
+            "It will be removed in February 2012. Please use std.datetime instead.");
 
 version(posix) import core.sys.posix.time;
 import std.typecons;
 import std.conv;
 version(unittest) import std.stdio;
+
+deprecated:
 
 version(none) unittest
 {

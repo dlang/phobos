@@ -18,7 +18,7 @@
  */
 module std.compiler;
 
-const
+immutable
 {
     /// Vendor specific string naming the compiler, for example: "Digital Mars D".
     string name = __VENDOR__;
@@ -26,11 +26,22 @@ const
     /// Master list of D compiler vendors.
     enum Vendor
     {
-        DigitalMars = 1,        /// Digital Mars
+        unknown = 0,     /// Compiler vendor could not be detected
+        digitalMars = 1, /// Digital Mars D (DMD)
+        gnu = 2,         /// GNU D Compiler (GDC)
+        llvm = 3,        /// LLVM D Compiler (LDC)
+        dotNET = 4,      /// D.NET
+        sdc = 5,         /// Stupid D Compiler (SDC)
     }
 
     /// Which vendor produced this compiler.
-    Vendor vendor = Vendor.DigitalMars;
+    version(StdDdoc)          Vendor vendor;
+    else version(DigitalMars) Vendor vendor = Vendor.digitalMars;
+    else version(GNU)         Vendor vendor = Vendor.gnu;
+    else version(LDC)         Vendor vendor = Vendor.llvm;
+    else version(D_NET)       Vendor vendor = Vendor.dotNET;
+    else version(SDC)         Vendor vendor = Vendor.sdc;
+    else                      Vendor vendor = Vendor.unknown;
 
 
     /**

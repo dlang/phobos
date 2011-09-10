@@ -1,7 +1,8 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use std.datetime instead.)
  *
  * dateparse module.
  *
@@ -24,6 +25,8 @@ private
     import std.c.stdlib;
     import std.date;
 }
+
+deprecated:
 
 //debug=dateparse;
 
