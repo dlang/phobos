@@ -6370,6 +6370,9 @@ auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, R
 (Range r, E pivot)
     if (ss == SwapStrategy.unstable && isRandomAccessRange!Range)
 {
+    // The algorithm is described in "Engineering a sort function" by
+    // Jon Bentley et al, pp 1257.
+
     alias binaryFun!less lessFun;
     size_t i, j, k = r.length, l = k;
 
@@ -6746,11 +6749,15 @@ template multiSort(less...) //if (less.length > 1)
             alias less funs;
         }
         alias binaryFun!(funs[0]) lessFun;
+
         static if (funs.length > 1)
         {
+            if (r.length <= 1) return;
             auto p = getPivot!lessFun(r);
             auto t = partition3!(less[0], ss)(r, r[p]);
+            .multiSort!less(t[0]);
             .multiSort!(less[1 .. $])(t[1]);
+            .multiSort!less(t[2]);
         }
         else
         {
@@ -6762,8 +6769,8 @@ template multiSort(less...) //if (less.length > 1)
 unittest
 {
     static struct Point { int x, y; }
-    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
+    auto pts2 = [ Point(0, 1), Point(1, 0), Point(1, 1), Point(1, 2), Point(5, 6), Point(5, 7) ];
     multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
     assert(pts1 == pts2);
 }
