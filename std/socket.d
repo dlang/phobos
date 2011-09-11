@@ -1712,6 +1712,79 @@ unittest
 }
 
 
+version(StdDdoc)
+{
+    /**
+     * $(D UnixAddress) encapsulates an address for a Unix domain socket
+     * ($(D AF_UNIX)). Available only on supported systems.
+     */
+    class UnixAddress: Address
+    {
+        /// Construct a new $(D UnixAddress) from the specified path.
+        this(string path);
+
+        /// Get the underlying _path.
+        @property string path() const;
+
+        /// ditto
+        override string toString() const;
+    }
+}
+else
+static if (is(typeof(sockaddr_un)))
+{
+    class UnixAddress: Address
+    {
+    protected:
+        sockaddr_un* sun;
+        socklen_t len;
+
+
+        this()
+        {
+        }
+
+
+    public:
+        override sockaddr* name()
+        {
+            return cast(sockaddr*)sun;
+        }
+
+        override const(sockaddr)* name() const
+        {
+            return cast(const(sockaddr)*)sun;
+        }
+
+
+        override socklen_t nameLen() const
+        {
+            return len;
+        }
+
+
+        this(string path)
+        {
+            len = sockaddr_un.sun_path.offsetof + path.length + 1;
+            sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
+            sun.sun_family = AF_UNIX;
+            sun.sun_path.ptr[0..path.length] = path;
+            sun.sun_path.ptr[path.length] = 0;
+        }
+
+        @property string path() const
+        {
+            return toString(sun.sun_path.ptr);
+        }
+
+        override string toString() const
+        {
+            return path;
+        }
+    }
+}
+
+
 /**
  * Class for exceptions thrown by $(D Socket.accept).
  */
