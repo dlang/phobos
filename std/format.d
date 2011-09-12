@@ -1537,7 +1537,7 @@ if (isSomeString!T)
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
-                    goto InvalidSeq;
+                    throw new UtfException("invalid UTF sequence in value", 0);
 
                 formatChar(app, c);
             }
@@ -1547,7 +1547,6 @@ if (isSomeString!T)
         }
         catch (UtfException e)
         {
-InvalidSeq:
             // If val contains invalid UTF sequence, formatted like HexString literal
             static if (is(typeof(val[0]) : const(char)))
             {
