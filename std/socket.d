@@ -314,12 +314,12 @@ shared static ~this()
  */
 enum AddressFamily: int
 {
-    UNSPEC =     AF_UNSPEC,     ///
-    UNIX =       AF_UNIX,       /// local communication
-    INET =       AF_INET,       /// internet protocol version 4
-    IPX =        AF_IPX,        /// novell IPX
-    APPLETALK =  AF_APPLETALK,  /// appletalk
-    INET6 =      AF_INET6,      /// internet protocol version 6
+    UNSPEC =     AF_UNSPEC,     /// Unspecified address family
+    UNIX =       AF_UNIX,       /// Local communication
+    INET =       AF_INET,       /// Internet Protocol version 4
+    IPX =        AF_IPX,        /// Novell IPX
+    APPLETALK =  AF_APPLETALK,  /// AppleTalk
+    INET6 =      AF_INET6,      /// Internet Protocol version 6
 }
 
 
@@ -328,11 +328,11 @@ enum AddressFamily: int
  */
 enum SocketType: int
 {
-    STREAM =     SOCK_STREAM,           /// sequenced, reliable, two-way communication-based byte streams
-    DGRAM =      SOCK_DGRAM,            /// connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
-    RAW =        SOCK_RAW,              /// raw protocol access
-    RDM =        SOCK_RDM,              /// reliably-delivered message datagrams
-    SEQPACKET =  SOCK_SEQPACKET,        /// sequenced, reliable, two-way connection-based datagrams with a fixed maximum length
+    STREAM =     SOCK_STREAM,           /// Sequenced, reliable, two-way communication-based byte streams
+    DGRAM =      SOCK_DGRAM,            /// Connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
+    RAW =        SOCK_RAW,              /// Raw protocol access
+    RDM =        SOCK_RDM,              /// Reliably-delivered message datagrams
+    SEQPACKET =  SOCK_SEQPACKET,        /// Sequenced, reliable, two-way connection-based datagrams with a fixed maximum length
 }
 
 
@@ -341,15 +341,16 @@ enum SocketType: int
  */
 enum ProtocolType: int
 {
-    IP =    IPPROTO_IP,         /// internet protocol version 4
-    ICMP =  IPPROTO_ICMP,       /// internet control message protocol
-    IGMP =  IPPROTO_IGMP,       /// internet group management protocol
-    GGP =   IPPROTO_GGP,        /// gateway to gateway protocol
-    TCP =   IPPROTO_TCP,        /// transmission control protocol
-    PUP =   IPPROTO_PUP,        /// PARC universal packet protocol
-    UDP =   IPPROTO_UDP,        /// user datagram protocol
+    IP =    IPPROTO_IP,         /// Internet Protocol version 4
+    ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+    IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+    GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
+    TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+    PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+    UDP =   IPPROTO_UDP,        /// User Datagram Protocol
     IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-    IPV6 =  IPPROTO_IPV6,       /// internet protocol version 6
+    RAW =   IPPROTO_RAW,        /// Raw IP packets
+    IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
 }
 
 
@@ -2055,16 +2056,17 @@ public:
 /// The level at which a socket option is defined:
 enum SocketOptionLevel: int
 {
-    SOCKET =  SOL_SOCKET,               /// socket level
-    IP =      ProtocolType.IP,          /// internet protocol version 4 level
-    ICMP =    ProtocolType.ICMP,        ///
-    IGMP =    ProtocolType.IGMP,        ///
-    GGP =     ProtocolType.GGP,         ///
-    TCP =     ProtocolType.TCP,         /// transmission control protocol level
-    PUP =     ProtocolType.PUP,         ///
-    UDP =     ProtocolType.UDP,         /// user datagram protocol level
-    IDP =     ProtocolType.IDP,         ///
-    IPV6 =    ProtocolType.IPV6,        /// internet protocol version 6 level
+    SOCKET =  SOL_SOCKET,               /// Socket level
+    IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+    ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+    IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+    GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
+    TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+    PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+    UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+    IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+    RAW =     ProtocolType.RAW,         /// Raw IP packet level
+    IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
 }
 
 /// _Linger information for use with SocketOption.LINGER.
@@ -2100,29 +2102,34 @@ alias Linger linger;
 /// Specifies a socket option:
 enum SocketOption: int
 {
-    DEBUG =                SO_DEBUG,            /// record debugging information
-    BROADCAST =            SO_BROADCAST,        /// allow transmission of broadcast messages
-    REUSEADDR =            SO_REUSEADDR,        /// allow local reuse of address
-    LINGER =               SO_LINGER,           /// linger on close if unsent data is present
-    OOBINLINE =            SO_OOBINLINE,        /// receive out-of-band data in band
-    SNDBUF =               SO_SNDBUF,           /// send buffer size
-    RCVBUF =               SO_RCVBUF,           /// receive buffer size
-    DONTROUTE =            SO_DONTROUTE,        /// do not route
-    SNDTIMEO =             SO_SNDTIMEO,         /// send timeout
-    RCVTIMEO =             SO_RCVTIMEO,         /// receive timeout
-    ERROR =                SO_ERROR,            /// retrieve and clear error status
-    KEEPALIVE =            SO_KEEPALIVE,        /// enable keep-alive packets
+    DEBUG =                SO_DEBUG,            /// Record debugging information
+    BROADCAST =            SO_BROADCAST,        /// Allow transmission of broadcast messages
+    REUSEADDR =            SO_REUSEADDR,        /// Allow local reuse of address
+    LINGER =               SO_LINGER,           /// Linger on close if unsent data is present
+    OOBINLINE =            SO_OOBINLINE,        /// Receive out-of-band data in band
+    SNDBUF =               SO_SNDBUF,           /// Send buffer size
+    RCVBUF =               SO_RCVBUF,           /// Receive buffer size
+    DONTROUTE =            SO_DONTROUTE,        /// Do not route
+    SNDTIMEO =             SO_SNDTIMEO,         /// Send timeout
+    RCVTIMEO =             SO_RCVTIMEO,         /// Receive timeout
+    ERROR =                SO_ERROR,            /// Retrieve and clear error status
+    KEEPALIVE =            SO_KEEPALIVE,        /// Enable keep-alive packets
+    ACCEPTCONN =           SO_ACCEPTCONN,       /// Listen
+    RCVLOWAT =             SO_RCVLOWAT,         /// Minimum number of input bytes to process
+    SNDLOWAT =             SO_SNDLOWAT,         /// Minimum number of output bytes to process
+    TYPE =                 SO_TYPE,             /// Socket type
 
     // SocketOptionLevel.TCP:
-    TCP_NODELAY =          .TCP_NODELAY,        /// disable the Nagle algorithm for send coalescing
+    TCP_NODELAY =          .TCP_NODELAY,        /// Disable the Nagle algorithm for send coalescing
 
     // SocketOptionLevel.IPV6:
-    IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit.
-    IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface.
-    IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback.
-    IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership.
-    IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership.
-    IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only.
+    IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,          /// IP unicast hop limit
+    IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,          /// IP multicast interface
+    IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,        /// IP multicast loopback
+    IPV6_MULTICAST_HOPS =  .IPV6_MULTICAST_HOPS,        /// IP multicast hops
+    IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,            /// Add an IP group membership
+    IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,           /// Drop an IP group membership
+    IPV6_V6ONLY =          .IPV6_V6ONLY,                /// Treat wildcard bind as AF_INET6-only
 }
 
 
