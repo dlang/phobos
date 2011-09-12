@@ -2587,11 +2587,12 @@ public:
      * Returns: The number of bytes actually received, $(D 0) if the remote side
      * has closed the connection, or $(D Socket.ERROR) on failure.
      */
-    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, out Address from)
+    ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from)
     {
         if(!buf.length)         //return 0 and don't think the connection closed
             return 0;
-        from = createAddress();
+        if (from is null || from.addressFamily != _family)
+            from = createAddress();
         socklen_t nameLen = from.nameLen();
         version(Win32)
         {
@@ -2609,7 +2610,7 @@ public:
 
 
     /// ditto
-    ptrdiff_t receiveFrom(void[] buf, out Address from)
+    ptrdiff_t receiveFrom(void[] buf, ref Address from)
     {
         return receiveFrom(buf, SocketFlags.NONE, from);
     }
