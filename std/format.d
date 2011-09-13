@@ -1525,11 +1525,11 @@ if (isSomeString!T)
 {
     if (f.spec == 's')
     {
+        bool invalidSeq = false;
         try
         {
             // ignore other specifications and quote
             auto app = appender!(typeof(T[0])[])();
-            bool invalidSeq = false;
 
             put(app, '\"');
             for (size_t i = 0; i < val.length; )
