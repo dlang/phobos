@@ -156,8 +156,8 @@ extern (C)
 {
     int access(in char*, int);
     int open(in char*, int, ...);
-    int read(int, void*, int);
-    int write(int, in void*, int);
+    ssize_t read(int, void*, size_t);
+    ssize_t write(int, in void*, size_t);
     int close(int);
     int lseek(int, off_t, int);
     int fstat(int, struct_stat*);
@@ -418,21 +418,21 @@ extern(C)
 	// Removes.
 	void FD_CLR(int fd, fd_set* set)
 	{
-		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		btr(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Tests.
 	int FD_ISSET(int fd, fd_set* set)
 	{
-		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		return bt(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Adds.
 	void FD_SET(int fd, fd_set* set)
 	{
-		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		bts(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
