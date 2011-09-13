@@ -1529,6 +1529,7 @@ if (isSomeString!T)
         {
             // ignore other specifications and quote
             auto app = appender!(typeof(T[0])[])();
+            bool invalidSeq = false;
 
             put(app, '\"');
             for (size_t i = 0; i < val.length; )
@@ -1537,17 +1538,25 @@ if (isSomeString!T)
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
-                    throw new UtfException("invalid UTF sequence in value", 0);
-
+                {
+                    invalidSeq = true;
+                    goto LinvalidSeq;
+                }
                 formatChar(app, c);
             }
             put(app, '\"');
 
             put(w, app.data());
         }
-        catch (UtfException e)
+        catch (UtfException)
         {
             // If val contains invalid UTF sequence, formatted like HexString literal
+            invalidSeq = true;
+        }
+
+    LinvalidSeq:
+        if (invalidSeq)
+        {
             static if (is(typeof(val[0]) : const(char)))
             {
                 enum postfix = 'c';
