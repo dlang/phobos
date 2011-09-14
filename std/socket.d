@@ -2184,8 +2184,34 @@ private:
     // The WinSock timeouts seem to be effectively skewed by a constant
     // offset of about half a second (value in milliseconds). This has
     // been confirmed on updated (as of Jun 2011) Windows XP, Windows 7
-    // and Windows Server 2008 R2 boxes.
+    // and Windows Server 2008 R2 boxes. The unittest below tests this
+    // behavior.
     enum WINSOCK_TIMEOUT_SKEW = 500;
+
+    unittest
+    {
+        version(SlowTests)
+        softUnittest({
+            import std.datetime;
+
+            enum msecs = 1000;
+            auto pair = socketPair();
+            auto sock = pair[0];
+            sock.setOption(SocketOptionLevel.SOCKET,
+                SocketOption.RCVTIMEO, dur!"msecs"(msecs));
+
+            auto sw = StopWatch(AutoStart.yes);
+            ubyte[1] buf;
+            sock.receive(buf);
+            sw.stop();
+
+            Duration readBack = void;
+            sock.getOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, readBack);
+
+            assert(readBack.total!"msecs" == msecs);
+            assert(sw.peek().msecs > msecs-100 && sw.peek().msecs < msecs+100);
+        });
+    }
 
     void setSock(socket_t handle)
     {
