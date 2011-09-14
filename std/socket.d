@@ -1209,12 +1209,22 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXHOST];
-            enforce(getnameinfoPointer(
+            auto ret = getnameinfoPointer(
                         name(), nameLen(),
                         buf.ptr, cast(uint)buf.length,
                         null, 0,
-                        numeric ? NI_NUMERICHOST : NI_NAMEREQD
-                    ) == 0, new AddressException("Could not get " ~
+                        numeric ? NI_NUMERICHOST : NI_NAMEREQD);
+
+            if (!numeric)
+            {
+                if (ret==EAI_NONAME)
+                    return null;
+                version(Windows)
+                    if (ret==WSANO_DATA)
+                        return null;
+            }
+
+            enforce(ret == 0, new AddressException("Could not get " ~
                         (numeric ? "host address" : "host name")));
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
@@ -1259,7 +1269,10 @@ abstract class Address
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Returns: The FQDN corresponding to this $(D Address), or $(D null) if
+     * the host name did not resolve.
+     *
+     * Throws: $(D AddressException) on error, or $(D SocketFeatureException)
      * if host name lookup for this address family is not available on the
      * current system.
      */
@@ -1494,7 +1507,10 @@ public:
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Throws: $(D AddressException) on failure.
+     * Returns: The FQDN corresponding to this $(D InternetAddress), or
+     * $(D null) if the host name did not resolve.
+     *
+     * Throws: $(D AddressException) on error.
      */
     override string toHostNameString() const
     {
@@ -1511,8 +1527,8 @@ public:
         else
         {
             auto host = new InternetHost();
-            enforce(host.getHostByAddr(ntohl(sin.sin_addr.s_addr)),
-                    new AddressException("Could not get host name."));
+            if (!host.getHostByAddr(ntohl(sin.sin_addr.s_addr)))
+                return null;
             return host.name;
         }
     }
@@ -1546,13 +1562,15 @@ unittest
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+    });
 
+    softUnittest({
         // test reverse lookup
         auto ih = new InternetHost;
         if (ih.getHostByName("digitalmars.com"))
         {
-            const ia2 = new InternetAddress(ih.addrList[0], 80);
-            assert(ia2.toHostNameString() == "digitalmars.com");
+            const ia = new InternetAddress(ih.addrList[0], 80);
+            assert(ia.toHostNameString() == "digitalmars.com");
 
             if (getnameinfoPointer)
             {
@@ -1561,8 +1579,25 @@ unittest
                 getnameinfoPointer = null;
                 scope(exit) getnameinfoPointer = getnameinfoPointerBackup;
 
-                assert(ia2.toHostNameString() == "digitalmars.com");
+                assert(ia.toHostNameString() == "digitalmars.com");
             }
+        }
+    });
+
+    version (SlowTests)
+    softUnittest({
+        // test failing reverse lookup
+        const InternetAddress ia = new InternetAddress("127.114.111.120", 80);
+        assert(ia.toHostNameString() is null);
+
+        if (getnameinfoPointer)
+        {
+            // test failing reverse lookup, via gethostbyaddr
+            auto getnameinfoPointerBackup = getnameinfoPointer;
+            getnameinfoPointer = null;
+            scope(exit) getnameinfoPointer = getnameinfoPointerBackup;
+
+            assert(ia.toHostNameString() is null);
         }
     });
 }

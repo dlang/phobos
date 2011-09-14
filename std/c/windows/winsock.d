@@ -88,6 +88,12 @@ enum: int
     WSAEWOULDBLOCK =     10035,
     WSAEINTR =           10004,
     WSAHOST_NOT_FOUND =  11001,
+    WSANO_DATA        =  11004,
+}
+
+enum: int
+{
+    EAI_NONAME    = WSAHOST_NOT_FOUND,
 }
 
 int WSAGetLastError();
