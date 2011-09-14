@@ -102,7 +102,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     auto endOrDie = false;
     auto crlfCount = int.min; // int.min == not defined
 
-    foreach (i, e ; email)
+    foreach (ref i, e ; email)
     {
         token = email.get(i, e);
 

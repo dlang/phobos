@@ -2135,7 +2135,7 @@ body
 {
 	size_t ni; // current character in path
 
-    foreach (pi; 0 .. pattern.length)
+    foreach (ref pi; 0 .. pattern.length)
     {
         C pc = pattern[pi];
         switch (pc)
