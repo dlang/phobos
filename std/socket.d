@@ -586,7 +586,7 @@ class HostException: SocketOSException
  * if (ih.getHostByName("www.digitalmars.com"))
  * {
  *     writefln("  Name: %s", ih.name);
- *     auto ip = InternetAddress.toString(ih.addrList[0]);
+ *     auto ip = InternetAddress.addrToString(ih.addrList[0]);
  *     writefln("  IP address: %s", ip);
  *     foreach (string s; ih.aliases)
  *          writefln("  Alias: %s", s);
@@ -1532,7 +1532,7 @@ public:
      * Convert an IPv4 address number in host byte order to a human readable
      * string representing the IPv4 address in dotted-decimal form.
      */
-    static string toString(uint32_t addr)
+    static string addrToString(uint32_t addr)
     {
         in_addr sin_addr;
         sin_addr.s_addr = htonl(addr);
@@ -1775,7 +1775,7 @@ static if (is(typeof(sockaddr_un)))
 
         @property string path() const
         {
-            return toString(sun.sun_path.ptr);
+            return to!string(sun.sun_path.ptr);
         }
 
         override string toString() const
