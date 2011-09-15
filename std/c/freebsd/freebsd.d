@@ -180,10 +180,10 @@ extern (C)
     int dup2(int, int);
     int pipe(int[2]);
     pid_t wait(int*);
-    int waitpid(pid_t, int*, int);
+    pid_t waitpid(pid_t, int*, int);
 
     uint alarm(uint);
-    char* basename(char*);
+    char* basename(in char*);
     //wint_t btowc(int);
     int chown(in char*, uid_t, gid_t);
     int chroot(in char*);
@@ -191,7 +191,7 @@ extern (C)
     int creat(in char*, mode_t);
     char* ctermid(char*);
     int dirfd(DIR*);
-    char* dirname(char*);
+    char* dirname(in char*);
     int fattach(int, char*);
     int fchmod(int, mode_t);
     int fdatasync(int);
