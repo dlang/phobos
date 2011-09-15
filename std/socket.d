@@ -121,6 +121,9 @@ else
 
 version(unittest)
 {
+    static assert(is(uint32_t == uint));
+    static assert(is(uint16_t == ushort));
+
     private import std.stdio : writefln;
 
     // Print a message on exception instead of failing the unittest.
@@ -473,14 +476,14 @@ class Service
     /// These members are populated when one of the following functions are called successfully:
     string name;
     string[] aliases;           /// ditto
-    uint16_t port;              /// ditto
+    ushort port;                /// ditto
     string protocolName;        /// ditto
 
 
     void populate(servent* serv)
     {
         name = to!string(serv.s_name);
-        port = ntohs(cast(uint16_t)serv.s_port);
+        port = ntohs(cast(ushort)serv.s_port);
         protocolName = to!string(serv.s_proto);
 
         int i;
@@ -521,7 +524,7 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(uint16_t port, string protocolName = null)
+    bool getServiceByPort(ushort port, string protocolName = null)
     {
         servent* serv;
         serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
@@ -612,7 +615,7 @@ class InternetHost
     /// These members are populated when one of the following functions are called successfully:
     string name;
     string[] aliases;           /// ditto
-    uint32_t[] addrList;        /// ditto
+    uint[] addrList;            /// ditto
 
 
     void validHostent(hostent* he)
@@ -659,10 +662,10 @@ class InternetHost
 
         if(i)
         {
-            addrList = new uint32_t[i];
+            addrList = new uint[i];
             for(i = 0; i != addrList.length; i++)
             {
-                addrList[i] = ntohl(*(cast(uint32_t*)he.h_addr_list[i]));
+                addrList[i] = ntohl(*(cast(uint*)he.h_addr_list[i]));
             }
         }
         else
@@ -735,7 +738,7 @@ class InternetHost
      * Returns:
      *   false if unable to resolve.
      */
-    bool getHostByAddr(uint32_t addr)
+    bool getHostByAddr(uint addr)
     {
         return getHost!q{
             auto x = htonl(param);
@@ -983,13 +986,13 @@ unittest
 }
 
 
-private uint16_t serviceToPort(string service)
+private ushort serviceToPort(string service)
 {
     if (service == "")
         return InternetAddress.PORT_ANY;
     else
     if (isNumeric(service))
-        return to!uint16_t(service);
+        return to!ushort(service);
     else
     {
         auto s = new Service();
@@ -1036,7 +1039,7 @@ Address[] getAddress(string hostname, string service = null)
 }
 
 /// ditto
-Address[] getAddress(string hostname, uint16_t port)
+Address[] getAddress(string hostname, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddress(hostname, to!string(port));
@@ -1049,7 +1052,7 @@ Address[] getAddress(string hostname, uint16_t port)
                         "Unable to resolve host '" ~ hostname ~ "'");
 
         Address[] results;
-        foreach (uint32_t addr; ih.addrList)
+        foreach (uint addr; ih.addrList)
             results ~= new InternetAddress(addr, port);
         return results;
     }
@@ -1108,7 +1111,7 @@ Address parseAddress(string hostaddr, string service = null)
 }
 
 /// ditto
-Address parseAddress(string hostaddr, uint16_t port)
+Address parseAddress(string hostaddr, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return parseAddress(hostaddr, to!string(port));
@@ -1430,18 +1433,18 @@ public:
     }
 
 
-    enum uint32_t ADDR_ANY = INADDR_ANY;         /// Any IPv4 host address.
-    enum uint32_t ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 host address.
-    enum uint16_t PORT_ANY = 0;                  /// Any IPv4 port number.
+    enum uint ADDR_ANY = INADDR_ANY;         /// Any IPv4 host address.
+    enum uint ADDR_NONE = INADDR_NONE;       /// An invalid IPv4 host address.
+    enum ushort PORT_ANY = 0;                /// Any IPv4 port number.
 
     /// Returns the IPv4 _port number (in host byte order).
-    uint16_t port() const
+    ushort port() const
     {
         return ntohs(sin.sin_port);
     }
 
     /// Returns the IPv4 address number (in host byte order).
-    uint32_t addr() const
+    uint addr() const
     {
         return ntohl(sin.sin_addr.s_addr);
     }
@@ -1454,9 +1457,9 @@ public:
      *          object.
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(string addr, uint16_t port)
+    this(string addr, ushort port)
     {
-        uint32_t uiaddr = parse(addr);
+        uint uiaddr = parse(addr);
         if(ADDR_NONE == uiaddr)
         {
             InternetHost ih = new InternetHost;
@@ -1477,7 +1480,7 @@ public:
      *   addr = (optional) an IPv4 address in host byte order, may be $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(uint32_t addr, uint16_t port)
+    this(uint addr, ushort port)
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = htonl(addr);
@@ -1485,7 +1488,7 @@ public:
     }
 
     /// ditto
-    this(uint16_t port)
+    this(ushort port)
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = ADDR_ANY;
@@ -1539,7 +1542,7 @@ public:
      * Returns: If the string is not a legitimate IPv4 address,
      * $(D ADDR_NONE) is returned.
      */
-    static uint32_t parse(string addr)
+    static uint parse(string addr)
     {
         return ntohl(inet_addr(std.string.toStringz(addr)));
     }
@@ -1548,7 +1551,7 @@ public:
      * Convert an IPv4 address number in host byte order to a human readable
      * string representing the IPv4 address in dotted-decimal form.
      */
-    static string addrToString(uint32_t addr)
+    static string addrToString(uint addr)
     {
         in_addr sin_addr;
         sin_addr.s_addr = htonl(addr);
@@ -1639,30 +1642,43 @@ public:
     }
 
 
-    static if (is(typeof(IN6ADDR_ANY)))
-        alias IN6ADDR_ANY ADDR_ANY;        /// Any IPv6 host address.
-    else
-    static if (is(typeof(in6addr_any)))
-        alias in6addr_any ADDR_ANY;        /// Any IPv6 host address.
+    /// Any IPv6 host address.
+    static @property ref const(ubyte)[16] ADDR_ANY()
+    {
+        static if (is(typeof(IN6ADDR_ANY)))
+            return IN6ADDR_ANY.s6_addr;
+        else
+        static if (is(typeof(in6addr_any)))
+            return in6addr_any.s6_addr;
+        else
+            assert(0);
+    }
 
-    static if (is(typeof(IN6ADDR_ANY)))
-        alias IN6ADDR_ANY ADDR_NONE;       /// An invalid IPv6 host address.
-    else
-    static if (is(typeof(in6addr_any)))
-        alias in6addr_any ADDR_NONE;       /// An invalid IPv6 host address.
+    /// An invalid IPv6 host address.
+    static @property ref const(ubyte)[16] ADDR_NONE()
+    {
+        static if (is(typeof(IN6ADDR_NONE)))
+            return IN6ADDR_NONE.s6_addr;
+        else
+        static if (is(typeof(in6addr_none)))
+            return in6addr_none.s6_addr;
+        else
+            assert(0);
+    }
 
-    enum uint16_t PORT_ANY = 0;            /// Any IPv6 port number.
+    /// Any IPv6 port number.
+    enum ushort PORT_ANY = 0;
 
     /// Returns the IPv6 port number.
-    uint16_t port() const
+    ushort port() const
     {
         return ntohs(sin6.sin6_port);
     }
 
     /// Returns the IPv6 address.
-    in6_addr addr() const
+    ubyte[16] addr() const
     {
-        return sin6.sin6_addr;
+        return sin6.sin6_addr.s6_addr;
     }
 
     /**
@@ -1686,7 +1702,7 @@ public:
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(string node, uint16_t port)
+    this(string node, ushort port)
     {
         if (port == PORT_ANY)
             this(node);
@@ -1701,18 +1717,18 @@ public:
                 $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(in6_addr addr, uint16_t port)
+    this(ubyte[16] addr, ushort port)
     {
         sin6.sin6_family = AddressFamily.INET6;
-        sin6.sin6_addr = addr;
+        sin6.sin6_addr.s6_addr = addr;
         sin6.sin6_port = htons(port);
     }
 
     /// ditto
-    this(uint16_t port)
+    this(ushort port)
     {
         sin6.sin6_family = AddressFamily.INET6;
-        sin6.sin6_addr = ADDR_ANY;
+        sin6.sin6_addr.s6_addr = ADDR_ANY;
         sin6.sin6_port = htons(port);
     }
 
@@ -1722,7 +1738,7 @@ public:
      * Returns: If the string is not a legitimate IPv6 host address,
      * $(D ADDR_NONE) is returned.
      */
-    static in6_addr parse(string addr)
+    static ubyte[16] parse(string addr)
     {
         // Although we could use inet_pton here, it's only available on Windows
         // versions starting with Vista, so use getAddressInfo with NUMERICHOST
@@ -1731,7 +1747,7 @@ public:
         {
             auto results = getAddressInfo(addr, AddressInfoFlags.NUMERICHOST);
             if (results.length && results[0].family == AddressFamily.INET6)
-                return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr;
+                return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr.s6_addr;
         }
         catch (SocketException) {}
         return ADDR_NONE;
