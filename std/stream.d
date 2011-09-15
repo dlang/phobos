@@ -1954,7 +1954,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Win32) {
-      ReadFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      ReadFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1967,7 +1969,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Win32) {
-      WriteFile(hFile, buffer, size, &size, null);
+	  auto dwSize = to!DWORD(size);
+      WriteFile(hFile, buffer, dwSize, &dwSize, null);
+	  size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -2191,8 +2195,8 @@ enum BOM {
 private enum int NBOMS = 5;
 immutable Endian[NBOMS] BOMEndian =
 [ std.system.endian,
-  Endian.LittleEndian, Endian.BigEndian,
-  Endian.LittleEndian, Endian.BigEndian
+  Endian.littleEndian, Endian.bigEndian,
+  Endian.littleEndian, Endian.bigEndian
   ];
 
 immutable ubyte[][NBOMS] ByteOrderMarks =
@@ -2421,7 +2425,7 @@ class EndianStream : FilterStream {
   unittest {
     MemoryStream m;
     m = new MemoryStream ();
-    EndianStream em = new EndianStream(m,Endian.BigEndian);
+    EndianStream em = new EndianStream(m,Endian.bigEndian);
     uint x = 0x11223344;
     em.write(x);
     assert( m.data[0] == 0x11 );
@@ -2436,7 +2440,7 @@ class EndianStream : FilterStream {
     em.position(0);
     static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.LittleEndian) {
+    if (std.system.endian == Endian.littleEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2448,7 +2452,7 @@ class EndianStream : FilterStream {
       assert( x3[10] == 2 );
       assert( x3[11] == 1 );
     }
-    em.endian = Endian.LittleEndian;
+    em.endian = Endian.littleEndian;
     em.write(x);
     assert( m.data[0] == 0x44 );
     assert( m.data[1] == 0x33 );
@@ -2460,7 +2464,7 @@ class EndianStream : FilterStream {
     assert( m.data[1] == 0x55 );
     em.position(0);
     em.fixBO(x3.ptr,12);
-    if (std.system.endian == Endian.BigEndian) {
+    if (std.system.endian == Endian.bigEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
       assert( x3[2] == 10 );
@@ -2703,7 +2707,7 @@ class MmFileStream : TArrayStream!(MmFile) {
   this(MmFile file) {
     super (file);
     MmFile.Mode mode = file.mode;
-    writeable = mode > MmFile.Mode.Read;
+    writeable = mode > MmFile.Mode.read;
   }
 
   override void flush() {
@@ -2723,7 +2727,7 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");

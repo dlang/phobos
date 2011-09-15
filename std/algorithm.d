@@ -3599,21 +3599,33 @@ unittest
     assert(equal(r1[1], a[4 .. $]));
 }
 
-/**
-If $(D haystack) supports slicing, returns the smallest number $(D n)
-such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
-returns the smallest $(D n) such that after $(D n) calls to $(D
-haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
-number could be found, return $(D -1).
- */
-sizediff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+/++
+    Returns the number of elements which must be popped from the front of
+    $(D haystack) before reaching an element for which
+    $(D startsWith!pred(haystack, needle)) is $(D true). If
+    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
+    $(D haystack), then -1 is returned.
+
+    $(D needle) may be either an element or a range.
+
+    Examples:
+--------------------
+assert(countUntil("hello world", "world") == 6);
+assert(countUntil("hello world", 'r') == 8);
+assert(countUntil("hello world", "programming") == -1);
+assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    static if (isNarrowString!R1)
+    static if (isNarrowString!R)
     {
         // Narrow strings are handled a bit differently
         auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront)
+        for (; !haystack.empty; haystack.popFront())
         {
             if (startsWith!pred(haystack, needle))
             {
@@ -3630,6 +3642,62 @@ if (is(typeof(startsWith!pred(haystack, needle))))
         }
     }
     return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil("hello world", "world") == 6);
+    assert(countUntil("hello world", 'r') == 8);
+    assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+    assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+    assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+
+/++
+    Returns the number of elements which must be popped from $(D haystack)
+    before $(D pred(hastack.front)) is $(D true.).
+
+    Examples:
+--------------------
+assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred, R)(R haystack)
+if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+{
+    static if (isNarrowString!R)
+    {
+        // Narrow strings are handled a bit differently
+        auto length = haystack.length;
+        for (; !haystack.empty; haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front))
+            {
+                return length - haystack.length;
+            }
+        }
+    }
+    else
+    {
+        typeof(return) result;
+        for (; !haystack.empty; ++result, haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front)) return result;
+        }
+    }
+    return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
 /**
@@ -5291,11 +5359,29 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    for (; !source.empty; source.popFront())
+    static if(isArray!Range1 && isArray!Range2 && 
+    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        put(target, source.front);
+        // Array specialization.  This uses optimized memory copying routines
+        // under the hood and is about 10-20x faster than the generic 
+        // implementation.
+        enforce(target.length >= source.length, 
+            "Cannot copy a source array into a smaller target array.");
+        target[0..source.length] = source;
+        
+        return target[source.length..$];
     }
-    return target;
+    else
+    {   
+        // Generic implementation.    
+        for (; !source.empty; source.popFront())
+        {
+            put(target, source.front);
+        }
+        
+        return target;
+    }
+    
 }
 
 unittest

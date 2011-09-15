@@ -242,11 +242,6 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-ifeq ($(OS)$(MODEL),freebsd64)
-DISABLED_TESTS += std/container
-# fails freebsd64 debug test
-endif
-
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/conv
 # not reduced yet. I hate reducing this file

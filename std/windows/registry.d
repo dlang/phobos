@@ -114,7 +114,7 @@ public enum Endian
 /+ + These are borrowed from synsoft.win32.types for the moment, but will not be
  + needed once I've convinced Walter to use strong typedefs for things like HKEY +
  +/
-private typedef uint Reserved;
+private alias uint Reserved;
 
 //import synsoft.text.token;
 /+ ++++++ This is borrowed from synsoft.text.token, until such time as something
@@ -337,7 +337,9 @@ shared static this()
 {
     //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
     //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
-    extern(Windows) BOOL function(HANDLE, PBOOL) IsWow64Process = GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
+    alias extern(Windows) BOOL function(HANDLE, PBOOL) fptr_t;
+    auto IsWow64Process =
+        cast(fptr_t)GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
     BOOL bIsWow64;
     isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
     
@@ -375,7 +377,7 @@ void freeAdvapi32()
         if(hAdvapi32) {
             RegDeleteKeyExA = null;
             hAdvapi32 = null;
-            enforce(FreeLibrary(hAdvapi32), `FreeLibrary(hAdvapi32)`);
+            enforce(FreeLibrary(cast(void*) hAdvapi32), `FreeLibrary(hAdvapi32)`);
         }
 }
 
@@ -517,8 +519,14 @@ body
         if(!RegDeleteKeyExA)
             synchronized(advapi32Mutex)
             {
-                hAdvapi32 = enforce(LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`);
-                RegDeleteKeyExA = enforce(GetProcAddress(hAdvapi32 , "RegDeleteKeyExA"), `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`);
+                hAdvapi32 = cast(shared) enforce(
+                    LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`
+                );
+                
+                RegDeleteKeyExA = cast(typeof(RegDeleteKeyExA))enforce(GetProcAddress(
+                    cast(void*) hAdvapi32 , "RegDeleteKeyExA"), 
+                    `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`
+                );
             }
         return RegDeleteKeyExA(hkey, toStringz(subKey), samDesired, RESERVED);
     }
@@ -597,7 +605,7 @@ body
     // more if it does.
     for(;;)
     {
-        cchName = name.length;
+        cchName = to!DWORD(name.length);
 
         res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
 
@@ -1306,7 +1314,7 @@ public:
         Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
                                             : REG_VALUE_TYPE.REG_SZ, value.ptr
-                        , value.length);
+                        , to!DWORD(value.length));
     }
 
     /// Sets the named value with the given multiple-strings value
@@ -1328,13 +1336,13 @@ public:
         // Allocate
 
         char[]  cs      =   new char[total];
-        int     base    =   0;
+        size_t  base    =   0;
 
         // Slice the individual strings into the new array
 
         foreach(string s; value)
         {
-            int top = base + s.length;
+            size_t top = base + s.length;
 
             cs[base .. top] = s;
             cs[top] = 0;
@@ -1342,7 +1350,7 @@ public:
             base = 1 + top;
         }
 
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, to!DWORD(cs.length));
     }
 
     /// Sets the named value with the given binary value
@@ -1352,7 +1360,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, to!DWORD(value.length));
     }
 
     /// Deletes the named value
@@ -1475,7 +1483,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
 
-        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, newValue.length))
+        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, to!DWORD(newValue.length)))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }

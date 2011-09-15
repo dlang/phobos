@@ -10,7 +10,7 @@ string synopsis()
 {
    FILE* f = enforce(fopen("some/file"));
    // f is not null from here on
-   FILE* g = enforceEx!(WriteException)(fopen("some/other/file", "w"));
+   FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
    // g is not null from here on
 
    Exception e = collectException(write(g, readln(f)));
@@ -407,15 +407,8 @@ T enforce(T)(T value, lazy Throwable ex) @safe
 
 unittest
 {
-    enforce(true, new Exception("this should not be thrown"));
-    try
-    {
-        enforce(false, new Exception("this should be thrown"));
-        assert(false);
-    }
-    catch (Exception e)
-    {
-    }
+    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
+    assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
 /++
@@ -437,9 +430,10 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
     return value;
 }
 
+
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
-    is thrown.
+    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    $(D new E(msg, file, line)) is thrown.
 
    Example:
 --------------------
@@ -448,26 +442,59 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "") @safe
+T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
+    if(is(typeof(new E(msg, file, line))))
 {
+    if (!value) throw new E(msg, file, line);
+    return value;
+}
+
+/++
+    $(RED Scheduled for deprecation in February 2012. Please use the version of
+          $(D enforceEx) which takes an exception that constructs with
+          $(D new E(msg, file, line)).)
+
+    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    $(D new E(msg)) is thrown.
+  +/
+T enforceEx(E, T)(T value, lazy string msg = "")
+    if(is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
+{
+    import std.metastrings;
+
+    pragma(msg, Format!("Notice: As of Phobos 2.055, the version of enforceEx which " ~
+                        "constructs its exception with new E(msg) instead of " ~
+                        "new E(msg, file, line) has been scheduled for " ~
+                        "deprecation in February 2012. Please update %s's " ~
+                        "constructor so that it can be constructed with " ~
+                        "new %s(msg, file, line).", E.stringof, E.stringof));
+
     if (!value) throw new E(msg);
     return value;
 }
 
 unittest
 {
-    enforce(true);
-    enforce(true, "blah");
-    typedef Exception MyException;
-    try
+    assertNotThrown(enforceEx!Exception(true));
+    assertNotThrown(enforceEx!Exception(true, "blah"));
+
     {
-        enforceEx!(MyException)(false);
-        assert(false);
+        auto e = collectException(enforceEx!Exception(false));
+        assert(e !is null);
+        assert(e.msg.empty);
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 4);
     }
-    catch (MyException e)
+
     {
+        auto e = collectException(enforceEx!Exception(false, "hello", "file", 42));
+        assert(e !is null);
+        assert(e.msg == "hello");
+        assert(e.file == "file");
+        assert(e.line == 42);
     }
 }
+
 
 /++
     Catches and returns the exception thrown from the given expression.
