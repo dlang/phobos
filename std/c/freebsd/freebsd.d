@@ -166,14 +166,14 @@ extern (C)
     ssize_t read(int, void*, size_t);
     ssize_t write(int, in void*, size_t);
     int close(int);
-    int lseek(int, off_t, int);
+    off_t lseek(int, off_t, int);
     int fstat(int, struct_stat*);
     int lstat(in char*, struct_stat*);
     int stat(in char*, struct_stat*);
     int chdir(in char*);
     int mkdir(in char*, int);
     int rmdir(in char*);
-    char* getcwd(char*, int);
+    char* getcwd(char*, size_t);
     int chmod(in char*, mode_t);
     int fork();
     int dup(int);
@@ -196,8 +196,8 @@ extern (C)
     int fchmod(int, mode_t);
     int fdatasync(int);
     int ffs(int);
-    int fmtmsg(int, char*, int, char*, char*, char*);
-    int fpathconf(int, int);
+    int fmtmsg(long, in char*, int, in char*, in char*, in char*);
+    long fpathconf(int, int);
     int fseeko(FILE*, off_t, int);
     off_t ftello(FILE*);
 
