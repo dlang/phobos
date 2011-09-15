@@ -14,8 +14,6 @@ private import std.c.stdio;
 
 alias uint fflags_t;
 alias int clockid_t;
-alias int time_t;
-alias int __time_t;
 alias int pid_t;
 alias long off_t;
 alias long blkcnt_t;
@@ -30,6 +28,15 @@ alias ushort nlink_t;
 alias uint uid_t;
 alias ulong fsblkcnt_t;
 alias ulong fsfilcnt_t;
+
+version( X86 ) {
+    alias int time_t;
+    alias int __time_t;
+}
+else version( X86_64 ) {
+    alias long time_t;
+    alias long __time_t;
+}
 
 struct timespec
 {
