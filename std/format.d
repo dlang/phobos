@@ -1549,12 +1549,10 @@ if (isSomeString!T)
 {
     if (f.spec == 's')
     {
-        bool invalidSeq = false;
         try
         {
             // ignore other specifications and quote
             auto app = appender!(typeof(T[0])[])();
-
             put(app, '\"');
             for (size_t i = 0; i < val.length; )
             {
@@ -1562,43 +1560,35 @@ if (isSomeString!T)
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
-                {
-                    invalidSeq = true;
                     goto LinvalidSeq;
-                }
                 formatChar(app, c);
             }
             put(app, '\"');
-
             put(w, app.data());
+            return;
         }
         catch (UTFException)
         {
-            // If val contains invalid UTF sequence, formatted like HexString literal
-            invalidSeq = true;
         }
 
+        // If val contains invalid UTF sequence, formatted like HexString literal
     LinvalidSeq:
-        if (invalidSeq)
+        static if (is(typeof(val[0]) : const(char)))
         {
-            static if (is(typeof(val[0]) : const(char)))
-            {
-                enum postfix = 'c';
-                alias const(ubyte)[] IntArr;
-            }
-            else static if (is(typeof(val[0]) : const(wchar)))
-            {
-                enum postfix = 'w';
-                alias const(ushort)[] IntArr;
-            }
-            else static if (is(typeof(val[0]) : const(dchar)))
-            {
-                enum postfix = 'd';
-                alias const(uint)[] IntArr;
-            }
-
-            formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)val, postfix);
+            enum postfix = 'c';
+            alias const(ubyte)[] IntArr;
         }
+        else static if (is(typeof(val[0]) : const(wchar)))
+        {
+            enum postfix = 'w';
+            alias const(ushort)[] IntArr;
+        }
+        else static if (is(typeof(val[0]) : const(dchar)))
+        {
+            enum postfix = 'd';
+            alias const(uint)[] IntArr;
+        }
+        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)val, postfix);
     }
     else
         formatValue(w, val, f);
