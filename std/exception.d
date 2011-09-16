@@ -350,7 +350,7 @@ enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
 T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy const(char)[] msg = null) @safe
+    (T value, lazy const(char)[] msg = null) @safe pure
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -359,15 +359,17 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, the given
     delegate is called.
+
+    The whole safety and purity are inferred from $(D Dg)'s safety and purity.
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
-(T value, scope void delegate() dg)
+T enforce(T, Dg : void delegate(), string file = __FILE__, int line = __LINE__)
+    (T value, scope Dg dg)
 {
     if (!value) dg();
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg) @safe
+private void bailOut(string file, int line, in char[] msg) @safe pure
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -389,6 +391,42 @@ unittest
     }
 }
 
+// purity and safety inference test
+unittest
+{
+    import std.typetuple;
+
+    foreach (EncloseSafe; TypeTuple!(false, true))
+    foreach (EnclosePure; TypeTuple!(false, true))
+    {
+        foreach (BodySafe; TypeTuple!(false, true))
+        foreach (BodyPure; TypeTuple!(false, true))
+        {
+            enum code =
+                "delegate void() " ~
+                (EncloseSafe ? "@safe " : "") ~
+                (EnclosePure ? "pure " : "") ~
+                "{ ""enforce(true, { "
+                        "int n; " ~
+                        (BodySafe ? "" : "auto p = &n + 10; "    ) ~    // unsafe code
+                        (BodyPure ? "" : "static int g; g = 10; ") ~    // impure code
+                    "}); "
+                "}";
+            enum expect =
+                (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);
+
+            version(none)
+            pragma(msg, "safe = ", EncloseSafe?1:0, "/", BodySafe?1:0, ", ",
+                        "pure = ", EnclosePure?1:0, "/", BodyPure?1:0, ", ",
+                        "expect = ", expect?"OK":"NG", ", ",
+                        "code = ", code);
+
+            static assert(__traits(compiles, mixin(code)()) == expect);
+        }
+    }
+}
+
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
@@ -399,7 +437,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex) @safe
+T enforce(T)(T value, lazy Throwable ex) @safe pure
 {
     if (!value) throw ex();
     return value;
@@ -424,7 +462,7 @@ enforce(line.length); // expect a non-empty line
 --------------------
  +/
 T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null) @safe
+    (T value, lazy string msg = null) @safe pure
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
@@ -442,8 +480,8 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
-    if(is(typeof(new E(msg, file, line))))
+T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    if (is(typeof(new E(msg, file, line))))
 {
     if (!value) throw new E(msg, file, line);
     return value;
@@ -457,8 +495,8 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-T enforceEx(E, T)(T value, lazy string msg = "")
-    if(is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
+T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
+    if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
 {
     import std.metastrings;
 
