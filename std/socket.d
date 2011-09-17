@@ -385,7 +385,7 @@ class Protocol
     void populate(protoent* proto)
     {
         type = cast(ProtocolType)proto.p_proto;
-        name = to!string(proto.p_name).idup;
+        name = to!string(proto.p_name);
 
         int i;
         for(i = 0;; i++)
@@ -400,7 +400,7 @@ class Protocol
             for(i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
-                    to!string(proto.p_aliases[i]).idup;
+                    to!string(proto.p_aliases[i]);
             }
         }
         else
@@ -499,7 +499,7 @@ class Service
             for(i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
-                    to!string(serv.s_aliases[i]).idup;
+                    to!string(serv.s_aliases[i]);
             }
         }
         else
@@ -630,7 +630,7 @@ class InternetHost
         int i;
         char* p;
 
-        name = to!string(he.h_name).idup;
+        name = to!string(he.h_name);
 
         for(i = 0;; i++)
         {
@@ -645,7 +645,7 @@ class InternetHost
             for(i = 0; i != aliases.length; i++)
             {
                 aliases[i] =
-                    to!string(he.h_aliases[i]).idup;
+                    to!string(he.h_aliases[i]);
             }
         }
         else
@@ -835,7 +835,7 @@ private string formatGaiError(int err)
     else
     {
         synchronized
-            return to!string(gai_strerror(err)).idup;
+            return to!string(gai_strerror(err));
     }
 }
 
@@ -941,7 +941,7 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
                 cast(SocketType   ) ai.ai_socktype,
                 cast(ProtocolType ) ai.ai_protocol,
                 new UnknownAddressReference(ai.ai_addr, ai.ai_addrlen),
-                ai.ai_canonname ? to!string(ai.ai_canonname).idup : null);
+                ai.ai_canonname ? to!string(ai.ai_canonname) : null);
 
         assert(result.length > 0);
         return result;
@@ -1049,7 +1049,7 @@ Address[] getAddress(in char[] hostname, ushort port)
         auto ih = new InternetHost;
         if (!ih.getHostByName(hostname))
             throw new AddressException(
-                        "Unable to resolve host '" ~ hostname.idup ~ "'");
+                        "Unable to resolve host '" ~ assumeUnique(hostname) ~ "'");
 
         Address[] results;
         foreach (uint addr; ih.addrList)
@@ -1466,7 +1466,7 @@ public:
             if(!ih.getHostByName(addr))
                 //throw new AddressException("Invalid internet address");
                 throw new AddressException(
-                          "Unable to resolve host '" ~ addr.idup ~ "'");
+                          "Unable to resolve host '" ~ assumeUnique(addr) ~ "'");
             uiaddr = ih.addrList[0];
         }
         sin.sin_family = AddressFamily.INET;
@@ -1498,7 +1498,7 @@ public:
     /// Human readable string representing the IPv4 address in dotted-decimal form.
     override string toAddrString() const
     {
-        return to!string(inet_ntoa(sin.sin_addr)).idup;
+        return to!string(inet_ntoa(sin.sin_addr));
     }
 
     /// Human readable string representing the IPv4 port.
@@ -1555,7 +1555,7 @@ public:
     {
         in_addr sin_addr;
         sin_addr.s_addr = htonl(addr);
-        return to!string(inet_ntoa(sin_addr)).idup;
+        return to!string(inet_ntoa(sin_addr));
     }
 }
 
@@ -2516,7 +2516,7 @@ public:
         char[256] result;         // Host names are limited to 255 chars.
         if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
             throw new SocketOSException("Unable to obtain host name");
-        return to!string(result.ptr).idup;
+        return to!string(result.ptr);
     }
 
     /// Remote endpoint $(D Address).
