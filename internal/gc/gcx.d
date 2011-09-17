@@ -1991,6 +1991,7 @@ struct Gcx
                         mark(cast(void *)context.Esp, t.stackBottom);
                         mark(&context.Edi, &context.Eip);
                     }
+
                     version (OSX)
                     {
                         x86_thread_state32_t   state = void;
@@ -2008,7 +2009,7 @@ struct Gcx
                         mark(cast(void *)state.esp, t.stackBottom);
                         mark(&state.eax, &state.esp);
                     }
-                    version (Posix)
+                    else version (Posix) // Don't do this on OSX
                     {
                         // The registers are already stored in the stack
                         //printf("Thread: ESP = %p, stackBottom = %p, isSelf = %d\n", Thread.getESP(), t.stackBottom, t.isSelf());
