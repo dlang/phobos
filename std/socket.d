@@ -410,7 +410,7 @@ class Protocol
     }
 
     /** Returns: false on failure */
-    bool getProtocolByName(string name)
+    bool getProtocolByName(in char[] name)
     {
         protoent* proto;
         proto = getprotobyname(toStringz(name));
@@ -512,7 +512,7 @@ class Service
      * If a protocol name is omitted, any protocol will be matched.
      * Returns: false on failure.
      */
-    bool getServiceByName(string name, string protocolName = null)
+    bool getServiceByName(in char[] name, in char[] protocolName = null)
     {
         servent* serv;
         serv = getservbyname(toStringz(name), protocolName !is null ? toStringz(protocolName) : null);
@@ -524,7 +524,7 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(ushort port, string protocolName = null)
+    bool getServiceByPort(ushort port, in char[] protocolName = null)
     {
         servent* serv;
         serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
@@ -701,7 +701,7 @@ class InternetHost
      * Resolve host name.
      * Returns: false if unable to resolve.
      */
-    bool getHostByName(string name)
+    bool getHostByName(in char[] name)
     {
         static if (is(typeof(gethostbyname_r)))
         {
@@ -751,7 +751,7 @@ class InternetHost
      * dotted-decimal form $(I a.b.c.d).
      * Returns: false if unable to resolve.
      */
-    bool getHostByAddr(string addr)
+    bool getHostByAddr(in char[] addr)
     {
         return getHost!q{
             auto x = inet_addr(std.string.toStringz(param));
@@ -891,15 +891,15 @@ private string formatGaiError(int err)
  *     AddressFamily.INET6);
  * ---
  */
-AddressInfo[] getAddressInfo(T...)(string node, T options)
+AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
 {
-    string service = null;
+    const(char)[] service = null;
     addrinfo hints;
     hints.ai_family = AF_UNSPEC;
 
     foreach (option; options)
     {
-        static if (is(typeof(option) == string))
+        static if (is(typeof(option) : const(char)[]))
             service = option;
         else
         static if (is(typeof(option) == AddressInfoFlags))
@@ -920,7 +920,7 @@ AddressInfo[] getAddressInfo(T...)(string node, T options)
     return getAddressInfoImpl(node, service, &hints);
 }
 
-private AddressInfo[] getAddressInfoImpl(string node, string service, addrinfo* hints)
+private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -986,7 +986,7 @@ unittest
 }
 
 
-private ushort serviceToPort(string service)
+private ushort serviceToPort(in char[] service)
 {
     if (service == "")
         return InternetAddress.PORT_ANY;
@@ -1023,7 +1023,7 @@ private ushort serviceToPort(string service)
  *     writefln("  Lookup failed: %s", e.msg);
  * ---
  */
-Address[] getAddress(string hostname, string service = null)
+Address[] getAddress(in char[] hostname, in char[] service = null)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -1039,7 +1039,7 @@ Address[] getAddress(string hostname, string service = null)
 }
 
 /// ditto
-Address[] getAddress(string hostname, ushort port)
+Address[] getAddress(in char[] hostname, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddress(hostname, to!string(port));
@@ -1049,7 +1049,7 @@ Address[] getAddress(string hostname, ushort port)
         auto ih = new InternetHost;
         if (!ih.getHostByName(hostname))
             throw new AddressException(
-                        "Unable to resolve host '" ~ hostname ~ "'");
+                        "Unable to resolve host '" ~ hostname.idup ~ "'");
 
         Address[] results;
         foreach (uint addr; ih.addrList)
@@ -1102,7 +1102,7 @@ unittest
  *     writefln("  Lookup failed: %s", e.msg);
  * ---
  */
-Address parseAddress(string hostaddr, string service = null)
+Address parseAddress(in char[] hostaddr, in char[] service = null)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return getAddressInfo(hostaddr, service, AddressInfoFlags.NUMERICHOST)[0].address;
@@ -1111,7 +1111,7 @@ Address parseAddress(string hostaddr, string service = null)
 }
 
 /// ditto
-Address parseAddress(string hostaddr, ushort port)
+Address parseAddress(in char[] hostaddr, ushort port)
 {
     if (getaddrinfoPointer && freeaddrinfoPointer)
         return parseAddress(hostaddr, to!string(port));
@@ -1457,7 +1457,7 @@ public:
      *          object.
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(string addr, ushort port)
+    this(in char[] addr, ushort port)
     {
         uint uiaddr = parse(addr);
         if(ADDR_NONE == uiaddr)
@@ -1466,7 +1466,7 @@ public:
             if(!ih.getHostByName(addr))
                 //throw new AddressException("Invalid internet address");
                 throw new AddressException(
-                          "Unable to resolve host '" ~ addr ~ "'");
+                          "Unable to resolve host '" ~ addr.idup ~ "'");
             uiaddr = ih.addrList[0];
         }
         sin.sin_family = AddressFamily.INET;
@@ -1542,7 +1542,7 @@ public:
      * Returns: If the string is not a legitimate IPv4 address,
      * $(D ADDR_NONE) is returned.
      */
-    static uint parse(string addr)
+    static uint parse(in char[] addr)
     {
         return ntohl(inet_addr(std.string.toStringz(addr)));
     }
@@ -1688,7 +1688,7 @@ public:
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = (optional) service name or port number.
      */
-    this(string node, string service = null)
+    this(in char[] node, in char[] service = null)
     {
         auto results = getAddressInfo(node, service, AddressFamily.INET6);
         assert(results.length && results[0].family == AddressFamily.INET6);
@@ -1702,7 +1702,7 @@ public:
      *          or a host name which will be resolved using $(D getAddressInfo).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(string node, ushort port)
+    this(in char[] node, ushort port)
     {
         if (port == PORT_ANY)
             this(node);
@@ -1738,7 +1738,7 @@ public:
      * Returns: If the string is not a legitimate IPv6 host address,
      * $(D ADDR_NONE) is returned.
      */
-    static ubyte[16] parse(string addr)
+    static ubyte[16] parse(in char[] addr)
     {
         // Although we could use inet_pton here, it's only available on Windows
         // versions starting with Vista, so use getAddressInfo with NUMERICHOST
@@ -1773,7 +1773,7 @@ version(StdDdoc)
     class UnixAddress: Address
     {
         /// Construct a new $(D UnixAddress) from the specified path.
-        this(string path);
+        this(in char[] path);
 
         /// Get the underlying _path.
         @property string path() const;
@@ -1815,7 +1815,7 @@ static if (is(typeof(sockaddr_un)))
         }
 
 
-        this(string path)
+        this(in char[] path)
         {
             len = sockaddr_un.sun_path.offsetof + path.length + 1;
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
@@ -2276,7 +2276,7 @@ public:
 
 
     /// ditto
-    this(AddressFamily af, SocketType type, string protocolName)
+    this(AddressFamily af, SocketType type, in char[] protocolName)
     {
         protoent* proto;
         proto = getprotobyname(toStringz(protocolName));
