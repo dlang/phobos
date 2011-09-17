@@ -165,7 +165,9 @@ class Thread
             return fp(arg);
         else if (dg)
             return dg();
-        assert(0);
+	// XXX Work around crash on OSX when calling assert here.
+	error("neither delegate nor function pointer supplied to run");
+	assert(false); // Not reached but compilred doesn't notice
     }
 
     /*****************************
@@ -734,7 +736,9 @@ class Thread
             return fp(arg);
         else if (dg)
             return dg();
-        assert(0);
+	// XXX Work around crash on OSX when calling assert here.
+	error("neither delegate nor function pointer supplied to run");
+	assert(false); // Not reached but compilred doesn't notice
     }
 
     void wait()
