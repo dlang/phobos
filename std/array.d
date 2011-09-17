@@ -765,7 +765,10 @@ private auto makeRangeTuple(E, U...)(E[] place, U stuff)
 {
     enum toPack = staticFrontConvertible!(E, U);
     foreach(i, v; stuff[0..toPack])
-        emplace!E(&place[i], v);
+        static if(!is(E == struct))
+            place[i] = v;
+        else
+            emplace!E(&place[i], v);
     assert(place.length >= toPack);
     static if(U.length != staticFrontConvertible!(E,U))
         return tuple(place[0..toPack],
@@ -920,6 +923,22 @@ unittest
     assert(testVar("flipflop"d.idup, 4, '_',
                     "xyz"w, '\U00010143', '_', "abc"d, "__",
                     "flip_xyz\U00010143_abc__flop"));
+    struct S
+    {
+        int payload;
+    }
+    S[] ss = [ S(1), S(2), S(3) ];
+    insertInPlace(ss, 1, S.init, S(3), [S(4)], S(5));
+    assert(ss == [ S(1), S.init, S(3), S(4), S(5), S(2), S(3)]);
+    
+    class A{ }
+    A a = new A, b = new A, c = new A;
+    A[] carr = [ b, c];
+    insertInPlace(carr, 0, a);
+    assert(carr == [a, b, c]);
+    carr = [a];
+    insertInPlace(carr, 1, [b], c);
+    assert(carr == [a, b, c]);
 }
 
 /++
