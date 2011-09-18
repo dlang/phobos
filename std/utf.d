@@ -504,15 +504,15 @@ assert(toUTFindex(`さいごの果実 / ミツバチと科学者`w, 9) == 9);
 assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
 --------------------
   +/
-size_t toUTFindex(in char[] s, size_t n) @safe pure
+size_t toUTFindex(in char[] str, size_t n) @safe pure
 {
     size_t i;
 
     while (n--)
     {
-        uint j = utf8Stride[s[i]];
+        uint j = utf8Stride[str[i]];
         if (j == 0xFF)
-            throw (new UTFException("Invalid UTF-8 sequence")).setSequence(s[i]);
+            throw (new UTFException("Invalid UTF-8 sequence")).setSequence(str[i]);
         i += j;
     }
 
@@ -520,13 +520,13 @@ size_t toUTFindex(in char[] s, size_t n) @safe pure
 }
 
 /// ditto
-size_t toUTFindex(in wchar[] s, size_t n) @safe pure nothrow
+size_t toUTFindex(in wchar[] str, size_t n) @safe pure nothrow
 {
     size_t i;
 
     while (n--)
     {
-        wchar u = s[i];
+        wchar u = str[i];
 
         i += 1 + (u >= 0xD800 && u <= 0xDBFF);
     }
@@ -535,7 +535,7 @@ size_t toUTFindex(in wchar[] s, size_t n) @safe pure nothrow
 }
 
 /// ditto
-size_t toUTFindex(in dchar[] s, size_t n) @safe pure nothrow
+size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
 {
     return n;
 }
@@ -636,8 +636,8 @@ body
   Lerr:
     uint[4] sequence;
     size_t seqLen = 0;
-    for(size_t i = index; seqLen < 4 && i < len && (str[i] & 0x80) && !(str[i] & 0xC0); ++i, ++seqLen)
-        sequence[i] = str[i];
+    for(size_t j = index; seqLen < 4 && j < len && (str[j] & 0x80) && !(str[j] & 0xC0); ++j, ++seqLen)
+        sequence[j] = str[j];
 
     throw (new UTFException("Invalid UTF-8 sequence", i)).setSequence(sequence[0 .. seqLen]);
 }
