@@ -124,29 +124,3 @@ public:
 			alias ulong c_uint64;
 		}
 	}
-	
-	/// Convenience aliases for given compiler and processor.
-	mixin template DefineTypes(Compiler comp = compiler, Processor proc = processor)
-	{
-		alias Type!(comp, proc).c_uchar c_uchar; ///
-		alias Type!(comp, proc).c_schar c_schar; ///
-		alias Type!(comp, proc).c_char c_char; ///
-		alias Type!(comp, proc).c_short c_short; ///
-		alias Type!(comp, proc).c_ushort c_ushort; ///
-		alias Type!(comp, proc).c_int c_int; ///
-		alias Type!(comp, proc).c_uint c_uint; ///
-		alias Type!(comp, proc).c_long c_long; ///
-		alias Type!(comp, proc).c_ulong c_ulong; ///
-
-		static if(compiler == Compiler.MSVC)
-		{
-			alias Type!(comp, proc).c_int8 c_int8; ///
-			alias Type!(comp, proc).c_uint8 c_uint8; ///
-			alias Type!(comp, proc).c_int16 c_int16; ///
-			alias Type!(comp, proc).c_uint16 c_uint16; ///
-			alias Type!(comp, proc).c_int32 c_int32; ///
-			alias Type!(comp, proc).c_uint32 c_uint32; ///
-			alias Type!(comp, proc).c_int64 c_int64; ///
-			alias Type!(comp, proc).c_uint64 c_uint64; ///
-		}
-	}
