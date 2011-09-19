@@ -1,4 +1,4 @@
-module sqlite3_bindings;
+module etc.c.sqlite3;
 /*
 ** 2001 September 15
 **
