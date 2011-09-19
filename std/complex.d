@@ -415,7 +415,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         more information.
     */
     string toString
-        (void delegate(const(char)[]) sink = null, string formatSpec = "%s")
+        (scope void delegate(const(char)[]) sink = null, string formatSpec = "%s")
         const
     {
         if (sink == null)
