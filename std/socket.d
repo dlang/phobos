@@ -1652,19 +1652,7 @@ public:
         static if (is(typeof(in6addr_any)))
             return addr = &in6addr_any.s6_addr, *addr;
         else
-            assert(0);
-    }
-
-    /// An invalid IPv6 host address.
-    static @property ref const(ubyte)[16] ADDR_NONE()
-    {
-        static if (is(typeof(IN6ADDR_NONE)))
-            return IN6ADDR_NONE.s6_addr;
-        else
-        static if (is(typeof(in6addr_none)))
-            return in6addr_none.s6_addr;
-        else
-            assert(0);
+            static assert(0);
     }
 
     /// Any IPv6 port number.
@@ -1736,22 +1724,17 @@ public:
     /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
-     * Returns: If the string is not a legitimate IPv6 host address,
-     * $(D ADDR_NONE) is returned.
+     * Throws: $(D SocketException) on error.
      */
     static ubyte[16] parse(in char[] addr)
     {
         // Although we could use inet_pton here, it's only available on Windows
         // versions starting with Vista, so use getAddressInfo with NUMERICHOST
         // instead.
-        try
-        {
-            auto results = getAddressInfo(addr, AddressInfoFlags.NUMERICHOST);
-            if (results.length && results[0].family == AddressFamily.INET6)
-                return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr.s6_addr;
-        }
-        catch (SocketException) {}
-        return ADDR_NONE;
+        auto results = getAddressInfo(addr, AddressInfoFlags.NUMERICHOST);
+        if (results.length && results[0].family == AddressFamily.INET6)
+            return (cast(sockaddr_in6*)results[0].address.name()).sin6_addr.s6_addr;
+        throw new AddressException("Not an IPv6 address", 0);
     }
 }
 
