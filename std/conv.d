@@ -553,6 +553,42 @@ T toImpl(T, S)(S value)
         is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
         is(T : Object) && !is(typeof(new T(value))))
 {
+    static if (is(T == immutable))
+    {
+            // immutable <- immutable
+            enum isModConvertible = is(S == immutable);
+    }
+    else static if (is(T == const))
+    {
+        static if (is(T == shared))
+        {
+            // shared const <- shared
+            // shared const <- shared const
+            // shared const <- immutable
+            enum isModConvertible = is(S == shared) || is(S == immutable);
+        }
+        else
+        {
+            // const <- mutable
+            // const <- immutable
+            enum isModConvertible = !is(S == shared);
+        }
+    }
+    else
+    {
+        static if (is(T == shared))
+        {
+            // shared <- shared mutable
+            enum isModConvertible = is(S == shared) && !is(S == const);
+        }
+        else
+        {
+            // (mutable) <- (mutable)
+            enum isModConvertible = is(Unqual!S == S);
+        }
+    }
+    static assert(isModConvertible, "Bad modifier convertion: "~S.stringof~" to "~T.stringof);
+
     auto result = cast(T) value;
     if (!result && value)
     {
@@ -574,6 +610,17 @@ unittest
     assert(to!B(a2) is a2);
     assert(to!C(a3) is a3);
     assertThrown!ConvException(to!B(a3));
+}
+
+// Unittest for 6288
+unittest
+{
+    class C {}
+    class D : C {}
+
+    const(C) c = new D;
+    static assert(!__traits(compiles, { D d = to!D(c); }));
+    //assert(d !is null);
 }
 
 /**
