@@ -2165,6 +2165,7 @@ Target parse(Target, Source)(ref Source p)
     case '-':
         sign++;
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'i')
             goto case 'i';
         enforce(!p.empty, bailOut());
@@ -2175,8 +2176,9 @@ Target parse(Target, Source)(ref Source p)
         break;
     case 'i': case 'I':
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'n' &&
-                (p.popFront(), std.ascii.toLower(p.front) == 'f') &&
+                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'
@@ -2591,6 +2593,13 @@ unittest
 {
     assert(1000_000_000e50L == to!real("1000_000_000_e50"));        // 1e59
     assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
+}
+
+// Unittest for bug 6258
+unittest
+{
+    assertThrown!ConvException(to!real("-"));
+    assertThrown!ConvException(to!real("in"));
 }
 
 /**
