@@ -1645,11 +1645,12 @@ public:
     /// Any IPv6 host address.
     static @property ref const(ubyte)[16] ADDR_ANY()
     {
+        const(ubyte)[16]* addr;
         static if (is(typeof(IN6ADDR_ANY)))
-            return IN6ADDR_ANY.s6_addr;
+            return addr = &IN6ADDR_ANY.s6_addr, *addr;
         else
         static if (is(typeof(in6addr_any)))
-            return in6addr_any.s6_addr;
+            return addr = &in6addr_any.s6_addr, *addr;
         else
             assert(0);
     }
