@@ -2262,6 +2262,7 @@ unittest
     assert(!globMatch("foo.bar", "[gh]???bar"));
     assert(!globMatch("foo.bar"w, "[!fg]*bar"w));
     assert(!globMatch("foo.bar"d, "[fg]???baz"d));
+    assert(!globMatch("foo.di", "*.d"));
 
     assert(globMatch("foo.bar", "{foo,bif}.bar"));
     assert(globMatch("bif.bar"w, "{foo,bif}.bar"w));
@@ -3995,6 +3996,7 @@ version (OldStdPathUnittest) unittest
     assert(!fnmatch("foo.bar", "[gh]???bar"));
     assert(!fnmatch("foo.bar", "[!fg]*bar"));
     assert(!fnmatch("foo.bar", "[fg]???baz"));
+    assert(!fnmatch("foo.di", "*.d"));
 
     assert(fnmatch("foo.bar", "{foo,bif}.bar"));
     assert(fnmatch("bif.bar", "{foo,bif}.bar"));
