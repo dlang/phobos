@@ -587,7 +587,7 @@ T toImpl(T, S)(S value)
             enum isModConvertible = is(Unqual!S == S);
         }
     }
-    static assert(isModConvertible, "Bad modifier convertion: "~S.stringof~" to "~T.stringof);
+    static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
 
     auto result = cast(T) value;
     if (!result && value)
