@@ -613,14 +613,69 @@ unittest
 }
 
 // Unittest for 6288
+version (unittest)
+{
+    private template Identity(T)        { alias              T   Identity; }
+    private template toConst(T)         { alias        const(T)  toConst; }
+    private template toShared(T)        { alias       shared(T)  toShared; }
+    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    private template Mod2Conv(int n) if (0 <= n && n < 5)
+    {
+        static if (n == 0) alias Identity       Mod2Conv;
+        static if (n == 1) alias toConst        Mod2Conv;
+        static if (n == 2) alias toShared       Mod2Conv;
+        static if (n == 3) alias toSharedConst  Mod2Conv;
+        static if (n == 4) alias toImmutable    Mod2Conv;
+    }
+}
 unittest
 {
-    class C {}
-    class D : C {}
+    interface I {}
+    interface J {}
 
-    const(C) c = new D;
-    static assert(!__traits(compiles, { D d = to!D(c); }));
-    //assert(d !is null);
+    class A {}
+    class B : A {}
+    class C : B, I, J {}
+    class D : I {}
+
+    foreach (mod1; TypeTuple!(0,1,2,3,4))
+    foreach (mod2; TypeTuple!(0,1,2,3,4))
+    {
+        alias Mod2Conv!mod1 Mod1;
+        alias Mod2Conv!mod2 Mod2;
+        //pragma(msg, Mod1!Object, " -> ", Mod2!Object, ", convertible = ",
+        //            isImplicitlyConvertible!(Mod1!Object, Mod2!Object));
+        static if (isImplicitlyConvertible!(Mod1!Object, Mod2!Object))
+        {
+            auto b = new Mod1!B();
+            auto c = new Mod1!C();
+            auto d = new Mod1!D();
+
+            // class to class
+            assert(to!(Mod2!C)(cast(Mod1!A)c) is c);    // A(c) to C
+            assertThrown(to!(Mod2!C)(cast(Mod1!A)b));   // A(b) to C
+
+            // class to interface
+            assert(to!(Mod2!I)(cast(Mod1!A)c) is c);    // A(c) to I
+            assertThrown(to!(Mod2!I)(cast(Mod1!A)b));   // A(b) to I
+
+            // interface to class
+            assert(to!(Mod2!C)(cast(Mod1!I)c) is c);    // I(c) to C
+            assertThrown(to!(Mod2!C)(cast(Mod1!I)d));   // I(d) to C
+
+            // interface to interface
+            assert(to!(Mod2!J)(cast(Mod1!I)c) is c);    // I(c) to J
+            assertThrown(to!(Mod2!J)(cast(Mod1!I)d));   // I(d) to J
+        }
+        else
+        {
+            static assert(!is(typeof(to!(Mod2!C)(Mod1!A.init))));   // A to C
+            static assert(!is(typeof(to!(Mod2!I)(Mod1!A.init))));   // A to I
+            static assert(!is(typeof(to!(Mod2!C)(Mod1!I.init))));   // I to C
+            static assert(!is(typeof(to!(Mod2!J)(Mod1!I.init))));   // I to J
+        }
+    }
 }
 
 /**
