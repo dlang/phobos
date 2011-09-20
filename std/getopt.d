@@ -77,10 +77,13 @@ $(D getopt) are removed from $(D args). Whatever in the
 arguments did not look like an option is left in $(D args) for
 further processing by the program. Values that were unaffected by the
 options are not touched, so a common idiom is to initialize options
-to their defaults and then invoke $(D getopt). If a
-command-line argument is recognized as an option with a parameter and
-the parameter cannot be parsed properly (e.g. a number is expected
-but not present), a $(D ConvException) exception is thrown.
+to their defaults and then invoke $(D getopt). If a command-line argument is
+recognized as an option with a parameter and the parameter cannot be parsed
+properly (e.g. a number is expected but not present), an $(LREF
+IllegalArgumentException) is thrown. The original exception (usually a
+$(XREF conv, ConvException)) is accessible with Throwable's $(D next). If an
+option expects an argument (applies to non-Boolean options) but wasn't specified
+a $(LREF MissingArgumentException) is thrown.
 
 Depending on the type of the pointer being bound, $(D getopt)
 recognizes the following kinds of options:
@@ -310,12 +313,16 @@ To set $(D timeout) to $(D 5), use either the long options $(D --timeout=5) or
 $(D --timeout 5) or the short options $(D -t=5) or $(D -t 5). Also the short
 option with no space $(D -t5) is accepted (see next section).
 
-The forms $(D -timeout=5), $(D -timeout 5), $(D --t=5), $(D --t 5), $(D --t5),
-$(D --timeout5), and $(D -timeout5) are not accepted. Beware though that $(D
--timeout=5), $(D -timeout 5), and $(D -timeout5) would be accepted with values
-$(D imeout=5), $(D imeout), and $(D imeout5), respectively, if -t was an option
-of type string. For more details about short options with no space, refer also
-to the next section.
+For $(D -timeout=5), $(D -timeout 5), and $(D -timeout5) an
+$(LREF IllegalArgumentException) is thrown because the argument imeout=5,
+imeout, and imeout5 respectively is not convertible to uint. For $(D --t=5),
+$(D --t 5), $(D --t5), and $(D --timeout5) an
+$(LREF UnrecognizedOptionException) is thrown.
+
+Beware though that $(D -timeout=5), $(D -timeout 5), and $(D -timeout5)
+would be accepted with values $(D imeout=5), $(D imeout), and $(D imeout5),
+respectively, if -t was an option of type string. For more details about short
+options with no space, refer also to the next section.
 
 $(B Omitting spaces for short options)
 
@@ -338,7 +345,7 @@ getopt(args, std.getopt.config.noSpaceOnlyForShortNumericOptions,
 ---------
 
 $(D -timeout=whatever), $(D -timeout whatever), and $(D -timeoutwhatever) will
-throw an exception.
+throw an $(LREF UnrecognizedOptionException).
 
 Specifying $(D std.getopt.config.noSpaceOnlyForShortNumericOptions) is strongly
 recommended in cases like above.
@@ -380,11 +387,20 @@ But "-vf filename" works as expected.
 
 $(B Passing unrecognized options through)
 
+By default $(D std.getopt.config.noPassThrough) is set. In this setting a $(LREF
+UnrecognizedOptionException) is thrown if any given option is not recognized.
+E.g. if --bar is given, then
+
+---------
+bool foo;
+getopt(args, "foo", &foo);
+---------
+
+will throw an $(LREF UnrecognizedOptionException).
+
 If an application needs to do its own processing of whichever arguments
 $(D getopt) did not understand, it can pass the
-$(D std.getopt.config.passThrough) directive to $(D getopt). As $(D
-std.getopt.config.passThrough) is only used in these cases the default is $(D
-std.getopt.config.noPassThrough).
+$(D std.getopt.config.passThrough) directive to $(D getopt).
 
 ---------
 bool foo, bar;
@@ -478,10 +494,8 @@ private void getoptImpl(T...)(ref string[] args,
                 continue;
             }
             if (endOfOptions.length && a == endOfOptions) break;
-            if (!cfg.passThrough)
-            {
-                throw new Exception("Unrecognized option "~a);
-            }
+            enforce(cfg.passThrough,
+                    new UnrecognizedOptionException("Unrecognized option " ~ a));
         }
     }
 }
@@ -489,6 +503,11 @@ private void getoptImpl(T...)(ref string[] args,
 void handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
+    static if (!isDelegate!(typeof(receiver)))
+        alias typeof(*receiver) ReceiverType;
+    else
+        alias typeof(receiver) ReceiverType;
+
     // Scan arguments looking for a match for this option
     for (size_t i = 1; i < args.length; ) {
         auto a = args[i];
@@ -511,12 +530,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             continue;
         }
         string val;
-        bool isNumericOption;
-        static if (!isDelegate!(typeof(receiver)))
-        {
-            isNumericOption = isNumeric!(typeof(*receiver));
-        }
-        if (!isValidOption(a, option, val, cfg, isNumericOption))
+        if (!isValidOption(a, option, val, cfg, isNumeric!(ReceiverType)))
         {
             ++i;
             continue;
@@ -526,10 +540,13 @@ void handleOption(R)(string option, R receiver, ref string[] args,
         // (and potentially args[i + 1] too, but that comes later)
         args = args[0 .. i] ~ args[i + 1 .. $];
 
-        static if (is(typeof(*receiver) == bool))
+        static if (is(ReceiverType == bool))
         {
             // enforce that no value was given
-            enforce(val is null);
+            enforce(val is null,
+                    new IllegalArgumentException(
+                          format("Illegal argument '%s' for '%s'. Expected no argument.",
+                                 val, a.length > 2 ? a : a ~ " " ~ val)));
             *receiver = true;
             break;
         }
@@ -538,71 +555,89 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             // non-boolean option, which might include an argument
             //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
             enum isDelegateWithLessThanTwoParameters =
-                is(typeof(receiver) == delegate) &&
-                !is(typeof(receiver("", "")));
+                isDelegate!(ReceiverType) && !is(typeof(receiver("", "")));
             if (!isDelegateWithLessThanTwoParameters && !val && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
-                    "Missing value for argument " ~ a ~ ".");
+                        new MissingArgumentException("Missing argument for " ~ a));
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
-            static if (is(typeof(*receiver) == enum))
+
+            try
             {
-                // enum receiver
-                *receiver = parse!(typeof(*receiver))(val);
-            }
-            else static if (is(typeof(*receiver) : real))
-            {
-                // numeric receiver
-                if (incremental) ++*receiver;
-                else *receiver = to!(typeof(*receiver))(val);
-            }
-            else static if (is(typeof(*receiver) == string))
-            {
-                // string receiver
-                *receiver = to!(typeof(*receiver))(val);
-            }
-            else static if (is(typeof(receiver) == delegate))
-            {
-                static if (is(typeof(receiver("", "")) : void))
+                static if (is(ReceiverType == enum))
                 {
-                    // option with argument
-                    receiver(option, val);
+                    // enum receiver
+                    *receiver = parse!(ReceiverType)(val);
                 }
-                else static if (is(typeof(receiver("")) : void))
+                else static if (is(ReceiverType : real))
                 {
-                    static assert(is(typeof(receiver("")) : void));
-                    // boolean-style receiver
-                    receiver(option);
+                    // numeric receiver
+                    if (incremental) ++*receiver;
+                    else *receiver = to!(ReceiverType)(val);
+                }
+                else static if (is(ReceiverType == string))
+                {
+                    // string receiver
+                    *receiver = to!(ReceiverType)(val);
+                }
+                else static if (isDelegate!(ReceiverType))
+                {
+                    static if (is(typeof(receiver("", "")) : void))
+                    {
+                        // option with argument
+                        receiver(option, val);
+                    }
+                    else static if (is(typeof(receiver("")) : void))
+                    {
+                        // boolean-style receiver
+                        receiver(option);
+                    }
+                    else
+                    {
+                        static assert(is(typeof(receiver()) : void));
+                        // boolean-style receiver without argument
+                        receiver();
+                    }
+                }
+                else static if (isArray!(ReceiverType))
+                {
+                    // array receiver
+                    *receiver ~= [ to!(typeof(*receiver[0]))(val) ];
+                }
+                else static if (isAssociativeArray!(ReceiverType))
+                {
+                    // hash receiver
+                    alias typeof(receiver.keys[0]) K;
+                    alias typeof(receiver.values[0]) V;
+                    auto j = std.string.indexOf(val, assignChar);
+                    enforce(j > 0,
+                            new IllegalArgumentException(
+                                format("Illegal argument '%s' for '%s'. Expected %s.",
+                                       val, a.length > 2 ? a : a ~ " " ~ val, humanReadable!(ReceiverType))));
+                    auto key = val[0 .. j], value = val[j + 1 .. $];
+                    (*receiver)[to!(K)(key)] = to!(V)(value);
                 }
                 else
                 {
-                    static assert(is(typeof(receiver()) : void));
-                    // boolean-style receiver without argument
-                    receiver();
+                    static assert(false, "Dunno how to deal with type " ~
+                            ReceiverType.stringof);
                 }
             }
-            else static if (isArray!(typeof(*receiver)))
-            {
-                // array receiver
-                *receiver ~= [ to!(typeof(*receiver[0]))(val) ];
-            }
-            else static if (isAssociativeArray!(typeof(*receiver)))
-            {
-                // hash receiver
-                alias typeof(receiver.keys[0]) K;
-                alias typeof(receiver.values[0]) V;
-                auto j = std.string.indexOf(val, assignChar);
-                enforce(j > 0, "Missing value for argument " ~ a ~ ".");
-                auto key = val[0 .. j], value = val[j + 1 .. $];
-                (*receiver)[to!(K)(key)] = to!(V)(value);
-            }
-            else
-            {
-                static assert(false, "Dunno how to deal with type " ~
-                        typeof(receiver).stringof);
+            catch (Exception e) {
+                if (cast(IllegalArgumentException) e ||
+                    cast(MissingArgumentException) e)
+                {
+                    throw e;
+                }
+                else
+                {
+                    throw new IllegalArgumentException(
+                        format("Illegal argument '%s' for '%s'. Expected %s.",
+                               val, a.length > 2 ? a : a ~ " " ~ val, humanReadable!(ReceiverType)), e);
+                }
             }
         }
     }
@@ -630,6 +665,84 @@ dchar assignChar = '=';
 
 enum autoIncrementChar = '+';
 
+/**
+   This exception is thrown if an option is not recognized.
+ */
+class UnrecognizedOptionException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null )
+    {
+        super(msg, file, line, next);
+    }
+}
+
+/**
+   This exception is thrown if the argument given to an option is illegal. There
+   may be other exceptions chained to this one, accessible via Throwable's
+   member $(D next).
+ */
+class IllegalArgumentException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    {
+        super(msg, file, line, next);
+    }
+
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line, next);
+    }
+}
+
+/**
+   This exception is thrown if there was no argument given to an option.
+ */
+class MissingArgumentException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    {
+        super(msg, file, line, next);
+    }
+}
+
+// Return a string representation for given type.
+private string humanReadable(T)()
+{
+    static if (isIntegral!(T))
+    {
+        return format("integer in [%s, ..., %s]", T.min, T.max);
+    }
+    else static if (isFloatingPoint!(T))
+    {
+        return format("floating point number in [%s, ..., %s]", T.min, T.max);
+    }
+    else static if (is(T == enum))
+    {
+        return "value in " ~ to!string(map!(to!string)([EnumMembers!T]));
+    }
+    else static if (isSomeString!(T))
+    {
+        return "string";
+    }
+    else static if (isArray!(T))
+    {
+        return humanReadable!(typeof(T[0]));
+    }
+    else static if (isAssociativeArray!(T))
+    {
+        return format("<%s>=<%s>", humanReadable!(typeof(T.keys[0])), humanReadable!(typeof(T.values[0])));
+    }
+    else static if (isDelegate!(T))
+    {
+        assert(false); // for delegates there is no exception thrown
+    }
+    else
+    {
+        static assert(false, "Dunno how to deal with type " ~ T.stringof);
+    }
+}
+
+
 private struct configuration
 {
     mixin(bitfields!(
@@ -641,15 +754,15 @@ private struct configuration
                 ubyte, "", 3));
 }
 
-// Returns true, if arg is considered a valid argument for given option.
-// Otherwise false.
+// Returns true, if arg is considered a valid argument for given option and sets
+// value appropriately. Otherwise returns false.
 private bool isValidOption(string arg, string optPattern, ref string value,
     configuration cfg, bool isNumericOption)
 {
     //import std.stdio;
     //debug writeln("isValidOption:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //debug scope(success) writeln("isValidOption result: ", value);
-    if (!arg.length || arg[0] != optionChar) return false;
+    if (arg.length <= 1 || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
     // long options have two '--' and at least two additional chars
@@ -976,7 +1089,7 @@ unittest {
                           "-t="~timeoutAsString]).dup;
         static if (is(T == bool))
         {
-            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assertThrown!IllegalArgumentException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
             assert(isEqual(timeout, timeout.init), to!string(timeout));
         }
         else
@@ -995,7 +1108,7 @@ unittest {
         }
         else
         {
-            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assertThrown!UnrecognizedOptionException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
             assert(isEqual(timeout, timeout.init), to!string(timeout));
         }
 
@@ -1036,7 +1149,7 @@ unittest {
                  "--timeout="~timeoutAsString]).dup;
         static if (is(T == bool))
         {
-            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assertThrown!IllegalArgumentException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
             assert(isEqual(timeout, timeout.init), to!string(timeout));
         }
         else
@@ -1049,13 +1162,13 @@ unittest {
         timeout = timeout.init;
         args = (["program.name",
                  "--t", timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assertThrown!UnrecognizedOptionException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
         assert(isEqual(timeout, timeout.init), to!string(timeout));
 
         timeout = timeout.init;
         args = (["program.name",
                  "--t="~timeoutAsString]).dup;
-        assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+        assertThrown!UnrecognizedOptionException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
         assert(isEqual(timeout, timeout.init), to!string(timeout));
 
         timeout = timeout.init;
@@ -1068,7 +1181,7 @@ unittest {
         }
         else
         {
-            assertThrown!Exception(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
+            assertThrown!UnrecognizedOptionException(getopt(args, config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeout));
             assert(isEqual(timeout, timeout.init), to!string(timeout));
         }
 
@@ -1132,6 +1245,195 @@ unittest
             "-a=-0x12"].dup;
     getopt(args, "a|addr", &str);
     assert(str == "-0x12", to!string(str));
+}
+
+// unrecognized options
+unittest
+{
+    string singleDash;
+    auto args = ["program.name",
+                 "-"];
+    auto ex = collectException!(UnrecognizedOptionException)(getopt(args, "u", &singleDash));
+    assert(ex !is null);
+    assert(ex.msg == "Unrecognized option -", ex.msg);
+
+    bool foo;
+    args = ["program.name",
+            "--bar"].dup;
+    ex = collectException!(UnrecognizedOptionException)(getopt(args, "foo", &foo));
+    assert(ex !is null);
+    assert(ex.msg == "Unrecognized option --bar", ex.msg);
+
+    int timeout;
+    args = ["program.name",
+            "-a"];
+    ex = collectException!(UnrecognizedOptionException)(getopt(args, "t|timeout", &timeout));
+    assert(ex !is null);
+    assert(ex.msg == "Unrecognized option -a", ex.msg);
+
+    string timeoutString;
+    args = ["program.name",
+            "-tstring"].dup;
+    ex = collectException!(UnrecognizedOptionException)(getopt(args,
+           config.noSpaceOnlyForShortNumericOptions, "t|timeout", &timeoutString));
+    assert(ex !is null);
+    assert(ex.msg == "Unrecognized option -tstring", ex.msg);
+}
+
+// illegal arguments
+unittest
+{
+    // bool
+    bool verbose;
+    auto args = ["program.name",
+                 "-vstring"];
+    auto ex = collectException!(IllegalArgumentException)(getopt(args, "v", &verbose));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'string' for '-vstring'. Expected no argument.", ex.msg);
+
+    // integer
+    int timeout;
+    args = ["program.name",
+            "-t", "string"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &timeout));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'string' for '-t string'. Expected integer in [-2147483648, ..., 2147483647].", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    short timeout2;
+    args = ["program.name",
+            "-t", "string"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &timeout2));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'string' for '-t string'. Expected integer in [-32768, ..., 32767].", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    // floating point
+    float floatValue;
+    args = ["program.name",
+            "-t", "string"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &floatValue));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'string' for '-t string'. Expected floating point number in [1.17549e-38, ..., 3.40282e+38].", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    // enum
+    enum Color { no, yes };
+    Color color;
+    args = ["program.name",
+            "-t", "0"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &color));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument '0' for '-t 0'. Expected value in [no, yes].", ex.msg);
+
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    // array
+    ubyte[] values;
+    args = ["program.name",
+            "-t", "string"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &values));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'string' for '-t string'. Expected integer in [0, ..., 255].", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    // associative array
+    int[string] hash;
+    args = ["program.name",
+            "-t", "foo=bar"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo=bar' for '-t foo=bar'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    hash = hash.init;
+    args = ["program.name",
+            "-tfoo=bar"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo=bar' for '-tfoo=bar'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    hash = hash.init;
+    args = ["program.name",
+            "-t=foo=bar"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo=bar' for '-t=foo=bar'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+
+    hash = hash.init;
+    args = ["program.name",
+            "-t", "foo"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo' for '-t foo'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(!ex.next);
+
+    hash = hash.init;
+    args = ["program.name",
+            "-t=foo"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo' for '-t=foo'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(!ex.next);
+
+    hash = hash.init;
+    args = ["program.name",
+            "-tfoo"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo' for '-tfoo'. Expected <string>=<integer in [-2147483648, ..., 2147483647]>.", ex.msg);
+    assert(!ex.next);
+
+    string[int] hash2;
+    args = ["program.name",
+            "-t", "foo=bar"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "t|timeout", &hash2));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'foo=bar' for '-t foo=bar'. Expected <integer in [-2147483648, ..., 2147483647]>=<string>.", ex.msg);
+    assert(ex.next);
+    assert(cast(ConvException) ex.next);
+}
+
+unittest
+{
+    // missing argument
+    int timeout;
+    auto args = ["program.name",
+                 "-t"];
+    auto ex = collectException!(MissingArgumentException)(getopt(args, "t|timeout", &timeout));
+    assert(ex !is null);
+    assert(ex.msg == "Missing argument for -t", ex.msg);
+}
+
+unittest
+{
+    int timeout;
+    string color;
+    auto args = ["program.name",
+                 "-t", "red", "-c", "red"];
+    auto ex = collectException!(IllegalArgumentException)(getopt(args, "t", &timeout, "c", &color));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument 'red' for '-t red'. Expected integer in [-2147483648, ..., 2147483647].", ex.msg);
+
+    ubyte overflow;
+    args = ["program.name",
+            "-u", "256"].dup;
+    ex = collectException!(IllegalArgumentException)(getopt(args, "u", &overflow));
+    assert(ex !is null);
+    assert(ex.msg == "Illegal argument '256' for '-u 256'. Expected integer in [0, ..., 255].", ex.msg);
+
+    assert(ex.next);
+    assert(cast(ConvOverflowException) ex.next);
 }
 
 unittest
