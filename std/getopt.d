@@ -612,13 +612,16 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                     // hash receiver
                     alias typeof(receiver.keys[0]) K;
                     alias typeof(receiver.values[0]) V;
-                    auto j = std.string.indexOf(val, assignChar);
-                    enforce(j > 0,
-                            new IllegalArgumentException(
-                                format("Illegal argument '%s' for '%s'. Expected %s.",
-                                       val, a.length > 2 ? a : a ~ " " ~ val, humanReadable!(ReceiverType))));
-                    auto key = val[0 .. j], value = val[j + 1 .. $];
-                    (*receiver)[to!(K)(key)] = to!(V)(value);
+                    foreach (elem; split(val, assocSep))
+                    {
+                        auto j = std.string.indexOf(elem, assignChar);
+                        enforce(j > 0,
+                                new IllegalArgumentException(
+                                    format("Illegal argument '%s' for '%s'. Expected %s.",
+                                           val, a.length > 2 ? a : a ~ " " ~ val, humanReadable!(ReceiverType))));
+                        auto key = elem[0 .. j], value = elem[j + 1 .. $];
+                        (*receiver)[to!(K)(key)] = to!(V)(value);
+                    }
                 }
                 else
                 {
@@ -662,6 +665,13 @@ string endOfOptions = "--";
    to '=' but can be assigned to prior to calling $(D getopt).
  */
 dchar assignChar = '=';
+
+/**
+   The string used to separate multiple elements of associative array
+   parameters. Defaults to "," but can be assigned to prior to calling
+   $(D getopt).
+ */
+string assocSep = ",";
 
 enum autoIncrementChar = '+';
 
