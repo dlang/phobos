@@ -5,12 +5,12 @@ Processing of command line options.
 
 The getopt module implements a $(D getopt) function, which adheres to the POSIX
 syntax for command line options. GNU extensions are supported in the form of
-long options introduced by a double dash ("--"). Values can separated by space/s
-and additionally by the $(LREF assignChar) character which defaults to '='.
-Short options with the value directly attached (i.e.  without intervening space)
-are allowed but configurable to work only for short numeric options. Support for
-bundling of command line options, as was the case with the more traditional
-single-letter approach, is provided but not enabled by default.
+long options introduced by a double dash ("--"). Values can be separated by
+space/s and additionally by the $(LREF assignChar) character which defaults to
+'='. Short options with the value directly attached (i.e.  without intervening
+space) are also allowed but configurable to work only for short numeric options.
+Support for bundling of command line options, as was the case with the more
+traditional single-letter approach, is provided but not enabled by default.
 
 Macros:
 
@@ -20,9 +20,9 @@ Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB perldoc.perl.org/Getopt/Long.html, Getopt::Long)
-		   module. The syntax of D's $(D getopt) is simpler than its Perl
-		   counterpart because $(D getopt) infers the expected parameter types
-		   from the static types of the passed-in pointers.
+           module. The syntax of D's $(D getopt) is simpler than its Perl
+           counterpart because $(D getopt) infers the expected parameter types
+           from the static types of the passed-in pointers.
 Source:    $(PHOBOSSRC std/_getopt.d)
 */
 /*
