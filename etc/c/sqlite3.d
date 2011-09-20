@@ -33,6 +33,7 @@ module etc.c.sqlite3;
 */
 
 extern (C) {
+__gshared:
 
 /**
 ** CAPI3REF: Compile-Time Library Version Numbers
