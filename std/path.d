@@ -2236,7 +2236,7 @@ body
                 break;
 	    }
 	}
-    assert(ni >= path.length);
+    assert(ni <= path.length);
 	return ni == path.length;
 }
 
@@ -3967,8 +3967,8 @@ body
                 break;
             }
         }
-    assert(ni >= filename.length);
-        return ni == filename.length;
+    assert(ni <= filename.length);
+    return ni == filename.length;
 }
 
 version (OldStdPathUnittest) unittest
