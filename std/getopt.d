@@ -1036,7 +1036,8 @@ unittest {
 }
 
 // with no space only for short numeric options, i.e. config.noSpaceOnlyForShortNumericOptions
-unittest {
+unittest
+{
     bool isEqual(T)(const(T) a, const(T) b) pure nothrow
     {
         static if (isFloatingPoint!(T)) {
@@ -1434,6 +1435,15 @@ unittest
 
     assert(ex.next);
     assert(cast(ConvOverflowException) ex.next);
+}
+
+unittest
+{
+    bool verbose;
+    auto args = ["program.name",
+                 "--", "-v"]; // stop processing at --
+    getopt(args, "v", &verbose);
+    assert(verbose == verbose.init, to!string(verbose));
 }
 
 unittest
