@@ -550,8 +550,8 @@ non-null and the target is null.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object) && !is(typeof(new T(value))))
+        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
     static if (is(T == immutable))
     {
