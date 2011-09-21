@@ -656,6 +656,13 @@ unittest
         // incompatible
         static assert(!__traits(compiles, Tuple!(int, int)(y)));
     }
+    // 6275
+    {
+        const int x = 1;
+        auto t1 = tuple(x);
+        alias Tuple!(const(int)) T;
+        auto t2 = T(1);
+    }
 }
 
 /**
@@ -671,11 +678,9 @@ assert(value[2] == "hello");
 ----
 */
 
-Tuple!(T) tuple(T...)(T args)
+Tuple!T tuple(T...)(T args)
 {
-    typeof(return) result;
-    static if (T.length > 0) result.field = args;
-    return result;
+    return typeof(return)(args);
 }
 
 /**
