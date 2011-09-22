@@ -3082,10 +3082,10 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool _followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
-        _followSymlink = _followSymlink;
+        _followSymlink = followSymlink;
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
