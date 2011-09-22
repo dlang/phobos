@@ -1,3 +1,13 @@
+$(VERSION 056, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+     )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
+     )
+ )
+
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
