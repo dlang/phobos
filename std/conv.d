@@ -622,11 +622,11 @@ version (unittest)
     private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
     private template Mod2Conv(int n) if (0 <= n && n < 5)
     {
-        static if (n == 0) alias Identity       Mod2Conv;
-        static if (n == 1) alias toConst        Mod2Conv;
-        static if (n == 2) alias toShared       Mod2Conv;
-        static if (n == 3) alias toSharedConst  Mod2Conv;
-        static if (n == 4) alias toImmutable    Mod2Conv;
+             static if (n == 0) alias Identity       Mod2Conv;
+        else static if (n == 1) alias toConst        Mod2Conv;
+        else static if (n == 2) alias toShared       Mod2Conv;
+        else static if (n == 3) alias toSharedConst  Mod2Conv;
+        else static if (n == 4) alias toImmutable    Mod2Conv;
     }
 }
 unittest
