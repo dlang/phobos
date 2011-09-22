@@ -75,7 +75,11 @@ version (unittest)
 
 // @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
 // {{{
-version (Posix)
+version (Windows)
+{
+    enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+}
+else version (Posix)
 {
     version (OSX)
     {
@@ -1467,7 +1471,7 @@ bool attrIsFile(uint attributes) nothrow
 {
     version(Windows)
     {
-        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
     }
     else version(Posix)
     {
@@ -1511,8 +1515,8 @@ unittest
 /++
     Returns whether the given file is a symbolic link.
 
-    Always return false on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         name = The path to the file.
@@ -1523,7 +1527,7 @@ unittest
 @property bool isSymlink(C)(const(C)[] name)
 {
     version(Windows)
-        return false;
+        return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
@@ -1534,6 +1538,9 @@ unittest
     {
         if("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isSymlink);
+
+        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+            assert("C:\\Documents and Settings\\".isSymlink);
 
         enum fakeSymFile = "C:\\Windows\\system.ini";
         if(fakeSymFile.exists)
@@ -1603,8 +1610,8 @@ unittest
 
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return $(D false) on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         attributes = The file attributes.
@@ -1612,7 +1619,7 @@ unittest
 @property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
-        return false;
+        return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (attributes & S_IFMT) == S_IFLNK;
 }
@@ -1621,8 +1628,8 @@ unittest
 /++
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return $(D false) on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         attributes = The file attributes.
@@ -1638,7 +1645,7 @@ assert(getLinkAttributes("/tmp/alink").isSymlink);
 bool attrIsSymlink(uint attributes) nothrow
 {
     version(Windows)
-        return false;
+        return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (attributes & S_IFMT) == S_IFLNK;
 }
@@ -2014,8 +2021,8 @@ assert(!de2.isFile);
             Returns whether the file represented by this $(D DirEntry) is a
             symbolic link.
 
-            Always return false on Windows. It exists on Windows so that you don't
-            have to special-case code for Windows when dealing with symbolic links.
+            On Windows, return $(D true) when the file is either a symbolic
+            link or a junction point.
           +/
         @property bool isSymlink();
 
@@ -2171,7 +2178,7 @@ else version(Windows)
 
         @property bool isSymlink() const
         {
-            return false;
+            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
         @property ulong size() const
@@ -2515,6 +2522,12 @@ unittest
             assert(!de.isSymlink);
         }
 
+        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+        {
+            auto de = dirEntry("C:\\Documents and Settings\\");
+            assert(de.isSymlink);
+        }
+
         if("C:\\Windows\\system.ini".exists)
         {
             auto de = dirEntry("C:\\Windows\\system.ini");
@@ -2559,8 +2572,8 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011. Please use the
- *       $(D getTimes) with two arguments instead.)
+ * $(RED Scheduled for deprecation in November 2011.
+ *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
@@ -3033,6 +3046,10 @@ private struct DirIteratorImpl
                 FindClose(d.h);
         }
 
+        bool mayStepIn()
+        {
+            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
+        }
     }
     else version(Posix)
     {
@@ -3076,23 +3093,27 @@ private struct DirIteratorImpl
 
         void releaseDirStack()
         {
-
             foreach( d;  _stack.data)
                 closedir(d.h);
         }
+
+        bool mayStepIn()
+        {
+            return _followSymlink ? _cur.isDir : isDir(_cur.linkAttributes);
+        }
     }
 
-    this(string pathname, SpanMode mode, bool _followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
-        _followSymlink = _followSymlink;
+        _followSymlink = followSymlink;
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
         if(stepIn(pathname))
         {
             if(_mode == SpanMode.depth)
-                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(mayStepIn())
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3113,7 +3134,7 @@ private struct DirIteratorImpl
         case SpanMode.depth:
             if(next())
             {
-                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(mayStepIn())
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3128,7 +3149,7 @@ private struct DirIteratorImpl
                 _cur = popExtra();
             break;
         case SpanMode.breadth:
-            if(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+            if(mayStepIn())
             {
                 if(!stepIn(_cur.name))
                     while(!empty && !next()){}
@@ -3192,7 +3213,7 @@ public:
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
         followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
-                         iterated over. Ignored on Windows.
+                         iterated over.
 
 Examples:
 --------------------
@@ -3211,7 +3232,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
-// Iterate over all *.d files in current directory and all it's subdirectories
+// Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
 foreach(d; dFiles)
     writeln(d.name);
@@ -3264,6 +3285,38 @@ unittest
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
     }
+}
+
+/++
+    Convenience wrapper for filtering file names with a glob pattern.
+
+    Params:
+        path = The directory to iterate over.
+        pattern  = String with wildcards, such as $(RED "*.d"). The supported
+                   wildcard strings are described under
+                   $(XREF path, globMatch).
+        mode = Whether the directory's sub-directories should be iterated
+               over depth-first ($(D_PARAM depth)), breadth-first
+               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
+        followSymlink = Whether symbolic links which point to directories
+                         should be treated as directories and their contents
+                         iterated over.
+
+Examples:
+--------------------
+// Iterate over all D source files in current directory and all its
+// subdirectories
+auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+foreach(d; dFiles)
+    writeln(d.name);
+--------------------
+//
+ +/
+auto dirEntries(string path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+{
+    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
+    return filter!f(DirIterator(path, mode, followSymlink));
 }
 
 /++
