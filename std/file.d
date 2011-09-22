@@ -1471,7 +1471,7 @@ bool attrIsFile(uint attributes) nothrow
 {
     version(Windows)
     {
-        return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
     }
     else version(Posix)
     {
