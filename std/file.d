@@ -3267,6 +3267,38 @@ unittest
 }
 
 /++
+    Convenience wrapper for filtering file names with a glob pattern.
+
+    Params:
+        path = The directory to iterate over.
+        pattern  = String with wildcards, such as $(RED "*.d"). The supported
+                   wildcard strings are described under
+                   $(XREF path, globMatch).
+        mode = Whether the directory's sub-directories should be iterated
+               over depth-first ($(D_PARAM depth)), breadth-first
+               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
+        followSymlink = Whether symbolic links which point to directories
+                         should be treated as directories and their contents
+                         iterated over. Ignored on Windows.
+
+Examples:
+--------------------
+// Iterate over all D source files in current directory and all its
+// subdirectories
+auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+foreach(d; dFiles)
+    writeln(d.name);
+--------------------
+//
+ +/
+auto dirEntries(string path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+{
+    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
+    return filter!f(DirIterator(path, mode, followSymlink));
+}
+
+/++
     Returns a DirEntry for the given file (or directory).
 
     Params:
