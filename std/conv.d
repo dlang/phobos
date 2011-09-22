@@ -2249,6 +2249,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {       p.popFront();
@@ -2358,6 +2365,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {
@@ -2570,6 +2584,13 @@ unittest
 {
     assert(to!float("inf") == float.infinity);
     assert(to!float("-inf") == -float.infinity);
+}
+
+// Unittest for bug 6160
+unittest
+{
+    assert(1000_000_000e50L == to!real("1000_000_000_e50"));        // 1e59
+    assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
 }
 
 /**
