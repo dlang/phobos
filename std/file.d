@@ -3211,7 +3211,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
-// Iterate over all *.d files in current directory and all it's subdirectories
+// Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
 foreach(d; dFiles)
     writeln(d.name);
