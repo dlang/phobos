@@ -5,7 +5,9 @@ $(VERSION 056, ddd mm, 2011, =================================================,
 
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
+        $(LI $(BUGZILLA 6258): std.conv.to!real("-") fetches the front of an empty array.)
         $(LI $(BUGZILLA 6288): std.conv.to removes const/immutable when converting a class)
+        $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
      )
  )
 
