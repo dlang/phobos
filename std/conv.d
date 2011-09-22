@@ -550,9 +550,45 @@ non-null and the target is null.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object) && !is(typeof(new T(value))))
+        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
+    static if (is(T == immutable))
+    {
+            // immutable <- immutable
+            enum isModConvertible = is(S == immutable);
+    }
+    else static if (is(T == const))
+    {
+        static if (is(T == shared))
+        {
+            // shared const <- shared
+            // shared const <- shared const
+            // shared const <- immutable
+            enum isModConvertible = is(S == shared) || is(S == immutable);
+        }
+        else
+        {
+            // const <- mutable
+            // const <- immutable
+            enum isModConvertible = !is(S == shared);
+        }
+    }
+    else
+    {
+        static if (is(T == shared))
+        {
+            // shared <- shared mutable
+            enum isModConvertible = is(S == shared) && !is(S == const);
+        }
+        else
+        {
+            // (mutable) <- (mutable)
+            enum isModConvertible = is(Unqual!S == S);
+        }
+    }
+    static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
+
     auto result = cast(T) value;
     if (!result && value)
     {
@@ -574,6 +610,74 @@ unittest
     assert(to!B(a2) is a2);
     assert(to!C(a3) is a3);
     assertThrown!ConvException(to!B(a3));
+}
+
+// Unittest for 6288
+version (unittest)
+{
+    private template Identity(T)        { alias              T   Identity; }
+    private template toConst(T)         { alias        const(T)  toConst; }
+    private template toShared(T)        { alias       shared(T)  toShared; }
+    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    private template AddModifier(int n) if (0 <= n && n < 5)
+    {
+             static if (n == 0) alias Identity       AddModifier;
+        else static if (n == 1) alias toConst        AddModifier;
+        else static if (n == 2) alias toShared       AddModifier;
+        else static if (n == 3) alias toSharedConst  AddModifier;
+        else static if (n == 4) alias toImmutable    AddModifier;
+    }
+}
+unittest
+{
+    interface I {}
+    interface J {}
+
+    class A {}
+    class B : A {}
+    class C : B, I, J {}
+    class D : I {}
+
+    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    {
+        alias AddModifier!m1 srcmod;
+        alias AddModifier!m2 tgtmod;
+        //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
+        //            isImplicitlyConvertible!(srcmod!Object, tgtmod!Object));
+
+        // Compile time convertible equals to modifier convertible.
+        static if (isImplicitlyConvertible!(srcmod!Object, tgtmod!Object))
+        {
+            // Test runtime conversions: class to class, class to interface,
+            // interface to class, and interface to interface
+
+            // Check that the runtime conversion to succeed
+            srcmod!A ac = new srcmod!C();
+            srcmod!I ic = new srcmod!C();
+            assert(to!(tgtmod!C)(ac) !is null); // A(c) to C
+            assert(to!(tgtmod!I)(ac) !is null); // A(c) to I
+            assert(to!(tgtmod!C)(ic) !is null); // I(c) to C
+            assert(to!(tgtmod!J)(ic) !is null); // I(c) to J
+
+            // Check that the runtime conversion fails
+            srcmod!A ab = new srcmod!B();
+            srcmod!I id = new srcmod!D();
+            assertThrown(to!(tgtmod!C)(ab));    // A(b) to C
+            assertThrown(to!(tgtmod!I)(ab));    // A(b) to I
+            assertThrown(to!(tgtmod!C)(id));    // I(d) to C
+            assertThrown(to!(tgtmod!J)(id));    // I(d) to J
+        }
+        else
+        {
+            // Check that the conversion is rejected statically
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!A.init))));   // A to C
+            static assert(!is(typeof(to!(tgtmod!I)(srcmod!A.init))));   // A to I
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
+            static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
+        }
+    }
 }
 
 /**
