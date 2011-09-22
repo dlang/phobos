@@ -2559,8 +2559,8 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011. Please use the
- *       $(D getTimes) with two arguments instead.)
+ * $(RED Scheduled for deprecation in November 2011.
+ *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
