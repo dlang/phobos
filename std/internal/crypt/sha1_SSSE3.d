@@ -227,7 +227,15 @@ version(USE_SSSE3)
      */
     private string[] loadstate(string base, string a, string b, string c, string d, string e)
     {
-        return ["mov "~a~",["~base~" + 0*4]",
+        // Work around because of issue 6459
+        // Just move the value into another register
+        string dummy = base;
+        version(_64Bit)
+        {
+            base = "RAX";
+        }
+        return swt3264([], ["mov RAX,"~dummy]) ~
+               ["mov "~a~",["~base~" + 0*4]",
                 "mov "~b~",["~base~" + 1*4]",
                 "mov "~c~",["~base~" + 2*4]",
                 "mov "~d~",["~base~" + 3*4]",
@@ -239,7 +247,15 @@ version(USE_SSSE3)
      */
     private string[] savestate(string base, string a, string b, string c, string d, string e)
     {
-        return ["add ["~base~" + 0*4],"~a,
+        // Work around because of issue 6459
+        // Just move the value into another register
+        string dummy = base;
+        version(_64Bit)
+        {
+            base = "RAX";
+        }
+        return swt3264([], ["mov RAX,"~dummy]) ~
+               ["add ["~base~" + 0*4],"~a,
                 "add ["~base~" + 1*4],"~b,
                 "add ["~base~" + 2*4],"~c,
                 "add ["~base~" + 3*4],"~d,
@@ -333,7 +349,10 @@ version(USE_SSSE3)
 
         if ((i & 3) == 0)
         {
-            return ["movdqu "~W~",["~BUFFER_PTR~" + "~to!string(regno)~"*16]"];
+            // Work around because of issue 6459
+            // Same instruction, but manually encoded
+            return swt3264(["movdqu "~W~",["~BUFFER_PTR~" + "~to!string(regno)~"*16]"],
+                            ["db 0xF3,0x41,0x0F,0x6F,"~to!string(0x41+regno*8)~","~to!string(regno*16)]);
         }
         else if ((i & 3) == 1)
         {
