@@ -349,7 +349,7 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
+T enforce(T, string file = __FILE__, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null) @safe pure
 {
     if (!value) bailOut(file, line, msg);
@@ -362,14 +362,14 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 
     The whole safety and purity are inferred from $(D Dg)'s safety and purity.
  +/
-T enforce(T, Dg : void delegate(), string file = __FILE__, int line = __LINE__)
+T enforce(T, Dg : void delegate(), string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
 {
     if (!value) dg();
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg) @safe pure
+private void bailOut(string file, size_t line, in char[] msg) @safe pure
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -461,7 +461,7 @@ auto line = readln(f);
 enforce(line.length); // expect a non-empty line
 --------------------
  +/
-T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
+T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     (T value, lazy string msg = null) @safe pure
 {
     if (!value) throw new ErrnoException(msg, file, line);
@@ -847,13 +847,13 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
-    
+
     int[] darr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(darr, darr[i]));
     assert(pointsTo(darr[0..3], darr[2]));
     assert(!pointsTo(darr[0..3], darr[3]));
-    
+
     int[4] sarr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(sarr, sarr[i]));
@@ -867,7 +867,7 @@ unittest
 class ErrnoException : Exception
 {
     uint errno;                 // operating system error code
-    this(string msg, string file = null, uint line = 0)
+    this(string msg, string file = null, size_t line = 0)
     {
         errno = getErrno;
         version (linux)
