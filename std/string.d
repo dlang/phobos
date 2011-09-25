@@ -3044,17 +3044,21 @@ unittest
     debug(string) printf("std.string.tr.unittest\n");
     import std.algorithm;
 
-    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
-                          wchar[], const(wchar)[], immutable(wchar)[],
-                          dchar[], const(dchar)[], immutable(dchar)[]))
+    // Complete list of test types; too slow to test'em all
+    // alias TypeTuple!(char[], const(char)[], immutable(char)[],
+    //         wchar[], const(wchar)[], immutable(wchar)[],
+    //         dchar[], const(dchar)[], immutable(dchar)[])
+    // TestTypes;
+
+    // Reduced list of test types
+    alias TypeTuple!(char[], const(wchar)[], immutable(dchar)[])
+    TestTypes;
+
+    foreach(S; TestTypes)
     {
-        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
-                              wchar[], const(wchar)[], immutable(wchar)[],
-                              dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach(T; TestTypes)
         {
-            foreach(U; TypeTuple!(char[], const(char)[], immutable(char)[],
-                                  wchar[], const(wchar)[], immutable(wchar)[],
-                                  dchar[], const(dchar)[], immutable(dchar)[]))
+            foreach(U; TestTypes)
             {
                 assert(equal(tr(to!S("abcdef"), to!T("cd"), to!U("CD")), "abCDef"));
                 assert(equal(tr(to!S("abcdef"), to!T("b-d"), to!U("B-D")), "aBCDef"));
