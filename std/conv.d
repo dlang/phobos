@@ -91,15 +91,9 @@ private
  */
 class ConvOverflowException : ConvException
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super("Error: overflow " ~ s);
-    }
-    // @@@BUG@@@ Issue 3269
-    // pure
-    static void raise(string s)
-    {
-        throw new ConvOverflowException(s);
+        super(s, fn, ln);
     }
 }
 
@@ -1442,13 +1436,13 @@ T toImpl(T, S)(S value)
             immutable good = value >= tSmallest;
         }
         if (!good)
-            ConvOverflowException.raise("Conversion negative overflow");
+            throw new ConvOverflowException("Conversion negative overflow");
     }
     static if (S.max > T.max)
     {
         // possible overflow
         if (value > T.max)
-            ConvOverflowException.raise("Conversion positive overflow");
+            throw new ConvOverflowException("Conversion positive overflow");
     }
     return cast(T) value;
 }
@@ -1908,7 +1902,7 @@ Target parse(Target, Source)(ref Source s)
     }
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s);
     assert(0);
@@ -2147,7 +2141,7 @@ body
     return v;
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
     assert(0);
