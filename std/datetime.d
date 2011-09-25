@@ -139,14 +139,10 @@ else version(Posix)
     import core.sys.posix.stdlib;
     import core.sys.posix.time;
     import core.sys.posix.sys.time;
-
-    //We need to disable many tests because building all of Phobos
-    //with all of std.datetime's unit tests enables currently causes
-    //dmd to run out of memory.
-    //Regardless of that, however, it's also useful to be able to
-    //easily turn the tests on and off.
-    version = testStdDateTime;
 }
+
+//Comment this out to disable std.datetime's unit tests.
+version = testStdDateTime;
 
 version(unittest)
 {
@@ -969,7 +965,6 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         date.year = year;
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
-
         adjTime = newDaysHNSecs + hnsecs;
     }
 
@@ -1109,7 +1104,6 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
         date.yearBC = year;
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
-
         adjTime = newDaysHNSecs + hnsecs;
     }
 
@@ -1264,7 +1258,6 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
         date.month = month;
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
-
         adjTime = newDaysHNSecs + hnsecs;
     }
 
@@ -1431,18 +1424,11 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
         date.day = day;
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(date.dayOfGregorianCal - 1);
-
         adjTime = newDaysHNSecs + hnsecs;
     }
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int day, in SysTime expected, size_t line = __LINE__)
-        {
-            st.day = day;
-            _assertPred!"=="(st, expected, "", __FILE__, line);
-        }
-
         foreach(day; chain(testDays))
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -1452,11 +1438,12 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                 if(day > maxDay(dt.year, dt.month))
                     continue;
 
-                auto e = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
-                                 st.fracSec,
-                                 st.timezone);
+                auto expected = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
+                                        st.fracSec,
+                                        st.timezone);
 
-                test(st, day, e);
+                st.day = day;
+                assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
 
@@ -1472,8 +1459,10 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                         {
                             auto st = SysTime(DateTime(Date(year, month, 1), tod), fs, tz);
                             immutable max = maxDay(year, month);
+                            auto expected = SysTime(DateTime(Date(year, month, max), tod), fs, tz);
 
-                            test(st, max, SysTime(DateTime(Date(year, month, max), tod), fs, tz));
+                            st.day = max;
+                            assert(st == expected, format("[%s] [%s]", st, expected));
                         }
                     }
                 }
@@ -1602,23 +1591,17 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int hour, in SysTime expected,
-                         size_t line = __LINE__)
-        {
-            st.hour = hour;
-            _assertPred!"=="(st, expected, "", __FILE__, line);
-        }
-
         foreach(hour; chain(testHours))
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
-                                 st.fracSec,
-                                 st.timezone);
+                auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
+                                        st.fracSec,
+                                        st.timezone);
 
-                test(st, hour, e);
+                st.hour = hour;
+                assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
 
@@ -1731,22 +1714,17 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int minute, in SysTime expected, size_t line = __LINE__)
-        {
-            st.minute = minute;
-            _assertPred!"=="(st, expected, "", __FILE__, line);
-        }
-
         foreach(minute; testMinSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
-                                 st.fracSec,
-                                 st.timezone);
+                auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
+                                        st.fracSec,
+                                        st.timezone);
 
-                test(st, minute, e);
+                st.minute = minute;
+                assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
 
@@ -1862,23 +1840,17 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, int second, in SysTime expected,
-                         size_t line = __LINE__)
-        {
-            st.second = second;
-            _assertPred!"=="(st, expected, "", __FILE__, line);
-        }
-
         foreach(second; testMinSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
-                                 st.fracSec,
-                                 st.timezone);
+                auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
+                                        st.fracSec,
+                                        st.timezone);
 
-                test(st, second, e);
+                st.second = second;
+                assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
 
@@ -1996,26 +1968,21 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
 
     version(testStdDateTime) unittest
     {
-        static void test(SysTime st, FracSec fracSec, in SysTime expected, size_t line = __LINE__)
-        {
-            st.fracSec = fracSec;
-            _assertPred!"=="(st, expected, "", __FILE__, line);
-        }
-
         foreach(fracSec; testFracSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto e = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
-                                 fracSec,
-                                 st.timezone);
+                auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
+                                        fracSec,
+                                        st.timezone);
 
-                test(st, fracSec, e);
+                st.fracSec = fracSec;
+                assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
 
-        SysTime st = SysTime(DateTime(2011, 7, 11, 2, 51, 27));
+        auto st = testSysTimesAD[0];
         assertThrown!DateTimeException(st.fracSec = FracSec.from!"hnsecs"(-1));
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -2122,6 +2089,16 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     {
         return _timezone.dstInEffect(_stdTime);
         //This function's unit testing is done in the time zone classes.
+    }
+
+
+    /++
+        Returns what the offset from UTC is for this $(D SysTime).
+        It includes the DST offset in effect at that time (if any).
+      +/
+    @property Duration utcOffset() const nothrow
+    {
+        return _timezone.utcOffsetAt(_stdTime);
     }
 
 
@@ -27696,6 +27673,20 @@ public:
 
 
     /++
+        Returns what the offset from UTC is at the given std time.
+        It includes the DST offset in effect at that time (if any).
+
+        Params:
+            stdTime = The UTC time for which to get the offset from UTC for this
+                      time zone.
+      +/
+    Duration utcOffsetAt(long stdTime) const nothrow
+    {
+        return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
+    }
+
+
+    /++
         Returns a $(D TimeZone) with the give name per the TZ Database.
 
         This returns a $(D PosixTimeZone) on Posix systems and a
@@ -27743,17 +27734,17 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     {
         version(Posix) scope(exit) clearTZEnvVar();
 
-        static void testTZ(string tzName,
-                           string stdName,
-                           string dstName,
-                           int utcOffset,
-                           int dstOffset,
-                           bool north = true)
+        static immutable(TimeZone) testTZ(string tzName,
+                                          string stdName,
+                                          string dstName,
+                                          Duration utcOffset,
+                                          Duration dstOffset,
+                                          bool north = true)
         {
             scope(failure) writefln("Failed time zone: %s", tzName);
 
             immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != 0;
+            immutable hasDST = dstOffset != dur!"hnsecs"(0);
 
             version(Posix)
                 _assertPred!"=="(tz.name, tzName);
@@ -27768,11 +27759,13 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 6, 0, 0);
             auto std = SysTime(stdDate, tz);
             auto dst = SysTime(dstDate, tz);
-            auto stdUTC = SysTime(stdDate - dur!"minutes"(utcOffset), UTC());
-            auto dstUTC = SysTime(stdDate - dur!"minutes"(utcOffset + dstOffset), UTC());
+            auto stdUTC = SysTime(stdDate - utcOffset, UTC());
+            auto dstUTC = SysTime(stdDate - utcOffset + dstOffset, UTC());
 
             assert(!std.dstInEffect);
             _assertPred!"=="(dst.dstInEffect, hasDST);
+            _assertPred!"=="(tz.utcOffsetAt(std.stdTime), utcOffset);
+            _assertPred!"=="(tz.utcOffsetAt(dst.stdTime), utcOffset + dstOffset);
 
             _assertPred!"=="(cast(DateTime)std, stdDate);
             _assertPred!"=="(cast(DateTime)dst, dstDate);
@@ -27791,7 +27784,6 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                     _assertPred!"=="(ourTimeInfo.tm_sec, osTimeInfo.tm_sec);
                     _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
                     _assertPred!"=="(ourTimeInfo.tm_hour, osTimeInfo.tm_hour);
-                    _assertPred!"=="(ourTimeInfo.tm_min, osTimeInfo.tm_min);
                     _assertPred!"=="(ourTimeInfo.tm_mday, osTimeInfo.tm_mday);
                     _assertPred!"=="(ourTimeInfo.tm_mon, osTimeInfo.tm_mon);
                     _assertPred!"=="(ourTimeInfo.tm_year, osTimeInfo.tm_year);
@@ -27800,7 +27792,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                     _assertPred!"=="(ourTimeInfo.tm_isdst, osTimeInfo.tm_isdst);
                     _assertPred!"=="(ourTimeInfo.tm_gmtoff, osTimeInfo.tm_gmtoff);
                     _assertPred!"=="(to!string(ourTimeInfo.tm_zone),
-                                    to!string(osTimeInfo.tm_zone));
+                                     to!string(osTimeInfo.tm_zone));
                 }
 
                 testTM(std);
@@ -27838,7 +27830,16 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                     _assertPred!"=="(leapDST.adjTime - leapDiff, dst.adjTime);
                 }
             }
+
+            return tz;
         }
+
+        auto dstSwitches = [/+America/Los_Angeles+/ tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
+                            /+America/New_York+/    tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
+                            /+America/Santiage+/    tuple(DateTime(2011, 8, 21),  DateTime(2011, 5, 8), 0, 0),
+                            /+Europe/London+/       tuple(DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 1, 2),
+                            /+Europe/Paris+/        tuple(DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 2, 3),
+                            /+Australia/Adelaide+/  tuple(DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
 
         version(Posix)
         {
@@ -27846,28 +27847,159 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             version(linux)   enum utcZone = "UTC";
             version(OSX)     enum utcZone = "UTC";
 
-            testTZ("America/Los_Angeles", "PST", "PDT", -8 * 60, 60);
-            testTZ("America/New_York", "EST", "EDT", -5 * 60, 60);
-            testTZ(utcZone, "UTC", "UTC", 0, 0);
-            testTZ("Europe/Paris", "CET", "CEST", 60, 60);
-            testTZ("Australia/Adelaide", "CST", "CST", 9 * 60 + 30, 60, false);
+            auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
+                        testTZ("America/New_York", "EST", "EDT", dur!"hours"(-5), dur!"hours"(1)),
+                        testTZ("America/Santiago", "CLT", "CLST", dur!"hours"(-4), dur!"hours"(1), false),
+                        testTZ("Europe/London", "GMT", "BST", dur!"hours"(0), dur!"hours"(1)),
+                        testTZ("Europe/Paris", "CET", "CEST", dur!"hours"(1), dur!"hours"(1)),
+                        //Per www.timeanddate.com, it should be "CST" and "CDT",
+                        //but the OS insists that it's "CST" for both. We should
+                        //probably figure out how to report an error in the TZ
+                        //database and report it.
+                        testTZ("Australia/Adelaide", "CST", "CST",
+                               dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
 
+            testTZ(utcZone, "UTC", "UTC", dur!"hours"(0), dur!"hours"(0));
             assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
         }
-        version(Windows)
+        else version(Windows)
         {
-            testTZ("America/Los_Angeles", "Pacific Standard Time",
-                   "Pacific Daylight Time", -8 * 60, 60);
-            testTZ("America/New_York", "Eastern Standard Time",
-                   "Eastern Daylight Time", -5 * 60, 60);
-            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
-                   "Greenwich Daylight Time", 0, 0);
-            testTZ("Europe/Paris", "Romance Standard Time",
-                   "Romance Daylight Time", 60, 60);
-            testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
-                   "Cen. Australia Daylight Time", 9 * 60 + 30, 60, false);
+            auto tzs = [testTZ("America/Los_Angeles", "Pacific Standard Time",
+                               "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
+                        testTZ("America/New_York", "Eastern Standard Time",
+                               "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
+                        testTZ("America/Santiago", "Pacific SA Standard Time",
+                               "Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
+                        testTZ("Europe/London", "GMT Standard Time",
+                               "GMT Daylight Time", dur!"hours"(0), dur!"hours"(1)),
+                        testTZ("Europe/Paris", "Romance Standard Time",
+                               "Romance Daylight Time", dur!"hours"(1), dur!"hours"(1)),
+                        testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                               "Cen. Australia Daylight Time",
+                               dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
 
+            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+                   "Greenwich Daylight Time", dur!"hours"(0), dur!"hours"(0));
             assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
+        }
+        else
+            assert(0, "OS not supported.");
+
+        foreach(i; 0 .. tzs.length)
+        {
+            auto tz = tzs[i];
+            immutable spring = dstSwitches[i][2];
+            immutable fall = dstSwitches[i][3];
+            auto stdOffset = SysTime(dstSwitches[i][0] + dur!"days"(-1), tz).utcOffset;
+            auto dstOffset = stdOffset + dur!"hours"(1);
+
+            //Verify that creating a SysTime in the given time zone results
+            //in a SysTime with the correct std time during and surrounding
+            //a DST switch.
+            foreach(hour; -12 .. 13)
+            {
+                auto st = SysTime(dstSwitches[i][0] + dur!"hours"(hour), tz);
+                immutable targetHour = hour < 0 ? hour + 24 : hour;
+
+                static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
+                {
+                    enforce(st.hour == hour,
+                            new AssertError(format("[%s] [%s]: [%s] [%s]", st, tzName, st.hour, hour),
+                                            __FILE__, line));
+                }
+
+                void testOffset1(Duration offset, bool dstInEffect, size_t line = __LINE__)
+                {
+                    AssertError msg(string tag)
+                    {
+                        return new AssertError(format("%s [%s] [%s]: [%s] [%s] [%s]",
+                                                      tag, st, tz.name, st.utcOffset, stdOffset, dstOffset),
+                                               __FILE__, line);
+                    }
+
+                    enforce(st.dstInEffect == dstInEffect, msg("1"));
+                    enforce(st.utcOffset == offset, msg("2"));
+                    enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                }
+
+                if(hour == spring)
+                {
+                    testHour(st, spring + 1, tz.name);
+                    testHour(st + dur!"minutes"(1), spring + 1, tz.name);
+                }
+                else
+                {
+                    testHour(st, targetHour, tz.name);
+                    testHour(st + dur!"minutes"(1), targetHour, tz.name);
+                }
+
+                if(hour < spring)
+                    testOffset1(stdOffset, false);
+                else
+                    testOffset1(dstOffset, true);
+
+                st = SysTime(dstSwitches[i][1] + dur!"hours"(hour), tz);
+                testHour(st, targetHour, tz.name);
+
+                //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
+                if(hour == fall - 1)
+                    testHour(st + dur!"hours"(1), targetHour, tz.name);
+
+                    if(hour < fall)
+                        testOffset1(dstOffset, true);
+                    else
+                        testOffset1(stdOffset, false);
+            }
+
+            //Verify that converting a time in UTC to a time in another
+            //time zone results in the correct time during and surrounding
+            //a DST switch.
+            bool first = true;
+            auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
+            auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
+            //@@@BUG@@@ 3659 makes this necessary.
+            auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+
+            foreach(hour; -24 .. 25)
+            {
+                auto utc = SysTime(dstSwitches[i][0] + dur!"hours"(hour), UTC());
+                auto local = utc.toOtherTZ(tz);
+
+                void testOffset2(Duration offset, size_t line = __LINE__)
+                {
+                    AssertError msg(string tag)
+                    {
+                        return new AssertError(format("%s [%s] [%s]: [%s] [%s]", tag, hour, tz.name, utc, local),
+                                               __FILE__, line);
+                    }
+
+                    enforce((utc + offset).hour == local.hour, msg("1"));
+                    enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                }
+
+                if(utc < springSwitch)
+                    testOffset2(stdOffset);
+                else
+                    testOffset2(dstOffset);
+
+                utc = SysTime(dstSwitches[i][1] + dur!"hours"(hour), UTC());
+                local = utc.toOtherTZ(tz);
+
+                if(utc == fallSwitch || utc == fallSwitchMinus1)
+                {
+                    if(first)
+                    {
+                        testOffset2(dstOffset);
+                        first = false;
+                    }
+                    else
+                        testOffset2(stdOffset);
+                }
+                else if(utc > fallSwitch)
+                    testOffset2(stdOffset);
+                else
+                    testOffset2(dstOffset);
+            }
         }
     }
 
@@ -28261,25 +28393,6 @@ public:
         {
             auto currTime = Clock.currStdTime;
             LocalTime().dstInEffect(currTime);
-
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
-                auto std = SysTime(DateTime(2010, 1, 1, 12, 0, 0), LocalTime());
-                auto dst = SysTime(DateTime(2010, 7, 1, 12, 0, 0), LocalTime());
-
-                setTZEnvVar("America/Los_Angeles");
-                assert(!LocalTime().dstInEffect(std.stdTime));
-                assert(LocalTime().dstInEffect(dst.stdTime));
-                assert(!std.dstInEffect);
-                assert(dst.dstInEffect);
-
-                setTZEnvVar("America/New_York");
-                assert(!LocalTime().dstInEffect(std.stdTime));
-                assert(LocalTime().dstInEffect(dst.stdTime));
-                assert(!std.dstInEffect);
-                assert(dst.dstInEffect);
-            }
         }
     }
 
@@ -28323,27 +28436,6 @@ public:
         version(testStdDateTime)
         {
             LocalTime().utcToTZ(0);
-
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
-
-                {
-                    setTZEnvVar("America/Los_Angeles");
-                    auto std = SysTime(Date(2010, 1, 1));
-                    auto dst = SysTime(Date(2010, 7, 1));
-                    _assertPred!"=="(LocalTime().utcToTZ(std.stdTime), SysTime(DateTime(2009, 12, 31, 16, 0, 0)).stdTime);
-                    _assertPred!"=="(LocalTime().utcToTZ(dst.stdTime), SysTime(DateTime(2010, 6, 30, 17, 0, 0)).stdTime);
-                }
-
-                {
-                    setTZEnvVar("America/New_York");
-                    auto std = SysTime(Date(2010, 1, 1));
-                    auto dst = SysTime(Date(2010, 7, 1));
-                    _assertPred!"=="(LocalTime().utcToTZ(std.stdTime), SysTime(DateTime(2009, 12, 31, 19, 0, 0)).stdTime);
-                    _assertPred!"=="(LocalTime().utcToTZ(dst.stdTime), SysTime(DateTime(2010, 6, 30, 20, 0, 0)).stdTime);
-                }
-            }
         }
     }
 
@@ -28365,7 +28457,23 @@ public:
         version(Posix)
         {
             time_t unixTime = stdTimeToUnixTime(adjTime);
-            tm* timeInfo = localtime(&unixTime);
+
+            immutable past = unixTime - cast(time_t)convert!("days", "seconds")(1);
+            tm* timeInfo = localtime(past < unixTime ? &past : &unixTime);
+            immutable pastOffset = timeInfo.tm_gmtoff;
+
+            immutable future = unixTime + cast(time_t)convert!("days", "seconds")(1);
+            timeInfo = localtime(future > unixTime ? &future : &unixTime);
+            immutable futureOffset = timeInfo.tm_gmtoff;
+
+            if(pastOffset == futureOffset)
+                return adjTime - convert!("seconds", "hnsecs")(pastOffset);
+
+            if(pastOffset < futureOffset)
+                unixTime -= cast(time_t)convert!("hours", "seconds")(1);
+
+            unixTime -= pastOffset;
+            timeInfo = localtime(&unixTime);
 
             return adjTime - convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
         }
@@ -28386,7 +28494,9 @@ public:
     {
         version(testStdDateTime)
         {
-            LocalTime().tzToUTC(0);
+            assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
+            assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+
             _assertPred!"=="(LocalTime().tzToUTC(LocalTime().utcToTZ(0)), 0);
             _assertPred!"=="(LocalTime().utcToTZ(LocalTime().tzToUTC(0)), 0);
 
@@ -28394,20 +28504,130 @@ public:
             {
                 scope(exit) clearTZEnvVar();
 
-                {
-                    setTZEnvVar("America/Los_Angeles");
-                    auto std = SysTime(DateTime(2009, 12, 31, 16, 0, 0));
-                    auto dst = SysTime(DateTime(2010, 6, 30, 17, 0, 0));
-                    _assertPred!"=="(LocalTime().tzToUTC(std.stdTime), SysTime(Date(2010, 1, 1)).stdTime);
-                    _assertPred!"=="(LocalTime().tzToUTC(dst.stdTime), SysTime(Date(2010, 7, 1)).stdTime);
-                }
+                auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
+                                tuple("America/New_York",    DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
+                                tuple("America/Santiago",    DateTime(2012, 10, 14), DateTime(2012, 3, 11), 0, 0),
+                                tuple("Atlantic/Azores",     DateTime(2011, 3, 27),  DateTime(2011, 10, 30), 0, 1),
+                                tuple("Europe/London",       DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 1, 2),
+                                tuple("Europe/Paris",        DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 2, 3),
+                                tuple("Australia/Adelaide",  DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
 
+                foreach(i; 0 .. tzInfos.length)
                 {
-                    setTZEnvVar("America/New_York");
-                    auto std = SysTime(DateTime(2009, 12, 31, 19, 0, 0));
-                    auto dst = SysTime(DateTime(2010, 6, 30, 20, 0, 0));
-                    _assertPred!"=="(LocalTime().tzToUTC(std.stdTime), SysTime(Date(2010, 1, 1)).stdTime);
-                    _assertPred!"=="(LocalTime().tzToUTC(dst.stdTime), SysTime(Date(2010, 7, 1)).stdTime);
+                    auto tzName = tzInfos[i][0];
+                    setTZEnvVar(tzName);
+                    immutable spring = tzInfos[i][3];
+                    immutable fall = tzInfos[i][4];
+                    auto stdOffset = SysTime(tzInfos[i][1] + dur!"hours"(-12)).utcOffset;
+                    auto dstOffset = stdOffset + dur!"hours"(1);
+
+                    //Verify that creating a SysTime in the given time zone results
+                    //in a SysTime with the correct std time during and surrounding
+                    //a DST switch.
+                    foreach(hour; -12 .. 13)
+                    {
+                        auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
+                        immutable targetHour = hour < 0 ? hour + 24 : hour;
+
+                        static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
+                        {
+                            enforce(st.hour == hour,
+                                    new AssertError(format("[%s] [%s]: [%s] [%s]", st, tzName, st.hour, hour),
+                                                    __FILE__, line));
+                        }
+
+                        void testOffset1(Duration offset, bool dstInEffect, size_t line = __LINE__)
+                        {
+                            AssertError msg(string tag)
+                            {
+                                return new AssertError(format("%s [%s] [%s]: [%s] [%s] [%s]",
+                                                              tag, st, tzName, st.utcOffset, stdOffset, dstOffset),
+                                                       __FILE__, line);
+                            }
+
+                            enforce(st.dstInEffect == dstInEffect, msg("1"));
+                            enforce(st.utcOffset == offset, msg("2"));
+                            enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                        }
+
+                        if(hour == spring)
+                        {
+                            testHour(st, spring + 1, tzName);
+                            testHour(st + dur!"minutes"(1), spring + 1, tzName);
+                        }
+                        else
+                        {
+                            testHour(st, targetHour, tzName);
+                            testHour(st + dur!"minutes"(1), targetHour, tzName);
+                        }
+
+                        if(hour < spring)
+                            testOffset1(stdOffset, false);
+                        else
+                            testOffset1(dstOffset, true);
+
+                        st = SysTime(tzInfos[i][2] + dur!"hours"(hour));
+                        testHour(st, targetHour, tzName);
+
+                        //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
+                        if(hour == fall - 1)
+                            testHour(st + dur!"hours"(1), targetHour, tzName);
+
+                        if(hour < fall)
+                            testOffset1(dstOffset, true);
+                        else
+                            testOffset1(stdOffset, false);
+                    }
+
+                    //Verify that converting a time in UTC to a time in another
+                    //time zone results in the correct time during and surrounding
+                    //a DST switch.
+                    bool first = true;
+                    auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
+                    auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
+                    //@@@BUG@@@ 3659 makes this necessary.
+                    auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+
+                    foreach(hour; -24 .. 25)
+                    {
+                        auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
+                        auto local = utc.toLocalTime();
+
+                        void testOffset2(Duration offset, size_t line = __LINE__)
+                        {
+                            AssertError msg(string tag)
+                            {
+                                return new AssertError(format("%s [%s] [%s]: [%s] [%s]", tag, hour, tzName, utc, local),
+                                                       __FILE__, line);
+                            }
+
+                            enforce((utc + offset).hour == local.hour, msg("1"));
+                            enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                        }
+
+                        if(utc < springSwitch)
+                            testOffset2(stdOffset);
+                        else
+                            testOffset2(dstOffset);
+
+                        utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
+                        local = utc.toLocalTime();
+
+                        if(utc == fallSwitch || utc == fallSwitchMinus1)
+                        {
+                            if(first)
+                            {
+                                testOffset2(dstOffset);
+                                first = false;
+                            }
+                            else
+                                testOffset2(stdOffset);
+                        }
+                        else if(utc > fallSwitch)
+                            testOffset2(stdOffset);
+                        else
+                            testOffset2(dstOffset);
+                    }
                 }
             }
         }
@@ -28538,6 +28758,19 @@ public:
     }
 
 
+    /++
+        Returns a $(CXREF time, Duration) of 0.
+
+        Params:
+            stdTime = The UTC time for which to get the offset from UTC for this
+                      time zone.
+      +/
+    override Duration utcOffsetAt(long stdTime) const nothrow
+    {
+        return dur!"hnsecs"(0);
+    }
+
+
 private:
 
     this() immutable pure
@@ -28644,6 +28877,19 @@ public:
             static assert(__traits(compiles, stz.tzToUTC(20005)));
             static assert(__traits(compiles, cstz.tzToUTC(20005)));
         }
+    }
+
+
+    /++
+        Returns utcOffset as a $(CXREF time, Duration).
+
+        Params:
+            stdTime = The UTC time for which to get the offset from UTC for this
+                      time zone.
+      +/
+    override Duration utcOffsetAt(long stdTime) const nothrow
+    {
+        return dur!"minutes"(utcOffset);
     }
 
 
@@ -28947,21 +29193,17 @@ public:
         try
         {
             immutable unixTime = stdTimeToUnixTime(stdTime);
-
-            if(_transitions.front.timeT >= unixTime)
-                return _transitions.front.ttInfo.isDST;
-
-            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
                 return _transitions.back.ttInfo.isDST;
 
-            auto transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
             return transition.ttInfo.isDST;
         }
         catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+            assert(0, format("Unexpected Exception: %s", e));
     }
 
 
@@ -28981,21 +29223,17 @@ public:
         {
             immutable leapSecs = calculateLeapSeconds(stdTime);
             immutable unixTime = stdTimeToUnixTime(stdTime);
-
-            if(_transitions.front.timeT >= unixTime)
-                return stdTime + convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
-
-            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
                 return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            auto transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
             return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
         }
         catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+            assert(0, format("Unexpected Exception: %s", e));
     }
 
 
@@ -29014,26 +29252,40 @@ public:
         try
         {
             immutable leapSecs = calculateLeapSeconds(adjTime);
-            immutable unixTime = stdTimeToUnixTime(adjTime);
+            time_t unixTime = stdTimeToUnixTime(adjTime);
+            immutable past = unixTime - convert!("days", "seconds")(1);
+            immutable future = unixTime + convert!("days", "seconds")(1);
 
-            if(_transitions.front.timeT >= unixTime)
-                return adjTime - convert!("seconds", "hnsecs")(_transitions.front.ttInfo.utcOffset + leapSecs);
+            immutable pastFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions, past);
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
-            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            if(pastFound == -1)
+                return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+
+            immutable futureFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $], future);
+            immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
+
+            if(futureFound == 0)
+                return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
+
+            immutable futureTrans = futureFound == -1 ? _transitions.back
+                                                      : _transitions[pastFound + futureFound - 1];
+            immutable pastOffset = pastTrans.ttInfo.utcOffset;
+
+            if(pastOffset < futureTrans.ttInfo.utcOffset)
+                unixTime -= convert!("hours", "seconds")(1);
+
+            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $],
+                                                       unixTime - pastOffset);
 
             if(found == -1)
                 return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            auto transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+            immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
 
             return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
         }
         catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+            assert(0, format("Unexpected Exception: %s", e));
     }
 
 
@@ -29661,16 +29913,12 @@ private:
             if(_leapSeconds.front.timeT >= unixTime)
                 return 0;
 
-            //Okay, casting is a hack, but countUntil shouldn't be changing it,
-            //and it would be too inefficient to have to keep duping it every
-            //time we have to calculate the time. Hopefully, countUntil will
-            //properly support immutable ranges at some point.
-            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
+            immutable found = countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
 
             if(found == -1)
                 return _leapSeconds.back.total;
 
-            auto leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
+            immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
 
             return leapSecond.total;
         }
@@ -29725,27 +29973,29 @@ version(StdDdoc)
         $(BLUE This class is Windows-Only.)
 
         Represents a time zone from the Windows registry. Unfortunately, Windows
-        does not use the TZ Database. You can, however, use $(D PosixTimeZone)
-        (which reads its information from the TZ Database files on disk) on
-        Windows if you provide the TZ Database files
+        does not use the TZ Database. You can, however, use
+        $(LREF PosixTimeZone) (which reads its information from the TZ Database
+        files on disk) on Windows if you provide the TZ Database files
         ( $(WEB ftp://elsie.nci.nih.gov/pub/,
             Repository with the TZ Database files (tzdata)) )
         yourself and tell $(D PosixTimeZone.getTimeZone) where the directory
         holding them is.
 
-        The TZ Dabatase files and Windows are not likely to always match,
-        particularly for historical dates, so if you want complete consistency
-        between Posix and Windows, then you should provide the appropriate
-        TZ Database files on Windows and use $(D PosixTimeZone). But as
-        $(D WindowsTimeZone) uses the Windows functions, $(D WindowsTimeZone)
-        is more likely to match the behavior of other Windows programs.
-        $(D WindowsTimeZone) should be fine for most programs.
+        The TZ Database files and Windows' time zone information frequently
+        do not match. Windows has many errors with regards to when DST switches
+        occur (especially for historical dates). Also, the TZ Database files
+        include far more time zones than Windows does. So, if you want accurate
+        time zone information, you should use the TZ Database files with
+        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
+        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
+        it's far more likely to match the behavior of other Windows programs.
+        So, which you should use depends on what you're trying to do.
 
         $(D WindowsTimeZone) does not exist on Posix systems.
 
         To get a $(D WindowsTimeZone), either call
         $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
-        (which will give you a $(D PosixTimeZone) on Posix systems and a
+        (which will give you a $(LREF PosixTimeZone) on Posix systems and a
          $(D WindowsTimeZone) on Windows systems).
       +/
     final class WindowsTimeZone : TimeZone
@@ -29849,23 +30099,6 @@ version(StdDdoc)
 }
 else version(Windows)
 {
-
-    //Should be in core.sys.windows.windows, but for some reason it isn't.
-    extern(Windows)
-    {
-    export LONG RegQueryValueExA(HKEY hKey, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD count);
-
-    struct REG_TZI_FORMAT
-    {
-        LONG Bias;
-        LONG StandardBias;
-        LONG DaylightBias;
-        SYSTEMTIME StandardDate;
-        SYSTEMTIME DaylightDate;
-    }
-
-    }
-
     final class WindowsTimeZone : TimeZone
     {
     public:
@@ -30052,7 +30285,7 @@ else version(Windows)
 
                 auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
 
-                //The limits of what SystemTimeToTZSpecificLocalTime will accept.
+                //The limits of what SystemTimeToTzSpecificLocalTime will accept.
                 if(utcDateTime.year < 1601)
                 {
                     if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
@@ -30068,7 +30301,7 @@ else version(Windows)
                     utcDateTime.year = 30_827;
                 }
 
-                //SystemTimeToTZSpecificLocalTime doesn't act correctly at the
+                //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
                 //beginning or end of the year (bleh). Unless some bizarre time
                 //zone changes DST on January 1st or December 31st, this should
                 //fix the problem.
@@ -30143,7 +30376,7 @@ else version(Windows)
                 {
                     bool dstInEffectForLocalDateTime(DateTime localDateTime)
                     {
-                        //The limits of what SystemTimeToTZSpecificLocalTime will accept.
+                        //The limits of what SystemTimeToTzSpecificLocalTime will accept.
                         if(localDateTime.year < 1601)
                         {
                             if(localDateTime.month == Month.feb && localDateTime.day == 29)
@@ -30159,7 +30392,7 @@ else version(Windows)
                             localDateTime.year = 30_827;
                         }
 
-                        //SystemTimeToTZSpecificLocalTime doesn't act correctly at the
+                        //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
                         //beginning or end of the year (bleh). Unless some bizarre time
                         //zone changes DST on January 1st or December 31st, this should
                         //fix the problem.
@@ -30182,7 +30415,7 @@ else version(Windows)
                         localTime.wSecond = localDateTime.second;
                         localTime.wMilliseconds = 0;
 
-                        immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                        immutable result = TzSpecificLocalTimeToSystemTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
                                                                            &localTime,
                                                                            &utcTime);
                         assert(result);
@@ -30195,7 +30428,7 @@ else version(Windows)
                                                          utcTime.wSecond);
 
                         immutable diff = localDateTime - utcDateTime;
-                        immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
+                        immutable minutes = -tzInfo.Bias - diff.total!"minutes"();
 
                         if(minutes == tzInfo.DaylightBias)
                             return true;
@@ -30219,11 +30452,10 @@ else version(Windows)
                         isDST = true;
                     else if(!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
                         isDST = false;
-                    else if((!dstInEffectBefore && dstInEffectAfter) ||
-                            (dstInEffectBefore && !dstInEffectAfter))
-                    {
+                    else if(!dstInEffectBefore && dstInEffectAfter)
+                        isDST = false;
+                    else if(dstInEffectBefore && !dstInEffectAfter)
                         isDST = dstInEffectNow;
-                    }
                     else
                         assert(0, "Bad Logic.");
 
@@ -30347,6 +30579,8 @@ string tzDatabaseNameToWindowsTZName(string tzName)
 {
     switch(tzName)
     {
+        //Most of these come from the link in the documentation, but a few have
+        //been added because they were found in the Windows registry.
         case "Africa/Cairo": return "Egypt Standard Time";
         case "Africa/Casablanca": return "Morocco Standard Time";
         case "Africa/Johannesburg": return "South Africa Standard Time";
@@ -30429,7 +30663,10 @@ string tzDatabaseNameToWindowsTZName(string tzName)
         case "Etc/GMT+5": return "US Eastern Standard Time";
         case "Europe/Berlin": return "W. Europe Standard Time";
         case "Europe/Budapest": return "Central Europe Standard Time";
+        //This should probably be Turkey Standard Time, but GTB Standard Time
+        //has been around longer and therefore will work on more systems.
         case "Europe/Istanbul": return "GTB Standard Time";
+        case "Europe/Kaliningrad": return "Kaliningrad Standard Time";
         case "Europe/Kiev": return "FLE Standard Time";
         case "Europe/London": return "GMT Standard Time";
         case "Europe/Minsk": return "E. Europe Standard Time";
@@ -30490,6 +30727,8 @@ string windowsTZNameToTZDatabaseName(string tzName)
 {
     switch(tzName)
     {
+        //Most of these come from the link in the documentation, but a few have
+        //been added because they were found in the Windows registry.
         case "AUS Central Standard Time": return "Australia/Darwin";
         case "AUS Eastern Standard Time": return "Australia/Sydney";
         case "Afghanistan Standard Time": return "Asia/Kabul";
@@ -30536,6 +30775,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Iran Standard Time": return "Asia/Tehran";
         case "Israel Standard Time": return "Asia/Jerusalem";
         case "Jordan Standard Time": return "Asia/Amman";
+        case "Kaliningrad Standard Time": return "Europe/Kaliningrad";
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
         case "Magadan Standard Time": return "Asia/Magadan";
@@ -30576,6 +30816,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Tasmania Standard Time": return "Australia/Hobart";
         case "Tokyo Standard Time": return "Asia/Tokyo";
         case "Tonga Standard Time": return "Pacific/Tongatapu";
+        case "Turkey Standard Time": return "Europe/Istanbul";
         case "US Eastern Standard Time": return "Etc/GMT+5";
         case "US Mountain Standard Time": return "America/Phoenix";
         case "UTC": return "Etc/GMT";
@@ -31677,8 +31918,8 @@ bool validTimeUnits(string[] units...)
 int cmpTimeUnits(string lhs, string rhs)
 {
     auto tstrings = timeStrings.dup;
-    immutable indexOfLHS = std.algorithm.countUntil(tstrings, lhs);
-    immutable indexOfRHS = std.algorithm.countUntil(tstrings, rhs);
+    immutable indexOfLHS = countUntil(tstrings, lhs);
+    immutable indexOfRHS = countUntil(tstrings, rhs);
 
     enforce(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
     enforce(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
@@ -31742,8 +31983,8 @@ template CmpTimeUnits(string lhs, string rhs)
 private int cmpTimeUnitsCTFE(string lhs, string rhs)
 {
     auto tstrings = timeStrings.dup;
-    immutable indexOfLHS = std.algorithm.countUntil(tstrings, lhs);
-    immutable indexOfRHS = std.algorithm.countUntil(tstrings, rhs);
+    immutable indexOfLHS = countUntil(tstrings, lhs);
+    immutable indexOfRHS = countUntil(tstrings, rhs);
 
     if(indexOfLHS < indexOfRHS)
         return -1;
@@ -32753,7 +32994,7 @@ template nextSmallerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.front != units)
 {
-    enum nextSmallerTimeUnits = timeStrings[std.algorithm.countUntil(timeStrings.dup, units) - 1];
+    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) - 1];
 }
 
 unittest
@@ -32790,7 +33031,7 @@ template nextLargerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.back != units)
 {
-    enum nextLargerTimeUnits = timeStrings[std.algorithm.countUntil(timeStrings.dup, units) + 1];
+    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) + 1];
 }
 
 unittest
@@ -33456,18 +33697,17 @@ version(unittest)
 
     static this()
     {
-        currLocalDiffFromUTC = Clock.currTime(UTC()) -
-                               Clock.currTime(LocalTime());
-
-        immutable simpleTZ = new SimpleTimeZone(cast(int)
-                (currLocalDiffFromUTC + dur!"hours"(2)).total!"minutes"());
-
         immutable lt = LocalTime().utcToTZ(0);
-        immutable st = simpleTZ.utcToTZ(0);
-        auto diffs = [0, lt, st];
-        auto diffAA = [0 : cast(immutable TimeZone)UTC(),
-                       lt : cast(immutable TimeZone)LocalTime(),
-                       st : cast(immutable TimeZone)simpleTZ];
+        currLocalDiffFromUTC = dur!"hnsecs"(lt);
+
+        immutable otherTZ = lt < 0 ? TimeZone.getTimeZone("Australia/Sydney")
+                                   : TimeZone.getTimeZone("America/Denver");
+        immutable ot = otherTZ.utcToTZ(0);
+
+        auto diffs = [0, lt, ot];
+        auto diffAA = [0 : UTC(),
+                       lt : LocalTime(),
+                       ot : otherTZ];
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 
