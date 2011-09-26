@@ -143,7 +143,7 @@ $(I Integer):
 $(I Digit):
     $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
 $(I FormatChar):
-    $(B 's')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
+    $(B 's')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B 'h')
 )
 
     $(BOOKTABLE Flags affect formatting depending on the specifier as
@@ -272,7 +272,29 @@ $(I FormatChar):
         The exponent for zero is zero.
         The hexadecimal digits, x and p are in upper case if the
         $(I FormatChar) is upper case.
-    </dl>
+
+        $(DT $(B 'h')) $(DD Formats integral and floating point
+        numbers using $(LUCKY SI prefixes) ($(D 'h') stands for "human
+        readable"). Numbers between $(D 1E-18) (inclusive)
+        and $(D 999E18) (exclusive) are represented as a number
+        between $(D 1) (inclusive)
+        and $(D 1000) (exclusive) followed by a letter denoting a
+        power of $(D 10) multiplier. For example, the number $(D 7255)
+        is represented as $(D 7.255K). For
+        numbers with absolute value strictly less than $(D 1), the multipliers
+        are $(D 'f') for
+        $(D 1E-18) (femto), $(D 'p') for $(D 1E-15) (pico), $(D 'n') for
+        $(D 1E-12) (nano), $(D 'μ') for $(D 1E-9) (micro), and $(D
+        'm') for $(D 1E-3) (milli). For numbers with
+        absolute value greater than or equal to $(D 1) and strictly less
+        than $(D 1000) no suffix is printed. For numbers equal to or greater than $(D
+        1000) in absolute value, the suffixes $(D 'K'), $(D 'M'), $(D
+        'G'), $(D 'T'), $(D 'P'), and $(D
+        'X') are used for multipliers equal to $(D 1E3) (Kilo), $(D 1E6) (Mega), $(D
+        1E9), (Giga), $(D 1E12) (Tera), $(D 1E15) (Peta), and $(D
+        1E18) (eXa) respectively.)
+
+        </dl>
 
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
@@ -1027,18 +1049,16 @@ unittest
 /**
    Integrals are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, FormatSpec!Char fs)
 if (isIntegral!T)
 {
-    FormatSpec!Char fs = f; // fs is copy for change its values.
-
     Unqual!T arg = val;
     if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
         auto begin = cast(const char*) &arg;
-        if (std.system.endian == Endian.littleEndian && f.flPlus
-            || std.system.endian == Endian.bigEndian && f.flDash)
+        if (std.system.endian == Endian.littleEndian && fs.flPlus
+            || std.system.endian == Endian.bigEndian && fs.flDash)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. arg.sizeof)
@@ -1051,6 +1071,14 @@ if (isIntegral!T)
         }
         return;
     }
+
+    // Human-readable
+    if (fs.spec == 'h' && std.math.abs(val) >= 1000)
+    {
+        formatValue(w, cast(real) val, fs);
+        return;
+    }
+
     if (fs.precision == fs.UNSPECIFIED)
     {
         // default precision for integrals is 1
@@ -1073,10 +1101,12 @@ if (isIntegral!T)
         fs.spec == 'x' || fs.spec == 'X' ? 16 :
         fs.spec == 'o' ? 8 :
         fs.spec == 'b' ? 2 :
-        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
+        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' || fs.spec == 'h' ? 10 :
         0;
     if (base == 0)
+    {
         throw new FormatException("integral");
+    }
     // figure out sign and continue in unsigned mode
     char forcedPrefix = void;
     if (fs.flPlus) forcedPrefix = '+';
@@ -1157,6 +1187,22 @@ if (isIntegral!T)
     if (!leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
 }
 
+unittest
+{
+    auto w = appender!string();
+    formattedWrite(w, "%h", 10);
+    assert(w.data == "10");
+    w.clear();
+
+    formattedWrite(w, "%h", 1000);
+    assert(w.data == "1.000000K", w.data);
+    w.clear();
+
+    formattedWrite(w, "%h", 4_538_284);
+    assert(w.data == "4.538284M", w.data);
+    w.clear();
+}
+
 /**
  * Floating-point values are formatted like $(D printf) does.
  */
@@ -1183,6 +1229,94 @@ if (isFloatingPoint!D)
         }
         return;
     }
+
+    // Human-readable
+    if (fs.spec == 'h')
+    {
+        fs.spec = 'f';
+        Unqual!D copy = obj;
+        real absVal = std.math.abs(copy);
+        string suffix;
+        if (absVal >= 1_000_000_000_000_000_000)
+        {
+            // "EXA" written with suffix 'X' so as to not create
+            // confusion with scientific notation.
+            suffix = "X";
+            copy /= 1E18;
+        }
+        else if (absVal >= 1_000_000_000_000_000)
+        {
+            // "PETA"
+            suffix = "P";
+            copy /= 1E15;
+        }
+        else if (absVal >= 1_000_000_000_000)
+        {
+            // "TERA"
+            suffix = "T";
+            copy /= 1E12;
+        }
+        else if (absVal >= 1_000_000_000)
+        {
+            // "GIGA"
+            suffix = "G";
+            copy /= 1E9;
+        }
+        else if (absVal >= 1_000_000)
+        {
+            // "MEGA"
+            suffix = "M";
+            copy /= 1E6;
+        }
+        else if (absVal >= 1_000)
+        {
+            // "KILO"
+            suffix = "K";
+            copy /= 1E3;
+        }
+        else if (absVal >= 1)
+        {
+            goto normalPath;
+        }
+        else if (absVal >= 1E-3)
+        {
+            // "mili"
+            suffix = "m";
+            copy *= 1E3;
+        }
+        else if (absVal >= 1E-6)
+        {
+            // "micro"
+            suffix = "μ";
+            copy *= 1E6;
+        }
+        else if (absVal >= 1E-9)
+        {
+            // "nano"
+            suffix = "n";
+            copy *= 1E9;
+        }
+        else if (absVal >= 1E-12)
+        {
+            // "pico"
+            suffix = "p";
+            copy *= 1E12;
+        }
+        else
+        {
+            // "femto"
+            suffix = "f";
+            copy *= 1E18;
+        }
+        // Decrement minimum width to account for the suffix.
+        if (fs.width > 0) --fs.width;
+        formatValue(w, copy, fs);
+        put(w, suffix);
+        return;
+      normalPath:
+        {}
+    }
+
     if (std.string.indexOf("fgFGaAeEs", fs.spec) < 0) {
         throw new FormatException("floating");
     }
@@ -1221,6 +1355,14 @@ unittest
     FormatSpec!char f;
     formatValue(a, x, f);
     assert(a.data == "5.5");
+
+    a.clear();
+    formattedWrite(a, "%h", 1001);
+    assert(a.data == "1.001000K", a.data);
+
+    a.clear();
+    formattedWrite(a, "%.4h", 5_235_567.34);
+    assert(a.data == "5.2356M", a.data);
 }
 
 /**

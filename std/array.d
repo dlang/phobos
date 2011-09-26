@@ -2091,21 +2091,6 @@ Appends an entire range to the managed array.
     static if(!is(T == immutable) && !is(T == const))
     {
 /**
-Clears the managed array.  This allows the elements of the array to be reused
-for appending.
-
-Note that clear is disabled for immutable or const element types, due to the
-possibility that $(D Appender) might overwrite immutable data.
-*/
-        void clear()
-        {
-            if (_data)
-            {
-                _data.arr = _data.arr.ptr[0..0];
-            }
-        }
-
-/**
 Shrinks the managed array to the given length.  Passing in a length that's
 greater than the current array length throws an enforce exception.
 */
@@ -2118,6 +2103,27 @@ greater than the current array length throws an enforce exception.
             }
             else
                 enforce(newlength == 0);
+        }
+    }
+
+/**
+Clears the managed array.
+
+If the array has mutable elements, this allows the elements of the array to be reused for appending.
+
+If the array has immutable or const element types, $(D clear) simply throws away the existing data and starts anew. This is so as to avoid $(D Appender) might overwrite immutable data.
+ */
+
+    void clear()
+    {
+        if (!_data) return;
+        static if (is(T == immutable) || is(T == const))
+        {
+            _data = new Data;
+        }
+        else
+        {
+            _data.arr = _data.arr.ptr[0..0];
         }
     }
 }

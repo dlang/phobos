@@ -2840,20 +2840,21 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
-    auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    auto d = deleteme ~ ".dir/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
     mkdirRecurse(d);
-    core.sys.posix.unistd.symlink("/tmp/deleteme/a/b/c", "/tmp/deleteme/link");
-    rmdirRecurse("/tmp/deleteme/link");
+    core.sys.posix.unistd.symlink(toStringz(deleteme ~ ".dir/a/b/c"),
+            toStringz(deleteme ~ ".dir/link"));
+    rmdirRecurse(deleteme ~ ".dir/link");
     enforce(exists(d));
-    rmdirRecurse("/tmp/deleteme");
-    enforce(!exists("/tmp/deleteme"));
+    rmdirRecurse(deleteme ~ ".dir");
+    enforce(!exists(deleteme ~ ".dir"));
 
-    d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    d = deleteme ~ ".dir/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
-    rmdirRecurse("/tmp/deleteme");
-    enforce(!exists("/tmp/deleteme"));
+    std.process.system("ln -sf " ~ deleteme ~ ".dir/a/b/c " ~ deleteme ~ ".dir/link");
+    rmdirRecurse(deleteme ~ ".dir");
+    enforce(!exists(deleteme ~ ".dir"));
 }
 
 unittest
