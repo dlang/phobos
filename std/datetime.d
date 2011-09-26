@@ -27836,7 +27836,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
         auto dstSwitches = [/+America/Los_Angeles+/ tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
                             /+America/New_York+/    tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
-                            /+America/Santiage+/    tuple(DateTime(2011, 8, 21),  DateTime(2011, 5, 8), 0, 0),
+                            ///+America/Santiago+/    tuple(DateTime(2011, 8, 21),  DateTime(2011, 5, 8), 0, 0),
                             /+Europe/London+/       tuple(DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 1, 2),
                             /+Europe/Paris+/        tuple(DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 2, 3),
                             /+Australia/Adelaide+/  tuple(DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
@@ -27849,7 +27849,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
             auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
                         testTZ("America/New_York", "EST", "EDT", dur!"hours"(-5), dur!"hours"(1)),
-                        testTZ("America/Santiago", "CLT", "CLST", dur!"hours"(-4), dur!"hours"(1), false),
+                        //testTZ("America/Santiago", "CLT", "CLST", dur!"hours"(-4), dur!"hours"(1), false),
                         testTZ("Europe/London", "GMT", "BST", dur!"hours"(0), dur!"hours"(1)),
                         testTZ("Europe/Paris", "CET", "CEST", dur!"hours"(1), dur!"hours"(1)),
                         //Per www.timeanddate.com, it should be "CST" and "CDT",
@@ -27868,8 +27868,8 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                                "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
                         testTZ("America/New_York", "Eastern Standard Time",
                                "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
-                        testTZ("America/Santiago", "Pacific SA Standard Time",
-                               "Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
+                        //testTZ("America/Santiago", "Pacific SA Standard Time",
+                               //"Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
                         testTZ("Europe/London", "GMT Standard Time",
                                "GMT Daylight Time", dur!"hours"(0), dur!"hours"(1)),
                         testTZ("Europe/Paris", "Romance Standard Time",
