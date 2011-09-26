@@ -65,14 +65,14 @@ class Win32Exception : Exception
 {
     int error;
 
-    this(string message)
+    this(string message, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(msg);
+        super(msg, fn, ln);
     }
 
-    this(string msg, int errnum)
+    this(string msg, int errnum, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(msg);
+        super(msg, fn, ln);
         error = errnum;
     }
 }
@@ -803,17 +803,17 @@ public:
     /// \brief Creates an instance of the exception
     ///
     /// \param message The message associated with the exception
-    this(string message)
+    this(string message, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(message);
+        super(message, fn, ln);
     }
     /// \brief Creates an instance of the exception, with the given
     ///
     /// \param message The message associated with the exception
     /// \param error The Win32 error number associated with the exception
-    this(string message, int error)
+    this(string message, int error, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(message, error);
+        super(message, error, fn, ln);
     }
 //@}
 }
