@@ -269,7 +269,7 @@ body
  * - removing the reserved arguments.
  */
 
-private LONG Reg_CloseKey_(in HKEY hkey)
+private LONG regCloseKey(in HKEY hkey)
 in
 {
     assert(!(null is hkey));
@@ -304,7 +304,7 @@ body
     return RegCloseKey(hkey);
 }
 
-private LONG Reg_FlushKey_(in HKEY hkey)
+private LONG regFlushKey(in HKEY hkey)
 in
 {
     assert(!(null is hkey));
@@ -314,7 +314,7 @@ body
     return RegFlushKey(hkey);
 }
 
-private LONG Reg_CreateKeyExA_(     in HKEY hkey, in string subKey
+private LONG regCreateKey(     in HKEY hkey, in string subKey
                                 ,   in DWORD dwOptions, in REGSAM samDesired
                                 ,   in LPSECURITY_ATTRIBUTES lpsa
                                 ,   out HKEY hkeyResult, out DWORD disposition)
@@ -330,7 +330,7 @@ body
                         ,   &disposition);
 }
 
-private LONG Reg_DeleteKeyA_(in HKEY hkey, in string subKey, in REGSAM samDesired)
+private LONG regDeleteKey(in HKEY hkey, in string subKey, in REGSAM samDesired)
 in
 {
     assert(!(null is hkey));
@@ -357,7 +357,7 @@ body
     return RegDeleteKeyA(hkey, toMBSz(subKey));
 }
 
-private LONG Reg_DeleteValueA_(in HKEY hkey, in string valueName)
+private LONG regDeleteValue(in HKEY hkey, in string valueName)
 in
 {
     assert(!(null is hkey));
@@ -368,7 +368,7 @@ body
     return RegDeleteValueA(hkey, toMBSz(valueName));
 }
 
-private HKEY Reg_Dup_(HKEY hkey)
+private HKEY regDup(HKEY hkey)
 in
 {
     assert(!(null is hkey));
@@ -403,7 +403,7 @@ body
     {
         if(ERROR_SUCCESS != lRes)
         {
-            printf("Reg_Dup_() failed: 0x%08x 0x%08x %d\n", hkey, hkeyDup, lRes);
+            printf("regDup() failed: 0x%08x 0x%08x %d\n", hkey, hkeyDup, lRes);
         }
 
         assert(ERROR_SUCCESS == lRes);
@@ -412,7 +412,7 @@ body
     return (ERROR_SUCCESS == lRes) ? hkeyDup : null;
 }
 
-private LONG Reg_EnumKeyName_(  in HKEY hkey, in DWORD index, ref char [] name
+private LONG regEnumKeyName(  in HKEY hkey, in DWORD index, ref char [] name
                             ,   out DWORD cchName)
 in
 {
@@ -448,7 +448,7 @@ body
 }
 
 
-private LONG Reg_EnumValueName_(in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
+private LONG regEnumValueName(in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
                             ,   ref DWORD cchName)
 in
 {
@@ -459,7 +459,7 @@ body
     return RegEnumValueA(hkey, dwIndex, cast(LPSTR) lpName, &cchName, null, null, null, null);
 }
 
-private LONG Reg_GetNumSubKeys_(in HKEY hkey, out DWORD cSubKeys
+private LONG regGetNumSubKeys(in HKEY hkey, out DWORD cSubKeys
                             ,   out DWORD cchSubKeyMaxLen)
 in
 {
@@ -471,7 +471,7 @@ body
                         ,   &cchSubKeyMaxLen, null, null, null, null, null, null);
 }
 
-private LONG Reg_GetNumValues_( in HKEY hkey, out DWORD cValues
+private LONG regGetNumValues( in HKEY hkey, out DWORD cValues
                             ,   out DWORD cchValueMaxLen)
 in
 {
@@ -483,7 +483,7 @@ body
                         ,   &cValues, &cchValueMaxLen, null, null, null);
 }
 
-private LONG Reg_GetValueType_( in HKEY hkey, in string name
+private LONG regGetValueType( in HKEY hkey, in string name
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -503,7 +503,7 @@ body
     return res;
 }
 
-private LONG Reg_OpenKeyExA_(   in HKEY hkey, in string subKey
+private LONG regOpenKey(   in HKEY hkey, in string subKey
                             ,   in REGSAM samDesired, out HKEY hkeyResult)
 in
 {
@@ -515,7 +515,7 @@ body
     return RegOpenKeyExA(hkey, toMBSz(subKey), 0, compatibleRegsam(samDesired), &hkeyResult);
 }
 
-private void Reg_QueryValue_(   in HKEY hkey, string name, out string value
+private void regQueryValue(   in HKEY hkey, string name, out string value
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -587,7 +587,7 @@ version(BigEndian)
     }
 }
 
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out string[] value
+private void regQueryValue(   in HKEY hkey, in string name, out string[] value
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -654,7 +654,7 @@ body
     }
 }
 
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out uint value
+private void regQueryValue(   in HKEY hkey, in string name, out uint value
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -697,7 +697,7 @@ version(BigEndian)
     }
 }
 
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out ulong value
+private void regQueryValue(   in HKEY hkey, in string name, out ulong value
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -726,7 +726,7 @@ body
     }
 }
 
-private void Reg_QueryValue_(   in HKEY hkey, in string name, out byte[] value
+private void regQueryValue(   in HKEY hkey, in string name, out byte[] value
                             ,   out REG_VALUE_TYPE type)
 in
 {
@@ -765,7 +765,7 @@ body
     }
 }
 
-private void Reg_SetValueExA_(  in HKEY hkey, in string subKey
+private void regSetValue(  in HKEY hkey, in string subKey
                             ,   in REG_VALUE_TYPE type, in LPCVOID lpData
                             ,   in DWORD cbData)
 in
@@ -884,7 +884,7 @@ private:
 
     ~this()
     {
-        Reg_CloseKey_(m_hkey);
+        regCloseKey(m_hkey);
 
         // Even though this is horried waste-of-cycles programming
         // we're doing it here so that the
@@ -913,7 +913,7 @@ public:
     {
         uint    cSubKeys;
         uint    cchSubKeyMaxLen;
-        LONG    res =   Reg_GetNumSubKeys_(m_hkey, cSubKeys, cchSubKeyMaxLen);
+        LONG    res =   regGetNumSubKeys(m_hkey, cSubKeys, cchSubKeyMaxLen);
 
         if(ERROR_SUCCESS != res)
         {
@@ -940,7 +940,7 @@ public:
     {
         uint    cValues;
         uint    cchValueMaxLen;
-        LONG    res =   Reg_GetNumValues_(m_hkey, cValues, cchValueMaxLen);
+        LONG    res =   regGetNumValues(m_hkey, cValues, cchValueMaxLen);
 
         if(ERROR_SUCCESS != res)
         {
@@ -982,7 +982,7 @@ public:
         {
             HKEY    hkey;
             DWORD   disposition;
-            LONG    lRes    =   Reg_CreateKeyExA_(  m_hkey, name, 0
+            LONG    lRes    =   regCreateKey(  m_hkey, name, 0
                                                 ,   access
                                                 ,   null, hkey, disposition);
 
@@ -1010,7 +1010,7 @@ public:
             {
                 if(hkey != null)
                 {
-                    Reg_CloseKey_(hkey);
+                    regCloseKey(hkey);
                 }
             }
         }
@@ -1027,12 +1027,12 @@ public:
         if( null is name ||
             0 == name.length)
         {
-            return new Key(Reg_Dup_(m_hkey), m_name, false);
+            return new Key(regDup(m_hkey), m_name, false);
         }
         else
         {
             HKEY    hkey;
-            LONG    lRes    =   Reg_OpenKeyExA_(m_hkey, name, access, hkey);
+            LONG    lRes    =   regOpenKey(m_hkey, name, access, hkey);
 
             if(ERROR_SUCCESS != lRes)
             {
@@ -1058,7 +1058,7 @@ public:
             {
                 if(hkey != null)
                 {
-                    Reg_CloseKey_(hkey);
+                    regCloseKey(hkey);
                 }
             }
         }
@@ -1076,7 +1076,7 @@ public:
         }
         else
         {
-            LONG    res =   Reg_DeleteKeyA_(m_hkey, name, access);
+            LONG    res =   regDeleteKey(m_hkey, name, access);
 
             if(ERROR_SUCCESS != res)
             {
@@ -1092,7 +1092,7 @@ public:
     Value getValue(string name)
     {
         REG_VALUE_TYPE  type;
-        LONG            res =   Reg_GetValueType_(m_hkey, name, type);
+        LONG            res =   regGetValueType(m_hkey, name, type);
 
         if(ERROR_SUCCESS == res)
         {
@@ -1127,7 +1127,7 @@ public:
         assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
                 type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
 
-        Reg_SetValueExA_(m_hkey, name, type, &value, value.sizeof);
+        regSetValue(m_hkey, name, type, &value, value.sizeof);
     }
 
     /// Sets the named value with the given 64-bit unsigned integer value
@@ -1137,7 +1137,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, ulong value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
+        regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
     }
 
     /// Sets the named value with the given string value
@@ -1158,7 +1158,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, string value, bool asEXPAND_SZ)
     {
-        Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
+        regSetValue(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
                                             : REG_VALUE_TYPE.REG_SZ, value.ptr
                         , to!DWORD(value.length));
@@ -1193,7 +1193,7 @@ public:
         }
 
 
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, result.ptr, result.length);
+        regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, result.ptr, result.length);
     }
 
     /// Sets the named value with the given binary value
@@ -1203,7 +1203,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, to!DWORD(value.length));
+        regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, to!DWORD(value.length));
     }
 
     /// Deletes the named value
@@ -1212,7 +1212,7 @@ public:
     /// \note If a value of the requested name is not found, a RegistryException is thrown
     void deleteValue(string name)
     {
-        LONG    res =   Reg_DeleteValueA_(m_hkey, name);
+        LONG    res =   regDeleteValue(m_hkey, name);
 
         if(ERROR_SUCCESS != res)
         {
@@ -1224,7 +1224,7 @@ public:
     ///
     void flush()
     {
-        LONG    res =   Reg_FlushKey_(m_hkey);
+        LONG    res =   regFlushKey(m_hkey);
 
         if(ERROR_SUCCESS != res)
         {
@@ -1296,7 +1296,7 @@ public:
         REG_VALUE_TYPE  type;
         string          value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        regQueryValue(m_key.m_hkey, m_name, value, type);
 
         if(type != m_type)
         {
@@ -1343,7 +1343,7 @@ public:
         REG_VALUE_TYPE  type;
         string[]        value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        regQueryValue(m_key.m_hkey, m_name, value, type);
 
         if(type != m_type)
         {
@@ -1362,7 +1362,7 @@ public:
         REG_VALUE_TYPE  type;
         uint            value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        regQueryValue(m_key.m_hkey, m_name, value, type);
 
         if(type != m_type)
         {
@@ -1391,7 +1391,7 @@ public:
         REG_VALUE_TYPE  type;
         ulong           value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        regQueryValue(m_key.m_hkey, m_name, value, type);
 
         if(type != m_type)
         {
@@ -1415,7 +1415,7 @@ public:
         REG_VALUE_TYPE  type;
         byte[]          value;
 
-        Reg_QueryValue_(m_key.m_hkey, m_name, value, type);
+        regQueryValue(m_key.m_hkey, m_name, value, type);
 
         if(type != m_type)
         {
@@ -1447,19 +1447,19 @@ public class Registry
 private:
     shared static this()
     {
-        sm_keyClassesRoot       = new Key(  Reg_Dup_(HKEY_CLASSES_ROOT)
+        sm_keyClassesRoot       = new Key(  regDup(HKEY_CLASSES_ROOT)
                                         ,   "HKEY_CLASSES_ROOT", false);
-        sm_keyCurrentUser       = new Key(  Reg_Dup_(HKEY_CURRENT_USER)
+        sm_keyCurrentUser       = new Key(  regDup(HKEY_CURRENT_USER)
                                         ,   "HKEY_CURRENT_USER", false);
-        sm_keyLocalMachine      = new Key(  Reg_Dup_(HKEY_LOCAL_MACHINE)
+        sm_keyLocalMachine      = new Key(  regDup(HKEY_LOCAL_MACHINE)
                                         ,   "HKEY_LOCAL_MACHINE", false);
-        sm_keyUsers             = new Key(  Reg_Dup_(HKEY_USERS)
+        sm_keyUsers             = new Key(  regDup(HKEY_USERS)
                                         ,   "HKEY_USERS", false);
-        sm_keyPerformanceData   = new Key(  Reg_Dup_(HKEY_PERFORMANCE_DATA)
+        sm_keyPerformanceData   = new Key(  regDup(HKEY_PERFORMANCE_DATA)
                                         ,   "HKEY_PERFORMANCE_DATA", false);
-        sm_keyCurrentConfig     = new Key(  Reg_Dup_(HKEY_CURRENT_CONFIG)
+        sm_keyCurrentConfig     = new Key(  regDup(HKEY_CURRENT_CONFIG)
                                         ,   "HKEY_CURRENT_CONFIG", false);
-        sm_keyDynData           = new Key(  Reg_Dup_(HKEY_DYN_DATA)
+        sm_keyDynData           = new Key(  regDup(HKEY_DYN_DATA)
                                         ,   "HKEY_DYN_DATA", false);
     }
 
@@ -1551,13 +1551,13 @@ public:
         DWORD   cSubKeys;
         DWORD   cchSubKeyMaxLen;
         HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
+        LONG    res     =   regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
         char[]  sName   =   new char[1 + cchSubKeyMaxLen];
         DWORD   cchName;
 
         assert(ERROR_SUCCESS == res);
 
-        res = Reg_EnumKeyName_(hkey, index, sName, cchName);
+        res = regEnumKeyName(hkey, index, sName, cchName);
 
         assert(ERROR_MORE_DATA != res);
 
@@ -1587,7 +1587,7 @@ public:
         HKEY    hkey    =   m_key.m_hkey;
         DWORD   cSubKeys;
         DWORD   cchSubKeyMaxLen;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
+        LONG    res     =   regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
         char[]  sName   =   new char[1 + cchSubKeyMaxLen];
 
         assert(ERROR_SUCCESS == res);
@@ -1596,7 +1596,7 @@ public:
         {
             DWORD   cchName;
 
-            res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
+            res =   regEnumKeyName(hkey, index, sName, cchName);
             assert(ERROR_MORE_DATA != res);
 
             if(ERROR_NO_MORE_ITEMS == res)
@@ -1682,13 +1682,13 @@ public:
         DWORD   cSubKeys;
         DWORD   cchSubKeyMaxLen;
         HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
+        LONG    res     =   regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
         char[]  sName   =   new char[1 + cchSubKeyMaxLen];
         DWORD   cchName;
 
         assert(ERROR_SUCCESS == res);
 
-        res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
+        res =   regEnumKeyName(hkey, index, sName, cchName);
 
         assert(ERROR_MORE_DATA != res);
 
@@ -1718,7 +1718,7 @@ public:
         HKEY        hkey    =   m_key.m_hkey;
         DWORD       cSubKeys;
         DWORD       cchSubKeyMaxLen;
-        LONG        res     =   Reg_GetNumSubKeys_(hkey, cSubKeys, cchSubKeyMaxLen);
+        LONG        res     =   regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
         char[]      sName   =   new char[1 + cchSubKeyMaxLen];
 
         assert(ERROR_SUCCESS == res);
@@ -1727,7 +1727,7 @@ public:
         {
             DWORD   cchName;
 
-            res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
+            res     =   regEnumKeyName(hkey, index, sName, cchName);
             assert(ERROR_MORE_DATA != res);
 
             if(ERROR_NO_MORE_ITEMS == res)
@@ -1826,13 +1826,13 @@ public:
         DWORD   cValues;
         DWORD   cchValueMaxLen;
         HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
+        LONG    res     =   regGetNumValues(hkey, cValues, cchValueMaxLen);
         char[]  sName   =   new char[1 + cchValueMaxLen];
         DWORD   cchName =   1 + cchValueMaxLen;
 
         assert(ERROR_SUCCESS == res);
 
-        res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+        res = regEnumValueName(hkey, index, sName.ptr, cchName);
 
         if(ERROR_SUCCESS != res)
         {
@@ -1860,7 +1860,7 @@ public:
         HKEY    hkey    =   m_key.m_hkey;
         DWORD   cValues;
         DWORD   cchValueMaxLen;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
+        LONG    res     =   regGetNumValues(hkey, cValues, cchValueMaxLen);
         char[]  sName   =   new char[1 + cchValueMaxLen];
 
         assert(ERROR_SUCCESS == res);
@@ -1869,7 +1869,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+            res = regEnumValueName(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete
@@ -1951,13 +1951,13 @@ public:
         DWORD   cValues;
         DWORD   cchValueMaxLen;
         HKEY    hkey    =   m_key.m_hkey;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
+        LONG    res     =   regGetNumValues(hkey, cValues, cchValueMaxLen);
         char[]  sName   =   new char[1 + cchValueMaxLen];
         DWORD   cchName =   1 + cchValueMaxLen;
 
         assert(ERROR_SUCCESS == res);
 
-        res     =   Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+        res     =   regEnumValueName(hkey, index, sName.ptr, cchName);
 
         if(ERROR_SUCCESS != res)
         {
@@ -1985,7 +1985,7 @@ public:
         HKEY    hkey    =   m_key.m_hkey;
         DWORD   cValues;
         DWORD   cchValueMaxLen;
-        LONG    res     =   Reg_GetNumValues_(hkey, cValues, cchValueMaxLen);
+        LONG    res     =   regGetNumValues(hkey, cValues, cchValueMaxLen);
         char[]  sName   =   new char[1 + cchValueMaxLen];
 
         assert(ERROR_SUCCESS == res);
@@ -1994,7 +1994,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+            res = regEnumValueName(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete
