@@ -1411,7 +1411,9 @@ S[] splitLines(S)(S s)
         }
     }
 
-    if(iStart != nextI)
+    if(iStart == nextI)
+        retval.put(S.init);
+    else
         retval.put(s[iStart .. $]);
 
     return retval.data;
@@ -1426,7 +1428,7 @@ unittest
         auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
 
         auto lines = splitLines(s);
-        assert(lines.length == 9);
+        assert(lines.length == 10);
         assert(lines[0] == "");
         assert(lines[1] == "peter");
         assert(lines[2] == "");
@@ -1436,6 +1438,7 @@ unittest
         assert(lines[6] == "cream");
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
+        assert(lines[9] == "");
 
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
