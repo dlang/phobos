@@ -1385,9 +1385,12 @@ S[] splitlines(S)(S s)
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    The delimiter is not included in the strings returned.
+    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    is included in the strings returned.
   +/
-S[] splitLines(S)(S s)
+enum KeepTerminator : bool { no, yes }
+/// ditto
+S[] splitLines(S)(S s, KeepTerminator keepTerm=KeepTerminator.no)
     if(isSomeString!S)
 {
     size_t iStart = 0;
@@ -1400,10 +1403,20 @@ S[] splitLines(S)(S s)
 
         if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            retval.put(s[iStart .. i]);
+            auto isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
+            auto iEnd = i;
+            
+            if(keepTerm == KeepTerminator.yes)
+            {
+                iEnd = nextI;
+                if(isWinEOL)
+                    ++iEnd;
+            }
+            
+            retval.put(s[iStart .. iEnd]);
             iStart = nextI;
 
-            if(c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            if(isWinEOL)
             {
                 ++nextI;
                 ++iStart;
@@ -1437,8 +1450,24 @@ unittest
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
 
+        lines = splitLines(s, KeepTerminator.yes);
+        assert(lines.length == 9);
+        assert(lines[0] == "\r");
+        assert(lines[1] == "peter\n");
+        assert(lines[2] == "\r");
+        assert(lines[3] == "paul\r\n");
+        assert(lines[4] == "jerry\u2028");
+        assert(lines[5] == "ice\u2029");
+        assert(lines[6] == "cream\n");
+        assert(lines[7] == "\n");
+        assert(lines[8] == "sunday\n");
+
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[8] == "sunday");
+
+        lines = splitLines(s, KeepTerminator.yes);
         assert(lines.length == 9);
         assert(lines[8] == "sunday");
     }
