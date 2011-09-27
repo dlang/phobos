@@ -33,28 +33,38 @@ import std.metastrings;
  */
 class ConvException : Exception
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super(s);
+        super(s, fn, ln);
     }
 }
 
 deprecated alias ConvException ConvError;   /// ditto
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
+private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" to type "~T.stringof));
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" to type "~T.stringof), fn, ln);
 }
 
-private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, int radix)
+private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    throw new ConvException(cast(string)
-            ("std.conv("~to!string(ln)
-                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
-                    ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
+    throw new ConvException(
+        text("Can't convert value `", source,
+             "' of type "~S.stringof~" base ", radix, " to type "~T.stringof), fn, ln);
+}
+
+private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
+{
+    throw new ConvException(text("Can't parse string: ", msg), fn, ln);
+}
+
+private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln = __LINE__)
+{
+    if (source.front != c)
+        parseError(text("\"", c, "\" is missing"), fn, ln);
+    source.popFront();
 }
 
 private
@@ -81,15 +91,9 @@ private
  */
 class ConvOverflowException : ConvException
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super("Error: overflow " ~ s);
-    }
-    // @@@BUG@@@ Issue 3269
-    // pure
-    static void raise(string s)
-    {
-        throw new ConvOverflowException(s);
+        super(s, fn, ln);
     }
 }
 
@@ -540,9 +544,45 @@ non-null and the target is null.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object) && !is(typeof(new T(value))))
+        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
+    static if (is(T == immutable))
+    {
+            // immutable <- immutable
+            enum isModConvertible = is(S == immutable);
+    }
+    else static if (is(T == const))
+    {
+        static if (is(T == shared))
+        {
+            // shared const <- shared
+            // shared const <- shared const
+            // shared const <- immutable
+            enum isModConvertible = is(S == shared) || is(S == immutable);
+        }
+        else
+        {
+            // const <- mutable
+            // const <- immutable
+            enum isModConvertible = !is(S == shared);
+        }
+    }
+    else
+    {
+        static if (is(T == shared))
+        {
+            // shared <- shared mutable
+            enum isModConvertible = is(S == shared) && !is(S == const);
+        }
+        else
+        {
+            // (mutable) <- (mutable)
+            enum isModConvertible = is(Unqual!S == S);
+        }
+    }
+    static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
+
     auto result = cast(T) value;
     if (!result && value)
     {
@@ -564,6 +604,74 @@ unittest
     assert(to!B(a2) is a2);
     assert(to!C(a3) is a3);
     assertThrown!ConvException(to!B(a3));
+}
+
+// Unittest for 6288
+version (unittest)
+{
+    private template Identity(T)        { alias              T   Identity; }
+    private template toConst(T)         { alias        const(T)  toConst; }
+    private template toShared(T)        { alias       shared(T)  toShared; }
+    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    private template AddModifier(int n) if (0 <= n && n < 5)
+    {
+             static if (n == 0) alias Identity       AddModifier;
+        else static if (n == 1) alias toConst        AddModifier;
+        else static if (n == 2) alias toShared       AddModifier;
+        else static if (n == 3) alias toSharedConst  AddModifier;
+        else static if (n == 4) alias toImmutable    AddModifier;
+    }
+}
+unittest
+{
+    interface I {}
+    interface J {}
+
+    class A {}
+    class B : A {}
+    class C : B, I, J {}
+    class D : I {}
+
+    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    {
+        alias AddModifier!m1 srcmod;
+        alias AddModifier!m2 tgtmod;
+        //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
+        //            isImplicitlyConvertible!(srcmod!Object, tgtmod!Object));
+
+        // Compile time convertible equals to modifier convertible.
+        static if (isImplicitlyConvertible!(srcmod!Object, tgtmod!Object))
+        {
+            // Test runtime conversions: class to class, class to interface,
+            // interface to class, and interface to interface
+
+            // Check that the runtime conversion to succeed
+            srcmod!A ac = new srcmod!C();
+            srcmod!I ic = new srcmod!C();
+            assert(to!(tgtmod!C)(ac) !is null); // A(c) to C
+            assert(to!(tgtmod!I)(ac) !is null); // A(c) to I
+            assert(to!(tgtmod!C)(ic) !is null); // I(c) to C
+            assert(to!(tgtmod!J)(ic) !is null); // I(c) to J
+
+            // Check that the runtime conversion fails
+            srcmod!A ab = new srcmod!B();
+            srcmod!I id = new srcmod!D();
+            assertThrown(to!(tgtmod!C)(ab));    // A(b) to C
+            assertThrown(to!(tgtmod!I)(ab));    // A(b) to I
+            assertThrown(to!(tgtmod!C)(id));    // I(d) to C
+            assertThrown(to!(tgtmod!J)(id));    // I(d) to J
+        }
+        else
+        {
+            // Check that the conversion is rejected statically
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!A.init))));   // A to C
+            static assert(!is(typeof(to!(tgtmod!I)(srcmod!A.init))));   // A to I
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
+            static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
+        }
+    }
 }
 
 /**
@@ -657,8 +765,7 @@ T toImpl(T, S)(S s)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -737,8 +844,7 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBra
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
 //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
@@ -766,8 +872,7 @@ T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T right
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
@@ -931,8 +1036,7 @@ T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
 
 version(none) unittest
 {
-    debug(conv) scope(success) writeln("unittest @",
-            __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
@@ -1332,13 +1436,13 @@ T toImpl(T, S)(S value)
             immutable good = value >= tSmallest;
         }
         if (!good)
-            ConvOverflowException.raise("Conversion negative overflow");
+            throw new ConvOverflowException("Conversion negative overflow");
     }
     static if (S.max > T.max)
     {
         // possible overflow
         if (value > T.max)
-            ConvOverflowException.raise("Conversion positive overflow");
+            throw new ConvOverflowException("Conversion positive overflow");
     }
     return cast(T) value;
 }
@@ -1722,7 +1826,8 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) && isIntegral!Target)
+    if (isSomeChar!(ElementType!Source) &&
+        isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1797,7 +1902,7 @@ Target parse(Target, Source)(ref Source s)
     }
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s);
     assert(0);
@@ -1805,8 +1910,7 @@ Lerr:
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
@@ -1989,13 +2093,17 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeString!Source && isIntegral!Target)
+    if (isSomeString!Source &&
+        isIntegral!Target)
 in
 {
     assert(radix >= 2 && radix <= 36);
 }
 body
 {
+    if (radix == 10)
+        return parse!Target(s);
+
     immutable length = s.length;
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
@@ -2033,7 +2141,7 @@ body
     return v;
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
     assert(0);
@@ -2068,10 +2176,15 @@ unittest
         assert(parse!int(s, 8) == octal!765);
     s = "fCDe";
         assert(parse!int(s, 16) == 0xfcde);
+
+    // 6609
+    s = "-42";
+    assert(parse!int(s, 10) == -42);
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == enum))
+    if (isSomeString!Source &&
+        is(Target == enum))
 {
     // TODO: BUG4744
     foreach (i, e; EnumMembers!Target)
@@ -2117,7 +2230,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2128,12 +2242,12 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
+    ConvException bailOut(string fn = __FILE__, size_t ln = __LINE__)
         (string msg = null)
     {
         if (!msg)
             msg = "Floating point conversion error";
-        return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
+        return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
     for (;;)
@@ -2149,6 +2263,7 @@ Target parse(Target, Source)(ref Source p)
     case '-':
         sign++;
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'i')
             goto case 'i';
         enforce(!p.empty, bailOut());
@@ -2159,8 +2274,9 @@ Target parse(Target, Source)(ref Source p)
         break;
     case 'i': case 'I':
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'n' &&
-                (p.popFront(), std.ascii.toLower(p.front) == 'f') &&
+                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'
@@ -2233,6 +2349,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {       p.popFront();
@@ -2342,6 +2465,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {
@@ -2556,6 +2686,20 @@ unittest
     assert(to!float("-inf") == -float.infinity);
 }
 
+// Unittest for bug 6160
+unittest
+{
+    assert(1000_000_000e50L == to!real("1000_000_000_e50"));        // 1e59
+    assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
+}
+
+// Unittest for bug 6258
+unittest
+{
+    assertThrown!ConvException(to!real("-"));
+    assertThrown!ConvException(to!real("in"));
+}
+
 /**
 Parsing one character off a string returns the character and bumps the
 string up one position.
@@ -2607,7 +2751,8 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Unqual!Target == bool))
+    if (isSomeString!Source &&
+        is(Unqual!Target == bool))
 {
     if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
     {
@@ -2619,7 +2764,7 @@ Target parse(Target, Source)(ref Source s)
         s = s[5 .. $];
         return false;
     }
-    convError!(Source, Target)(s);
+    parseError("bool should be case-insensive 'true' or 'false'");
     assert(0);
 }
 
@@ -2654,7 +2799,8 @@ unittest
 
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && is(Target == typedef))
+    if (isSomeString!Source &&
+        is(Target == typedef))
 {
     static if (is(Target T == typedef))
         return cast(Target) parse!T(s);
@@ -2673,13 +2819,12 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source && isDynamicArray!Target && !isSomeString!Target)
+    if (isSomeString!Source &&
+        isDynamicArray!Target)
 {
     Target result;
-    skipWS(s);
-    if (s.front != lbracket)
-        return result;
-    s.popFront();
+
+    parseCheck!s(lbracket);
     skipWS(s);
     if (s.front == rbracket)
     {
@@ -2688,15 +2833,13 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     }
     for (;; s.popFront(), skipWS(s))
     {
-        result ~= parse!(ElementType!Target)(s);
+        result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
         if (s.front != comma)
             break;
     }
-    if (s.front == rbracket)
-    {
-        s.popFront();
-    }
+    parseCheck!s(rbracket);
+
     return result;
 }
 
@@ -2733,6 +2876,255 @@ unittest
     ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
 }
+
+unittest
+{
+    auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
+    auto a1 = parse!(string[])(s1);
+    assert(a1 == ["hello", "world"]);
+
+    auto s2 = `["aaa", "bbb", "ccc"]`;
+    auto a2 = parse!(string[])(s2);
+    assert(a2 == ["aaa", "bbb", "ccc"]);
+}
+
+/// ditto
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
+    if (isSomeString!Source &&
+        isStaticArray!Target)
+{
+    Target result = void;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        static if (result.length != 0)
+            goto Lmanyerr;
+        else
+        {
+            s.popFront();
+            return result;
+        }
+    }
+    for (size_t i = 0; ; s.popFront(), skipWS(s))
+    {
+        if (i == result.length)
+            goto Lmanyerr;
+        result[i++] = parseElement!(ElementType!Target)(s);
+        skipWS(s);
+        if (s.front != comma)
+        {
+            if (i != result.length)
+                goto Lfewerr;
+            break;
+        }
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+
+Lmanyerr:
+    parseError(text("Too many elements in input, ", result.length, " elements expected."));
+    assert(0);
+
+Lfewerr:
+    parseError(text("Too few elements in input, ", result.length, " elements expected."));
+    assert(0);
+}
+
+unittest
+{
+    auto s1 = "[1,2,3,4]";
+    auto sa1 = parse!(int[4])(s1);
+    assert(sa1 == [1,2,3,4]);
+
+    auto s2 = "[[1],[2,3],[4]]";
+    auto sa2 = parse!(int[][3])(s2);
+    assert(sa2 == [[1],[2,3],[4]]);
+
+    auto s3 = "[1,2,3]";
+    assertThrown!ConvException(parse!(int[4])(s3));
+
+    auto s4 = "[1,2,3,4,5]";
+    assertThrown!ConvException(parse!(int[4])(s4));
+}
+
+/**
+ * Parses an associative array from a string given the left bracket (default $(D
+ * '[')), right bracket (default $(D ']')), key-value separator (default $(D
+ * ':')), and element seprator (by default $(D ',')).
+ */
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+    if (isSomeString!Source &&
+        isAssociativeArray!Target)
+{
+    alias typeof(Target.keys[0]) KeyType;
+    alias typeof(Target.values[0]) ValueType;
+
+    Target result;
+
+    parseCheck!s(lbracket);
+    skipWS(s);
+    if (s.front == rbracket)
+    {
+        s.popFront();
+        return result;
+    }
+    for (;; s.popFront(), skipWS(s))
+    {
+        auto key = parseElement!KeyType(s);
+        skipWS(s);
+        parseCheck!s(keyval);
+        skipWS(s);
+        auto val = parseElement!ValueType(s);
+        skipWS(s);
+        result[key] = val;
+        if (s.front != comma) break;
+    }
+    parseCheck!s(rbracket);
+
+    return result;
+}
+
+unittest
+{
+    auto s1 = "[1:10, 2:20, 3:30]";
+    auto aa1 = parse!(int[int])(s1);
+    assert(aa1 == [1:10, 2:20, 3:30]);
+
+    auto s2 = `["aaa":10, "bbb":20, "ccc":30]`;
+    auto aa2 = parse!(int[string])(s2);
+    assert(aa2 == ["aaa":10, "bbb":20, "ccc":30]);
+
+    auto s3 = `["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]`;
+    auto aa3 = parse!(int[][string])(s3);
+    assert(aa3 == ["aaa":[1], "bbb":[2,3], "ccc":[4,5,6]]);
+}
+
+private dchar parseEscape(Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+{
+    parseCheck!s('\\');
+
+    dchar getHexDigit()
+    {
+        s.popFront();
+        if (s.empty)
+            parseError("Unterminated escape sequence");
+        dchar c = s.front;
+        if (!isHexDigit(c))
+            parseError("Hex digit is missing");
+        return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
+    }
+
+    dchar result;
+
+    switch (s.front)
+    {
+        case 'a':   result = '\a';  break;
+        case 'b':   result = '\b';  break;
+        case 'f':   result = '\f';  break;
+        case 'n':   result = '\n';  break;
+        case 'r':   result = '\r';  break;
+        case 't':   result = '\t';  break;
+        case 'v':   result = '\v';  break;
+        case 'x':
+            result  = getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'u':
+            result  = getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        case 'U':
+            result  = getHexDigit() << 28;
+            result |= getHexDigit() << 24;
+            result |= getHexDigit() << 20;
+            result |= getHexDigit() << 16;
+            result |= getHexDigit() << 12;
+            result |= getHexDigit() << 8;
+            result |= getHexDigit() << 4;
+            result |= getHexDigit();
+            break;
+        default:
+            parseError("Unknown escape character " ~ to!string(s.front));
+            break;
+    }
+
+    s.popFront();
+
+    return result;
+}
+
+// Undocumented
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeString!Target)
+{
+    auto result = appender!Target();
+
+    // parse array of chars
+    if (s.front == '[')
+        return parse!Target(s);
+
+    parseCheck!s('\"');
+    if (s.front == '\"')
+    {
+        s.popFront();
+        return result.data;
+    }
+    while (true)
+    {
+        if (s.empty)
+            parseError("Unterminated quoted string");
+        switch (s.front)
+        {
+            case '\"':
+                s.popFront();
+                return result.data;
+            case '\\':
+                result.put(parseEscape(s));
+                break;
+            default:
+                result.put(s.front());
+                s.popFront();
+                break;
+        }
+    }
+    assert(0);
+}
+
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target)
+{
+    Target c;
+
+    parseCheck!s('\'');
+    if (s.front != '\\')
+    {
+        c = s.front;
+        s.popFront();
+    }
+    else
+        c = parseEscape(s);
+    parseCheck!s('\'');
+
+    return c;
+}
+
+// ditto
+Target parseElement(Target, Source)(ref Source s)
+    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        !isSomeString!Target && !isSomeChar!Target)
+{
+    return parse!Target(s);
+}
+
 
 /***************************************************************
    Convenience functions for converting any number and types of
@@ -2831,7 +3223,8 @@ ulong octal(string num)()
 }
 
 /// Ditto
-template octal(alias s) if (isIntegral!(typeof(s)))
+template octal(alias s)
+    if (isIntegral!(typeof(s)))
 {
     enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
@@ -3041,6 +3434,14 @@ T* emplace(T)(T* chunk)
     memcpy(result, &i, T.sizeof);
     return result;
 }
+///ditto
+T* emplace(T)(T* chunk)
+    if (is(T == class))
+{
+    *chunk = null;
+    return chunk;
+}
+
 
 /**
 Given a pointer $(D chunk) to uninitialized memory (but already typed
@@ -3054,7 +3455,7 @@ Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
 T* emplace(T, Args...)(T* chunk, Args args)
-    if (!is(T == class) && !is(T == struct) && Args.length == 1)
+    if (!is(T == struct) && Args.length == 1)
 {
     *chunk = args[0];
     return chunk;
@@ -3233,6 +3634,26 @@ unittest
     Foo foo;
     emplace!Foo(&foo, 2U);
     assert(foo.num == 2);
+}
+
+unittest
+{
+    interface I {}
+    class K : I {}
+
+    K k = void;
+    emplace!K(&k);
+    assert(k is null);
+    K k2 = new K;
+    assert(k2 !is null);
+    emplace!K(&k, k2);
+    assert(k is k2);
+
+    I i = void;
+    emplace!I(&i);
+    assert(i is null);
+    emplace!I(&i, k);
+    assert(i is k);
 }
 
 // Undocumented for the time being

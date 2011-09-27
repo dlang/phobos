@@ -1,8 +1,6 @@
 // Written in the D programming language.
 
 /**
- * Boilerplate:
- *      $(std_boilerplate.html)
  * Macros:
  *      WIKI = Phobos/StdOutbuffer
  *

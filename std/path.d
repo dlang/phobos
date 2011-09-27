@@ -2135,7 +2135,7 @@ body
 {
 	size_t ni; // current character in path
 
-    foreach (pi; 0 .. pattern.length)
+    foreach (ref pi; 0 .. pattern.length)
     {
         C pc = pattern[pi];
         switch (pc)
@@ -2236,7 +2236,7 @@ body
                 break;
 	    }
 	}
-    assert(ni >= path.length);
+    assert(ni <= path.length);
 	return ni == path.length;
 }
 
@@ -2262,6 +2262,7 @@ unittest
     assert(!globMatch("foo.bar", "[gh]???bar"));
     assert(!globMatch("foo.bar"w, "[!fg]*bar"w));
     assert(!globMatch("foo.bar"d, "[fg]???baz"d));
+    assert(!globMatch("foo.di", "*.d")); // test issue 6634: triggered bad assertion
 
     assert(globMatch("foo.bar", "{foo,bif}.bar"));
     assert(globMatch("bif.bar"w, "{foo,bif}.bar"w));
@@ -3966,8 +3967,8 @@ body
                 break;
             }
         }
-    assert(ni >= filename.length);
-        return ni == filename.length;
+    assert(ni <= filename.length);
+    return ni == filename.length;
 }
 
 version (OldStdPathUnittest) unittest
@@ -3995,6 +3996,7 @@ version (OldStdPathUnittest) unittest
     assert(!fnmatch("foo.bar", "[gh]???bar"));
     assert(!fnmatch("foo.bar", "[!fg]*bar"));
     assert(!fnmatch("foo.bar", "[fg]???baz"));
+    assert(!fnmatch("foo.di", "*.d")); // test issue 6634: triggered bad assertion
 
     assert(fnmatch("foo.bar", "{foo,bif}.bar"));
     assert(fnmatch("bif.bar", "{foo,bif}.bar"));
