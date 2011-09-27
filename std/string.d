@@ -3812,8 +3812,8 @@ unittest
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
  *
- * The indentation style must be consistent (except for whitespace-only lines)
- * or else this will throw a StringException.
+ * A StringException will be thrown if inconsistent indentation prevents
+ * the input from being outdented.
  * 
  * Works at compile-time.
  * 
@@ -3871,21 +3871,21 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
     }
     
     S shortestIndent;
-    bool foundPossibleShortest=false;
     foreach (i, line; lines)
     {
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
-        auto indent = stripped.empty? null : leadingWhiteOf(line);
         
         if (stripped.empty)
             lines[i] = null;
         else
         {
+            auto indent = leadingWhiteOf(line);
+            
             // Comparing number of code units instead of code points is OK here
             // because this function throws upon inconsistent indentation.
-            if (!foundPossibleShortest || indent.length < shortestIndent.length)
+            if (shortestIndent is null || indent.length < shortestIndent.length)
             {
-                foundPossibleShortest = true;
+                if (indent.empty) return lines;
                 shortestIndent = indent;
             }
         }
@@ -3903,8 +3903,8 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
         }
         else
         {
-            if (__ctfe) assert(false, "Inconsistent indentation");
-            else throw new StringException("Inconsistent indentation");
+            if (__ctfe) assert(false, "outdent: Inconsistent indentation");
+            else throw new StringException("outdent: Inconsistent indentation");
         }
     }
     
@@ -3984,7 +3984,11 @@ unittest
         assert(testStr1.outdent() == expected1);
         static assert(testStr1.outdent() == expected1);
 
-        enum S testStr2 =
+        enum S testStr2  = "a\n \t\nb";
+        assert(testStr2.outdent() == testStr2);
+        static assert(testStr2.outdent() == testStr2);
+
+        enum S testStr3 =
 "
  \t\tX
  \t\U00010143X
@@ -3993,7 +3997,7 @@ unittest
  \t\t\tX
 \t ";
 
-        enum S expected2 =
+        enum S expected3 =
 "
 \tX
 \U00010143X
@@ -4001,8 +4005,8 @@ unittest
 
 \t\tX
 ";
-        assert(testStr2.outdent() == expected2);
-        static assert(testStr2.outdent() == expected2);
+        assert(testStr3.outdent() == expected3);
+        static assert(testStr3.outdent() == expected3);
     }
 }
 
