@@ -3843,17 +3843,17 @@ unittest
 
 S outdent(S)(S str) if(isSomeString!S)
 {
-	bool hasTrailingEOL =
-		str.endsWith('\n') || str.endsWith('\r') ||
-	    str.endsWith(lineSep) || str.endsWith(paraSep);
-	
-	auto lines = str.splitLines().outdent();
-	S nl = "\n";
+    bool hasTrailingEOL =
+        str.endsWith('\n') || str.endsWith('\r') ||
+        str.endsWith(lineSep) || str.endsWith(paraSep);
+    
+    auto lines = str.splitLines().outdent();
+    S nl = "\n";
     str = lines.join(nl);
-	
-	// TODO: Remove this when BUG6735 is fixed
+    
+    // TODO: Remove this when BUG6735 is fixed
     if (hasTrailingEOL) str ~= '\n';
-	
+    
     return str;
 }
 
@@ -3870,25 +3870,25 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
         return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
     }
     
-	S shortestIndent;
-	bool foundPossibleShortest=false;
+    S shortestIndent;
+    bool foundPossibleShortest=false;
     foreach (i, line; lines)
     {
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
         auto indent = stripped.empty? null : leadingWhiteOf(line);
-		
-		if (stripped.empty)
-			lines[i] = null;
-		else
-		{
-			// Comparing number of code units instead of code points is OK here
-			// because this function throws upon inconsistent indentation.
-			if (!foundPossibleShortest || indent.length < shortestIndent.length)
-			{
-				foundPossibleShortest = true;
-				shortestIndent = indent;
-			}
-		}
+        
+        if (stripped.empty)
+            lines[i] = null;
+        else
+        {
+            // Comparing number of code units instead of code points is OK here
+            // because this function throws upon inconsistent indentation.
+            if (!foundPossibleShortest || indent.length < shortestIndent.length)
+            {
+                foundPossibleShortest = true;
+                shortestIndent = indent;
+            }
+        }
     }
     
     foreach (i; 0..lines.length)
@@ -3938,9 +3938,9 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
 
 version(unittest)
 {
-	template outdent_testStr(S)
-	{
-		enum S outdent_testStr =
+    template outdent_testStr(S)
+    {
+        enum S outdent_testStr =
 "
  \t\tX
  \t\U00010143X
@@ -3948,11 +3948,11 @@ version(unittest)
 
  \t\t\tX
 \t ";
-	}
+    }
 
-	template outdent_expected(S)
-	{
-		enum S outdent_expected =
+    template outdent_expected(S)
+    {
+        enum S outdent_expected =
 "
 \tX
 \U00010143X
@@ -3960,7 +3960,7 @@ version(unittest)
 
 \t\tX
 ";
-	}
+    }
 }
 
 unittest
@@ -3975,16 +3975,16 @@ unittest
     
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
-		enum S blank = "";
-		assert(blank.outdent() == blank);
-		static assert(blank.outdent() == blank);
+        enum S blank = "";
+        assert(blank.outdent() == blank);
+        static assert(blank.outdent() == blank);
 
-		enum S testStr1  = " \n \t\n ";
-		enum S expected1 = "\n\n";
-		assert(testStr1.outdent() == expected1);
-		static assert(testStr1.outdent() == expected1);
+        enum S testStr1  = " \n \t\n ";
+        enum S expected1 = "\n\n";
+        assert(testStr1.outdent() == expected1);
+        static assert(testStr1.outdent() == expected1);
 
-		enum S testStr2 =
+        enum S testStr2 =
 "
  \t\tX
  \t\U00010143X
@@ -3993,7 +3993,7 @@ unittest
  \t\t\tX
 \t ";
 
-		enum S expected2 =
+        enum S expected2 =
 "
 \tX
 \U00010143X
@@ -4001,9 +4001,9 @@ unittest
 
 \t\tX
 ";
-		assert(testStr2.outdent() == expected2);
-		static assert(testStr2.outdent() == expected2);
-	}
+        assert(testStr2.outdent() == expected2);
+        static assert(testStr2.outdent() == expected2);
+    }
 }
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
