@@ -2054,6 +2054,7 @@ unittest
     //synchronized(useWfuncs)
     {
         auto save_useWfuncs = useWfuncs;
+        scope(exit) useWfuncs = save_useWfuncs;
 
         foreach (loop; 0..2)
         {
@@ -2087,8 +2088,6 @@ unittest
                 }
             }
         }
-
-        useWfuncs = save_useWfuncs;
     }
 }
 
@@ -2100,6 +2099,7 @@ unittest
     //synchronized(useWfuncs)
     {
         auto save_useWfuncs = useWfuncs;
+        scope(exit) useWfuncs = save_useWfuncs;
 
         foreach (loop; 0..2)
         {
@@ -2168,7 +2168,5 @@ unittest
             unittestKey.deleteKey(cityKey.name);
             HKCU.deleteKey(unittestKeyName);
         }
-
-        useWfuncs = save_useWfuncs;
     }
 }
