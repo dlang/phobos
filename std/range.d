@@ -3946,13 +3946,12 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 if (step > 0)
                 {
                     this.pastLast = pastLast - 1;
-                    this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
                     this.pastLast = pastLast + 1;
-                    this.pastLast += (current - this.pastLast) % -step;
                 }
+                this.pastLast -= (this.pastLast - current) % step;
                 this.pastLast += step;
             }
             else
