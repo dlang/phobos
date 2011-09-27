@@ -3965,7 +3965,7 @@ version(unittest)
 
 unittest
 {
-    debug(string__) printf("string.outdent.unittest\n");
+    debug(string) printf("string.outdent.unittest\n");
     
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
