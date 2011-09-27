@@ -175,8 +175,7 @@ private immutable ubyte[256] utf8Stride =
 uint stride(in char[] str, size_t index) @safe pure
 {
     immutable result = utf8Stride[str[index]];
-    if (result == 0xFF)
-        throw new UTFException("Not the start of the UTF-8 sequence", index);
+    enforce(result != 0xFF, new UTFException("Not the start of the UTF-8 sequence", index));
     return result;
 }
 
@@ -309,8 +308,8 @@ uint stride(in wchar[] str, size_t index) @safe pure nothrow
   +/
 uint strideBack(in wchar[] str, size_t index) @safe pure
 {
-    if (index == 0 || (str[index-1] >= 0xD800 && str[index-1] <= 0xDBFF))
-        throw new UTFException("Not the end of the UTF-16 sequence", index);
+    enforce(index != 0 && (str[index-1] < 0xD800 || str[index-1] > 0xDBFF),
+            new UTFException("Not the end of the UTF-16 sequence", index));
     if (index <= 1)
         return 1;
     immutable c = str[index - 2];
@@ -560,8 +559,7 @@ out (result)
 }
 body
 {
-    if(index >= str.length)
-        throw new UTFException("Attempted to decode past the end of a string");
+    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
 
     immutable len = str.length;
     dchar V;
@@ -721,8 +719,7 @@ out (result)
 }
 body
 {
-    if(index >= str.length)
-        throw new UTFException("Attempted to decode past the end of a string");
+    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
 
     string msg;
     dchar V;
@@ -783,8 +780,7 @@ unittest
 /// ditto
 dchar decode(in dchar[] str, ref size_t index) @safe pure
 {
-    if(index >= str.length)
-        throw new UTFException("Attempted to decode past the end of a string");
+    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
 
     size_t i = index;
     dchar c = str[i];
