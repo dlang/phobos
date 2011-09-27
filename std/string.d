@@ -3817,6 +3817,8 @@ unittest
  * 
  * Works at compile-time.
  * 
+ * This currently has a side-effect of replacing all line endings with "\n".
+ * 
  * Example:
  * ---
  * writeln(q{
@@ -3839,24 +3841,24 @@ unittest
  * 
  */
 
-S outdent(S)(S str) if(isSomeString!(Unqual!S))
+S outdent(S)(S str) if(isSomeString!S)
 {
-    alias immutable(ElementEncodingType!S)[] SplitArgType;
-    
-    if (str.empty)
-    {
-        return to!S("");
-    }
-    
-    S nl = to!S("\n");
-    // split seems limited in what it can accept
-    S[] lines = to!(S[])( str.split( to!SplitArgType(nl) ) );
-    lines = outdent(lines);
-    return lines.join(nl);
+	bool hasTrailingEOL =
+		str.endsWith('\n') || str.endsWith('\r') ||
+	    str.endsWith(lineSep) || str.endsWith(paraSep);
+	
+	auto lines = str.splitLines().outdent();
+	S nl = "\n";
+    str = lines.join(nl);
+	
+	// TODO: Remove this when BUG6735 is fixed
+    if (hasTrailingEOL) str ~= '\n';
+	
+    return str;
 }
 
 /// ditto
-S[] outdent(S)(S[] lines) if(isSomeString!(Unqual!S))
+S[] outdent(S)(S[] lines) if(isSomeString!S)
 {
     if (lines.empty)
     {
@@ -3868,51 +3870,41 @@ S[] outdent(S)(S[] lines) if(isSomeString!(Unqual!S))
         return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
     }
     
-    // Apply leadingWhiteOf, but emit null instead for whitespace-only lines
-    S[] indents;
-    indents.length = lines.length;
+	S shortestIndent;
+	bool foundPossibleShortest=false;
     foreach (i, line; lines)
     {
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
-        indents[i] = stripped.empty? null : leadingWhiteOf(line);
+        auto indent = stripped.empty? null : leadingWhiteOf(line);
+		
+		if (stripped.empty)
+			lines[i] = null;
+		else
+		{
+			// Comparing number of code units instead of code points is OK here
+			// because this function throws upon inconsistent indentation.
+			if (!foundPossibleShortest || indent.length < shortestIndent.length)
+			{
+				foundPossibleShortest = true;
+				shortestIndent = indent;
+			}
+		}
     }
-
-    static S shorterAndNonNull(S a, S b)
-    {
-        if (a is null)
-        {
-            return b;
-        }
-        
-        if (b is null)
-        {
-            return a;
-        }
-        
-        return (a.length < b.length)? a : b;
-    };
-    auto shortestIndent = std.algorithm.reduce!shorterAndNonNull(indents);
     
     foreach (i; 0..lines.length)
     {
-        if (indents[i] is null)
+        if (lines[i].empty)
         {
-            lines[i] = to!S("");
+            // Do nothing
         }
-        else if (indents[i].startsWith(shortestIndent))
+        else if (lines[i].startsWith(shortestIndent))
         {
             lines[i] = lines[i][shortestIndent.length..$];
         }
         else
         {
-            if (__ctfe)
-            {
-                assert(false, "Inconsistent indentation");
-            }
-            else
-            {
-                throw new StringException("Inconsistent indentation");
-            }
+            if (__ctfe) assert(false, "Inconsistent indentation");
+            else throw new StringException("Inconsistent indentation");
         }
     }
     
@@ -3944,59 +3936,74 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
     return str[0..endIndex];
 }
 
-unittest
+version(unittest)
 {
-    debug(string) printf("string.outdent.unittest\n");
-    
-    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
-    static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
-    static assert(ctfe_strip("Hi")         == "Hi");
-    static assert(ctfe_strip(" \t \r\n")   == "");
-    static assert(ctfe_strip("")           == "");
-
-    enum testStr =
+	template outdent_testStr(S)
+	{
+		enum S outdent_testStr =
 "
  \t\tX
  \t\U00010143X
  \t\t
 
  \t\t\tX
-\t "c;
+\t ";
+	}
 
-    enum expected =
+	template outdent_expected(S)
+	{
+		enum S outdent_expected =
 "
 \tX
 \U00010143X
 
 
 \t\tX
-"c;
-    
-    immutable iblank = "";
-    
-    assert(testStr.outdent() == expected);
-    assert(to!wstring(testStr).outdent() == to!wstring(expected));
-    assert(to!dstring(testStr).outdent() == to!dstring(expected));
-    assert(""c.outdent() == ""c);
-    assert(""w.outdent() == ""w);
-    assert(""d.outdent() == ""d);
-    assert(" \n \t\n "c.outdent() == "\n\n"c);
-    assert(" \n \t\n "w.outdent() == "\n\n"w);
-    assert(" \n \t\n "d.outdent() == "\n\n"d);
-    assert(['a','b'].outdent() == ['a','b']);
-    
-    // TODO: Uncomment this when find works on immutable(string)
-    //assert(iblank.outdent() == iblank);
+";
+	}
+}
 
-    static assert(testStr.outdent() == expected);
-    // TODO: Uncomment these when to!w/dstring(string) works at compile-time
-    //static assert(to!wstring(testStr).outdent() == to!wstring(expected));
-    //static assert(to!dstring(testStr).outdent() == to!dstring(expected));
+unittest
+{
+    debug(string__) printf("string.outdent.unittest\n");
+    
+    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+    static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
+    static assert(ctfe_strip("Hi")         == "Hi");
+    static assert(ctfe_strip(" \t \r\n")   == "");
+    static assert(ctfe_strip("")           == "");
+    
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+		enum S blank = "";
+		assert(blank.outdent() == blank);
+		static assert(blank.outdent() == blank);
 
-    static assert(" \n \t\n "c.outdent() == "\n\n"c);
-    static assert(" \n \t\n "w.outdent() == "\n\n"w);
-    static assert(" \n \t\n "d.outdent() == "\n\n"d);
-    static assert(['a','b'].outdent() == ['a','b']);
+		enum S testStr1  = " \n \t\n ";
+		enum S expected1 = "\n\n";
+		assert(testStr1.outdent() == expected1);
+		static assert(testStr1.outdent() == expected1);
+
+		enum S testStr2 =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t ";
+
+		enum S expected2 =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+";
+		assert(testStr2.outdent() == expected2);
+		static assert(testStr2.outdent() == expected2);
+	}
 }
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
