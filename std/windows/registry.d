@@ -1,17 +1,20 @@
+/**
+    This library provides Win32 Registry facilities.
+
+    Copyright: Copyright 2003-2004 by Matthew Wilson and Synesis Software
+               Written by Matthew Wilson
+
+    License:
+
+    Author:    Matthew Wilson, Kenji Hara
+
+    Histry:
+        Created      15th March 2003,
+        Updated      25th April 2004,
+
+    Source:    $(PHOBOSSRC std/windows/_registry.d)
+*/
 /* /////////////////////////////////////////////////////////////////////////////
- * File:        registry.d (from synsoft.win32.registry)
- *
- * Purpose:     Win32 Registry manipulation
- *
- * Created      15th March 2003
- * Updated:     25th April 2004
- *
- * Author:      Matthew Wilson
- *
- * License:
- *
- * Copyright 2003-2004 by Matthew Wilson and Synesis Software
- * Written by Matthew Wilson
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -32,22 +35,9 @@
  *    distribution.
  *
  * ////////////////////////////////////////////////////////////////////////// */
-
-
-
-/** \file std/windows/registry.d This file contains
- * the \c std.windows.registry.* classes
- */
-
-/* ////////////////////////////////////////////////////////////////////////// */
-
 module std.windows.registry;
 
 pragma(lib, "advapi32.lib");
-
-/* /////////////////////////////////////////////////////////////////////////////
- * Imports
- */
 
 import std.system : Endian, endian;
 import std.exception;
@@ -87,10 +77,10 @@ private
     extern (Windows) int lstrlenW(LPCWSTR lpString);
 }
 
-//import synsoft.types;
-/+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
- +/
+/* ************* Exceptions *************** */
 
+/**
+ */
 class Win32Exception : Exception
 {
     int error;
@@ -107,46 +97,66 @@ class Win32Exception : Exception
     }
 }
 
-/* ////////////////////////////////////////////////////////////////////////// */
-
-/// \defgroup group_std_windows_reg std.windows.registry
-/// \ingroup group_std_windows
-/// \brief This library provides Win32 Registry facilities
-
-/* /////////////////////////////////////////////////////////////////////////////
- * Private constants
+/**
+    Exception class thrown by the std.windows.registry classes.
  */
-
-private
+class RegistryException
+    : Win32Exception
 {
-    enum DWORD DELETE                   =   0x00010000L;
-    enum DWORD READ_CONTROL             =   0x00020000L;
-    enum DWORD WRITE_DAC                =   0x00040000L;
-    enum DWORD WRITE_OWNER              =   0x00080000L;
-    enum DWORD SYNCHRONIZE              =   0x00100000L;
+public:
+    /**
+        Creates an instance of the exception.
 
-    enum DWORD STANDARD_RIGHTS_REQUIRED =   0x000F0000L;
+        Params:
+            message = The message associated with the exception.
+     */
+    this(string message, string fn = __FILE__, size_t ln = __LINE__)
+    {
+        super(message, fn, ln);
+    }
 
-    enum DWORD STANDARD_RIGHTS_READ     =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_WRITE    =   0x00020000L/* READ_CONTROL */;
-    enum DWORD STANDARD_RIGHTS_EXECUTE  =   0x00020000L/* READ_CONTROL */;
+    /**
+        Creates an instance of the exception, with the given.
 
-    enum DWORD STANDARD_RIGHTS_ALL      =   0x001F0000L;
-
-    enum DWORD SPECIFIC_RIGHTS_ALL      =   0x0000FFFFL;
-
-    enum DWORD REG_CREATED_NEW_KEY      =   0x00000001;
-    enum DWORD REG_OPENED_EXISTING_KEY  =   0x00000002;
+        Params:
+            message = The message associated with the exception.
+            error   = The Win32 error number associated with the exception.
+     */
+    this(string message, int error, string fn = __FILE__, size_t ln = __LINE__)
+    {
+        super(message, error, fn, ln);
+    }
 }
 
-/* /////////////////////////////////////////////////////////////////////////////
- * Public enumerations
- */
+unittest
+{
+    // (i) Test that we can throw and catch one by its own type
+    try
+    {
+        string message = "Test 1";
+        int    code    = 3;
 
-/// Enumeration of the recognised registry access modes
-///
-/// \ingroup group_D_win32_reg
-public enum REGSAM
+        try
+        {
+            throw new RegistryException(message, code);
+        }
+        catch (RegistryException e)
+        {
+            assert(e.error == code);
+        }
+    }
+    catch (Exception /*e*/)
+    {
+        assert(0);
+    }
+}
+
+/* ************* public enumerations *************** */
+
+/**
+    Enumeration of the recognised registry access modes.
+ */
+enum REGSAM
 {
     KEY_QUERY_VALUE         = 0x0001,   /// Permission to query subkey data
     KEY_SET_VALUE           = 0x0002,   /// Permission to set subkey data
@@ -179,10 +189,10 @@ public enum REGSAM
                                         /// access rights except SYNCHRONIZE
 }
 
-/// Enumeration of the recognised registry value types
-///
-/// \ingroup group_D_win32_reg
-public enum REG_VALUE_TYPE : DWORD
+/**
+    Enumeration of the recognised registry value types.
+ */
+enum REG_VALUE_TYPE : DWORD
 {
     REG_UNKNOWN                     =  -1,  ///
     REG_NONE                        =   0,  /// The null value type. (In practise this is treated as a zero-length binary array by the Win32 registry)
@@ -201,9 +211,30 @@ public enum REG_VALUE_TYPE : DWORD
     REG_QWORD_LITTLE_ENDIAN         =  11,  /// A 64-bit unsigned integer, stored in little-endian byte order
 }
 
-/* /////////////////////////////////////////////////////////////////////////////
- * External function declarations
- */
+
+/* ************* private *************** */
+
+private
+{
+    enum DWORD DELETE                   =   0x00010000L;
+    enum DWORD READ_CONTROL             =   0x00020000L;
+    enum DWORD WRITE_DAC                =   0x00040000L;
+    enum DWORD WRITE_OWNER              =   0x00080000L;
+    enum DWORD SYNCHRONIZE              =   0x00100000L;
+
+    enum DWORD STANDARD_RIGHTS_REQUIRED =   0x000F0000L;
+
+    enum DWORD STANDARD_RIGHTS_READ     =   0x00020000L/* READ_CONTROL */;
+    enum DWORD STANDARD_RIGHTS_WRITE    =   0x00020000L/* READ_CONTROL */;
+    enum DWORD STANDARD_RIGHTS_EXECUTE  =   0x00020000L/* READ_CONTROL */;
+
+    enum DWORD STANDARD_RIGHTS_ALL      =   0x001F0000L;
+
+    enum DWORD SPECIFIC_RIGHTS_ALL      =   0x0000FFFFL;
+
+    enum DWORD REG_CREATED_NEW_KEY      =   0x00000001;
+    enum DWORD REG_OPENED_EXISTING_KEY  =   0x00000002;
+}
 
 private extern (Windows)
 {
@@ -211,14 +242,10 @@ private extern (Windows)
     LONG function(in HKEY hkey, in LPCWSTR lpSubKey, in REGSAM samDesired, in DWORD reserved) pRegDeleteKeyExW;
 }
 
-/* /////////////////////////////////////////////////////////////////////////////
- * Private utility functions
- */
-
 shared static this()
 {
-    //WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
-    //IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
+    // WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
+    // IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
     alias extern(Windows) BOOL function(HANDLE, PBOOL) fptr_t;
     auto IsWow64Process =
         cast(fptr_t)GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
@@ -239,8 +266,8 @@ private
     shared Object advapi32Mutex;
     shared HMODULE hAdvapi32 = null;
 
-    ///Returns samDesired but without WoW64 flags if not in WoW64 mode
-    ///for compatibility with Windows 2000
+    // Returns samDesired but without WoW64 flags if not in WoW64 mode
+    // for compatibility with Windows 2000
     REGSAM compatibleRegsam(in REGSAM samDesired)
     {
         return isWow64 ? samDesired : cast(REGSAM)(samDesired & ~REGSAM.KEY_WOW64_RES);
@@ -253,7 +280,7 @@ private
     }
 }
 
-///It will free Advapi32.dll, which may be loaded for RegDeleteKeyEx function
+// It will free Advapi32.dll, which may be loaded for RegDeleteKeyEx function
 void freeAdvapi32()
 {
     synchronized (advapi32Mutex)
@@ -297,12 +324,6 @@ body
 }
 +/
 
-/* /////////////////////////////////////////////////////////////////////////////
- * Translation of the raw APIs:
- *
- * - translating char[] to char*
- * - removing the reserved arguments.
- */
 
 private LONG regCloseKey(in HKEY hkey)
 in
@@ -982,80 +1003,18 @@ private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delega
     useWfuncs ? impl!wchar() : impl!char();
 }
 
-/* /////////////////////////////////////////////////////////////////////////////
- * Classes
+/* ************* public classes *************** */
+
+/**
+    This class represents a registry key.
  */
-
-////////////////////////////////////////////////////////////////////////////////
-// RegistryException
-
-/// Exception class thrown by the std.windows.registry classes
-///
-/// \ingroup group_D_win32_reg
-
-public class RegistryException
-    : Win32Exception
-{
-/// \name Construction
-//@{
-public:
-    /// \brief Creates an instance of the exception
-    ///
-    /// \param message The message associated with the exception
-    this(string message, string fn = __FILE__, size_t ln = __LINE__)
-    {
-        super(message, fn, ln);
-    }
-    /// \brief Creates an instance of the exception, with the given
-    ///
-    /// \param message The message associated with the exception
-    /// \param error The Win32 error number associated with the exception
-    this(string message, int error, string fn = __FILE__, size_t ln = __LINE__)
-    {
-        super(message, error, fn, ln);
-    }
-//@}
-}
-
-unittest
-{
-    // (i) Test that we can throw and catch one by its own type
-    try
-    {
-        string message = "Test 1";
-        int    code    = 3;
-
-        try
-        {
-            throw new RegistryException(message, code);
-        }
-        catch (RegistryException e)
-        {
-            assert(e.error == code);
-        }
-    }
-    catch (Exception /*e*/)
-    {
-        assert(0);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Key
-
-/// This class represents a registry key
-///
-/// \ingroup group_D_win32_reg
-
-public class Key
+class Key
 {
     invariant()
     {
         assert(m_hkey !is null);
     }
 
-/// \name Construction
-//@{
 private:
     this(HKEY hkey, string name, bool created)
     in
@@ -1077,10 +1036,7 @@ private:
         // we're doing it here so that the
         m_hkey = null;
     }
-//@}
 
-/// \name Attributes
-//@{
 public:
     /// The name of the key
     @property string name() @safe nothrow const
@@ -1088,14 +1044,15 @@ public:
         return m_name;
     }
 
-/*  /// Indicates whether this key was created, rather than opened, by the client
-    bool Created()
-    {
-        return m_created;
-    }
-*/
+    // Indicates whether this key was created, rather than opened, by the client
+    // bool Created()
+    // {
+    //     return m_created;
+    // }
 
-    /// The number of sub keys
+    /**
+        The number of sub keys.
+     */
     @property uint keyCount() const
     {
         uint cSubKeys;
@@ -1110,19 +1067,25 @@ public:
         return cSubKeys;
     }
 
-    /// An enumerable sequence of all the sub-keys of this key
+    /**
+        An enumerable sequence of all the sub-keys of this key.
+     */
     @property KeySequence keys()
     {
         return new KeySequence(this);
     }
 
-    /// An enumerable sequence of the names of all the sub-keys of this key
+    /**
+        An enumerable sequence of the names of all the sub-keys of this key.
+     */
     @property KeyNameSequence keyNames()
     {
         return new KeyNameSequence(this);
     }
 
-    /// The number of values
+    /**
+        The number of values.
+     */
     @property uint valueCount() const
     {
         uint cValues;
@@ -1137,27 +1100,33 @@ public:
         return cValues;
     }
 
-    /// An enumerable sequence of all the values of this key
+    /**
+        An enumerable sequence of all the values of this key.
+     */
     @property ValueSequence values()
     {
         return new ValueSequence(this);
     }
 
-    /// An enumerable sequence of the names of all the values of this key
+    /**
+        An enumerable sequence of the names of all the values of this key.
+     */
     @property ValueNameSequence valueNames()
     {
         return new ValueNameSequence(this);
     }
-//@}
 
-/// \name Methods
-//@{
 public:
-    /// Returns the named sub-key of this key
-    ///
-    /// \param name The name of the subkey to create. May not be null
-    /// \return The created key
-    /// \note If the key cannot be created, a RegistryException is thrown.
+    /**
+        Returns the named sub-key of this key.
+
+        Params:
+            name    = The name of the subkey to create. May not be $(D null).
+        Returns:
+            The created key.
+        Throws:
+            $(D RegistryException) is thrown if the key cannot be created.
+     */
     Key createKey(string name, REGSAM access = REGSAM.KEY_ALL_ACCESS)
     {
         if (name.length == 0)
@@ -1187,12 +1156,19 @@ public:
         }
     }
 
-    /// Returns the named sub-key of this key
-    ///
-    /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
-    /// \param access The desired access; one of the REGSAM enumeration
-    /// \return The aquired key.
-    /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Returns the named sub-key of this key.
+
+        Params:
+            name    = The name of the subkey to aquire. If name is the empty
+                      string, then the called key is duplicated.
+            access  = The desired access; one of the $(D REGSAM) enumeration.
+        Returns:
+            The aquired key.
+        Throws:
+            This function never returns null. If a key corresponding to the
+            requested name is not found, $(D RegistryException) is thrown.
+     */
     Key getKey(string name, REGSAM access = REGSAM.KEY_READ)
     {
         if (name is null || name.length == 0)
@@ -1225,9 +1201,12 @@ public:
         }
     }
 
-    /// Deletes the named key
-    ///
-    /// \param name The name of the key to delete. May not be null
+    /**
+        Deletes the named key.
+
+        Params:
+            name    = The name of the key to delete. May not be $(D null).
+     */
     void deleteKey(string name, REGSAM access = cast(REGSAM)0)
     {
         if (name.length == 0)
@@ -1236,31 +1215,48 @@ public:
         regDeleteKey(m_hkey, name, access);
     }
 
-    /// Returns the named value
-    ///
-    /// \note if name is null (or the empty-string), then the default value is returned
-    /// \return This function never returns null. If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Returns the named value.
+        If $(D name) is the empty string, then the default value is returned.
+
+        Returns:
+            This function never returns $(D null). If a value corresponding
+            to the requested name is not found, $(D RegistryException) is thrown.
+     */
     Value getValue(string name)
     {
         return new Value(this, name, regGetValueType(m_hkey, name));
     }
 
-    /// Sets the named value with the given 32-bit unsigned integer value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The 32-bit unsigned value to set
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given 32-bit unsigned integer value.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The 32-bit unsigned value to set.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, uint value)
     {
         setValue(name, value, endian);
     }
 
-    /// Sets the named value with the given 32-bit unsigned integer value, according to the desired byte-ordering
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The 32-bit unsigned value to set
-    /// \param endian Can be Endian.BigEndian or Endian.LittleEndian
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given 32-bit unsigned integer value,
+        according to the desired byte-ordering.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The 32-bit unsigned value to set.
+            endian  = Can be $(D Endian.BigEndian) or $(D Endian.LittleEndian).
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, uint value, Endian endian)
     {
         REG_VALUE_TYPE  type = _RVT_from_Endian(endian);
@@ -1271,32 +1267,51 @@ public:
         regSetValue(m_hkey, name, type, &value, value.sizeof);
     }
 
-    /// Sets the named value with the given 64-bit unsigned integer value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The 64-bit unsigned value to set
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given 64-bit unsigned integer value.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The 64-bit unsigned value to set.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, ulong value)
     {
         regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
     }
 
-    /// Sets the named value with the given string value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The string value to set
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given string value.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The string value to set.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, string value)
     {
         setValue(name, value, false);
     }
 
-    /// Sets the named value with the given string value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The string value to set
-    /// \param asEXPAND_SZ If true, the value will be stored as an expandable environment string, otherwise as a normal string
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given string value.
+
+        Params:
+            name        = The name of the value to set. If it is the empty string,
+                          sets the default value.
+            value       = The string value to set.
+            asEXPAND_SZ = If $(D true), the value will be stored as an
+                          expandable environment string, otherwise as a normal string.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, string value, bool asEXPAND_SZ)
     {
         const(void)* data;
@@ -1320,11 +1335,17 @@ public:
                     data, len);
     }
 
-    /// Sets the named value with the given multiple-strings value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The multiple-strings value to set
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given multiple-strings value.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The multiple-strings value to set.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, string[] value)
     {
         wstring[] data = new wstring[value.length+1];
@@ -1355,50 +1376,54 @@ public:
         }
     }
 
-    /// Sets the named value with the given binary value
-    ///
-    /// \param name The name of the value to set. If null, or the empty string, sets the default value
-    /// \param value The binary value to set
-    /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
+    /**
+        Sets the named value with the given binary value.
+
+        Params:
+            name    = The name of the value to set. If it is the empty string,
+                      sets the default value.
+            value   = The binary value to set.
+        Throws:
+            If a value corresponding to the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void setValue(string name, byte[] value)
     {
         regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, to!DWORD(value.length));
     }
 
-    /// Deletes the named value
-    ///
-    /// \param name The name of the value to delete. May not be null
-    /// \note If a value of the requested name is not found, a RegistryException is thrown
+    /**
+        Deletes the named value.
+
+        Params:
+            name    = The name of the value to delete. May not be $(D null).
+        Throws:
+            If a value of the requested name is not found,
+            $(D RegistryException) is thrown.
+     */
     void deleteValue(string name)
     {
         regDeleteValue(m_hkey, name);
     }
 
-    /// Flushes any changes to the key to disk
-    ///
+    /**
+        Flushes any changes to the key to disk.
+     */
     void flush()
     {
         regFlushKey(m_hkey);
     }
-//@}
 
-/// \name Members
-//@{
 private:
     HKEY   m_hkey;
     string m_name;
     bool   m_created;
-//@}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Value
-
-/// This class represents a value of a registry key
-///
-/// \ingroup group_D_win32_reg
-
-public class Value
+/**
+    This class represents a value of a registry key.
+ */
+class Value
 {
     invariant()
     {
@@ -1418,28 +1443,36 @@ private:
         m_name = name;
     }
 
-/// \name Attributes
-//@{
 public:
-    /// The name of the value.
-    ///
-    /// \note If the value represents a default value of a key, which has no name, the returned string will be of zero length
+    /**
+        The name of the value.
+        If the value represents a default value of a key, which has no name,
+        the returned string will be of zero length.
+     */
     @property string name() pure nothrow const
     {
         return m_name;
     }
 
-    /// The type of value
+    /**
+        The type of value.
+     */
     @property REG_VALUE_TYPE type() pure nothrow const
     {
         return m_type;
     }
 
-    /// Obtains the current value of the value as a string.
-    ///
-    /// \return The contents of the value
-    /// \note If the value's type is REG_EXPAND_SZ the returned value is <b>not</b> expanded; Value_EXPAND_SZ() should be called
-    /// \note Throws a RegistryException if the type of the value is not REG_SZ, REG_EXPAND_SZ, REG_DWORD(_*) or REG_QWORD(_*):
+    /**
+        Obtains the current value of the value as a string.
+        If the value's type is REG_EXPAND_SZ the returned value is <b>not</b>
+        expanded; $(D value_EXPAND_SZ) should be called
+
+        Returns:
+            The contents of the value.
+        Throws:
+            $(D RegistryException) if the type of the value is not REG_SZ,
+            REG_EXPAND_SZ, REG_DWORD, or REG_QWORD.
+     */
     @property string value_SZ() const
     {
         string value;
@@ -1449,20 +1482,21 @@ public:
         return value;
     }
 
-    /// Obtains the current value as a string, within which any environment
-    /// variables have undergone expansion
-    ///
-    /// \return The contents of the value
-    /// \note This function works with the same value-types as Value_SZ().
+    /**
+        Obtains the current value as a string, within which any environment
+        variables have undergone expansion.
+        This function works with the same value-types as $(D value_SZ).
+
+        Returns:
+            The contents of the value.
+     */
     @property string value_EXPAND_SZ() const
     {
         string  value   =   value_SZ;
 
-/+
-        value = expand_environment_strings(value);
+        // value = expand_environment_strings(value);
+        // return value;
 
-        return value;
- +/
         // ExpandEnvironemntStrings():
         //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
         LPCSTR  lpSrc       =   toMBSz(value);
@@ -1475,10 +1509,14 @@ public:
         return fromMBSz(cast(immutable(char)*) newValue.ptr); // remove trailing 0
     }
 
-    /// Obtains the current value as an array of strings
-    ///
-    /// \return The contents of the value
-    /// \note Throws a RegistryException if the type of the value is not REG_MULTI_SZ
+    /**
+        Obtains the current value as an array of strings.
+
+        Returns:
+            The contents of the value.
+        Throws:
+            $(D RegistryException) if the type of the value is not REG_MULTI_SZ.
+     */
     @property string[] value_MULTI_SZ() const
     {
         string[] value;
@@ -1488,10 +1526,16 @@ public:
         return value;
     }
 
-    /// Obtains the current value as a 32-bit unsigned integer, ordered correctly according to the current architecture
-    ///
-    /// \return The contents of the value
-    /// \note An exception is thrown for all types other than REG_DWORD, REG_DWORD_LITTLE_ENDIAN and REG_DWORD_BIG_ENDIAN.
+    /**
+        Obtains the current value as a 32-bit unsigned integer, ordered
+        correctly according to the current architecture.
+
+        Returns:
+            The contents of the value.
+        Throws:
+            $(D RegistryException) is thrown for all types other than
+            REG_DWORD, REG_DWORD_LITTLE_ENDIAN and REG_DWORD_BIG_ENDIAN.
+     */
     @property uint value_DWORD() const
     {
         uint value;
@@ -1511,10 +1555,15 @@ public:
         return value_DWORD;
     }
 
-    /// Obtains the value as a 64-bit unsigned integer, ordered correctly according to the current architecture
-    ///
-    /// \return The contents of the value
-    /// \note Throws a RegistryException if the type of the value is not REG_QWORD
+    /**
+        Obtains the value as a 64-bit unsigned integer, ordered correctly
+        according to the current architecture.
+
+        Returns:
+            The contents of the value.
+        Throws:
+            $(D RegistryException) if the type of the value is not REG_QWORD.
+     */
     @property ulong value_QWORD() const
     {
         ulong value;
@@ -1529,11 +1578,15 @@ public:
         return value_QWORD;
     }
 
-    /// Obtains the value as a binary blob
-    ///
-    /// \return The contents of the value
-    /// \note Throws a RegistryException if the type of the value is not REG_BINARY
-    @property byte[]  value_BINARY() const
+    /**
+        Obtains the value as a binary blob.
+
+        Returns:
+            The contents of the value.
+        Throws:
+            $(D RegistryException) if the type of the value is not REG_BINARY.
+     */
+    @property byte[] value_BINARY() const
     {
         byte[] value;
 
@@ -1541,25 +1594,17 @@ public:
 
         return value;
     }
-//@}
 
-/// \name Members
-//@{
 private:
     Key             m_key;
     REG_VALUE_TYPE  m_type;
     string          m_name;
-//@}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Registry
-
-/// Represents the local system registry.
-///
-/// \ingroup group_D_win32_reg
-
-public abstract class Registry
+/**
+    Represents the local system registry.
+ */
+abstract final class Registry
 {
 private:
     shared static this()
@@ -1573,8 +1618,6 @@ private:
         sm_keyDynData         = new Key(regDup(HKEY_DYN_DATA),         "HKEY_DYN_DATA",         false);
     }
 
-/// \name Hives
-//@{
 public:
     /// Returns the root key for the HKEY_CLASSES_ROOT hive
     static @property Key classesRoot()     { return sm_keyClassesRoot; }
@@ -1590,7 +1633,6 @@ public:
     static @property Key currentConfig()   { return sm_keyCurrentConfig; }
     /// Returns the root key for the HKEY_DYN_DATA hive
     static @property Key dynData()         { return sm_keyDynData; }
-//@}
 
 private:
     __gshared Key  sm_keyClassesRoot;
@@ -1602,57 +1644,50 @@ private:
     __gshared Key  sm_keyDynData;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// KeyNameSequence
+/**
+    An enumerable sequence representing the names of the sub-keys of a registry Key.
 
-/// An enumerable sequence representing the names of the sub-keys of a registry Key
-///
-/// It would be used as follows:
-///
-/// <code>&nbsp;&nbsp;Key&nbsp;key&nbsp;=&nbsp;. . .</code>
-/// <br>
-/// <code></code>
-/// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] kName; key.SubKeys)</code>
-/// <br>
-/// <code>&nbsp;&nbsp;{</code>
-/// <br>
-/// <code>&nbsp;&nbsp;&nbsp;&nbsp;process_Key(kName);</code>
-/// <br>
-/// <code>&nbsp;&nbsp;}</code>
-/// <br>
-/// <br>
-///
-/// \ingroup group_D_win32_reg
-
-public class KeyNameSequence
+Example:
+----
+Key key = ...
+foreach (string subkeyName; key.keyNames)
+{
+    // using subkeyName
+}
+----
+ */
+class KeyNameSequence
 {
     invariant()
     {
         assert(m_key !is null);
     }
 
-/// Construction
 private:
     this(Key key)
     {
         m_key = key;
     }
 
-/// \name Attributes
-///@{
 public:
-    /// The number of keys
+    /**
+        The number of keys.
+     */
     @property uint count() const
     {
         return m_key.keyCount;
     }
 
-    /// The name of the key at the given index
-    ///
-    /// \param index The 0-based index of the key to retrieve
-    /// \return The name of the key corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding key is retrieved
+    /**
+        The name of the key at the given index.
+
+        Params:
+            index   = The 0-based index of the key to retrieve.
+        Returns:
+            The name of the key corresponding to the given index.
+        Throws:
+            RegistryException if no corresponding key is retrieved.
+     */
     string getKeyName(uint index)
     {
         string name;
@@ -1665,18 +1700,23 @@ public:
         return name;
     }
 
-    /// The name of the key at the given index
-    ///
-    /// \param index The 0-based index of the key to retrieve
-    /// \return The name of the key corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding key is retrieved
+    /**
+        The name of the key at the given index.
+
+        Params:
+            index   = The 0-based index of the key to retrieve.
+        Returns:
+            The name of the key corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding key is retrieved.
+     */
     string opIndex(uint index)
     {
         return getKeyName(index);
     }
-///@}
 
 public:
+    ///
     int opApply(scope int delegate(ref string name) dg)
     {
         int result;
@@ -1697,63 +1737,55 @@ public:
         return result;
     }
 
-/// Members
 private:
     Key m_key;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-// KeySequence
+/**
+    An enumerable sequence representing the sub-keys of a registry Key.
 
-/// An enumerable sequence representing the sub-keys of a registry Key
-///
-/// It would be used as follows:
-///
-/// <code>&nbsp;&nbsp;Key&nbsp;key&nbsp;=&nbsp;. . .</code>
-/// <br>
-/// <code></code>
-/// <br>
-/// <code>&nbsp;&nbsp;foreach(Key k; key.SubKeys)</code>
-/// <br>
-/// <code>&nbsp;&nbsp;{</code>
-/// <br>
-/// <code>&nbsp;&nbsp;&nbsp;&nbsp;process_Key(k);</code>
-/// <br>
-/// <code>&nbsp;&nbsp;}</code>
-/// <br>
-/// <br>
-///
-/// \ingroup group_D_win32_reg
-
-public class KeySequence
+Example:
+----
+Key key = ...
+foreach (Key subkey; key.keys)
+{
+    // using subkey
+}
+----
+ */
+class KeySequence
 {
     invariant()
     {
         assert(m_key !is null);
     }
 
-/// Construction
 private:
     this(Key key)
     {
         m_key = key;
     }
 
-/// \name Attributes
-///@{
 public:
-    /// The number of keys
+    /**
+        The number of keys.
+     */
     @property uint count() const
     {
         return m_key.keyCount;
     }
 
-    /// The key at the given index
-    ///
-    /// \param index The 0-based index of the key to retrieve
-    /// \return The key corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding key is retrieved
+    /**
+        The key at the given index.
+
+        Params:
+            index   = The 0-based index of the key to retrieve.
+        Returns:
+            The key corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding key is retrieved.
+     */
     Key getKey(uint index)
     {
         string name;
@@ -1766,18 +1798,23 @@ public:
         return m_key.getKey(name);
     }
 
-    /// The key at the given index
-    ///
-    /// \param index The 0-based index of the key to retrieve
-    /// \return The key corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding key is retrieved
+    /**
+        The key at the given index.
+
+        Params:
+            index   = The 0-based index of the key to retrieve.
+        Returns:
+            The key corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding key is retrieved.
+     */
     Key opIndex(uint index)
     {
         return getKey(index);
     }
-///@}
 
 public:
+    ///
     int opApply(scope int delegate(ref Key key) dg)
     {
         int result = 0;
@@ -1811,62 +1848,54 @@ public:
         return result;
     }
 
-/// Members
 private:
     Key m_key;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// ValueNameSequence
+/**
+    An enumerable sequence representing the names of the values of a registry Key.
 
-/// An enumerable sequence representing the names of the values of a registry Key
-///
-/// It would be used as follows:
-///
-/// <code>&nbsp;&nbsp;Key&nbsp;key&nbsp;=&nbsp;. . .</code>
-/// <br>
-/// <code></code>
-/// <br>
-/// <code>&nbsp;&nbsp;foreach(char[] vName; key.Values)</code>
-/// <br>
-/// <code>&nbsp;&nbsp;{</code>
-/// <br>
-/// <code>&nbsp;&nbsp;&nbsp;&nbsp;process_Value(vName);</code>
-/// <br>
-/// <code>&nbsp;&nbsp;}</code>
-/// <br>
-/// <br>
-///
-/// \ingroup group_D_win32_reg
-
-public class ValueNameSequence
+Example:
+----
+Key key = ...
+foreach (string valueName; key.valueNames)
+{
+    // using valueName
+}
+----
+ */
+class ValueNameSequence
 {
     invariant()
     {
         assert(m_key !is null);
     }
 
-/// Construction
 private:
     this(Key key)
     {
         m_key = key;
     }
 
-/// \name Attributes
-///@{
 public:
-    /// The number of values
+    /**
+        The number of values.
+     */
     @property uint count() const
     {
         return m_key.valueCount;
     }
 
-    /// The name of the value at the given index
-    ///
-    /// \param index The 0-based index of the value to retrieve
-    /// \return The name of the value corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding value is retrieved
+    /**
+        The name of the value at the given index.
+
+        Params:
+            index   = The 0-based index of the value to retrieve.
+        Returns:
+            The name of the value corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding value is retrieved.
+     */
     string getValueName(uint index)
     {
         string name;
@@ -1879,18 +1908,23 @@ public:
         return name;
     }
 
-    /// The name of the value at the given index
-    ///
-    /// \param index The 0-based index of the value to retrieve
-    /// \return The name of the value corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding value is retrieved
+    /**
+        The name of the value at the given index.
+
+        Params:
+            index   = The 0-based index of the value to retrieve.
+        Returns:
+            The name of the value corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding value is retrieved.
+     */
     string opIndex(uint index)
     {
         return getValueName(index);
     }
-///@}
 
 public:
+    ///
     int opApply(scope int delegate(ref string name) dg)
     {
         int result = 0;
@@ -1911,50 +1945,35 @@ public:
         return result;
     }
 
-/// Members
 private:
     Key m_key;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// ValueSequence
+/**
+    An enumerable sequence representing the values of a registry Key.
 
-/// An enumerable sequence representing the values of a registry Key
-///
-/// It would be used as follows:
-///
-/// <code>&nbsp;&nbsp;Key&nbsp;key&nbsp;=&nbsp;. . .</code>
-/// <br>
-/// <code></code>
-/// <br>
-/// <code>&nbsp;&nbsp;foreach(Value v; key.Values)</code>
-/// <br>
-/// <code>&nbsp;&nbsp;{</code>
-/// <br>
-/// <code>&nbsp;&nbsp;&nbsp;&nbsp;process_Value(v);</code>
-/// <br>
-/// <code>&nbsp;&nbsp;}</code>
-/// <br>
-/// <br>
-///
-/// \ingroup group_D_win32_reg
-
-public class ValueSequence
+Example:
+----
+Key key = ...
+foreach (Value value; key.values)
+{
+    // using value
+}
+----
+ */
+class ValueSequence
 {
     invariant()
     {
         assert(m_key !is null);
     }
 
-/// Construction
 private:
     this(Key key)
     {
         m_key = key;
     }
 
-/// \name Attributes
-///@{
 public:
     /// The number of values
     @property uint count() const
@@ -1962,11 +1981,16 @@ public:
         return m_key.valueCount;
     }
 
-    /// The value at the given index
-    ///
-    /// \param index The 0-based index of the value to retrieve
-    /// \return The value corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding value is retrieved
+    /**
+        The value at the given $(D index).
+
+        Params:
+            index   = The 0-based index of the value to retrieve
+        Returns:
+            The value corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding value is retrieved
+     */
     Value getValue(uint index)
     {
         string name;
@@ -1979,18 +2003,23 @@ public:
         return m_key.getValue(name);
     }
 
-    /// The value at the given index
-    ///
-    /// \param index The 0-based index of the value to retrieve
-    /// \return The value corresponding to the given index
-    /// \note Throws a RegistryException if no corresponding value is retrieved
+    /**
+        The value at the given $(D index).
+
+        Params:
+            index   = The 0-based index of the value to retrieve.
+        Returns:
+            The value corresponding to the given index.
+        Throws:
+            $(D RegistryException) if no corresponding value is retrieved.
+     */
     Value opIndex(uint index)
     {
         return getValue(index);
     }
-///@}
 
 public:
+    ///
     int opApply(scope int delegate(ref Value value) dg)
     {
         int result = 0;
@@ -2012,12 +2041,10 @@ public:
         return result;
     }
 
-/// Members
 private:
     Key m_key;
 }
 
-/* ////////////////////////////////////////////////////////////////////////// */
 
 unittest
 {
@@ -2145,5 +2172,3 @@ unittest
         useWfuncs = save_useWfuncs;
     }
 }
-
-/* ////////////////////////////////////////////////////////////////////////// */
