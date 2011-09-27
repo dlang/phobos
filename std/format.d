@@ -1548,7 +1548,7 @@ if (isSomeString!T)
 
             put(w, app.data());
         }
-        catch (UtfException)
+        catch (UTFException)
         {
             // If val contains invalid UTF sequence, formatted like HexString literal
             invalidSeq = true;
@@ -3738,7 +3738,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else
                 {   if (!isValidDchar(vdchar))
-                        throw new UtfException("invalid dchar in format", 0);
+                        throw new UTFException("invalid dchar in format");
                     char[4] vbuf;
                     putstr(toUTF8(vbuf, vdchar));
                 }
