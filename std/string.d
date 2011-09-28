@@ -59,9 +59,9 @@ module std.string;
 //debug=string;                 // uncomment to turn on debugging printf's
 
 import core.exception : onRangeError;
-import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
+import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.ascii, std.conv, std.exception, std.format, std.functional,
-    std.metastrings, std.range, std.regex, std.stdio, std.traits,
+    std.metastrings, std.range, std.regex, std.traits,
     std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
