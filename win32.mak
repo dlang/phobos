@@ -96,8 +96,6 @@ OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 	oldsyserror.obj \
 	c_stdio.obj
 
-#	ti_bit.obj ti_Abit.obj
-
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 # SRCS_1 is the heavyweight modules which are most likely to trigger the bug.
 # Do not add any more modules to SRCS_1.
@@ -347,18 +345,10 @@ phobos.lib : $(OBJS) $(SRCS) \
 	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) phobos.lib
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest11.obj unittest12.obj unittest2.obj \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
-	unittest
-
 emptymain.d :
 	echo void main(){} > emptymain.d
 
-eachtest : emptymain.d phobos.lib
+unittest : emptymain.d phobos.lib
 	$(DMD) -ofeachtest -debuglib=$(DRUNTIMELIB) -defaultlib=$(DRUNTIMELIB) eachtest.d
 	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@" \
 			 "unittest\$$(basefile*).exe" \
