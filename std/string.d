@@ -1405,12 +1405,12 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
         {
             immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
             auto iEnd = i;
-            
+
             if(keepTerm == KeepTerminator.yes)
             {
                 iEnd = isWinEOL? nextI + 1 : nextI;
             }
-            
+
             retval.put(s[iStart .. iEnd]);
             iStart = nextI;
 
