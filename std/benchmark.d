@@ -408,16 +408,39 @@ unittest
 Benchmarks one function, automatically issuing multiple calls to
 achieve good accuracy.
 
-The call $(D benchmark!fun()) first calls $(D fun) once. If the call
-completes too quickly to gather an accurate timing, $(D fun) is called
-10 times, then 100 times, 1000 times and so on, until a meaningful
-timing is collected.
+The call $(D benchmark!fun(timeBudget, trials)) repeats $(D trials)
+times the time-measured experiment of calling $(D fun) once, and then
+takes the minimum of the times obtained. If the minimum obtained $(D
+tMin) is greater than or equal to $(D timeBudget), the function
+returns $(D tuple(1u, tMin)).
+
+If, on the other hand, $(D tMin < timeBudget), then $(D benchmark)
+repeats the experiment $(D trials) times, but this time measuring the
+time spent in calling $(D fun) 10 times, 100 times, 1000 times and so
+on, until the time budget is exceeded by one experiment. Then $(D
+benchmark) returns $(D tuple(n, tMin)), where $(D n) (always a power
+of 10) is the number of loops to achieve $(D tMin). In all cases, the
+effective time spent per call is $(D tMin / n).
 
 Params:
 
 fun = Alias of callable object (e.g. function name). It should take
 either no arguments or one integral argument, which is the iterations
 count.
+
+timeBudget = The time budget allocated for iterating $(D fun) multiple
+times. Ideally there would be no need for a time budget, but measuring
+very fast functions is affected by imperfections of the timer and
+other vagaries. Therefore, the function must be run multiple times
+until it exceeds the time budget. Then the estimated run time is the
+time obtained divided by the number of iterations. The default time
+budget is $(D 10ms).
+
+trials = When iterating calls to $(D fun), multipled such iterations
+must be tried because each individual measurement may be affected by
+e.g. a task switch or other activity on the machine. Therefore, the
+iteration is repeated $(D trials) time and the minimum of the obtained
+times is taken. The default value of $(D trials) is $(D 10).
 
 Returns:
 
@@ -432,10 +455,11 @@ int a;
 void fun() { auto b = to!(string)(a); }
 auto r = benchmark!fun();
 writefln("Milliseconds to call fun() %s times: %s",
-    r[0], r[1][0].to!("msecs", int));
+    r[0], r[1].to!("msecs", int));
 ----
  */
-auto benchmark(alias fun)()
+auto benchmark(alias fun)(TickDuration timeBudget = TickDuration.from!"msecs"(10),
+        uint trials = 10)
 if (is(typeof(benchmark!fun(1u))))
 {
     uint n = 1;
@@ -443,25 +467,33 @@ if (is(typeof(benchmark!fun(1u))))
   bigloop:
     for (; n < 1_000_000_000; n *= 10)
     {
-        elapsed = benchmark!fun(n)[0];
-        if (elapsed.to!("msecs", int) < 10)
+        // Take the minimum of 10 trials
+        foreach (k; 0 .. trials)
         {
-            continue bigloop;
+            TickDuration elapsedThisPass = benchmark!fun(n)[0];
+            if (elapsedThisPass < elapsed || k == 0)
+            {
+                elapsed = elapsedThisPass;
+            }
         }
-        break;
+        // Done if time budget exceeded
+        if (elapsed >= timeBudget)
+        {
+            break;
+        }
     }
 
     return tuple(n, elapsed);
 }
 
 /**
-Benchmarks an entire module given its name. Benchmarking proceeds
-as follows: all symbols inside the module are enumerated, and those that
-start with "benchmark_" are considered benchmark functions and are
-timed using $(D benchmark) defined above.
+Benchmarks an entire module given its name. Benchmarking first
+enumerates all symbols inside the module. Those that start with $(D
+benchmark_) are considered benchmark functions and are timed using $(D
+benchmark) defined above.
 
 This function prints to $(D target) a table containing for each
-benchmark the function name (excluding the $(D "benchmark_") prefix),
+benchmark the function name (excluding the $(D benchmark_) prefix),
 the number of calls issued, the average duration per call, and the
 speed in calls per second.
 
@@ -570,7 +602,9 @@ was $(D 5.28) times faster than $(D append_builtin)), and with $(D
 1/14.28x) for $(D concat) (meaning that $(D append_concat)'s speed was
 $(D 14.28) times $(I slower) than $(D append_builtin)'s speed).
  */
-void benchmarkModule(string mod)(File target = stdout)
+void benchmarkModule(string mod)(File target = stdout,
+        TickDuration timeBudget = TickDuration.from!"msecs"(10),
+        uint trials = 10)
 {
     import std.algorithm;
 
@@ -677,7 +711,7 @@ void benchmarkModule(string mod)(File target = stdout)
                     && entity[0 .. 10] == "benchmark_")
             {
                 auto r = mixin("benchmark!(" ~ mod ~ "."
-                        ~ entity ~ ")()");
+                        ~ entity ~ ")(timeBudget, trials)");
                 collectResult(entity, r);
             }
         }
