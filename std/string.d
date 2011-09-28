@@ -1390,7 +1390,7 @@ S[] splitlines(S)(S s)
   +/
 enum KeepTerminator : bool { no, yes }
 /// ditto
-S[] splitLines(S)(S s, KeepTerminator keepTerm=KeepTerminator.no)
+S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(isSomeString!S)
 {
     size_t iStart = 0;
@@ -1403,14 +1403,12 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm=KeepTerminator.no)
 
         if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            auto isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
+            immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
             auto iEnd = i;
             
             if(keepTerm == KeepTerminator.yes)
             {
-                iEnd = nextI;
-                if(isWinEOL)
-                    ++iEnd;
+                iEnd = isWinEOL? nextI + 1 : nextI;
             }
             
             retval.put(s[iStart .. iEnd]);
