@@ -5937,6 +5937,8 @@ if (isRandomAccessRange!Range)
         if(!__ctfe)
         debug
         {
+            import std.random;
+
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;
