@@ -24,8 +24,8 @@ splitter) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
-partition) $(MYREF schwartzSort) $(MYREF sort) $(MYREF topN) $(MYREF
-topNCopy) )
+partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
+$(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
@@ -314,9 +314,9 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.ctype, std.exception,
+import std.array, std.ascii, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.stdio;
+    std.traits, std.typecons, std.typetuple, std.stdio, std.uni;
 
 version(unittest)
 {
@@ -433,7 +433,7 @@ template map(fun...) if (fun.length >= 1)
 
             static if (hasLength!R || isSomeString!R)
             {
-                @property size_t length()
+                @property auto length()
                 {
                     return _input.length;
                 }
@@ -547,6 +547,12 @@ unittest
         static assert(propagatesRangeType!(typeof(m), DummyType));
         assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
     }
+}
+unittest
+{
+    auto LL = iota(1L, 4L);
+    auto m = map!"a*a"(LL);
+    assert(equal(m, [1L, 4L, 9L]));
 }
 
 // reduce
@@ -1479,6 +1485,7 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T)
     {
+      if (&lhs != &rhs) {
         // For structs with non-trivial assignment, move memory directly
         // First check for undue aliasing
         assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
@@ -1490,6 +1497,7 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         t[] = a[];
         a[] = b[];
         b[] = t[];
+      }
     }
     else
     {
@@ -1553,6 +1561,10 @@ unittest
     swap(nc1, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
+    swap(nc1, nc1);
+    swap(nc2, nc2);
+    assert(nc1.n == 513 && nc1.s == "uvwxyz");
+    assert(nc2.n == 127 && nc2.s == "abc");
 
     struct NoCopyHolder
     {
@@ -1562,6 +1574,10 @@ unittest
     h1.noCopy.n = 31; h1.noCopy.s = "abc";
     h2.noCopy.n = 65; h2.noCopy.s = null;
     swap(h1, h2);
+    assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
+    assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
+    swap(h1, h1);
+    swap(h2, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
 
@@ -1619,13 +1635,15 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     private:
         Range _input;
         Separator _separator;
-        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
-        size_t _frontLength = _unComputed;
-        size_t _backLength = _unComputed;
+        // Do we need hasLength!Range? popFront uses _input.length...
+        alias typeof(unsigned(_input.length)) IndexType;
+        enum IndexType _unComputed = IndexType.max - 1, _atEnd = IndexType.max;
+        IndexType _frontLength = _unComputed;
+        IndexType _backLength = _unComputed;
 
         static if(isBidirectionalRange!Range)
         {
-            static sizediff_t lastIndexOf(Range haystack, Separator needle)
+            static IndexType lastIndexOf(Range haystack, Separator needle)
             {
                 immutable index = countUntil(retro(haystack), needle);
                 return (index == -1) ? -1 : haystack.length - 1 - index;
@@ -1812,6 +1830,16 @@ unittest
         }
     }
 }
+unittest
+{
+    auto L = retro(iota(1L, 10L));
+    auto s = splitter(L, 5L);
+    assert(equal(s.front, [9L, 8L, 7L, 6L]));
+    s.popFront();
+    assert(equal(s.front, [4L, 3L, 2L, 1L]));
+    s.popFront();
+    assert(s.empty);
+}
 
 /**
 Splits a range using another range as a separator. This can be used
@@ -1825,12 +1853,13 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
     private:
         Range _input;
         Separator _separator;
+        alias typeof(unsigned(_input.length)) RIndexType;
         // _frontLength == size_t.max means empty
-        size_t _frontLength = size_t.max;
+        RIndexType _frontLength = RIndexType.max;
         static if (isBidirectionalRange!Range)
-            size_t _backLength = size_t.max;
+            RIndexType _backLength = RIndexType.max;
 
-        size_t separatorLength() { return _separator.length; }
+        auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
@@ -1877,7 +1906,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         {
             @property bool empty()
             {
-                return _frontLength == size_t.max && _input.empty;
+                return _frontLength == RIndexType.max && _input.empty;
             }
         }
 
@@ -2104,6 +2133,16 @@ if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
 
     return Result(input);
 }
+unittest
+{
+    auto L = iota(1L, 10L);
+    auto s = splitter(L, [5L, 6L]);
+    assert(equal(s.front, [1L, 2L, 3L, 4L]));
+    s.popFront();
+    assert(equal(s.front, [7L, 8L, 9L]));
+    s.popFront();
+    assert(s.empty);
+}
 
 unittest
 {
@@ -2145,7 +2184,7 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
-    return splitter!isspace(input);
+    return splitter!(std.uni.isWhite)(input);
 }
 
 unittest
@@ -2723,7 +2762,7 @@ assert(!find(a, 2).empty);      // found
 
 // Case-insensitive find of a string
 string[] s = [ "Hello", "world", "!" ];
-assert(!find!("tolower(a) == b")(s, "hello").empty);
+assert(!find!("toLower(a) == b")(s, "hello").empty);
 ----
  */
 R find(alias pred = "a == b", R, E)(R haystack, E needle)
@@ -3093,10 +3132,10 @@ unittest
 
 // Case-insensitive find of a string
     string[] s = [ "Hello", "world", "!" ];
-    //writeln(find!("toupper(a) == toupper(b)")(s, "hello"));
-    assert(find!("toupper(a) == toupper(b)")(s, "hello").length == 3);
+    //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
+    assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
 
-    static bool f(string a, string b) { return toupper(a) == toupper(b); }
+    static bool f(string a, string b) { return toUpper(a) == toUpper(b); }
     assert(find!(f)(s, "hello").length == 3);
 }
 
@@ -3310,10 +3349,10 @@ unittest
  * Example:
 ----
 string s = "abcdef";
-assert(findSkip("abcdef", "cd") && s == "ef");
+assert(findSkip(s, "cd") && s == "ef");
 s = "abcdef";
-assert(!findSkip("abcdef", "cxd") && s == "abcdef");
-assert(findSkip("abcdef", "def") && s.empty);
+assert(!findSkip(s, "cxd") && s == "abcdef");
+assert(findSkip(s, "def") && s.empty);
 ----
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
@@ -3560,21 +3599,33 @@ unittest
     assert(equal(r1[1], a[4 .. $]));
 }
 
-/**
-If $(D haystack) supports slicing, returns the smallest number $(D n)
-such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
-returns the smallest $(D n) such that after $(D n) calls to $(D
-haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
-number could be found, return $(D -1).
- */
-sizediff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+/++
+    Returns the number of elements which must be popped from the front of
+    $(D haystack) before reaching an element for which
+    $(D startsWith!pred(haystack, needle)) is $(D true). If
+    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
+    $(D haystack), then -1 is returned.
+
+    $(D needle) may be either an element or a range.
+
+    Examples:
+--------------------
+assert(countUntil("hello world", "world") == 6);
+assert(countUntil("hello world", 'r') == 8);
+assert(countUntil("hello world", "programming") == -1);
+assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    static if (isNarrowString!R1)
+    static if (isNarrowString!R)
     {
         // Narrow strings are handled a bit differently
         auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront)
+        for (; !haystack.empty; haystack.popFront())
         {
             if (startsWith!pred(haystack, needle))
             {
@@ -3591,6 +3642,62 @@ if (is(typeof(startsWith!pred(haystack, needle))))
         }
     }
     return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil("hello world", "world") == 6);
+    assert(countUntil("hello world", 'r') == 8);
+    assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+    assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+    assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+
+/++
+    Returns the number of elements which must be popped from $(D haystack)
+    before $(D pred(hastack.front)) is $(D true.).
+
+    Examples:
+--------------------
+assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred, R)(R haystack)
+if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+{
+    static if (isNarrowString!R)
+    {
+        // Narrow strings are handled a bit differently
+        auto length = haystack.length;
+        for (; !haystack.empty; haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front))
+            {
+                return length - haystack.length;
+            }
+        }
+    }
+    else
+    {
+        typeof(return) result;
+        for (; !haystack.empty; ++result, haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front)) return result;
+        }
+    }
+    return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
 /**
@@ -4591,8 +4698,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 {
     for (;; r1.popFront(), r2.popFront())
     {
-        if (r1.empty) return -r2.empty;
-        if (r2.empty) return r1.empty;
+        if (r1.empty) return -cast(int)!r2.empty;
+        if (r2.empty) return !r1.empty;
         auto a = r1.front, b = r2.front;
         if (binaryFun!pred(a, b)) return -1;
         if (binaryFun!pred(b, a)) return 1;
@@ -4682,6 +4789,16 @@ unittest
     assert(result > 0);
     result = cmp("aaa", "aaa"d);
     assert(result == 0);
+    result = cmp(cast(int[])[], cast(int[])[]);
+    assert(result == 0);
+    result = cmp([1, 2, 3], [1, 2, 3]);
+    assert(result == 0);
+    result = cmp([1, 3, 2], [1, 2, 3]);
+    assert(result > 0);
+    result = cmp([1, 2, 3], [1L, 2, 3, 4]);
+    assert(result < 0);
+    result = cmp([1L, 2, 3], [1, 2]);
+    assert(result > 0);
 }
 
 // MinType
@@ -5135,7 +5252,7 @@ assert(levenshteinDistance("cat", "rat") == 1);
 assert(levenshteinDistance("parks", "spark") == 2);
 assert(levenshteinDistance("kitten", "sitting") == 3);
 // ignore case
-assert(levenshteinDistance!("toupper(a) == toupper(b)")
+assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
     ("parks", "SPARK") == 2);
 ----
 */
@@ -5145,6 +5262,16 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 {
     Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
     return lev.distance(s, t);
+}
+
+//Verify Examples.
+unittest
+{
+    assert(levenshteinDistance("cat", "rat") == 1);
+    assert(levenshteinDistance("parks", "spark") == 2);
+    assert(levenshteinDistance("kitten", "sitting") == 3);
+    assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
+        ("parks", "SPARK") == 2);
 }
 
 /**
@@ -5232,11 +5359,29 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    for (; !source.empty; source.popFront())
+    static if(isArray!Range1 && isArray!Range2 &&
+    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        put(target, source.front);
+        // Array specialization.  This uses optimized memory copying routines
+        // under the hood and is about 10-20x faster than the generic
+        // implementation.
+        enforce(target.length >= source.length,
+            "Cannot copy a source array into a smaller target array.");
+        target[0..source.length] = source;
+
+        return target[source.length..$];
     }
-    return target;
+    else
+    {
+        // Generic implementation.
+        for (; !source.empty; source.popFront())
+        {
+            put(target, source.front);
+        }
+
+        return target;
+    }
+
 }
 
 unittest
@@ -5554,7 +5699,7 @@ Defines the swapping strategy for algorithms that need to swap
 elements in a range (such as partition and sort). The strategy
 concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
-"b", "aBc" ]) according to $(D toupper(a) < toupper(b)). That
+"b", "aBc" ]) according to $(D toUpper(a) < toUpper(b)). That
 algorithm might choose to swap the two equivalent strings $(D "abc")
 and $(D "aBc"). That does not affect the sorting since both $(D [
 "abc", "aBc", "b" ]) and $(D [ "aBc", "abc", "b" ]) are valid
@@ -6199,6 +6344,116 @@ unittest
     assert(isPartitioned!("a & 1")(r));
 }
 
+// partition3
+/**
+Rearranges elements in $(D r) in three adjacent ranges and returns
+them. The first and leftmost range only contains elements in $(D r)
+less than $(D pivot). The second and middle range only contains
+elements in $(D r) that are equal to $(D pivot). Finally, the third
+and rightmost range only contains elements in $(D r) that are greater
+than $(D pivot). The less-than test is defined by the binary function
+$(D less).
+
+Example:
+----
+auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+auto pieces = partition3(a, 4);
+assert(a == [ 1, 3, 4, 4, 4, 7, 8 ];
+assert(pieces[0] == [ 1, 3 ]);
+assert(pieces[1] == [ 4, 4, 4 ]);
+assert(pieces[2] == [ 7, 8 ]);
+----
+
+BUGS: stable $(D partition3) has not been implemented yet.
+ */
+auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
+(Range r, E pivot)
+if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
+        && hasSwappableElements!Range && hasLength!Range
+        && is(typeof(binaryFun!less(r.front, pivot)) == bool)
+        && is(typeof(binaryFun!less(pivot, r.front)) == bool)
+        && is(typeof(binaryFun!less(r.front, r.front)) == bool))
+{
+    // The algorithm is described in "Engineering a sort function" by
+    // Jon Bentley et al, pp 1257.
+
+    alias binaryFun!less lessFun;
+    size_t i, j, k = r.length, l = k;
+
+ bigloop:
+    for (;;)
+    {
+        for (;; ++j)
+        {
+            if (j == k) break bigloop;
+            assert(j < r.length);
+            if (lessFun(r[j], pivot)) continue;
+            if (lessFun(pivot, r[j])) break;
+            swap(r[i++], r[j]);
+        }
+        assert(j < k);
+        for (;;)
+        {
+            assert(k > 0);
+            if (!lessFun(pivot, r[--k]))
+            {
+                if (lessFun(r[k], pivot)) break;
+                swap(r[k], r[--l]);
+            }
+            if (j == k) break bigloop;
+        }
+        // Here we know r[j] > pivot && r[k] < pivot
+        swap(r[j++], r[k]);
+    }
+
+    // Swap the equal ranges from the extremes into the middle
+    auto strictlyLess = j - i, strictlyGreater = l - k;
+    auto swapLen = min(i, strictlyLess);
+    swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
+    swapLen = min(r.length - l, strictlyGreater);
+    swapRanges(r[k .. k + swapLen], r[r.length - swapLen .. r.length]);
+    return tuple(r[0 .. strictlyLess],
+            r[strictlyLess .. r.length - strictlyGreater],
+            r[r.length - strictlyGreater .. r.length]);
+}
+
+unittest
+{
+    auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+    auto pieces = partition3(a, 4);
+    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
+    assert(pieces[0] == [ 1, 3 ]);
+    assert(pieces[1] == [ 4, 4, 4 ]);
+    assert(pieces[2] == [ 8, 7 ]);
+
+    a = null;
+    pieces = partition3(a, 4);
+    assert(a.empty);
+    assert(pieces[0].empty);
+    assert(pieces[1].empty);
+    assert(pieces[2].empty);
+
+    a.length = uniform(0, 100);
+    foreach (ref e; a)
+    {
+        e = uniform(0, 50);
+    }
+    pieces = partition3(a, 25);
+    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+    foreach (e; pieces[0])
+    {
+        assert(e < 25);
+    }
+    foreach (e; pieces[1])
+    {
+        assert(e == 25);
+    }
+    foreach (e; pieces[2])
+    {
+        assert(e > 25);
+    }
+}
+
 // topN
 /**
 Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
@@ -6388,7 +6643,7 @@ sort!(myComp)(array);
 assert(array == [ 4, 3, 2, 1 ]);
 // Showcase stable sorting
 string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-sort!("toupper(a) < toupper(b)", SwapStrategy.stable)(words);
+sort!("toUpper(a) < toUpper(b)", SwapStrategy.stable)(words);
 assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 ----
 */
@@ -6450,7 +6705,7 @@ unittest
     assert(isSorted!(less)(a));
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-    bool lessi(string a, string b) { return toupper(a) < toupper(b); }
+    bool lessi(string a, string b) { return toUpper(a) < toUpper(b); }
     sort!(lessi, SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 
@@ -6462,59 +6717,157 @@ unittest
     sort(a);
     assert(isSorted(a));
     auto b = rndstuff!(string);
-    sort!("tolower(a) < tolower(b)")(b);
-    assert(isSorted!("toupper(a) < toupper(b)")(b));
+    sort!("toLower(a) < toLower(b)")(b);
+    assert(isSorted!("toUpper(a) < toUpper(b)")(b));
+}
+
+private template validPredicates(E, less...) {
+    static if (less.length == 0)
+        enum validPredicates = true;
+    else static if (less.length == 1 && is(typeof(less[0]) == SwapStrategy))
+        enum validPredicates = true;
+    else
+        enum validPredicates =
+            is(typeof(binaryFun!(less[0])(E.init, E.init)) == bool) &&
+            validPredicates!(E, less[1 .. $]);
+}
+
+/**
+Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
+"a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
+and sorts elements that have the same $(D id) by $(D date)
+descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
+< b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
+does fewer comparisons (in addition to being more convenient).
+
+Example:
+----
+static struct Point { int x, y; }
+auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+assert(pts1 == pts2);
+----
+ */
+template multiSort(less...) //if (less.length > 1)
+{
+    void multiSort(Range)(Range r)
+    if (validPredicates!(ElementType!Range, less))
+    {
+        static if (is(typeof(less[$ - 1]) == SwapStrategy))
+        {
+            enum ss = less[$ - 1];
+            alias less[0 .. $ - 1] funs;
+        }
+        else
+        {
+            alias SwapStrategy.unstable ss;
+            alias less funs;
+        }
+        alias binaryFun!(funs[0]) lessFun;
+
+        static if (funs.length > 1)
+        {
+            while (r.length > 1)
+            {
+                auto p = getPivot!lessFun(r);
+                auto t = partition3!(less[0], ss)(r, r[p]);
+                if (t[0].length <= t[2].length)
+                {
+                    .multiSort!less(t[0]);
+                    .multiSort!(less[1 .. $])(t[1]);
+                    r = t[2];
+                }
+                else
+                {
+                    .multiSort!(less[1 .. $])(t[1]);
+                    .multiSort!less(t[2]);
+                    r = t[0];
+                }
+            }
+        }
+        else
+        {
+            sort!(lessFun, ss)(r);
+        }
+    }
+}
+
+unittest
+{
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
+    auto pts2 = [ Point(0, 1), Point(1, 0), Point(1, 1), Point(1, 2), Point(5, 6), Point(5, 7) ];
+    static assert(validPredicates!(Point, "a.x < b.x", "a.y < b.y"));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+
+    auto pts3 = indexed(pts1, iota(pts1.length));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts3);
+    assert(equal(pts3, pts2));
 }
 
 // @@@BUG1904
 /*private*/
 size_t getPivot(alias less, Range)(Range r)
 {
-    return r.length / 2;
+    // This algorithm sorts the first, middle and last elements of r,
+    // then returns the index of the middle element.  In effect, it uses the
+    // median-of-three heuristic.
+
+    alias binaryFun!(less) pred;
+    immutable len = r.length;
+    immutable size_t mid = len / 2;
+    immutable uint result = ((cast(uint) (pred(r[0], r[mid]))) << 2) |
+                            ((cast(uint) (pred(r[0], r[len - 1]))) << 1) |
+                            (cast(uint) (pred(r[mid], r[len - 1])));
+
+    switch(result) {
+        case 0b001:
+            swapAt(r, 0, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b110:
+            swapAt(r, mid, len - 1);
+            break;
+        case 0b011:
+            swapAt(r, 0, mid);
+            break;
+        case 0b100:
+            swapAt(r, mid, len - 1);
+            swapAt(r, 0, mid);
+            break;
+        case 0b000:
+            swapAt(r, 0, len - 1);
+            break;
+        case 0b111:
+            break;
+        default:
+            assert(0);
+    }
+
+    return mid;
 }
 
 // @@@BUG1904
 /*private*/
 void optimisticInsertionSort(alias less, Range)(Range r)
 {
-    if (r.length <= 1) return;
-    for (auto i = 1; i != r.length; )
-    {
-        // move to the left to find the insertion point
-        auto p = i - 1;
-        for (;;)
-        {
-            if (!less(r[i], r[p]))
-            {
-                ++p;
-                break;
-            }
-            if (p == 0) break;
-            --p;
+    alias binaryFun!(less) pred;
+    if(r.length < 2) {
+        return ;
+    }
+
+    immutable maxJ = r.length - 1;
+    for(size_t i = r.length - 2; i != size_t.max; --i) {
+        size_t j = i;
+        auto temp = r[i];
+
+        for(; j < maxJ && pred(r[j + 1], temp); ++j) {
+            r[j] = r[j + 1];
         }
-        if (i == p)
-        {
-            // already in place
-            ++i;
-            continue;
-        }
-        assert(less(r[i], r[p]));
-        // move up to see how many we can insert
-        auto iOld = i, iPrev = i;
-        ++i;
-        // The code commented below has a darn bug in it.
-        // while (i != r.length && less(r[i], r[p]) && !less(r[i], r[iPrev]))
-        // {
-        //     ++i;
-        //     ++iPrev;
-        // }
-        // do the insertion
-        //assert(isSorted!(less)(r[0 .. iOld]));
-        //assert(isSorted!(less)(r[iOld .. i]));
-        //assert(less(r[i - 1], r[p]));
-        //assert(p == 0 || !less(r[i - 1], r[p - 1]));
-        bringToFront(r[p .. iOld], r[iOld .. i]);
-        //assert(isSorted!(less)(r[0 .. i]));
+
+        r[j] = temp;
     }
 }
 
@@ -6554,46 +6907,51 @@ void swapAt(R)(R r, size_t i1, size_t i2)
 void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
-    enum uint optimisticInsertionSortGetsBetter = 1;
+    enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
 
     while (r.length > optimisticInsertionSortGetsBetter)
     {
         const pivotIdx = getPivot!(less)(r);
+        auto pivot = r[pivotIdx];
+
         // partition
         static if (ss == SwapStrategy.unstable)
         {
+            alias binaryFun!(less) pred;
+
             // partition
             swapAt(r, pivotIdx, r.length - 1);
-            bool pred(ElementType!(Range) a)
+            size_t lessI = size_t.max, greaterI = r.length - 1;
+
+            while(true)
             {
-                return less(a, r.back);
-            }
-            auto right = partition!(pred, ss)(r);
-            swapAt(r, r.length - right.length, r.length - 1);
-            // done with partitioning
-            if (r.length == right.length)
-            {
-                // worst case: *b <= everything (also pivot <= everything)
-                // avoid quadratic behavior
-                do r.popFront; while (!r.empty && !less(right.front, r.front));
-            }
-            else
-            {
-                auto left = r[0 .. r.length - right.length];
-                right.popFront; // no need to consider right.front,
-                                // it's in the proper place already
-                if (right.length > left.length)
+                while(pred(r[++lessI], pivot)) {}
+                while(greaterI > 0 && pred(pivot, r[--greaterI])) {}
+
+                if(lessI < greaterI)
                 {
-                    swap(left, right);
+                    swapAt(r, lessI, greaterI);
                 }
-                .sortImpl!(less, ss, Range)(right);
-                r = left;
+                else
+                {
+                    break;
+                }
             }
+
+            swapAt(r, r.length - 1, lessI);
+            auto right = r[lessI + 1..r.length];
+
+            auto left = r[0..min(lessI, greaterI + 1)];
+            if (right.length > left.length)
+            {
+                swap(left, right);
+            }
+            .sortImpl!(less, ss, Range)(right);
+            r = left;
         }
         else // handle semistable and stable the same
         {
-            auto pivot = r[pivotIdx];
             static assert(ss != SwapStrategy.semistable);
             bool pred(Elem a) { return less(a, pivot); }
             auto right = partition!(pred, ss)(r);
@@ -7230,14 +7588,14 @@ unittest
     // random data
     auto b = rndstuff!(string);
     auto index = new string*[b.length];
-    partialIndex!("toupper(a) < toupper(b)")(b, index);
-    assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+    partialIndex!("std.uni.toUpper(a) < std.uni.toUpper(b)")(b, index);
+    assert(isSorted!("std.uni.toUpper(*a) < std.uni.toUpper(*b)")(index));
 
     // random data with indexes
     auto index1 = new size_t[b.length];
-    bool cmp(string x, string y) { return toupper(x) < toupper(y); }
+    bool cmp(string x, string y) { return std.uni.toUpper(x) < std.uni.toUpper(y); }
     partialIndex!(cmp)(b, index1);
-    bool check(size_t x, size_t y) { return toupper(b[x]) < toupper(b[y]); }
+    bool check(size_t x, size_t y) { return std.uni.toUpper(b[x]) < std.uni.toUpper(b[y]); }
     assert(isSorted!(check)(index1));
 }
 
@@ -7252,10 +7610,10 @@ unittest
 
 // ----
 // string[] arr = [ "ab", "c", "Ab", "C" ];
-// auto index = schwartzMakeIndex!(toupper, less, SwapStrategy.stable)(arr);
+// auto index = schwartzMakeIndex!(toUpper, less, SwapStrategy.stable)(arr);
 // assert(*index[0] == "ab" && *index[1] == "Ab"
 //     && *index[2] == "c" && *index[2] == "C");
-// assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+// assert(isSorted!("toUpper(*a) < toUpper(*b)")(index));
 // ----
 // */
 // Iterator!(Range)[] schwartzMakeIndex(
@@ -7300,16 +7658,16 @@ unittest
 // version (wyda) unittest
 // {
 //     string[] arr = [ "D", "ab", "c", "Ab", "C" ];
-//     auto index = schwartzMakeIndex!(toupper, "a < b",
+//     auto index = schwartzMakeIndex!(toUpper, "a < b",
 //                                     SwapStrategy.stable)(arr);
-//     assert(isSorted!(q{toupper(*a) < toupper(*b)})(index));
+//     assert(isSorted!(q{toUpper(*a) < toUpper(*b)})(index));
 //     assert(*index[0] == "ab" && *index[1] == "Ab"
 //            && *index[2] == "c" && *index[3] == "C");
 
 //     // random data
 //     auto b = rndstuff!(string);
-//     auto index1 = schwartzMakeIndex!(toupper)(b);
-//     assert(isSorted!("toupper(*a) < toupper(*b)")(index1));
+//     auto index1 = schwartzMakeIndex!(toUpper)(b);
+//     assert(isSorted!("toUpper(*a) < toUpper(*b)")(index1));
 // }
 
 +/

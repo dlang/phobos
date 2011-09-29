@@ -10,7 +10,7 @@ string synopsis()
 {
    FILE* f = enforce(fopen("some/file"));
    // f is not null from here on
-   FILE* g = enforceEx!(WriteException)(fopen("some/other/file", "w"));
+   FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
    // g is not null from here on
 
    Exception e = collectException(write(g, readln(f)));
@@ -349,8 +349,8 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
+T enforce(T, string file = __FILE__, size_t line = __LINE__)
+    (T value, lazy const(char)[] msg = null) @safe pure
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -359,15 +359,17 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, the given
     delegate is called.
+
+    The whole safety and purity are inferred from $(D Dg)'s safety and purity.
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
-(T value, scope void delegate() dg)
+T enforce(T, Dg : void delegate(), string file = __FILE__, size_t line = __LINE__)
+    (T value, scope Dg dg)
 {
     if (!value) dg();
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg)
+private void bailOut(string file, size_t line, in char[] msg) @safe pure
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -389,6 +391,42 @@ unittest
     }
 }
 
+// purity and safety inference test
+unittest
+{
+    import std.typetuple;
+
+    foreach (EncloseSafe; TypeTuple!(false, true))
+    foreach (EnclosePure; TypeTuple!(false, true))
+    {
+        foreach (BodySafe; TypeTuple!(false, true))
+        foreach (BodyPure; TypeTuple!(false, true))
+        {
+            enum code =
+                "delegate void() " ~
+                (EncloseSafe ? "@safe " : "") ~
+                (EnclosePure ? "pure " : "") ~
+                "{ ""enforce(true, { "
+                        "int n; " ~
+                        (BodySafe ? "" : "auto p = &n + 10; "    ) ~    // unsafe code
+                        (BodyPure ? "" : "static int g; g = 10; ") ~    // impure code
+                    "}); "
+                "}";
+            enum expect =
+                (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);
+
+            version(none)
+            pragma(msg, "safe = ", EncloseSafe?1:0, "/", BodySafe?1:0, ", ",
+                        "pure = ", EnclosePure?1:0, "/", BodyPure?1:0, ", ",
+                        "expect = ", expect?"OK":"NG", ", ",
+                        "code = ", code);
+
+            static assert(__traits(compiles, mixin(code)()) == expect);
+        }
+    }
+}
+
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
@@ -399,7 +437,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex)
+T enforce(T)(T value, lazy Throwable ex) @safe pure
 {
     if (!value) throw ex();
     return value;
@@ -407,15 +445,8 @@ T enforce(T)(T value, lazy Throwable ex)
 
 unittest
 {
-    enforce(true, new Exception("this should not be thrown"));
-    try
-    {
-        enforce(false, new Exception("this should be thrown"));
-        assert(false);
-    }
-    catch (Exception e)
-    {
-    }
+    assertNotThrown(enforce(true, new Exception("this should not be thrown")));
+    assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
 /++
@@ -430,16 +461,17 @@ auto line = readln(f);
 enforce(line.length); // expect a non-empty line
 --------------------
  +/
-T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null)
+T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
+    (T value, lazy string msg = null) @safe pure
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
 }
 
+
 /++
-    If $(D !!value) is true, $(D value) is returned. Otherwise, $(D new E(msg))
-    is thrown.
+    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    $(D new E(msg, file, line)) is thrown.
 
    Example:
 --------------------
@@ -448,26 +480,59 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "")
+T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    if (is(typeof(new E(msg, file, line))))
 {
+    if (!value) throw new E(msg, file, line);
+    return value;
+}
+
+/++
+    $(RED Scheduled for deprecation in February 2012. Please use the version of
+          $(D enforceEx) which takes an exception that constructs with
+          $(D new E(msg, file, line)).)
+
+    If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
+    $(D new E(msg)) is thrown.
+  +/
+T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
+    if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
+{
+    import std.metastrings;
+
+    pragma(msg, Format!("Notice: As of Phobos 2.055, the version of enforceEx which " ~
+                        "constructs its exception with new E(msg) instead of " ~
+                        "new E(msg, file, line) has been scheduled for " ~
+                        "deprecation in February 2012. Please update %s's " ~
+                        "constructor so that it can be constructed with " ~
+                        "new %s(msg, file, line).", E.stringof, E.stringof));
+
     if (!value) throw new E(msg);
     return value;
 }
 
 unittest
 {
-    enforce(true);
-    enforce(true, "blah");
-    typedef Exception MyException;
-    try
+    assertNotThrown(enforceEx!Exception(true));
+    assertNotThrown(enforceEx!Exception(true, "blah"));
+
     {
-        enforceEx!(MyException)(false);
-        assert(false);
+        auto e = collectException(enforceEx!Exception(false));
+        assert(e !is null);
+        assert(e.msg.empty);
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 4);
     }
-    catch (MyException e)
+
     {
+        auto e = collectException(enforceEx!Exception(false, "hello", "file", 42));
+        assert(e !is null);
+        assert(e.msg == "hello");
+        assert(e.file == "file");
+        assert(e.line == 42);
     }
 }
+
 
 /++
     Catches and returns the exception thrown from the given expression.
@@ -782,13 +847,13 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
-    
+
     int[] darr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(darr, darr[i]));
     assert(pointsTo(darr[0..3], darr[2]));
     assert(!pointsTo(darr[0..3], darr[3]));
-    
+
     int[4] sarr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(sarr, sarr[i]));
@@ -802,7 +867,7 @@ unittest
 class ErrnoException : Exception
 {
     uint errno;                 // operating system error code
-    this(string msg, string file = null, uint line = 0)
+    this(string msg, string file = null, size_t line = 0)
     {
         errno = getErrno;
         version (linux)

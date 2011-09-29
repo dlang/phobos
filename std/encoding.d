@@ -656,7 +656,7 @@ template EncoderInstance(E)
 //=============================================================================
 
 /** Defines various character sets. */
-typedef ubyte AsciiChar;
+enum AsciiChar : ubyte { init };
 /// Ditto
 alias immutable(AsciiChar)[] AsciiString;
 
@@ -736,7 +736,7 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-typedef ubyte Latin1Char;
+enum Latin1Char : ubyte { init };
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
@@ -812,7 +812,7 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /** Defines a Windows1252-encoded character. */
-typedef ubyte Windows1252Char;
+enum Windows1252Char : ubyte { init };
 /**
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
@@ -2087,7 +2087,7 @@ abstract class EncodingScheme
             throw new EncodingException("Unable to create class "~className);
         foreach(encodingName;scheme.names())
         {
-            supported[tolower(encodingName)] = className;
+            supported[toLower(encodingName)] = className;
         }
     }
 
@@ -2105,7 +2105,7 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = std.string.tolower(encodingName) in supported;
+        auto p = std.string.toLower(encodingName) in supported;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
@@ -2685,8 +2685,8 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
     const
     {
-        version(LittleEndian) { string NAME = "UTF-16LE"; }
-        version(BigEndian)    { string NAME = "UTF-16BE"; }
+        version(LittleEndian) { enum string NAME = "UTF-16LE"; }
+        version(BigEndian)    { enum string NAME = "UTF-16BE"; }
 
         override string[] names()
         {
@@ -2763,8 +2763,8 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
     const
     {
-        version(LittleEndian) { string NAME = "UTF-32LE"; }
-        version(BigEndian)    { string NAME = "UTF-32BE"; }
+        version(LittleEndian) { enum string NAME = "UTF-32LE"; }
+        version(BigEndian)    { enum string NAME = "UTF-32BE"; }
 
         override string[] names()
         {

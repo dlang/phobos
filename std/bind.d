@@ -57,9 +57,9 @@ const DynArg!(9) _9;            /// ditto
 template isDynArg(T) {
         static if (is(typeof(T.argNr))) {                               // must have the argNr field
                 static if(is(T : DynArg!(T.argNr))) {           // now check the exact type
-                        static const bool isDynArg = true;
-                } else static const bool isDynArg = false;
-        } else static const bool isDynArg = false;
+                        static enum bool isDynArg = true;
+                } else static enum bool isDynArg = false;
+        } else static enum bool isDynArg = false;
 }
 
 
@@ -67,7 +67,7 @@ template isDynArg(T) {
         Detect if a given type is a DynArg of the specified index
 */
 template isDynArg(T, int i) {
-        static const bool isDynArg = is(T : DynArg!(i));
+        static enum bool isDynArg = is(T : DynArg!(i));
 }
 
 
@@ -150,7 +150,7 @@ template _assign(T, Y, bool copyStaticArrays = true) {
 */
 struct Tuple(T ...) {
         alias Tuple     meta;
-        const bool      expressionTuple = isExpressionTuple!(T);
+        enum bool      expressionTuple = isExpressionTuple!(T);
 
         static if (!expressionTuple) {
                 alias T type;           // a built-in tuple
@@ -160,7 +160,7 @@ struct Tuple(T ...) {
         }
 
 
-        const int length = value.length;
+        enum int length = value.length;
 
 
         /**
@@ -241,8 +241,8 @@ struct Tuple() {
         alias EmptyTuple_!()    type;           /// an empty built-in tuple
         alias EmptyTuple_!()    value;          /// an empty built-in tuple
 
-        const bool      expressionTuple = false;
-        const int       length = 0;
+        enum bool      expressionTuple = false;
+        enum int       length = 0;
 
 
         template appendT(X) {
@@ -291,9 +291,9 @@ Tuple!(T) tuple(T ...)(T t) {
 template isTypeTuple(T) {
         static if (is(T.type)) {
                 static if (is(T == Tuple!(T.type))) {
-                        const bool isTypeTuple = true;
-                } else const bool isTypeTuple = false;
-        } else const bool isTypeTuple = false;
+                        enum bool isTypeTuple = true;
+                } else enum bool isTypeTuple = false;
+        } else enum bool isTypeTuple = false;
 }
 
 unittest
@@ -314,7 +314,7 @@ template minNumArgs_impl(alias fn, fnT) {
                 static assert (i <= Params.length);
 
                 static if (is(typeof(fn(params[0..i])))) {
-                        const int res = i;
+                        enum int res = i;
                 } else {
                         alias loop!(i+1).res res;
                 }
@@ -326,7 +326,7 @@ template minNumArgs_impl(alias fn, fnT) {
         Finds the minimal number of arguments a given function needs to be provided
 */
 template minNumArgs(alias fn, fnT = typeof(&fn)) {
-        const int minNumArgs = minNumArgs_impl!(fn, fnT).res;
+        enum int minNumArgs = minNumArgs_impl!(fn, fnT).res;
 }
 
 
@@ -350,11 +350,11 @@ template MBoundFunc() {
 
         // if bindAlias was used, we can detect default arguments and only demand the non-default arguments to be specified
         static if (!is(typeof(FAlias) == EmptySlot)) {
-                const int minFuncArgs = minNumArgs!(FAlias);
+                enum int minFuncArgs = minNumArgs!(FAlias);
 
                 alias ParamsPassMethodTuple!(FAlias)                    ParamPassingMethods;    // find out whether the function expects parameters by value or reference
         } else {
-                const int minFuncArgs = FuncParams.length;
+                enum int minFuncArgs = FuncParams.length;
         }
 
         // the parameters that our wrapper function must get
@@ -373,36 +373,36 @@ template MBoundFunc() {
                         // the argI-th arg is a composed/nested function
                         static if (isBoundFunc!(AllBoundArgs.type[argI])) {
                                 alias DerefFunc!(AllBoundArgs.type[argI]).RetType               FuncRetType;
-                                const int argLen = getArgLen!(FuncParams.type[fargI], FuncRetType);
-                                const int bargInc = 1;
+                                enum int argLen = getArgLen!(FuncParams.type[fargI], FuncRetType);
+                                enum int bargInc = 1;
                         }
 
                         // the argI-th arg is a dynamic argument whose value we will get in the call to func()
                         else static if (isDynArg!(AllBoundArgs.type[argI])) {
-                                const int argLen = getArgLen!(FuncParams.type[fargI], DynParams[AllBoundArgs.type[argI].argNr]);
-                                const int bargInc = 0;
+                                enum int argLen = getArgLen!(FuncParams.type[fargI], DynParams[AllBoundArgs.type[argI].argNr]);
+                                enum int bargInc = 0;
                         }
 
                         // the argI-th arg is a statically bound argument
                         else {
-                                const int argLen = getArgLen!(FuncParams.type[fargI], BoundArgs.type[bargI]);
-                                const int bargInc = 1;
+                                enum int argLen = getArgLen!(FuncParams.type[fargI], BoundArgs.type[bargI]);
+                                enum int bargInc = 1;
                         }
 
                         // iterate
-                        const int res = numFuncArgsReallyBound!(argI+1, fargI+argLen, bargI+bargInc).res;
+                        enum int res = numFuncArgsReallyBound!(argI+1, fargI+argLen, bargI+bargInc).res;
                 } else {
                         // last iteration
 
                         // the number of bound args is the number of arguments we've detected in this template loop
-                        const int res = fargI;
+                        enum int res = fargI;
 
                         // make sure we'll copy all args the function is going to need
                         static assert (res >= minFuncArgs);
                 }
         }
 
-        const int numSpecifiedParams = numFuncArgsReallyBound!().res;
+        enum int numSpecifiedParams = numFuncArgsReallyBound!().res;
 
         // it's a tuple type whose instance will be applied to the bound function
         alias Tuple!(FuncParams.type[0 .. numSpecifiedParams])  SpecifiedParams;
@@ -444,8 +444,8 @@ template MBoundFunc() {
                                 // we'll take data from the returned value
                                 auto srcItem = &funcRet;
 
-                                const int bargInc = 1;                                                  // nested/composed functions belong to the boundArgs tuple
-                                const bool dupStaticArrays = true;              // because the function's return value is stored locally
+                                enum int bargInc = 1;                                                  // nested/composed functions belong to the boundArgs tuple
+                                enum bool dupStaticArrays = true;              // because the function's return value is stored locally
                         }
 
                         // the argI-th arg is a dynamic argument whose value we will get in the call to func()
@@ -454,8 +454,8 @@ template MBoundFunc() {
                                 // we'll take data from dynArgs
                                 auto srcItem = &dynArgs[AllBoundArgs.type[argI].argNr];
 
-                                const int bargInc = 0;                                                  // dynamic args don't belond to the boundArgs tuple
-                                const bool dupStaticArrays = true;              // because we get dynArgs on stack
+                                enum int bargInc = 0;                                                  // dynamic args don't belond to the boundArgs tuple
+                                enum bool dupStaticArrays = true;              // because we get dynArgs on stack
                         }
 
                         // the argI-th arg is a statically bound argument
@@ -464,12 +464,12 @@ template MBoundFunc() {
                                 // we'll take data directly from boundArgs
                                 auto srcItem = &boundArgs.value[bargI];
 
-                                const int bargInc = 1;                                                  // statically bound args belong to the boundArgs tuple
-                                const bool dupStaticArrays = false;             // because the storage exists in boundArgs
+                                enum int bargInc = 1;                                                  // statically bound args belong to the boundArgs tuple
+                                enum bool dupStaticArrays = false;             // because the storage exists in boundArgs
                         }
 
                         // the number of bound-function parameters this argument will cover after tuple expansion
-                        const int argLen = getArgLen!(funcArgs.type[fargI], typeof(*srcItem));
+                        enum int argLen = getArgLen!(funcArgs.type[fargI], typeof(*srcItem));
 
                         static if (isTypeTuple!(typeof(*srcItem)) && !isTypeTuple!(funcArgs.type[fargI])) {
                                 foreach (i, x; srcItem.value) {
@@ -715,11 +715,11 @@ template isBoundFunc(T) {
                 static if (is(DerefFunc!(T).BoundArgs)) {
                         static if (is(typeof(DerefFunc!(T).FAlias))) {
                                 static if (is(DerefFunc!(T) : BoundFunc!(DerefFunc!(T).FuncType, DerefFunc!(T).FAlias, DerefFunc!(T).AllBoundArgs))) {
-                                        static const bool isBoundFunc = true;
-                                } else static const bool isBoundFunc = false;
-                        } else static const bool isBoundFunc = false;
-                } else static const bool isBoundFunc = false;
-        } else static const bool isBoundFunc = false;
+                                        static enum bool isBoundFunc = true;
+                                } else static enum bool isBoundFunc = false;
+                        } else static enum bool isBoundFunc = false;
+                } else static enum bool isBoundFunc = false;
+        } else static enum bool isBoundFunc = false;
 }
 
 
@@ -805,8 +805,8 @@ template dynArgTypes(int i, FuncParams, BoundArgs, int minParamsLeft) {
 
 // just a simple util
 private template maxInt(int a, int b) {
-        static if (a > b) static const int maxInt = a;
-        else static const int maxInt = b;
+        static if (a > b) static enum int maxInt = a;
+        else static enum int maxInt = b;
 }
 
 
@@ -816,21 +816,21 @@ private template maxInt(int a, int b) {
 template numDynArgs(BoundArgs) {
         static if (BoundArgs.length == 0) {
                 // received an EmptyTuple
-                static const int res = 0;
+                static enum int res = 0;
         } else {
                 // ordinary dynamic arg
                 static if (isDynArg!(BoundArgs.type[0])) {
-                        static const int res = maxInt!(BoundArgs.type[0].argNr+1, numDynArgs!(Tuple!(BoundArgs.type[1..$])).res);
+                        static enum int res = maxInt!(BoundArgs.type[0].argNr+1, numDynArgs!(Tuple!(BoundArgs.type[1..$])).res);
                 }
 
                 // count the args in nested / composed functions
                 else static if (isBoundFunc!(BoundArgs.type[0])) {
-                        static const int res = maxInt!(DerefFunc!(BoundArgs.type[0]).DynParams.length, numDynArgs!(Tuple!(BoundArgs.type[1..$])).res);
+                        static enum int res = maxInt!(DerefFunc!(BoundArgs.type[0]).DynParams.length, numDynArgs!(Tuple!(BoundArgs.type[1..$])).res);
                 }
 
                 // statically bound arg, skip it
                 else {
-                        static const int res = numDynArgs!(Tuple!(BoundArgs.type[1..$])).res;
+                        static enum int res = numDynArgs!(Tuple!(BoundArgs.type[1..$])).res;
                 }
         }
 }
@@ -924,12 +924,12 @@ void extractBoundArgs(int dst, int src, BoundArgs ...)(ref ExtractedBoundArgs!(B
 template getArgLen(Dst, Src) {
         // if the arg is a tuple and the target isn't one, it will be expanded/decomposed to the tuple's length
         static if (isTypeTuple!(Src) && !isTypeTuple!(Dst)) {
-                static const int getArgLen = Src.length;
+                static enum int getArgLen = Src.length;
         }
 
         // plain arg - it will use 1:1 mapping of functioni params to bound params
         else {
-                static const int getArgLen = 1;
+                static enum int getArgLen = 1;
         }
 }
 
@@ -938,7 +938,7 @@ template getArgLen(Dst, Src) {
         Tell whether a parameter type tuple contains an EmptySlot struct
 */
 template ContainsEmptySlotType(ParamList ...) {
-        const bool ContainsEmptySlotType = -1 != IndexOf!(EmptySlot, ParamList);
+        enum bool ContainsEmptySlotType = -1 != IndexOf!(EmptySlot, ParamList);
 }
 
 
@@ -958,7 +958,7 @@ template ParamsPassMethodTuple_impl(alias Func, int i = 0) {
                 alias Tuple!() res;
         } else {
                 Params params = void;
-                const params.type[i] constParam;
+                enum params.type[i] constParam;
 
                 // if the function expects references, it won't like our const.
                 static if (is(typeof(Func(params.value[0..i], constParam, params.value[i+1..$])))) {

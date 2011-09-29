@@ -8,6 +8,7 @@ module std.c.osx.socket;
 
 private import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
+public import core.sys.posix.netdb;
 public import core.sys.posix.netinet.tcp;
 public import core.sys.posix.netinet.in_;
 public import core.sys.posix.sys.select;
@@ -40,46 +41,8 @@ enum: int
     IPPROTO_MAX =   256,
 }
 
-struct protoent
-{
-    char* p_name;
-    char** p_aliases;
-    int32_t p_proto;
-}
-
-protoent* getprotobyname(in char* name);
-protoent* getprotobynumber(int number);
-
-struct servent
-{
-    char* s_name;
-    char** s_aliases;
-    int32_t s_port;
-    char* s_proto;
-}
-
-servent* getservbyname(in char* name, in char* proto);
-servent* getservbyport(int port, in char* proto);
-
-struct hostent
-{
-    char* h_name;
-    char** h_aliases;
-    int32_t h_addrtype;
-    int32_t h_length;
-    char** h_addr_list;
-
-
-    char* h_addr()
-    {
-        return h_addr_list[0];
-    }
-}
-
-hostent* gethostbyname(in char* name);
 int gethostbyname_r(in char* name, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
 int gethostbyname2_r(in char* name, int af, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
-hostent* gethostbyaddr(void* addr, int len, int type);
 
 // Not defined in OSX, but we'll use them anyway
 enum: int
@@ -87,11 +50,6 @@ enum: int
     SD_RECEIVE =  0,
     SD_SEND =     1,
     SD_BOTH =     2,
-}
-
-enum: int
-{
-    MSG_NOSIGNAL =   0x4000,
 }
 
 enum: int

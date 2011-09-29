@@ -11,12 +11,12 @@ immune of threading issues. The generators feature a number of
 well-known and well-documented methods of generating random
 numbers. An overall fast and reliable means to generate random numbers
 is the $(D_PARAM Mt19937) generator, which derives its name from
-"$(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
-Twister) with a period of 2 to the power of 19937". In
-memory-constrained situations, $(LUCKY linear congruential) generators
-such as $(D MinstdRand0) and $(D MinstdRand) might be useful. The
-standard library provides an alias $(D_PARAM Random) for whichever
-generator it considers the most fit for the target environment.
+"$(LUCKY Mersenne Twister) with a period of 2 to the power of
+19937". In memory-constrained situations, $(LUCKY linear congruential)
+generators such as $(D MinstdRand0) and $(D MinstdRand) might be
+useful. The standard library provides an alias $(D_PARAM Random) for
+whichever generator it considers the most fit for the target
+environment.
 
 Example:
 
@@ -59,7 +59,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.random;
 
 import std.algorithm, std.c.time, std.conv, std.datetime, std.exception,
-       std.math, std.numeric, std.process, std.range, std.stdio, std.traits,
+       std.math, std.numeric, std.process, std.range, std.traits,
        core.thread;
 
 version(unittest) import std.typetuple;
@@ -372,8 +372,7 @@ unittest
 }
 
 /**
-The $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
-Twister) generator.
+The $(LUCKY Mersenne Twister) generator.
  */
 struct MersenneTwisterEngine(
     UIntType, size_t w, size_t n, size_t m, size_t r,
@@ -381,6 +380,7 @@ struct MersenneTwisterEngine(
     UIntType b, size_t t,
     UIntType c, size_t l)
 {
+    static assert(UIntType.min == 0);
 /**
 Parameter for the generator.
 */
@@ -866,7 +866,8 @@ Generates a number between $(D a) and $(D b). The $(D boundaries)
 parameter controls the shape of the interval (open vs. closed on
 either side). Valid values for $(D boundaries) are $(D "[]"), $(D
 "$(LPAREN)]"), $(D "[$(RPAREN)"), and $(D "()"). The default interval
-is closed to the left and open to the right.
+is closed to the left and open to the right. The version that does not
+take $(D urng) uses the default generator $(D rndGen).
 
 Example:
 
@@ -878,98 +879,8 @@ auto a = uniform(0, 1024, gen);
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
-            T1, T2, UniformRandomNumberGenerator)
-        (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
-else
-    CommonType!(T1, T2) uniform(string boundaries = "[)",
-            T1, T2, UniformRandomNumberGenerator)
-(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
-if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
-        !is(CommonType!(T1, T2) == void))
-{
-    alias Unqual!(CommonType!(T1, T2)) NumberType;
-    NumberType _a, _b;
-    static if (boundaries[0] == '(')
-        {
-        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-                {
-            _a = a;
-                        _a++;
-        }
-                else {
-            _a = nextafter(a, a.infinity);
-                }
-    }
-        else
-        {
-        _a = a;
-        }
-    static if (boundaries[1] == ')')
-        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-        {
-                    _b = b;
-            static if (_b.min == 0)
-            {
-                if (b == 0)
-                {
-                    // writeln("Invalid distribution range: "
-                    //         ~ boundaries[0] ~ to!(string)(a)
-                    //         ~ ", " ~ to!(string)(b) ~ boundaries[1]);
-                    _b++;
-                }
-            }
-                        _b--;
-        }
-        else
-        {
-            static assert(isFloatingPoint!NumberType);
-            _b = nextafter(to!NumberType(b), -_b.infinity);
-        }
-    else
-        _b = b;
-    enforce(_a <= _b,
-            text("Invalid distribution range: ", boundaries[0], a,
-                    ", ", b, boundaries[1]));
-    static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-    {
-        auto myRange = _b - _a;
-        if (!myRange) return _a;
-        assert(urng.max - urng.min >= myRange,
-                "UniformIntGenerator.popFront not implemented"
-                " for large ranges");
-        Unsigned!(typeof((urng.max - urng.min + 1) / (myRange + 1)))
-            bucketSize = 1 + (urng.max - urng.min - myRange) / (myRange + 1);
-        //assert(bucketSize, to!(string)(myRange));
-        NumberType r;
-        do
-        {
-            r = cast(NumberType) ((urng.front - urng.min) / bucketSize);
-            urng.popFront;
-        }
-        while (r > myRange);
-        return cast(typeof(return)) (_a + r);
-    }
-    else
-    {
-        static assert(isFloatingPoint!NumberType);
-        auto result = _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
-            / (urng.max - urng.min);
-        urng.popFront;
-        return result;
-    }
-}
-
-/**
-As above, but uses the default generator $(D rndGen).
- */
-version(StdDdoc)
-    CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
-        (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
-else
-CommonType!(T1, T2) uniform(string boundaries = "[)", T1, T2)
-(T1 a, T2 b)  if (is(CommonType!(T1, T2)))
+auto uniform(string boundaries = "[)", T1, T2)
+(T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
 {
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
 }
@@ -981,13 +892,11 @@ unittest
     {
         auto x = uniform(0., 15., gen);
         assert(0 <= x && x < 15);
-        //writeln(x);
     }
     foreach (i; 0 .. 20)
     {
         auto x = uniform!"[]"('a', 'z', gen);
         assert('a' <= x && x <= 'z');
-        //writeln(x);
     }
 
         foreach (i; 0 .. 20)
@@ -1004,6 +913,94 @@ unittest
         }
 }
 
+// Implementation of uniform for floating-point types
+/// ditto
+auto uniform(string boundaries = "[)",
+        T1, T2, UniformRandomNumberGenerator)
+(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+if (isFloatingPoint!(CommonType!(T1, T2)))
+{
+    alias Unqual!(CommonType!(T1, T2)) NumberType;
+    static if (boundaries[0] == '(')
+    {
+        NumberType _a = nextafter(cast(NumberType) a, NumberType.infinity);
+    }
+    else
+    {
+        NumberType _a = a;
+    }
+    static if (boundaries[1] == ')')
+    {
+        NumberType _b = nextafter(cast(NumberType) b, -NumberType.infinity);
+    }
+    else
+    {
+        NumberType _b = b;
+    }
+    enforce(_a <= _b,
+            text("std.random.uniform(): invalid bounding interval ",
+                    boundaries[0], a, ", ", b, boundaries[1]));
+    NumberType result =
+        _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
+        / (urng.max - urng.min);
+    urng.popFront();
+    return result;
+}
+
+// Implementation of uniform for integral types
+auto uniform(string boundaries = "[)",
+        T1, T2, UniformRandomNumberGenerator)
+(T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+if (isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2)))
+{
+    alias Unqual!(CommonType!(T1, T2)) ResultType;
+    // We handle the case "[)' as the common case, and we adjust all
+    // other cases to fit it.
+    static if (boundaries[0] == '(')
+    {
+        enforce(cast(ResultType) a < ResultType.max,
+                text("std.random.uniform(): invalid left bound ", a));
+        ResultType min = cast(ResultType) a + 1;
+    }
+    else
+    {
+        ResultType min = a;
+    }
+    static if (boundaries[1] == ']')
+    {
+        enforce(min <= cast(ResultType) b,
+                text("std.random.uniform(): invalid bounding interval ",
+                        boundaries[0], a, ", ", b, boundaries[1]));
+        if (b == ResultType.max && min == ResultType.min)
+        {
+            // Special case - all bits are occupied
+            return .uniform!ResultType(urng);
+        }
+        auto count = unsigned(b - min) + 1u;
+        static assert(count.min == 0);
+    }
+    else
+    {
+        enforce(min < cast(ResultType) b,
+                text("std.random.uniform(): invalid bounding interval ",
+                        boundaries[0], a, ", ", b, boundaries[1]));
+        auto count = unsigned(b - min);
+        static assert(count.min == 0);
+    }
+    assert(count != 0);
+    if (count == 1) return min;
+    alias typeof(count) CountType;
+    static assert(CountType.min == 0);
+    auto bucketSize = 1u + (CountType.max - count + 1) / count;
+    CountType r;
+    do
+    {
+        r = cast(CountType) (uniform!CountType(urng) / bucketSize);
+    }
+    while (r >= count);
+    return cast(typeof(return)) (min + r);
+}
+
 unittest
 {
     auto gen = Mt19937(unpredictableSeed);
@@ -1015,6 +1012,59 @@ unittest
     assert(0 <= b && b < 1, to!string(b));
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
+
+    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+                          int, uint, long, ulong, float, double, real))
+    {
+        T lo = 0, hi = 100;
+        T init = uniform(lo, hi);
+        size_t i = 50;
+        while (--i && uniform(lo, hi) == init) {}
+        assert(i > 0);
+    }
+}
+
+/**
+Generates a uniformly-distributed number in the range $(D [T.min,
+T.max]) for any integral type $(D T). If no random number generator is
+passed, uses the default $(D rndGen).
+ */
+auto uniform(T, UniformRandomNumberGenerator)
+(ref UniformRandomNumberGenerator urng)
+if (isIntegral!T || isSomeChar!T)
+{
+    auto r = urng.front;
+    urng.popFront();
+    static if (T.sizeof <= r.sizeof)
+    {
+        return cast(T) r;
+    }
+    else
+    {
+        static assert(T.sizeof == 8 && r.sizeof == 4);
+        T r1 = urng.front | (cast(T)r << 32);
+        urng.popFront();
+        return r1;
+    }
+}
+
+/// Ditto
+auto uniform(T)()
+if (isIntegral!T || isSomeChar!T)
+{
+    return uniform!T(rndGen);
+}
+
+unittest
+{
+    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+                          int, uint, long, ulong))
+    {
+        T init = uniform!T();
+        size_t i = 50;
+        while (--i && uniform!T() == init) {}
+        assert(i > 0);
+    }
 }
 
 /**
@@ -1393,139 +1443,3 @@ unittest
     assert(i == 5);
 }
 
-//__EOF__
-/* ===================== Random ========================= */
-
-// seed and index are deliberately thread local
-
-private uint seed;              // starting seed
-private uint index;             // ith random number
-
-/**
-The random number generator is seeded at program startup with a random
-value.  This ensures that each program generates a different sequence
-of random numbers. To generate a repeatable sequence, use $(D
-rand_seed()) to start the sequence. seed and index start it, and each
-successive value increments index.  This means that the $(I n)th
-random number of the sequence can be directly generated by passing
-index + $(I n) to $(D rand_seed()).
-
-Note: This is more random, but slower, than C's $(D rand()) function.
-To use C's $(D rand()) instead, import $(D std.c.stdlib).
-
-BUGS: Shares a global single state, not multithreaded.  SCHEDULED FOR
-DEPRECATION.
-
-*/
-
-void rand_seed(uint seed, uint index)
-{
-    .seed = seed;
-    .index = index;
-}
-
-/**
-Get the popFront random number in sequence.
-BUGS: Shares a global single state, not multithreaded.
-SCHEDULED FOR DEPRECATION.
-*/
-
-deprecated uint rand()
-{
-    static uint xormix1[20] =
-    [
-                0xbaa96887, 0x1e17d32c, 0x03bcdc3c, 0x0f33d1b2,
-                0x76a6491d, 0xc570d85d, 0xe382b1e3, 0x78db4362,
-                0x7439a9d4, 0x9cea8ac5, 0x89537c5c, 0x2588f55d,
-                0x415b5e1d, 0x216e3d95, 0x85c662e7, 0x5e8ab368,
-                0x3ea5cc8c, 0xd26a0f74, 0xf3a9222b, 0x48aad7e4
-    ];
-
-    static uint xormix2[20] =
-    [
-                0x4b0f3b58, 0xe874f0c3, 0x6955c5a6, 0x55a7ca46,
-                0x4d9a9d86, 0xfe28a195, 0xb1ca7865, 0x6b235751,
-                0x9a997a61, 0xaa6e95c8, 0xaaa98ee1, 0x5af9154c,
-                0xfc8e2263, 0x390f5e8c, 0x58ffd802, 0xac0a5eba,
-                0xac4874f6, 0xa9df0913, 0x86be4c74, 0xed2c123b
-    ];
-
-    uint hiword, loword, hihold, temp, itmpl, itmph, i;
-
-    loword = seed;
-    hiword = index++;
-    for (i = 0; i < 4; i++)             // loop limit can be 2..20, we choose 4
-    {
-        hihold  = hiword;                           // save hiword for later
-        temp    = hihold ^  xormix1[i];             // mix up bits of hiword
-        itmpl   = temp   &  0xffff;                 // decompose to hi & lo
-        itmph   = temp   >> 16;                     // 16-bit words
-        temp    = itmpl * itmpl + ~(itmph * itmph); // do a multiplicative mix
-        temp    = (temp >> 16) | (temp << 16);      // swap hi and lo halves
-        hiword  = loword ^ ((temp ^ xormix2[i]) + itmpl * itmph); //loword mix
-        loword  = hihold;                           // old hiword is loword
-    }
-    return hiword;
-}
-
-// disabling because it's commented out anyways, and this causes a cyclic
-// dependency with std.encoding.
-version(none)
-{
-shared static this()
-{
-    ulong s;
-
-    version(Win32)
-    {
-        QueryPerformanceCounter(&s);
-    }
-    version(Posix)
-    {
-        // time.h
-        // sys/time.h
-
-        timeval tv;
-        if (gettimeofday(&tv, null))
-        {   // Some error happened - try time() instead
-            s = core.sys.posix.sys.time.time(null);
-        }
-        else
-        {
-            s = cast(ulong)((cast(long)tv.tv_sec << 32) + tv.tv_usec);
-        }
-    }
-    //rand_seed(cast(uint) s, cast(uint)(s >> 32));
-}
-}
-
-deprecated
-unittest
-{
-    static uint results[10] =
-    [
-        0x8c0188cb,
-        0xb161200c,
-        0xfc904ac5,
-        0x2702e049,
-        0x9705a923,
-        0x1c139d89,
-        0x346b6d1f,
-        0xf8c33e32,
-        0xdb9fef76,
-        0xa97fcb3f
-    ];
-    int i;
-    uint seedsave = seed;
-    uint indexsave = index;
-
-    rand_seed(1234, 5678);
-    for (i = 0; i < 10; i++)
-    {   uint r = rand();
-        //printf("0x%x,\n", rand());
-        assert(r == results[i]);
-    }
-
-    seed = seedsave;
-    index = indexsave;
-}

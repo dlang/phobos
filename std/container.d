@@ -2330,8 +2330,8 @@ version(unittest)
         uint* pDestructionMask;
         ~this()
         {
-            if (pDestructionMask) 
-                *pDestructionMask += 1 << order; 
+            if (pDestructionMask)
+                *pDestructionMask += 1 << order;
         }
     }
 }
@@ -3082,7 +3082,7 @@ struct Array(T) if (is(T == bool))
     @property bool back()
     {
         enforce(!empty);
-        return data.back & (1u << ((_store._length - 1) % bitsPerWord));
+        return cast(bool)(data.back & (1u << ((_store._length - 1) % bitsPerWord)));
     }
 
     /// Ditto
@@ -3117,7 +3117,7 @@ struct Array(T) if (is(T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        return data.ptr[div] & (1u << rem);
+        return cast(bool)(data.ptr[div] & (1u << rem));
     }
     /// ditto
     void opIndexAssign(bool value, ulong i)

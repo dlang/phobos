@@ -2,8 +2,8 @@
 // Regular Expressions.
 
 /**
- * $(RED This module has been deprecated. Use $(LINK2 std_regex.html,
- * std.regex) instead.)
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use $(LINK2 std_regex.html, std.regex) instead.)
  *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
  * expressions) are a powerful method of string pattern matching.  The
@@ -124,6 +124,9 @@
 
 module std.regexp;
 
+pragma(msg, "Notice: As of Phobos 2.055, std.regexp has been deprecated. " ~
+            "It will be removed in February 2012. Please use std.regex instead.");
+
 //debug = regexp;       // uncomment to turn on debugging printf's
 
 private
@@ -134,7 +137,7 @@ private
     import std.array;
     import std.stdio;
     import std.string;
-    import std.ctype;
+    import std.ascii;
     import std.outbuffer;
     import std.bitmanip;
     import std.utf;
@@ -142,6 +145,8 @@ private
     import std.array;
     import std.traits;
 }
+
+deprecated:
 
 /** Regular expression to extract an _email address.
  * References:
@@ -233,7 +238,7 @@ unittest
  * sub(s, "[ar]",
  *    delegate char[] (RegExp m)
  *    {
- *         return toupper(m[0]);
+ *         return toUpper(m[0]);
  *    },
  *    "g");    // result: StRAp A Rocket engine on A chicken.
  * ---
@@ -306,7 +311,7 @@ unittest
             "[ar]",
             delegate string (RegExp m)
             {
-                return std.string.toupper(m[0]);
+                return std.string.toUpper(m[0]);
             },
             "g");
     assert(s == "StRAp A Rocket engine on A chicken.");
@@ -879,7 +884,7 @@ private:
             };
 
 // BUG: should this include '$'?
-    private int isword(dchar c) { return isalnum(c) || c == '_'; }
+    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
 
     private uint inf = ~0u;
 
@@ -1315,7 +1320,7 @@ public bool test(string s)
         if (program[0] == REchar)
         {
             firstc = program[1];
-            if (attributes & REA.ignoreCase && isalpha(firstc))
+            if (attributes & REA.ignoreCase && isAlpha(firstc))
                 firstc = 0;
         }
 
@@ -1652,8 +1657,8 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(rchar)c2))
-                        c2 = std.ctype.toupper(cast(rchar)c2);
+                    if (isLower(cast(rchar)c2))
+                        c2 = std.ascii.toUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -1681,8 +1686,8 @@ public bool test(string s)
                 c2 = input[src];
                 if (c1 != c2)
                 {
-                    if (islower(cast(rchar)c2))
-                        c2 = std.ctype.toupper(cast(rchar)c2);
+                    if (isLower(cast(rchar)c2))
+                        c2 = std.ascii.toUpper(cast(rchar)c2);
                     else
                         goto Lnomatch;
                     if (c1 != c2)
@@ -2042,7 +2047,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREdigit\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isdigit(input[src]))
+                if (!isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2052,7 +2057,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREnotdigit\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isdigit(input[src]))
+                if (isDigit(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2062,7 +2067,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (!isspace(input[src]))
+                if (!isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2072,7 +2077,7 @@ public bool test(string s)
                 debug(regexp) printf("\tREnotspace\n");
                 if (src == input.length)
                     goto Lnomatch;
-                if (isspace(input[src]))
+                if (isWhite(input[src]))
                     goto Lnomatch;
                 src++;
                 pc++;
@@ -2226,7 +2231,7 @@ public bool test(string s)
 
         case '{':   // {n} {n,} {n,m}
             p++;
-            if (p == plength || !isdigit(pattern[p]))
+            if (p == plength || !isDigit(pattern[p]))
                 goto Lerr;
             n = 0;
             do
@@ -2236,7 +2241,7 @@ public bool test(string s)
                 p++;
                 if (p == plength)
                     goto Lerr;
-            } while (isdigit(pattern[p]));
+            } while (isDigit(pattern[p]));
             if (pattern[p] == '}')      // {n}
             {   m = n;
                 goto Lnm;
@@ -2250,7 +2255,7 @@ public bool test(string s)
             {   m = inf;
                 goto Lnm;
             }
-            if (!isdigit(pattern[p]))
+            if (!isDigit(pattern[p]))
                 goto Lerr;
             m = 0;          // {n,m}
             do
@@ -2260,7 +2265,7 @@ public bool test(string s)
                 p++;
                 if (p == plength)
                     goto Lerr;
-            } while (isdigit(pattern[p]));
+            } while (isDigit(pattern[p]));
             if (pattern[p] != /*{*/ '}')
                 goto Lerr;
             goto Lnm;
@@ -2413,10 +2418,10 @@ public bool test(string s)
                 op = REchar;
                 if (attributes & REA.ignoreCase)
                 {
-                    if (isalpha(c))
+                    if (isAlpha(c))
                     {
                         op = REichar;
-                        c = cast(char)std.ctype.toupper(c);
+                        c = cast(char)std.ascii.toUpper(c);
                     }
                 }
                 if (op == REchar && c <= 0xFF)
@@ -2614,13 +2619,13 @@ private:
 
                 case 's':
                     for (i = 0; i <= cmax; i++)
-                        if (isspace(i))
+                        if (isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
                 case 'S':
                     for (i = 1; i <= cmax; i++)
-                        if (!isspace(i))
+                        if (!isWhite(i))
                             r.bits[i] = 1;
                     goto Lrs;
 
@@ -2956,7 +2961,7 @@ private:
                 c = prog[i + 1];
                 if (c <= 0x7F)
                 {   r.setbit2(c);
-                    r.setbit2(std.ctype.tolower(cast(rchar)c));
+                    r.setbit2(std.ascii.toLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -2982,8 +2987,8 @@ private:
                 c = *cast(rchar *)&prog[i + 1 + size_t.sizeof];
                 debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
                 if (c <= 0x7F)
-                {   r.setbit2(std.ctype.toupper(cast(rchar)c));
-                    r.setbit2(std.ctype.tolower(cast(rchar)c));
+                {   r.setbit2(std.ascii.toUpper(cast(rchar)c));
+                    r.setbit2(std.ascii.toLower(cast(rchar)c));
                 }
                 return 1;
 
@@ -3072,14 +3077,14 @@ private:
             case REspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (isspace(c))
+                    if (isWhite(c))
                         r.bits[c] = 1;
                 return 1;
 
             case REnotspace:
                 r.setbitmax(0x7F);
                 for (c = 0; c <= r.maxc; c++)
-                    if (!isspace(c))
+                    if (!isWhite(c))
                         r.bits[c] = 1;
                 return 1;
 

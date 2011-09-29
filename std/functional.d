@@ -20,7 +20,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.metastrings, std.stdio, std.traits, std.typecons, std.typetuple;
+import std.metastrings, std.traits, std.typecons, std.typetuple;
 // for making various functions visible in *naryFun
 import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
 
@@ -280,7 +280,7 @@ Negates predicate $(D pred).
 Example:
 ----
 string a = "   Hello, world!";
-assert(find!(not!isspace)(a) == "Hello, world!");
+assert(find!(not!isWhite)(a) == "Hello, world!");
 ----
  */
 template not(alias pred)
@@ -316,41 +316,126 @@ template curry(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun curry(ParameterTypeTuple!fun[1] arg2)
+        ReturnType!fun curry(ParameterTypeTuple!fun[1..$] args2)
         {
-            return fun(arg, arg2);
+            return fun(arg, args2);
         }
     }
     else
     {
-        auto curry(T)(T arg2) if (is(typeof(fun(arg, T.init))))
+        auto curry(Ts...)(Ts args2)
         {
-            return fun(arg, arg2);
+            static if (is(typeof(fun(arg, args2))))
+            {
+                return fun(arg, args2);
+            }
+            else
+            {
+                static string errormsg()
+                {
+                    string msg = "Cannot call '" ~ fun.stringof ~ "' with arguments " ~
+                        "(" ~ arg.stringof;
+                    foreach(T; Ts)
+                        msg ~= ", " ~ T.stringof;
+                    msg ~= ").";
+                    return msg;
+                }
+                static assert(0, errormsg());
+            }
         }
     }
 }
 
-private auto add(A, B)(A x, B y)
-{
-    return x + y;
-}
-
+// tests for currying callables
 unittest
 {
-    alias curry!(add, 5) add5;
-    assert(add5(6) == 11);
-}
+    static int f1(int a, int b) { return a + b; }
+    assert(curry!(f1, 5)(6) == 11);
 
-unittest
-{
-    // static int f1(int a, int b) { return a + b; }
-    // assert(curry!(f1, 5)(6) == 11);
-    int x = 5;
     int f2(int a, int b) { return a + b; }
+    int x = 5;
     assert(curry!(f2, x)(6) == 11);
+    x = 7;
+    assert(curry!(f2, x)(6) == 13);
+    static assert(curry!(f2, 5)(6) == 11);
+
     auto dg = &f2;
     auto f3 = &curry!(dg, x);
-    assert(f3(6) == 11);
+    assert(f3(6) == 13);
+
+    static int funOneArg(int a) { return a; }
+    assert(curry!(funOneArg, 1)() == 1);
+
+    static int funThreeArgs(int a, int b, int c) { return a + b + c; }
+    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    assert(funThreeArgs1(2, 3) == 6);
+    static assert(!is(typeof(funThreeArgs1(2))));
+
+    enum xe = 5;
+    alias curry!(f2, xe) fe;
+    static assert(fe(6) == 11);
+}
+
+// tests for currying templated/overloaded callables
+unittest
+{
+    static auto add(A, B)(A x, B y)
+    {
+        return x + y;
+    }
+
+    alias curry!(add, 5) add5;
+    assert(add5(6) == 11);
+    static assert(!is(typeof(add5())));
+    static assert(!is(typeof(add5(6, 7))));
+
+    // taking address of templated curry needs explicit type
+    auto dg = &add5!(int);
+    assert(dg(6) == 11);
+
+    int x = 5;
+    alias curry!(add, x) addX;
+    assert(addX(6) == 11);
+
+    static struct Callable
+    {
+        static string opCall(string a, string b) { return a ~ b; }
+        int opCall(int a, int b) { return a * b; }
+        double opCall(double a, double b) { return a + b; }
+    }
+    Callable callable;
+    assert(curry!(Callable, "5")("6") == "56");
+    assert(curry!(callable, 5)(6) == 30);
+    assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+
+    static struct TCallable
+    {
+        auto opCall(A, B)(A a, B b)
+        {
+            return a + b;
+        }
+    }
+    TCallable tcallable;
+    assert(curry!(tcallable, 5)(6) == 11);
+    static assert(!is(typeof(curry!(tcallable, "5")(6))));
+
+    static A funOneArg(A)(A a) { return a; }
+    alias curry!(funOneArg, 1) funOneArg1;
+    assert(funOneArg1() == 1);
+
+    static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
+    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    assert(funThreeArgs1(2, 3) == 6);
+    static assert(!is(typeof(funThreeArgs1(1))));
+
+    // @@ dmd BUG 6600 @@
+    // breaks completely unrelated unittest for toDelegate
+    // static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
+    version (none)
+    {
+        auto dg2 = &funOneArg1!();
+        assert(dg2() == 1);
+    }
 }
 
 /**

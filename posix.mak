@@ -53,9 +53,11 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(EXTRA_DOCUMENTABLES))
+BIGDOC_OUTPUT_DIR = /tmp
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
-DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
+DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
 CC =
@@ -152,9 +154,9 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
-        compiler complex concurrency container contracts conv cpuid		\
-        cstream ctype date datetime datebase dateparse demangle			\
+STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
+        bitmanip compiler complex concurrency container contracts conv	\
+        cpuid cstream ctype date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
@@ -164,12 +166,6 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
 
 STD_NET_MODULES = $(addprefix std/net/, isemail)
 
-# Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES = $(addprefix etc/c/,curl zlib)
-EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) \
-	$(EXTRA_DOCUMENTABLES) $(addprefix std/internal/math/, \
-	biguintcore biguintnoasm biguintx86 gammafunction errorfunction)
-
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
@@ -177,10 +173,18 @@ EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
 ifeq (,$(findstring win,$(OS)))
-	EXTRA_MODULES+=$(EXTRA_MODULES_LINUX)
+	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
 else
-	EXTRA_MODULES+=$(EXTRA_MODULES_WIN32)
+	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_WIN32)
 endif
+
+# Other D modules that aren't under std/
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
+std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
+time wcharh)
+EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/math/, biguintcore biguintnoasm biguintx86	\
+	gammafunction errorfunction)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
@@ -237,11 +241,6 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-ifeq ($(OS)$(MODEL),freebsd64)
-DISABLED_TESTS += std/container
-# fails freebsd64 debug test
-endif
-
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/conv
 # not reduced yet. I hate reducing this file
@@ -293,28 +292,44 @@ $(DRUNTIME) :
 ###########################################################
 # html documentation
 
+HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
+	$(SRC_DOCUMENTABLES))))
+BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, $(subst /,_,$(subst	\
+	.d,.html, $(SRC_DOCUMENTABLES))))
+
 $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
-html : $(DOC_OUTPUT_DIR)/. $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
-	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
-#	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
+html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
 	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
+
+html_consolidated :
+	$(DDOC) $(DDOCFLAGS) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
+	$(DDOC) $(DDOCFLAGS) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
+	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
+	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
+	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html

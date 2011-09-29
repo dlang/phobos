@@ -495,19 +495,24 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- *
+ * $(RED Scheduled for deprecation in January 2012. Please use the version
+ *       which takes a $(CXREF time, Duration) instead.)
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
-    checkops( ops );
-    static enum long TICKS_PER_MILLI = 10_000;
-    return mbox.get( ms * TICKS_PER_MILLI, ops );
+    return receiveTimeout( dur!"msecs"( ms ), ops );
 }
 
-/++ ditto +/
+/++
+    Same as $(D receive) except that rather than wait forever for a message,
+    it waits until either it receives a message or the given
+    $(CXREF time, Duration) has passed. It returns $(D true) if it received a
+    message and $(D false) if it timed out waiting for one.
+  +/
 bool receiveTimeout(T...)( Duration duration, T ops )
 {
-    return receiveTimeout(duration.total!"msecs"(), ops);
+    checkops( ops );
+    return mbox.get( duration, ops );
 }
 
 unittest
@@ -851,13 +856,13 @@ private
         {
             static assert( T.length );
 
-            static if( isImplicitlyConvertible!(T[0], long) )
+            static if( isImplicitlyConvertible!(T[0], Duration) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
-                assert( vals[0] >= 0 );
+                assert( vals[0] >= dur!"msecs"(0) );
                 enum timedWait = true;
-                long period = vals[0];
+                Duration period = vals[0];
             }
             else
             {
@@ -1213,7 +1218,6 @@ private
         void put( T val )
         {
             put( new Node( val ) );
-            m_count++;
         }
 
 
@@ -1251,6 +1255,7 @@ private
          */
         void removeAt( Range r )
         {
+            assert( m_count );
             Node* n = r.m_prev;
             enforce( n && n.next );
 
@@ -1280,6 +1285,7 @@ private
         void clear()
         {
             m_first = m_last = null;
+            m_count = 0;
         }
 
 
@@ -1310,6 +1316,7 @@ private
          */
         void put( Node* n )
         {
+            m_count++;
             if( !empty )
             {
                 m_last.next = n;
@@ -1358,15 +1365,24 @@ version( unittest )
         prioritySend( tid, "done" );
     }
 
-
-    unittest
+    void runTest( Tid tid )
     {
-        auto tid = spawn( &testfn, thisTid );
-
         send( tid, 42, 86 );
         send( tid, tuple(42, 86) );
         send( tid, "hello", "there" );
         send( tid, "the quick brown fox" );
         receive( (string val) { assert(val == "done"); } );
+    }
+
+
+    unittest
+    {
+        auto tid = spawn( &testfn, thisTid );
+        runTest( tid );
+
+        // Run the test again with a limited mailbox size.
+        tid = spawn( &testfn, thisTid );
+        setMaxMailboxSize( tid, 2, OnCrowding.block );
+        runTest( tid );
     }
 }

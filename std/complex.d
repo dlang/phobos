@@ -19,7 +19,93 @@ import std.traits;
 
 
 
-/** A complex number parametrised by a type T. */
+/** Helper function that returns a _complex number with the specified
+    real and imaginary parts.
+
+    If neither $(D re) nor $(D im) are floating-point numbers, this
+    function returns a $(D Complex!double).  Otherwise, the return type
+    is deduced using $(D std.traits.CommonType!(R, I)).
+
+    Examples:
+    ---
+    auto c = complex(2.0);
+    static assert (is(typeof(c) == Complex!double));
+    assert (c.re == 2.0);
+    assert (c.im == 0.0);
+
+    auto w = complex(2);
+    static assert (is(typeof(w) == Complex!double));
+    assert (w == c);
+
+    auto z = complex(1, 3.14L);
+    static assert (is(typeof(z) == Complex!real));
+    assert (z.re == 1.0L);
+    assert (z.im == 3.14L);
+    ---
+*/
+auto complex(T)(T re)  @safe pure nothrow  if (is(T : double))
+{
+    static if (isFloatingPoint!T)
+        return Complex!T(re, 0);
+    else
+        return Complex!double(re, 0);
+}
+
+/// ditto
+auto complex(R, I)(R re, I im)  @safe pure nothrow
+    if (is(R : double) && is(I : double))
+{
+    static if (isFloatingPoint!R || isFloatingPoint!I)
+        return Complex!(CommonType!(R, I))(re, im);
+    else
+        return Complex!double(re, im);
+}
+
+
+unittest
+{
+    auto a = complex(1.0);
+    static assert (is(typeof(a) == Complex!double));
+    assert (a.re == 1.0);
+    assert (a.im == 0.0);
+
+    auto b = complex(2.0L);
+    static assert (is(typeof(b) == Complex!real));
+    assert (b.re == 2.0L);
+    assert (b.im == 0.0L);
+
+    auto c = complex(1.0, 2.0);
+    static assert (is(typeof(c) == Complex!double));
+    assert (c.re == 1.0);
+    assert (c.im == 2.0);
+
+    auto d = complex(3.0, 4.0L);
+    static assert (is(typeof(d) == Complex!real));
+    assert (d.re == 3.0);
+    assert (d.im == 4.0L);
+
+    auto e = complex(1);
+    static assert (is(typeof(e) == Complex!double));
+    assert (e.re == 1);
+    assert (e.im == 0);
+
+    auto f = complex(1L, 2);
+    static assert (is(typeof(f) == Complex!double));
+    assert (f.re == 1L);
+    assert (f.im == 2);
+
+    auto g = complex(3, 4.0L);
+    static assert (is(typeof(g) == Complex!real));
+    assert (g.re == 3);
+    assert (g.im == 4.0L);
+}
+
+
+
+
+/** A complex number parametrised by a type $(D T), which must be either
+    $(D float), $(D double) or $(D real).
+*/
 struct Complex(T)  if (isFloatingPoint!T)
 {
     /** The real part of the number. */
@@ -244,8 +330,8 @@ struct Complex(T)  if (isFloatingPoint!T)
         FPTemporary!T ab = r^^z.re * exp(-t*z.im);
         FPTemporary!T ar = t*z.re + log(r)*z.im;
 
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = ab*std.math.cos(ar);
+        im = ab*std.math.sin(ar);
         return this;
     }
 
@@ -275,8 +361,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     {
         FPTemporary!T ab = abs^^r;
         FPTemporary!T ar = arg*r;
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = ab*std.math.cos(ar);
+        im = ab*std.math.sin(ar);
         return this;
     }
 
@@ -329,7 +415,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         more information.
     */
     string toString
-        (void delegate(const(char)[]) sink = null, string formatSpec = "%s")
+        (scope void delegate(const(char)[]) sink = null, string formatSpec = "%s")
         const
     {
         if (sink == null)
@@ -355,7 +441,7 @@ unittest
 
     // Check abs() and arg()
     auto c1 = Complex!double(1.0, 1.0);
-    assert (approxEqual(c1.abs, sqrt(2.0), EPS));
+    assert (approxEqual(c1.abs, std.math.sqrt(2.0), EPS));
     assert (approxEqual(c1.arg, PI_4, EPS));
 
     auto c1c = c1.conj;
@@ -439,7 +525,7 @@ unittest
         assert (approxEqual(cei.abs, c1.abs^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert (approxEqual(cos(cei.arg), cos(c1.arg*i), EPS));
+        assert (approxEqual(std.math.cos(cei.arg), std.math.cos(c1.arg*i), EPS));
     }
 
 
@@ -548,13 +634,96 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow
 {
     return Complex!(CommonType!(T,U))
-        (modulus*cos(argument), modulus*sin(argument));
+        (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
 }
-
 
 unittest
 {
-    auto z = fromPolar(sqrt(2.0), PI_4);
+    auto z = fromPolar(std.math.sqrt(2.0), PI_4);
     assert (approxEqual(z.re, 1.0L, real.epsilon));
     assert (approxEqual(z.im, 1.0L, real.epsilon));
+}
+
+
+
+
+/** Trigonometric functions. */
+Complex!T sin(T)(Complex!T z)  @safe pure nothrow
+{
+    auto cs = expi(z.re);
+    auto csh = coshisinh(z.im);
+    return typeof(return)(cs.im * csh.re, cs.re * csh.im);
+}
+
+unittest
+{
+  assert(sin(complex(0.0)) == 0.0);
+  assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
+}
+
+
+/// ditto
+Complex!T cos(T)(Complex!T z)  @safe pure nothrow
+{
+    auto cs = expi(z.re);
+    auto csh = coshisinh(z.im);
+    return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
+}
+
+unittest{
+    assert(cos(complex(0.0)) == 1.0);
+    assert(cos(complex(1.3L)) == std.math.cos(1.3L));
+    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+}
+
+
+/** Square root. */
+Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow
+{
+    typeof(return) c;
+    real x,y,w,r;
+
+    if (z == 0)
+    {
+        c = typeof(return)(0, 0);
+    }
+    else
+    {
+        real z_re = z.re;
+        real z_im = z.im;
+
+        x = fabs(z_re);
+        y = fabs(z_im);
+        if (x >= y)
+        {
+            r = y / x;
+            w = std.math.sqrt(x)
+                * std.math.sqrt(0.5 * (1 + std.math.sqrt(1 + r * r)));
+        }
+        else
+        {
+            r = x / y;
+            w = std.math.sqrt(y)
+                * std.math.sqrt(0.5 * (r + std.math.sqrt(1 + r * r)));
+        }
+
+        if (z_re >= 0)
+        {
+            c = typeof(return)(w, z_im / (w + w));
+        }
+        else
+        {
+            if (z_im < 0)
+                w = -w;
+            c = typeof(return)(z_im / (w + w), w);
+        }
+    }
+    return c;
+}
+
+unittest
+{
+    assert (sqrt(complex(0.0)) == 0.0);
+    assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
+    assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
 }

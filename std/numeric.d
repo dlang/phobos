@@ -40,7 +40,6 @@ import std.typetuple;
 import std.complex;
 
 import core.bitop;
-import core.memory;
 import core.exception;
 
 version(unittest)
@@ -1279,7 +1278,11 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
     /* Do trailing portion in naive loop. */
     while (avec != all_endp)
-        sum0 += (*avec++) * (*bvec++);
+    {
+        sum0 += *avec * *bvec;
+        ++avec;
+        ++bvec;
+    }
 
     return sum0;
 }
@@ -1290,6 +1293,17 @@ unittest
     double[] b = [ 4., 6., ];
     assert(dotProduct(a, b) == 16);
     assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    
+    // Make sure the unrolled loop codepath gets tested.
+    static const x = 
+        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    static const y = 
+        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    assert(dotProduct(x, y) == 2280);
+    
+    // Test in CTFE
+    enum ctfeDot = dotProduct(x, y);
+    static assert(ctfeDot == 2280);
 }
 
 /**
@@ -2312,10 +2326,7 @@ public:
     this(size_t size) {
         // Allocate all twiddle factor buffers in one contiguous block so that,
         // when one is done being used, the next one is next in cache.
-        auto memSpace = (cast(lookup_t*)
-            GC.malloc(lookup_t.sizeof * size * 2, GC.BlkAttr.NO_SCAN))
-            [0..2 * size];
-
+        auto memSpace = uninitializedArray!(lookup_t[])(2 * size);
         this(memSpace);
     }
 
@@ -2342,9 +2353,7 @@ public:
         }
 
         // Don't waste time initializing the memory for ret.
-        ret = (cast(Complex!(F)*) GC.malloc(range.length * (Complex!(F)).sizeof,
-               GC.BlkAttr.NO_SCAN))[0..range.length];
-
+        ret = uninitializedArray!(Complex!F[])(range.length);
 
         fft(range,  ret);
         return ret;
@@ -2395,8 +2404,7 @@ public:
         }
 
         // Don't waste time initializing the memory for ret.
-        ret = (cast(Complex!(F)*) GC.malloc(range.length * (Complex!(F)).sizeof,
-               GC.BlkAttr.NO_SCAN))[0..range.length];
+        ret = uninitializedArray!(Complex!F[])(range.length);
 
         inverseFft(range, ret);
         return ret;
