@@ -580,7 +580,7 @@ version(Posix) private string searchPathFor(string executable)
 
     foreach (dir; splitter(to!string(pathz), ':'))
     {
-        auto execPath = join(dir, executable);
+        auto execPath = buildPath(dir, executable);
         if (isExecutable(execPath))  return execPath;
     }
 
