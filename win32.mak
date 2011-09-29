@@ -355,6 +355,15 @@ unittest : $(SRCS) phobos.lib
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 
+emptymain.d :
+	echo void main(){} > emptymain.d
+
+eachtest : emptymain.d phobos.lib
+	$(DMD) -ofeachtest -debuglib=$(DRUNTIMELIB) -defaultlib=$(DRUNTIMELIB) eachtest.d
+	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@" \
+			 "unittest\$$(basefile*).exe" \
+			 -- $(SRCS)
+
 #unittest : unittest.exe
 #	unittest
 #
@@ -940,6 +949,9 @@ clean:
 	del unittest1.obj unittest.obj unittest.map unittest.exe
 	del phobos.lib
 	del phobos.json
+	del /Q unittest\*.*
+	rmdir unittest
+	del emptymain.d
 
 cleanhtml:
 	del $(DOCS)
