@@ -798,7 +798,8 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
 {
-    pragma(msg, "Schedule for deprecation");
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
     static if (!isInputRange!S)
     {
@@ -861,7 +862,8 @@ T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracke
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
 {
-    pragma(msg, "Schedule for deprecation");
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
     return toImpl(s);
 }
@@ -888,7 +890,8 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
     if (isAssociativeArray!S &&
         isSomeString!T)
 {
-    pragma(msg, "Schedule for deprecation");
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
     alias Unqual!(typeof(T.init[0])) Char;
     auto result = appender!(Char[])();
@@ -920,7 +923,8 @@ T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
         isSomeString!T)
 {
-    pragma(msg, "Schedule for deprecation");
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
     if (!s)
         return nullstr;
@@ -970,7 +974,8 @@ T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
-    pragma(msg, "Schedule for deprecation");
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
 
     Tuple!(FieldTypeTuple!S) * t = void;
     static if ((*t).sizeof == S.sizeof)
@@ -3540,3 +3545,10 @@ void toTextRange(T, W)(T value, W writer)
     put(writer, buffer[i .. $]);
 }
 
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Notice: As of Phobos %s, %s has been scheduled " ~
+                              "for deprecation in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
+}
