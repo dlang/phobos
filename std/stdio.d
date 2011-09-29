@@ -907,7 +907,7 @@ Returns the file number corresponding to this object.
 
 /**
 Range that reads one line at a time. */
-    enum KeepTerminator : bool { no, yes }
+    alias std.string.KeepTerminator KeepTerminator;
     /// ditto
     struct ByLine(Char, Terminator)
     {
