@@ -216,6 +216,9 @@ $(I FormatChar):
             formatted with the default format.
         </dl>
 
+        <dt>$(B 'c')
+        <dd>The corresponding argument must be a character type.
+
         <dt>$(B 'b','d','o','x','X')
         <dd> The corresponding argument must be an integral type
         and is formatted as an integer. If the argument is a signed type
@@ -564,6 +567,12 @@ struct FormatSpec(Char)
     const(Char)[] nested;
 
     /**
+       In case of a compound format specifier, $(D _sep) contains the
+       string positioning after $(D "%|").
+     */
+    const(Char)[] sep;
+
+    /**
        $(D _trailing) contains the rest of the format string.
      */
     const(Char)[] trailing;
@@ -680,24 +689,51 @@ struct FormatSpec(Char)
                                 trailing[i .. $]));
                 }
                 // Get the matching balanced paren
-                for (uint innerParens;; ++j)
+                for (uint innerParens;;)
                 {
                     check(j < trailing.length);
-                    if (trailing[j] != '%')
+                    if (trailing[j++] != '%')
                     {
                         // skip, we're waiting for %( and %)
                         continue;
                     }
-                    if (trailing[++j] == ')')
+                    if (trailing[j] == ')')
                     {
                         if (innerParens-- == 0) break;
+                    }
+                    else if (trailing[j] == '|')
+                    {
+                        if (innerParens == 0) break;
                     }
                     else if (trailing[j] == '(')
                     {
                         ++innerParens;
                     }
                 }
-                nested = to!(typeof(nested))(trailing[i + 1 .. j - 1]);
+                if (trailing[j] == '|')
+                {
+                    auto k = j;
+                    for (++j;;)
+                    {
+                        if (trailing[j++] != '%')
+                            continue;
+                        if (trailing[j] == '%')
+                            ++j;
+                        else if (trailing[j] == ')')
+                            break;
+                        else
+                            throw new Exception(
+                                text("Incorrect format specifier: %",
+                                        trailing[j .. $]));
+                    }
+                    nested = to!(typeof(nested))(trailing[i + 1 .. k - 1]);
+                    sep = to!(typeof(nested))(trailing[k + 1 .. j - 1]);
+                }
+                else
+                {
+                    nested = to!(typeof(nested))(trailing[i + 1 .. j - 1]);
+                    sep = null;
+                }
                 //this = FormatSpec(innerTrailingSpec);
                 spec = '(';
                 // We practically found the format specifier
@@ -1224,7 +1260,7 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeChar!T)
 {
-    if (f.spec == 's')
+    if (f.spec == 's' || f.spec == 'c')
     {
         put(w, val);
     }
@@ -1460,60 +1496,53 @@ if (isInputRange!T)
         // raw writes
         for (size_t i; !val.empty; val.popFront(), ++i)
         {
-            if (f.spec == '(')
+            formatValue(w, val.front, f);
+        }
+    }
+    else if (f.spec == 's')
+    {
+        put(w, f.seqBefore);
+        if (!val.empty)
+        {
+            formatElement(w, val.front, f);
+            val.popFront();
+            for (size_t i; !val.empty; val.popFront(), ++i)
             {
-                // It's a nested format specifier
-                formattedWrite(w, f.nested, val.front);
+                put(w, f.seqSeparator);
+                formatElement(w, val.front, f);
+            }
+        }
+        static if (!isInfinite!T) put(w, f.seqAfter);
+    }
+    else if (f.spec == '(')
+    {
+        if (val.empty)
+            return;
+        // Nested specifier is to be used
+        for (;;)
+        {
+            auto fmt = FormatSpec!Char(f.nested);
+            fmt.writeUpToNextSpec(w);
+            formatElement(w, val.front, fmt);
+            if (f.sep)
+            {
+                put(w, fmt.trailing);
+                val.popFront();
+                if (val.empty)
+                    break;
+                put(w, f.sep);
             }
             else
             {
-                formatValue(w, val.front, f);
+                val.popFront();
+                if (val.empty)
+                    break;
+                put(w, fmt.trailing);
             }
         }
     }
     else
-    {
-        // formatted writes
-        if (!f.nested)
-        {
-            put(w, f.seqBefore);
-            scope(exit) put(w, f.seqAfter);
-            if (!val.empty)
-            {
-                formatElement(w, val.front, f);
-                val.popFront();
-                for (size_t i; !val.empty; val.popFront(), ++i)
-                {
-                    put(w, f.seqSeparator);
-                    formatElement(w, val.front, f);
-                }
-            }
-        }
-        else
-        {
-            if (val.empty)
-                return;
-            // Nested specifier is to be used
-            for (;;)
-            {
-                auto fmt = FormatSpec!Char(f.nested);
-                fmt.writeUpToNextSpec(w);
-                auto spec = fmt.spec;
-                formatValue(w, val.front, fmt);
-                val.popFront();
-                if (spec == '(')
-                {   // If element is range
-                    fmt.writeUpToNextSpec(w);   // always put trailing
-                    if (val.empty) break;
-                }
-                else
-                {
-                    if (val.empty) break;
-                    fmt.writeUpToNextSpec(w);
-                }
-            }
-        }
-    }
+        enforce(false, text("Incorrect format specifier for range: %", f.spec));
 }
 
 unittest
@@ -1537,7 +1566,7 @@ unittest
         ["[%10s]", "[    string]"],
         ["[%-10s]", "[string    ]"],
         ["[%(%02x %)]", "[73 74 72 69 6e 67]"],
-        ["[%(%s %)]", "[s t r i n g]"],
+        ["[%(%c %)]", "[s t r i n g]"],
     ];
     foreach (e; table)
     {
@@ -1639,9 +1668,14 @@ if (isSomeString!T)
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeChar!T)
 {
-    put(w, '\'');
-    formatChar(w, val);
-    put(w, '\'');
+    if (f.spec == 's')
+    {
+        put(w, '\'');
+        formatChar(w, val);
+        put(w, '\'');
+    }
+    else
+        formatValue(w, val, f);
 }
 
 // undocumented
@@ -1712,8 +1746,8 @@ unittest
 
     auto a = ["test", "msg"];
     w.clear();
-    formattedWrite(w, "%({%(%02x %)} %)", a);
-    assert(w.data == `{74 65 73 74} {6d 73 67} `);
+    formattedWrite(w, "%({%(%02x %)}%| %)", a);
+    assert(w.data == `{74 65 73 74} {6d 73 67}`);
 }
 
 /**
@@ -1723,16 +1757,44 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
-    put(w, f.seqBefore);
-    bool first = true;
-    foreach (k, ref v; val) {
-        if (first) first = false;
-        else put(w, f.seqSeparator);
-        formatElement(w, k, f);
-        put(w, f.keySeparator);
-        formatElement(w, v, f);
+    if (f.spec == '(')
+    {
+        size_t i = 0, end = val.length;
+        foreach (k, ref v; val)
+        {
+            auto fmt = FormatSpec!Char(f.nested);
+            fmt.writeUpToNextSpec(w);
+            formatElement(w, k, fmt);
+            fmt.writeUpToNextSpec(w);
+            formatElement(w, v, fmt);
+            if (f.sep)
+            {
+                fmt.writeUpToNextSpec(w);
+                if (++i != end)
+                    put(w, f.sep);
+            }
+            else
+            {
+                if (++i != end)
+                    fmt.writeUpToNextSpec(w);
+            }
+        }
     }
-    put(w, f.seqAfter);
+    else if (f.spec == 's')
+    {
+        put(w, f.seqBefore);
+        bool first = true;
+        foreach (k, ref v; val) {
+            if (first) first = false;
+            else put(w, f.seqSeparator);
+            formatElement(w, k, f);
+            put(w, f.keySeparator);
+            formatElement(w, v, f);
+        }
+        put(w, f.seqAfter);
+    }
+    else
+        throw new FormatException("associative");
 }
 
 unittest
@@ -1759,6 +1821,20 @@ unittest
     auto a = appender!string();
     formatValue(a, ['c':"str"], f);
     assert(a.data == `['c':"str"]`);
+}
+
+unittest
+{
+    auto aa = [1:"hello", 2:"world"];
+
+    FormatSpec!char f;
+    auto a1 = appender!string();
+    formattedWrite(a1, "{%([%04d->%(%c.%)]%| $ %)}", aa);
+    assert(a1.data == `{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`);
+
+    auto a2 = appender!string();
+    formattedWrite(a2, "{%(%s:%s%| $ %)}", aa);
+    assert(a2.data == `{1:"hello" $ 2:"world"}`);
 }
 
 
@@ -3150,7 +3226,7 @@ unittest
 
     line = `['h','e','l','l','o']`;
     string s3;
-    formattedRead(line, "[%(%s, %)]", &s3);
+    formattedRead(line, "[%(%s,%)]", &s3);
     assert(s3 == "hello");
 
     line = `"hello"`;
@@ -3192,7 +3268,7 @@ unittest
 
     line = "[1,2,3]";
     int[] s1;
-    formattedRead(line, "[%(%s, %)]", &s1);
+    formattedRead(line, "[%(%s,%)]", &s1);
     assert(s1 == [1,2,3]);
 
     line = `["hello", "world"]`;
@@ -3205,9 +3281,9 @@ unittest
     formattedRead(line, "%(%s %)", &s3);
     assert(s3 == [123, 456]);
 
-    line = "h,e,l,l,o;w,o,r,l,d;";
+    line = "h,e,l,l,o; w,o,r,l,d";
     string[] s4;
-    formattedRead(line, "%(%(%c,%);%)", &s4);
+    formattedRead(line, "%(%(%c,%); %)", &s4);
     assert(s4 == ["hello", "world"]);
 }
 
@@ -3227,6 +3303,20 @@ unittest
     int[4] sa3;
     line = `[1,2,3,4,5]`;
     assertThrown(formattedRead(line, "%s", &sa3));
+}
+
+unittest
+{
+    string input;
+
+    int[4] sa1;
+    input = `[1,2,3,4]`;
+    formattedRead(input, "[%(%s,%)]", &sa1);
+    assert(sa1 == [1,2,3,4]);
+
+    int[4] sa2;
+    input = `[1,2,3]`;
+    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
 }
 
 /**
@@ -3261,61 +3351,108 @@ unittest
     assert(aa2 == ["hello":1, "world":2]);
 
     int[string] aa3;
-    line = `{hello=1; world=2}`;
-    formattedRead(line, "{%(%(%c%)=%s; %)}", &aa3);
+    line = `{[hello=1]; [world=2]}`;
+    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
     assert(aa3 == ["hello":1, "world":2]);
 }
 
+//debug = unformatRange;
+
 private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+in
 {
+    assert(spec.spec == '(');
+}
+body
+{
+    debug (unformatRange) printf("unformatRange:\n");
+
     T result;
     static if (isStaticArray!T)
     {
         size_t i;
     }
 
-    auto tr = spec.headUpToNextSpec();
-
-    for (;;)
+    const(Char)[] cont = spec.trailing;
+    for (size_t j = 0; j < spec.trailing.length; ++j)
     {
-        auto fmt = FormatSpec!Char(spec.nested);
-        fmt.readUpToNextSpec(input);
-
-        bool isRangeValue = (fmt.spec == '(');
-
-        static if (isStaticArray!T)
+        if (spec.trailing[j] == '%')
         {
-            result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
+            cont = spec.trailing[0 .. j];
+            break;
         }
-        else static if (isDynamicArray!T)
-        {
-            result ~= unformatElement!(ElementType!T)(input, fmt);
-        }
-        else static if (isAssociativeArray!T)
-        {
-            auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
-            enforce(!input.empty, "Need more input");
-            fmt.readUpToNextSpec(input);        // eat key separator
+    }
+    debug (unformatRange) printf("\t");
+    debug (unformatRange) if (!input.empty) printf("input.front = %c, ", input.front);
+    debug (unformatRange) printf("cont = %.*s\n", cont);
 
-            result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
-        }
+    bool checkEnd()
+    {
+        return input.empty || !cont.empty && input.front == cont.front;
+    }
 
-        if (isRangeValue)
+    if (!checkEnd())
+    {
+        for (;;)
         {
-            fmt.readUpToNextSpec(input);        // always get trailing
-            if (input.empty)
-                break;
-            if (tr.length && std.algorithm.startsWith(input, tr))
-                break;
-        }
-        else
-        {
-            if (input.empty)
-                break;
-            if (tr.length && std.algorithm.startsWith(input, tr))
-                break;
+            auto fmt = FormatSpec!Char(spec.nested);
             fmt.readUpToNextSpec(input);
+            enforce(!input.empty);
+
+            debug (unformatRange) printf("\t) spec = %c, front = %c ", fmt.spec, input.front);
+            static if (isStaticArray!T)
+            {
+                result[i++] = unformatElement!(typeof(T.init[0]))(input, fmt);
+            }
+            else static if (isDynamicArray!T)
+            {
+                result ~= unformatElement!(ElementType!T)(input, fmt);
+            }
+            else static if (isAssociativeArray!T)
+            {
+                auto key = unformatElement!(typeof(T.keys[0]))(input, fmt);
+                fmt.readUpToNextSpec(input);        // eat key separator
+
+                result[key] = unformatElement!(typeof(T.values[0]))(input, fmt);
+            }
+            debug (unformatRange) {
+            if (input.empty) printf("-> front = [empty] ");
+            else             printf("-> front = %c ", input.front);
+            }
+
+            static if (isStaticArray!T)
+            {
+                debug (unformatRange) printf("i = %u < %u\n", i, T.length);
+                enforce(i <= T.length);
+            }
+
+            auto sep =
+                spec.sep ? fmt.readUpToNextSpec(input), spec.sep
+                         : fmt.trailing;
+            debug (unformatRange) {
+            if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);
+            else                            printf("\n");
+            }
+
+            if (checkEnd())
+                break;
+
+            if (!sep.empty && input.front == sep.front)
+            {
+                while (!sep.empty)
+                {
+                    enforce(!input.empty);
+                    enforce(input.front == sep.front);
+                    input.popFront();
+                    sep.popFront();
+                }
+                debug (unformatRange) printf("input.front = %c\n", input.front);
+            }
         }
+    }
+    static if (isStaticArray!T)
+    {
+        enforce(i == T.length);
     }
     return result;
 }
