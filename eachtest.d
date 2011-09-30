@@ -10,7 +10,7 @@ module eachrun;
 
 import core.stdc.stdio;
 
-import std.parallelism;
+version (Parallel) import std.parallelism;
 
 //debug = internal;
 
@@ -38,8 +38,12 @@ int main(string[] args)
 
     if (files.length)
     {
-        //foreach (i, file; files)
-        foreach (i, file; taskPool.parallel(files, 1))
+        version (Parallel)
+            auto aggr = taskPool.parallel(files, 1);
+        else
+            auto aggr = files;
+
+        foreach (i, file; aggr)
         {
             string[] cmdlines;
             foreach (j, cmd; cmds)
