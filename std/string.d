@@ -3878,17 +3878,17 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
     {
         return null;
     }
-        
+
     static S leadingWhiteOf(S str)
     {
         return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
     }
-    
+
     S shortestIndent;
     foreach (i, line; lines)
     {
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
-        
+
         if (stripped.empty)
         {
             lines[i] = line[line.chomp().length..$];
@@ -3896,7 +3896,7 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
         else
         {
             auto indent = leadingWhiteOf(line);
-            
+
             // Comparing number of code units instead of code points is OK here
             // because this function throws upon inconsistent indentation.
             if (shortestIndent is null || indent.length < shortestIndent.length)
@@ -3906,7 +3906,7 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
             }
         }
     }
-    
+
     foreach (i; 0..lines.length)
     {
         auto stripped = __ctfe? lines[i].ctfe_strip() : lines[i].strip();
@@ -3924,7 +3924,7 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
             else throw new StringException("outdent: Inconsistent indentation");
         }
     }
-    
+
     return lines;
 }
 
@@ -3939,7 +3939,7 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
 {
     size_t endIndex = 0;
     size_t prevIndex = str.length;
-    
+
     foreach_reverse (i, dchar ch; str)
     {
         if (!std.uni.isWhite(ch))
@@ -3949,7 +3949,7 @@ private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
         }
         prevIndex = i;
     }
-    
+
     return str[0..endIndex];
 }
 
@@ -3983,13 +3983,13 @@ version(unittest)
 unittest
 {
     debug(string) printf("string.outdent.unittest\n");
-    
+
     static assert(ctfe_strip(" \tHi \r\n") == "Hi");
     static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
     static assert(ctfe_strip("Hi")         == "Hi");
     static assert(ctfe_strip(" \t \r\n")   == "");
     static assert(ctfe_strip("")           == "");
-    
+
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         enum S blank = "";
@@ -4027,17 +4027,17 @@ unittest
 ";
         assert(testStr3.outdent() == expected3);
         static assert(testStr3.outdent() == expected3);
-        
+
         enum testStr4 = "  X\r  X\n  X\r\n  X\u2028  X\u2029  X";
         enum expected4 = "X\rX\nX\r\nX\u2028X\u2029X";
         assert(testStr4.outdent() == expected4);
         static assert(testStr4.outdent() == expected4);
-        
+
         enum testStr5  = testStr4[0..$-1];
         enum expected5 = expected4[0..$-1];
         assert(testStr5.outdent() == expected5);
         static assert(testStr5.outdent() == expected5);
-        
+
         enum testStr6 = "  \r  \n  \r\n  \u2028  \u2029";
         enum expected6 = "\r\n\r\n\u2028\u2029";
         assert(testStr6.outdent() == expected6);
