@@ -20,7 +20,7 @@ module std.conv;
 import core.stdc.math : ldexpl;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
-    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.metastrings;
 
@@ -1316,6 +1316,8 @@ T toImpl(T, S)(S value)
     if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
         isSomeString!T)
 {
+    import core.stdc.stdio;// : sprintf;
+
     /// $(D float) to all string types.
     static if (is(Unqual!S == float))
     {

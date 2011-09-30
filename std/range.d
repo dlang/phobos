@@ -25,7 +25,7 @@ module std.range;
 public import std.array;
 import core.bitop;
 import std.algorithm, std.conv, std.exception,  std.functional,
-    std.random, std.traits, std.typecons, std.typetuple;
+    std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -5937,6 +5937,8 @@ if (isRandomAccessRange!Range)
         if(!__ctfe)
         debug
         {
+            import std.random;
+
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;

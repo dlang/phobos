@@ -393,7 +393,7 @@ validation will fail.
 
 Returns: Array of characters read.
 
-Throws: $(D FileException) on file error, $(D UtfException) on UTF
+Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
 
 Example:
