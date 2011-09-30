@@ -3844,8 +3844,6 @@ unittest
  * 
  * Works at compile-time.
  * 
- * This currently has a side-effect of replacing all line endings with "\n".
- * 
  * Example:
  * ---
  * writeln(q{
@@ -3870,18 +3868,7 @@ unittest
 
 S outdent(S)(S str) if(isSomeString!S)
 {
-    bool hasTrailingEOL =
-        str.endsWith('\n') || str.endsWith('\r') ||
-        str.endsWith(lineSep) || str.endsWith(paraSep);
-    
-    auto lines = str.splitLines().outdent();
-    S nl = "\n";
-    str = lines.join(nl);
-    
-    // TODO: Remove this when BUG6735 is fixed
-    if (hasTrailingEOL) str ~= '\n';
-    
-    return str;
+    return str.splitLines(KeepTerminator.yes).outdent().join();
 }
 
 /// ditto
@@ -3903,7 +3890,9 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
         auto stripped = __ctfe? line.ctfe_strip() : line.strip();
         
         if (stripped.empty)
-            lines[i] = null;
+        {
+            lines[i] = line[line.chomp().length..$];
+        }
         else
         {
             auto indent = leadingWhiteOf(line);
@@ -3920,7 +3909,8 @@ S[] outdent(S)(S[] lines) if(isSomeString!S)
     
     foreach (i; 0..lines.length)
     {
-        if (lines[i].empty)
+        auto stripped = __ctfe? lines[i].ctfe_strip() : lines[i].strip();
+        if (stripped.empty)
         {
             // Do nothing
         }
@@ -4011,6 +4001,9 @@ unittest
         assert(testStr1.outdent() == expected1);
         static assert(testStr1.outdent() == expected1);
 
+        assert(testStr1[0..$-1].outdent() == expected1);
+        static assert(testStr1[0..$-1].outdent() == expected1);
+
         enum S testStr2  = "a\n \t\nb";
         assert(testStr2.outdent() == testStr2);
         static assert(testStr2.outdent() == testStr2);
@@ -4034,6 +4027,21 @@ unittest
 ";
         assert(testStr3.outdent() == expected3);
         static assert(testStr3.outdent() == expected3);
+        
+        enum testStr4 = "  X\r  X\n  X\r\n  X\u2028  X\u2029  X";
+        enum expected4 = "X\rX\nX\r\nX\u2028X\u2029X";
+        assert(testStr4.outdent() == expected4);
+        static assert(testStr4.outdent() == expected4);
+        
+        enum testStr5  = testStr4[0..$-1];
+        enum expected5 = expected4[0..$-1];
+        assert(testStr5.outdent() == expected5);
+        static assert(testStr5.outdent() == expected5);
+        
+        enum testStr6 = "  \r  \n  \r\n  \u2028  \u2029";
+        enum expected6 = "\r\n\r\n\u2028\u2029";
+        assert(testStr6.outdent() == expected6);
+        static assert(testStr6.outdent() == expected6);
     }
 }
 
