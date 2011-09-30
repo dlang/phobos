@@ -349,9 +349,9 @@ emptymain.d :
 	echo void main(){} > emptymain.d
 
 unittest : emptymain.d phobos.lib
-	$(DMD) -ofeachtest -debuglib=$(DRUNTIMELIB) -defaultlib=$(DRUNTIMELIB) eachtest.d
-	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@" \
-			 "unittest\$$(basefile*).exe" \
+	$(DMD) -ofeachtest eachtest.d
+	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@  > unittest\$$(basefile*).out 2>&1" \
+			 "unittest\$$(basefile*).exe  >> unittest\$$(basefile*).out 2>>&1" \
 			 -- $(SRCS)
 
 #unittest : unittest.exe

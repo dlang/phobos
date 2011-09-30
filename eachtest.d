@@ -1,9 +1,6 @@
 // Written in the D programming language.
 
 /**
- *  This utility depends only druntime.
- *  DO NOT USE Phobos in this module.
- *
  * Copyright: Kenji Hara 2011.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Kenji Hara
@@ -13,9 +10,11 @@ module eachrun;
 
 import core.stdc.stdio;
 
+import std.parallelism;
+
 //debug = internal;
 
-bool printcmd = true;
+enum bool printcmd = true;
 
 int main(string[] args)
 {
@@ -39,20 +38,28 @@ int main(string[] args)
 
     if (files.length)
     {
-        foreach (i, file; files)
+        //foreach (i, file; files)
+        foreach (i, file; taskPool.parallel(files, 1))
         {
-            if (printcmd)
-                printf("\n");
-
+            string[] cmdlines;
             foreach (j, cmd; cmds)
             {
-                auto cmdln = replace_current_target(file, cmd);
+                cmdlines ~= replace_current_target(file, cmd);
+            }
 
-                if (printcmd)
-                    printf("each%d:%d> %.*s\n", i+1, j+1, cmdln.length, cmdln.ptr);
+            int[] results;
+            foreach (j, cmdln; cmdlines)
+            {
+                results ~= system(cmdln);
+                //system("rdmd --main -d -unittest " ~ file);
+                if (results[$-1] != 0)
+                    break;
+            }
 
-                if (system(cmdln) != 0)
-                    return -1;
+            printf("\neach:%d>\n", i+1);
+            foreach (j, res; results)
+            {
+                printf("  [%d] %.*s\n", res, cmdlines[j].length, cmdlines[j].ptr);
             }
         }
     }
@@ -227,6 +234,7 @@ import core.sys.windows.windows;
 enum CP_UTF8 = 65001;
 pragma(lib,"shell32.lib");
 
+/+
 extern (Windows)
 {
     struct STARTUPINFO {
@@ -326,4 +334,25 @@ body
     }
 
     return -1;
+}+/
+
+
+extern (C) int system(in char *);
+extern (C) int _wsystem(in wchar *);
+
+int system(string command)
+{
+    //const commandz = (command ~ "\0").ptr;
+    //immutable status = system(commandz);
+
+    auto n = MultiByteToWideChar(CP_UTF8, 0, command.ptr, command.length, null, 0);
+    assert(n != 0);
+    wchar[] wsz = new wchar[n + 1];
+    n = MultiByteToWideChar(CP_UTF8, 0, command.ptr, command.length, wsz.ptr, wsz.length);
+    assert(n != 0);
+    wsz[$-1] = '\0';
+
+    immutable status = _wsystem(wsz.ptr);
+
+    return status;
 }
