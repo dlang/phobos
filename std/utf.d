@@ -1525,37 +1525,6 @@ else pure wstring toUTF16(C)(in C[] s)
     return r.assumeUnique();  // ok because r is unique
 }
 
-/++
-    Encodes string $(D s) into UTF-16 and returns the encoded string.
-    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
-    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
-  +/
-const(wchar)* toUTF16z(in char[] s)
-{
-    wchar[] r;
-    size_t slen = s.length;
-
-    r.length = slen + 1;
-    r.length = 0;
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c <= 0x7F)
-        {
-            i++;
-            r ~= cast(wchar)c;
-        }
-        else
-        {
-            c = decode(s, i);
-            encode(r, c);
-        }
-    }
-    r ~= "\000";
-
-    return r.ptr;
-}
-
 
 /* =================== Conversion to UTF32 ======================= */
 
@@ -1857,6 +1826,30 @@ unittest
             test!P(s);
         }
     }
+}
+
+
+/++
+    $(D toUTF16z) is a convenience function for $(D toUTFz!(const(wchar)*)).
+
+    Encodes string $(D s) into UTF-16 and returns the encoded string.
+    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
+    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
+  +/
+const(wchar)* toUTF16z(C)(const(C)[] str)
+    if(isSomeChar!C)
+{
+    return toUTFz!(const(wchar)*)(str);
+}
+
+unittest
+{
+    import std.typetuple;
+
+    //toUTFz is already thoroughly tested, so this will just verify that
+    //toUTF16z compile properly for the various string types.
+    foreach(S; TypeTuple!(string, wstring, dstring))
+        static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
 }
 
 
