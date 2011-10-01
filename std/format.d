@@ -1261,10 +1261,11 @@ if (isSomeChar!T)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
+    Unqual!(StringTypeOf!T) str = val;  // for `alias this`, see bug5371
+
     if (f.spec == 's')
     {
-        StringTypeOf!T val2 = val;          // for `alias this`
-        auto s = val2[0 .. f.precision < $ ? f.precision : $];
+        auto s = str[0 .. f.precision < $ ? f.precision : $];
         if (!f.flDash)
         {
             // right align
@@ -1282,17 +1283,17 @@ if (isSomeString!T && !isStaticArray!T && !is(T == enum))
     }
     else
     {
-        static if (is(typeof(val[0]) : const(char)))
+        static if (is(typeof(str[0]) : const(char)))
         {
-            formatRange(w, cast(ubyte[])val, f);
+            formatRange(w, str, f);
         }
-        else static if (is(typeof(val[0]) : const(wchar)))
+        else static if (is(typeof(str[0]) : const(wchar)))
         {
-            formatRange(w, cast(ushort[])val, f);
+            formatRange(w, str, f);
         }
-        else static if (is(typeof(val[0]) : const(dchar)))
+        else static if (is(typeof(str[0]) : const(dchar)))
         {
-            formatRange(w, cast(uint[])val, f);
+            formatRange(w, str, f);
         }
     }
 }
@@ -1304,6 +1305,28 @@ unittest
     string s = "abc";
     formatValue(w, s, f);
     assert(w.data == "abc");
+}
+
+unittest
+{
+    // 5371
+    class C1
+    {
+        const(string) var = "C1";
+        alias var this;
+    }
+    class C2
+    {
+        string var = "C2";
+        alias var this;
+    }
+    auto c1 = new C1();
+    auto c2 = new C2();
+
+    FormatSpec!char f;
+    auto a = appender!string();
+    formatValue(a, c1, f);
+    formatValue(a, c2, f);
 }
 
 /**
@@ -1320,11 +1343,86 @@ if (isInputRange!T && !isSomeString!T)
             return;
         }
     }
+
+    static if (isSomeChar!(ElementType!T))
+    if (f.spec == 's')
+    {
+        if (!f.flDash)
+        {
+            static if (hasLength!T)
+            {
+                // right align
+                auto len = val.length;
+            }
+            else static if (isForwardRange!T)
+            {
+                auto len = walkLength(val.save);
+            }
+            else
+            {
+                enforce(f.width == 0, "Cannot right-align a range without length");
+                size_t len = 0;
+            }
+            if (f.width > len)
+                foreach (i ; 0 .. f.width - len) put(w, ' ');
+            for (; !val.empty; val.popFront())
+            {
+                put(w, val.front);
+            }
+        }
+        else
+        {
+            // left align
+            size_t printed = 0;
+            for (; !val.empty; val.popFront(), ++printed)
+            {
+                put(w, val.front);
+            }
+            if (f.width > printed)
+                foreach (i ; 0 .. f.width - printed) put(w, ' ');
+        }
+        return;
+    }
+
     formatRange(w, val, f);
 }
 
+unittest
+{
+    // 6640
+    struct Range
+    {
+        string value;
+        const @property bool empty(){ return !value.length; }
+        const @property dchar front(){ return value.front(); }
+        void popFront(){ value.popFront(); }
+
+        const @property size_t length(){ return value.length; }
+    }
+    auto s = "string";
+    auto r = Range("string");
+
+    immutable table =
+    [
+        ["[%s]", "[string]"],
+        ["[%10s]", "[    string]"],
+        ["[%-10s]", "[string    ]"],
+        ["[%(%02x %)]", "[73 74 72 69 6e 67]"],
+        ["[%(%s %)]", "[s t r i n g]"],
+    ];
+    foreach (e; table)
+    {
+        auto w1 = appender!string();
+        auto w2 = appender!string();
+        formattedWrite(w1, e[0], s);
+        formattedWrite(w2, e[0], r);
+        assert(w1.data == w2.data);
+        assert(w1.data == e[1]);
+    }
+}
+
 private void formatRange(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isInputRange!T && !isSomeChar!(ElementType!T))
+if (isInputRange!T)
 {
     auto arr = val;
     if (f.spec == 'r')
@@ -1385,71 +1483,7 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
                     fmt.writeUpToNextSpec(w);
                 }
             }
-
-            // auto itemFormatString = f.nested;
-            // // First, parse and figure the format spec
-            // // Skip to the format spec
-            // size_t i = 0;
-            // while (i < itemFormatString.length)
-            // {
-            //     if (itemFormatString[i++] != '%') continue;
-            //     enforce(i < itemFormatString.length);
-            //     if (itemFormatString[i] != '%') break;
-            //     ++i;
-            // }
-            // auto head = itemFormatString[0 .. i - 1];
-            // itemFormatString = itemFormatString[i .. $];
-            // auto itemFmt = FormatSpec(itemFormatString);
-            // auto tail = itemFormatString;
-            // for (;;)
-            // {
-            //     auto headCopy = head;
-            //     writeUpToFormatSpec(w, headCopy);
-            //     formatValue(w, arr.front, itemFmt);
-            //     arr.popFront();
-            //     if (arr.empty) break;
-            //     put(w, tail);
-            // }
         }
-    }
-}
-
-private void formatRange(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isInputRange!T && isSomeChar!(ElementType!T))
-{
-    if (!f.flDash)
-    {
-        static if (hasLength!T)
-        {
-            // right align
-            auto len = val.length;
-        }
-        else static if (isForwardRange!T)
-        {
-            auto len = walkLength(val.save);
-        }
-        else
-        {
-            enforce(f.width == 0, "Cannot right-align a range without length");
-            size_t len = 0;
-        }
-        if (f.width > len)
-            foreach (i ; 0 .. f.width - len) put(w, ' ');
-        for (; !val.empty; val.popFront())
-        {
-            put(w, val.front);
-        }
-    }
-    else
-    {
-        // left align
-        size_t printed = 0;
-        for (; !val.empty; val.popFront(), ++printed)
-        {
-            put(w, val.front);
-        }
-        if (f.width > printed)
-            foreach (i ; 0 .. f.width - printed) put(w, ' ');
     }
 }
 
@@ -1491,6 +1525,7 @@ if (isSomeString!T)
 {
     if (f.spec == 's')
     {
+        bool invalidSeq = false;
         try
         {
             // ignore other specifications and quote
@@ -1503,26 +1538,42 @@ if (isSomeString!T)
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
-                    goto InvalidSeq;
-
+                {
+                    invalidSeq = true;
+                    goto LinvalidSeq;
+                }
                 formatChar(app, c);
             }
             put(app, '\"');
 
             put(w, app.data());
         }
-        catch (UtfException e)
+        catch (UTFException)
         {
-InvalidSeq:
-            // If val contains invalid UTF sequence, formatted like HexString literalx
-          static if (is(typeof(val[0]) : const(char)))
-            enum postfix = 'c';
-          else static if (is(typeof(val[0]) : const(wchar)))
-            enum postfix = 'w';
-          else static if (is(typeof(val[0]) : const(dchar)))
-            enum postfix = 'd';
+            // If val contains invalid UTF sequence, formatted like HexString literal
+            invalidSeq = true;
+        }
 
-            formattedWrite(w, "x\"%(%02X %)\"%s", val, postfix);
+    LinvalidSeq:
+        if (invalidSeq)
+        {
+            static if (is(typeof(val[0]) : const(char)))
+            {
+                enum postfix = 'c';
+                alias const(ubyte)[] IntArr;
+            }
+            else static if (is(typeof(val[0]) : const(wchar)))
+            {
+                enum postfix = 'w';
+                alias const(ushort)[] IntArr;
+            }
+            else static if (is(typeof(val[0]) : const(dchar)))
+            {
+                enum postfix = 'd';
+                alias const(uint)[] IntArr;
+            }
+
+            formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)val, postfix);
         }
     }
     else
@@ -3687,7 +3738,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else
                 {   if (!isValidDchar(vdchar))
-                        throw new UtfException("invalid dchar in format", 0);
+                        throw new UTFException("invalid dchar in format");
                     char[4] vbuf;
                     putstr(toUTF8(vbuf, vdchar));
                 }

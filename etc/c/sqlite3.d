@@ -1,4 +1,4 @@
-module sqlite3_bindings;
+module etc.c.sqlite3;
 /*
 ** 2001 September 15
 **
@@ -33,6 +33,7 @@ module sqlite3_bindings;
 */
 
 extern (C) {
+__gshared:
 
 /**
 ** CAPI3REF: Compile-Time Library Version Numbers
