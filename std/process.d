@@ -22,6 +22,7 @@ module std.process;
 
 import core.stdc.stdlib;
 import core.stdc.errno;
+import core.thread;
 import std.c.process;
 import std.c.string;
 
