@@ -27737,8 +27737,8 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             else version(Windows)
                 _assertPred!"=="(tz.name, stdName);
 
-            _assertPred!"=="(tz.stdName, stdName);
-            _assertPred!"=="(tz.dstName, dstName);
+            //_assertPred!"=="(tz.stdName, stdName);  //Locale-dependent
+            //_assertPred!"=="(tz.dstName, dstName);  //Locale-dependent
             _assertPred!"=="(tz.hasDST, hasDST);
 
             immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 6, 0, 0);
@@ -27796,8 +27796,8 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                     auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
 
                     assert(leapTZ.name == "right/" ~ tzName);
-                    assert(leapTZ.stdName == stdName);
-                    assert(leapTZ.dstName == dstName);
+                    //assert(leapTZ.stdName == stdName);  //Locale-dependent
+                    //assert(leapTZ.dstName == dstName);  //Locale-dependent
                     assert(leapTZ.hasDST == hasDST);
 
                     auto leapSTD = SysTime(std.stdTime, leapTZ);
