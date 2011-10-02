@@ -96,66 +96,92 @@ OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
 	oldsyserror.obj \
 	c_stdio.obj
 
-#	ti_bit.obj ti_Abit.obj
-
-# The separation is a workaround for bug 4904 (optlink bug 3372).
-# SRCS_1 is the heavyweight modules which are most likely to trigger the bug.
-# Do not add any more modules to SRCS_1.
-SRCS_11 = std\stdio.d std\stdiobase.d \
-	std\string.d std\format.d \
-	std\algorithm.d std\file.d
-
-SRCS_12 = std\array.d std\functional.d std\range.d \
-	std\path.d std\outbuffer.d std\utf.d
-
-SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\dateparse.d std\date.d std\datetime.d \
-    std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
-    std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
-    std\signals.d std\typetuple.d std\traits.d std\bind.d \
-    std\encoding.d std\xml.d \
-    std\random.d std\regexp.d \
-    std\contracts.d std\exception.d \
-    std\compiler.d std\cpuid.d \
-    std\process.d std\system.d std\concurrency.d
-
-SRCS_3 = std\variant.d \
-	std\stream.d std\socket.d std\socketstream.d \
-	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d std\loader.d \
+SRCS = crc32.d \
 	std\__fileinit.d \
+	std\algorithm.d \
+	std\array.d \
+    std\ascii.d \
+    std\base64.d \
+	std\bigint.d \
+    std\bind.d \
+    std\bitmanip.d \
+    std\compiler.d \
+	std\complex.d \
+    std\concurrency.d \
+	std\container.d \
+    std\contracts.d \
+	std\conv.d \
+    std\cpuid.d \
+	std\cstream.d \
+    std\ctype.d \
+    std\date.d \
 	std\datebase.d \
+    std\dateparse.d \
+    std\datetime.d \
+    std\demangle.d \
+    std\encoding.d \
+    std\exception.d \
+	std\file.d \
+	std\format.d \
+	std\functional.d \
+    std\getopt.d \
+	std\gregorian.d \
+	std\json.d \
+	std\loader.d \
+	std\math.d \
+    std\mathspecial.d \
+    std\md5.d \
+    std\metastrings.d \
+    std\mmfile.d \
+	std\numeric.d \
+	std\outbuffer.d \
+	std\parallelism.d \
+	std\path.d \
+	std\perf.d \
+    std\process.d \
+    std\random.d \
+	std\range.d \
 	std\regex.d \
+    std\regexp.d \
+    std\signals.d \
+	std\socket.d \
+	std\socketstream.d \
 	std\stdarg.d \
 	std\stdint.d \
-	std\json.d \
-	std\parallelism.d \
-	std\gregorian.d \
-    std\mathspecial.d \
-	std\internal\math\biguintcore.d \
-	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-    std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
-	crc32.d \
+	std\stdio.d \
+	std\stdiobase.d \
+	std\stream.d \
+	std\string.d \
+    std\system.d \
+    std\traits.d \
+    std\typecons.d \
+    std\typetuple.d \
+    std\uni.d \
+    std\uri.d \
+	std\utf.d \
+	std\variant.d \
+    std\xml.d \
+	std\zip.d \
+	std\c\math.d \
 	std\c\process.d \
 	std\c\stdarg.d \
 	std\c\stddef.d \
 	std\c\stdlib.d \
 	std\c\string.d \
 	std\c\time.d \
-	std\c\math.d \
 	std\c\windows\com.d \
 	std\c\windows\stat.d \
 	std\c\windows\windows.d \
 	std\c\windows\winsock.d \
+	std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d \
+	std\internal\math\biguintx86.d \
+    std\internal\math\errorfunction.d \
+    std\internal\math\gammafunction.d \
 	std\windows\charset.d \
 	std\windows\iunknown.d \
 	std\windows\registry.d \
 	std\windows\syserror.d
-
-# The separation is a workaround for bug 4904 (optlink bug 3372).
-# See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
-SRCS = $(SRCS_11) $(SRCS_12) $(SRCS_2) $(SRCS_3)
 
 
 DOCS=	$(DOC)\object.html \
@@ -347,13 +373,20 @@ phobos.lib : $(OBJS) $(SRCS) \
 	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) phobos.lib
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_3) unittest11.obj unittest12.obj unittest2.obj \
-		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
-	unittest
+emptymain.d :
+	echo void main(){} > emptymain.d
+
+unittest : emptymain.d phobos.lib
+	$(DMD) -ofeachtest -debuglib=$(DRUNTIMELIB) -defaultlib=$(DRUNTIMELIB) eachtest.d
+	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@  > unittest\$$(basefile*).out 2>&1" \
+			 "unittest\$$(basefile*).exe  >> unittest\$$(basefile*).out 2>>&1" \
+			 -- $(SRCS)
+
+unittestp : emptymain.d phobos.lib
+	$(DMD) -version=Parallel -ofeachtest eachtest.d
+	eachtest "$(DMD) $(UDFLAGS) -L/co -unittest -ofunittest\$$(basefile*).exe emptymain.d $$@  > unittest\$$(basefile*).out 2>&1" \
+			 "unittest\$$(basefile*).exe  >> unittest\$$(basefile*).out 2>>&1" \
+			 -- $(SRCS)
 
 #unittest : unittest.exe
 #	unittest
@@ -940,6 +973,9 @@ clean:
 	del unittest1.obj unittest.obj unittest.map unittest.exe
 	del phobos.lib
 	del phobos.json
+	del /Q unittest\*.*
+	rmdir unittest
+	del emptymain.d
 
 cleanhtml:
 	del $(DOCS)
