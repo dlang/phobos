@@ -1542,7 +1542,7 @@ private:
 /**
     Represents the local system registry.
  */
-abstract final class Registry
+final class Registry
 {
 private:
     shared static this()
@@ -1555,6 +1555,8 @@ private:
         sm_keyCurrentConfig   = new Key(regDup(HKEY_CURRENT_CONFIG),   "HKEY_CURRENT_CONFIG",   false);
         sm_keyDynData         = new Key(regDup(HKEY_DYN_DATA),         "HKEY_DYN_DATA",         false);
     }
+
+    @disable this() { }
 
 public:
     /// Returns the root key for the HKEY_CLASSES_ROOT hive
