@@ -315,14 +315,7 @@ else
  * writefln("Current process id: %s", getpid());
  * ---
  */
-version(Posix)
-{
-    alias core.sys.posix.unistd.getpid getpid;
-}
-else version (Windows)
-{
-    alias std.c.windows.windows.GetCurrentProcessId getpid;
-}
+alias core.thread.getpid getpid;
 
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
