@@ -37,8 +37,6 @@
  * ////////////////////////////////////////////////////////////////////////// */
 module std.windows.registry;
 
-pragma(lib, "advapi32.lib");
-
 import std.array;
 import std.system : Endian, endian;
 import std.exception;
@@ -48,6 +46,7 @@ import std.windows.charset: toMBSz, fromMBSz;
 import std.conv;
 import std.utf : toUTFz, toUTF16z, toUTF8, toUTF16;
 import std.__fileinit : useWfuncs;
+private import std.internal.windows.advapi32;
 
 //debug = winreg;
 debug(winreg) import std.stdio;
@@ -227,61 +226,17 @@ private
     enum DWORD REG_OPENED_EXISTING_KEY  =   0x00000002;
 }
 
-private extern (Windows)
+// Returns samDesired but without WoW64 flags if not in WoW64 mode
+// for compatibility with Windows 2000
+private REGSAM compatibleRegsam(in REGSAM samDesired)
 {
-    LONG function(in HKEY hkey, in LPCSTR lpSubKey, in REGSAM samDesired, in DWORD reserved) pRegDeleteKeyExA;
-    LONG function(in HKEY hkey, in LPCWSTR lpSubKey, in REGSAM samDesired, in DWORD reserved) pRegDeleteKeyExW;
+    return isWow64 ? samDesired : cast(REGSAM)(samDesired & ~REGSAM.KEY_WOW64_RES);
 }
 
-shared static this()
+///Returns true, if we are in WoW64 mode and have WoW64 flags
+private bool haveWoW64Job(in REGSAM samDesired)
 {
-    // WOW64 is the x86 emulator that allows 32-bit Windows-based applications to run seamlessly on 64-bit Windows
-    // IsWow64Process Function - Minimum supported client - Windows Vista, Windows XP with SP2
-    alias extern(Windows) BOOL function(HANDLE, PBOOL) fptr_t;
-    auto IsWow64Process =
-        cast(fptr_t)GetProcAddress(enforce(GetModuleHandleA("kernel32")), "IsWow64Process");
-    BOOL bIsWow64;
-    isWow64 = IsWow64Process && IsWow64Process(GetCurrentProcess(), &bIsWow64) && bIsWow64;
-
-    advapi32Mutex = new shared(Object)();
-}
-
-shared static ~this()
-{
-    freeAdvapi32();
-}
-
-private
-{
-    immutable bool isWow64;
-    shared Object advapi32Mutex;
-    shared HMODULE hAdvapi32 = null;
-
-    // Returns samDesired but without WoW64 flags if not in WoW64 mode
-    // for compatibility with Windows 2000
-    REGSAM compatibleRegsam(in REGSAM samDesired)
-    {
-        return isWow64 ? samDesired : cast(REGSAM)(samDesired & ~REGSAM.KEY_WOW64_RES);
-    }
-
-    ///Returns true, if we are in WoW64 mode and have WoW64 flags
-    bool haveWoW64Job(in REGSAM samDesired)
-    {
-        return isWow64 && (samDesired & REGSAM.KEY_WOW64_RES);
-    }
-}
-
-// It will free Advapi32.dll, which may be loaded for RegDeleteKeyEx function
-void freeAdvapi32()
-{
-    synchronized (advapi32Mutex)
-        if (hAdvapi32)
-        {
-            pRegDeleteKeyExA = null;
-            pRegDeleteKeyExW = null;
-            hAdvapi32 = null;
-            enforce(FreeLibrary(cast(void*) hAdvapi32), `FreeLibrary(hAdvapi32)`);
-        }
+    return isWow64 && (samDesired & REGSAM.KEY_WOW64_RES);
 }
 
 private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
@@ -395,52 +350,18 @@ in
 body
 {
     LONG res;
-
     if (haveWoW64Job(samDesired))
     {
-        if (useWfuncs)
-        {
-            if (!pRegDeleteKeyExW)
-                synchronized (advapi32Mutex)
-                {
-                    hAdvapi32 = cast(shared) enforce(
-                        LoadLibraryW("Advapi32.dll"), `LoadLibraryW("Advapi32.dll")`
-                    );
-
-                    pRegDeleteKeyExW = cast(typeof(pRegDeleteKeyExW))enforce(GetProcAddress(
-                        cast(void*) hAdvapi32 , "RegDeleteKeyExW"),
-                        `GetProcAddress(hAdvapi32 , "RegDeleteKeyExW")`
-                    );
-                }
-            res = pRegDeleteKeyExW(hkey, toUTF16z(subKey), samDesired, 0);
-        }
-        else
-        {
-            if (!pRegDeleteKeyExA)
-                synchronized (advapi32Mutex)
-                {
-                    hAdvapi32 = cast(shared) enforce(
-                        LoadLibraryA("Advapi32.dll"), `LoadLibraryA("Advapi32.dll")`
-                    );
-
-                    pRegDeleteKeyExA = cast(typeof(pRegDeleteKeyExA))enforce(GetProcAddress(
-                        cast(void*) hAdvapi32 , "RegDeleteKeyExA"),
-                        `GetProcAddress(hAdvapi32 , "RegDeleteKeyExA")`
-                    );
-                }
-            res = pRegDeleteKeyExA(hkey, toMBSz(subKey), samDesired, 0);
-        }
+        loadAdvapi32();
+        res =
+            useWfuncs ? pRegDeleteKeyExW(hkey, toUTF16z(subKey), samDesired, 0)
+                      : pRegDeleteKeyExA(hkey, toMBSz(subKey), samDesired, 0);
     }
     else
     {
-        if (useWfuncs)
-        {
-            res = RegDeleteKeyW(hkey, toUTF16z(subKey));
-        }
-        else
-        {
-            res = RegDeleteKeyA(hkey, toMBSz(subKey));
-        }
+        res =
+            useWfuncs ? RegDeleteKeyW(hkey, toUTF16z(subKey))
+                      : RegDeleteKeyA(hkey, toMBSz(subKey));
     }
     enforceSucc(res, "Value cannot be deleted: \"" ~ subKey ~ "\"");
 }
@@ -1545,43 +1466,23 @@ private:
 final class Registry
 {
 private:
-    shared static this()
-    {
-        sm_keyClassesRoot     = new Key(regDup(HKEY_CLASSES_ROOT),     "HKEY_CLASSES_ROOT",     false);
-        sm_keyCurrentUser     = new Key(regDup(HKEY_CURRENT_USER),     "HKEY_CURRENT_USER",     false);
-        sm_keyLocalMachine    = new Key(regDup(HKEY_LOCAL_MACHINE),    "HKEY_LOCAL_MACHINE",    false);
-        sm_keyUsers           = new Key(regDup(HKEY_USERS),            "HKEY_USERS",            false);
-        sm_keyPerformanceData = new Key(regDup(HKEY_PERFORMANCE_DATA), "HKEY_PERFORMANCE_DATA", false);
-        sm_keyCurrentConfig   = new Key(regDup(HKEY_CURRENT_CONFIG),   "HKEY_CURRENT_CONFIG",   false);
-        sm_keyDynData         = new Key(regDup(HKEY_DYN_DATA),         "HKEY_DYN_DATA",         false);
-    }
-
     @disable this() { }
 
 public:
     /// Returns the root key for the HKEY_CLASSES_ROOT hive
-    static @property Key classesRoot()     { return sm_keyClassesRoot; }
+    static @property Key classesRoot()     { return new Key(HKEY_CLASSES_ROOT,     "HKEY_CLASSES_ROOT",     false); }
     /// Returns the root key for the HKEY_CURRENT_USER hive
-    static @property Key currentUser()     { return sm_keyCurrentUser; }
+    static @property Key currentUser()     { return new Key(HKEY_CURRENT_USER,     "HKEY_CURRENT_USER",     false); }
     /// Returns the root key for the HKEY_LOCAL_MACHINE hive
-    static @property Key localMachine()    { return sm_keyLocalMachine; }
+    static @property Key localMachine()    { return new Key(HKEY_LOCAL_MACHINE,    "HKEY_LOCAL_MACHINE",    false); }
     /// Returns the root key for the HKEY_USERS hive
-    static @property Key users()           { return sm_keyUsers; }
+    static @property Key users()           { return new Key(HKEY_USERS,            "HKEY_USERS",            false); }
     /// Returns the root key for the HKEY_PERFORMANCE_DATA hive
-    static @property Key performanceData() { return sm_keyPerformanceData; }
+    static @property Key performanceData() { return new Key(HKEY_PERFORMANCE_DATA, "HKEY_PERFORMANCE_DATA", false); }
     /// Returns the root key for the HKEY_CURRENT_CONFIG hive
-    static @property Key currentConfig()   { return sm_keyCurrentConfig; }
+    static @property Key currentConfig()   { return new Key(HKEY_CURRENT_CONFIG,   "HKEY_CURRENT_CONFIG",   false); }
     /// Returns the root key for the HKEY_DYN_DATA hive
-    static @property Key dynData()         { return sm_keyDynData; }
-
-private:
-    __gshared Key  sm_keyClassesRoot;
-    __gshared Key  sm_keyCurrentUser;
-    __gshared Key  sm_keyLocalMachine;
-    __gshared Key  sm_keyUsers;
-    __gshared Key  sm_keyPerformanceData;
-    __gshared Key  sm_keyCurrentConfig;
-    __gshared Key  sm_keyDynData;
+    static @property Key dynData()         { return new Key(HKEY_DYN_DATA,         "HKEY_DYN_DATA",         false); }
 }
 
 /**
