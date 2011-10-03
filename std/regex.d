@@ -102,7 +102,6 @@ module std.regex;
 
 import core.stdc.stdlib;
 import core.stdc.string;
-import std.stdio;
 import std.string;
 import std.ascii;
 import std.outbuffer;
@@ -117,6 +116,7 @@ import std.range;
 import std.conv;
 import std.functional;
 
+version(unittest) import std.stdio;
 unittest
 {
     auto r = regex("abc"w);
