@@ -28,7 +28,6 @@ import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
 version(unittest) {
     import std.stdio;
 }
-import std.stdio;
 
 version (Windows) version (DigitalMars)
 {
