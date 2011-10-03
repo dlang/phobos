@@ -20,7 +20,7 @@ import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.range, std.string, std.traits, std.typecons,
+    std.file, std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 
 version (DigitalMars) version (Windows)
