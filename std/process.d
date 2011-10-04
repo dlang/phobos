@@ -28,6 +28,7 @@ import std.c.string;
 
 import std.conv;
 import std.exception;
+import std.internal.processinit;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -48,11 +49,17 @@ version (Posix)
 // The following is needed for reading/writing environment variables.
 version(Posix)
 {
-    version(OSX)
+    version(OSX) private extern(C)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
-        private extern(C) extern __gshared char*** _NSGetEnviron();
-        // need to declare environ = *_NSGetEnviron() in static this()
+        extern __gshared char*** _NSGetEnviron();
+        __gshared char** environ;
+
+        //Run in std.__processinit to avoid cyclic construction errors.
+        void std_process_static_this()
+        {
+            environ = *_NSGetEnviron();
+        }
     }
     else
     {
@@ -491,17 +498,7 @@ alias Environment environment;
 
 abstract final class Environment
 {
-    // initiaizes the value of environ for OSX
-    version(OSX)
-    {
-        static private char** environ;
-        static this()
-        {
-            environ = * _NSGetEnviron();
-        }
-    }
 static:
-
 private:
     // Return the length of an environment variable (in number of
     // wchars, including the null terminator), 0 if it doesn't exist.
