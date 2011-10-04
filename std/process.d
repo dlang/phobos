@@ -49,14 +49,14 @@ version (Posix)
 // The following is needed for reading/writing environment variables.
 version(Posix)
 {
-    version(OSX) private extern(C)
+    version(OSX)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
-        extern __gshared char*** _NSGetEnviron();
+        private extern(C) extern __gshared char*** _NSGetEnviron();
         __gshared char** environ;
 
-        //Run in std.__processinit to avoid cyclic construction errors.
-        void std_process_static_this()
+        // Run in std.__processinit to avoid cyclic construction errors.
+        extern(C) void std_process_static_this()
         {
             environ = *_NSGetEnviron();
         }
