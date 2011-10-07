@@ -129,9 +129,7 @@ version(Windows)
 {
     import core.sys.windows.windows;
     import std.c.windows.winsock;
-
-    //For system call to access the registry.
-    pragma(lib, "advapi32.lib");
+    import std.windows.registry;
 }
 else version(Posix)
 {
@@ -30129,99 +30127,45 @@ else version(Windows)
 
         static immutable(WindowsTimeZone) getTimeZone(string name)
         {
-            auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\0";
-            HKEY baseKey;
+            scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
+            foreach (tzKeyName; baseKey.keyNames)
             {
-                auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
-                if(result != ERROR_SUCCESS)
-                    throw new DateTimeException(format("Failed to open registry. Error: %s", result));
+                if (tzKeyName != name)
+                    continue;
+
+                scope tzKey = baseKey.getKey(tzKeyName);
+
+                scope stdVal = tzKey.getValue("Std");
+                auto stdName = stdVal.value_SZ;
+
+                scope dstVal = tzKey.getValue("Dlt");
+                auto dstName = dstVal.value_SZ;
+
+                scope tziVal = tzKey.getValue("TZI");
+                auto binVal = tziVal.value_BINARY;
+                assert(binVal.length == REG_TZI_FORMAT.sizeof);
+                auto tziFmt = cast(REG_TZI_FORMAT*)binVal.ptr;
+
+                TIME_ZONE_INFORMATION tzInfo;
+
+                auto wstdName = toUTF16(stdName);
+                auto wdstName = toUTF16(dstName);
+                auto wstdNameLen = wstdName.length > 32 ? 32 : wstdName.length;
+                auto wdstNameLen = wdstName.length > 32 ? 32 : wdstName.length;
+
+                tzInfo.Bias = tziFmt.Bias;
+                tzInfo.StandardName[0 .. wstdNameLen] = wstdName[0 .. wstdNameLen];
+                tzInfo.StandardName[wstdNameLen .. $] = '\0';
+                tzInfo.StandardDate = tziFmt.StandardDate;
+                tzInfo.StandardBias = tziFmt.StandardBias;
+                tzInfo.DaylightName[0 .. wdstNameLen] = wdstName[0 .. wdstNameLen];
+                tzInfo.DaylightName[wdstNameLen .. $] = '\0';
+                tzInfo.DaylightDate = tziFmt.DaylightDate;
+                tzInfo.DaylightBias = tziFmt.DaylightBias;
+
+                return new WindowsTimeZone(name, tzInfo);
             }
-            scope(exit) RegCloseKey(baseKey);
-
-            char[1024] keyName;
-            auto nameLen = to!DWORD(keyName.length);
-            int result;
-            for(DWORD index = 0;
-                (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
-                ++index, nameLen = keyName.length)
-            {
-                if(result == ERROR_SUCCESS)
-                {
-                    HKEY tzKey;
-                    if(RegOpenKeyExA(baseKey, keyName.ptr, 0, KEY_READ, &tzKey) == ERROR_SUCCESS)
-                    {
-                        scope(exit) RegCloseKey(tzKey);
-                        char[1024] strVal;
-                        auto strValLen = to!DWORD(strVal.length);
-
-                        bool queryStringValue(string name, size_t lineNum = __LINE__)
-                        {
-                            strValLen = strVal.length;
-
-                            return RegQueryValueExA(tzKey, name.ptr, null, null, cast(ubyte*)strVal.ptr, &strValLen) == ERROR_SUCCESS;
-                        }
-
-                        if(to!string(keyName.ptr) == name)
-                        {
-                            if(queryStringValue("Std\0"))
-                            {
-                                //Cannot use to!wstring(char*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                                static wstring conv(char* cstr, size_t strValLen)
-                                {
-                                    cstr[strValLen - 1] = '\0';
-
-                                    string retval;
-
-                                    for(;; ++cstr)
-                                    {
-                                        if(*cstr == '\0')
-                                            break;
-
-                                        retval ~= *cstr;
-                                    }
-
-                                    return to!wstring(retval);
-                                }
-
-                                //auto stdName = to!wstring(strVal.ptr);
-                                auto stdName = conv(strVal.ptr, strValLen);
-
-                                if(queryStringValue("Dlt\0"))
-                                {
-                                    //auto dstName = to!wstring(strVal.ptr);
-                                    auto dstName = conv(strVal.ptr, strValLen);
-
-                                    enum tzi = "TZI\0";
-                                    REG_TZI_FORMAT binVal;
-                                    auto binValLen = to!DWORD(REG_TZI_FORMAT.sizeof);
-
-                                    if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
-                                    {
-                                        TIME_ZONE_INFORMATION tzInfo;
-
-                                        auto stdNameLen = stdName.length > 32 ? 32 : stdName.length;
-                                        auto dstNameLen = dstName.length > 32 ? 32 : dstName.length;
-
-                                        tzInfo.Bias = binVal.Bias;
-                                        tzInfo.StandardName[0 .. stdNameLen] = stdName[0 .. stdNameLen];
-                                        tzInfo.StandardName[stdNameLen .. $] = '\0';
-                                        tzInfo.StandardDate = binVal.StandardDate;
-                                        tzInfo.StandardBias = binVal.StandardBias;
-                                        tzInfo.DaylightName[0 .. dstNameLen] = dstName[0 .. dstNameLen];
-                                        tzInfo.DaylightName[dstNameLen .. $] = '\0';
-                                        tzInfo.DaylightDate = binVal.DaylightDate;
-                                        tzInfo.DaylightBias = binVal.DaylightBias;
-
-                                        return new WindowsTimeZone(name, tzInfo);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
 
@@ -30229,27 +30173,12 @@ else version(Windows)
         {
             auto timezones = appender!(string[])();
 
-            auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones";
-            HKEY baseKey;
+            scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
+            foreach (tzKeyName; baseKey.keyNames)
             {
-                auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
-                if(result != ERROR_SUCCESS)
-                    throw new DateTimeException(format("Failed to open registry. Error: %s", result));
+                timezones.put(tzKeyName);
             }
-            scope(exit) RegCloseKey(baseKey);
-
-            char[1024] keyName;
-            auto nameLen = to!DWORD(keyName.length);
-            int result;
-            for(DWORD index = 0;
-                (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
-                ++index, nameLen = keyName.length)
-            {
-                if(result == ERROR_SUCCESS)
-                    timezones.put(to!string(keyName.ptr));
-            }
-
             sort(timezones.data);
 
             return timezones.data;
