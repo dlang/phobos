@@ -107,17 +107,30 @@ class CSV{
          * --------------------
          *
          * import csv;
-         * CSV          csvFile         = new CSV("/path/to/file.tsv", "\t", true);
+         * string[]     header          = ["male", "female", "old"];
+         * string[][]   data            = [["john", "smith", "andrew"], ["Ainsley", "Elizabeth", "Haley"], ["18", "30", "60"];
+         * CSV          csvFile         = new CSV( header, data );
          * string[]     line2           = csvFile.getLine( 2 );     // get line 2
          * string[]     line25          = csvFile.getLine( 2, 5 );  // get line 2 to 5
          * string[]     column3         = csvFile[3];               // get column 3
-         * string[]     columnKey       = csvFile["Sum"];           // get column sum
+         * string[]     columnKey       = csvFile["male"];          // get column sum
          * string[][]   column13        = csvFile[1..3];            // get columns 1 to 3
-         * string[][]   columnKey1Key2  = csvFile["Mean".."Sum"];   // get columns from mean to sum
+         * string[][]   columnKey1Key2  = csvFile["male".."female"];// get columns from mean to sum
          * --------------------
          */
         this(ref size_t[string]  header, ref string[][] data){
             this._header = header;
+            this._data   = data;
+        }
+
+        this(ref string[]  header, ref string[][] data){
+            foreach(size_t count, colHeader, header)
+                this._header[colHeader] = count;
+            this._data   = data;
+        }
+
+        this(ref string[][] data){
+            this._header = null;
             this._data   = data;
         }
 
