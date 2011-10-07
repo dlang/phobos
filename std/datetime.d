@@ -91,10 +91,12 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
         $(D DateTimeException)).
 
     See_Also:
-        $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)
-        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+        <a href="../intro-to-datetime.html">Introduction to std&#46;_datetime </a><br>
+        $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)<br>
+        $(WEB en.wikipedia.org/wiki/Tz_database,
+              Wikipedia entry on TZ Database)<br>
         $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones,
-              List of Time Zones)
+              List of Time Zones)<br>
 
     Copyright: Copyright 2010 - 2011
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
