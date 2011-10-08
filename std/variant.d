@@ -673,7 +673,7 @@ public:
         };
         auto p = *cast(T**) &store;
         Buf buf = { typeid(T) };
-        if (fptr(OpID.get, cast(typeof(&store)) &store, &buf))
+        if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
