@@ -19,7 +19,7 @@ $(VERSION 056, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 6609): std.conv.parse!Integer should consider sign when radix == 10)
         $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
         $(LI $(BUGZILLA 6640): More formatting consistency between string and range of char)
-        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causeing a dangling pointer)
+        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causing a dangling pointer)
      )
  )
 
