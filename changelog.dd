@@ -1,14 +1,25 @@
 $(VERSION 056, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
+      $(LI std.exception: enforce/enforceEx now can use in @safe pure function.)
+      $(LI Added optional KeepTerminator param to std.string.splitLines.)
+      $(LI Added std.string.outdent.)
+      $(LI std.utf: More @safe and pure.)
+      $(LI std.windows.registry now use *W functions in order to deal properly with Unicode.)
      )
 
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 5522): std.range.zip fails on arrays of Object.)
+        $(LI $(BUGZILLA 6009): std/container disabled on freebsd/64)
         $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
         $(LI $(BUGZILLA 6181): assert fails in datetime.d while runining Phobos unittest)
         $(LI $(BUGZILLA 6258): std.conv.to!real("-") fetches the front of an empty array.)
+        $(LI $(BUGZILLA 6275): Const values in tuples)
         $(LI $(BUGZILLA 6288): std.conv.to removes const/immutable when converting a class)
+        $(LI $(BUGZILLA 6609): std.conv.parse!Integer should consider sign when radix == 10)
         $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
+        $(LI $(BUGZILLA 6640): More formatting consistency between string and range of char)
+        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causeing a dangling pointer)
      )
  )
 
