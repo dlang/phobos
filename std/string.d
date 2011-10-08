@@ -60,7 +60,7 @@ module std.string;
 
 import core.exception : onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
-    std.ascii, std.conv, std.exception, std.format, std.functional,
+    std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.traits,
     std.typetuple, std.uni, std.utf;
 
@@ -1385,9 +1385,12 @@ S[] splitlines(S)(S s)
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    The delimiter is not included in the strings returned.
+    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    is included in the strings returned.
   +/
-S[] splitLines(S)(S s)
+enum KeepTerminator : bool { no, yes }
+/// ditto
+S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(isSomeString!S)
 {
     size_t iStart = 0;
@@ -1400,10 +1403,18 @@ S[] splitLines(S)(S s)
 
         if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            retval.put(s[iStart .. i]);
+            immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
+            auto iEnd = i;
+
+            if(keepTerm == KeepTerminator.yes)
+            {
+                iEnd = isWinEOL? nextI + 1 : nextI;
+            }
+
+            retval.put(s[iStart .. iEnd]);
             iStart = nextI;
 
-            if(c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            if(isWinEOL)
             {
                 ++nextI;
                 ++iStart;
@@ -1437,8 +1448,24 @@ unittest
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
 
+        lines = splitLines(s, KeepTerminator.yes);
+        assert(lines.length == 9);
+        assert(lines[0] == "\r");
+        assert(lines[1] == "peter\n");
+        assert(lines[2] == "\r");
+        assert(lines[3] == "paul\r\n");
+        assert(lines[4] == "jerry\u2028");
+        assert(lines[5] == "ice\u2029");
+        assert(lines[6] == "cream\n");
+        assert(lines[7] == "\n");
+        assert(lines[8] == "sunday\n");
+
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[8] == "sunday");
+
+        lines = splitLines(s, KeepTerminator.yes);
         assert(lines.length == 9);
         assert(lines[8] == "sunday");
     }
@@ -3806,6 +3833,217 @@ unittest
     assert(wrap("u u") == "u u\n");
 }
 
+/******************************************
+ * Removes indentation from a multi-line string or an array of single-line strings.
+ *
+ * This uniformly outdents the text as much as possible.
+ * Whitespace-only lines are always converted to blank lines.
+ *
+ * A StringException will be thrown if inconsistent indentation prevents
+ * the input from being outdented.
+ * 
+ * Works at compile-time.
+ * 
+ * Example:
+ * ---
+ * writeln(q{
+ *     import std.stdio;
+ *     void main() {
+ *         writeln("Hello");
+ *     }
+ * }.outdent());
+ * ---
+ * 
+ * Output:
+ * ---
+ * 
+ * import std.stdio;
+ * void main() {
+ *     writeln("Hello");
+ * }
+ * 
+ * ---
+ * 
+ */
+
+S outdent(S)(S str) if(isSomeString!S)
+{
+    return str.splitLines(KeepTerminator.yes).outdent().join();
+}
+
+/// ditto
+S[] outdent(S)(S[] lines) if(isSomeString!S)
+{
+    if (lines.empty)
+    {
+        return null;
+    }
+
+    static S leadingWhiteOf(S str)
+    {
+        return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
+    }
+
+    S shortestIndent;
+    foreach (i, line; lines)
+    {
+        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
+
+        if (stripped.empty)
+        {
+            lines[i] = line[line.chomp().length..$];
+        }
+        else
+        {
+            auto indent = leadingWhiteOf(line);
+
+            // Comparing number of code units instead of code points is OK here
+            // because this function throws upon inconsistent indentation.
+            if (shortestIndent is null || indent.length < shortestIndent.length)
+            {
+                if (indent.empty) return lines;
+                shortestIndent = indent;
+            }
+        }
+    }
+
+    foreach (i; 0..lines.length)
+    {
+        auto stripped = __ctfe? lines[i].ctfe_strip() : lines[i].strip();
+        if (stripped.empty)
+        {
+            // Do nothing
+        }
+        else if (lines[i].startsWith(shortestIndent))
+        {
+            lines[i] = lines[i][shortestIndent.length..$];
+        }
+        else
+        {
+            if (__ctfe) assert(false, "outdent: Inconsistent indentation");
+            else throw new StringException("outdent: Inconsistent indentation");
+        }
+    }
+
+    return lines;
+}
+
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
+private S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
+{
+    return str.stripLeft().ctfe_stripRight();
+}
+
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
+private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
+{
+    size_t endIndex = 0;
+    size_t prevIndex = str.length;
+
+    foreach_reverse (i, dchar ch; str)
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            endIndex = prevIndex;
+            break;
+        }
+        prevIndex = i;
+    }
+
+    return str[0..endIndex];
+}
+
+version(unittest)
+{
+    template outdent_testStr(S)
+    {
+        enum S outdent_testStr =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t ";
+    }
+
+    template outdent_expected(S)
+    {
+        enum S outdent_expected =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+";
+    }
+}
+
+unittest
+{
+    debug(string) printf("string.outdent.unittest\n");
+
+    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+    static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
+    static assert(ctfe_strip("Hi")         == "Hi");
+    static assert(ctfe_strip(" \t \r\n")   == "");
+    static assert(ctfe_strip("")           == "");
+
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        enum S blank = "";
+        assert(blank.outdent() == blank);
+        static assert(blank.outdent() == blank);
+
+        enum S testStr1  = " \n \t\n ";
+        enum S expected1 = "\n\n";
+        assert(testStr1.outdent() == expected1);
+        static assert(testStr1.outdent() == expected1);
+
+        assert(testStr1[0..$-1].outdent() == expected1);
+        static assert(testStr1[0..$-1].outdent() == expected1);
+
+        enum S testStr2  = "a\n \t\nb";
+        assert(testStr2.outdent() == testStr2);
+        static assert(testStr2.outdent() == testStr2);
+
+        enum S testStr3 =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t ";
+
+        enum S expected3 =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+";
+        assert(testStr3.outdent() == expected3);
+        static assert(testStr3.outdent() == expected3);
+
+        enum testStr4 = "  X\r  X\n  X\r\n  X\u2028  X\u2029  X";
+        enum expected4 = "X\rX\nX\r\nX\u2028X\u2029X";
+        assert(testStr4.outdent() == expected4);
+        static assert(testStr4.outdent() == expected4);
+
+        enum testStr5  = testStr4[0..$-1];
+        enum expected5 = expected4[0..$-1];
+        assert(testStr5.outdent() == expected5);
+        static assert(testStr5.outdent() == expected5);
+
+        enum testStr6 = "  \r  \n  \r\n  \u2028  \u2029";
+        enum expected6 = "\r\n\r\n\u2028\u2029";
+        assert(testStr6.outdent() == expected6);
+        static assert(testStr6.outdent() == expected6);
+    }
+}
 
 private template softDeprec(string vers, string date, string oldFunc, string newFunc)
 {

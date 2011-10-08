@@ -44,9 +44,9 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.stdio, std.traits, std.typetuple, std.range;
+    std.metastrings, std.traits, std.typetuple, std.range;
 
-version(unittest) import core.vararg;
+version(unittest) import core.vararg, std.stdio;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
