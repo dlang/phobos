@@ -349,6 +349,66 @@ unittest
 }
 
 /**
+   Allows manipulating the fraction, exponent, and sign parts of a
+   $(D_PARAM real) separately. The definition is:
+
+----
+struct RealRep
+{
+    union
+    {
+        real value;
+        struct
+        {
+            ulong fraction;
+            mixin(bitfields!(
+                      ushort, "exponent", 15,
+                      bool,   "sign"    ,  1));
+        }
+    }
+
+    enum uint bias = 16383, signBits = 1, fractionBits = 64, exponentBits = 15;
+}
+----
+*/
+
+struct RealRep
+{
+    union
+    {
+        real value;
+        struct
+        {
+            ulong fraction;
+            mixin(bitfields!(
+                      ushort, "exponent", 15,
+                      bool,   "sign"    ,  1));
+        }
+    }
+
+    enum uint bias = 16383, signBits = 1, fractionBits = 64, exponentBits = 15;
+}
+
+unittest
+{
+    // test reading
+    RealRep x;
+    assert(cast(void*)&x.value == cast(void*)&x.fraction);
+    x.value = 1.0;
+    assert(x.fraction == 0x8000_0000_0000_0000UL && x.exponent == 16383 && !x.sign);
+    x.value = -0.5;
+    assert(x.fraction == 0x8000_0000_0000_0000UL && x.exponent == 16382 && x.sign);
+    x.value = 0.5;
+    assert(x.fraction == 0x8000_0000_0000_0000UL && x.exponent == 16382 && !x.sign);
+
+    // test writing
+    x.fraction = 0xA000_0000_0000_0000UL;
+    x.exponent = 16385;
+    x.sign = true;
+    assert(x.value == -5.0);
+}
+
+/**
  * An array of bits.
  */
 
