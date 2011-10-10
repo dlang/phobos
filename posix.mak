@@ -187,7 +187,7 @@ EXTRA_MODULES_CRYPT += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/crypt/, sha1_SSSE3)
 EXTRA_MODULES += $(EXTRA_MODULES_CRYPT) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction)
+	gammafunction errorfunction) std/internal/processinit
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_CRYPT_MODULES)
@@ -195,7 +195,10 @@ D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_CRYPT
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
-$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32))
+$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
+	std/stdarg.d std/bind.d std/internal/windows/advapi32.d std/__fileinit.d \
+	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
+	std/c/linux/tipc.d std/net/isemail.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -243,11 +246,6 @@ $(ROOT)/%$(DOTOBJ) : %.c
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
-
-ifeq ($(OS)$(MODEL),freebsd64)
-DISABLED_TESTS += std/container
-# fails freebsd64 debug test
-endif
 
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/conv

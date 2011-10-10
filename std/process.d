@@ -22,11 +22,13 @@ module std.process;
 
 import core.stdc.stdlib;
 import core.stdc.errno;
+import core.thread;
 import std.c.process;
 import std.c.string;
 
 import std.conv;
 import std.exception;
+import std.internal.processinit;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -51,7 +53,13 @@ version(Posix)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
         private extern(C) extern __gshared char*** _NSGetEnviron();
-        // need to declare environ = *_NSGetEnviron() in static this()
+        __gshared char** environ;
+
+        // Run in std.__processinit to avoid cyclic construction errors.
+        extern(C) void std_process_static_this()
+        {
+            environ = *_NSGetEnviron();
+        }
     }
     else
     {
@@ -315,14 +323,7 @@ else
  * writefln("Current process id: %s", getpid());
  * ---
  */
-version(Posix)
-{
-    alias core.sys.posix.unistd.getpid getpid;
-}
-else version (Windows)
-{
-    alias std.c.windows.windows.GetCurrentProcessId getpid;
-}
+alias core.thread.getpid getpid;
 
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
@@ -497,17 +498,7 @@ alias Environment environment;
 
 abstract final class Environment
 {
-    // initiaizes the value of environ for OSX
-    version(OSX)
-    {
-        static private char** environ;
-        static this()
-        {
-            environ = * _NSGetEnviron();
-        }
-    }
 static:
-
 private:
     // Return the length of an environment variable (in number of
     // wchars, including the null terminator), 0 if it doesn't exist.
@@ -798,7 +789,8 @@ else version (Posix)
             args[0] = browser;
         }
         else
-            args[0] = "x-www-browser".ptr;
+            //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
+            args[0] = "xdg-open".ptr;
 
         args[1] = toStringz(url);
         args[2] = null;

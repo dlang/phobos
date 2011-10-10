@@ -1,6 +1,33 @@
+$(VERSION 056, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI std.exception: enforce/enforceEx now can use in @safe pure function.)
+      $(LI Added optional KeepTerminator param to std.string.splitLines.)
+      $(LI Added std.string.outdent.)
+      $(LI std.utf: More @safe and pure.)
+      $(LI std.windows.registry now use *W functions in order to deal properly with Unicode.)
+     )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 5522): std.range.zip fails on arrays of Object.)
+        $(LI $(BUGZILLA 6009): std/container disabled on freebsd/64)
+        $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
+        $(LI $(BUGZILLA 6181): assert fails in datetime.d while runining Phobos unittest)
+        $(LI $(BUGZILLA 6258): std.conv.to!real("-") fetches the front of an empty array.)
+        $(LI $(BUGZILLA 6275): Const values in tuples)
+        $(LI $(BUGZILLA 6288): std.conv.to removes const/immutable when converting a class)
+        $(LI $(BUGZILLA 6609): std.conv.parse!Integer should consider sign when radix == 10)
+        $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
+        $(LI $(BUGZILLA 6640): More formatting consistency between string and range of char)
+        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causing a dangling pointer)
+     )
+ )
+
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
+      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved 
+           performance.)
       $(LI std.path has been rewritten from scratch and has a completely new API.)
       $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
            character type and of any type of mutability.)
@@ -9,21 +36,37 @@ $(VERSION 055, ddd mm, 2011, =================================================,
       $(LI Added functions to std.bitswap for generically handling swapping
            endianness.)
       $(LI Added std.parallelism.TaskPool.workerIndex.)
+      $(LI Added buffer recycling overload of std.parallelism.asyncBuf)
       $(LI std.math.tgamma, lgamma, erf, and erfc are now deprecated. The
            equivalent functions in std.mathspecial should be used instead.)
-      $(LI The names of the values of std.mmfile.Mode, std.traits.FunctionAttributes,
-           std.traits.ParameterStorageClass, and std.traits.Variadic were
-           changed to match Phobos' naming conventions.)
+      $(LI The names of the values of std.mmfile.Mode, std.system.Endian,
+           std.traits.FunctionAttributes, std.traits.ParameterStorageClass,
+           and std.traits.Variadic were changed to match Phobos' naming conventions.)
+      $(LI std.range:  Added indexed and chunks)
       $(LI std.string.translate has been updated to work with unicode. As a
            result, its signature has been changed. The old version and
            std.string.maketrans have been scheduled for deprecation.)
       $(LI std.string.tr has been updated so that it works with any string type.)
+      $(LI std.conv.parse works for associative array and static array)
+      $(LI std.format: Improvement of formatValue and unformatValue.
+           They now works for associative array, consider element escaping,
+           and treat range format spec more properly.)
      )
 
     $(LIBBUGSFIXED
+        $(LI Unlisted bug:  std.range.transversal should have length)
+        $(LI $(BUGZILLA 3890): Bad writeln of a nested struct)
+        $(LI $(BUGZILLA 4977): cannot use nothrow or pure with Rebindable)
+        $(LI $(BUGZILLA 5237): writefln doesn't respect Complex.toString)
         $(LI $(BUGZILLA 5645): std.range.drop())
+        $(LI $(BUGZILLA 5825): write is calling a deprecated function)
         $(LI $(BUGZILLA 6064): std.array.join is unnecssarily slow for strings)
+        $(LI $(BUGZILLA 6194): [GSoC] Destructor gets called on object before it is copied when calling writeln())
         $(LI $(BUGZILLA 6261): [2.054 beta regression] Regex cannot take a char[])
+        $(LI $(BUGZILLA 6377): std.conv.to should check range when changing signedness)
+        $(LI $(BUGZILLA 6587): std.parallelism's Task cannot handle immutable values)
+        $(LI $(BUGZILLA 6606): RefCounted doesn't work with unions due to use of format)
+        $(LI $(BUGZILLA 6608): Tuple field is not escaped)
      )
  )
 

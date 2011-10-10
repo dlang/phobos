@@ -1106,8 +1106,8 @@ unittest
     static assert(!hasRawAliasing!(S6));
     union S7 { int a; int * b; }
     static assert(hasRawAliasing!(S7));
-    typedef int* S8;
-    static assert(hasRawAliasing!(S8));
+    //typedef int* S8;
+    //static assert(hasRawAliasing!(S8));
     enum S9 { a };
     static assert(!hasRawAliasing!(S9));
     // indirect members
@@ -1190,10 +1190,10 @@ unittest
     static assert(hasRawUnsharedAliasing!(S9));
     union S10 { int a; shared int * b; }
     static assert(!hasRawUnsharedAliasing!(S10));
-    typedef int* S11;
-    static assert(hasRawUnsharedAliasing!(S11));
-    typedef shared int* S12;
-    static assert(hasRawUnsharedAliasing!(S12));
+    //typedef int* S11;
+    //static assert(hasRawUnsharedAliasing!(S11));
+    //typedef shared int* S12;
+    //static assert(hasRawUnsharedAliasing!(S12));
     enum S13 { a };
     static assert(!hasRawUnsharedAliasing!(S13));
     // indirect members
@@ -3196,75 +3196,23 @@ version (unittest) private template Intify(T) { alias int Intify; }
 */
 template StringTypeOf(T) if (isSomeString!T)
 {
-    static if (is(T == class) || is(T == struct))
-    {
-        static if (is(T : const(char[])))
-        {
-            static if (is(T : char[]))
-                alias char[] StringTypeOf;
-            else static if (is(T : immutable(char[])))
-                alias immutable(char)[] StringTypeOf;
-            else
-                alias const(char)[] StringTypeOf;
-        }
-        else static if (is(T : const(wchar[])))
-        {
-            static if (is(T : wchar[]))
-                alias wchar[] StringTypeOf;
-            else static if (is(T : immutable(wchar[])))
-                alias immutable(wchar)[] StringTypeOf;
-            else
-                alias const(wchar)[] StringTypeOf;
-        }
-        else
-        {
-            static if (is(T : dchar[]))
-                alias dchar[] StringTypeOf;
-            else static if (is(T : immutable(dchar[])))
-                alias immutable(dchar)[] StringTypeOf;
-            else
-                alias const(dchar)[] StringTypeOf;
-        }
-    }
-    else
-    {
-        alias T StringTypeOf;
-    }
+    alias typeof(T.init[]) StringTypeOf;
 }
 unittest
 {
-    class C(Char, int n)
+    foreach (Ch; TypeTuple!(char, wchar, dchar))
     {
-        static if (n==0) Char[]            val;
-        static if (n==1) const(Char)[]     val;
-        static if (n==2) const(Char[])     val;
-        static if (n==3) immutable(Char)[] val;
-        static if (n==4) immutable(Char[]) val;
-        alias val this;
-    }
-    struct S(Char, int n)
-    {
-        static if (n==0) Char[]            val;
-        static if (n==1) const(Char)[]     val;
-        static if (n==2) const(Char[])     val;
-        static if (n==3) immutable(Char)[] val;
-        static if (n==4) immutable(Char[]) val;
-        alias val this;
-    }
-    foreach (Char; TypeTuple!(char, wchar, dchar))
-    {
-        static assert(is(StringTypeOf!(C!(Char, 0)) == Char[]));
-        static assert(is(StringTypeOf!(C!(Char, 1)) == const(Char)[]));
-        static assert(is(StringTypeOf!(C!(Char, 2)) == const(Char)[]));     // cannot get exact string type
-        static assert(is(StringTypeOf!(C!(Char, 3)) == immutable(Char)[]));
-        static assert(is(StringTypeOf!(C!(Char, 4)) == immutable(Char)[])); // cannot get exact string type
+        foreach (Char; TypeTuple!(Ch, const(Ch), immutable(Ch)))
+        {
+            foreach (Str; TypeTuple!(Char[], const(Char)[], immutable(Char)[]))
+            {
+                class  C(Str) { Str val;  alias val this; }
+                struct S(Str) { Str val;  alias val this; }
 
-
-        static assert(is(StringTypeOf!(S!(Char, 0)) == Char[]));
-        static assert(is(StringTypeOf!(S!(Char, 1)) == const(Char)[]));
-        static assert(is(StringTypeOf!(S!(Char, 2)) == const(Char)[]));     // cannot get exact string type
-        static assert(is(StringTypeOf!(S!(Char, 3)) == immutable(Char)[]));
-        static assert(is(StringTypeOf!(S!(Char, 4)) == immutable(Char)[])); // cannot get exact string type
+                static assert(is(StringTypeOf!(C!Str) == Str));
+                static assert(is(StringTypeOf!(S!Str) == Str));
+            }
+        }
     }
 }
 
@@ -3319,18 +3267,18 @@ private template OriginalTypeImpl(T)
 
 unittest
 {
-    typedef real T;
-    typedef T    U;
-    enum V : U { a }
-    static assert(is(OriginalType!T == real));
-    static assert(is(OriginalType!U == real));
-    static assert(is(OriginalType!V == real));
+    //typedef real T;
+    //typedef T    U;
+    //enum V : U { a }
+    //static assert(is(OriginalType!T == real));
+    //static assert(is(OriginalType!U == real));
+    //static assert(is(OriginalType!V == real));
     enum E : real { a }
     enum F : E    { a = E.a }
-    typedef const F G;
+    //typedef const F G;
     static assert(is(OriginalType!E == real));
     static assert(is(OriginalType!F == real));
-    static assert(is(OriginalType!G == const real));
+    //static assert(is(OriginalType!G == const real));
 }
 
 
@@ -3551,8 +3499,8 @@ private string removeDummyEnvelope(string s)
 
 unittest
 {
-    typedef int MyInt;
-    MyInt test() { return 0; }
+    //typedef int MyInt;
+    //MyInt test() { return 0; }
     class C { int value() @property { return 0; } }
     static assert(mangledName!(int) == int.mangleof);
     static assert(mangledName!(C) == C.mangleof);

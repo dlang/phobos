@@ -437,7 +437,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;
-    foreach (i; 0 .. s.length)
+    foreach (ref i; 0 .. s.length)
     {
         char c = s[i];
         if (c != '&')

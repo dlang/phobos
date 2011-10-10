@@ -44,9 +44,9 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.metastrings, std.stdio, std.traits, std.typetuple, std.range;
+    std.metastrings, std.traits, std.typetuple, std.range;
 
-version(unittest) import core.vararg;
+version(unittest) import core.vararg, std.stdio;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -496,6 +496,7 @@ assert(s[0] == "abc" && s[1] == 4.5);
         enum header = typeof(this).stringof ~ "(",
              footer = ")",
              separator = ", ";
+
         Appender!string app;
         app.put(header);
         foreach (i, Unused; Types)
@@ -508,7 +509,10 @@ assert(s[0] == "abc" && s[1] == 4.5);
             static if (is(Unused == class) && is(Unused == shared))
                 formattedWrite(app, "%s", field[i].stringof);
             else
-                formattedWrite(app, "%s", field[i]);
+            {
+                FormatSpec!char f;  // "%s"
+                formatElement(app, field[i], f);
+            }
         }
         app.put(footer);
         return app.data;
@@ -549,6 +553,13 @@ unittest
         assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
         Tuple!(int, int) yessh;
         nosh = yessh;
+    }
+    {
+        Tuple!(int, string) t;
+        t[0] = 10;
+        t[1] = "str";
+        assert(t[0] == 10 && t[1] == "str");
+        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -645,6 +656,13 @@ unittest
         // incompatible
         static assert(!__traits(compiles, Tuple!(int, int)(y)));
     }
+    // 6275
+    {
+        const int x = 1;
+        auto t1 = tuple(x);
+        alias Tuple!(const(int)) T;
+        auto t2 = T(1);
+    }
 }
 
 /**
@@ -660,11 +678,9 @@ assert(value[2] == "hello");
 ----
 */
 
-Tuple!(T) tuple(T...)(T args)
+Tuple!T tuple(T...)(T args)
 {
-    typeof(return) result;
-    static if (T.length > 0) result.field = args;
-    return result;
+    return typeof(return)(args);
 }
 
 /**
@@ -2597,6 +2613,21 @@ unittest
     if (a.x.RefCounted._store._count != 2) {
         stderr.writeln("*** BUG 4356 still unfixed");
     }
+}
+
+// 6606
+unittest
+{
+    union U {
+       size_t i;
+       void* p;
+    }
+
+    struct S {
+       U u;
+    }
+
+    alias RefCounted!S SRC;
 }
 
 /**

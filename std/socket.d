@@ -63,7 +63,7 @@ version(Win32)
     private import std.c.windows.windows, std.c.windows.winsock;
     private alias std.c.windows.winsock.timeval _ctimeval;
 
-    typedef SOCKET socket_t = INVALID_SOCKET;
+    enum socket_t : SOCKET { INVALID_SOCKET };
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
 
@@ -107,7 +107,7 @@ else version(BsdSockets)
     }
     private import core.stdc.errno;
 
-    typedef int32_t socket_t = -1;
+    enum socket_t : int32_t { init = -1 }
     private const int _SOCKET_ERROR = -1;
 
 
@@ -586,7 +586,7 @@ class InternetHost
      * Resolve IPv4 address number. Returns false if unable to resolve.
      *
      * Params:
-     *   addr = The IPv4 address to resolve, in network byte order.
+     *   addr = The IPv4 address to resolve, in host byte order.
      */
     bool getHostByAddr(uint addr)
     {
