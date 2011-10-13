@@ -945,7 +945,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ", in T right = ")")
+T toImpl(T, S)(S s, in string left = S.stringof~"(", in string separator = ", ", in string right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
@@ -1023,14 +1023,14 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
+T toImpl(T, S)(S s, in string left = S.stringof~"(", in string right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
     static if (is(S Original == typedef))
     {
         // typedef
-        return left ~ to!T(cast(Original) s) ~ right;
+        return to!T(left) ~ to!T(cast(Original) s) ~ to!T(right);
     }
 }
 
