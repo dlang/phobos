@@ -24,7 +24,8 @@
  */
 module std.net.isemail;
 
-import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
+import std.algorithm : equal, uniq, filter, contains = canFind;
+import std.range : ElementType;
 import std.array;
 import std.ascii;
 import std.conv;
