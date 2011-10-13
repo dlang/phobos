@@ -538,12 +538,10 @@ b = b.dup;
 assert(overlap(a, b).empty);
 ----
 */
-inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
+T[] overlap(T)(T[] r1, T[] r2) @trusted pure nothrow
 {
-    alias inout(T) U;
-    static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
-    static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
-
+    static T* max(T* a, T* b) nothrow { return a > b ? a : b; }
+    static T* min(T* a, T* b) nothrow { return a < b ? a : b; }
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
@@ -1811,7 +1809,7 @@ unittest
     Returns an array that is $(D s) with $(D slice) replaced by
     $(D replacement[]).
  +/
-inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
+T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
 in
 {
     // Verify that slice[] really is a slice of s[]
@@ -1819,14 +1817,15 @@ in
 }
 body
 {
-    auto result = new T[s.length - slice.length + replacement.length];
+    auto result = new Unqual!(typeof(s[0]))[
+        s.length - slice.length + replacement.length];
     immutable so = slice.ptr - s.ptr;
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement;
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
 
-    return cast(inout(T)[]) result;
+    return cast(T[]) result;
 }
 
 unittest
