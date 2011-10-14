@@ -55,6 +55,7 @@ class ClassInfo : Object
     //  4:                      // has offTi[] member
     //  8:                      // has constructors
     //  32:                     // has typeinfo
+    //  64:                     // is abstract (not constructable)
     void *deallocator;
     OffsetTypeInfo[] offTi;
     void* defaultConstructor;   // default Constructor

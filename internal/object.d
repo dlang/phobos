@@ -286,6 +286,7 @@ class ClassInfo : Object
     //  4:                      // has offTi[] member
     //  8:                      // has constructors
     //  32:                     // has typeinfo
+    //  64:                     // is abstract (not constructable)
     void *deallocator;
     OffsetTypeInfo[] offTi;
     void function(Object) defaultConstructor;   // default Constructor
@@ -322,6 +323,8 @@ class ClassInfo : Object
     {
         if (flags & 8 && !defaultConstructor)
             return null;
+        if (flags & 64) // abstract 
+            return null; 
         Object o = _d_newclass(this);
         if (flags & 8 && defaultConstructor)
         {
