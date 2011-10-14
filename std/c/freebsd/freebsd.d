@@ -14,8 +14,6 @@ private import std.c.stdio;
 
 alias uint fflags_t;
 alias int clockid_t;
-alias int time_t;
-alias int __time_t;
 alias int pid_t;
 alias long off_t;
 alias long blkcnt_t;
@@ -30,6 +28,15 @@ alias ushort nlink_t;
 alias uint uid_t;
 alias ulong fsblkcnt_t;
 alias ulong fsfilcnt_t;
+
+version( X86 ) {
+    alias int time_t;
+    alias int __time_t;
+}
+else version( X86_64 ) {
+    alias long time_t;
+    alias long __time_t;
+}
 
 struct timespec
 {
@@ -156,27 +163,27 @@ extern (C)
 {
     int access(in char*, int);
     int open(in char*, int, ...);
-    int read(int, void*, int);
-    int write(int, in void*, int);
+    ssize_t read(int, void*, size_t);
+    ssize_t write(int, in void*, size_t);
     int close(int);
-    int lseek(int, off_t, int);
+    off_t lseek(int, off_t, int);
     int fstat(int, struct_stat*);
     int lstat(in char*, struct_stat*);
     int stat(in char*, struct_stat*);
     int chdir(in char*);
     int mkdir(in char*, int);
     int rmdir(in char*);
-    char* getcwd(char*, int);
+    char* getcwd(char*, size_t);
     int chmod(in char*, mode_t);
     int fork();
     int dup(int);
     int dup2(int, int);
     int pipe(int[2]);
     pid_t wait(int*);
-    int waitpid(pid_t, int*, int);
+    pid_t waitpid(pid_t, int*, int);
 
     uint alarm(uint);
-    char* basename(char*);
+    char* basename(in char*);
     //wint_t btowc(int);
     int chown(in char*, uid_t, gid_t);
     int chroot(in char*);
@@ -184,13 +191,13 @@ extern (C)
     int creat(in char*, mode_t);
     char* ctermid(char*);
     int dirfd(DIR*);
-    char* dirname(char*);
+    char* dirname(in char*);
     int fattach(int, char*);
     int fchmod(int, mode_t);
     int fdatasync(int);
     int ffs(int);
-    int fmtmsg(int, char*, int, char*, char*, char*);
-    int fpathconf(int, int);
+    int fmtmsg(long, in char*, int, in char*, in char*, in char*);
+    long fpathconf(int, int);
     int fseeko(FILE*, off_t, int);
     off_t ftello(FILE*);
 
@@ -418,21 +425,21 @@ extern(C)
 	// Removes.
 	void FD_CLR(int fd, fd_set* set)
 	{
-		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		btr(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Tests.
 	int FD_ISSET(int fd, fd_set* set)
 	{
-		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		return bt(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Adds.
 	void FD_SET(int fd, fd_set* set)
 	{
-		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		bts(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
