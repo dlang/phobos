@@ -469,6 +469,18 @@ unittest
     Int3 i3 = to!Int3(1);
 }
 
+// Bugzilla 6808
+unittest
+{
+    static struct FakeBigInt
+    {
+        this(string s){}
+    }
+
+    string s = "101";
+    auto i3 = to!FakeBigInt(s);
+}
+
 /// ditto
 T toImpl(T, S)(S src)
     if (!isImplicitlyConvertible!(S, T) &&
@@ -1725,7 +1737,7 @@ $(UL
 */
 T toImpl(T, S)(S value)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T)
+        !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
 {
     alias ElementEncodingType!S[] SV;
     static if (is(SV == S))
