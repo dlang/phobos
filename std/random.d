@@ -1318,12 +1318,20 @@ foreach (e; randomSample(n, 5))
 }
 ----
  */
-struct RandomSample(R)
+struct RandomSample(R, Random)
 {
     private size_t _available, _toSelect;
     private R _input;
     private size_t _index;
-    private enum bool byRef = is(typeof(&(R.init.front())));
+
+    // If we're using the default thread-local random number generator then
+    // we shouldn't store a copy of it here.  Random == void is a sentinel
+    // for this.  If we're using a user-specified generator then we have no 
+    // choice but to store a copy.
+    static if(!is(Random == void))
+    {
+        Random gen;
+    }
 
 /**
 Constructor.
@@ -1334,8 +1342,7 @@ Constructor.
             this(input, howMany, input.length);
         }
 
-/// Ditto
-    this(R input, size_t howMany, size_t total)
+    private this(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
@@ -1354,12 +1361,11 @@ Constructor.
         return _toSelect == 0;
     }
 
-    mixin((byRef ? "ref " : "")~
-            q{ElementType!R front()
-                {
-                    assert(!empty);
-                    return _input.front;
-                }});
+    auto ref front()
+    {
+        assert(!empty);
+        return _input.front;
+    }
 
 /// Ditto
     void popFront()
@@ -1399,7 +1405,15 @@ Returns the index of the visited record.
         assert(_available && _available >= _toSelect);
         for (;;)
         {
-            auto r = uniform(0, _available);
+            static if(is(Random == void))
+            {
+                auto r = uniform(0, _available);
+            } 
+            else
+            {
+                auto r = uniform(0, _available, gen);
+            }
+            
             if (r < _toSelect)
             {
                 // chosen!
@@ -1416,24 +1430,46 @@ Returns the index of the visited record.
 }
 
 /// Ditto
-RandomSample!R randomSample(R)(R r, size_t n, size_t total)
+auto randomSample(R)(R r, size_t n, size_t total)
+if(isInputRange!R)
 {
-    return typeof(return)(r, n, total);
+    RandomSample!(R, void)(r, n, total);
 }
 
 /// Ditto
-RandomSample!R randomSample(R)(R r, size_t n) //if (hasLength!R) // @@@BUG@@@
+auto randomSample(R)(R r, size_t n) if (hasLength!R) 
 {
-    return typeof(return)(r, n, r.length);
+    return RandomSample!(R, void)(r, n, r.length);
+}
+
+/// Ditto
+auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
+if(isInputRange!R && isInputRange!Random)
+{
+    auto ret = RandomSample!(R, Random)(r, n, total);
+    ret.gen = gen;
+    return ret;
+}
+
+/// Ditto
+auto randomSample(R, Random)(R r, size_t n, Random gen) 
+if (isInputRange!R && hasLength!R && isInputRange!Random) 
+{
+    auto ret = RandomSample!(R, Random)(r, n, r.length);
+    ret.gen = gen;
+    return ret;
 }
 
 unittest
 {
+    Random gen;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     static assert(isForwardRange!(typeof(randomSample(a, 5))));
+    static assert(isForwardRange!(typeof(randomSample(a, 5, gen))));
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
+    assert(randomSample(a, 5, gen).length == 5);
     uint i;
     foreach (e; randomSample(randomCover(a, rndGen), 5))
     {
@@ -1442,4 +1478,3 @@ unittest
     }
     assert(i == 5);
 }
-
