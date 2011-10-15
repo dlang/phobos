@@ -1342,8 +1342,7 @@ Constructor.
             this(input, howMany, input.length);
         }
 
-/// Ditto
-    this(R input, size_t howMany, size_t total)
+    private this(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
