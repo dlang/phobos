@@ -673,17 +673,14 @@ template functionLinkage(func...)
     if (func.length == 1 && isCallable!(func))
 {
     enum string functionLinkage =
-        LOOKUP_LINKAGE[ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
+        [
+            'F': "D",
+            'U': "C",
+            'W': "Windows",
+            'V': "Pascal",
+            'R': "C++"
+        ][ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
 }
-
-private enum LOOKUP_LINKAGE =
-[
-    'F': "D",
-    'U': "C",
-    'W': "Windows",
-    'V': "Pascal",
-    'R': "C++"
-];
 
 unittest
 {
