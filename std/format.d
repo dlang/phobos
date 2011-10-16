@@ -1847,6 +1847,7 @@ unittest
 ---
 const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
 const void toString(scope void delegate(const(char)[]) sink, string fmt);
+const void toString(scope void delegate(const(char)[]) sink);
 const string toString();
 ---
 
@@ -1861,6 +1862,10 @@ if ((is(T == struct) || is(T == union)) && !isInputRange!T)
     else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
     {   // Support toString( delegate(const(char)[]) sink, string fmt)
         val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
+    }
+    else static if (is(typeof(val.toString((const(char)[] s){}))))
+    {   // Support toString( delegate(const(char)[]) sink)
+        val.toString((const(char)[] s) { put(w, s); });
     }
     else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
