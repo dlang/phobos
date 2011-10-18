@@ -633,13 +633,17 @@ public:
 
         // Simplify, step 1: Remove all powers of 2.
         uint firstnonzero = firstNonZeroDigit(x.data);
+        // Now we know x = x[firstnonzero..$] * (2^^(firstnonzero*BigDigitBits))
+        // where BigDigitBits = BigDigit.sizeof * 8
 
-        // See if x can now fit into a single digit.
+        // See if x[firstnonzero..$] can now fit into a single digit.
         bool singledigit = ((x.data.length - firstnonzero) == 1);
-        // If true, then x0 is that digit, and we must calculate x0 ^^ y0.
+        // If true, then x0 is that digit
+        // and the result will be (x0 ^^ y) * (2^^(firstnonzero*y*BigDigitBits))
         BigDigit x0 = x.data[firstnonzero];
         assert(x0 !=0);
-        size_t xlength = x.data.length;
+        // Length of the non-zero portion
+        size_t nonzerolength = x.data.length - firstnonzero;
         ulong y0;
         uint evenbits = 0; // number of even bits in the bottom of x
         while (!(x0 & 1))
@@ -658,6 +662,8 @@ public:
                 singledigit = true;
             }
         }
+        // Now if (singledigit), x = (x0 ^^ y) * (2^^(evenbits + firstnonzero*y*BigDigitBits))
+
         uint evenshiftbits = 0; // Total powers of 2 to shift by, at the end
 
         // Simplify, step 2: For singledigits, see if we can trivially reduce y
@@ -675,7 +681,7 @@ public:
             if (x0 == 1)
             {   // Perfect power of 2
                 result = 1UL;
-                return result << (evenbits + firstnonzero*BigDigit.sizeof)*y;
+                return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
             }
             else
             {
@@ -685,27 +691,32 @@ public:
                     result = cast(ulong)intpow(x0, y);
                     if (evenbits + firstnonzero == 0)
                         return result;
-                    return result<< (evenbits + firstnonzero*BigDigit.sizeof)*y;
+                    return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
                 }
-                y0 = y/p;
+                y0 = y / p;
                 finalMultiplier = intpow(x0, y - y0*p);
                 x0 = intpow(x0, p);
+                // Result is x0
             }
-            xlength = 1;
+            nonzerolength = 1;
         }
 
         // Check for overflow and allocate result buffer
         // Single digit case: +1 is for final multiplier, + 1 is for spare evenbits.
-        ulong estimatelength = singledigit ? firstnonzero*y + y0*1 + 2 + ((evenbits*y) >> LG2BIGDIGITBITS)
+        ulong estimatelength = singledigit
+            ? firstnonzero*y + y0 * 1 + 2 + ((evenbits*y) >> LG2BIGDIGITBITS)
             : x.data.length * y; // estimated length in BigDigits
         // (Estimated length can overestimate by a factor of 2, if x.data.length ~ 2).
-        if (estimatelength > uint.max/(4*BigDigit.sizeof)) assert(0, "Overflow in BigInt.pow");
+        if (estimatelength > uint.max/(4*BigDigit.sizeof))
+            assert(0, "Overflow in BigInt.pow");
 
         // The result buffer includes space for all the trailing zeros
         BigDigit [] resultBuffer = new BigDigit[cast(size_t)estimatelength];
 
         // Do all the powers of 2!
-        size_t result_start = cast(size_t)(firstnonzero*y + singledigit? ((evenbits*y) >> LG2BIGDIGITBITS) : 0);
+        size_t result_start = cast(size_t)( firstnonzero * y
+            + (singledigit ? ((evenbits * y) >> LG2BIGDIGITBITS) : 0));
+
         resultBuffer[0..result_start] = 0;
         BigDigit [] t1 = resultBuffer[result_start..$];
         BigDigit [] r1;
@@ -726,7 +737,6 @@ public:
 
         if (y>1)
         {   // Set r1 = r1 ^^ y.
-
             // The secondary buffer only needs space for the multiplication results
             BigDigit [] secondaryBuffer = new BigDigit[resultBuffer.length - result_start];
             BigDigit [] t2 = secondaryBuffer;
@@ -742,18 +752,25 @@ public:
 
             while(y!=0)
             {
+                // For each bit of y: Set r1 =  r2 * r2
+                // If the bit is 1, set r1 = r2 * x
+                // Eg, if y is 0b101, result = ((x^^2)^^2)*x == x^^5.
+                // Optimization opportunity: if more than 2 bits in y are set,
+                // it's usually possible to reduce the number of multiplies
+                // by caching odd powers of x. eg for y = 54,
+                // (0b110110), set u = x^^3, and result is ((u^^8)*u)^^2
                 r2 = t2[0 .. r1.length*2];
                 squareInternal(r2, r1);
                 if (y & 0x8000_0000_0000_0000L)
                 {
-                    r1 = t1[0 .. r2.length + xlength];
-                    if (xlength == 1)
+                    r1 = t1[0 .. r2.length + nonzerolength];
+                    if (singledigit)
                     {
                         r1[$-1] = multibyteMul(r1[0 .. $-1], r2, x0, 0);
                     }
                     else
                     {
-                        mulInternal(r1, r2, x.data);
+                        mulInternal(r1, r2, x.data[firstnonzero..$]);
                     }
                 }
                 else
