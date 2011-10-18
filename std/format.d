@@ -941,86 +941,17 @@ struct FormatSpec(Char)
 }
 
 /**
-   $(D void[]) is formatted like $(D ubyte[]).
+   $(D bool) is formatted as "true" or "false" with %s and as "1" or
+   "0" with integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(const(T) == const(void[])))
+if (is(Unqual!T == bool))
 {
-    formatValue(w, cast(const ubyte[])val, f);
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!(char[])();
-    void[] val0;
-    formatValue(a, val0, f);
-    assert(a.data == "[]");
-    a.clear();
-
-    void[] val = cast(void[])cast(ubyte[])[1, 2, 3];
-    formatValue(a, val, f);
-    assert(a.data == "[1, 2, 3]");
-    a.clear();
-
-    void[0] sval0;
-    formatValue(a, sval0, f);
-    assert(a.data == "[]");
-    a.clear();
-
-    void[3] sval = cast(void[3])cast(ubyte[3])[1, 2, 3];
-    formatValue(a, sval, f);
-    assert(a.data == "[1, 2, 3]");
-}
-
-/**
-   $(D enum) is formatted like its base value.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == enum))
-{
-    foreach (i, e; EnumMembers!T)
-    {
-        if (val == e) {
-            put(w, __traits(allMembers, T)[i]);
-            return;
-        }
+    if (f.spec == 's') {
+        put(w, val ? "true" : "false");
+    } else {
+        formatValue(w, cast(int) val, f);
     }
-
-    // val is not a member of T, output cast(T)rawValue instead.
-    put(w, "cast(" ~ T.stringof ~ ")");
-    static assert(!is(OriginalType!T == T));
-    formatValue(w, cast(OriginalType!T)val, f);
-}
-unittest
-{
-    auto a = appender!string();
-    enum A { first, second, third }
-    FormatSpec!char spec;
-    formatValue(a, A.second, spec);
-    assert(a.data == "second");
-    formatValue(a, cast(A)72, spec);
-    assert(a.data == "secondcast(A)72");
-}
-unittest
-{
-    auto a = appender!string();
-    enum A : string { one = "uno", two = "dos", three = "tres" }
-    FormatSpec!char spec;
-    formatValue(a, A.three, spec);
-    assert(a.data == "three");
-    formatValue(a, cast(A)"mill\&oacute;n", spec);
-    assert(a.data == "threecast(A)mill\&oacute;n");
-}
-unittest
-{
-    auto a = appender!string();
-    enum A : bool { no, yes }
-    FormatSpec!char spec;
-    formatValue(a, A.yes, spec);
-    assert(a.data == "yes");
-    formatValue(a, A.no, spec);
-    assert(a.data == "yesno");
 }
 
 /**
@@ -1248,18 +1179,42 @@ unittest
     assert(a.data == "5.5");
 }
 
-/**
-   $(D bool) is formatted as "true" or "false" with %s and as "1" or
-   "0" with integral-specific format specs.
+/*
+   Formatting a $(D creal) is deprecated but still kept around for a while.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(Unqual!T == bool))
+if (is(T : creal))
 {
-    if (f.spec == 's') {
-        put(w, val ? "true" : "false");
-    } else {
-        formatValue(w, cast(int) val, f);
-    }
+    formatValue(w, val.re, f);
+    put(w, '+');
+    formatValue(w, val.im, f);
+    put(w, 'i');
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    creal val = 1 + 1i;
+    formatValue(a, val, f);
+}
+
+/*
+   Formatting an $(D ireal) is deprecated but still kept around for a while.
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T : ireal))
+{
+    formatValue(w, val.im, f);
+    put(w, 'i');
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    ireal val = 1i;
+    formatValue(a, val, f);
 }
 
 /**
@@ -1352,6 +1307,67 @@ unittest
     auto a = appender!string();
     formatValue(a, c1, f);
     formatValue(a, c2, f);
+}
+
+/**
+   Static-size arrays are formatted just like arrays.
+ */
+void formatValue(Writer, T, Char)(Writer w, ref T val, ref FormatSpec!Char f)
+if (isStaticArray!T)
+{
+    formatValue(w, val[], f);
+}
+
+/**
+   $(D void[]) is formatted like $(D ubyte[]).
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(const(T) == const(void[])))
+{
+    formatValue(w, cast(const ubyte[])val, f);
+}
+
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
+    !is(const(T) == const(void[])))
+{
+    alias Unqual!T U;
+    static assert(isInputRange!U);
+    U unq = val;
+    formatValue(w, unq, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!(char[])();
+    void[] val0;
+    formatValue(a, val0, f);
+    assert(a.data == "[]");
+    a.clear();
+
+    void[] val = cast(void[])cast(ubyte[])[1, 2, 3];
+    formatValue(a, val, f);
+    assert(a.data == "[1, 2, 3]");
+    a.clear();
+
+    void[0] sval0;
+    formatValue(a, sval0, f);
+    assert(a.data == "[]");
+    a.clear();
+
+    void[3] sval = cast(void[3])cast(ubyte[3])[1, 2, 3];
+    formatValue(a, sval, f);
+    assert(a.data == "[1, 2, 3]");
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+    const short[] a = [1, 2, 3];
+    formatValue(w, a, f);
+    assert(w.data == "[1, 2, 3]");
 }
 
 /**
@@ -1664,59 +1680,6 @@ unittest
     }
 }
 
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
-    !is(const(T) == const(void[])))
-{
-    alias Unqual!T U;
-    static assert(isInputRange!U);
-    U unq = val;
-    formatValue(w, unq, f);
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto w = appender!string();
-    const short[] a = [1, 2, 3];
-    formatValue(w, a, f);
-    assert(w.data == "[1, 2, 3]");
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto w = appender!(char[])();
-
-    // class range (issue 5154)
-    auto c = inputRangeObject([1,2,3,4]);
-    w.clear();
-    formatValue(w, c, f);
-    assert(w.data == "[1, 2, 3, 4]");
-    assert(c.empty);
-
-    // interface
-    InputRange!int i = inputRangeObject([1,2,3,4]);
-    w.clear();
-    formatValue(w, i, f);
-    assert(w.data == "[1, 2, 3, 4]");
-    assert(i.empty);
-
-    // pointer
-    auto r = retro([1,2,3,4]);
-    w.clear();
-    formatValue(w, &r, f);
-    assert(w.data == "[4, 3, 2, 1]");
-    assert(r.empty);
-
-    // null
-    c = null;
-    w.clear();
-    formatValue(w, c, f);
-    assert(w.data == "null");
-    assert(r.empty);
-}
-
 unittest
 {
     FormatSpec!char f;
@@ -1726,72 +1689,6 @@ unittest
     w.clear();
     formattedWrite(w, "%({%(%02x %)} %)", a);
     assert(w.data == `{74 65 73 74} {6d 73 67} `);
-}
-
-/**
-   Pointers are formatted as hex integers.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isPointer!T && !isInputRange!T)
-{
-    const void * p = val;
-    if (f.spec == 's')
-    {
-        FormatSpec!Char fs = f; // fs is copy for change its values.
-        fs.spec = 'X';
-        formatValue(w, cast(ulong) p, fs);
-    }
-    else
-    {
-        enforce(f.spec == 'X' || f.spec == 'x');
-        formatValue(w, cast(ulong) p, f);
-    }
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-
-    struct S{ void* p; string s; }
-    auto s = S(cast(void*)0xFFEECCAA, "hello");
-    formatValue(a, s, f);
-    assert(a.data == `S(FFEECCAA, "hello")`);
-}
-
-/**
-   Objects are formatted by calling $(D toString).
-   Interfaces are formatted by casting to $(D Object) and then calling
-   $(D toString).
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isSomeString!T && is(T == class) && !isInputRange!T)
-{
-    // TODO: Change this once toString() works for shared objects.
-    static assert(!is(T == shared), "unable to format shared objects");
-    if (val is null) put(w, "null");
-    else put(w, val.toString());
-}
-
-/// ditto
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == interface) && !isInputRange!T)
-{
-    return formatValue(w, cast(Object)val, f);
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-    interface Whatever {}
-    class C : Whatever
-    {
-        override @property string toString() { return "ab"; }
-    }
-    Whatever val = new C;
-    formatValue(a, val, f);
-    assert(a.data == "ab");
 }
 
 /**
@@ -1837,6 +1734,75 @@ unittest
     auto a = appender!string();
     formatValue(a, ['c':"str"], f);
     assert(a.data == `['c':"str"]`);
+}
+
+/**
+   Objects are formatted by calling $(D toString).
+   Interfaces are formatted by casting to $(D Object) and then calling
+   $(D toString).
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (!isSomeString!T && is(T == class) && !isInputRange!T)
+{
+    // TODO: Change this once toString() works for shared objects.
+    static assert(!is(T == shared), "unable to format shared objects");
+    if (val is null) put(w, "null");
+    else put(w, val.toString());
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    // class range (issue 5154)
+    auto c = inputRangeObject([1,2,3,4]);
+    w.clear();
+    formatValue(w, c, f);
+    assert(w.data == "[1, 2, 3, 4]");
+    assert(c.empty);
+
+    // interface
+    InputRange!int i = inputRangeObject([1,2,3,4]);
+    w.clear();
+    formatValue(w, i, f);
+    assert(w.data == "[1, 2, 3, 4]");
+    assert(i.empty);
+
+    // pointer
+    auto r = retro([1,2,3,4]);
+    w.clear();
+    formatValue(w, &r, f);
+    assert(w.data == "[4, 3, 2, 1]");
+    assert(r.empty);
+
+    // null
+    c = null;
+    w.clear();
+    formatValue(w, c, f);
+    assert(w.data == "null");
+    assert(r.empty);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    interface Whatever {}
+    class C : Whatever
+    {
+        override @property string toString() { return "ab"; }
+    }
+    Whatever val = new C;
+    formatValue(a, val, f);
+    assert(a.data == "ab");
+}
+
+/// ditto
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T == interface) && !isInputRange!T)
+{
+    return formatValue(w, cast(Object)val, f);
 }
 
 /**
@@ -1988,50 +1954,84 @@ unittest
 }
 
 /**
-   Static-size arrays are formatted just like arrays.
- */
-void formatValue(Writer, T, Char)(Writer w, ref T val, ref FormatSpec!Char f)
-if (isStaticArray!T)
-{
-    formatValue(w, val[], f);
-}
-
-/*
-   Formatting a $(D creal) is deprecated but still kept around for a while.
+   $(D enum) is formatted like its base value.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T : creal))
+if (is(T == enum))
 {
-    formatValue(w, val.re, f);
-    put(w, '+');
-    formatValue(w, val.im, f);
-    put(w, 'i');
+    foreach (i, e; EnumMembers!T)
+    {
+        if (val == e) {
+            put(w, __traits(allMembers, T)[i]);
+            return;
+        }
+    }
+
+    // val is not a member of T, output cast(T)rawValue instead.
+    put(w, "cast(" ~ T.stringof ~ ")");
+    static assert(!is(OriginalType!T == T));
+    formatValue(w, cast(OriginalType!T)val, f);
+}
+unittest
+{
+    auto a = appender!string();
+    enum A { first, second, third }
+    FormatSpec!char spec;
+    formatValue(a, A.second, spec);
+    assert(a.data == "second");
+    formatValue(a, cast(A)72, spec);
+    assert(a.data == "secondcast(A)72");
+}
+unittest
+{
+    auto a = appender!string();
+    enum A : string { one = "uno", two = "dos", three = "tres" }
+    FormatSpec!char spec;
+    formatValue(a, A.three, spec);
+    assert(a.data == "three");
+    formatValue(a, cast(A)"mill\&oacute;n", spec);
+    assert(a.data == "threecast(A)mill\&oacute;n");
+}
+unittest
+{
+    auto a = appender!string();
+    enum A : bool { no, yes }
+    FormatSpec!char spec;
+    formatValue(a, A.yes, spec);
+    assert(a.data == "yes");
+    formatValue(a, A.no, spec);
+    assert(a.data == "yesno");
+}
+
+/**
+   Pointers are formatted as hex integers.
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (isPointer!T && !isInputRange!T)
+{
+    const void * p = val;
+    if (f.spec == 's')
+    {
+        FormatSpec!Char fs = f; // fs is copy for change its values.
+        fs.spec = 'X';
+        formatValue(w, cast(ulong) p, fs);
+    }
+    else
+    {
+        enforce(f.spec == 'X' || f.spec == 'x');
+        formatValue(w, cast(ulong) p, f);
+    }
 }
 
 unittest
 {
     FormatSpec!char f;
     auto a = appender!string();
-    creal val = 1 + 1i;
-    formatValue(a, val, f);
-}
 
-/*
-   Formatting an $(D ireal) is deprecated but still kept around for a while.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T : ireal))
-{
-    formatValue(w, val.im, f);
-    put(w, 'i');
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-    ireal val = 1i;
-    formatValue(a, val, f);
+    struct S{ void* p; string s; }
+    auto s = S(cast(void*)0xFFEECCAA, "hello");
+    formatValue(a, s, f);
+    assert(a.data == `S(FFEECCAA, "hello")`);
 }
 
 
@@ -2710,6 +2710,65 @@ private template acceptedSpecs(T)
 }
 
 /**
+ * Reads a boolean value and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && is(Unqual!T == bool))
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong integral type specifier: `", spec.spec, "'"));
+    if (spec.spec == 's')
+    {
+        return parse!T(input);
+    }
+    else if (spec.spec == 'd')
+    {
+        return parse!long(input) != 0;
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    bool f1;
+
+    line = "true";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "TrUE";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "false";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+    line = "fALsE";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+
+    line = "1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "-1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+
+    line = "-0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+}
+
+/**
    Reads an integral value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
@@ -2801,65 +2860,6 @@ unittest
 }
 
 /**
- * Reads a boolean value and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && is(Unqual!T == bool))
-{
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong integral type specifier: `", spec.spec, "'"));
-    if (spec.spec == 's')
-    {
-        return parse!T(input);
-    }
-    else if (spec.spec == 'd')
-    {
-        return parse!long(input) != 0;
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
-}
-
-unittest
-{
-    string line;
-
-    bool f1;
-
-    line = "true";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "TrUE";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "false";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-    line = "fALsE";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-
-    line = "1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "-1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-
-    line = "-0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-}
-
-/**
  * Reads one character and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
@@ -2886,6 +2886,66 @@ unittest
     formattedRead(line, "%s%c", &c1, &c2);
     assert(c1 == 'a' && c2 == 'b');
     assert(line == "c");
+}
+
+/**
+   Reads a string and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && isSomeString!T)
+{
+    if (spec.spec == 's')
+    {
+        auto app = appender!T();
+        if (spec.trailing.empty)
+        {
+            for (; !input.empty; input.popFront())
+            {
+                app.put(input.front);
+            }
+        }
+        else
+        {
+            for (; !input.empty && input.front != spec.trailing.front;
+                 input.popFront())
+            {
+                app.put(input.front);
+            }
+        }
+        auto result = app.data;
+        return result;
+    }
+    else if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+unittest
+{
+    string line;
+
+    string s1, s2;
+
+    line = "hello, world";
+    formattedRead(line, "%s", &s1);
+    assert(s1 == "hello, world", s1);
+
+    line = "hello, world;yah";
+    formattedRead(line, "%s;%s", &s1, &s2);
+    assert(s1 == "hello, world", s1);
+    assert(s2 == "yah", s2);
+
+    line = `['h','e','l','l','o']`;
+    string s3;
+    formattedRead(line, "[%(%s, %)]", &s3);
+    assert(s3 == "hello");
+
+    line = `"hello"`;
+    string s4;
+    formattedRead(line, "\"%(%c%)\"", &s4);
+    assert(s4 == "hello");
 }
 
 /**
@@ -2956,66 +3016,6 @@ unittest
     int[4] sa3;
     line = `[1,2,3,4,5]`;
     assertThrown(formattedRead(line, "%s", &sa3));
-}
-
-/**
-   Reads a string and returns it.
- */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeString!T)
-{
-    if (spec.spec == 's')
-    {
-        auto app = appender!T();
-        if (spec.trailing.empty)
-        {
-            for (; !input.empty; input.popFront())
-            {
-                app.put(input.front);
-            }
-        }
-        else
-        {
-            for (; !input.empty && input.front != spec.trailing.front;
-                 input.popFront())
-            {
-                app.put(input.front);
-            }
-        }
-        auto result = app.data;
-        return result;
-    }
-    else if (spec.spec == '(')
-    {
-        return unformatRange!T(input, spec);
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
-}
-
-unittest
-{
-    string line;
-
-    string s1, s2;
-
-    line = "hello, world";
-    formattedRead(line, "%s", &s1);
-    assert(s1 == "hello, world", s1);
-
-    line = "hello, world;yah";
-    formattedRead(line, "%s;%s", &s1, &s2);
-    assert(s1 == "hello, world", s1);
-    assert(s2 == "yah", s2);
-
-    line = `['h','e','l','l','o']`;
-    string s3;
-    formattedRead(line, "[%(%s, %)]", &s3);
-    assert(s3 == "hello");
-
-    line = `"hello"`;
-    string s4;
-    formattedRead(line, "\"%(%c%)\"", &s4);
-    assert(s4 == "hello");
 }
 
 /**
