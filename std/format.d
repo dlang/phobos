@@ -1759,24 +1759,26 @@ unittest
 
 template hasToString(T, Char)
 {
-    enum hasToString = is(typeof({
-        FormatSpec!Char f;
-        T val;
-        static if (is(typeof(val.toString((const(char)[] s){}, f))))
-        {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
-        }
-        else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
-        {   // Support toString( delegate(const(char)[]) sink, string fmt)
-        }
-        else static if (is(typeof(val.toString((const(char)[] s){}))))
-        {   // Support toString( delegate(const(char)[]) sink)
-        }
-        else static if (is(typeof(val.toString()) S) && isSomeString!S)
-        {
-        }
-        else
-            static assert(0);
-    }));
+    static if (is(typeof({ T val; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
+    {
+        enum hasToString = 4;
+    }
+    else static if (is(typeof({ T val; val.toString((const(char)[] s){}, "%s"); })))
+    {
+        enum hasToString = 3;
+    }
+    else static if (is(typeof({ T val; val.toString((const(char)[] s){}); })))
+    {
+        enum hasToString = 2;
+    }
+    else static if (is(typeof({ T val; return val.toString(); }()) S) && isSomeString!S)
+    {
+        enum hasToString = 1;
+    }
+    else
+    {
+        enum hasToString = 0;
+    }
 }
 
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
@@ -1815,15 +1817,85 @@ if (!isSomeString!T && is(T == class))
         put(w, "null");
     else
     {
-        static if (isInputRange!T)
-        {
-            formatRange(w, val, f);
-        }
-        else
+        static if (hasToString!(T, Char) > 1 || !isInputRange!T)
         {
             formatObject!(Writer, T, Char)(w, val, f);
         }
+        else
+        {
+            string delegate() dg = &val.toString;
+            if (dg.funcptr != &Object.toString) // toString is overridden
+                formatObject(w, val, f);
+            else
+                formatRange(w, val, f);
+        }
     }
+}
+
+unittest
+{
+    // 5354
+    // If the class has both range I/F and custom toString, the use of custom
+    // toString routine is prioritized.
+
+    // Enable the use of custom toString that gets a sink delegate
+    // for class formatting.
+
+    enum inputRangeCode =
+    q{
+        int[] arr;
+        this(int[] a){ arr = a; }
+        @property int front() const { return arr[0]; }
+        @property bool empty() const { return arr.length == 0; }
+        void popFront(){ arr = arr[1..$]; }
+    };
+
+    class C1
+    {
+        mixin(inputRangeCode);
+        void toString(scope void delegate(const(char)[]) dg, ref FormatSpec!char f) const { dg("[012]"); }
+    }
+    class C2
+    {
+        mixin(inputRangeCode);
+        void toString(scope void delegate(const(char)[]) dg, string f) const { dg("[012]"); }
+    }
+    class C3
+    {
+        mixin(inputRangeCode);
+        void toString(scope void delegate(const(char)[]) dg) const { dg("[012]"); }
+    }
+    class C4
+    {
+        mixin(inputRangeCode);
+        override string toString() { return "[012]"; }
+    }
+    class C5
+    {
+        mixin(inputRangeCode);
+    }
+
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    formatValue(w, new C1([0, 1, 2]), f);
+    assert(w.data == "[012]");
+    w.clear();
+
+    formatValue(w, new C2([0, 1, 2]), f);
+    assert(w.data == "[012]");
+    w.clear();
+
+    formatValue(w, new C3([0, 1, 2]), f);
+    assert(w.data == "[012]");
+    w.clear();
+
+    formatValue(w, new C4([0, 1, 2]), f);
+    assert(w.data == "[012]");
+    w.clear();
+
+    formatValue(w, new C5([0, 1, 2]), f);
+    assert(w.data == "[0, 1, 2]");
 }
 
 /// ditto
