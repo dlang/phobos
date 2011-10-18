@@ -947,11 +947,10 @@ struct FormatSpec(Char)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(Unqual!T == bool))
 {
-    if (f.spec == 's') {
+    if (f.spec == 's')
         put(w, val ? "true" : "false");
-    } else {
+    else
         formatValue(w, cast(int) val, f);
-    }
 }
 
 /**
@@ -1183,7 +1182,7 @@ unittest
    Formatting a $(D creal) is deprecated but still kept around for a while.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T : creal))
+if (is(Unqual!T : creal))
 {
     formatValue(w, val.re, f);
     put(w, '+');
@@ -1203,7 +1202,7 @@ unittest
    Formatting an $(D ireal) is deprecated but still kept around for a while.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T : ireal))
+if (is(Unqual!T : ireal))
 {
     formatValue(w, val.im, f);
     put(w, 'i');
@@ -1242,40 +1241,7 @@ void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 {
     Unqual!(StringTypeOf!T) str = val;  // for `alias this`, see bug5371
-
-    if (f.spec == 's')
-    {
-        auto s = str[0 .. f.precision < $ ? f.precision : $];
-        if (!f.flDash)
-        {
-            // right align
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-            put(w, s);
-        }
-        else
-        {
-            // left align
-            put(w, s);
-            if (f.width > s.length)
-                foreach (i ; 0 .. f.width - s.length) put(w, ' ');
-        }
-    }
-    else
-    {
-        static if (is(typeof(str[0]) : const(char)))
-        {
-            formatRange(w, str, f);
-        }
-        else static if (is(typeof(str[0]) : const(wchar)))
-        {
-            formatRange(w, str, f);
-        }
-        else static if (is(typeof(str[0]) : const(dchar)))
-        {
-            formatRange(w, str, f);
-        }
-    }
+    formatRange(w, str, f);
 }
 
 unittest
@@ -1289,7 +1255,10 @@ unittest
 
 unittest
 {
-    // 5371
+    FormatSpec!char f;
+    auto a = appender!string();
+
+    // 5371 for class
     class C1
     {
         const(string) var = "C1";
@@ -1300,13 +1269,26 @@ unittest
         string var = "C2";
         alias var this;
     }
-    auto c1 = new C1();
-    auto c2 = new C2();
-
-    FormatSpec!char f;
-    auto a = appender!string();
+    C1 c1 = new C1();
+    C2 c2 = new C2();
     formatValue(a, c1, f);
     formatValue(a, c2, f);
+
+    // 5371 for struct
+    struct S1
+    {
+        const string var = "S1";
+        alias var this;
+    }
+    struct S2
+    {
+        string var = "S2";
+        alias var this;
+    }
+    S1 s1;
+    S2 s2;
+    formatValue(a, s1, f);
+    formatValue(a, s2, f);
 }
 
 /**
@@ -1322,23 +1304,28 @@ if (isStaticArray!T)
    $(D void[]) is formatted like $(D ubyte[]).
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(const(T) == const(void[])))
+if (!isSomeString!T && isDynamicArray!T)
 {
-    formatValue(w, cast(const ubyte[])val, f);
-}
-
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
-    !is(const(T) == const(void[])))
-{
-    alias Unqual!T U;
-    static assert(isInputRange!U);
-    U unq = val;
-    formatValue(w, unq, f);
+    static if (is(const(T) == const(void[])))
+    {
+        formatValue(w, cast(const ubyte[])val, f);
+    }
+    else static if (!isInputRange!T)
+    {
+        alias Unqual!T U;
+        static assert(isInputRange!U);
+        U unq = val;
+        formatValue(w, unq, f);
+    }
+    else
+    {
+        formatRange(w, val, f);
+    }
 }
 
 unittest
 {
+    // void[]
     FormatSpec!char f;
     auto a = appender!(char[])();
     void[] val0;
@@ -1363,6 +1350,7 @@ unittest
 
 unittest
 {
+    // const(T[]) -> const(T)[]
     FormatSpec!char f;
     auto w = appender!string();
     const short[] a = [1, 2, 3];
@@ -1370,62 +1358,158 @@ unittest
     assert(w.data == "[1, 2, 3]");
 }
 
-/**
-   Input ranges are formatted like arrays.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isInputRange!T && !isSomeString!T)
+// input range formatting
+private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
+if (isInputRange!T)
 {
-    static if (is(T == class) || is(T == interface) || isPointer!T)
-    {
-        if (val is null)
-        {
-            put(w, "null");
-            return;
-        }
-    }
-
+    // Formatting character ranges like string
     static if (isSomeChar!(ElementType!T))
     if (f.spec == 's')
     {
-        if (!f.flDash)
+        static if (isSomeString!T)
         {
-            static if (hasLength!T)
+            auto s = val[0 .. f.precision < $ ? f.precision : $];
+            if (!f.flDash)
             {
                 // right align
-                auto len = val.length;
-            }
-            else static if (isForwardRange!T)
-            {
-                auto len = walkLength(val.save);
+                if (f.width > s.length)
+                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+                put(w, s);
             }
             else
             {
-                enforce(f.width == 0, "Cannot right-align a range without length");
-                size_t len = 0;
-            }
-            if (f.width > len)
-                foreach (i ; 0 .. f.width - len) put(w, ' ');
-            for (; !val.empty; val.popFront())
-            {
-                put(w, val.front);
+                // left align
+                put(w, s);
+                if (f.width > s.length)
+                    foreach (i ; 0 .. f.width - s.length) put(w, ' ');
             }
         }
         else
         {
-            // left align
-            size_t printed = 0;
-            for (; !val.empty; val.popFront(), ++printed)
+            if (!f.flDash)
             {
-                put(w, val.front);
+                static if (hasLength!T)
+                {
+                    // right align
+                    auto len = val.length;
+                }
+                else static if (isForwardRange!T)
+                {
+                    auto len = walkLength(val.save);
+                }
+                else
+                {
+                    enforce(f.width == 0, "Cannot right-align a range without length");
+                    size_t len = 0;
+                }
+                if (f.precision != f.UNSPECIFIED && len > f.precision)
+                    len = f.precision;
+
+                if (f.width > len)
+                    foreach (i ; 0 .. f.width - len)
+                        put(w, ' ');
+                if (f.precision == f.UNSPECIFIED)
+                    put(w, val);
+                else
+                {
+                    size_t printed = 0;
+                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
+                        put(w, val.front);
+                }
             }
-            if (f.width > printed)
-                foreach (i ; 0 .. f.width - printed) put(w, ' ');
+            else
+            {
+                size_t printed = void;
+
+                // left align
+                if (f.precision == f.UNSPECIFIED)
+                {
+                    static if (hasLength!T)
+                    {
+                        printed = val.length;
+                        put(w, val);
+                    }
+                    else
+                    {
+                        printed = 0;
+                        for (; !val.empty; val.popFront(), ++printed)
+                            put(w, val.front);
+                    }
+                }
+                else
+                {
+                    printed = 0;
+                    for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
+                        put(w, val.front);
+                }
+
+                if (f.width > printed)
+                    foreach (i ; 0 .. f.width - printed)
+                        put(w, ' ');
+            }
         }
         return;
     }
 
-    formatRange(w, val, f);
+    if (f.spec == 'r')
+    {
+        // raw writes
+        for (size_t i; !val.empty; val.popFront(), ++i)
+        {
+            if (f.spec == '(')
+            {
+                // It's a nested format specifier
+                formattedWrite(w, f.nested, val.front);
+            }
+            else
+            {
+                formatValue(w, val.front, f);
+            }
+        }
+    }
+    else
+    {
+        // formatted writes
+        if (!f.nested)
+        {
+            put(w, f.seqBefore);
+            scope(exit) put(w, f.seqAfter);
+            if (!val.empty)
+            {
+                formatElement(w, val.front, f);
+                val.popFront();
+                for (size_t i; !val.empty; val.popFront(), ++i)
+                {
+                    put(w, f.seqSeparator);
+                    formatElement(w, val.front, f);
+                }
+            }
+        }
+        else
+        {
+            if (val.empty)
+                return;
+            // Nested specifier is to be used
+            for (;;)
+            {
+                auto fmt = FormatSpec!Char(f.nested);
+                fmt.writeUpToNextSpec(w);
+                auto spec = fmt.spec;
+                formatValue(w, val.front, fmt);
+                val.popFront();
+                if (spec == '(')
+                {   // If element is range
+                    fmt.writeUpToNextSpec(w);   // always put trailing
+                    if (val.empty) break;
+                }
+                else
+                {
+                    if (val.empty) break;
+                    fmt.writeUpToNextSpec(w);
+                }
+            }
+        }
+    }
 }
 
 unittest
@@ -1459,71 +1543,6 @@ unittest
         formattedWrite(w2, e[0], r);
         assert(w1.data == w2.data);
         assert(w1.data == e[1]);
-    }
-}
-
-private void formatRange(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isInputRange!T)
-{
-    auto arr = val;
-    if (f.spec == 'r')
-    {
-        // raw writes
-        for (size_t i; !arr.empty; arr.popFront(), ++i)
-        {
-            if (f.spec == '(')
-            {
-                // It's a nested format specifier
-                formattedWrite(w, f.nested, arr.front);
-            }
-            else
-            {
-                formatValue(w, arr.front, f);
-            }
-        }
-    }
-    else
-    {
-        // formatted writes
-        if (!f.nested)
-        {
-            put(w, f.seqBefore);
-            scope(exit) put(w, f.seqAfter);
-            if (!arr.empty)
-            {
-                formatElement(w, arr.front, f);
-                arr.popFront();
-                for (size_t i; !arr.empty; arr.popFront(), ++i)
-                {
-                    put(w, f.seqSeparator);
-                    formatElement(w, arr.front, f);
-                }
-            }
-        }
-        else
-        {
-            if (arr.empty)
-                return;
-            // Nested specifier is to be used
-            for (;;)
-            {
-                auto fmt = FormatSpec!Char(f.nested);
-                fmt.writeUpToNextSpec(w);
-                auto spec = fmt.spec;
-                formatValue(w, arr.front, fmt);
-                arr.popFront();
-                if (spec == '(')
-                {   // If element is range
-                    fmt.writeUpToNextSpec(w);   // always put trailing
-                    if (arr.empty) break;
-                }
-                else
-                {
-                    if (arr.empty) break;
-                    fmt.writeUpToNextSpec(w);
-                }
-            }
-        }
     }
 }
 
@@ -1621,6 +1640,7 @@ if (isSomeChar!T)
 }
 
 // undocumented
+// Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if (!isSomeString!T && !isSomeChar!T)
 {
@@ -1736,18 +1756,97 @@ unittest
     assert(a.data == `['c':"str"]`);
 }
 
+
+template hasToString(T, Char)
+{
+    enum hasToString = is(typeof({
+        FormatSpec!Char f;
+        T val;
+        static if (is(typeof(val.toString((const(char)[] s){}, f))))
+        {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
+        }
+        else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
+        {   // Support toString( delegate(const(char)[]) sink, string fmt)
+        }
+        else static if (is(typeof(val.toString((const(char)[] s){}))))
+        {   // Support toString( delegate(const(char)[]) sink)
+        }
+        else static if (is(typeof(val.toString()) S) && isSomeString!S)
+        {
+        }
+        else
+            static assert(0);
+    }));
+}
+
+private void formatObject(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
+if (hasToString!(T, Char))
+{
+    static if (is(typeof(val.toString((const(char)[] s){}, f))))
+    {
+        val.toString((const(char)[] s) { put(w, s); }, f);
+    }
+    else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
+    {
+        val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
+    }
+    else static if (is(typeof(val.toString((const(char)[] s){}))))
+    {
+        val.toString((const(char)[] s) { put(w, s); });
+    }
+    else static if (is(typeof(val.toString()) S) && isSomeString!S)
+    {
+        put(w, val.toString());
+    }
+    else
+        static assert(0);
+}
+
 /**
-   Objects are formatted by calling $(D toString).
-   Interfaces are formatted by casting to $(D Object) and then calling
-   $(D toString).
+   TODO
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isSomeString!T && is(T == class) && !isInputRange!T)
+if (!isSomeString!T && is(T == class))
 {
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");
-    if (val is null) put(w, "null");
-    else put(w, val.toString());
+
+    if (val is null)
+        put(w, "null");
+    else
+    {
+        static if (isInputRange!T)
+        {
+            formatRange(w, val, f);
+        }
+        else
+        {
+            formatObject!(Writer, T, Char)(w, val, f);
+        }
+    }
+}
+
+/// ditto
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (!isSomeString!T && is(T == interface))
+{
+    if (val is null)
+        put(w, "null");
+    else
+    {
+        static if (hasToString!(T, Char))
+        {
+            formatObject(w, val, f);
+        }
+        else static if (isInputRange!T)
+        {
+            formatRange(w, val, f);
+        }
+        else
+        {
+            formatValue(w, cast(Object)val, f);
+        }
+    }
 }
 
 unittest
@@ -1799,43 +1898,17 @@ unittest
 }
 
 /// ditto
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == interface) && !isInputRange!T)
-{
-    return formatValue(w, cast(Object)val, f);
-}
-
-/**
-   Structs and unions are formatted using by calling $(D toString) member
-   function of the object. $(D toString) should have one of the following
-   signatures:
-
----
-const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
-const void toString(scope void delegate(const(char)[]) sink, string fmt);
-const void toString(scope void delegate(const(char)[]) sink);
-const string toString();
----
-
- */
+// Maybe T is noncopyable struct, so receive it by 'auto ref'.
 void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
-if ((is(T == struct) || is(T == union)) && !isInputRange!T)
+if (!isSomeString!T && (is(T == struct) || is(T == union)))
 {
-    static if (is(typeof(val.toString((const(char)[] s){}, f))))
-    {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
-        val.toString((const(char)[] s) { put(w, s); }, f);
-    }
-    else static if (is(typeof(val.toString((const(char)[] s){}, "%s"))))
-    {   // Support toString( delegate(const(char)[]) sink, string fmt)
-        val.toString((const(char)[] s) { put(w, s); }, f.getCurFmtStr());
-    }
-    else static if (is(typeof(val.toString((const(char)[] s){}))))
-    {   // Support toString( delegate(const(char)[]) sink)
-        val.toString((const(char)[] s) { put(w, s); });
-    }
-    else static if (is(typeof(val.toString()) S) && isSomeString!S)
+    static if (hasToString!(T, Char))
     {
-        put(w, val.toString());
+        formatObject(w, val, f);
+    }
+    else static if (isInputRange!T)
+    {
+        formatRange(w, val, f);
     }
     else static if (is(T == struct))
     {
@@ -1953,6 +2026,17 @@ unittest
     assert(w.data == `Bug7230("hello", #{overlap a, b, c}, 10)`);
 }
 
+unittest
+{
+    static struct S{ @disable this(this); }
+    S s;
+
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, s, f);
+    assert(w.data == "S()");
+}
+
 /**
    $(D enum) is formatted like its base value.
  */
@@ -2007,19 +2091,31 @@ unittest
    Pointers are formatted as hex integers.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (isPointer!T && !isInputRange!T)
+if (isPointer!T)
 {
-    const void * p = val;
-    if (f.spec == 's')
-    {
-        FormatSpec!Char fs = f; // fs is copy for change its values.
-        fs.spec = 'X';
-        formatValue(w, cast(ulong) p, fs);
-    }
+    if (val is null)
+        put(w, "null");
     else
     {
-        enforce(f.spec == 'X' || f.spec == 'x');
-        formatValue(w, cast(ulong) p, f);
+        static if (isInputRange!T)
+        {
+            formatRange(w, *val, f);
+        }
+        else
+        {
+            const void * p = val;
+            if (f.spec == 's')
+            {
+                FormatSpec!Char fs = f; // fs is copy for change its values.
+                fs.spec = 'X';
+                formatValue(w, cast(ulong) p, fs);
+            }
+            else
+            {
+                enforce(f.spec == 'X' || f.spec == 'x');
+                formatValue(w, cast(ulong) p, f);
+            }
+        }
     }
 }
 
@@ -2034,6 +2130,23 @@ unittest
     assert(a.data == `S(FFEECCAA, "hello")`);
 }
 
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+
+    struct R
+    {
+        int[] arr;
+
+        @property bool empty() const { return arr.length == 0; }
+        @property int front() const { return arr[0]; }
+        void popFront() { arr = arr[1..$]; }
+    }
+    auto r = R([1,2,3]);
+    formatValue(w, &r, f);
+    assert(w.data == "[1, 2, 3]");
+}
 
 /**
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
