@@ -941,7 +941,7 @@ struct FormatSpec(Char)
 }
 
 /**
-   $(D bool) is formatted as "true" or "false" with %s and as "1" or
+   $(D bool)s are formatted as "true" or "false" with %s and as "1" or
    "0" with integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
@@ -1235,7 +1235,7 @@ if (isSomeChar!T)
 }
 
 /**
-   Strings are formatted like printf does.
+   Strings are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T && !is(T == enum))
@@ -1292,7 +1292,7 @@ unittest
 }
 
 /**
-   Static-size arrays are formatted just like arrays.
+   Static-size arrays are formatted as dynamic arrays.
  */
 void formatValue(Writer, T, Char)(Writer w, ref T val, ref FormatSpec!Char f)
 if (isStaticArray!T)
@@ -1301,7 +1301,11 @@ if (isStaticArray!T)
 }
 
 /**
-   $(D void[]) is formatted like $(D ubyte[]).
+   Dynamic arrays are formatted as input ranges.
+
+   Specializations:
+     $(UL $(LI $(D void[]) is formatted like $(D ubyte[]).)
+          $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (!isSomeString!T && isDynamicArray!T)
@@ -1546,6 +1550,7 @@ unittest
     }
 }
 
+// character formatting with ecaping
 private void formatChar(Writer)(Writer w, dchar c)
 {
     if (std.uni.isGraphical(c))
@@ -1578,7 +1583,7 @@ private void formatChar(Writer)(Writer w, dchar c)
 }
 
 // undocumented
-// string element is formatted like UTF-8 string literal.
+// string elements are formatted like UTF-8 string literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T)
 {
@@ -1630,7 +1635,7 @@ if (isSomeString!T)
 }
 
 // undocumented
-// character element is formatted like UTF-8 character literal.
+// character elements are formatted like UTF-8 character literals.
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeChar!T)
 {
@@ -1781,6 +1786,7 @@ template hasToString(T, Char)
     }
 }
 
+// object formatting with toString
 private void formatObject(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
@@ -1805,7 +1811,27 @@ if (hasToString!(T, Char))
 }
 
 /**
-   TODO
+   Aggregates ($(D struct), $(D union), $(D class), and $(D interface)) are
+   basically formatted by calling $(D toString).
+   $(D toString) should have one of the following signatures:
+
+---
+const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
+const void toString(scope void delegate(const(char)[]) sink, string fmt);
+const void toString(scope void delegate(const(char)[]) sink);
+const string toString();
+---
+
+   For the class objects which have input range interface,
+   $(UL $(LI If the instance $(D toString) has overridden
+             $(D Object.toString), it is used.)
+        $(LI Otherwise, the objects are formatted as input range.))
+
+   For the struct and union objects which does not have $(D toString),
+   $(UL $(LI If they have range interface, formatted as input range.)
+        $(LI Otherwise, they are formatted like $(D Type(field1, filed2, ...)).))
+
+   Otherwise, are formatted just as their type name.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (!isSomeString!T && is(T == class))
