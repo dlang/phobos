@@ -27,6 +27,7 @@ import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
     std.utf;
 version(unittest) {
     import std.stdio;
+    import core.exception;
 }
 
 version (Windows) version (DigitalMars)
@@ -1207,11 +1208,12 @@ if (isFloatingPoint!D)
 
 unittest
 {
-    auto a = appender!(string)();
-    immutable real x = 5.5;
-    FormatSpec!char f;
-    formatValue(a, x, f);
-    assert(a.data == "5.5");
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        formatTest( to!(          T)(5.5), "5.5" );
+        formatTest( to!(    const T)(5.5), "5.5" );
+        formatTest( to!(immutable T)(5.5), "5.5" );
+    }
 }
 
 /*
@@ -1228,10 +1230,12 @@ if (is(Unqual!T : creal))
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
-    creal val = 1 + 1i;
-    formatValue(a, val, f);
+    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    {
+        formatTest( to!(          T)(1 + 1i), "1+1i" );
+        formatTest( to!(    const T)(1 + 1i), "1+1i" );
+        formatTest( to!(immutable T)(1 + 1i), "1+1i" );
+    }
 }
 
 /*
@@ -1246,10 +1250,12 @@ if (is(Unqual!T : ireal))
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
-    ireal val = 1i;
-    formatValue(a, val, f);
+    foreach (T; TypeTuple!(ifloat, idouble, ireal))
+    {
+        formatTest( to!(          T)(1i), "1i" );
+        formatTest( to!(    const T)(1i), "1i" );
+        formatTest( to!(immutable T)(1i), "1i" );
+    }
 }
 
 /**
@@ -1282,49 +1288,22 @@ if (isSomeString!T && !isStaticArray!T && !is(T == enum))
 
 unittest
 {
-    FormatSpec!char f;
-    auto w = appender!(string)();
-    string s = "abc";
-    formatValue(w, s, f);
-    assert(w.data == "abc");
+    formatTest( "abc", "abc" );
 }
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
-
     // 5371 for class
-    class C1
-    {
-        const(string) var = "C1";
-        alias var this;
-    }
-    class C2
-    {
-        string var = "C2";
-        alias var this;
-    }
-    C1 c1 = new C1();
-    C2 c2 = new C2();
-    formatValue(a, c1, f);
-    formatValue(a, c2, f);
+    class C1 { const string var = "c1"; alias var this; }
+    class C2 {       string var = "c2"; alias var this; }
+    formatTest( new C1(), "c1" );
+    formatTest( new C2(), "c2" );
 
     // 5371 for struct
-    struct S1
-    {
-        const string var = "S1";
-        alias var this;
-    }
-    struct S2
-    {
-        string var = "S2";
-        alias var this;
-    }
-    S1 s1;
-    S2 s2;
-    formatValue(a, s1, f);
-    formatValue(a, s2, f);
+    struct S1 { const string var = "s1"; alias var this; }
+    struct S2 {       string var = "s2"; alias var this; }
+    formatTest( S1(), "s1" );
+    formatTest( S2(), "s2" );
 }
 
 /**
@@ -1366,36 +1345,100 @@ if (!isSomeString!T && isDynamicArray!T)
 unittest
 {
     // void[]
-    FormatSpec!char f;
-    auto a = appender!(char[])();
     void[] val0;
-    formatValue(a, val0, f);
-    assert(a.data == "[]");
-    a.clear();
+    formatTest( val0, "[]" );
 
     void[] val = cast(void[])cast(ubyte[])[1, 2, 3];
-    formatValue(a, val, f);
-    assert(a.data == "[1, 2, 3]");
-    a.clear();
+    formatTest( val, "[1, 2, 3]" );
 
-    void[0] sval0;
-    formatValue(a, sval0, f);
-    assert(a.data == "[]");
-    a.clear();
+    void[0] sval0 = [];
+    formatTest( sval0, "[]");
 
     void[3] sval = cast(void[3])cast(ubyte[3])[1, 2, 3];
-    formatValue(a, sval, f);
-    assert(a.data == "[1, 2, 3]");
+    formatTest( sval, "[1, 2, 3]" );
 }
 
 unittest
 {
     // const(T[]) -> const(T)[]
-    FormatSpec!char f;
-    auto w = appender!string();
     const short[] a = [1, 2, 3];
-    formatValue(w, a, f);
-    assert(w.data == "[1, 2, 3]");
+    formatTest( a, "[1, 2, 3]" );
+}
+
+unittest
+{
+    // 6640
+    struct Range
+    {
+        string value;
+        const @property bool empty(){ return !value.length; }
+        const @property dchar front(){ return value.front(); }
+        void popFront(){ value.popFront(); }
+
+        const @property size_t length(){ return value.length; }
+    }
+    immutable table =
+    [
+        ["[%s]", "[string]"],
+        ["[%10s]", "[    string]"],
+        ["[%-10s]", "[string    ]"],
+        ["[%(%02x %)]", "[73 74 72 69 6e 67]"],
+        ["[%(%c %)]", "[s t r i n g]"],
+    ];
+    foreach (e; table)
+    {
+        formatTest(e[0], "string", e[1]);
+        formatTest(e[0], Range("string"), e[1]);
+    }
+}
+
+unittest
+{
+    // string literal from valid UTF sequence is encoding free.
+    foreach (StrType; TypeTuple!(string, wstring, dstring))
+    {
+        // Valid and printable (ASCII)
+        formatTest( [cast(StrType)"hello"],
+                    `["hello"]` );
+
+        // 1 character escape sequences
+        formatTest( [cast(StrType)"\"\\\a\b\f\n\r\t\v"],
+                    `["\"\\\a\b\f\n\r\t\v"]` );
+
+        // Valid and non-printable code point (<= U+FF)
+        formatTest( [cast(StrType)"\x00\x10\x1F\x20test"],
+                    `["\x00\x10\x1F test"]` );
+
+        // Valid and non-printable code point (<= U+FFFF)
+        formatTest( [cast(StrType)"\u200B..\u200F"],
+                    `["\u200B..\u200F"]` );
+
+        // Valid and non-printable code point (<= U+10FFFF)
+        formatTest( [cast(StrType)"\U000E0020..\U000E007F"],
+                    `["\U000E0020..\U000E007F"]` );
+    }
+
+    // invalid UTF sequence needs hex-string literal postfix (c/w/d)
+    {
+        // U+FFFF with UTF-8 (Invalid code point for interchange)
+        formatTest( [cast(string)[0xEF, 0xBF, 0xBF]],
+                    `[x"EF BF BF"c]` );
+
+        // U+FFFF with UTF-16 (Invalid code point for interchange)
+        formatTest( [cast(wstring)[0xFFFF]],
+                    `[x"FFFF"w]` );
+
+        // U+FFFF with UTF-32 (Invalid code point for interchange)
+        formatTest( [cast(dstring)[0xFFFF]],
+                    `[x"FFFF"d]` );
+    }
+}
+
+unittest
+{
+    // nested range formatting with array of string
+    formatTest( "%({%(%02x %)}%| %)", ["test", "msg"],
+                `{74 65 73 74} {6d 73 67}` );
 }
 
 // input range formatting
@@ -1545,40 +1588,6 @@ if (isInputRange!T)
         enforce(false, text("Incorrect format specifier for range: %", f.spec));
 }
 
-unittest
-{
-    // 6640
-    struct Range
-    {
-        string value;
-        const @property bool empty(){ return !value.length; }
-        const @property dchar front(){ return value.front(); }
-        void popFront(){ value.popFront(); }
-
-        const @property size_t length(){ return value.length; }
-    }
-    auto s = "string";
-    auto r = Range("string");
-
-    immutable table =
-    [
-        ["[%s]", "[string]"],
-        ["[%10s]", "[    string]"],
-        ["[%-10s]", "[string    ]"],
-        ["[%(%02x %)]", "[73 74 72 69 6e 67]"],
-        ["[%(%c %)]", "[s t r i n g]"],
-    ];
-    foreach (e; table)
-    {
-        auto w1 = appender!string();
-        auto w2 = appender!string();
-        formattedWrite(w1, e[0], s);
-        formattedWrite(w2, e[0], r);
-        assert(w1.data == w2.data);
-        assert(w1.data == e[1]);
-    }
-}
-
 // character formatting with ecaping
 private void formatChar(Writer)(Writer w, dchar c)
 {
@@ -1686,70 +1695,6 @@ if (!isSomeString!T && !isSomeChar!T)
     formatValue(w, val, f);
 }
 
-unittest
-{
-    FormatSpec!char f;
-    auto w = appender!(char[])();
-
-    // string literal from valid UTF sequence is encoding free.
-    foreach (StrType; TypeTuple!(string, wstring, dstring))
-    {
-        // Valid and printable (ASCII)
-        w.clear();
-        formatValue(w, [cast(StrType)"hello"], f);
-        assert(w.data == `["hello"]`);
-
-        // 1 character escape sequences
-        w.clear();
-        formatValue(w, [cast(StrType)"\"\\\a\b\f\n\r\t\v"], f);
-        assert(w.data == `["\"\\\a\b\f\n\r\t\v"]`);
-
-        // Valid and non-printable code point (<= U+FF)
-        w.clear();
-        formatValue(w, [cast(StrType)"\x00\x10\x1F\x20test"], f);
-        assert(w.data == `["\x00\x10\x1F test"]`);
-
-        // Valid and non-printable code point (<= U+FFFF)
-        w.clear();
-        formatValue(w, [cast(StrType)"\u200B..\u200F"], f);
-        assert(w.data == `["\u200B..\u200F"]`);
-
-        // Valid and non-printable code point (<= U+10FFFF)
-        w.clear();
-        formatValue(w, [cast(StrType)"\U000E0020..\U000E007F"], f);
-        assert(w.data == `["\U000E0020..\U000E007F"]`);
-    }
-
-    // invalid UTF sequence needs hex-string literal postfix (c/w/d)
-    {
-        // U+FFFF with UTF-8 (Invalid code point for interchange)
-        w.clear();
-        formatValue(w, [cast(string)[0xEF, 0xBF, 0xBF]], f);
-        assert(w.data == `[x"EF BF BF"c]`);
-
-        // U+FFFF with UTF-16 (Invalid code point for interchange)
-        w.clear();
-        formatValue(w, [cast(wstring)[0xFFFF]], f);
-        assert(w.data == `[x"FFFF"w]`);
-
-        // U+FFFF with UTF-32 (Invalid code point for interchange)
-        w.clear();
-        formatValue(w, [cast(dstring)[0xFFFF]], f);
-        assert(w.data == `[x"FFFF"d]`);
-    }
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto w = appender!(char[])();
-
-    auto a = ["test", "msg"];
-    w.clear();
-    formattedWrite(w, "%({%(%02x %)}%| %)", a);
-    assert(w.data == `{74 65 73 74} {6d 73 67}`);
-}
-
 /**
    Associative arrays are formatted by using $(D ':') and $(D ', ') as
    separators, and enclosed by $(D '[') and $(D ']').
@@ -1792,42 +1737,23 @@ if (isAssociativeArray!T && !is(T == enum))
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
-    int[string] aa;
-    formatValue(a, aa, f);
-    assert(a.data == `[]`);
-}
+    int[string] aa0;
+    formatTest( aa0, `[]` );
 
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-    int[string] aa = ["aaa": 1, "bbb": 2, "ccc": 3];
-    formatValue(a, aa, f);
-    assert(a.data == `["aaa":1, "bbb":2, "ccc":3]`);
-}
+    // elements escaping
+    formatTest(  ["aaa":1, "bbb":2, "ccc":3],
+                `["aaa":1, "bbb":2, "ccc":3]` );
+    formatTest(  ['c':"str"],
+                `['c':"str"]` );
 
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-    formatValue(a, ['c':"str"], f);
-    assert(a.data == `['c':"str"]`);
-}
-
-unittest
-{
-    auto aa = [1:"hello", 2:"world"];
-
-    FormatSpec!char f;
-    auto a1 = appender!string();
-    formattedWrite(a1, "{%([%04d->%(%c.%)]%| $ %)}", aa);
-    assert(a1.data == `{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}`);
-
-    auto a2 = appender!string();
-    formattedWrite(a2, "{%(%s:%s%| $ %)}", aa);
-    assert(a2.data == `{1:"hello" $ 2:"world"}`);
+    // range formatting for AA
+    auto aa3 = [1:"hello", 2:"world"];
+    // escape
+    formatTest( "{%(%s:%s $ %)}", aa3,
+                `{1:"hello" $ 2:"world"}`);
+    // use range formatting for key and value, and use %|
+    formatTest( "{%([%04d->%(%c.%)]%| $ %)}", aa3,
+                `{[0001->h.e.l.l.o] $ [0002->w.o.r.l.d]}` );
 }
 
 
@@ -1929,6 +1855,16 @@ if (!isSomeString!T && is(T == class))
 
 unittest
 {
+    // class range (issue 5154)
+    auto c = inputRangeObject([1,2,3,4]);
+    formatTest( c, "[1, 2, 3, 4]" );
+    assert(c.empty);
+    c = null;
+    formatTest( c, "null" );
+}
+
+unittest
+{
     // 5354
     // If the class has both range I/F and custom toString, the use of custom
     // toString routine is prioritized.
@@ -1970,27 +1906,11 @@ unittest
         mixin(inputRangeCode);
     }
 
-    FormatSpec!char f;
-    auto w = appender!(char[])();
-
-    formatValue(w, new C1([0, 1, 2]), f);
-    assert(w.data == "[012]");
-    w.clear();
-
-    formatValue(w, new C2([0, 1, 2]), f);
-    assert(w.data == "[012]");
-    w.clear();
-
-    formatValue(w, new C3([0, 1, 2]), f);
-    assert(w.data == "[012]");
-    w.clear();
-
-    formatValue(w, new C4([0, 1, 2]), f);
-    assert(w.data == "[012]");
-    w.clear();
-
-    formatValue(w, new C5([0, 1, 2]), f);
-    assert(w.data == "[0, 1, 2]");
+    formatTest( new C1([0, 1, 2]), "[012]" );
+    formatTest( new C2([0, 1, 2]), "[012]" );
+    formatTest( new C3([0, 1, 2]), "[012]" );
+    formatTest( new C4([0, 1, 2]), "[012]" );
+    formatTest( new C5([0, 1, 2]), "[0, 1, 2]" );
 }
 
 /// ditto
@@ -2018,50 +1938,21 @@ if (!isSomeString!T && is(T == interface))
 
 unittest
 {
-    FormatSpec!char f;
-    auto w = appender!(char[])();
-
-    // class range (issue 5154)
-    auto c = inputRangeObject([1,2,3,4]);
-    w.clear();
-    formatValue(w, c, f);
-    assert(w.data == "[1, 2, 3, 4]");
-    assert(c.empty);
-
     // interface
     InputRange!int i = inputRangeObject([1,2,3,4]);
-    w.clear();
-    formatValue(w, i, f);
-    assert(w.data == "[1, 2, 3, 4]");
+    formatTest( i, "[1, 2, 3, 4]" );
     assert(i.empty);
+    i = null;
+    formatTest( i, "null" );
 
-    // pointer
-    auto r = retro([1,2,3,4]);
-    w.clear();
-    formatValue(w, &r, f);
-    assert(w.data == "[4, 3, 2, 1]");
-    assert(r.empty);
-
-    // null
-    c = null;
-    w.clear();
-    formatValue(w, c, f);
-    assert(w.data == "null");
-    assert(r.empty);
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
+    // interface (downcast to Object)
     interface Whatever {}
     class C : Whatever
     {
         override @property string toString() { return "ab"; }
     }
     Whatever val = new C;
-    formatValue(a, val, f);
-    assert(a.data == "ab");
+    formatTest( val, "ab" );
 }
 
 /// ditto
@@ -2119,14 +2010,9 @@ unittest
     struct U8  {  string toString() { return "blah"; } }
     struct U16 { wstring toString() { return "blah"; } }
     struct U32 { dstring toString() { return "blah"; } }
-
-    FormatSpec!char f;
-    auto w = appender!string();
-
-    formatValue(w, U8(), f);
-    formatValue(w, U16(), f);
-    formatValue(w, U32(), f);
-    assert(w.data() == "blahblahblah");
+    formatTest( U8(), "blah" );
+    formatTest( U16(), "blah" );
+    formatTest( U32(), "blah" );
 }
 
 unittest
@@ -2134,30 +2020,22 @@ unittest
     // 3890
     struct Int{ int n; }
     struct Pair{ string s; Int i; }
-
-    FormatSpec!char f;
-    auto w = appender!string();
-
-    formatValue(w, Pair("hello", Int(5)), f);
-    assert(w.data() == `Pair("hello", Int(5))`);
+    formatTest( Pair("hello", Int(5)),
+                `Pair("hello", Int(5))` );
 }
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!(char[])();
-
+    // union formatting without toString
     union U1
     {
         int n;
         string s;
     }
     U1 u1;
-    formatValue(a, u1, f);
-    assert(a.data == "U1");
+    formatTest( u1, "U1" );
 
-    a.clear();
-
+    // union formatting with toString
     union U2
     {
         int n;
@@ -2166,8 +2044,7 @@ unittest
     }
     U2 u2;
     u2.s = "hello";
-    formatValue(a, u2, f);
-    assert(a.data == "hello");
+    formatTest( u2, "hello" );
 }
 
 unittest
@@ -2225,33 +2102,21 @@ if (is(T == enum))
 }
 unittest
 {
-    auto a = appender!string();
     enum A { first, second, third }
-    FormatSpec!char spec;
-    formatValue(a, A.second, spec);
-    assert(a.data == "second");
-    formatValue(a, cast(A)72, spec);
-    assert(a.data == "secondcast(A)72");
+    formatTest( A.second, "second" );
+    formatTest( cast(A)72, "cast(A)72" );
 }
 unittest
 {
-    auto a = appender!string();
     enum A : string { one = "uno", two = "dos", three = "tres" }
-    FormatSpec!char spec;
-    formatValue(a, A.three, spec);
-    assert(a.data == "three");
-    formatValue(a, cast(A)"mill\&oacute;n", spec);
-    assert(a.data == "threecast(A)mill\&oacute;n");
+    formatTest( A.three, "three" );
+    formatTest( cast(A)"mill\&oacute;n", "cast(A)mill\&oacute;n" );
 }
 unittest
 {
-    auto a = appender!string();
     enum A : bool { no, yes }
-    FormatSpec!char spec;
-    formatValue(a, A.yes, spec);
-    assert(a.data == "yes");
-    formatValue(a, A.no, spec);
-    assert(a.data == "yesno");
+    formatTest( A.yes, "yes" );
+    formatTest( A.no, "no" );
 }
 
 /**
@@ -2288,31 +2153,16 @@ if (isPointer!T)
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
+    // pointer
+    auto r = retro([1,2,3,4]);
+    auto p = &r;
+    formatTest( p, "[4, 3, 2, 1]" );
+    assert(p.empty);
+    p = null;
+    formatTest( p, "null" );
 
-    struct S{ void* p; string s; }
-    auto s = S(cast(void*)0xFFEECCAA, "hello");
-    formatValue(a, s, f);
-    assert(a.data == `S(FFEECCAA, "hello")`);
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto w = appender!string();
-
-    struct R
-    {
-        int[] arr;
-
-        @property bool empty() const { return arr.length == 0; }
-        @property int front() const { return arr[0]; }
-        void popFront() { arr = arr[1..$]; }
-    }
-    auto r = R([1,2,3]);
-    formatValue(w, &r, f);
-    assert(w.data == "[1, 2, 3]");
+    auto q = cast(void*)0xFFEECCAA;
+    formatTest( q, "FFEECCAA" );
 }
 
 /**
@@ -2335,9 +2185,8 @@ if (is(T == delegate))
 
 unittest
 {
-    FormatSpec!char f;
-    auto a = appender!string();
-    formatValue(a, {}, f);
+    void func() {}
+    formatTest( &func, "void delegate()" );
 }
 
 /*
@@ -2346,17 +2195,10 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == typedef))
 {
-    static if (is(T U == typedef)) {
+    static if (is(T U == typedef))
+    {
         formatValue(w, cast(U) val, f);
     }
-}
-
-unittest
-{
-    FormatSpec!char f;
-    auto a = appender!string();
-    ireal val = 1i;
-    formatValue(a, val, f);
 }
 
 /*
@@ -2372,18 +2214,15 @@ private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, ref Form
 
 unittest
 {
-    auto w = appender!(char[])();
     int[] a = [ 1, 3, 2 ];
-    formattedWrite(w, "testing %(%s & %) embedded", a);
-    assert(w.data == "testing 1 & 3 & 2 embedded", w.data);
-    w.clear();
-    formattedWrite(w, "testing %((%s) %)) wyda3", a);
-    assert(w.data == "testing (1) (3) (2) wyda3", w.data);
+    formatTest( "testing %(%s & %) embedded", a,
+                "testing 1 & 3 & 2 embedded");
+    formatTest( "testing %((%s) %)) wyda3", a,
+                "testing (1) (3) (2) wyda3" );
 
     int[0] empt = [];
-    w.clear();
-    formattedWrite(w, "(%s)", empt);
-    assert(w.data == "([])", w.data);
+    formatTest( "(%s)", empt,
+                "([])" );
 }
 
 //------------------------------------------------------------------------------
@@ -2412,6 +2251,27 @@ private int getNthInt(A...)(uint index, A args)
 }
 
 /* ======================== Unit Tests ====================================== */
+
+version(unittest)
+void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+    formatValue(w, val, f);
+    enforceEx!AssertError(
+            w.data == expected,
+            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
+
+version(unittest)
+void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
+{
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+    enforceEx!AssertError(
+            w.data == expected,
+            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+}
 
 unittest
 {
@@ -3029,7 +2889,6 @@ unittest
     line = "fALsE";
     formattedRead(line, "%s", &f1);
     assert(!f1);
-
 
     line = "1";
     formattedRead(line, "%d", &f1);
@@ -4108,7 +3967,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 putstr(vbit ? "true" : "false");
                 return;
 
-
             case Mangle.Tchar:
                 vchar = va_arg!(char)(argptr);
                 if (fc != 's')
@@ -4141,7 +3999,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     putstr(toUTF8(vbuf, vdchar));
                 }
                 return;
-
 
             case Mangle.Tbyte:
                 signed = 1;
@@ -4200,7 +4057,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 base = 16;
                 goto Lnumber;
 
-
             case Mangle.Tfloat:
             case Mangle.Tifloat:
                 if (fc == 'x' || fc == 'X')
@@ -4219,7 +4075,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             case Mangle.Tireal:
                 vreal = va_arg!(real)(argptr);
                 goto Lreal;
-
 
             case Mangle.Tcfloat:
                 vcreal = va_arg!(cfloat)(argptr);
