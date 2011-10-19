@@ -581,25 +581,25 @@ struct FormatSpec(Char)
        This string is inserted before each sequence (e.g. array)
        formatted (by default $(D "[")).
      */
-    static const(Char)[] seqBefore = "[";
+    enum const(Char)[] seqBefore = "[";
 
     /*
        This string is inserted after each sequence formatted (by
        default $(D "]")).
      */
-    static const(Char)[] seqAfter = "]";
+    enum const(Char)[] seqAfter = "]";
 
     /*
        This string is inserted after each element keys of a sequence (by
        default $(D ":")).
      */
-    static const(Char)[] keySeparator = ":";
+    enum const(Char)[] keySeparator = ":";
 
     /*
        This string is inserted in between elements of a sequence (by
        default $(D ", ")).
      */
-    static const(Char)[] seqSeparator = ", ";
+    enum const(Char)[] seqSeparator = ", ";
 
     /**
        Given a string format specification fmt, parses a format
@@ -1760,7 +1760,7 @@ if (isAssociativeArray!T && !is(T == enum))
     enforce(f.spec == 's' || f.spec == '(',
             new FormatException("associative"));
 
-    auto defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
+    enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
 
     size_t i = 0, end = val.length;
