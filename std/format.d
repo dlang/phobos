@@ -1757,44 +1757,37 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
-    if (f.spec == '(')
-    {
-        size_t i = 0, end = val.length;
-        foreach (k, ref v; val)
-        {
-            auto fmt = FormatSpec!Char(f.nested);
-            fmt.writeUpToNextSpec(w);
-            formatElement(w, k, fmt);
-            fmt.writeUpToNextSpec(w);
-            formatElement(w, v, fmt);
-            if (f.sep)
-            {
-                fmt.writeUpToNextSpec(w);
-                if (++i != end)
-                    put(w, f.sep);
-            }
-            else
-            {
-                if (++i != end)
-                    fmt.writeUpToNextSpec(w);
-            }
-        }
-    }
-    else if (f.spec == 's')
-    {
+    enforce(f.spec == 's' || f.spec == '(',
+            new FormatException("associative"));
+
+    auto defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
+    auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
+
+    size_t i = 0, end = val.length;
+
+    if (f.spec == 's')
         put(w, f.seqBefore);
-        bool first = true;
-        foreach (k, ref v; val) {
-            if (first) first = false;
-            else put(w, f.seqSeparator);
-            formatElement(w, k, f);
-            put(w, f.keySeparator);
-            formatElement(w, v, f);
+    foreach (k, ref v; val)
+    {
+        auto fmt = FormatSpec!Char(fmtSpec);
+        fmt.writeUpToNextSpec(w);
+        formatElement(w, k, fmt);
+        fmt.writeUpToNextSpec(w);
+        formatElement(w, v, fmt);
+        if (f.sep)
+        {
+            fmt.writeUpToNextSpec(w);
+            if (++i != end)
+                put(w, f.sep);
         }
-        put(w, f.seqAfter);
+        else
+        {
+            if (++i != end)
+                fmt.writeUpToNextSpec(w);
+        }
     }
-    else
-        throw new FormatException("associative");
+    if (f.spec == 's')
+        put(w, f.seqAfter);
 }
 
 unittest
