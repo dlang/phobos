@@ -20,7 +20,7 @@ module std.conv;
 import core.stdc.math : ldexpl;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
-    std.stdio, std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
 import std.metastrings;
 
@@ -91,15 +91,9 @@ private
  */
 class ConvOverflowException : ConvException
 {
-    this(string s)
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
     {
-        super("Error: overflow " ~ s);
-    }
-    // @@@BUG@@@ Issue 3269
-    // pure
-    static void raise(string s)
-    {
-        throw new ConvOverflowException(s);
+        super(s, fn, ln);
     }
 }
 
@@ -475,6 +469,18 @@ unittest
     Int3 i3 = to!Int3(1);
 }
 
+// Bugzilla 6808
+unittest
+{
+    static struct FakeBigInt
+    {
+        this(string s){}
+    }
+
+    string s = "101";
+    auto i3 = to!FakeBigInt(s);
+}
+
 /// ditto
 T toImpl(T, S)(S src)
     if (!isImplicitlyConvertible!(S, T) &&
@@ -550,9 +556,45 @@ non-null and the target is null.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(S : Object) && !is(typeof(value.opCast!T()) : T) &&
-        is(T : Object) && !is(typeof(new T(value))))
+        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
+    static if (is(T == immutable))
+    {
+            // immutable <- immutable
+            enum isModConvertible = is(S == immutable);
+    }
+    else static if (is(T == const))
+    {
+        static if (is(T == shared))
+        {
+            // shared const <- shared
+            // shared const <- shared const
+            // shared const <- immutable
+            enum isModConvertible = is(S == shared) || is(S == immutable);
+        }
+        else
+        {
+            // const <- mutable
+            // const <- immutable
+            enum isModConvertible = !is(S == shared);
+        }
+    }
+    else
+    {
+        static if (is(T == shared))
+        {
+            // shared <- shared mutable
+            enum isModConvertible = is(S == shared) && !is(S == const);
+        }
+        else
+        {
+            // (mutable) <- (mutable)
+            enum isModConvertible = is(Unqual!S == S);
+        }
+    }
+    static assert(isModConvertible, "Bad modifier conversion: "~S.stringof~" to "~T.stringof);
+
     auto result = cast(T) value;
     if (!result && value)
     {
@@ -574,6 +616,74 @@ unittest
     assert(to!B(a2) is a2);
     assert(to!C(a3) is a3);
     assertThrown!ConvException(to!B(a3));
+}
+
+// Unittest for 6288
+version (unittest)
+{
+    private template Identity(T)        { alias              T   Identity; }
+    private template toConst(T)         { alias        const(T)  toConst; }
+    private template toShared(T)        { alias       shared(T)  toShared; }
+    private template toSharedConst(T)   { alias shared(const(T)) toSharedConst; }
+    private template toImmutable(T)     { alias    immutable(T)  toImmutable; }
+    private template AddModifier(int n) if (0 <= n && n < 5)
+    {
+             static if (n == 0) alias Identity       AddModifier;
+        else static if (n == 1) alias toConst        AddModifier;
+        else static if (n == 2) alias toShared       AddModifier;
+        else static if (n == 3) alias toSharedConst  AddModifier;
+        else static if (n == 4) alias toImmutable    AddModifier;
+    }
+}
+unittest
+{
+    interface I {}
+    interface J {}
+
+    class A {}
+    class B : A {}
+    class C : B, I, J {}
+    class D : I {}
+
+    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    {
+        alias AddModifier!m1 srcmod;
+        alias AddModifier!m2 tgtmod;
+        //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
+        //            isImplicitlyConvertible!(srcmod!Object, tgtmod!Object));
+
+        // Compile time convertible equals to modifier convertible.
+        static if (isImplicitlyConvertible!(srcmod!Object, tgtmod!Object))
+        {
+            // Test runtime conversions: class to class, class to interface,
+            // interface to class, and interface to interface
+
+            // Check that the runtime conversion to succeed
+            srcmod!A ac = new srcmod!C();
+            srcmod!I ic = new srcmod!C();
+            assert(to!(tgtmod!C)(ac) !is null); // A(c) to C
+            assert(to!(tgtmod!I)(ac) !is null); // A(c) to I
+            assert(to!(tgtmod!C)(ic) !is null); // I(c) to C
+            assert(to!(tgtmod!J)(ic) !is null); // I(c) to J
+
+            // Check that the runtime conversion fails
+            srcmod!A ab = new srcmod!B();
+            srcmod!I id = new srcmod!D();
+            assertThrown(to!(tgtmod!C)(ab));    // A(b) to C
+            assertThrown(to!(tgtmod!I)(ab));    // A(b) to I
+            assertThrown(to!(tgtmod!C)(id));    // I(d) to C
+            assertThrown(to!(tgtmod!J)(id));    // I(d) to J
+        }
+        else
+        {
+            // Check that the conversion is rejected statically
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!A.init))));   // A to C
+            static assert(!is(typeof(to!(tgtmod!I)(srcmod!A.init))));   // A to I
+            static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
+            static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
+        }
+    }
 }
 
 /**
@@ -1218,6 +1328,8 @@ T toImpl(T, S)(S value)
     if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
         isSomeString!T)
 {
+    import core.stdc.stdio;// : sprintf;
+
     /// $(D float) to all string types.
     static if (is(Unqual!S == float))
     {
@@ -1338,13 +1450,13 @@ T toImpl(T, S)(S value)
             immutable good = value >= tSmallest;
         }
         if (!good)
-            ConvOverflowException.raise("Conversion negative overflow");
+            throw new ConvOverflowException("Conversion negative overflow");
     }
     static if (S.max > T.max)
     {
         // possible overflow
         if (value > T.max)
-            ConvOverflowException.raise("Conversion positive overflow");
+            throw new ConvOverflowException("Conversion positive overflow");
     }
     return cast(T) value;
 }
@@ -1625,7 +1737,7 @@ $(UL
 */
 T toImpl(T, S)(S value)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T)
+        !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
 {
     alias ElementEncodingType!S[] SV;
     static if (is(SV == S))
@@ -1804,7 +1916,7 @@ Target parse(Target, Source)(ref Source s)
     }
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s);
     assert(0);
@@ -2043,7 +2155,7 @@ body
     return v;
 
 Loverflow:
-    ConvOverflowException.raise("Overflow in integral conversion");
+    throw new ConvOverflowException("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
     assert(0);
@@ -2165,6 +2277,7 @@ Target parse(Target, Source)(ref Source p)
     case '-':
         sign++;
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'i')
             goto case 'i';
         enforce(!p.empty, bailOut());
@@ -2175,8 +2288,9 @@ Target parse(Target, Source)(ref Source p)
         break;
     case 'i': case 'I':
         p.popFront();
+        enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'n' &&
-                (p.popFront(), std.ascii.toLower(p.front) == 'f') &&
+                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f') &&
                 (p.popFront(), p.empty))
         {
             // 'inf'
@@ -2249,6 +2363,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {       p.popFront();
@@ -2358,6 +2479,13 @@ Target parse(Target, Source)(ref Source p)
                 if (p.empty)
                     break;
                 i = p.front;
+                if (i == '_')
+                {
+                    p.popFront();
+                    if (p.empty)
+                        break;
+                    i = p.front;
+                }
             }
             if (i == '.' && !dot)
             {
@@ -2570,6 +2698,20 @@ unittest
 {
     assert(to!float("inf") == float.infinity);
     assert(to!float("-inf") == -float.infinity);
+}
+
+// Unittest for bug 6160
+unittest
+{
+    assert(1000_000_000e50L == to!real("1000_000_000_e50"));        // 1e59
+    assert(0x1000_000_000_p10 == to!real("0x1000_000_000_p10"));    // 7.03687e+13
+}
+
+// Unittest for bug 6258
+unittest
+{
+    assertThrown!ConvException(to!real("-"));
+    assertThrown!ConvException(to!real("in"));
 }
 
 /**

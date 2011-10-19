@@ -25,7 +25,7 @@ module std.range;
 public import std.array;
 import core.bitop;
 import std.algorithm, std.conv, std.exception,  std.functional,
-    std.random, std.traits, std.typecons, std.typetuple;
+    std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -3946,13 +3946,12 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 if (step > 0)
                 {
                     this.pastLast = pastLast - 1;
-                    this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
                     this.pastLast = pastLast + 1;
-                    this.pastLast += (this.pastLast - current) % step;
                 }
+                this.pastLast -= (this.pastLast - current) % step;
                 this.pastLast += step;
             }
             else
@@ -4169,6 +4168,16 @@ unittest
     assert(equal(r, [0, -1, -2, -3, -4, -5, -6, -7, -8, -9][]));
     rSlice = r[3..9];
     assert(equal(rSlice, [-3, -4, -5, -6, -7, -8]));
+
+    r = iota(0, -6, -3);
+    assert(equal(r, [0, -3][]));
+    rSlice = r[1..2];
+    assert(equal(rSlice, [-3]));
+    
+    r = iota(0, -7, -3);
+    assert(equal(r, [0, -3, -6][]));
+    rSlice = r[1..3];
+    assert(equal(rSlice, [-3, -6]));
 
     r = iota(0, 11, 3);
     assert(equal(r, [0, 3, 6, 9][]));
@@ -5937,6 +5946,8 @@ if (isRandomAccessRange!Range)
         if(!__ctfe)
         debug
         {
+            import std.random;
+
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;

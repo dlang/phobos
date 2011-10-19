@@ -3204,7 +3204,7 @@ unittest
     {
         foreach (Char; TypeTuple!(Ch, const(Ch), immutable(Ch)))
         {
-            foreach (Str; TypeTuple!(Char[], const(Char[]), immutable(Char[])))
+            foreach (Str; TypeTuple!(Char[], const(Char)[], immutable(Char)[]))
             {
                 class  C(Str) { Str val;  alias val this; }
                 struct S(Str) { Str val;  alias val this; }

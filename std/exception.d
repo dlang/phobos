@@ -46,11 +46,6 @@ module std.exception;
 
 import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
 import core.exception, core.stdc.errno;
-version(unittest)
-{
-    import std.datetime;
-    import std.stdio;
-}
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -68,12 +63,14 @@ version(unittest)
 
     Examples:
 --------------------
-assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
-assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
 
-assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
-                            std.datetime.TimeOfDay(12, 0, 60))) ==
-       `assertNotThrown failed: TimeException was thrown.`);
+//Exception is the default.
+assertNotThrown(enforceEx!StringException(true, "Error!"));
+
+assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+           enforceEx!StringException(false, "Error!"))) ==
+       `assertNotThrown failed: StringException was thrown.`);
 --------------------
   +/
 void assertNotThrown(T : Throwable = Exception, E)
@@ -100,12 +97,14 @@ void assertNotThrown(T : Throwable = Exception, E)
 //Verify Examples
 unittest
 {
-    assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
-    assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+    assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
 
-    assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
-                                std.datetime.TimeOfDay(12, 0, 60))) ==
-           `assertNotThrown failed: TimeException was thrown.`);
+    //Exception is the default.
+    assertNotThrown(enforceEx!StringException(true, "Error!"));
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, "Error!"))) ==
+           `assertNotThrown failed: StringException was thrown.`);
 }
 
 unittest
@@ -207,12 +206,14 @@ unittest
 
     Examples:
 --------------------
-assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
-assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+assertThrown!StringException(enforceEx!StringException(false, "Error!"));
 
-assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
-                            std.datetime.TimeOfDay(12, 0, 0))) ==
-       `assertThrown failed: No AssertError was thrown.`);
+//Exception is the default.
+assertThrown(enforceEx!StringException(false, "Error!"));
+
+assert(collectExceptionMsg!AssertError(assertThrown!StringException(
+           enforceEx!StringException(true, "Error!"))) ==
+       `assertThrown failed: No StringException was thrown.`);
 --------------------
   +/
 void assertThrown(T : Throwable = Exception, E)
@@ -243,12 +244,14 @@ void assertThrown(T : Throwable = Exception, E)
 //Verify Examples
 unittest
 {
-    assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
-    assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+    assertThrown!StringException(enforceEx!StringException(false, "Error!"));
 
-    assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
-                                std.datetime.TimeOfDay(12, 0, 0))) ==
-           `assertThrown failed: No AssertError was thrown.`);
+    //Exception is the default.
+    assertThrown(enforceEx!StringException(false, "Error!"));
+
+    assert(collectExceptionMsg!AssertError(assertThrown!StringException(
+               enforceEx!StringException(true, "Error!"))) ==
+           `assertThrown failed: No StringException was thrown.`);
 }
 
 unittest
@@ -349,8 +352,8 @@ auto line = readln(f);
 enforce(line.length, "Expected a non-empty line."));
 --------------------
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy const(char)[] msg = null) @safe
+T enforce(T, string file = __FILE__, size_t line = __LINE__)
+    (T value, lazy const(char)[] msg = null) @safe pure
 {
     if (!value) bailOut(file, line, msg);
     return value;
@@ -359,15 +362,17 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, the given
     delegate is called.
+
+    The whole safety and purity are inferred from $(D Dg)'s safety and purity.
  +/
-T enforce(T, string file = __FILE__, int line = __LINE__)
-(T value, scope void delegate() dg)
+T enforce(T, Dg : void delegate(), string file = __FILE__, size_t line = __LINE__)
+    (T value, scope Dg dg)
 {
     if (!value) dg();
     return value;
 }
 
-private void bailOut(string file, int line, in char[] msg) @safe
+private void bailOut(string file, size_t line, in char[] msg) @safe pure
 {
     throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
 }
@@ -389,6 +394,42 @@ unittest
     }
 }
 
+// purity and safety inference test
+unittest
+{
+    import std.typetuple;
+
+    foreach (EncloseSafe; TypeTuple!(false, true))
+    foreach (EnclosePure; TypeTuple!(false, true))
+    {
+        foreach (BodySafe; TypeTuple!(false, true))
+        foreach (BodyPure; TypeTuple!(false, true))
+        {
+            enum code =
+                "delegate void() " ~
+                (EncloseSafe ? "@safe " : "") ~
+                (EnclosePure ? "pure " : "") ~
+                "{ ""enforce(true, { "
+                        "int n; " ~
+                        (BodySafe ? "" : "auto p = &n + 10; "    ) ~    // unsafe code
+                        (BodyPure ? "" : "static int g; g = 10; ") ~    // impure code
+                    "}); "
+                "}";
+            enum expect =
+                (BodySafe || !EncloseSafe) && (!EnclosePure || BodyPure);
+
+            version(none)
+            pragma(msg, "safe = ", EncloseSafe?1:0, "/", BodySafe?1:0, ", ",
+                        "pure = ", EnclosePure?1:0, "/", BodyPure?1:0, ", ",
+                        "expect = ", expect?"OK":"NG", ", ",
+                        "code = ", code);
+
+            static assert(__traits(compiles, mixin(code)()) == expect);
+        }
+    }
+}
+
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise, $(D ex) is thrown.
 
@@ -399,7 +440,7 @@ auto line = readln(f);
 enforce(line.length, new IOException); // expect a non-empty line
 --------------------
  +/
-T enforce(T)(T value, lazy Throwable ex) @safe
+T enforce(T)(T value, lazy Throwable ex) @safe pure
 {
     if (!value) throw ex();
     return value;
@@ -423,8 +464,8 @@ auto line = readln(f);
 enforce(line.length); // expect a non-empty line
 --------------------
  +/
-T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null) @safe
+T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
+    (T value, lazy string msg = null) @safe pure
 {
     if (!value) throw new ErrnoException(msg, file, line);
     return value;
@@ -442,8 +483,8 @@ T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
-    if(is(typeof(new E(msg, file, line))))
+T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    if (is(typeof(new E(msg, file, line))))
 {
     if (!value) throw new E(msg, file, line);
     return value;
@@ -457,8 +498,8 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-T enforceEx(E, T)(T value, lazy string msg = "")
-    if(is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
+T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
+    if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
 {
     import std.metastrings;
 
@@ -809,13 +850,13 @@ unittest
     shared S3 sh3;
     shared sh3sub = sh3.a[];
     assert(pointsTo(sh3sub, sh3));
-    
+
     int[] darr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(darr, darr[i]));
     assert(pointsTo(darr[0..3], darr[2]));
     assert(!pointsTo(darr[0..3], darr[3]));
-    
+
     int[4] sarr = [1, 2, 3, 4];
     foreach(i; 0 .. 4)
         assert(pointsTo(sarr, sarr[i]));
@@ -829,7 +870,7 @@ unittest
 class ErrnoException : Exception
 {
     uint errno;                 // operating system error code
-    this(string msg, string file = null, uint line = 0)
+    this(string msg, string file = null, size_t line = 0)
     {
         errno = getErrno;
         version (linux)
