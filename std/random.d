@@ -1318,7 +1318,7 @@ foreach (e; randomSample(n, 5))
 }
 ----
  */
-struct RandomSample(R, Random)
+struct RandomSample(R, Random = void)
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1342,7 +1342,7 @@ Constructor.
             this(input, howMany, input.length);
         }
 
-    private this(R input, size_t howMany, size_t total)
+    this(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
@@ -1478,3 +1478,4 @@ unittest
     }
     assert(i == 5);
 }
+
