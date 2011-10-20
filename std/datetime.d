@@ -27597,7 +27597,7 @@ public:
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-              Database)
+              Database)<br>
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
       +/
@@ -27706,9 +27706,9 @@ public:
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-              Database)
+              Database)<br>
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
-              Time Zones)
+              Time Zones)<br>
             $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
                   Windows <-> TZ Database Name Conversion Table)
 
@@ -28131,7 +28131,7 @@ public:
 
             See_Also:
                 $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-                  Database)
+                  Database)<br>
                 $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
           +/
@@ -29137,15 +29137,11 @@ private:
 
 /++
     Represents a time zone from a TZ Database time zone file. Files from the TZ
-    database are how Posix systems hold their time zone information.
-    Unfortunately, Windows does not use the TZ Database.
-        To use the TZ database, use
-        $(LREF PosixTimeZone) (which reads its information from the TZ Database
-        files on disk) on Windows by providing the TZ Database files
-        ( $(WEB ftp://elsie.nci.nih.gov/pub/,
-            Repository with the TZ Database files (tzdata)) )
-        and telling $(D PosixTimeZone.getTimeZone) where the directory
-        holding them is.
+    Database are how Posix systems hold their time zone information.
+    Unfortunately, Windows does not use the TZ Database. To use the TZ Database,
+    use $(LREF PosixTimeZone) (which reads its information from the TZ Database
+    files on disk) on Windows by providing the TZ Database files and telling
+    $(D PosixTimeZone.getTimeZone) where the directory holding them is.
 
     To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
     (which allows specifying the location the time zone files) or call
@@ -29163,7 +29159,8 @@ private:
         in the file).
 
     See_Also:
-        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+        $(WEB www.iana.org/time-zones, Home of the TZ Database files)<br>
+        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)<br>
         $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time
           Zones)
   +/
@@ -29319,7 +29316,7 @@ public:
 
         See_Also:
             $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-              Database)
+              Database)<br>
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
 
@@ -29978,14 +29975,10 @@ version(StdDdoc)
         $(BLUE This class is Windows-Only.)
 
         Represents a time zone from the Windows registry. Unfortunately, Windows
-        does not use the TZ Database.
-        To use the TZ database, use
+        does not use the TZ Database. To use the TZ Database, use
         $(LREF PosixTimeZone) (which reads its information from the TZ Database
-        files on disk) on Windows by providing the TZ Database files
-        ( $(WEB ftp://elsie.nci.nih.gov/pub/,
-            Repository with the TZ Database files (tzdata)) )
-        and telling $(D PosixTimeZone.getTimeZone) where the directory
-        holding them is.
+        files on disk) on Windows by providing the TZ Database files and telling
+        $(D PosixTimeZone.getTimeZone) where the directory holding them is.
 
         The TZ Database files and Windows' time zone information frequently
         do not match. Windows has many errors with regards to when DST switches
@@ -30003,6 +29996,9 @@ version(StdDdoc)
         $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
         (which will give a $(LREF PosixTimeZone) on Posix systems and a
          $(D WindowsTimeZone) on Windows systems).
+
+        See_Also:
+            $(WEB www.iana.org/time-zones, Home of the TZ Database files)
       +/
     final class WindowsTimeZone : TimeZone
     {
@@ -30060,7 +30056,7 @@ version(StdDdoc)
 
             See_Also:
                 $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-                  Database)
+                  Database)<br>
                 $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
 
@@ -30443,10 +30439,10 @@ version(StdDdoc)
         $(BLUE This function is Posix-Only.)
 
         Sets the local time zone on Posix systems with the TZ
-        database name by setting the TZ environment variable.
+        Database name by setting the TZ environment variable.
 
         Unfortunately, there is no way to do it on Windows using the TZ
-        database name, so this function only exists on Posix systems.
+        Database name, so this function only exists on Posix systems.
       +/
     void setTZEnvVar(string tzDatabaseName);
 
@@ -32455,7 +32451,7 @@ unittest
     hnsecs.
 
     See_Also:
-        splitUnitsFromHNSecs()
+        $(LREF splitUnitsFromHNSecs)
 
     Params:
         units  = The units to split out.
@@ -32497,7 +32493,7 @@ unittest
     just the remaining hnsecs.
 
     See_Also:
-        splitUnitsFromHNSecs()
+        $(LREF splitUnitsFromHNSecs)
 
     Params:
         units  = The units to split out.
