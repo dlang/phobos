@@ -662,7 +662,7 @@ public:
                 singledigit = true;
             }
         }
-        // Now if (singledigit), x = (x0 ^^ y) * (2^^(evenbits + firstnonzero*y*BigDigitBits))
+        // Now if (singledigit), x^^y  = (x0 ^^ y) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
 
         uint evenshiftbits = 0; // Total powers of 2 to shift by, at the end
 
@@ -683,30 +683,44 @@ public:
                 result = 1UL;
                 return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
             }
-            else
-            {
-                int p = highestPowerBelowUintMax(x0);
-                if (y <= p)
-                {   // Just do it with pow
-                    result = cast(ulong)intpow(x0, y);
-                    if (evenbits + firstnonzero == 0)
-                        return result;
-                    return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
-                }
-                y0 = y / p;
-                finalMultiplier = intpow(x0, y - y0*p);
-                x0 = intpow(x0, p);
-                // Result is x0
+            int p = highestPowerBelowUintMax(x0);
+            if (y <= p)
+            {   // Just do it with pow
+                result = cast(ulong)intpow(x0, y);
+                if (evenbits + firstnonzero == 0)
+                    return result;
+                return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
             }
+            y0 = y / p;
+            finalMultiplier = intpow(x0, y - y0*p);
+            x0 = intpow(x0, p);
+            // Result is x0
             nonzerolength = 1;
         }
+        // Now if (singledigit), x^^y  = finalMultiplier * (x0 ^^ y0) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
 
-        // Check for overflow and allocate result buffer
-        // Single digit case: +1 is for final multiplier, + 1 is for spare evenbits.
+        // Perform a crude check for overflow and allocate result buffer.
+        // The length required is y * lg2(x) bits.
+        // which will always fit into y*x.length digits. But this is
+        // a gross overestimate if x is small (length 1 or 2) and the highest
+        // digit is nearly empty.
+        // A better estimate is:
+        //   y * lg2(x[$-1]/BigDigit.max) + y * (x.length - 1) digits,
+        //  and the first term is always between
+        //  y * (bsr(x.data[$-1]) + 1) / BIGDIGITBITS and
+        //  y * (bsr(x.data[$-1]) + 2) / BIGDIGITBITS
+        // For single digit payloads, we already have
+        //   x^^y  = finalMultiplier * (x0 ^^ y0) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
+        // and x0 is almost a full digit, so it's a tight estimate.
+        // Number of digits is therefore 1 + x0.length*y0 + (evenbits*y)/BIGDIGIT + firstnonzero*y
+        // Note that the divisions must be rounded up.
+
+        // Estimated length in BigDigits
         ulong estimatelength = singledigit
-            ? firstnonzero*y + y0 * 1 + 2 + ((evenbits*y) >> LG2BIGDIGITBITS)
-            : x.data.length * y; // estimated length in BigDigits
-        // (Estimated length can overestimate by a factor of 2, if x.data.length ~ 2).
+            ? 1 + y0 + ((evenbits*y  + BigDigit.sizeof * 8 - 1) / (BigDigit.sizeof *8)) + firstnonzero*y
+            :  x.data.length * y;
+        // Imprecise check for overflow. Makes the extreme cases easier to debug
+        // (less extreme overflow will result in an out of memory error).
         if (estimatelength > uint.max/(4*BigDigit.sizeof))
             assert(0, "Overflow in BigInt.pow");
 
@@ -752,8 +766,8 @@ public:
 
             while(y!=0)
             {
-                // For each bit of y: Set r1 =  r2 * r2
-                // If the bit is 1, set r1 = r2 * x
+                // For each bit of y: Set r1 =  r1 * r1
+                // If the bit is 1, set r1 = r1 * x
                 // Eg, if y is 0b101, result = ((x^^2)^^2)*x == x^^5.
                 // Optimization opportunity: if more than 2 bits in y are set,
                 // it's usually possible to reduce the number of multiplies
