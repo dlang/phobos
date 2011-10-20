@@ -344,7 +344,10 @@ if (isNarrowString!A && isMutable!A && !isStaticArray!A)
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ typeof(a[0]).stringof);
-    a = a[std.utf.stride(a, 0) .. $];
+    if (a[0] < 0x80)
+        a = a[1 .. $];
+    else
+        a = a[std.utf.stride(a, 0) .. $];
 }
 
 unittest
@@ -464,8 +467,13 @@ dchar front(A)(A a) if (isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~
                      typeof(a[0]).stringof);
-    size_t i = 0;
-    return decode(a, i);
+    if (a[0] < 0x80)
+        return cast(dchar)a[0];
+    else
+    {
+        size_t i;
+        return decode(a, i);
+    }
 }
 
 unittest
