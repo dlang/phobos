@@ -2847,20 +2847,40 @@ unittest
     {
         auto b = true;
         formatReflectTest(b, "%s",  `true`);
+        formatReflectTest(b, "%b",  `1`);
+        formatReflectTest(b, "%o",  `1`);
         formatReflectTest(b, "%d",  `1`);
+        formatReflectTest(b, "%u",  `1`);
+        formatReflectTest(b, "%x",  `1`);
     }
 
     {
         auto n = 127;
         formatReflectTest(n, "%s",  `127`);
+        formatReflectTest(n, "%b",  `1111111`);
+        formatReflectTest(n, "%o",  `177`);
         formatReflectTest(n, "%d",  `127`);
+        formatReflectTest(n, "%u",  `127`);
         formatReflectTest(n, "%x",  `7f`);
+    }
+
+    {
+        auto f = 3.14;
+        formatReflectTest(f, "%s",  `3.14`);
+        formatReflectTest(f, "%e",  `3.140000e+00`);
+        formatReflectTest(f, "%f",  `3.140000`);
+        formatReflectTest(f, "%g",  `3.14`);
     }
 
     {
         auto c = 'a';
         formatReflectTest(c, "%s",  `a`);
         formatReflectTest(c, "%c",  `a`);
+        formatReflectTest(c, "%b",  `1100001`);
+        formatReflectTest(c, "%o",  `141`);
+        formatReflectTest(c, "%d",  `97`);
+        formatReflectTest(c, "%u",  `97`);
+        formatReflectTest(c, "%x",  `61`);
     }
 
     {
@@ -2913,9 +2933,10 @@ private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 private template acceptedSpecs(T)
 {
-    static if (isIntegral!T) enum acceptedSpecs = "sdu";// + "coxX" (todo)
-    else static if (isFloatingPoint!T) enum acceptedSpecs = "seEfgG";
-    else enum acceptedSpecs = "";
+         static if (isIntegral!T)       enum acceptedSpecs = "bdosuxX";
+    else static if (isFloatingPoint!T)  enum acceptedSpecs = "seEfgG";
+    else static if (isSomeChar!T)       enum acceptedSpecs = "bcdosuxX";    // integral + 'c'
+    else                                enum acceptedSpecs = "";
 }
 
 /**
@@ -2924,17 +2945,14 @@ private template acceptedSpecs(T)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && is(Unqual!T == bool))
 {
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong integral type specifier: `", spec.spec, "'"));
     if (spec.spec == 's')
     {
         return parse!T(input);
     }
-    else if (spec.spec == 'd')
-    {
-        return parse!long(input) != 0;
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(std.algorithm.find(acceptedSpecs!long, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return unformatValue!long(input, spec) != 0;
 }
 
 unittest
@@ -2982,17 +3000,18 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isIntegral!T)
 {
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong integral type specifier: `", spec.spec, "'"));
-    if (std.algorithm.find("dsu", spec.spec).length)
-    {
-        return parse!T(input);
-    }
-    else if (std.algorithm.find("xX", spec.spec).length)
-    {
-        return parse!T(input, 16);
-    }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    enforce(spec.width == 0);   // TODO
+
+    uint base =
+        spec.spec == 'x' || spec.spec == 'X' ? 16 :
+        spec.spec == 'o' ? 8 :
+        spec.spec == 'b' ? 2 :
+        spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
+    assert(base != 0);
+    return parse!T(input, base);
 }
 
 /**
@@ -3029,8 +3048,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         return x.typed;
     }
     enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
-            text("Format specifier `%", spec.spec,
-                    "' not accepted for floating point types"));
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
     return parse!T(input);
 }
 
@@ -3077,15 +3096,23 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isSomeChar!T)
 {
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
-            text("Wrong character type specifier: `", spec.spec, "'"));
-    if (std.algorithm.find("sc", spec.spec).length)
+    if (spec.spec == 's' || spec.spec == 'c')
     {
         auto result = to!T(input.front);
         input.popFront();
         return result;
     }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    static if (T.sizeof == 1)
+        return unformatValue!ubyte(input, spec);
+    else static if (T.sizeof == 2)
+        return unformatValue!ushort(input, spec);
+    else static if (T.sizeof == 4)
+        return unformatValue!uint(input, spec);
+    else
+        static assert(0);
 }
 
 unittest
@@ -3106,32 +3133,30 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isSomeString!T)
 {
-    if (spec.spec == 's')
-    {
-        auto app = appender!T();
-        if (spec.trailing.empty)
-        {
-            for (; !input.empty; input.popFront())
-            {
-                app.put(input.front);
-            }
-        }
-        else
-        {
-            for (; !input.empty && input.front != spec.trailing.front;
-                 input.popFront())
-            {
-                app.put(input.front);
-            }
-        }
-        auto result = app.data;
-        return result;
-    }
-    else if (spec.spec == '(')
+    if (spec.spec == '(')
     {
         return unformatRange!T(input, spec);
     }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    auto app = appender!T();
+    if (spec.trailing.empty)
+    {
+        for (; !input.empty; input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    else
+    {
+        auto end = spec.trailing.front;
+        for (; !input.empty && input.front != end; input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    return app.data;
 }
 
 unittest
@@ -3166,15 +3191,14 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isArray!T && !isSomeString!T)
 {
-    if (spec.spec == 's')
-    {
-        return parse!T(input);
-    }
-    else if (spec.spec == '(')
+    if (spec.spec == '(')
     {
         return unformatRange!T(input, spec);
     }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
 }
 
 unittest
@@ -3250,15 +3274,14 @@ unittest
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isAssociativeArray!T)
 {
-    if (spec.spec == 's')
-    {
-        return parse!T(input);
-    }
-    else if (spec.spec == '(')
+    if (spec.spec == '(')
     {
         return unformatRange!T(input, spec);
     }
-    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
 }
 
 unittest
