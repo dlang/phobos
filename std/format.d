@@ -2824,6 +2824,75 @@ unittest
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
+version(unittest)
+void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
+{
+    auto w = appender!string();
+    formattedWrite(w, fmt, val);
+
+    auto input = w.data;
+    enforceEx!AssertError(
+            input == formatted,
+            input, fn, ln);
+
+    T val2;
+    formattedRead(input, fmt, &val2);
+    enforceEx!AssertError(
+            val == val2,
+            input, fn, ln);
+}
+
+unittest
+{
+    {
+        auto b = true;
+        formatReflectTest(b, "%s",  `true`);
+        formatReflectTest(b, "%d",  `1`);
+    }
+
+    {
+        auto n = 127;
+        formatReflectTest(n, "%s",  `127`);
+        formatReflectTest(n, "%d",  `127`);
+        formatReflectTest(n, "%x",  `7f`);
+    }
+
+    {
+        auto c = 'a';
+        formatReflectTest(c, "%s",  `a`);
+        formatReflectTest(c, "%c",  `a`);
+    }
+
+    {
+        auto s = "hello";
+        formatReflectTest(s, "%s",                      `hello`);
+        formatReflectTest(s, "%(%c,%)",                 `h,e,l,l,o`);
+        formatReflectTest(s, "%(%s,%)",                 `'h','e','l','l','o'`);
+        formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
+    }
+
+    {
+        auto a = [1,2,3,4];
+        formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
+        formatReflectTest(a, "[%(%s; %)]",              `[1; 2; 3; 4]`);
+        formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    {
+        int[4] sa = [1,2,3,4];
+        formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
+        formatReflectTest(sa, "[%(%s; %)]",             `[1; 2; 3; 4]`);
+        formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
+    }
+
+    {
+        auto aa = [1:"hello", 2:"world"];
+        formatReflectTest(aa, "%s",                     `[1:"hello", 2:"world"]`);
+        formatReflectTest(aa, "[%(%s->%s, %)]",         `[1->"hello", 2->"world"]`);
+        formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  `{[1=hello]; [2=world]}`);
+    }
+}
+
 //------------------------------------------------------------------------------
 private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
@@ -2918,6 +2987,10 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (std.algorithm.find("dsu", spec.spec).length)
     {
         return parse!T(input);
+    }
+    else if (std.algorithm.find("xX", spec.spec).length)
+    {
+        return parse!T(input, 16);
     }
     assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
 }
