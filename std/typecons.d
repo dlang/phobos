@@ -3077,6 +3077,41 @@ unittest
 }
 
 /**
+Library typedef.
+ */
+template TypeDef(T)
+{
+    alias .TypeDef!(T, T.init) TypeDef;
+}
+
+/// ditto
+struct TypeDef(T, alias Init)
+{
+    private T _store_payload = Init;
+
+    this(T init)
+    {
+        _store_payload = init;
+    }
+
+    mixin ProxyOf!_store_payload;
+}
+
+unittest
+{
+    TypeDef!int x = 10;
+    static assert(!__traits(compiles, { int y = x; }));
+    static assert(!__traits(compiles, { long z = x; }));
+
+    TypeDef!int y = 10;
+    assert(x == y);
+
+    TypeDef!(float, 1.0) z; // specifies the init
+    assert(z == 1.0);
+}
+
+
+/**
 Allocates a $(D class) object right inside the current scope,
 therefore avoiding the overhead of $(D new). This facility is unsafe;
 it is the responsibility of the user to not escape a reference to the
