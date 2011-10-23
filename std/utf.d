@@ -1342,19 +1342,12 @@ pure wstring toUTF16(in dchar[] s)
 }
 
 /++
-    $(RED Scheduled for deprecation in February 2012.
-          Please use $(LREF toUTFz) instead.)
-
     Encodes string $(D s) into UTF-16 and returns the encoded string.
     $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
-version(StdDdoc) const(wchar)* toUTF16z(in char[] s);
-else const(wchar)* toUTF16z(C)(in C[] s)
-    if(is(Unqual!C == char))
+const(wchar)* toUTF16z(in char[] s)
 {
-    pragma(msg, softDeprec!("2.055", "February 2012", "toUTF16z", "toUTFz"));
-
     wchar[] r;
     size_t slen = s.length;
 
