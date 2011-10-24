@@ -8459,8 +8459,6 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString, tz);
     }
 
@@ -13116,8 +13114,6 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -14735,8 +14731,6 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -17976,8 +17970,6 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -34132,12 +34124,4 @@ template _isPrintable(T...)
     {
         enum _isPrintable = _isPrintable!(T[0]) && _isPrintable!(T[1 .. $]);
     }
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.datetime.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.datetime.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }

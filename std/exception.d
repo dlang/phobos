@@ -501,15 +501,6 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
 T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
     if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
 {
-    import std.metastrings;
-
-    pragma(msg, Format!("Notice: As of Phobos 2.055, the version of enforceEx which " ~
-                        "constructs its exception with new E(msg) instead of " ~
-                        "new E(msg, file, line) has been scheduled for " ~
-                        "deprecation in February 2012. Please update %s's " ~
-                        "constructor so that it can be constructed with " ~
-                        "new %s(msg, file, line).", E.stringof, E.stringof));
-
     if (!value) throw new E(msg);
     return value;
 }

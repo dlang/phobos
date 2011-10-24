@@ -3701,6 +3701,9 @@ unittest
 }
 
 /**
+ *  $(RED Scheduled for deprecation. Please use $(XREF algorithm, countUntil)
+ *        instead.)
+ *
  * Same as $(D countUntil). This symbol has been scheduled for
  * deprecation because it is easily confused with the homonym function
  * in $(D std.string).
@@ -3708,8 +3711,6 @@ unittest
 sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    pragma(msg, "std.algorithm.indexOf has been scheduled for deprecation."
-            " You may want to use std.algorithm.countUntil instead.");
     return countUntil!pred(haystack, needle);
 }
 

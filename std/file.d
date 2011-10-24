@@ -937,10 +937,6 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
                                           out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in November 2011. Please use " ~
-                "the version of getTimes with two arguments instead.");
-
     struct_stat64 statbuf = void;
 
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -3602,7 +3598,6 @@ void main(string[] args)
  +/
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3674,7 +3669,6 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     import std.regexp;
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
@@ -3747,7 +3741,6 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3880,14 +3873,6 @@ version(Windows)
 
         return sysTimeToDTime(sysTime);
     }
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.file.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }
 
 
