@@ -1181,18 +1181,148 @@ void validate(S)(in S str) @safe pure
 }
 
 
+/* =================== Conversion to UTFx ======================= */
+
+/++
+    Converts $(D str) from its character type to the requested character type.
+    A new string is always allocated, even if both the type of $(D str) the
+    return type are identical (including if they're both $(D immutable)).
+  +/
+C1[] toUTF(C1, C2)(const(C2)[] str) @trusted
+    if(isSomeChar!C1 && isSomeChar!C2)
+{
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        validate(str);
+        return cast(C1[])str.dup;
+    }
+    else static if(is(Unqual!C1 == dchar))
+    {
+        immutable len = str.length;
+        auto retval = new Unqual!C1[](len);
+
+        static if(is(Unqual!C2 == wchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        size_t j = 0;
+        for(size_t i = 0; i < len; ++j)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                retval[j] = c;
+                ++i;
+            }
+            else
+                retval[j] = decode(str, i);
+        }
+        retval.length = j;
+        assumeSafeAppend(retval);
+
+        return cast(C1[]) retval;
+    }
+    else
+    {
+        immutable len = str.length;
+        auto retval = new Unqual!C1[](len);
+        retval.length = 0;
+        assumeSafeAppend(retval);
+
+        static if(is(Unqual!C1 == wchar) && is(Unqual!C2 == dchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                ++i;
+                retval ~= cast(Unqual!C1)c;
+            }
+            else
+            {
+                static if(is(Unqual!C2 == char) || is(Unqual!C2 == wchar))
+                    encode(retval, decode(str, i));
+                else if(is(Unqual!C2 == dchar))
+                {
+                    encode(retval, c);
+                    ++i;
+                }
+            }
+        }
+
+        return cast(C1[]) retval;
+    }
+}
+
+unittest
+{
+    import std.algorithm;
+    import std.typetuple;
+
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        //We're doing this instead of to!S, because std.conv.to uses toUTF, and
+        //we don't want to use toUTF to test itself.
+        static if(is(immutable Unqual!(ElementEncodingType!S) == ElementEncodingType!S))
+            enum dup = ".idup";
+        else
+            enum dup = ".dup";
+
+        static if(is(Unqual!(ElementEncodingType!S) == char))
+            enum suffix = "" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+            enum suffix = "w" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == dchar))
+            enum suffix = "d" ~ dup;
+
+        S str1 = mixin(`"hello world"` ~ suffix);
+
+        S str2 = mixin(`"\U00068d0c\u0039\u04a0\ubfde\u0c50\u02c6\u0534\U000a92b4\u0051` ~
+                        `\u0074\uf0a4\u002c\U000afd07\u4153\u060c\U0008a651"` ~ suffix);
+
+        S str3 = mixin(`"\u0021\U00071e2f\ufecc\U0008b0bd\u0023\u0495\U000c1010\u000a` ~
+                        `\u011a\u5311\u7513\u024f\u01af\U000c11fa\u0070\u9163"` ~ suffix);
+
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            auto result1 = toUTF!C(str1);
+            auto result2 = toUTF!(const C)(str2);
+            auto result3 = toUTF!(immutable C)(str3);
+
+            assert(equal(str1, result1));
+            assert(equal(str2, result2));
+            assert(equal(str3, result3));
+        }
+    }
+}
+
+
 /* =================== Conversion to UTF8 ======================= */
 
 @trusted
 {
 
-char[] toUTF8(out char[4] buf, dchar c)
+//This does the same thing as std.utf.encode, so it's being deprecated, and
+//since it was never documented, it's being deprecated directly without being
+//scheduled for deprecation.
+deprecated char[] toUTF8()(out char[4] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
 }
 body
 {
+    pragma(msg, hardDeprec!("2.056", "April 2012", "toUTF8", "encode"));
+
     if (c <= 0x7F)
     {
         buf[0] = cast(char)c;
@@ -1225,17 +1355,28 @@ body
 
 
 /*******************
+ *  $(RED Scheduled for deprecation in April 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
  */
-string toUTF8(in char[] s)
+version(StdDdoc) string toUTF8(in char[] s);
+else string toUTF8(C)(in C[] s)
+    if(is(Unqual!C == char))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
+
     validate(s);
     return s.idup;
 }
 
 /// ditto
-string toUTF8(in wchar[] s)
+version(StdDdoc) string toUTF8(in wchar[] s);
+else string toUTF8(C)(in C[] s)
+    if(is(Unqual!C == wchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
+
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -1260,8 +1401,13 @@ string toUTF8(in wchar[] s)
 }
 
 /// ditto
-pure string toUTF8(in dchar[] s)
+/// ditto
+version(StdDdoc) pure string toUTF8(in dchar[] s);
+else pure string toUTF8(C)(in C[] s)
+    if(is(Unqual!C == dchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
+
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -1290,7 +1436,10 @@ pure string toUTF8(in dchar[] s)
 
 /* =================== Conversion to UTF16 ======================= */
 
-pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
+//This does the same thing as std.utf.encode, so it's being deprecated, and
+//since it was never documented, it's being deprecated directly without being
+//scheduled for deprecation.
+deprecated pure wchar[] toUTF16()(ref wchar[2] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -1311,10 +1460,17 @@ body
 }
 
 /****************
+ *  $(RED Scheduled for deprecation in April 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(in char[] s)
+version(StdDdoc) wstring toUTF16(in char[] s);
+else wstring toUTF16(C)(in C[] s)
+    if(is(Unqual!C == char))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
+
     wchar[] r;
     size_t slen = s.length;
 
@@ -1339,15 +1495,23 @@ wstring toUTF16(in char[] s)
 }
 
 /// ditto
-wstring toUTF16(in wchar[] s)
+version(StdDdoc) wstring toUTF16(in wchar[] s);
+else wstring toUTF16(C)(in C[] s)
+    if(is(Unqual!C == wchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
+
     validate(s);
     return s.idup;
 }
 
 /// ditto
-pure wstring toUTF16(in dchar[] s)
+version(StdDdoc) pure wstring toUTF16(in dchar[] s);
+else pure wstring toUTF16(C)(in C[] s)
+    if(is(Unqual!C == dchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
+
     wchar[] r;
     size_t slen = s.length;
 
@@ -1396,10 +1560,17 @@ const(wchar)* toUTF16z(in char[] s)
 /* =================== Conversion to UTF32 ======================= */
 
 /*****
+ *  $(RED ScheduLed for deprecation in April 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(in char[] s)
+version(StdDdoc) dstring toUTF32(in char[] s);
+else dstring toUTF32(C)(in C[] s)
+    if(is(Unqual!C == char))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
+
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -1419,8 +1590,12 @@ dstring toUTF32(in char[] s)
 }
 
 /// ditto
-dstring toUTF32(in wchar[] s)
+version(StdDdoc) dstring toUTF32(in wchar[] s);
+else dstring toUTF32(C)(in C[] s)
+    if(is(Unqual!C == wchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
+
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -1440,8 +1615,12 @@ dstring toUTF32(in wchar[] s)
 }
 
 /// ditto
-dstring toUTF32(in dchar[] s)
+version(StdDdoc) dstring toUTF32(in dchar[] s);
+else dstring toUTF32(C)(in C[] s)
+    if(is(Unqual!C == dchar))
 {
+    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
+
     validate(s);
     return s.idup;
 }
@@ -1766,4 +1945,12 @@ unittest
     assert(count("a") == 1);
     assert(count("abc") == 3);
     assert(count("\u20AC100") == 4);
+}
+
+
+template hardDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum hardDeprec = Format!("Notice: As of Phobos %s, std.utf.%s has been deprecated. " ~
+                              "It will be removed in %s. Please use std.utf.%s instead.",
+                              vers, oldFunc, date, newFunc);
 }
