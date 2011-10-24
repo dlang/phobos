@@ -351,8 +351,9 @@ unittest
 }
 
 /**
-$(RED Scheduled for deprecation in January 2012. Please use
-      method $(D opCast) instead.)
+$(RED Scheduled for deprecation in January 2012. Please define $(D opCast)
+      for user-defined types instead of a $(D to) function.
+      $(LREF to) will now use $(D opCast).)
 
 Object-_to-non-object conversions look for a method "to" of the source
 object.
@@ -379,10 +380,6 @@ unittest
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
         && is(typeof(S.init.to!T()) : T))
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
-                "\"to\" has been scheduled for deprecation in January 2012. " ~
-                "Please use method opCast instead.");
-
     return value.to!T();
 }
 

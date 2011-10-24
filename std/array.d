@@ -923,23 +923,20 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Use $(XREF array, insertInPlace) instead.)
+    $(RED Scheduled for deprecation in November 2011.
+          Please use $(LREF insertInPlace) instead.)
 
     Same as $(XREF array, insertInPlace).
   +/
 void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
-    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
-                "Use insertInPlace instead.");
     insertInPlace(array, pos, stuff);
 }
 
 /// Ditto
 void insert(T)(ref T[] array, size_t pos, T stuff)
 {
-    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
-                "Use insertInPlace instead.");
     insertInPlace(array, pos, stuff);
 }
 
@@ -1747,16 +1744,14 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Use $(XREF array, replaceInPlace) instead.)
+    $(RED Scheduled for deprecation in November 2011.
+          Please use $(LREF replaceInPlace) instead.)
 
     Same as $(XREF array, replaceInPlace).
   +/
 void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
-    pragma(msg, "std.array.replace(T, Range)(ref T[] array, size_t from, " ~
-                "size_t to, Range stuff) has been scheduled for deprecation. " ~
-                "Use replaceInPlace instead.");
     replaceInPlace(array, from, to, stuff);
 }
 
