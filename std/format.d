@@ -1035,8 +1035,8 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         fs.spec == 'b' ? 2 :
         fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
         0;
-    if (base == 0)
-        throw new FormatException("integral");
+    enforce(base > 0,
+            new FormatException("integral"));
 
     bool negative = (base == 10 && arg < 0);
     if (negative)
@@ -1175,9 +1175,8 @@ if (isFloatingPoint!D)
         }
         return;
     }
-    if (std.string.indexOf("fgFGaAeEs", fs.spec) < 0) {
-        throw new FormatException("floating");
-    }
+    enforce(std.string.indexOf("fgFGaAeEs", fs.spec) >= 0,
+            new FormatException("floating"));
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] = void;
@@ -1201,8 +1200,8 @@ if (isFloatingPoint!D)
             // negative precision is same as no precision specified
             fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
             obj);
-    if (n < 0)
-        throw new FormatException("floating point formatting failure");
+    enforce(n >= 0,
+            new FormatException("floating point formatting failure"));
     put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
