@@ -1128,7 +1128,7 @@ Example:
 ----
 auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
 auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
-auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
+auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
                            // and 2 10% of the time
 ----
 */
