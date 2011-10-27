@@ -1572,7 +1572,7 @@ unittest
     }
 
     // CTFE
-    // Fails due to BUG 6390
+    // Fails due to BUG 6416
     //static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 }
 
@@ -1890,7 +1890,7 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assertThrown(relativePath("/foo", "bar"));
 
-        //BUG: std.algorithm.cmp is not CTFEable
+        // TODO: pathSplitter() is not CTFEable
         //static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
     }
     else version (Windows)
@@ -1905,7 +1905,7 @@ unittest
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
 
-        //BUG: 6390
+        // TODO: pathSplitter() is not CTFEable
         //static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
     }
     else static assert (0);
