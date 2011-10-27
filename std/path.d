@@ -266,7 +266,7 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    //TODO: @safe pure nothrow (because of to())
+    @safe pure nothrow
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -288,7 +288,7 @@ inout(C)[] baseName(C)(inout(C)[] path)
 /// ditto
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
-    //TODO: @safe pure nothrow (because of the other baseName())
+    @safe pure //TODO: nothrow (because of filenameCmp())
     if (isSomeChar!C && isSomeChar!C1)
 {
     auto p = baseName(path);
@@ -376,7 +376,7 @@ unittest
     (with suitable adaptations for Windows paths).
 */
 C[] dirName(C)(C[] path)
-    //TODO: @safe pure nothrow (because of to())
+    //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
     enum currentDir = cast(C[]) ".";
@@ -531,7 +531,7 @@ unittest
     }
     ---
 */
-inout(C)[] driveName(C)(inout(C)[] path)  @safe pure //TODO: nothrow (because of stripLeft())
+inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     version (Windows)
@@ -839,7 +839,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @trusted // (BUG 4850) pure (BUG 5700) nothrow
+    @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
@@ -2021,7 +2021,7 @@ unittest
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
     (const(C1)[] filename1, const(C2)[] filename2)
-    @safe //TODO: pure nothrow (because of std.array.front())
+    @safe pure //TODO: nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     for (;;)
@@ -2126,7 +2126,7 @@ unittest
  */
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
     (const(C)[] path, const(C)[] pattern)
-    @safe nothrow //TODO: pure (because of balancedParens())
+    @safe pure nothrow
     if (isSomeChar!C)
 in
 {
