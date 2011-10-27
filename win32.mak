@@ -953,42 +953,42 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\windows\lib
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
-	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos
-	$(CP) $(SRC) $(DIR)\src\phobos
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
-	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
-	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows
-	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(DOCS) $(DIR)\html\d\phobos
+	$(CP) phobos.lib $(DIR)\windows\lib\
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\
+	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\
+	$(CP) $(SRC) $(DIR)\src\phobos\
+	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\
+	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\
+	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\
+	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\
+	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\
+	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux\
+	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\
+	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\
+	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\
+	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\
+	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\
+	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\
+	$(CP) $(DOCS) $(DIR)\html\d\phobos\
 
 svn:
 	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\
 	$(CP) $(SRC) $(SVN)\
-	$(CP) $(SRC_STD) $(SVN)\std
-	$(CP) $(SRC_STD_NET) $(SVN)\std\net
-	$(CP) $(SRC_STD_C) $(SVN)\std\c
-	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd
-	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows
-	#$(CP) $(SRC_ETC) $(SVN)\etc
-	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
-	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
+	$(CP) $(SRC_STD) $(SVN)\std\
+	$(CP) $(SRC_STD_NET) $(SVN)\std\net\
+	$(CP) $(SRC_STD_C) $(SVN)\std\c\
+	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows\
+	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows\
+	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux\
+	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\
+	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\
+	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\
+	#$(CP) $(SRC_ETC) $(SVN)\etc\
+	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\
+	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\
 
 
