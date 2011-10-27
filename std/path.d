@@ -174,7 +174,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private C[] ltrimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     int i = 0;
@@ -182,7 +182,7 @@ private C[] ltrimDirSeparators(C)(C[] path)  @safe pure nothrow
     return path[i .. $];
 }
 
-private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     auto i = (cast(sizediff_t) path.length) - 1;
@@ -190,7 +190,7 @@ private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
     return path[0 .. i+1];
 }
 
-private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
@@ -265,7 +265,8 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
+inout(C)[] baseName(C)(inout(C)[] path)
+    //TODO: @safe pure nothrow (because of to())
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -285,8 +286,8 @@ C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
 }
 
 /// ditto
-C[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
-    (C[] path, C1[] suffix)
+inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
+    (inout(C)[] path, in C1[] suffix)
     //TODO: @safe pure nothrow (because of the other baseName())
     if (isSomeChar!C && isSomeChar!C1)
 {
@@ -374,7 +375,8 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
+C[] dirName(C)(C[] path)
+    //TODO: @safe pure nothrow (because of to())
     if (isSomeChar!C)
 {
     enum currentDir = cast(C[]) ".";
@@ -466,7 +468,7 @@ unittest
     }
     ---
 */
-C[] rootName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
@@ -529,7 +531,7 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow (because of stripLeft())
+inout(C)[] driveName(C)(inout(C)[] path)  @safe pure //TODO: nothrow (because of stripLeft())
     if (isSomeChar!C)
 {
     version (Windows)
@@ -574,7 +576,7 @@ unittest
     }
     ---
 */
-C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     version(Windows)
     {
@@ -634,7 +636,7 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-C[] extension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return null;
@@ -695,7 +697,8 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-C[] stripExtension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return path;
