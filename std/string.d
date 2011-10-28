@@ -59,9 +59,9 @@ module std.string;
 //debug=string;                 // uncomment to turn on debugging printf's
 
 import core.exception : onRangeError;
-import core.vararg, core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
-    std.ascii, std.conv, std.exception, std.format, std.functional,
-    std.metastrings, std.range, std.regex, std.stdio, std.traits,
+import core.vararg, core.stdc.stdlib, core.stdc.string,
+    std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
+    std.metastrings, std.range, std.regex, std.traits,
     std.typetuple, std.uni, std.utf;
 
 //Remove when repeat is finally removed. They're only here as part of the
@@ -112,7 +112,7 @@ immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, digits) instead.)
+          Please use $(XREF ascii, _digits) instead.)
 
     0..9
   +/
@@ -128,7 +128,7 @@ immutable char[8]  octdigits = "01234567";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, lowercase) instead.)
+          Please use $(XREF ascii, _lowercase) instead.)
 
     a..z
   +/
@@ -136,7 +136,7 @@ immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, letters) instead.)
+          Please use $(XREF ascii, _letters) instead.)
 
     A..Za..z
   +/
@@ -145,7 +145,7 @@ immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, uppercase) instead.)
+          Please use $(XREF ascii, _uppercase) instead.)
 
     A..Z
   +/
@@ -153,7 +153,7 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, whitespace) instead.)
+          Please use $(XREF ascii, _whitespace) instead.)
 
     ASCII whitespace.
   +/
@@ -177,7 +177,7 @@ enum dchar PS = '\u2029';
 
 /++
     $(RED Scheduled for deprecation in January 2012.
-          Please use $(XREF ascii, newline) instead.)
+          Please use $(XREF ascii, _newline) instead.)
 
     Newline sequence for this system.
   +/
@@ -193,9 +193,6 @@ version(StdDdoc) bool iswhite(dchar c);
 else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "iswhite",
-                            "std.ascii.isWhite or std.uni.isWhite"));
-
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
         : (c == paraSep || c == lineSep);
@@ -881,7 +878,6 @@ unittest
  */
 S tolower(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "tolower", "std.string.toLower"));
     return toLower!S(s);
 }
 
@@ -940,7 +936,6 @@ unittest
  */
 void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "tolowerInPlace", "std.string.toLowerInPlace"));
     toLowerInPlace!C(s);
 }
 
@@ -1056,7 +1051,6 @@ unittest
  */
 S toupper(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "toupper", "std.string.toUpper"));
     return toUpper!S(s);
 }
 
@@ -1115,7 +1109,6 @@ unittest
  */
 void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "toupperInPlace", "std.string.toUpperInPlace"));
     toUpperInPlace!C(s);
 }
 
@@ -1296,9 +1289,6 @@ unittest
  */
 S capwords(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.string.capwords has been " ~
-                "scheduled for deprecation in January 2012.");
-
     return _capWords!S(s);
 }
 
@@ -1359,35 +1349,40 @@ unittest
 
 
 /********************************************
- *  $(RED Scheduled for deprecation in August 2011.
+ * $(RED Deprecated. It will be removed in February 2012.
  *        Please use $(XREF array, replicate) instead.)
  *
  * Repeat $(D s) for $(D n) times.
  */
-S repeat(S)(S s, size_t n)
+deprecated S repeat(S)(S s, size_t n)
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "repeat", "std.array.replicate"));
+    pragma(msg, hardDeprec!("2.055", "February 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
 
 /**************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(LREF, splitLines) instead.)
+ *
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
  * The delimiter is not included in the line.
  */
 S[] splitlines(S)(S s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "splitlines", "std.string.splitLines"));
     return splitLines!S(s);
 }
 
 /++
     Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    The delimiter is not included in the strings returned.
+    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    is included in the strings returned.
   +/
-S[] splitLines(S)(S s)
+enum KeepTerminator : bool { no, yes }
+/// ditto
+S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(isSomeString!S)
 {
     size_t iStart = 0;
@@ -1400,10 +1395,18 @@ S[] splitLines(S)(S s)
 
         if(c == '\r' || c == '\n' || c == lineSep || c == paraSep)
         {
-            retval.put(s[iStart .. i]);
+            immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
+            auto iEnd = i;
+
+            if(keepTerm == KeepTerminator.yes)
+            {
+                iEnd = isWinEOL? nextI + 1 : nextI;
+            }
+
+            retval.put(s[iStart .. iEnd]);
             iStart = nextI;
 
-            if(c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            if(isWinEOL)
             {
                 ++nextI;
                 ++iStart;
@@ -1437,8 +1440,24 @@ unittest
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
 
+        lines = splitLines(s, KeepTerminator.yes);
+        assert(lines.length == 9);
+        assert(lines[0] == "\r");
+        assert(lines[1] == "peter\n");
+        assert(lines[2] == "\r");
+        assert(lines[3] == "paul\r\n");
+        assert(lines[4] == "jerry\u2028");
+        assert(lines[5] == "ice\u2029");
+        assert(lines[6] == "cream\n");
+        assert(lines[7] == "\n");
+        assert(lines[8] == "sunday\n");
+
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
+        assert(lines.length == 9);
+        assert(lines[8] == "sunday");
+
+        lines = splitLines(s, KeepTerminator.yes);
         assert(lines.length == 9);
         assert(lines[8] == "sunday");
     }
@@ -1453,7 +1472,6 @@ unittest
  */
 String stripl(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "stripl", "std.string.stripLeft"));
     return stripLeft!String(s);
 }
 
@@ -1489,7 +1507,6 @@ S stripLeft(S)(S s) @safe pure
  */
 String stripr(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "stripr", "std.string.stripRight"));
     return stripRight!String(s);
 }
 
@@ -1684,7 +1701,6 @@ unittest
  */
 S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "ljustify", "std.string.leftJustify"));
     return leftJustify!S(s, width);
 }
 
@@ -1731,7 +1747,6 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
  */
 S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "rjustify", "std.string.rightJustify"));
     return rightJustify!S(s, width);
 }
 
@@ -1844,26 +1859,23 @@ unittest
  */
 S zfill(S)(S s, int width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "zfill",
-                            "std.string.rightJustify with a fillChar of '0'"));
     return rightJustify!S(s, width, '0');
 }
 
 
 /**********************************************
- * $(RED Scheduled for deprecation in August 2011.
+ * $(RED Deprecated. It will be removed in February 2012.
  *       Please use $(XREF array, insertInPlace) instead.)
  *
  * Insert sub[] into s[] at location index.
  */
-S insert(S)(S s, size_t index, S sub)
+deprecated S insert(S)(S s, size_t index, S sub)
 in
 {
     assert(0 <= index && index <= s.length);
 }
 body
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "insert", "std.array.insertInPlace"));
     std.array.insertInPlace(s, index, sub);
     return s;
 }
@@ -1878,7 +1890,6 @@ body
  */
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "expandtabs", "std.string.detab"));
     return detab!S(str, tabsize);
 }
 
@@ -2112,9 +2123,186 @@ unittest
 }
 
 
+/++
+    Replaces the characters in $(D str) which are keys in $(D transTable) with
+    their corresponding values in $(D transTable). $(D transTable) is an AA
+    where its keys are $(D dchar) and its values are either $(D dchar) or some
+    type of string. Also, if $(D toRemove) is given, the characters in it are
+    removed from $(D str) prior to translation. $(D str) itself is unaltered.
+    A copy with the changes is returned.
+
+    See_Also:
+        $(LREF tr)
+        $(XREF array, replace)
+
+    Params:
+        str        = The original string.
+        transTable = The AA indicating which characters to replace and what to
+                     replace them with.
+        toRemove   = The characters to remove from the string.
+
+        Examples:
+--------------------
+dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+assert(translate("hello world", transTable3) == "h5llorange worangerld");
+--------------------
+  +/
+C1[] translate(C1, C2 = immutable char)(C1[] str,
+                                        dchar[dchar] transTable,
+                                        const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+//Verify Examples.
+unittest
+{
+    dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+    dchar[dchar] transTable2 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable2, "low") == "h5 rd");
+
+    string[dchar] transTable3 = ['e' : "5", 'o' : "orange"];
+    assert(translate("hello world", transTable3) == "h5llorange worangerld");
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
+               to!S("qe55o wor5d"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])['o' : 'l', 'l' : '\U00010143']) ==
+               to!S("he\U00010143\U00010143l wlr\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['h' : 'q', 'l': '5']) ==
+               to!S("qe55o \U00010143 wor5d"));
+        assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['o' : '0', '\U00010143' : 'o']) ==
+               to!S("hell0 o w0rld"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("r")) ==
+                   to!S("qe55o wo5d"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"),
+                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
+                             to!T("q5")) ==
+                   to!S("qe55o wor5d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             cast(dchar[dchar])['o' : '0', '\U00010143' : 'o'],
+                             to!T("\U00010143 ")) ==
+                   to!S("hell0w0rld"));
+        }
+
+        auto s = to!S("hello world");
+        dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
+    }
+}
+
+/++ Ditto +/
+C1[] translate(C1, S, C2 = immutable char)(C1[] str,
+                                           S[dchar] transTable,
+                                           const(C2)[] toRemove = null) @safe
+    if(isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
+{
+    return translateImpl(str, transTable, toRemove);
+}
+
+unittest
+{
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o wor42d"));
+        assert(translate(to!S("hello world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : "yellow", 'l' : "42"]) ==
+               to!S("yellowe4242o \U00010143 wor42d"));
+        assert(translate(to!S("hello \U00010143 world"), ['o' : "owl", 'l' : "\U00010143\U00010143"]) ==
+               to!S("he\U00010143\U00010143\U00010143\U00010143owl \U00010143 wowlr\U00010143\U00010143d"));
+        assert(translate(to!S("hello \U00010143 world"), ['h' : ""]) ==
+               to!S("ello \U00010143 world"));
+        assert(translate(to!S("hello \U00010143 world"), ['\U00010143' : ""]) ==
+               to!S("hello  world"));
+        assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
+
+        foreach(T; TypeTuple!(char[], const(char)[], immutable(char)[],
+                              wchar[], const(wchar)[], immutable(wchar)[],
+                              dchar[], const(dchar)[], immutable(dchar)[]))
+        {
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("r")) ==
+                   to!S("yellowe4242o wo42d"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("helo")) ==
+                   to!S(" wrd"));
+            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("y42")) ==
+                   to!S("yellowe4242o wor42d"));
+            assert(translate(to!S("hello \U00010143 world"),
+                             ['o' : "owl", '\U00010143' : "\n"],
+                             to!T("\U00010143 ")) ==
+                   to!S("hellowlwowlrld"));
+        }
+
+        auto s = to!S("hello world");
+        string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
+        static assert(is(typeof(s) == typeof(translate(s, transTable))));
+    }
+}
+
+private auto translateImpl(C1, T, C2)(C1[] str,
+                                      T transTable,
+                                      const(C2)[] toRemove) @trusted
+{
+    auto retval = appender!(C1[])();
+
+    bool[dchar] removeTable;
+
+    foreach(dchar c; toRemove)
+        removeTable[c] = true;
+
+    foreach(dchar c; str)
+    {
+        if(c in removeTable)
+            continue;
+
+        auto newC = c in transTable;
+
+        if(newC)
+            retval.put(*newC);
+        else
+            retval.put(c);
+    }
+
+    return retval.data;
+}
+
+
+
 /************************************
+ * $(RED Scheduled for deprecation in February 2012.)
+ *
  * Construct translation table for translate().
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
 string maketrans(in char[] from, in char[] to)
@@ -2140,12 +2328,15 @@ body
 }
 
 /******************************************
+ * $(RED Scheduled for deprecation in February 2012.
+ *   Please use the version of $(D translate) which takes an AA instead.)
+ *
  * Translate characters in s[] using table created by maketrans().
  * Delete chars in delchars[].
- * BUG: only works with ASCII
+ * BUGS: only works with ASCII
  */
 
-string translate(in char[] s, in char[] transtab, in char[] delchars)
+string translate()(in char[] s, in char[] transtab, in char[] delchars)
 in
 {
     assert(transtab.length == 256);
@@ -2710,41 +2901,51 @@ unittest
 }
 
 
-/***********************************************
- * Replaces characters in str[] that are in from[]
- * with corresponding characters in to[] and returns the resulting
- * string.
- * Params:
- *  modifiers = a string of modifier characters
- * Modifiers:
-        <table border=1 cellspacing=0 cellpadding=5>
-        <tr> <th>Modifier <th>Description
-        <tr> <td><b>c</b> <td>Complement the list of characters in from[]
-        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
-        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
-        </table>
+/++
+    Replaces the characters in $(D str) which are in $(D from) with the
+    the corresponding characters in $(D to) and returns the resulting string.
 
-    If modifier <b>d</b> is present, then the number of characters
-    in to[] may be only 0 or 1.
+    $(D tr) is based on
+    $(WEB pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
+    though it doesn't do everything that the Posix utility does.
 
-    If modifier <b>d</b> is not present and to[] is null,
-    then to[] is taken _to be the same as from[].
+    Params:
+        str       = The original string.
+        from      = The characters to replace.
+        to        = The characters to replace with.
+        modifiers = String containing modifiers.
 
-    If modifier <b>d</b> is not present and to[] is shorter
-    than from[], then to[] is extended by replicating the
-    last character in to[].
+    Modifiers:
+        $(BOOKTABLE,
+        $(TR $(TD Modifier) $(TD Description))
+        $(TR $(TD $(D 'c')) $(TD Complement the list of characters in $(D from)))
+        $(TR $(TD $(D 'd')) $(TD Removes matching characters with no corresponding
+                              replacement in $(D to)))
+        $(TR $(TD $(D 's')) $(TD Removes adjacent duplicates in the replaced
+                              characters))
+        )
 
-    Both from[] and to[] may contain ranges using the <b>-</b>
-    character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
-    Neither accept a leading <b>^</b> as meaning the complement of
-    the string (use the <b>c</b> modifier for that).
- */
+    If the modifier $(D 'd') is present, then the number of characters in
+    $(D to) may be only $(D 0) or $(D 1).
 
-string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[] modifiers = null)
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is empty, then
+    $(D to) is taken to be the same as $(D from).
+
+    If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
+    $(D from), then $(D to) is extended by replicating the last charcter in
+    $(D to).
+
+    Both $(D from) and $(D to) may contain ranges using the $(D '-') character
+    (e.g. $(D "a-d") is synonymous with $(D "abcd).) Neither accept a leading
+    $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
+    for that).
+  +/
+C1[] tr(C1, C2, C3, C4 = immutable char)
+       (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
 {
-    int mod_c;
-    int mod_d;
-    int mod_s;
+    bool mod_c;
+    bool mod_d;
+    bool mod_s;
 
     foreach (char c; modifiers)
     {
@@ -2757,12 +2958,11 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         }
     }
 
-    if (to is null && !mod_d)
-        to = from;
+    if (to.empty && !mod_d)
+        to = std.conv.to!(typeof(to))(from);
 
-    char[] result = new char[str.length];
-    result.length = 0;
-    int m;
+    auto result = appender!(C1[])();
+    bool modified;
     dchar lastc;
 
     foreach (dchar c; str)
@@ -2775,11 +2975,9 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         for (size_t i = 0; i < from.length; )
         {
             dchar f = std.utf.decode(from, i);
-            //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
                 dchar nextf = std.utf.decode(from, i);
-                //writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -2807,14 +3005,12 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
       Lfound:
 
         // Find the nth character in to[]
-        //writefln("\tc = '%s', n = %d", c, n);
         dchar nextt;
         for (size_t i = 0; i < to.length; )
         {   dchar t = std.utf.decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
                 nextt = std.utf.decode(to, i);
-                //writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
                 n -= nextt - lastt;
                 if (n < 0)
                 {
@@ -2837,60 +3033,61 @@ string tr(const(char)[] str, const(char)[] from, const(char)[] to, const(char)[]
         newc = nextt;
 
       Lnewc:
-        if (mod_s && m && newc == lastc)
+        if (mod_s && modified && newc == lastc)
             continue;
-        std.utf.encode(result, newc);
-        m = 1;
+        result.put(newc);
+        assert(newc != dchar.init);
+        modified = true;
         lastc = newc;
         continue;
 
       Lnotfound:
-        std.utf.encode(result, c);
+        result.put(c);
         lastc = c;
-        m = 0;
+        modified = false;
     }
-    return assumeUnique(result);
+
+    return result.data;
 }
 
 unittest
 {
     debug(string) printf("std.string.tr.unittest\n");
+    import std.algorithm;
 
-    string r;
-    //writefln("r = '%s'", r);
+    // Complete list of test types; too slow to test'em all
+    // alias TypeTuple!(char[], const(char)[], immutable(char)[],
+    //         wchar[], const(wchar)[], immutable(wchar)[],
+    //         dchar[], const(dchar)[], immutable(dchar)[])
+    // TestTypes;
 
-    r = tr("abcdef", "cd", "CD");
-    assert(r == "abCDef");
+    // Reduced list of test types
+    alias TypeTuple!(char[], const(wchar)[], immutable(dchar)[])
+    TestTypes;
 
-    r = tr("abcdef", "b-d", "B-D");
-    assert(r == "aBCDef");
+    foreach(S; TestTypes)
+    {
+        foreach(T; TestTypes)
+        {
+            foreach(U; TestTypes)
+            {
+                assert(equal(tr(to!S("abcdef"), to!T("cd"), to!U("CD")), "abCDef"));
+                assert(equal(tr(to!S("abcdef"), to!T("b-d"), to!U("B-D")), "aBCDef"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-Dx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-CDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdefgh"), to!T("b-dh"), to!U("B-BCDx")), "aBCDefgx"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U("*"), to!S("c")), "****ef"));
+                assert(equal(tr(to!S("abcdef"), to!T("ef"), to!U(""), to!T("d")), "abcd"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U(""), to!U("s")), "helo godbye"));
+                assert(equal(tr(to!S("hello goodbye"), to!T("lo"), to!U("x"), "s"), "hex gxdbye"));
+                assert(equal(tr(to!S("14-Jul-87"), to!T("a-zA-Z"), to!U(" "), "cs"), " Jul "));
+                assert(equal(tr(to!S("Abc"), to!T("AAA"), to!U("XYZ")), "Xbc"));
+            }
+        }
 
-    r = tr("abcdefgh", "b-dh", "B-Dx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-CDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdefgh", "b-dh", "B-BCDx");
-    assert(r == "aBCDefgx");
-
-    r = tr("abcdef", "ef", "*", "c");
-    assert(r == "****ef");
-
-    r = tr("abcdef", "ef", "", "d");
-    assert(r == "abcd");
-
-    r = tr("hello goodbye", "lo", null, "s");
-    assert(r == "helo godbye");
-
-    r = tr("hello goodbye", "lo", "x", "s");
-    assert(r == "hex gxdbye");
-
-    r = tr("14-Jul-87", "a-zA-Z", " ", "cs");
-    assert(r == " Jul ");
-
-    r = tr("Abc", "AAA", "XYZ");
-    assert(r == "Xbc");
+        auto s = to!S("hello world");
+        static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
+    }
 }
 
 
@@ -3620,10 +3817,221 @@ unittest
     assert(wrap("u u") == "u u\n");
 }
 
+/******************************************
+ * Removes indentation from a multi-line string or an array of single-line strings.
+ *
+ * This uniformly outdents the text as much as possible.
+ * Whitespace-only lines are always converted to blank lines.
+ *
+ * A StringException will be thrown if inconsistent indentation prevents
+ * the input from being outdented.
+ * 
+ * Works at compile-time.
+ * 
+ * Example:
+ * ---
+ * writeln(q{
+ *     import std.stdio;
+ *     void main() {
+ *         writeln("Hello");
+ *     }
+ * }.outdent());
+ * ---
+ * 
+ * Output:
+ * ---
+ * 
+ * import std.stdio;
+ * void main() {
+ *     writeln("Hello");
+ * }
+ * 
+ * ---
+ * 
+ */
 
-private template softDeprec(string vers, string date, string oldFunc, string newFunc)
+S outdent(S)(S str) if(isSomeString!S)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.string.%s has been scheduled " ~
-                              "for deprecation in %s. Please use %s instead.",
+    return str.splitLines(KeepTerminator.yes).outdent().join();
+}
+
+/// ditto
+S[] outdent(S)(S[] lines) if(isSomeString!S)
+{
+    if (lines.empty)
+    {
+        return null;
+    }
+
+    static S leadingWhiteOf(S str)
+    {
+        return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
+    }
+
+    S shortestIndent;
+    foreach (i, line; lines)
+    {
+        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
+
+        if (stripped.empty)
+        {
+            lines[i] = line[line.chomp().length..$];
+        }
+        else
+        {
+            auto indent = leadingWhiteOf(line);
+
+            // Comparing number of code units instead of code points is OK here
+            // because this function throws upon inconsistent indentation.
+            if (shortestIndent is null || indent.length < shortestIndent.length)
+            {
+                if (indent.empty) return lines;
+                shortestIndent = indent;
+            }
+        }
+    }
+
+    foreach (i; 0..lines.length)
+    {
+        auto stripped = __ctfe? lines[i].ctfe_strip() : lines[i].strip();
+        if (stripped.empty)
+        {
+            // Do nothing
+        }
+        else if (lines[i].startsWith(shortestIndent))
+        {
+            lines[i] = lines[i][shortestIndent.length..$];
+        }
+        else
+        {
+            if (__ctfe) assert(false, "outdent: Inconsistent indentation");
+            else throw new StringException("outdent: Inconsistent indentation");
+        }
+    }
+
+    return lines;
+}
+
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
+private S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
+{
+    return str.stripLeft().ctfe_stripRight();
+}
+
+// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
+private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
+{
+    size_t endIndex = 0;
+    size_t prevIndex = str.length;
+
+    foreach_reverse (i, dchar ch; str)
+    {
+        if (!std.uni.isWhite(ch))
+        {
+            endIndex = prevIndex;
+            break;
+        }
+        prevIndex = i;
+    }
+
+    return str[0..endIndex];
+}
+
+version(unittest)
+{
+    template outdent_testStr(S)
+    {
+        enum S outdent_testStr =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t ";
+    }
+
+    template outdent_expected(S)
+    {
+        enum S outdent_expected =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+";
+    }
+}
+
+unittest
+{
+    debug(string) printf("string.outdent.unittest\n");
+
+    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
+    static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
+    static assert(ctfe_strip("Hi")         == "Hi");
+    static assert(ctfe_strip(" \t \r\n")   == "");
+    static assert(ctfe_strip("")           == "");
+
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        enum S blank = "";
+        assert(blank.outdent() == blank);
+        static assert(blank.outdent() == blank);
+
+        enum S testStr1  = " \n \t\n ";
+        enum S expected1 = "\n\n";
+        assert(testStr1.outdent() == expected1);
+        static assert(testStr1.outdent() == expected1);
+
+        assert(testStr1[0..$-1].outdent() == expected1);
+        static assert(testStr1[0..$-1].outdent() == expected1);
+
+        enum S testStr2  = "a\n \t\nb";
+        assert(testStr2.outdent() == testStr2);
+        static assert(testStr2.outdent() == testStr2);
+
+        enum S testStr3 =
+"
+ \t\tX
+ \t\U00010143X
+ \t\t
+
+ \t\t\tX
+\t ";
+
+        enum S expected3 =
+"
+\tX
+\U00010143X
+
+
+\t\tX
+";
+        assert(testStr3.outdent() == expected3);
+        static assert(testStr3.outdent() == expected3);
+
+        enum testStr4 = "  X\r  X\n  X\r\n  X\u2028  X\u2029  X";
+        enum expected4 = "X\rX\nX\r\nX\u2028X\u2029X";
+        assert(testStr4.outdent() == expected4);
+        static assert(testStr4.outdent() == expected4);
+
+        enum testStr5  = testStr4[0..$-1];
+        enum expected5 = expected4[0..$-1];
+        assert(testStr5.outdent() == expected5);
+        static assert(testStr5.outdent() == expected5);
+
+        enum testStr6 = "  \r  \n  \r\n  \u2028  \u2029";
+        enum expected6 = "\r\n\r\n\u2028\u2029";
+        assert(testStr6.outdent() == expected6);
+        static assert(testStr6.outdent() == expected6);
+    }
+}
+
+private template hardDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum hardDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been deprecated " ~
+                              "It will be removed in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }

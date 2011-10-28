@@ -24,7 +24,8 @@
  */
 module std.net.isemail;
 
-import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
+import std.algorithm : equal, uniq, filter, contains = canFind;
+import std.range : ElementType;
 import std.array;
 import std.ascii;
 import std.conv;
@@ -102,7 +103,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     auto endOrDie = false;
     auto crlfCount = int.min; // int.min == not defined
 
-    foreach (i, e ; email)
+    foreach (ref i, e ; email)
     {
         token = email.get(i, e);
 
@@ -597,7 +598,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     case Token.cr:
                     case Token.space:
                     case Token.tab:
-                        if (token == Token.cr && (i++ == email.length || email.get(i, e) != Token.lf))
+                        if (token == Token.cr && (++i == email.length || email.get(i, e) != Token.lf))
                         {
                             returnStatus ~= EmailStatusCode.errorCrNoLf;
                             break;
@@ -1127,6 +1128,9 @@ unittest
         ,`No LF after the CR`);
 
     assert("(\u000D)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+        `No LF after the CR`);
+
+    assert("(\u000D".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
     assert("test@iana.org(\u000D)".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,

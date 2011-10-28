@@ -24,8 +24,8 @@ splitter) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF partialSort) $(MYREF
-partition) $(MYREF schwartzSort) $(MYREF sort) $(MYREF topN) $(MYREF
-topNCopy) )
+partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
+$(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF
 largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
@@ -316,7 +316,7 @@ module std.algorithm;
 import std.c.string;
 import std.array, std.ascii, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.stdio, std.uni;
+    std.traits, std.typecons, std.typetuple, std.uni;
 
 version(unittest)
 {
@@ -3599,21 +3599,33 @@ unittest
     assert(equal(r1[1], a[4 .. $]));
 }
 
-/**
-If $(D haystack) supports slicing, returns the smallest number $(D n)
-such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
-returns the smallest $(D n) such that after $(D n) calls to $(D
-haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
-number could be found, return $(D -1).
- */
-sizediff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+/++
+    Returns the number of elements which must be popped from the front of
+    $(D haystack) before reaching an element for which
+    $(D startsWith!pred(haystack, needle)) is $(D true). If
+    $(D startsWith!pred(haystack, needle)) is not $(D true) for any element in
+    $(D haystack), then -1 is returned.
+
+    $(D needle) may be either an element or a range.
+
+    Examples:
+--------------------
+assert(countUntil("hello world", "world") == 6);
+assert(countUntil("hello world", 'r') == 8);
+assert(countUntil("hello world", "programming") == -1);
+assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    static if (isNarrowString!R1)
+    static if (isNarrowString!R)
     {
         // Narrow strings are handled a bit differently
         auto length = haystack.length;
-        for (; !haystack.empty; haystack.popFront)
+        for (; !haystack.empty; haystack.popFront())
         {
             if (startsWith!pred(haystack, needle))
             {
@@ -3632,7 +3644,66 @@ if (is(typeof(startsWith!pred(haystack, needle))))
     return -1;
 }
 
+//Verify Examples.
+unittest
+{
+    assert(countUntil("hello world", "world") == 6);
+    assert(countUntil("hello world", 'r') == 8);
+    assert(countUntil("hello world", "programming") == -1);
+    assert(countUntil([0, 7, 12, 22, 9], [12, 22]) == 2);
+    assert(countUntil([0, 7, 12, 22, 9], 9) == 4);
+    assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
+}
+
+/++
+    Returns the number of elements which must be popped from $(D haystack)
+    before $(D pred(hastack.front)) is $(D true.).
+
+    Examples:
+--------------------
+assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+--------------------
+  +/
+sizediff_t countUntil(alias pred, R)(R haystack)
+if (isForwardRange!R && is(typeof(unaryFun!pred(haystack.front)) == bool))
+{
+    static if (isNarrowString!R)
+    {
+        // Narrow strings are handled a bit differently
+        auto length = haystack.length;
+        for (; !haystack.empty; haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front))
+            {
+                return length - haystack.length;
+            }
+        }
+    }
+    else
+    {
+        typeof(return) result;
+        for (; !haystack.empty; ++result, haystack.popFront())
+        {
+            if (unaryFun!pred(haystack.front)) return result;
+        }
+    }
+    return -1;
+}
+
+//Verify Examples.
+unittest
+{
+    assert(countUntil!(std.uni.isWhite)("hello world") == 5);
+    assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
+    assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
+}
+
 /**
+ *  $(RED Scheduled for deprecation. Please use $(XREF algorithm, countUntil)
+ *        instead.)
+ *
  * Same as $(D countUntil). This symbol has been scheduled for
  * deprecation because it is easily confused with the homonym function
  * in $(D std.string).
@@ -3640,8 +3711,6 @@ if (is(typeof(startsWith!pred(haystack, needle))))
 sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    pragma(msg, "std.algorithm.indexOf has been scheduled for deprecation."
-            " You may want to use std.algorithm.countUntil instead.");
     return countUntil!pred(haystack, needle);
 }
 
@@ -5291,11 +5360,29 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    for (; !source.empty; source.popFront())
+    static if(isArray!Range1 && isArray!Range2 &&
+    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        put(target, source.front);
+        // Array specialization.  This uses optimized memory copying routines
+        // under the hood and is about 10-20x faster than the generic
+        // implementation.
+        enforce(target.length >= source.length,
+            "Cannot copy a source array into a smaller target array.");
+        target[0..source.length] = source;
+
+        return target[source.length..$];
     }
-    return target;
+    else
+    {
+        // Generic implementation.
+        for (; !source.empty; source.popFront())
+        {
+            put(target, source.front);
+        }
+
+        return target;
+    }
+
 }
 
 unittest
@@ -6258,6 +6345,116 @@ unittest
     assert(isPartitioned!("a & 1")(r));
 }
 
+// partition3
+/**
+Rearranges elements in $(D r) in three adjacent ranges and returns
+them. The first and leftmost range only contains elements in $(D r)
+less than $(D pivot). The second and middle range only contains
+elements in $(D r) that are equal to $(D pivot). Finally, the third
+and rightmost range only contains elements in $(D r) that are greater
+than $(D pivot). The less-than test is defined by the binary function
+$(D less).
+
+Example:
+----
+auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+auto pieces = partition3(a, 4);
+assert(a == [ 1, 3, 4, 4, 4, 7, 8 ];
+assert(pieces[0] == [ 1, 3 ]);
+assert(pieces[1] == [ 4, 4, 4 ]);
+assert(pieces[2] == [ 7, 8 ]);
+----
+
+BUGS: stable $(D partition3) has not been implemented yet.
+ */
+auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
+(Range r, E pivot)
+if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
+        && hasSwappableElements!Range && hasLength!Range
+        && is(typeof(binaryFun!less(r.front, pivot)) == bool)
+        && is(typeof(binaryFun!less(pivot, r.front)) == bool)
+        && is(typeof(binaryFun!less(r.front, r.front)) == bool))
+{
+    // The algorithm is described in "Engineering a sort function" by
+    // Jon Bentley et al, pp 1257.
+
+    alias binaryFun!less lessFun;
+    size_t i, j, k = r.length, l = k;
+
+ bigloop:
+    for (;;)
+    {
+        for (;; ++j)
+        {
+            if (j == k) break bigloop;
+            assert(j < r.length);
+            if (lessFun(r[j], pivot)) continue;
+            if (lessFun(pivot, r[j])) break;
+            swap(r[i++], r[j]);
+        }
+        assert(j < k);
+        for (;;)
+        {
+            assert(k > 0);
+            if (!lessFun(pivot, r[--k]))
+            {
+                if (lessFun(r[k], pivot)) break;
+                swap(r[k], r[--l]);
+            }
+            if (j == k) break bigloop;
+        }
+        // Here we know r[j] > pivot && r[k] < pivot
+        swap(r[j++], r[k]);
+    }
+
+    // Swap the equal ranges from the extremes into the middle
+    auto strictlyLess = j - i, strictlyGreater = l - k;
+    auto swapLen = min(i, strictlyLess);
+    swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
+    swapLen = min(r.length - l, strictlyGreater);
+    swapRanges(r[k .. k + swapLen], r[r.length - swapLen .. r.length]);
+    return tuple(r[0 .. strictlyLess],
+            r[strictlyLess .. r.length - strictlyGreater],
+            r[r.length - strictlyGreater .. r.length]);
+}
+
+unittest
+{
+    auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+    auto pieces = partition3(a, 4);
+    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
+    assert(pieces[0] == [ 1, 3 ]);
+    assert(pieces[1] == [ 4, 4, 4 ]);
+    assert(pieces[2] == [ 8, 7 ]);
+
+    a = null;
+    pieces = partition3(a, 4);
+    assert(a.empty);
+    assert(pieces[0].empty);
+    assert(pieces[1].empty);
+    assert(pieces[2].empty);
+
+    a.length = uniform(0, 100);
+    foreach (ref e; a)
+    {
+        e = uniform(0, 50);
+    }
+    pieces = partition3(a, 25);
+    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+    foreach (e; pieces[0])
+    {
+        assert(e < 25);
+    }
+    foreach (e; pieces[1])
+    {
+        assert(e == 25);
+    }
+    foreach (e; pieces[2])
+    {
+        assert(e > 25);
+    }
+}
+
 // topN
 /**
 Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
@@ -6523,6 +6720,92 @@ unittest
     auto b = rndstuff!(string);
     sort!("toLower(a) < toLower(b)")(b);
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
+}
+
+private template validPredicates(E, less...) {
+    static if (less.length == 0)
+        enum validPredicates = true;
+    else static if (less.length == 1 && is(typeof(less[0]) == SwapStrategy))
+        enum validPredicates = true;
+    else
+        enum validPredicates =
+            is(typeof(binaryFun!(less[0])(E.init, E.init)) == bool) &&
+            validPredicates!(E, less[1 .. $]);
+}
+
+/**
+Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
+"a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
+and sorts elements that have the same $(D id) by $(D date)
+descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
+< b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
+does fewer comparisons (in addition to being more convenient).
+
+Example:
+----
+static struct Point { int x, y; }
+auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+assert(pts1 == pts2);
+----
+ */
+template multiSort(less...) //if (less.length > 1)
+{
+    void multiSort(Range)(Range r)
+    if (validPredicates!(ElementType!Range, less))
+    {
+        static if (is(typeof(less[$ - 1]) == SwapStrategy))
+        {
+            enum ss = less[$ - 1];
+            alias less[0 .. $ - 1] funs;
+        }
+        else
+        {
+            alias SwapStrategy.unstable ss;
+            alias less funs;
+        }
+        alias binaryFun!(funs[0]) lessFun;
+
+        static if (funs.length > 1)
+        {
+            while (r.length > 1)
+            {
+                auto p = getPivot!lessFun(r);
+                auto t = partition3!(less[0], ss)(r, r[p]);
+                if (t[0].length <= t[2].length)
+                {
+                    .multiSort!less(t[0]);
+                    .multiSort!(less[1 .. $])(t[1]);
+                    r = t[2];
+                }
+                else
+                {
+                    .multiSort!(less[1 .. $])(t[1]);
+                    .multiSort!less(t[2]);
+                    r = t[0];
+                }
+            }
+        }
+        else
+        {
+            sort!(lessFun, ss)(r);
+        }
+    }
+}
+
+unittest
+{
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
+    auto pts2 = [ Point(0, 1), Point(1, 0), Point(1, 1), Point(1, 2), Point(5, 6), Point(5, 7) ];
+    static assert(validPredicates!(Point, "a.x < b.x", "a.y < b.y"));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+
+    auto pts3 = indexed(pts1, iota(pts1.length));
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts3);
+    assert(equal(pts3, pts2));
 }
 
 // @@@BUG1904
@@ -6993,19 +7276,30 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && isRandomAccessRange!(RangeIndex)
-            && isIntegral!(ElementType!(RangeIndex)))
+    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
+        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
+        isIntegral!(ElementType!(RangeIndex)))
 {
-    // assume collection already ordered
-    size_t i;
-    auto r1 = r;
-    for (; !r1.empty; r1.popFront, ++i)
-        index[i] = i;
-    enforce(index.length == i);
+    alias Unqual!(ElementType!RangeIndex) I;
+    enforce(r.length == index.length,
+        "r and index must be same length for makeIndex.");
+    static if(I.sizeof < size_t.sizeof)
+    {
+        enforce(r.length <= I.max, "Cannot create an index with " ~
+            "element type " ~ I.stringof ~ " with length " ~ 
+            to!string(r.length) ~ "."
+        );
+    }
+    
+    for(I i = 0; i < r.length; ++i) 
+    {
+        index[cast(size_t) i] = i;
+    }
+    
     // sort the index
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
-        return binaryFun!(less)(r[a], r[b]);
+        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
     }
     sort!(indirectLess, ss)(index);
 }
@@ -7027,18 +7321,19 @@ unittest
     assert(isSorted!("*a < *b")(index1));
 
     // index using offsets
-    auto index2 = new size_t[arr.length];
+    auto index2 = new long[arr.length];
     makeIndex(arr, index2);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr[a] < arr[b];})
-            (index2));
+            ((long a, long b){
+                return arr[cast(size_t) a] < arr[cast(size_t) b];
+            })(index2));
 
     // index strings using offsets
     string[] arr1 = ["I", "have", "no", "chocolate"];
-    auto index3 = new size_t[arr1.length];
+    auto index3 = new byte[arr1.length];
     makeIndex(arr1, index3);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr1[a] < arr1[b];})
+            ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
 }
 

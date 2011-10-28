@@ -58,9 +58,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
-import std.algorithm, std.c.time, std.conv, std.datetime, std.exception,
-       std.math, std.numeric, std.process, std.range, std.stdio, std.traits,
-       core.thread;
+import std.algorithm, std.c.time, std.conv, std.exception,
+       std.math, std.numeric, std.range, std.traits,
+       core.thread, core.time;
 
 version(unittest) import std.typetuple;
 
@@ -820,11 +820,11 @@ uint unpredictableSeed()
     static MinstdRand0 rand;
     if (!seeded) {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid + threadID) ^ cast(uint) Clock.currSystemTick().length);
+        rand.seed((getpid + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
         seeded = true;
     }
     rand.popFront;
-    return cast(uint) (Clock.currSystemTick().length ^ rand.front);
+    return cast(uint) (TickDuration.currSystemTick().length ^ rand.front);
 }
 
 unittest
@@ -1128,7 +1128,7 @@ Example:
 ----
 auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
 auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
-auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
+auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
                            // and 2 10% of the time
 ----
 */
@@ -1318,12 +1318,20 @@ foreach (e; randomSample(n, 5))
 }
 ----
  */
-struct RandomSample(R)
+struct RandomSample(R, Random = void)
 {
     private size_t _available, _toSelect;
     private R _input;
     private size_t _index;
-    private enum bool byRef = is(typeof(&(R.init.front())));
+
+    // If we're using the default thread-local random number generator then
+    // we shouldn't store a copy of it here.  Random == void is a sentinel
+    // for this.  If we're using a user-specified generator then we have no 
+    // choice but to store a copy.
+    static if(!is(Random == void))
+    {
+        Random gen;
+    }
 
 /**
 Constructor.
@@ -1334,7 +1342,6 @@ Constructor.
             this(input, howMany, input.length);
         }
 
-/// Ditto
     this(R input, size_t howMany, size_t total)
     {
         _input = input;
@@ -1354,12 +1361,11 @@ Constructor.
         return _toSelect == 0;
     }
 
-    mixin((byRef ? "ref " : "")~
-            q{ElementType!R front()
-                {
-                    assert(!empty);
-                    return _input.front;
-                }});
+    auto ref front()
+    {
+        assert(!empty);
+        return _input.front;
+    }
 
 /// Ditto
     void popFront()
@@ -1399,7 +1405,15 @@ Returns the index of the visited record.
         assert(_available && _available >= _toSelect);
         for (;;)
         {
-            auto r = uniform(0, _available);
+            static if(is(Random == void))
+            {
+                auto r = uniform(0, _available);
+            } 
+            else
+            {
+                auto r = uniform(0, _available, gen);
+            }
+            
             if (r < _toSelect)
             {
                 // chosen!
@@ -1416,24 +1430,46 @@ Returns the index of the visited record.
 }
 
 /// Ditto
-RandomSample!R randomSample(R)(R r, size_t n, size_t total)
+auto randomSample(R)(R r, size_t n, size_t total)
+if(isInputRange!R)
 {
-    return typeof(return)(r, n, total);
+    RandomSample!(R, void)(r, n, total);
 }
 
 /// Ditto
-RandomSample!R randomSample(R)(R r, size_t n) //if (hasLength!R) // @@@BUG@@@
+auto randomSample(R)(R r, size_t n) if (hasLength!R) 
 {
-    return typeof(return)(r, n, r.length);
+    return RandomSample!(R, void)(r, n, r.length);
+}
+
+/// Ditto
+auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
+if(isInputRange!R && isInputRange!Random)
+{
+    auto ret = RandomSample!(R, Random)(r, n, total);
+    ret.gen = gen;
+    return ret;
+}
+
+/// Ditto
+auto randomSample(R, Random)(R r, size_t n, Random gen) 
+if (isInputRange!R && hasLength!R && isInputRange!Random) 
+{
+    auto ret = RandomSample!(R, Random)(r, n, r.length);
+    ret.gen = gen;
+    return ret;
 }
 
 unittest
 {
+    Random gen;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     static assert(isForwardRange!(typeof(randomSample(a, 5))));
+    static assert(isForwardRange!(typeof(randomSample(a, 5, gen))));
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
+    assert(randomSample(a, 5, gen).length == 5);
     uint i;
     foreach (e; randomSample(randomCover(a, rndGen), 5))
     {
@@ -1443,139 +1479,3 @@ unittest
     assert(i == 5);
 }
 
-//__EOF__
-/* ===================== Random ========================= */
-
-// seed and index are deliberately thread local
-
-private uint seed;              // starting seed
-private uint index;             // ith random number
-
-/**
-The random number generator is seeded at program startup with a random
-value.  This ensures that each program generates a different sequence
-of random numbers. To generate a repeatable sequence, use $(D
-rand_seed()) to start the sequence. seed and index start it, and each
-successive value increments index.  This means that the $(I n)th
-random number of the sequence can be directly generated by passing
-index + $(I n) to $(D rand_seed()).
-
-Note: This is more random, but slower, than C's $(D rand()) function.
-To use C's $(D rand()) instead, import $(D std.c.stdlib).
-
-BUGS: Shares a global single state, not multithreaded.  SCHEDULED FOR
-DEPRECATION.
-
-*/
-
-void rand_seed(uint seed, uint index)
-{
-    .seed = seed;
-    .index = index;
-}
-
-/**
-Get the popFront random number in sequence.
-BUGS: Shares a global single state, not multithreaded.
-SCHEDULED FOR DEPRECATION.
-*/
-
-deprecated uint rand()
-{
-    static uint xormix1[20] =
-    [
-                0xbaa96887, 0x1e17d32c, 0x03bcdc3c, 0x0f33d1b2,
-                0x76a6491d, 0xc570d85d, 0xe382b1e3, 0x78db4362,
-                0x7439a9d4, 0x9cea8ac5, 0x89537c5c, 0x2588f55d,
-                0x415b5e1d, 0x216e3d95, 0x85c662e7, 0x5e8ab368,
-                0x3ea5cc8c, 0xd26a0f74, 0xf3a9222b, 0x48aad7e4
-    ];
-
-    static uint xormix2[20] =
-    [
-                0x4b0f3b58, 0xe874f0c3, 0x6955c5a6, 0x55a7ca46,
-                0x4d9a9d86, 0xfe28a195, 0xb1ca7865, 0x6b235751,
-                0x9a997a61, 0xaa6e95c8, 0xaaa98ee1, 0x5af9154c,
-                0xfc8e2263, 0x390f5e8c, 0x58ffd802, 0xac0a5eba,
-                0xac4874f6, 0xa9df0913, 0x86be4c74, 0xed2c123b
-    ];
-
-    uint hiword, loword, hihold, temp, itmpl, itmph, i;
-
-    loword = seed;
-    hiword = index++;
-    for (i = 0; i < 4; i++)             // loop limit can be 2..20, we choose 4
-    {
-        hihold  = hiword;                           // save hiword for later
-        temp    = hihold ^  xormix1[i];             // mix up bits of hiword
-        itmpl   = temp   &  0xffff;                 // decompose to hi & lo
-        itmph   = temp   >> 16;                     // 16-bit words
-        temp    = itmpl * itmpl + ~(itmph * itmph); // do a multiplicative mix
-        temp    = (temp >> 16) | (temp << 16);      // swap hi and lo halves
-        hiword  = loword ^ ((temp ^ xormix2[i]) + itmpl * itmph); //loword mix
-        loword  = hihold;                           // old hiword is loword
-    }
-    return hiword;
-}
-
-// disabling because it's commented out anyways, and this causes a cyclic
-// dependency with std.encoding.
-version(none)
-{
-shared static this()
-{
-    ulong s;
-
-    version(Win32)
-    {
-        QueryPerformanceCounter(&s);
-    }
-    version(Posix)
-    {
-        // time.h
-        // sys/time.h
-
-        timeval tv;
-        if (gettimeofday(&tv, null))
-        {   // Some error happened - try time() instead
-            s = core.sys.posix.sys.time.time(null);
-        }
-        else
-        {
-            s = cast(ulong)((cast(long)tv.tv_sec << 32) + tv.tv_usec);
-        }
-    }
-    //rand_seed(cast(uint) s, cast(uint)(s >> 32));
-}
-}
-
-deprecated
-unittest
-{
-    static uint results[10] =
-    [
-        0x8c0188cb,
-        0xb161200c,
-        0xfc904ac5,
-        0x2702e049,
-        0x9705a923,
-        0x1c139d89,
-        0x346b6d1f,
-        0xf8c33e32,
-        0xdb9fef76,
-        0xa97fcb3f
-    ];
-    int i;
-    uint seedsave = seed;
-    uint indexsave = index;
-
-    rand_seed(1234, 5678);
-    for (i = 0; i < 10; i++)
-    {   uint r = rand();
-        //printf("0x%x,\n", rand());
-        assert(r == results[i]);
-    }
-
-    seed = seedsave;
-    index = indexsave;
-}

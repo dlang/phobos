@@ -1076,7 +1076,7 @@ int uncompress(ubyte* dest,
 */
 
 
-typedef void* gzFile;
+alias void* gzFile;
 alias int z_off_t;              // file offset
 
 gzFile gzopen(char* path, char* mode);

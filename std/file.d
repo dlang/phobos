@@ -60,7 +60,7 @@ version (unittest)
         if(_first)
         {
             version(Windows)
-                _deleteme = std.path.join(std.process.getenv("TEMP"), _deleteme);
+                _deleteme = buildPath(std.process.getenv("TEMP"), _deleteme);
             else version(Posix)
                 _deleteme = "/tmp/" ~ _deleteme;
 
@@ -75,7 +75,11 @@ version (unittest)
 
 // @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
 // {{{
-version (Posix)
+version (Windows)
+{
+    enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+}
+else version (Posix)
 {
     version (OSX)
     {
@@ -389,7 +393,7 @@ validation will fail.
 
 Returns: Array of characters read.
 
-Throws: $(D FileException) on file error, $(D UtfException) on UTF
+Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
 
 Example:
@@ -446,7 +450,7 @@ void write(in char[] name, const void[] buffer)
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) == 1
                 && buffer.length == numwritten,
                 name);
     }
@@ -488,7 +492,7 @@ void append(in char[] name, in void[] buffer)
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
         cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) == 1
                 && buffer.length == numwritten,
                 name);
     }
@@ -609,23 +613,23 @@ unittest
 }
 
 /*************************
- * $(RED Scheduled for deprecation in August 2011. Please use either the version
- *       of $(D getTimes) which takes two arguments or $(D getTimesWin)
+ * $(RED Deprecated. It will be removed in February 2012. Please use either the
+ *       version of $(D getTimes) which takes two arguments or $(D getTimesWin)
  *       (Windows-Only) instead.)
  */
-version(StdDdoc) void getTimes(in char[] name,
-                               out d_time ftc,
-                               out d_time fta,
-                               out d_time ftm);
-else version(Windows) void getTimes(C)(in C[] name,
-                                       out d_time ftc,
-                                       out d_time fta,
-                                       out d_time ftm) if(is(Unqual!C == char))
+version(StdDdoc) deprecated void getTimes(in char[] name,
+                                          out d_time ftc,
+                                          out d_time fta,
+                                          out d_time ftm);
+else version(Windows) deprecated void getTimes(C)(in C[] name,
+                                                  out d_time ftc,
+                                                  out d_time fta,
+                                                  out d_time ftm) if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "either the version of getTimes with two arguments or " ~
-                "getTimesWin (Windows-Only) instead.");
+    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
+                "with 3 arguments has been deprecated. It will be removed in " ~
+                "February 2012. Please use either the version of getTimes with " ~
+                "two arguments or getTimesWin (Windows-Only) instead.");
 
     HANDLE findhndl = void;
 
@@ -654,15 +658,15 @@ else version(Windows) void getTimes(C)(in C[] name,
     }
     FindClose(findhndl);
 }
-else version(Posix) void getTimes(C)(in C[] name,
-                                     out d_time ftc,
-                                     out d_time fta,
-                                     out d_time ftm) if(is(Unqual!C == char))
+else version(Posix) deprecated void getTimes(C)(in C[] name,
+                                                out d_time ftc,
+                                                out d_time fta,
+                                                out d_time ftm) if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.052, std.file.getTimes with 3 arguments has been " ~
-                "scheduled for deprecation in August 2011. Please use " ~
-                "either the version of getTimes with two arguments or " ~
-                "getTimesWin (Windows-Only) instead.");
+    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
+                "with 3 arguments has been deprecated. It will be removed in " ~
+                "February 2012. Please use either the version of getTimes with " ~
+                "two arguments or getTimesWin (Windows-Only) instead.");
 
     struct_stat64 statbuf = void;
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -741,17 +745,19 @@ unittest
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(4);
+    enum leeway = dur!"seconds"(2);
 
     {
         auto diffa = accessTime1 - currTime;
         auto diffm = modificationTime1 - currTime;
+        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime1, modificationTime1, currTime, diffa, diffm);
 
         assert(abs(diffa) <= leeway);
         assert(abs(diffm) <= leeway);
     }
 
-    Thread.sleep(dur!"seconds"(1));
+    enum sleepTime = dur!"seconds"(2);
+    Thread.sleep(sleepTime);
 
     currTime = Clock.currTime();
     write(deleteme, "b");
@@ -764,8 +770,10 @@ unittest
     {
         auto diffa = accessTime2 - currTime;
         auto diffm = modificationTime2 - currTime;
+        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
 
-        assert(abs(diffa) <= leeway);
+        //There is no guarantee that the access time will be updated.
+        assert(abs(diffa) <= leeway + sleepTime);
         assert(abs(diffm) <= leeway);
     }
 
@@ -842,19 +850,24 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(4);
+    enum leeway = dur!"seconds"(3);
 
     {
         auto diffc = creationTime1 - currTime;
         auto diffa = accessTime1 - currTime;
         auto diffm = modificationTime1 - currTime;
+        scope(failure)
+        {
+            writefln("[%s] [%s] [%s] [%s] [%s] [%s] [%s]",
+                     creationTime1, accessTime1, modificationTime1, currTime, diffc, diffa, diffm);
+        }
 
         assert(abs(diffc) <= leeway);
         assert(abs(diffa) <= leeway);
         assert(abs(diffm) <= leeway);
     }
 
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
 
     currTime = Clock.currTime();
     write(deleteme, "b");
@@ -868,12 +881,17 @@ version(Windows) unittest
     {
         auto diffa = accessTime2 - currTime;
         auto diffm = modificationTime2 - currTime;
+        scope(failure)
+        {
+            writefln("[%s] [%s] [%s] [%s] [%s]",
+                     accessTime2, modificationTime2, currTime, diffa, diffm);
+        }
 
         assert(abs(diffa) <= leeway);
         assert(abs(diffm) <= leeway);
     }
 
-    assert(creationTime1 <= creationTime2);
+    assert(creationTime1 == creationTime2);
     assert(accessTime1 <= accessTime2);
     assert(modificationTime1 <= modificationTime2);
 }
@@ -919,10 +937,6 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
                                           out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in November 2011. Please use " ~
-                "the version of getTimes with two arguments instead.");
-
     struct_stat64 statbuf = void;
 
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -934,14 +948,14 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
 
 
 /++
- $(RED Scheduled for deprecation in August 2011. Please use
+ $(RED Deprecated. It will be removed in February 2012. Please use
        $(D timeLastModified) instead.)
  +/
-version(StdDdoc) d_time lastModified(in char[] name);
-else d_time lastModified(C)(in C[] name)
+version(StdDdoc) deprecated d_time lastModified(in char[] name);
+else deprecated d_time lastModified(C)(in C[] name)
     if(is(Unqual!C == char))
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -959,14 +973,14 @@ else d_time lastModified(C)(in C[] name)
 
 
 /++
-    $(RED Scheduled for deprecation in August 2011.
-          Please use $(D timeLastModified) instead.)
-+/
-version(StdDdoc) d_time lastModified(in char[] name, d_time returnIfMissing);
-else d_time lastModified(C)(in C[] name, d_time returnIfMissing)
+ $(RED Deprecated. It will be removed in February 2012. Please use
+       $(D timeLastModified) instead.)
+ +/
+version(StdDdoc) deprecated d_time lastModified(in char[] name, d_time returnIfMissing);
+else deprecated d_time lastModified(C)(in C[] name, d_time returnIfMissing)
     if(is(Unqual!C == char))
 {
-    pragma(msg, softDeprec!("2.052", "August 2011", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -1247,10 +1261,10 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in August 2011.
-          Please use $(D isDir) instead.)
+ $(RED Deprecated. It will be removed in February 2012. Please use
+       $(D isDir) instead.)
  +/
-alias isDir isdir;
+deprecated alias isDir isdir;
 
 
 /++
@@ -1388,10 +1402,10 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in August 2011.
-          Please use $(D isFile) instead.)
+ $(RED Deprecated. It will be removed in February 2012. Please use
+       $(D isDir) instead.)
  +/
-alias isFile isfile;
+deprecated alias isFile isfile;
 
 
 /++
@@ -1497,8 +1511,8 @@ unittest
 /++
     Returns whether the given file is a symbolic link.
 
-    Always return false on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         name = The path to the file.
@@ -1509,7 +1523,7 @@ unittest
 @property bool isSymlink(C)(const(C)[] name)
 {
     version(Windows)
-        return false;
+        return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
@@ -1520,6 +1534,9 @@ unittest
     {
         if("C:\\Program Files\\".exists)
             assert(!"C:\\Program Files\\".isSymlink);
+
+        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+            assert("C:\\Documents and Settings\\".isSymlink);
 
         enum fakeSymFile = "C:\\Windows\\system.ini";
         if(fakeSymFile.exists)
@@ -1589,8 +1606,8 @@ unittest
 
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return $(D false) on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         attributes = The file attributes.
@@ -1598,7 +1615,7 @@ unittest
 @property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
-        return false;
+        return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (attributes & S_IFMT) == S_IFLNK;
 }
@@ -1607,8 +1624,8 @@ unittest
 /++
     Returns whether the given file attributes are for a symbolic link.
 
-    Always return $(D false) on Windows. It exists on Windows so that you don't
-    have to special-case code for Windows when dealing with symbolic links.
+    On Windows, return $(D true) when the file is either a symbolic link or a
+    junction point.
 
     Params:
         attributes = The file attributes.
@@ -1624,7 +1641,7 @@ assert(getLinkAttributes("/tmp/alink").isSymlink);
 bool attrIsSymlink(uint attributes) nothrow
 {
     version(Windows)
-        return false;
+        return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
     else version(Posix)
         return (attributes & S_IFMT) == S_IFLNK;
 }
@@ -1677,7 +1694,7 @@ void mkdir(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
-    const left = dirname(pathname);
+    const left = dirName(pathname);
     if (!exists(left))
     {
         version (Windows)
@@ -1689,7 +1706,7 @@ void mkdirRecurse(in char[] pathname)
         }
         mkdirRecurse(left);
     }
-    if (!basename(pathname).empty)
+    if (!baseName(pathname).empty)
     {
         mkdir(pathname);
     }
@@ -1859,7 +1876,7 @@ version(Windows) string getcwd()
     if (useWfuncs)
     {
         auto buffW = cast(wchar[]) staticBuff;
-        immutable n = cenforce(GetCurrentDirectoryW(buffW.length, buffW.ptr),
+        immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
                 "getcwd");
         // we can do it because toUTFX always produces a fresh string
         if(n < buffW.length)
@@ -1878,7 +1895,7 @@ version(Windows) string getcwd()
     else
     {
         auto buffA = cast(char[]) staticBuff;
-        immutable n = cenforce(GetCurrentDirectoryA(buffA.length, buffA.ptr),
+        immutable n = cenforce(GetCurrentDirectoryA(to!DWORD(buffA.length), buffA.ptr),
                 "getcwd");
         // fromMBSz doesn't always produce a fresh string
         if(n < buffA.length)
@@ -1959,10 +1976,10 @@ assert(de2.isDir);
         @property bool isDir();
 
         /++
-            $(RED Scheduled for deprecation in August 2011.
-                  Please use $(D isDir) instead.)
-          +/
-        alias isDir isdir;
+         $(RED Deprecated. It will be removed in February 2012. Please use
+               $(D isDir) instead.)
+         +/
+        deprecated alias isDir isdir;
 
 
         /++
@@ -1991,17 +2008,17 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-            $(RED Scheduled for deprecation in August 2011.
-                  Please use $(D isFile) instead.)
-          +/
-        alias isFile isfile;
+         $(RED Deprecated. It will be removed in February 2012. Please use
+               $(D isFile) instead.)
+         +/
+        deprecated alias isFile isfile;
 
         /++
             Returns whether the file represented by this $(D DirEntry) is a
             symbolic link.
 
-            Always return false on Windows. It exists on Windows so that you don't
-            have to special-case code for Windows when dealing with symbolic links.
+            On Windows, return $(D true) when the file is either a symbolic
+            link or a junction point.
           +/
         @property bool isSymlink();
 
@@ -2012,8 +2029,8 @@ assert(!de2.isFile);
         @property ulong size();
 
         /++
-            $(RED Scheduled for deprecation in August 2011.
-                  Please use $(D timeCreated) instead.)
+            $(RED Deprecated. It will be removed in February 2012. Please use
+                   $(D timeCreated) instead.)
 
             Returns the creation time of the file represented by this
             $(D DirEntry).
@@ -2027,7 +2044,7 @@ assert(!de2.isFile);
                   access to the $(D stat) struct which Posix systems use (check
                   out $(D stat)'s man page for more details.))
           +/
-        @property d_time creationTime() const;
+        deprecated @property d_time creationTime() const;
 
         /++
             $(BLUE This function is Windows-Only.)
@@ -2039,8 +2056,9 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in November 2011.
-                  Please use $(D timeLastAccessed) instead.)
+            $(RED Scheduled for deprecation in November 2011. It will not be
+                  replaced. You can use $(D attributes) to get at this
+                  information if you need it.)
 
             $(BLUE This function is Posix-Only.)
 
@@ -2050,8 +2068,8 @@ assert(!de2.isFile);
         @property SysTime timeStatusChanged();
 
         /++
-            $(RED Scheduled for deprecation in August 2011.
-                  Please use $(D timeLastAccessed) instead.)
+            $(RED Deprecated. It will be removed in February 2012. Please use
+                  $(D timeLastAccessed) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
             last accessed.
@@ -2060,7 +2078,8 @@ assert(!de2.isFile);
             (generally for performance reasons), so there's a good chance that
             $(D lastAccessTime) will return the same value as $(D lastWriteTime).
           +/
-        @property d_time lastAccessTime();
+        deprecated @property d_time lastAccessTime();
+
         /++
             Returns the time that the file represented by this $(D DirEntry) was
             last accessed.
@@ -2071,14 +2090,16 @@ assert(!de2.isFile);
             $(D timeLastModified).
           +/
         @property SysTime timeLastAccessed();
+
         /++
-            $(RED Scheduled for deprecation in August 2011.
-                  Please use $(D timeLastModified) instead.)
+            $(RED Deprecated. It will be removed in February 2012. Please use
+                  $(D timeLastModified) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
             last modified.
           +/
-        @property d_time lastWriteTime();
+        deprecated @property d_time lastWriteTime();
+
         /++
             Returns the time that the file represented by this $(D DirEntry) was
             last modified.
@@ -2139,7 +2160,7 @@ else version(Windows)
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        alias isDir isdir;
+        deprecated alias isDir isdir;
 
         @property bool isFile() const
         {
@@ -2149,11 +2170,11 @@ else version(Windows)
             return !isDir;
         }
 
-        alias isFile isfile;
+        deprecated alias isFile isfile;
 
         @property bool isSymlink() const
         {
-            return false;
+            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
         @property ulong size() const
@@ -2161,7 +2182,7 @@ else version(Windows)
             return _size;
         }
 
-        @property d_time creationTime() const
+        deprecated @property d_time creationTime() const
         {
             return sysTimeToDTime(_timeCreated);
         }
@@ -2171,7 +2192,7 @@ else version(Windows)
             return cast(SysTime)_timeCreated;
         }
 
-        @property d_time lastAccessTime() const
+        deprecated @property d_time lastAccessTime() const
         {
             return sysTimeToDTime(_timeLastAccessed);
         }
@@ -2181,7 +2202,7 @@ else version(Windows)
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property d_time lastWriteTime() const
+        deprecated @property d_time lastWriteTime() const
         {
             return sysTimeToDTime(_timeLastModified);
         }
@@ -2246,7 +2267,7 @@ else version(Windows)
 
         void _init(in char[] path, in WIN32_FIND_DATA* fd)
         {
-            auto clength = std.c.string.strlen(fd.cFileName.ptr);
+            auto clength = to!int(std.c.string.strlen(fd.cFileName.ptr));
 
             // Convert cFileName[] to unicode
             const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
@@ -2254,7 +2275,7 @@ else version(Windows)
             const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
             assert(n == wlength);
             // toUTF8() returns a new buffer
-            _name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2266,7 +2287,7 @@ else version(Windows)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
             _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
-            _name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2304,7 +2325,7 @@ else version(Posix)
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        alias isDir isdir;
+        deprecated alias isDir isdir;
 
         @property bool isFile()
         {
@@ -2313,7 +2334,7 @@ else version(Posix)
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
-        alias isFile isfile;
+        deprecated alias isFile isfile;
 
         @property bool isSymlink()
         {
@@ -2326,8 +2347,8 @@ else version(Posix)
         // worthless, since the odds are high that it will be DT_UNKNOWN,
         // so it continues to be left undocumented.
         //
-        // Scheduled for deprecation in August 2011.
-        @property ubyte d_type()
+        // Will be removed in February 2012.
+        deprecated @property ubyte d_type()
         {
             return _dType;
         }
@@ -2338,7 +2359,7 @@ else version(Posix)
             return _statBuf.st_size;
         }
 
-        @property d_time creationTime()
+        deprecated @property d_time creationTime()
         {
             _ensureStatDone();
 
@@ -2352,7 +2373,7 @@ else version(Posix)
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
 
-        @property d_time lastAccessTime()
+        deprecated @property d_time lastAccessTime()
         {
             _ensureStatDone();
 
@@ -2366,7 +2387,7 @@ else version(Posix)
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
 
-        @property d_time lastWriteTime()
+        deprecated @property d_time lastWriteTime()
         {
             _ensureStatDone();
 
@@ -2415,7 +2436,7 @@ else version(Posix)
         void _init(in char[] path, core.sys.posix.dirent.dirent* fd)
         {
             immutable len = std.c.string.strlen(fd.d_name.ptr);
-            _name = std.path.join(path, fd.d_name[0 .. len]);
+            _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
             _didStat = false;
@@ -2497,6 +2518,12 @@ unittest
             assert(!de.isSymlink);
         }
 
+        if("C:\\Users\\".exists && "C:\\Documents and Settings\\".exists)
+        {
+            auto de = dirEntry("C:\\Documents and Settings\\");
+            assert(de.isSymlink);
+        }
+
         if("C:\\Windows\\system.ini".exists)
         {
             auto de = dirEntry("C:\\Windows\\system.ini");
@@ -2541,7 +2568,7 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in August 2011.
+ * $(RED Scheduled for deprecation in November 2011.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
@@ -2640,21 +2667,21 @@ void copy(in char[] from, in char[] to)
 }
 
     /++
-        $(RED Scheduled for deprecation in August 2011. Please use the version
-              which takes $(XREF datetime, SysTime) instead).
+       $(RED Deprecated. It will be removed in February 2012. Please use the
+             version which takes a $(XREF datetime, SysTime) instead.)
 
         Set access/modified times of file $(D name).
 
         Throws:
             $(D FileException) on error.
      +/
-version(StdDdoc) void setTimes(in char[] name, d_time fta, d_time ftm);
-else void setTimes(C)(in C[] name, d_time fta, d_time ftm)
+version(StdDdoc) deprecated void setTimes(in char[] name, d_time fta, d_time ftm);
+else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
     if(is(Unqual!C == char))
 {
-    pragma(msg, "Warning: As of Phobos 2.052, the version of std.file.setTimes " ~
-                "which takes std.date.d_time has been scheduled for deprecation " ~
-                "in August 2011. Please use the version which takes " ~
+    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.setTimes " ~
+                "which takes std.date.d_time has been deprecated. It will be " ~
+                "removed in February 2012. Please use the version which takes " ~
                 "std.datetime.SysTime instead.");
 
     version(Windows)
@@ -2922,7 +2949,7 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            string search_pattern = std.path.join(directory, "*.*");
+            string search_pattern = buildPath(directory, "*.*");
             if(useWfuncs)
             {
                 WIN32_FIND_DATAW findinfo;
@@ -3015,6 +3042,10 @@ private struct DirIteratorImpl
                 FindClose(d.h);
         }
 
+        bool mayStepIn()
+        {
+            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
+        }
     }
     else version(Posix)
     {
@@ -3058,23 +3089,27 @@ private struct DirIteratorImpl
 
         void releaseDirStack()
         {
-
             foreach( d;  _stack.data)
                 closedir(d.h);
         }
+
+        bool mayStepIn()
+        {
+            return _followSymlink ? _cur.isDir : isDir(_cur.linkAttributes);
+        }
     }
 
-    this(string pathname, SpanMode mode, bool _followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
-        _followSymlink = _followSymlink;
+        _followSymlink = followSymlink;
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
         if(stepIn(pathname))
         {
             if(_mode == SpanMode.depth)
-                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(mayStepIn())
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3095,7 +3130,7 @@ private struct DirIteratorImpl
         case SpanMode.depth:
             if(next())
             {
-                while(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+                while(mayStepIn())
                 {
                     auto thisDir = _cur;
                     if(stepIn(_cur.name))
@@ -3110,7 +3145,7 @@ private struct DirIteratorImpl
                 _cur = popExtra();
             break;
         case SpanMode.breadth:
-            if(_followSymlink ? _cur.isDir : isDir(_cur.linkAttributes))
+            if(mayStepIn())
             {
                 if(!stepIn(_cur.name))
                     while(!empty && !next()){}
@@ -3174,7 +3209,7 @@ public:
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
         followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
-                         iterated over. Ignored on Windows.
+                         iterated over.
 
 Examples:
 --------------------
@@ -3193,7 +3228,7 @@ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
  writeln(e.name, "\t", e.size);
 }
-// Iterate over all *.d files in current directory and all it's subdirectories
+// Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = filter!`endsWith(a.name,".d")`(dirEntries(".",SpanMode.depth));
 foreach(d; dFiles)
     writeln(d.name);
@@ -3215,19 +3250,19 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 unittest
 {
     string testdir = "deleteme.dmd.unittest.std.file"; // needs to be relative
-    mkdirRecurse(std.path.join(testdir, "somedir"));
+    mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
-    write(std.path.join(testdir, "somefile"), null);
-    write(std.path.join(testdir, "somedir", "somedeepfile"), null);
+    write(buildPath(testdir, "somefile"), null);
+    write(buildPath(testdir, "somedir", "somedeepfile"), null);
 
     // testing range interface
     size_t equalEntries(string relpath, SpanMode mode)
     {
-        auto len = enforce(walkLength(dirEntries(std.path.rel2abs(relpath), mode)));
+        auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(q{std.path.rel2abs(a.name)})(dirEntries(relpath, mode)),
-                   map!(q{a.name})(dirEntries(std.path.rel2abs(relpath), mode))));
+                   map!(q{std.path.absolutePath(a.name)})(dirEntries(relpath, mode)),
+                   map!(q{a.name})(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
 
@@ -3241,11 +3276,43 @@ unittest
         //writeln(name);
         assert(name.startsWith(testdir));
     }
-    foreach (DirEntry e; dirEntries(std.path.rel2abs(testdir), SpanMode.breadth))
+    foreach (DirEntry e; dirEntries(absolutePath(testdir), SpanMode.breadth))
     {
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
     }
+}
+
+/++
+    Convenience wrapper for filtering file names with a glob pattern.
+
+    Params:
+        path = The directory to iterate over.
+        pattern  = String with wildcards, such as $(RED "*.d"). The supported
+                   wildcard strings are described under
+                   $(XREF path, globMatch).
+        mode = Whether the directory's sub-directories should be iterated
+               over depth-first ($(D_PARAM depth)), breadth-first
+               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
+        followSymlink = Whether symbolic links which point to directories
+                         should be treated as directories and their contents
+                         iterated over.
+
+Examples:
+--------------------
+// Iterate over all D source files in current directory and all its
+// subdirectories
+auto dFiles = dirEntries(".","*.{d,di}",SpanMode.depth);
+foreach(d; dFiles)
+    writeln(d.name);
+--------------------
+//
+ +/
+auto dirEntries(string path, string pattern, SpanMode mode,
+    bool followSymlink = true)
+{
+    bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
+    return filter!f(DirIterator(path, mode, followSymlink));
 }
 
 /++
@@ -3273,12 +3340,12 @@ DirEntry dirEntry(in char[] name)
 unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_dir";
     scope(exit) { if(path.exists) rmdirRecurse(path); }
 
     mkdir(path);
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3323,12 +3390,12 @@ unittest
 unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_file";
     scope(exit) { if(path.exists) remove(path); }
 
     write(path, "hello world");
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
@@ -3373,7 +3440,7 @@ unittest
 version(linux) unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_dir";
     mkdir(orig);
     immutable path = deleteme ~ "_slink";
@@ -3381,7 +3448,7 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3418,7 +3485,7 @@ version(linux) unittest
 version(linux) unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_file";
     write(orig, "hello world");
     immutable path = deleteme ~ "_slink";
@@ -3426,7 +3493,7 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(1));
+    Thread.sleep(dur!"seconds"(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
@@ -3503,7 +3570,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in August 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D dirEntries) instead.)
 
     Returns the contents of the given directory.
@@ -3529,10 +3596,8 @@ void main(string[] args)
 }
 --------------------
  +/
-
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3553,7 +3618,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in August 2011.
+    $(RED Scheduled for deprecation in November 2011.
           Please use $(D dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
@@ -3604,7 +3669,6 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     import std.regexp;
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
@@ -3638,7 +3702,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 }
 
 /******************************************************
- * $(RED Scheduled for deprecation in August 2011.
+ * $(RED Scheduled for deprecation in November 2011.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
@@ -3663,7 +3727,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
  *
  *    bool listing(string filename)
  *    {
- *      result ~= std.path.join(pathname, filename);
+ *      result ~= buildPath(pathname, filename);
  *      return true; // continue
  *    }
  *
@@ -3677,7 +3741,6 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "August 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3692,7 +3755,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
-        return callback(de.name.basename);
+        return callback(de.name.baseName);
     }
 
     _listDir(pathname, &listing);
@@ -3704,7 +3767,7 @@ version(Windows)
     void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         DirEntry de;
-        auto c = std.path.join(pathname, "*.*");
+        auto c = buildPath(pathname, "*.*");
 
         if(useWfuncs)
         {
@@ -3798,13 +3861,13 @@ else version(Posix)
 //==============================================================================
 //
 
-alias long d_time;
-enum d_time d_time_nan = long.min;
-enum ticksPerSecond = 1000;
+deprecated alias long d_time;
+deprecated enum d_time d_time_nan = long.min;
+deprecated enum ticksPerSecond = 1000;
 
 version(Windows)
 {
-    d_time FILETIME2d_time(const FILETIME *ft)
+    deprecated d_time FILETIME2d_time(const FILETIME *ft)
     {
         auto sysTime = FILETIMEToSysTime(ft);
 
@@ -3812,9 +3875,10 @@ version(Windows)
     }
 }
 
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
+
+template hardDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Warning: As of Phobos %s, std.file.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.file.%s instead.",
+    enum hardDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been deprecated " ~
+                              "It will be removed in %s. Please use std.file.%s instead.",
                               vers, oldFunc, date, newFunc);
 }

@@ -17,6 +17,7 @@
  */
 module std.windows.charset;
 
+private import std.conv;
 private import std.c.windows.windows;
 private import std.windows.syserror;
 private import std.utf;
@@ -53,7 +54,7 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
             if (result.length)
             {
                 readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
-                        result.length, null, null);
+                        to!int(result.length), null, null);
             }
 
             if (!readLen || readLen != result.length)
@@ -98,7 +99,7 @@ string fromMBSz(immutable(char)* s, int codePage = 0)
             if (result.length)
             {
                 readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
-                        result.length);
+                        to!int(result.length));
             }
 
             if (!readLen || readLen != result.length)

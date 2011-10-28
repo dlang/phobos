@@ -161,9 +161,9 @@ public:
         else if (u == 2) data = TWO;
         else if (u == 10) data = TEN;
         else
-		{
+        {
             static if (BigDigit.sizeof == int.sizeof)
-		    {
+            {
                 uint ulo = cast(uint)(u & 0xFFFF_FFFF);
                 uint uhi = cast(uint)(u >> 32);
                 if (uhi == 0)
@@ -177,7 +177,7 @@ public:
                   data[0] = ulo;
                   data[1] = uhi;
                 }
-		    }
+            }
             else static if (BigDigit.sizeof == long.sizeof)
             {
                 data = new BigDigit[1];
@@ -190,615 +190,646 @@ public:
         this.data = y.data;
     }
 
-///
-int opCmp(Tdummy = void)(BigUint y)
-{
-    if (data.length != y.data.length)
-        return (data.length > y.data.length) ?  1 : -1;
-    size_t k = highestDifferentDigit(data, y.data);
-    if (data[k] == y.data[k])
-        return 0;
-    return data[k] > y.data[k] ? 1 : -1;
-}
-
-///
-int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
-{
-    if (data.length > 2)
-        return 1;
-    uint ylo = cast(uint)(y & 0xFFFF_FFFF);
-    uint yhi = cast(uint)(y >> 32);
-    if (data.length == 2 && data[1] != yhi)
-        return data[1] > yhi ? 1: -1;
-    if (data[0] == ylo)
-        return 0;
-    return data[0] > ylo ? 1: -1;
-}
-
-bool opEquals(Tdummy = void)(ref const BigUint y) pure const
-{
-       return y.data[] == data[];
-}
-
-bool opEquals(Tdummy = void)(ulong y) pure const 
-{
-    if (data.length > 2)
-        return false;
-    uint ylo = cast(uint)(y & 0xFFFF_FFFF);
-    uint yhi = cast(uint)(y >> 32);
-    if (data.length==2 && data[1]!=yhi)
-        return false;
-    if (data.length==1 && yhi!=0)
-        return false;
-    return (data[0] == ylo);
-}
-
-bool isZero() pure const
-{
-    return data.length == 1 && data[0] == 0;
-}
-
-size_t numBytes() pure const
-{
-    return data.length * BigDigit.sizeof;
-}
-
-// the extra bytes are added to the start of the string
-char [] toDecimalString(int frontExtraBytes) const
-{
-    auto predictlength = 20+20*(data.length/2); // just over 19
-    char [] buff = new char[frontExtraBytes + predictlength];
-    sizediff_t sofar = biguintToDecimal(buff, data.dup);
-    return buff[sofar-frontExtraBytes..$];
-}
-
-/** Convert to a hex string, printing a minimum number of digits 'minPadding',
- *  allocating an additional 'frontExtraBytes' at the start of the string.
- *  Padding is done with padChar, which may be '0' or ' '.
- *  'separator' is a digit separation character. If non-zero, it is inserted
- *  between every 8 digits.
- *  Separator characters do not contribute to the minPadding.
- */
-char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, char padChar = '0') const
-{
-    // Calculate number of extra padding bytes
-    size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
-        ? minPadding - data.length * 2 * BigDigit.sizeof : 0;
-
-    // Length not including separator bytes
-    size_t lenBytes = data.length * 2 * BigDigit.sizeof;
-
-    // Calculate number of separator bytes
-    size_t mainSeparatorBytes = separator ? (lenBytes  / 8) - 1 : 0;
-    size_t totalSeparatorBytes = separator ? ((extraPad + lenBytes + 7) / 8) - 1: 0;
-
-    char [] buff = new char[lenBytes + extraPad + totalSeparatorBytes + frontExtraBytes];
-    biguintToHex(buff[$ - lenBytes - mainSeparatorBytes .. $], data, separator);
-    if (extraPad > 0)
+    ///
+    int opCmp(Tdummy = void)(BigUint y)
     {
-        if (separator)
+        if (data.length != y.data.length)
+            return (data.length > y.data.length) ?  1 : -1;
+        size_t k = highestDifferentDigit(data, y.data);
+        if (data[k] == y.data[k])
+            return 0;
+        return data[k] > y.data[k] ? 1 : -1;
+    }
+
+    ///
+    int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
+    {
+        if (data.length > 2)
+            return 1;
+        uint ylo = cast(uint)(y & 0xFFFF_FFFF);
+        uint yhi = cast(uint)(y >> 32);
+        if (data.length == 2 && data[1] != yhi)
+            return data[1] > yhi ? 1: -1;
+        if (data[0] == ylo)
+            return 0;
+        return data[0] > ylo ? 1: -1;
+    }
+
+    bool opEquals(Tdummy = void)(ref const BigUint y) pure const
+    {
+           return y.data[] == data[];
+    }
+
+    bool opEquals(Tdummy = void)(ulong y) pure const
+    {
+        if (data.length > 2)
+            return false;
+        uint ylo = cast(uint)(y & 0xFFFF_FFFF);
+        uint yhi = cast(uint)(y >> 32);
+        if (data.length==2 && data[1]!=yhi)
+            return false;
+        if (data.length==1 && yhi!=0)
+            return false;
+        return (data[0] == ylo);
+    }
+
+    bool isZero() pure const
+    {
+        return data.length == 1 && data[0] == 0;
+    }
+
+    size_t numBytes() pure const
+    {
+        return data.length * BigDigit.sizeof;
+    }
+
+    // the extra bytes are added to the start of the string
+    char [] toDecimalString(int frontExtraBytes) const
+    {
+        auto predictlength = 20+20*(data.length/2); // just over 19
+        char [] buff = new char[frontExtraBytes + predictlength];
+        sizediff_t sofar = biguintToDecimal(buff, data.dup);
+        return buff[sofar-frontExtraBytes..$];
+    }
+
+    /** Convert to a hex string, printing a minimum number of digits 'minPadding',
+     *  allocating an additional 'frontExtraBytes' at the start of the string.
+     *  Padding is done with padChar, which may be '0' or ' '.
+     *  'separator' is a digit separation character. If non-zero, it is inserted
+     *  between every 8 digits.
+     *  Separator characters do not contribute to the minPadding.
+     */
+    char [] toHexString(int frontExtraBytes, char separator = 0, int minPadding=0, char padChar = '0') const
+    {
+        // Calculate number of extra padding bytes
+        size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
+            ? minPadding - data.length * 2 * BigDigit.sizeof : 0;
+
+        // Length not including separator bytes
+        size_t lenBytes = data.length * 2 * BigDigit.sizeof;
+
+        // Calculate number of separator bytes
+        size_t mainSeparatorBytes = separator ? (lenBytes  / 8) - 1 : 0;
+        size_t totalSeparatorBytes = separator ? ((extraPad + lenBytes + 7) / 8) - 1: 0;
+
+        char [] buff = new char[lenBytes + extraPad + totalSeparatorBytes + frontExtraBytes];
+        biguintToHex(buff[$ - lenBytes - mainSeparatorBytes .. $], data, separator);
+        if (extraPad > 0)
         {
-            size_t start = frontExtraBytes; // first index to pad
-            if (extraPad &7)
+            if (separator)
             {
-                // Do 1 to 7 extra zeros.
-                buff[frontExtraBytes .. frontExtraBytes + (extraPad & 7)] = padChar;
-                buff[frontExtraBytes + (extraPad & 7)] = (padChar == ' ' ? ' ' : separator);
-                start += (extraPad & 7) + 1;
-            }
-            for (int i=0; i< (extraPad >> 3); ++i)
-            {
-                buff[start .. start + 8] = padChar;
-                buff[start + 8] = (padChar == ' ' ? ' ' : separator);
-                start += 9;
-            }
-        }
-        else
-        {
-            buff[frontExtraBytes .. frontExtraBytes + extraPad]=padChar;
-        }
-    }
-    int z = frontExtraBytes;
-    if (lenBytes > minPadding)
-    {
-        // Strip leading zeros.
-        ptrdiff_t maxStrip = lenBytes - minPadding;
-        while (z< buff.length-1 && (buff[z]=='0' || buff[z]==padChar) && maxStrip>0)
-        {
-            ++z;
-            --maxStrip;
-        }
-    }
-    if (padChar!='0')
-    {
-        // Convert leading zeros into padChars.
-        for (size_t k= z; k< buff.length-1 && (buff[k]=='0' || buff[k]==padChar); ++k)
-        {
-            if (buff[k]=='0') buff[k]=padChar;
-        }
-    }
-    return buff[z-frontExtraBytes..$];
-}
-
-// return false if invalid character found
-bool fromHexString(string s)
-{
-    //Strip leading zeros
-    int firstNonZero = 0;
-    while ((firstNonZero < s.length - 1) &&
-        (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
-    {
-            ++firstNonZero;
-    }
-    auto len = (s.length - firstNonZero + 15)/4;
-    data = new BigDigit[len+1];
-    uint part = 0;
-    uint sofar = 0;
-    uint partcount = 0;
-    assert(s.length>0);
-    for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
-    {
-        assert(i>=0);
-        char c = s[i];
-        if (s[i]=='_') continue;
-        uint x = (c>='0' && c<='9') ? c - '0'
-               : (c>='A' && c<='F') ? c - 'A' + 10
-               : (c>='a' && c<='f') ? c - 'a' + 10
-               : 100;
-        if (x==100) return false;
-        part >>= 4;
-        part |= (x<<(32-4));
-        ++partcount;
-        if (partcount==8)
-        {
-            data[sofar] = part;
-            ++sofar;
-            partcount = 0;
-            part = 0;
-        }
-    }
-    if (part)
-    {
-        for ( ; partcount != 8; ++partcount) part >>= 4;
-        data[sofar] = part;
-        ++sofar;
-    }
-    if (sofar == 0) data = ZERO;
-    else data = data[0..sofar];
-    return true;
-}
-
-// return true if OK; false if erroneous characters found
-bool fromDecimalString(string s)
-{
-    //Strip leading zeros
-    int firstNonZero = 0;
-    while ((firstNonZero < s.length) &&
-        (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
-    {
-            ++firstNonZero;
-    }
-    if (firstNonZero == s.length && s.length >= 1)
-    {
-        data = ZERO;
-        return true;
-    }
-    auto predictlength = (18*2 + 2*(s.length-firstNonZero)) / 19;
-    data = new BigDigit[predictlength];
-    uint hi = biguintFromDecimal(data, s[firstNonZero..$]);
-    data.length = hi;
-    return true;
-}
-
-////////////////////////
-//
-// All of these member functions create a new BigUint.
-
-// return x >> y
-BigUint opShr(Tulong)(Tulong y) if (is (Tulong == ulong))
-{
-    assert(y>0);
-    uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
-    if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
-    uint words = cast(uint)(y >> LG2BIGDIGITBITS);
-    if (bits==0)
-    {
-        return BigUint(data[words..$]);
-    }
-    else
-    {
-        uint [] result = new BigDigit[data.length - words];
-        multibyteShr(result, data[words..$], bits);
-        if (result.length>1 && result[$-1]==0) return BigUint(result[0..$-1]);
-        else return BigUint(result);
-    }
-}
-
-// return x << y
-BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
-{
-    assert(y>0);
-    if (isZero()) return this;
-    uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
-    assert ((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
-    uint words = cast(uint)(y >> LG2BIGDIGITBITS);
-    BigDigit [] result = new BigDigit[data.length + words+1];
-    result[0..words] = 0;
-    if (bits==0)
-    {
-        result[words..words+data.length] = data[];
-        return BigUint(result[0..words+data.length]);
-    }
-    else
-    {
-        uint c = multibyteShl(result[words..words+data.length], data, bits);
-        if (c==0) return BigUint(result[0..words+data.length]);
-        result[$-1] = c;
-        return BigUint(result);
-    }
-}
-
-// If wantSub is false, return x + y, leaving sign unchanged
-// If wantSub is true, return abs(x - y), negating sign if x < y
-static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref bool sign)
-    if (is(Tulong == ulong))
-{
-    BigUint r;
-    if (wantSub)
-    {   // perform a subtraction
-        if (x.data.length > 2)
-        {
-            r.data = subInt(x.data, y);
-        }
-        else
-        {   // could change sign!
-            ulong xx = x.data[0];
-            if (x.data.length > 1)
-                xx += (cast(ulong)x.data[1]) << 32;
-            ulong d;
-            if (xx <= y)
-            {
-                d = y - xx;
-                sign = !sign;
+                size_t start = frontExtraBytes; // first index to pad
+                if (extraPad &7)
+                {
+                    // Do 1 to 7 extra zeros.
+                    buff[frontExtraBytes .. frontExtraBytes + (extraPad & 7)] = padChar;
+                    buff[frontExtraBytes + (extraPad & 7)] = (padChar == ' ' ? ' ' : separator);
+                    start += (extraPad & 7) + 1;
+                }
+                for (int i=0; i< (extraPad >> 3); ++i)
+                {
+                    buff[start .. start + 8] = padChar;
+                    buff[start + 8] = (padChar == ' ' ? ' ' : separator);
+                    start += 9;
+                }
             }
             else
             {
-                d = xx - y;
+                buff[frontExtraBytes .. frontExtraBytes + extraPad]=padChar;
             }
-            if (d == 0)
+        }
+        int z = frontExtraBytes;
+        if (lenBytes > minPadding)
+        {
+            // Strip leading zeros.
+            ptrdiff_t maxStrip = lenBytes - minPadding;
+            while (z< buff.length-1 && (buff[z]=='0' || buff[z]==padChar) && maxStrip>0)
             {
-                r = 0UL;
-                sign = false;
-                return r;
+                ++z;
+                --maxStrip;
             }
-            r.data = new BigDigit[ d > uint.max ? 2: 1];
-            r.data[0] = cast(uint)(d & 0xFFFF_FFFF);
-            if (d > uint.max)
-				r.data[1] = cast(uint)(d>>32);
         }
-    }
-    else
-    {
-        r.data = addInt(x.data, y);
-    }
-    return r;
-}
-
-// If wantSub is false, return x + y, leaving sign unchanged.
-// If wantSub is true, return abs(x - y), negating sign if x<y
-static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
-{
-    BigUint r;
-    if (wantSub)
-    {   // perform a subtraction
-        bool negative;
-        r.data = sub(x.data, y.data, &negative);
-        *sign ^= negative;
-        if (r.isZero())
+        if (padChar!='0')
         {
-            *sign = false;
+            // Convert leading zeros into padChars.
+            for (size_t k= z; k< buff.length-1 && (buff[k]=='0' || buff[k]==padChar); ++k)
+            {
+                if (buff[k]=='0') buff[k]=padChar;
+            }
         }
+        return buff[z-frontExtraBytes..$];
     }
-    else
-    {
-        r.data = add(x.data, y.data);
-    }
-    return r;
-}
 
-
-//  return x*y.
-//  y must not be zero.
-static BigUint mulInt(T = ulong)(BigUint x, T y)
-{
-    if (y==0 || x == 0) return BigUint(ZERO);
-    uint hi = cast(uint)(y >>> 32);
-    uint lo = cast(uint)(y & 0xFFFF_FFFF);
-    uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
-    result[x.data.length] = multibyteMul(result[0..x.data.length], x.data, lo, 0);
-    if (hi!=0)
+    // return false if invalid character found
+    bool fromHexString(string s)
     {
-        result[x.data.length+1] = multibyteMulAdd!('+')(result[1..x.data.length+1],
-            x.data, hi, 0);
-    }
-    return BigUint(removeLeadingZeros(result));
-}
-
-/*  return x * y.
- */
-static BigUint mul(BigUint x, BigUint y)
-{
-    if (y==0 || x == 0)
-        return BigUint(ZERO);
-    auto len = x.data.length + y.data.length;
-    BigDigit [] result = new BigDigit[len];
-    if (y.data.length > x.data.length)
-    {
-        mulInternal(result, y.data, x.data);
-    }
-    else
-    {
-        if (x.data[]==y.data[]) squareInternal(result, x.data);
-        else mulInternal(result, x.data, y.data);
-    }
-    // the highest element could be zero,
-    // in which case we need to reduce the length
-    return BigUint(removeLeadingZeros(result));
-}
-
-// return x / y
-static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) )
-{
-    uint [] result = new BigDigit[x.data.length];
-    if ((y&(-y))==y)
-    {
-        assert(y!=0, "BigUint division by zero");
-        // perfect power of 2
-        uint b = 0;
-        for (;y!=1; y>>=1)
+        //Strip leading zeros
+        int firstNonZero = 0;
+        while ((firstNonZero < s.length - 1) &&
+            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
         {
-            ++b;
+                ++firstNonZero;
         }
-        multibyteShr(result, x.data, b);
-    }
-    else
-    {
-        result[] = x.data[];
-        uint rem = multibyteDivAssign(result, y, 0);
-    }
-    return BigUint(removeLeadingZeros(result));
-}
-
-// return x % y
-static uint modInt(T)(BigUint x, T y) if ( is(T == uint) )
-{
-    assert(y!=0);
-    if ((y&(-y)) == y)
-    {   // perfect power of 2
-        return x.data[0] & (y-1);
-    }
-    else
-    {
-        // horribly inefficient - malloc, copy, & store are unnecessary.
-        uint [] wasteful = new BigDigit[x.data.length];
-        wasteful[] = x.data[];
-        uint rem = multibyteDivAssign(wasteful, y, 0);
-        delete wasteful;
-        return rem;
-    }
-}
-
-// return x / y
-static BigUint div(BigUint x, BigUint y)
-{
-    if (y.data.length > x.data.length)
-        return BigUint(ZERO);
-    if (y.data.length == 1)
-        return divInt(x, y.data[0]);
-    BigDigit [] result = new BigDigit[x.data.length - y.data.length + 1];
-    divModInternal(result, null, x.data, y.data);
-    return BigUint(removeLeadingZeros(result));
-}
-
-// return x % y
-static BigUint mod(BigUint x, BigUint y)
-{
-    if (y.data.length > x.data.length) return x;
-    if (y.data.length == 1)
-    {
-        BigDigit [] result = new BigDigit[1];
-        result[0] = modInt(x, y.data[0]);
-        return BigUint(result);
-    }
-    BigDigit [] result = new BigDigit[x.data.length - y.data.length + 1];
-    BigDigit [] rem = new BigDigit[y.data.length];
-    divModInternal(result, rem, x.data, y.data);
-    return BigUint(removeLeadingZeros(rem));
-}
-
-/**
- * Return a BigUint which is x raised to the power of y.
- * Method: Powers of 2 are removed from x, then left-to-right binary
- * exponentiation is used.
- * Memory allocation is minimized: at most one temporary BigUint is used.
- */
-static BigUint pow(BigUint x, ulong y)
-{
-    // Deal with the degenerate cases first.
-    if (y==0) return BigUint(ONE);
-    if (y==1) return x;
-    if (x==0 || x==1) return x;
-
-    BigUint result;
-
-    // Simplify, step 1: Remove all powers of 2.
-    uint firstnonzero = firstNonZeroDigit(x.data);
-
-    // See if x can now fit into a single digit.
-    bool singledigit = ((x.data.length - firstnonzero) == 1);
-    // If true, then x0 is that digit, and we must calculate x0 ^^ y0.
-    BigDigit x0 = x.data[firstnonzero];
-    assert(x0 !=0);
-    size_t xlength = x.data.length;
-    ulong y0;
-    uint evenbits = 0; // number of even bits in the bottom of x
-    while (!(x0 & 1))
-    {
-        x0 >>= 1;
-        ++evenbits;
-    }
-
-    if ((x.data.length- firstnonzero == 2))
-    {
-        // Check for a single digit straddling a digit boundary
-        BigDigit x1 = x.data[firstnonzero+1];
-        if ((x1 >> evenbits) == 0)
+        auto len = (s.length - firstNonZero + 15)/4;
+        data = new BigDigit[len+1];
+        uint part = 0;
+        uint sofar = 0;
+        uint partcount = 0;
+        assert(s.length>0);
+        for (ptrdiff_t i = s.length - 1; i>=firstNonZero; --i)
         {
-            x0 |= (x1 << (BigDigit.sizeof * 8 - evenbits));
-            singledigit = true;
+            assert(i>=0);
+            char c = s[i];
+            if (s[i]=='_') continue;
+            uint x = (c>='0' && c<='9') ? c - '0'
+                   : (c>='A' && c<='F') ? c - 'A' + 10
+                   : (c>='a' && c<='f') ? c - 'a' + 10
+                   : 100;
+            if (x==100) return false;
+            part >>= 4;
+            part |= (x<<(32-4));
+            ++partcount;
+            if (partcount==8)
+            {
+                data[sofar] = part;
+                ++sofar;
+                partcount = 0;
+                part = 0;
+            }
         }
+        if (part)
+        {
+            for ( ; partcount != 8; ++partcount) part >>= 4;
+            data[sofar] = part;
+            ++sofar;
+        }
+        if (sofar == 0) data = ZERO;
+        else data = data[0..sofar];
+        return true;
     }
-    uint evenshiftbits = 0; // Total powers of 2 to shift by, at the end
 
-    // Simplify, step 2: For singledigits, see if we can trivially reduce y
-
-    BigDigit finalMultiplier = 1UL;
-
-    if (singledigit)
+    // return true if OK; false if erroneous characters found
+    bool fromDecimalString(string s)
     {
-        // x fits into a single digit. Raise it to the highest power we can
-        // that still fits into a single digit, then reduce the exponent accordingly.
-        // We're quite likely to have a residual multiply at the end.
-        // For example, 10^^100 = (((5^^13)^^7) * 5^^9) * 2^^100.
-        // and 5^^13 still fits into a uint.
-        evenshiftbits  = cast(uint)( (evenbits * y) & BIGDIGITSHIFTMASK);
-        if (x0 == 1)
-        {   // Perfect power of 2
-            result = 1UL;
-            return result << (evenbits + firstnonzero*BigDigit.sizeof)*y;
+        //Strip leading zeros
+        int firstNonZero = 0;
+        while ((firstNonZero < s.length) &&
+            (s[firstNonZero]=='0' || s[firstNonZero]=='_'))
+        {
+                ++firstNonZero;
+        }
+        if (firstNonZero == s.length && s.length >= 1)
+        {
+            data = ZERO;
+            return true;
+        }
+        auto predictlength = (18*2 + 2*(s.length-firstNonZero)) / 19;
+        data = new BigDigit[predictlength];
+        uint hi = biguintFromDecimal(data, s[firstNonZero..$]);
+        data.length = hi;
+        return true;
+    }
+
+    ////////////////////////
+    //
+    // All of these member functions create a new BigUint.
+
+    // return x >> y
+    BigUint opShr(Tulong)(Tulong y) if (is (Tulong == ulong))
+    {
+        assert(y>0);
+        uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
+        if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
+        uint words = cast(uint)(y >> LG2BIGDIGITBITS);
+        if (bits==0)
+        {
+            return BigUint(data[words..$]);
         }
         else
         {
+            uint [] result = new BigDigit[data.length - words];
+            multibyteShr(result, data[words..$], bits);
+            if (result.length>1 && result[$-1]==0) return BigUint(result[0..$-1]);
+            else return BigUint(result);
+        }
+    }
+
+    // return x << y
+    BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
+    {
+        assert(y>0);
+        if (isZero()) return this;
+        uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
+        assert ((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
+        uint words = cast(uint)(y >> LG2BIGDIGITBITS);
+        BigDigit [] result = new BigDigit[data.length + words+1];
+        result[0..words] = 0;
+        if (bits==0)
+        {
+            result[words..words+data.length] = data[];
+            return BigUint(result[0..words+data.length]);
+        }
+        else
+        {
+            uint c = multibyteShl(result[words..words+data.length], data, bits);
+            if (c==0) return BigUint(result[0..words+data.length]);
+            result[$-1] = c;
+            return BigUint(result);
+        }
+    }
+
+    // If wantSub is false, return x + y, leaving sign unchanged
+    // If wantSub is true, return abs(x - y), negating sign if x < y
+    static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref bool sign)
+        if (is(Tulong == ulong))
+    {
+        BigUint r;
+        if (wantSub)
+        {   // perform a subtraction
+            if (x.data.length > 2)
+            {
+                r.data = subInt(x.data, y);
+            }
+            else
+            {   // could change sign!
+                ulong xx = x.data[0];
+                if (x.data.length > 1)
+                    xx += (cast(ulong)x.data[1]) << 32;
+                ulong d;
+                if (xx <= y)
+                {
+                    d = y - xx;
+                    sign = !sign;
+                }
+                else
+                {
+                    d = xx - y;
+                }
+                if (d == 0)
+                {
+                    r = 0UL;
+                    sign = false;
+                    return r;
+                }
+                r.data = new BigDigit[ d > uint.max ? 2: 1];
+                r.data[0] = cast(uint)(d & 0xFFFF_FFFF);
+                if (d > uint.max)
+                    r.data[1] = cast(uint)(d>>32);
+            }
+        }
+        else
+        {
+            r.data = addInt(x.data, y);
+        }
+        return r;
+    }
+
+    // If wantSub is false, return x + y, leaving sign unchanged.
+    // If wantSub is true, return abs(x - y), negating sign if x<y
+    static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign)
+    {
+        BigUint r;
+        if (wantSub)
+        {   // perform a subtraction
+            bool negative;
+            r.data = sub(x.data, y.data, &negative);
+            *sign ^= negative;
+            if (r.isZero())
+            {
+                *sign = false;
+            }
+        }
+        else
+        {
+            r.data = add(x.data, y.data);
+        }
+        return r;
+    }
+
+
+    //  return x*y.
+    //  y must not be zero.
+    static BigUint mulInt(T = ulong)(BigUint x, T y)
+    {
+        if (y==0 || x == 0) return BigUint(ZERO);
+        uint hi = cast(uint)(y >>> 32);
+        uint lo = cast(uint)(y & 0xFFFF_FFFF);
+        uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
+        result[x.data.length] = multibyteMul(result[0..x.data.length], x.data, lo, 0);
+        if (hi!=0)
+        {
+            result[x.data.length+1] = multibyteMulAdd!('+')(result[1..x.data.length+1],
+                x.data, hi, 0);
+        }
+        return BigUint(removeLeadingZeros(result));
+    }
+
+    /*  return x * y.
+     */
+    static BigUint mul(BigUint x, BigUint y)
+    {
+        if (y==0 || x == 0)
+            return BigUint(ZERO);
+        auto len = x.data.length + y.data.length;
+        BigDigit [] result = new BigDigit[len];
+        if (y.data.length > x.data.length)
+        {
+            mulInternal(result, y.data, x.data);
+        }
+        else
+        {
+            if (x.data[]==y.data[]) squareInternal(result, x.data);
+            else mulInternal(result, x.data, y.data);
+        }
+        // the highest element could be zero,
+        // in which case we need to reduce the length
+        return BigUint(removeLeadingZeros(result));
+    }
+
+    // return x / y
+    static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) )
+    {
+        uint [] result = new BigDigit[x.data.length];
+        if ((y&(-y))==y)
+        {
+            assert(y!=0, "BigUint division by zero");
+            // perfect power of 2
+            uint b = 0;
+            for (;y!=1; y>>=1)
+            {
+                ++b;
+            }
+            multibyteShr(result, x.data, b);
+        }
+        else
+        {
+            result[] = x.data[];
+            uint rem = multibyteDivAssign(result, y, 0);
+        }
+        return BigUint(removeLeadingZeros(result));
+    }
+
+    // return x % y
+    static uint modInt(T)(BigUint x, T y) if ( is(T == uint) )
+    {
+        assert(y!=0);
+        if ((y&(-y)) == y)
+        {   // perfect power of 2
+            return x.data[0] & (y-1);
+        }
+        else
+        {
+            // horribly inefficient - malloc, copy, & store are unnecessary.
+            uint [] wasteful = new BigDigit[x.data.length];
+            wasteful[] = x.data[];
+            uint rem = multibyteDivAssign(wasteful, y, 0);
+            delete wasteful;
+            return rem;
+        }
+    }
+
+    // return x / y
+    static BigUint div(BigUint x, BigUint y)
+    {
+        if (y.data.length > x.data.length)
+            return BigUint(ZERO);
+        if (y.data.length == 1)
+            return divInt(x, y.data[0]);
+        BigDigit [] result = new BigDigit[x.data.length - y.data.length + 1];
+        divModInternal(result, null, x.data, y.data);
+        return BigUint(removeLeadingZeros(result));
+    }
+
+    // return x % y
+    static BigUint mod(BigUint x, BigUint y)
+    {
+        if (y.data.length > x.data.length) return x;
+        if (y.data.length == 1)
+        {
+            BigDigit [] result = new BigDigit[1];
+            result[0] = modInt(x, y.data[0]);
+            return BigUint(result);
+        }
+        BigDigit [] result = new BigDigit[x.data.length - y.data.length + 1];
+        BigDigit [] rem = new BigDigit[y.data.length];
+        divModInternal(result, rem, x.data, y.data);
+        return BigUint(removeLeadingZeros(rem));
+    }
+
+    /**
+     * Return a BigUint which is x raised to the power of y.
+     * Method: Powers of 2 are removed from x, then left-to-right binary
+     * exponentiation is used.
+     * Memory allocation is minimized: at most one temporary BigUint is used.
+     */
+    static BigUint pow(BigUint x, ulong y)
+    {
+        // Deal with the degenerate cases first.
+        if (y==0) return BigUint(ONE);
+        if (y==1) return x;
+        if (x==0 || x==1) return x;
+
+        BigUint result;
+
+        // Simplify, step 1: Remove all powers of 2.
+        uint firstnonzero = firstNonZeroDigit(x.data);
+        // Now we know x = x[firstnonzero..$] * (2^^(firstnonzero*BigDigitBits))
+        // where BigDigitBits = BigDigit.sizeof * 8
+
+        // See if x[firstnonzero..$] can now fit into a single digit.
+        bool singledigit = ((x.data.length - firstnonzero) == 1);
+        // If true, then x0 is that digit
+        // and the result will be (x0 ^^ y) * (2^^(firstnonzero*y*BigDigitBits))
+        BigDigit x0 = x.data[firstnonzero];
+        assert(x0 !=0);
+        // Length of the non-zero portion
+        size_t nonzerolength = x.data.length - firstnonzero;
+        ulong y0;
+        uint evenbits = 0; // number of even bits in the bottom of x
+        while (!(x0 & 1))
+        {
+            x0 >>= 1;
+            ++evenbits;
+        }
+
+        if ((x.data.length- firstnonzero == 2))
+        {
+            // Check for a single digit straddling a digit boundary
+            BigDigit x1 = x.data[firstnonzero+1];
+            if ((x1 >> evenbits) == 0)
+            {
+                x0 |= (x1 << (BigDigit.sizeof * 8 - evenbits));
+                singledigit = true;
+            }
+        }
+        // Now if (singledigit), x^^y  = (x0 ^^ y) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
+
+        uint evenshiftbits = 0; // Total powers of 2 to shift by, at the end
+
+        // Simplify, step 2: For singledigits, see if we can trivially reduce y
+
+        BigDigit finalMultiplier = 1UL;
+
+        if (singledigit)
+        {
+            // x fits into a single digit. Raise it to the highest power we can
+            // that still fits into a single digit, then reduce the exponent accordingly.
+            // We're quite likely to have a residual multiply at the end.
+            // For example, 10^^100 = (((5^^13)^^7) * 5^^9) * 2^^100.
+            // and 5^^13 still fits into a uint.
+            evenshiftbits  = cast(uint)( (evenbits * y) & BIGDIGITSHIFTMASK);
+            if (x0 == 1)
+            {   // Perfect power of 2
+                result = 1UL;
+                return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
+            }
             int p = highestPowerBelowUintMax(x0);
             if (y <= p)
             {   // Just do it with pow
                 result = cast(ulong)intpow(x0, y);
                 if (evenbits + firstnonzero == 0)
                     return result;
-                return result<< (evenbits + firstnonzero*BigDigit.sizeof)*y;
+                return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
             }
-            y0 = y/p;
+            y0 = y / p;
             finalMultiplier = intpow(x0, y - y0*p);
             x0 = intpow(x0, p);
+            // Result is x0
+            nonzerolength = 1;
         }
-        xlength = 1;
-    }
+        // Now if (singledigit), x^^y  = finalMultiplier * (x0 ^^ y0) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
 
-    // Check for overflow and allocate result buffer
-    // Single digit case: +1 is for final multiplier, + 1 is for spare evenbits.
-    ulong estimatelength = singledigit ? firstnonzero*y + y0*1 + 2 + ((evenbits*y) >> LG2BIGDIGITBITS)
-        : x.data.length * y; // estimated length in BigDigits
-    // (Estimated length can overestimate by a factor of 2, if x.data.length ~ 2).
-    if (estimatelength > uint.max/(4*BigDigit.sizeof)) assert(0, "Overflow in BigInt.pow");
+        // Perform a crude check for overflow and allocate result buffer.
+        // The length required is y * lg2(x) bits.
+        // which will always fit into y*x.length digits. But this is
+        // a gross overestimate if x is small (length 1 or 2) and the highest
+        // digit is nearly empty.
+        // A better estimate is:
+        //   y * lg2(x[$-1]/BigDigit.max) + y * (x.length - 1) digits,
+        //  and the first term is always between
+        //  y * (bsr(x.data[$-1]) + 1) / BIGDIGITBITS and
+        //  y * (bsr(x.data[$-1]) + 2) / BIGDIGITBITS
+        // For single digit payloads, we already have
+        //   x^^y  = finalMultiplier * (x0 ^^ y0) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
+        // and x0 is almost a full digit, so it's a tight estimate.
+        // Number of digits is therefore 1 + x0.length*y0 + (evenbits*y)/BIGDIGIT + firstnonzero*y
+        // Note that the divisions must be rounded up.
 
-    // The result buffer includes space for all the trailing zeros
-    BigDigit [] resultBuffer = new BigDigit[cast(size_t)estimatelength];
+        // Estimated length in BigDigits
+        ulong estimatelength = singledigit
+            ? 1 + y0 + ((evenbits*y  + BigDigit.sizeof * 8 - 1) / (BigDigit.sizeof *8)) + firstnonzero*y
+            :  x.data.length * y;
+        // Imprecise check for overflow. Makes the extreme cases easier to debug
+        // (less extreme overflow will result in an out of memory error).
+        if (estimatelength > uint.max/(4*BigDigit.sizeof))
+            assert(0, "Overflow in BigInt.pow");
 
-    // Do all the powers of 2!
-    size_t result_start = cast(size_t)(firstnonzero*y + singledigit? ((evenbits*y) >> LG2BIGDIGITBITS) : 0);
-    resultBuffer[0..result_start] = 0;
-    BigDigit [] t1 = resultBuffer[result_start..$];
-    BigDigit [] r1;
+        // The result buffer includes space for all the trailing zeros
+        BigDigit [] resultBuffer = new BigDigit[cast(size_t)estimatelength];
 
-    if (singledigit)
-    {
-        r1 = t1[0..1];
-        r1[0] = x0;
-        y = y0;
-    }
-    else
-    {
-        // It's not worth right shifting by evenbits unless we also shrink the length after each
-        // multiply or squaring operation. That might still be worthwhile for large y.
-        r1 = t1[0..x.data.length - firstnonzero];
-        r1[0..$] = x.data[firstnonzero..$];
-    }
+        // Do all the powers of 2!
+        size_t result_start = cast(size_t)( firstnonzero * y
+            + (singledigit ? ((evenbits * y) >> LG2BIGDIGITBITS) : 0));
 
-    if (y>1)
-    {   // Set r1 = r1 ^^ y.
+        resultBuffer[0..result_start] = 0;
+        BigDigit [] t1 = resultBuffer[result_start..$];
+        BigDigit [] r1;
 
-        // The secondary buffer only needs space for the multiplication results
-        BigDigit [] secondaryBuffer = new BigDigit[resultBuffer.length - result_start];
-        BigDigit [] t2 = secondaryBuffer;
-        BigDigit [] r2;
-
-        int shifts = 63; // num bits in a long
-        while(!(y & 0x8000_0000_0000_0000L))
+        if (singledigit)
         {
-            y <<= 1;
-            --shifts;
+            r1 = t1[0..1];
+            r1[0] = x0;
+            y = y0;
         }
-        y <<=1;
-
-        while(y!=0)
+        else
         {
-            r2 = t2[0 .. r1.length*2];
-            squareInternal(r2, r1);
-            if (y & 0x8000_0000_0000_0000L)
+            // It's not worth right shifting by evenbits unless we also shrink the length after each
+            // multiply or squaring operation. That might still be worthwhile for large y.
+            r1 = t1[0..x.data.length - firstnonzero];
+            r1[0..$] = x.data[firstnonzero..$];
+        }
+
+        if (y>1)
+        {   // Set r1 = r1 ^^ y.
+            // The secondary buffer only needs space for the multiplication results
+            BigDigit [] secondaryBuffer = new BigDigit[resultBuffer.length - result_start];
+            BigDigit [] t2 = secondaryBuffer;
+            BigDigit [] r2;
+
+            int shifts = 63; // num bits in a long
+            while(!(y & 0x8000_0000_0000_0000L))
             {
-                r1 = t1[0 .. r2.length + xlength];
-                if (xlength == 1)
+                y <<= 1;
+                --shifts;
+            }
+            y <<=1;
+
+            while(y!=0)
+            {
+                // For each bit of y: Set r1 =  r1 * r1
+                // If the bit is 1, set r1 = r1 * x
+                // Eg, if y is 0b101, result = ((x^^2)^^2)*x == x^^5.
+                // Optimization opportunity: if more than 2 bits in y are set,
+                // it's usually possible to reduce the number of multiplies
+                // by caching odd powers of x. eg for y = 54,
+                // (0b110110), set u = x^^3, and result is ((u^^8)*u)^^2
+                r2 = t2[0 .. r1.length*2];
+                squareInternal(r2, r1);
+                if (y & 0x8000_0000_0000_0000L)
                 {
-                    r1[$-1] = multibyteMul(r1[0 .. $-1], r2, x0, 0);
+                    r1 = t1[0 .. r2.length + nonzerolength];
+                    if (singledigit)
+                    {
+                        r1[$-1] = multibyteMul(r1[0 .. $-1], r2, x0, 0);
+                    }
+                    else
+                    {
+                        mulInternal(r1, r2, x.data[firstnonzero..$]);
+                    }
                 }
                 else
                 {
-                    mulInternal(r1, r2, x.data);
+                    r1 = t1[0 .. r2.length];
+                    r1[] = r2[];
                 }
+                y <<=1;
+                shifts--;
             }
-            else
+            while (shifts>0)
             {
+                r2 = t2[0 .. r1.length * 2];
+                squareInternal(r2, r1);
                 r1 = t1[0 .. r2.length];
                 r1[] = r2[];
+                --shifts;
             }
-            y <<=1;
-            shifts--;
         }
-        while (shifts>0)
-        {
-            r2 = t2[0 .. r1.length * 2];
-            squareInternal(r2, r1);
-            r1 = t1[0 .. r2.length];
-            r1[] = r2[];
-            --shifts;
-        }
-    }
 
-    if (finalMultiplier!=1)
-    {
-        BigDigit carry = multibyteMul(r1, r1, finalMultiplier, 0);
-        if (carry)
+        if (finalMultiplier!=1)
         {
-            r1 = t1[0 .. r1.length + 1];
-            r1[$-1] = carry;
+            BigDigit carry = multibyteMul(r1, r1, finalMultiplier, 0);
+            if (carry)
+            {
+                r1 = t1[0 .. r1.length + 1];
+                r1[$-1] = carry;
+            }
         }
-    }
-    if (evenshiftbits)
-    {
-        BigDigit carry = multibyteShl(r1, r1, evenshiftbits);
-        if (carry!=0)
+        if (evenshiftbits)
         {
-            r1 = t1[0 .. r1.length + 1];
-            r1[$ - 1] = carry;
+            BigDigit carry = multibyteShl(r1, r1, evenshiftbits);
+            if (carry!=0)
+            {
+                r1 = t1[0 .. r1.length + 1];
+                r1[$ - 1] = carry;
+            }
         }
+        while(r1[$ - 1]==0)
+        {
+            r1=r1[0 .. $ - 1];
+        }
+        result.data = resultBuffer[0 .. result_start + r1.length];
+        return result;
     }
-    while(r1[$ - 1]==0)
-    {
-        r1=r1[0 .. $ - 1];
-    }
-    result.data = resultBuffer[0 .. result_start + r1.length];
-    return result;
-}
 
 } // end BigUint
 

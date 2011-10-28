@@ -1,4 +1,4 @@
-module sqlite3_bindings;
+module etc.c.sqlite3;
 /*
 ** 2001 September 15
 **
@@ -33,6 +33,7 @@ module sqlite3_bindings;
 */
 
 extern (C) {
+__gshared:
 
 /**
 ** CAPI3REF: Compile-Time Library Version Numbers
@@ -46,11 +47,11 @@ enum SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52
 /**
 ** CAPI3REF: Run-Time Library Version Numbers
 */
-const char* sqlite3_version;
+immutable(char)* sqlite3_version;
+/// Ditt
+immutable(char)* sqlite3_libversion();
 /// Ditto
-const (char*) sqlite3_libversion();
-/// Ditto
-const (char*) sqlite3_sourceid();
+immutable(char)* sqlite3_sourceid();
 /// Ditto
 int sqlite3_libversion_number();
 
@@ -59,7 +60,7 @@ int sqlite3_libversion_number();
 */
 int sqlite3_compileoption_used(const char *zOptName);
 /// Ditto
-const (char*) sqlite3_compileoption_get(int N);
+immutable(char)* sqlite3_compileoption_get(int N);
 
 /**
 ** CAPI3REF: Test To See If The Library Is Threadsafe
@@ -94,7 +95,7 @@ alias int function (void*,int,char**, char**) sqlite3_callback;
 */
 int sqlite3_exec(
   sqlite3*,                                         /** An open database */
-  const char *sql,                                  /** SQL to be evaluated */
+  const(char)*sql,                                  /** SQL to be evaluated */
   int function (void*,int,char**,char**) callback,  /** Callback function */
   void *,                                           /** 1st argument to callback */
   char **errmsg                                     /** Error msg written here */
@@ -228,7 +229,7 @@ enum
 ** CAPI3REF: OS Interface Open File Handle
 */
 struct sqlite3_file {
-  const sqlite3_io_methods *pMethods;  /* Methods for an open file */
+  const(sqlite3_io_methods)*pMethods;  /* Methods for an open file */
 };
 
 /**
@@ -289,7 +290,7 @@ struct sqlite3_vfs {
   int szOsFile;            /** Size of subclassed sqlite3_file */
   int mxPathname;          /** Maximum file pathname length */
   sqlite3_vfs *pNext;      /** Next registered VFS */
-  const char *zName;       /** Name of this virtual file system */
+  const(char)*zName;       /** Name of this virtual file system */
   void *pAppData;          /** Pointer to application-specific data */
   int function (sqlite3_vfs*, const char *zName, sqlite3_file*,
                int flags, int *pOutFlags) xOpen;
@@ -455,7 +456,7 @@ int sqlite3_busy_timeout(sqlite3*, int ms);
 */
 int sqlite3_get_table(
   sqlite3 *db,          /** An open database */
-  const char *zSql,     /** SQL to be evaluated */
+  const(char)*zSql,     /** SQL to be evaluated */
   char ***pazResult,    /** Results of the query */
   int *pnRow,           /** Number of result rows written here */
   int *pnColumn,        /** Number of result columns written here */
@@ -567,20 +568,20 @@ void sqlite3_progress_handler(sqlite3*, int, int function (void*), void*);
 ** CAPI3REF: Opening A New Database Connection
 */
 int sqlite3_open(
-  const char *filename,   /** Database filename (UTF-8) */
+  const(char)*filename,   /** Database filename (UTF-8) */
   sqlite3 **ppDb          /** OUT: SQLite db handle */
 );
 /// Ditto
 int sqlite3_open16(
-  const void *filename,   /** Database filename (UTF-16) */
+  const(void)*filename,   /** Database filename (UTF-16) */
   sqlite3 **ppDb          /** OUT: SQLite db handle */
 );
 /// Ditto
 int sqlite3_open_v2(
-  const char *filename,   /** Database filename (UTF-8) */
+  const(char)*filename,   /** Database filename (UTF-8) */
   sqlite3 **ppDb,         /** OUT: SQLite db handle */
   int flags,              /** Flags */
-  const char *zVfs        /** Name of VFS module to use */
+  const(char)*zVfs        /** Name of VFS module to use */
 );
 
 /**
@@ -590,9 +591,9 @@ int sqlite3_errcode(sqlite3 *db);
 /// Ditto
 int sqlite3_extended_errcode(sqlite3 *db);
 /// Ditto
-const (char*) sqlite3_errmsg(sqlite3*);
+immutable(char)* sqlite3_errmsg(sqlite3*);
 /// Ditto
-const (void*) sqlite3_errmsg16(sqlite3*);
+immutable(void)* sqlite3_errmsg16(sqlite3*);
 
 /**
 ** CAPI3REF: SQL Statement Object
@@ -625,40 +626,40 @@ enum
 */
 int sqlite3_prepare(
   sqlite3 *db,            /** Database handle */
-  const char *zSql,       /** SQL statement, UTF-8 encoded */
+  const(char)*zSql,       /** SQL statement, UTF-8 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
-  const char **pzTail     /** OUT: Pointer to unused portion of zSql */
+  const(char*)*pzTail     /** OUT: Pointer to unused portion of zSql */
 );
 /// Ditto
 int sqlite3_prepare_v2(
   sqlite3 *db,            /** Database handle */
-  const char *zSql,       /** SQL statement, UTF-8 encoded */
+  const(char)*zSql,       /** SQL statement, UTF-8 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
-  const char **pzTail     /** OUT: Pointer to unused portion of zSql */
+  const(char*)*pzTail     /** OUT: Pointer to unused portion of zSql */
 );
 /// Ditto
 int sqlite3_prepare16(
   sqlite3 *db,            /** Database handle */
-  const void *zSql,       /** SQL statement, UTF-16 encoded */
+  const(void)*zSql,       /** SQL statement, UTF-16 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
-  const void **pzTail     /** OUT: Pointer to unused portion of zSql */
+  const(void*)*pzTail     /** OUT: Pointer to unused portion of zSql */
 );
 /// Ditto
 int sqlite3_prepare16_v2(
   sqlite3 *db,            /** Database handle */
-  const void *zSql,       /** SQL statement, UTF-16 encoded */
+  const(void)*zSql,       /** SQL statement, UTF-16 encoded */
   int nByte,              /** Maximum length of zSql in bytes. */
   sqlite3_stmt **ppStmt,  /** OUT: Statement handle */
-  const void **pzTail     /** OUT: Pointer to unused portion of zSql */
+  const(void*)*pzTail     /** OUT: Pointer to unused portion of zSql */
 );
 
 /**
 ** CAPI3REF: Retrieving Statement SQL
 */
-const (char*) sqlite3_sql(sqlite3_stmt *pStmt);
+const(char)* sqlite3_sql(sqlite3_stmt *pStmt);
 
 /**
 ** CAPI3REF: Determine If An SQL Statement Writes The Database
@@ -704,7 +705,7 @@ int sqlite3_bind_parameter_count(sqlite3_stmt*);
 /**
 ** CAPI3REF: Name Of A Host Parameter
 */
-const (char*) sqlite3_bind_parameter_name(sqlite3_stmt*, int);
+const(char)* sqlite3_bind_parameter_name(sqlite3_stmt*, int);
 
 /**
 ** CAPI3REF: Index Of A Parameter With A Given Name
@@ -724,31 +725,31 @@ int sqlite3_column_count(sqlite3_stmt *pStmt);
 /**
 ** CAPI3REF: Column Names In A Result Set
 */
-const (char*) sqlite3_column_name(sqlite3_stmt*, int N);
+const(char)* sqlite3_column_name(sqlite3_stmt*, int N);
 /// Ditto
-const (void*) sqlite3_column_name16(sqlite3_stmt*, int N);
+const(void)* sqlite3_column_name16(sqlite3_stmt*, int N);
 
 /**
 ** CAPI3REF: Source Of Data In A Query Result
 */
-const (char*) sqlite3_column_database_name(sqlite3_stmt*,int);
+const(char)* sqlite3_column_database_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_database_name16(sqlite3_stmt*,int);
+const(void)* sqlite3_column_database_name16(sqlite3_stmt*,int);
 /// Ditto
-const (char*) sqlite3_column_table_name(sqlite3_stmt*,int);
+const(char)* sqlite3_column_table_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_table_name16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_table_name16(sqlite3_stmt*,int);
 /// Ditto
-const (char*) sqlite3_column_origin_name(sqlite3_stmt*,int);
+const (char)* sqlite3_column_origin_name(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_origin_name16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_origin_name16(sqlite3_stmt*,int);
 
 /**
 ** CAPI3REF: Declared Datatype Of A Query Result
 */
-const (char*) sqlite3_column_decltype(sqlite3_stmt*,int);
+const (char)* sqlite3_column_decltype(sqlite3_stmt*,int);
 /// Ditto
-const (void*) sqlite3_column_decltype16(sqlite3_stmt*,int);
+const (void)* sqlite3_column_decltype16(sqlite3_stmt*,int);
 
 /**
 ** CAPI3REF: Evaluate An SQL Statement
@@ -773,7 +774,7 @@ enum
 /**
 ** CAPI3REF: Result Values From A Query
 */
-const (void*) sqlite3_column_blob(sqlite3_stmt*, int iCol);
+const (void)* sqlite3_column_blob(sqlite3_stmt*, int iCol);
 /// Ditto
 int sqlite3_column_bytes(sqlite3_stmt*, int iCol);
 /// Ditto
@@ -785,9 +786,9 @@ int sqlite3_column_int(sqlite3_stmt*, int iCol);
 /// Ditto
 sqlite3_int64 sqlite3_column_int64(sqlite3_stmt*, int iCol);
 /// Ditto
-const (char*) sqlite3_column_text(sqlite3_stmt*, int iCol);
+const (char)* sqlite3_column_text(sqlite3_stmt*, int iCol);
 /// Ditto
-const (void*) sqlite3_column_text16(sqlite3_stmt*, int iCol);
+const (void)* sqlite3_column_text16(sqlite3_stmt*, int iCol);
 /// Ditto
 int sqlite3_column_type(sqlite3_stmt*, int iCol);
 /// Ditto
@@ -808,7 +809,7 @@ int sqlite3_reset(sqlite3_stmt *pStmt);
 */
 int sqlite3_create_function(
   sqlite3 *db,
-  const char *zFunctionName,
+  const(char)*zFunctionName,
   int nArg,
   int eTextRep,
   void *pApp,
@@ -819,7 +820,7 @@ int sqlite3_create_function(
 /// Ditto
 int sqlite3_create_function16(
   sqlite3 *db,
-  const void *zFunctionName,
+  const(void)*zFunctionName,
   int nArg,
   int eTextRep,
   void *pApp,
@@ -830,7 +831,7 @@ int sqlite3_create_function16(
 /// Ditto
 int sqlite3_create_function_v2(
   sqlite3 *db,
-  const char *zFunctionName,
+  const(char)*zFunctionName,
   int nArg,
   int eTextRep,
   void *pApp,
@@ -859,7 +860,7 @@ enum
 /**
 ** CAPI3REF: Obtaining SQL Function Parameter Values
 */
-const (void*) sqlite3_value_blob(sqlite3_value*);
+const (void)* sqlite3_value_blob(sqlite3_value*);
 /// Ditto
 int sqlite3_value_bytes(sqlite3_value*);
 /// Ditto
@@ -871,13 +872,13 @@ int sqlite3_value_int(sqlite3_value*);
 /// Ditto
 sqlite3_int64 sqlite3_value_int64(sqlite3_value*);
 /// Ditto
-const (char*) sqlite3_value_text(sqlite3_value*);
+const (char)* sqlite3_value_text(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16(sqlite3_value*);
+const (void)* sqlite3_value_text16(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16le(sqlite3_value*);
+const (void)* sqlite3_value_text16le(sqlite3_value*);
 /// Ditto
-const (void*) sqlite3_value_text16be(sqlite3_value*);
+const (void)* sqlite3_value_text16be(sqlite3_value*);
 /// Ditto
 int sqlite3_value_type(sqlite3_value*);
 /// Ditto
@@ -955,7 +956,7 @@ void sqlite3_result_zeroblob(sqlite3_context*, int n);
 */
 int sqlite3_create_collation(
   sqlite3*, 
-  const char *zName, 
+  const(char)*zName, 
   int eTextRep, 
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare
@@ -963,7 +964,7 @@ int sqlite3_create_collation(
 /// Ditto
 int sqlite3_create_collation_v2(
   sqlite3*, 
-  const char *zName, 
+  const(char)*zName, 
   int eTextRep, 
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare,
@@ -972,7 +973,7 @@ int sqlite3_create_collation_v2(
 /// Ditto
 int sqlite3_create_collation16(
   sqlite3*, 
-  const void *zName,
+  const(void)*zName,
   int eTextRep, 
   void *pArg,
   int function (void*,int,const void*,int,const void*) xCompare
@@ -996,7 +997,7 @@ int sqlite3_collation_needed16(
 ///
 int sqlite3_key(
   sqlite3 *db,                   /** Database to be rekeyed */
-  const void *pKey, int nKey     /** The key */
+  const(void)*pKey, int nKey     /** The key */
 );
 
 /**
@@ -1009,7 +1010,7 @@ int sqlite3_key(
 */
 int sqlite3_rekey(
   sqlite3 *db,                   /** Database to be rekeyed */
-  const void *pKey, int nKey     /** The new key */
+  const(void)*pKey, int nKey     /** The new key */
 );
 
 /**
@@ -1017,7 +1018,7 @@ int sqlite3_rekey(
 ** activated, none of the SEE routines will work.
 */
 void sqlite3_activate_see(
-  const char *zPassPhrase        /** Activation phrase */
+  const(char)*zPassPhrase        /** Activation phrase */
 );
 
 /**
@@ -1025,7 +1026,7 @@ void sqlite3_activate_see(
 ** activated, none of the CEROD routines will work.
 */
 void sqlite3_activate_cerod(
-  const char *zPassPhrase        /** Activation phrase */
+  const(char)*zPassPhrase        /** Activation phrase */
 );
 
 /**
@@ -1089,9 +1090,9 @@ sqlite3_int64 sqlite3_soft_heap_limit64(sqlite3_int64 N);
 */
 int sqlite3_table_column_metadata(
   sqlite3 *db,                /** Connection handle */
-  const char *zDbName,        /** Database name or NULL */
-  const char *zTableName,     /** Table name */
-  const char *zColumnName,    /** Column name */
+  const(char)*zDbName,        /** Database name or NULL */
+  const(char)*zTableName,     /** Table name */
+  const(char)*zColumnName,    /** Column name */
   char **pzDataType,    /** OUTPUT: Declared data type */
   char **pzCollSeq,     /** OUTPUT: Collation sequence name */
   int *pNotNull,              /** OUTPUT: True if NOT NULL constraint exists */
@@ -1104,8 +1105,8 @@ int sqlite3_table_column_metadata(
 */
 int sqlite3_load_extension(
   sqlite3 *db,          /** Load the extension into this database connection */
-  const char *zFile,    /** Name of the shared library containing extension */
-  const char *zProc,    /** Entry point.  Derived from zFile if 0 */
+  const(char)*zFile,    /** Name of the shared library containing extension */
+  const(char)*zProc,    /** Entry point.  Derived from zFile if 0 */
   char **pzErrMsg       /** Put error message here if not 0 */
 );
 
@@ -1218,15 +1219,15 @@ enum
 */
 int sqlite3_create_module(
   sqlite3 *db,                    /* SQLite connection to register module with */
-  const char *zName,              /* Name of the module */
-  const sqlite3_module *p,        /* Methods for the module */
+  const(char)*zName,              /* Name of the module */
+  const(sqlite3_module)*p,        /* Methods for the module */
   void *pClientData               /* Client data for xCreate/xConnect */
 );
 /// Ditto
 int sqlite3_create_module_v2(
   sqlite3 *db,                    /* SQLite connection to register module with */
-  const char *zName,              /* Name of the module */
-  const sqlite3_module *p,        /* Methods for the module */
+  const(char)*zName,              /* Name of the module */
+  const(sqlite3_module)*p,        /* Methods for the module */
   void *pClientData,              /* Client data for xCreate/xConnect */
   void function (void*) xDestroy  /* Module destructor function */
 );
@@ -1235,7 +1236,7 @@ int sqlite3_create_module_v2(
 ** CAPI3REF: Virtual Table Instance Object
 */
 struct sqlite3_vtab {
-  const sqlite3_module *pModule;  /** The module for this virtual table */
+  const(sqlite3_module)*pModule;  /** The module for this virtual table */
   int nRef;                       /** NO LONGER USED */
   char *zErrMsg;                  /** Error message from sqlite3_mprintf() */
   /* Virtual table implementations will typically add additional fields */
@@ -1279,9 +1280,9 @@ struct sqlite3_blob;
 */
 int sqlite3_blob_open(
   sqlite3*,
-  const char *zDb,
-  const char *zTable,
-  const char *zColumn,
+  const(char)*zDb,
+  const(char)*zTable,
+  const(char)*zColumn,
   sqlite3_int64 iRow,
   int flags,
   sqlite3_blob **ppBlob
@@ -1499,9 +1500,9 @@ struct sqlite3_backup;
 */
 sqlite3_backup *sqlite3_backup_init(
   sqlite3 *pDest,                        /** Destination database handle */
-  const char *zDestName,                 /** Destination database name */
+  const(char)*zDestName,                 /** Destination database name */
   sqlite3 *pSource,                      /** Source database handle */
-  const char *zSourceName                /** Source database name */
+  const(char)*zSourceName                /** Source database name */
 );
 /// Ditto
 int sqlite3_backup_step(sqlite3_backup *p, int nPage);
@@ -1556,7 +1557,7 @@ int sqlite3_wal_checkpoint(sqlite3 *db, const char *zDb);
 */
 int sqlite3_wal_checkpoint_v2(
   sqlite3 *db,                    /** Database handle */
-  const char *zDb,                /** Name of attached database (or NULL) */
+  const(char)*zDb,                /** Name of attached database (or NULL) */
   int eMode,                      /** SQLITE_CHECKPOINT_* value */
   int *pnLog,                     /** OUT: Size of WAL log in frames */
   int *pnCkpt                     /** OUT: Total number of frames checkpointed */
@@ -1599,7 +1600,7 @@ extern (C) {
 */
 int sqlite3_rtree_geometry_callback(
   sqlite3 *db,
-  const char *zGeom,
+  const(char)*zGeom,
   int function (sqlite3_rtree_geometry *, int nCoord, double *aCoord, int *pRes) xGeom,
   void *pContext
 );

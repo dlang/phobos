@@ -22,11 +22,13 @@ module std.process;
 
 import core.stdc.stdlib;
 import core.stdc.errno;
+import core.thread;
 import std.c.process;
 import std.c.string;
 
 import std.conv;
 import std.exception;
+import std.internal.processinit;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -51,7 +53,13 @@ version(Posix)
     {
         // https://www.gnu.org/software/gnulib/manual/html_node/environ.html
         private extern(C) extern __gshared char*** _NSGetEnviron();
-        // need to declare environ = *_NSGetEnviron() in static this()
+        __gshared char** environ;
+
+        // Run in std.__processinit to avoid cyclic construction errors.
+        extern(C) void std_process_static_this()
+        {
+            environ = *_NSGetEnviron();
+        }
     }
     else
     {
@@ -315,14 +323,7 @@ else
  * writefln("Current process id: %s", getpid());
  * ---
  */
-version(Posix)
-{
-    alias core.sys.posix.unistd.getpid getpid;
-}
-else version (Windows)
-{
-    alias std.c.windows.windows.GetCurrentProcessId getpid;
-}
+alias core.thread.getpid getpid;
 
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
@@ -497,17 +498,7 @@ alias Environment environment;
 
 abstract final class Environment
 {
-    // initiaizes the value of environ for OSX
-    version(OSX)
-    {
-        static private char** environ;
-        static this()
-        {
-            environ = * _NSGetEnviron();
-        }
-    }
 static:
-
 private:
     // Return the length of an environment variable (in number of
     // wchars, including the null terminator), 0 if it doesn't exist.
@@ -542,7 +533,7 @@ private:
             if (len == 1) return true;
 
             auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
+            GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
             value = toUTF8(buf[0 .. $-1]);
             return true;
         }
@@ -724,3 +715,98 @@ unittest
         assert (v == environment[n]);
     }
 }
+
+
+version (Windows)
+{
+    import core.sys.windows.windows;
+
+    extern (Windows)
+    HINSTANCE ShellExecuteA(HWND hwnd, LPCSTR lpOperation, LPCSTR lpFile, LPCSTR lpParameters, LPCSTR lpDirectory, INT nShowCmd);
+
+
+    pragma(lib,"shell32.lib");
+
+    /****************************************
+     * Start up the browser and set it to viewing the page at url.
+     */
+    void browse(string url)
+    {
+        ShellExecuteA(null, "open", toStringz(url), null, null, SW_SHOWNORMAL);
+    }
+}
+else version (OSX)
+{
+    import core.stdc.stdio;
+    import core.stdc.string;
+    import core.sys.posix.unistd;
+
+    void browse(string url)
+    {
+        const(char)*[5] args;
+
+        const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
+        if (browser)
+        {   browser = strdup(browser);
+            args[0] = browser;
+            args[1] = toStringz(url);
+            args[2] = null;
+        }
+        else
+        {
+            //browser = "/Applications/Safari.app/Contents/MacOS/Safari";
+            args[0] = "open".ptr;
+            args[1] = "-a".ptr;
+            args[2] = "/Applications/Safari.app".ptr;
+            args[3] = toStringz(url);
+            args[4] = null;
+        }
+
+        auto childpid = fork();
+        if (childpid == 0)
+        {
+            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            perror(args[0]);                // failed to execute
+            return;
+        }
+        if (browser)
+            free(cast(void*)browser);
+    }
+}
+else version (Posix)
+{
+    import core.stdc.stdio;
+    import core.stdc.string;
+    import core.sys.posix.unistd;
+
+    void browse(string url)
+    {
+        const(char)*[3] args;
+
+        const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
+        if (browser)
+        {   browser = strdup(browser);
+            args[0] = browser;
+        }
+        else
+            //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
+            args[0] = "xdg-open".ptr;
+
+        args[1] = toStringz(url);
+        args[2] = null;
+
+        auto childpid = fork();
+        if (childpid == 0)
+        {
+            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            perror(args[0]);                // failed to execute
+            return;
+        }
+        if (browser)
+            free(cast(void*)browser);
+    }
+}
+else
+    static assert(0, "os not supported");
+
+

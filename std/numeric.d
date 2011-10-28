@@ -1278,7 +1278,11 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
     /* Do trailing portion in naive loop. */
     while (avec != all_endp)
-        sum0 += (*avec++) * (*bvec++);
+    {
+        sum0 += *avec * *bvec;
+        ++avec;
+        ++bvec;
+    }
 
     return sum0;
 }
@@ -1289,6 +1293,17 @@ unittest
     double[] b = [ 4., 6., ];
     assert(dotProduct(a, b) == 16);
     assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    
+    // Make sure the unrolled loop codepath gets tested.
+    static const x = 
+        [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    static const y = 
+        [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    assert(dotProduct(x, y) == 2280);
+    
+    // Test in CTFE
+    enum ctfeDot = dotProduct(x, y);
+    static assert(ctfeDot == 2280);
 }
 
 /**
