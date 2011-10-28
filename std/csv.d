@@ -75,6 +75,17 @@ class HeadingMismatchException : Exception
 }
 
 /**
+* Determines the behavior for when an error is detected.
+*/
+enum Malformed
+{
+    /// No exceptions are thrown due to incorrect CSV.
+    ignore,
+    /// Use exceptions when input is incorrect CSV.
+    throwException
+}
+
+/**
  * Builds a RecordList range for iterating over records found in input.
  *
  * This function simplifies the process for standard text input.
@@ -868,17 +879,6 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
             throw new IncompleteCellException(ans.data.idup,
                   "Data continues on future lines or trailing quote");
 
-}
-
-/**
-* Determines the behavior for when an error is detected.
-*/
-enum Malformed
-{
-    /// No exceptions are thrown due to incorrect CSV.
-    ignore,
-    /// Use exceptions when input is incorrect CSV.
-    throwException
 }
 
 // Test csvNextToken on simplest form and correct format.
