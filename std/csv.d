@@ -48,6 +48,33 @@ import std.stdio;
 import std.traits;
 
 /**
+ * Exception thrown when a Token is identified to not be completed: a quote is
+ * found in an unquoted field, data continues after a closing quote, or the
+ * quoted field was not closed before data was empty.
+ */
+class IncompleteCellException : Exception
+{
+    string partialData;
+    this(string cellPartial, string msg)
+    {
+        super(msg);
+        partialData = cellPartial;
+    }
+}
+
+/** 
+ * Exception thrown when a heading is provided but a matching column is not
+ * found or the order did not match that found in the file (non-struct).
+ */
+class HeadingMismatchException : Exception
+{
+    this(string msg)
+    {
+        super(msg);
+    }
+}
+
+/**
  * Builds a RecordList range for iterating over records found in input.
  *
  * This function simplifies the process for standard text input.
@@ -129,9 +156,13 @@ import std.traits;
  *      Otherwise the range will return a Record range of the type.
  *
  * Throws:
- *       IncompleteCellException When a quote is found in an unquoted field, data
- *       continues after a closing quote, or the quoted field was not closed
- *       before data was empty.
+ *       IncompleteCellException When a quote is found in an unquoted field,
+ *       data continues after a closing quote, or the quoted field was not
+ *       closed before data was empty.
+ *
+ *       HeadingMismatchException  when a heading is provided but a matching
+ *       column is not found or the order did not match that found in the file
+ *       (non-struct).
  */
 auto csvText(Contents = string, Malformed ErrorLevel 
              = Malformed.throwException, Range)(Range input)
@@ -402,8 +433,9 @@ public:
      * with a heading.
      *
      * Throws:
-     *     HeadingOrderMismatchException when heading provided does not match
-     *     the order of the heading in the file.
+     *       HeadingMismatchException  when a heading is provided but a
+     *       matching column is not found or the order did not match that found
+     *       in the file (non-struct).
      */
     this(Range input, Separator delimiter, Separator quote, string[] colHeaders)
     {
@@ -435,7 +467,7 @@ public:
         {
             immutable index = colToIndex[h];
             static if(!Malformed.ignore)
-                enforceEx!(HeadingOrderMismatchException)(index < size_t.max,
+                enforceEx!(HeadingMismatchException)(index < size_t.max,
                         "Header not found: " ~ to!string(h));
             indices[i] = index;
         }
@@ -448,7 +480,8 @@ public:
             }
             else 
             {
-                enforce(isSorted(indices));
+                enforceEx!(HeadingMismatchException)(isSorted(indices),
+                           "Header in file does not match specified header.");
             }
         }
 
@@ -487,6 +520,10 @@ public:
      * Brings the next Record into the front of the range.
      *
      * Throws:
+     *       IncompleteCellException When a quote is found in an unquoted field,
+     *       data continues after a closing quote, or the quoted field was not
+     *       closed before data was empty.
+     *
      *       ConvException when conversion fails.
      *
      *       ConvOverflowException when conversion overflows.
@@ -651,6 +688,10 @@ public:
      * Brings the next Content into the front of the range.
      *
      * Throws:
+     *       IncompleteCellException When a quote is found in an unquoted field,
+     *       data continues after a closing quote, or the quoted field was not
+     *       closed before data was empty.
+     *
      *       ConvException when conversion fails.
      *
      *       ConvOverflowException when conversion overflows.
@@ -838,32 +879,6 @@ enum Malformed
     ignore,
     /// Use exceptions when input is incorrect CSV.
     throwException
-}
-
-/**
- * Exception thrown when a Token is identified to not be
- * completed.
- */
-class IncompleteCellException : Exception
-{
-    string partialData;
-    this(string cellPartial, string msg)
-    {
-        super(msg);
-        partialData = cellPartial;
-    }
-}
-
-/**
- * Exception thrown when a heading is provided but the
- * order did not match that found in the file.
- */
-class HeadingOrderMismatchException : Exception
-{
-    this(string msg)
-    {
-        super(msg);
-    }
 }
 
 // Test csvNextToken on simplest form and correct format.
