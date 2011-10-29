@@ -44,7 +44,6 @@ import std.array;
 import std.conv;
 import std.exception;
 import std.range;
-import std.stdio;
 import std.traits;
 
 /**
@@ -329,6 +328,17 @@ unittest
             assert(cell == ans.front);
             ans.popFront();
         }
+
+    str = "a,c,e\nJoe,Carpenter,300000\nFred,Fly,4";
+    records2 = csvText!(string, Malformed.ignore)(str, ["a","b","c","d"]);
+
+    ans = ["Joe","Carpenter","Fred","Fly"];
+    foreach(record; records2)
+        foreach(cell; record)
+        {
+            assert(cell == ans.front);
+            ans.popFront();
+        }
 }
 
 // Test null header interface
@@ -477,7 +487,7 @@ public:
         foreach(i, h; colHeaders)
         {
             immutable index = colToIndex[h];
-            static if(!Malformed.ignore)
+            static if(ErrorLevel != Malformed.ignore)
                 enforceEx!(HeadingMismatchException)(index < size_t.max,
                         "Header not found: " ~ to!string(h));
             indices[i] = index;
@@ -657,6 +667,14 @@ public:
         // how many will be skipped to get to the next header column
         size_t normalizer;
         foreach(ref c; _popCount) {
+            static if(ErrorLevel == Malformed.ignore)
+            {
+                // If we are not throwing exceptions
+                // a header may not exist, indices are sorted
+                // and will be size_t.max if not found.
+                if(c == size_t.max)
+                    break;
+            }
             c -= normalizer;
             normalizer += c + 1;
         }
@@ -709,12 +727,12 @@ public:
      */
     void popFront()
     {
-        if(_popCount && _popCount.empty) {
+        // Skip last of record when header is depleted.
+        if(_popCount && _popCount.empty)
             while(!recordEnd())
             {
                 prime(1);
             }
-        }
 
         if(recordEnd())
         {
@@ -755,6 +773,14 @@ public:
         auto skipNum = _popCount.empty ? 0 : _popCount.front;
         if(!_popCount.empty)
             _popCount.popFront();
+
+        if(skipNum == size_t.max) {
+            while(!recordEnd())
+                prime(1);
+            _empty = true;
+            return;
+        }
+
         if(skipNum)
             prime(skipNum);
         curContentsoken = to!Contents(_front.data);
