@@ -691,7 +691,7 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, R)(R delegate(T) f, T a, T b)
+T findRoot(T, R)(scope R delegate(T) f, T a, T b)
 {
     auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
     // Return the first value if it is smaller or NaN
@@ -731,8 +731,8 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T,R)(R delegate(T) f, T ax, T bx, R fax, R fbx,
-    bool delegate(T lo, T hi) tolerance)
+Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, T ax, T bx, R fax, R fbx,
+    scope bool delegate(T lo, T hi) tolerance)
 in {
     assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
