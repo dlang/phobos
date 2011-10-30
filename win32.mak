@@ -118,7 +118,8 @@ SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\random.d std\regexp.d \
     std\contracts.d std\exception.d \
     std\compiler.d std\cpuid.d \
-    std\process.d std\system.d std\concurrency.d
+    std\process.d std\internal\processinit.d \
+    std\system.d std\concurrency.d
 
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
@@ -136,6 +137,7 @@ SRCS_3 = std\variant.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
+	std\internal\windows\advapi32.d \
 	crc32.d \
 	std\c\process.d \
 	std\c\stdarg.d \
@@ -294,10 +296,13 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
+SRC_STD_INTERNAL= std\internal\processinit.d
+
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
+SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
 SRC_ETC=
 
@@ -338,9 +343,7 @@ SRC_ZLIB= \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
 	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak \
-	etc\c\zlib\freebsd.mak \
-	etc\c\zlib\solaris.mak
+	etc\c\zlib\osx.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
@@ -490,6 +493,9 @@ perf.obj : std\perf.d
 
 process.obj : std\process.d
 	$(DMD) -c $(DFLAGS) std\process.d
+
+processinit.obj : std\internal\processinit.d
+	$(DMD) -c $(DFLAGS) std\internal\processinit.d
 
 random.obj : std\random.d
 	$(DMD) -c $(DFLAGS) std\random.d
@@ -926,7 +932,9 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
+	zip32 -u phobos $(SRC_STD_INTERNAL)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
+	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
@@ -957,7 +965,9 @@ install:
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
+	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
@@ -974,7 +984,9 @@ svn:
 	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd
+	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows
 	#$(CP) $(SRC_ETC) $(SVN)\etc
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib

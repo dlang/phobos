@@ -553,6 +553,14 @@ unittest // Recursive division, bug 5568
     BigInt c = (BigInt(1) << (4846*2 + 4843*2)) - 1;
     BigInt w =  c - b + a;
     assert(w % m == 0);
+
+    // Bug 6819. ^^
+    BigInt z1 = BigInt(10)^^64;
+    BigInt w1 = BigInt(10)^^128;
+    assert(z1^^2 == w1);
+    BigInt z2 = BigInt(1)<<64;
+    BigInt w2 = BigInt(1)<<128;
+    assert(z2^^2 == w2);
 }
 
 unittest

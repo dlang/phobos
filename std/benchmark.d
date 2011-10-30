@@ -7,7 +7,8 @@
     Source:    $(PHOBOSSRC std/_benchmark.d)
  */
 module std.benchmark;
-import std.datetime, std.traits, std.range, std.typecons;
+import std.datetime, std.traits, std.range, std.stdio, std.typecons;
+version(unittest) import std.random;
 
 debug = std_benchmark;
 
@@ -422,6 +423,12 @@ benchmark) returns $(D tuple(n, tMin)), where $(D n) (always a power
 of 10) is the number of loops to achieve $(D tMin). In all cases, the
 effective time spent per call is $(D tMin / n).
 
+To make sure you only run the function exactly once (e.g. the function
+performs database or networking work), _benchmark it with $(D
+benchmark!(fun)(TickDuration.init, 1)). That ensures that there's only
+one trial, and since the time budget is $(D 0), the first experiment
+will pass muster.
+
 Params:
 
 fun = Alias of callable object (e.g. function name). It should take
@@ -485,6 +492,13 @@ if (is(typeof(benchmark!fun(1u))))
 
     return tuple(n, elapsed);
 }
+
+// void foo(string moduleName, fun...)()
+// {
+//     mixin("import " ~ moduleName ~ ";");
+//     mixin("pragma(msg, __traits(allMembers, mymain));");
+//     mixin(fun[3] ~ "(0);");
+// }
 
 /**
 Benchmarks an entire module given its name. Benchmarking first
@@ -602,10 +616,12 @@ was $(D 5.28) times faster than $(D append_builtin)), and with $(D
 1/14.28x) for $(D concat) (meaning that $(D append_concat)'s speed was
 $(D 14.28) times $(I slower) than $(D append_builtin)'s speed).
  */
-void benchmarkModule(string mod)(File target = stdout,
+void benchmarkModule(string mod, functions...)(File target = stdout,
         TickDuration timeBudget = TickDuration.from!"msecs"(10),
         uint trials = 10)
 {
+    writeln("giba");
+/+
     import std.algorithm;
 
     struct TestResult
@@ -624,9 +640,12 @@ void benchmarkModule(string mod)(File target = stdout,
     // Step 1: fill the results with name information
     {
         // Import stuff here so we have access to it
-        mixin("import " ~ mod ~ ";");
+        enum importDeclaration = "import " ~ mod ~ ";";
+        static assert(is(typeof({ mixin(importDeclaration); })),
+                "Cannot import module `" ~ mod ~ "' from std.benchmark.");
+        mixin(importDeclaration);
 
-        foreach (entity; mixin("__traits(allMembers, " ~ mod ~ ")"))
+        foreach (entity; functions)
         {
             static if (entity.length >= 10
                     && entity[0 .. 10] == "benchmark_")
@@ -705,7 +724,7 @@ void benchmarkModule(string mod)(File target = stdout,
     {
         // Import stuff here so we have access to it
         mixin("import " ~ mod ~ ";");
-        foreach (entity; mixin("__traits(allMembers, " ~ mod ~ ")"))
+        foreach (entity; functions)
         {
             static if (entity.length >= 10
                     && entity[0 .. 10] == "benchmark_")
@@ -721,6 +740,7 @@ void benchmarkModule(string mod)(File target = stdout,
     {
         target.writeln(repeat('=', 79));
     }
++/
 }
 
 debug (std_benchmark)
@@ -816,7 +836,6 @@ void benchmarkResume()
     theStopWatch.start();
 }
 
-version(unittest) import std.random, std.stdio;
 unittest
 {
     void benchmark_findDouble(uint n)

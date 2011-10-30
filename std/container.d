@@ -4254,7 +4254,8 @@ class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         private enum doUnittest = isIntegral!T;
 
-        bool arrayEqual(T[] arr)
+        // note, this must be final so it does not affect the vtable layout
+        final bool arrayEqual(T[] arr)
         {
             if(walkLength(this[]) == arr.length)
             {

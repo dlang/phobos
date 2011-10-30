@@ -46,11 +46,6 @@ module std.exception;
 
 import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
 import core.exception, core.stdc.errno;
-version(unittest)
-{
-    import std.datetime;
-    import std.stdio;
-}
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -68,12 +63,14 @@ version(unittest)
 
     Examples:
 --------------------
-assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
-assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
 
-assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
-                            std.datetime.TimeOfDay(12, 0, 60))) ==
-       `assertNotThrown failed: TimeException was thrown.`);
+//Exception is the default.
+assertNotThrown(enforceEx!StringException(true, "Error!"));
+
+assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+           enforceEx!StringException(false, "Error!"))) ==
+       `assertNotThrown failed: StringException was thrown.`);
 --------------------
   +/
 void assertNotThrown(T : Throwable = Exception, E)
@@ -100,12 +97,14 @@ void assertNotThrown(T : Throwable = Exception, E)
 //Verify Examples
 unittest
 {
-    assertNotThrown!TimeException(std.datetime.TimeOfDay(0, 0, 0));
-    assertNotThrown(std.datetime.TimeOfDay(23, 59, 59));  //Exception is default.
+    assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
 
-    assert(collectExceptionMsg!AssertError(assertNotThrown!TimeException(
-                                std.datetime.TimeOfDay(12, 0, 60))) ==
-           `assertNotThrown failed: TimeException was thrown.`);
+    //Exception is the default.
+    assertNotThrown(enforceEx!StringException(true, "Error!"));
+
+    assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
+               enforceEx!StringException(false, "Error!"))) ==
+           `assertNotThrown failed: StringException was thrown.`);
 }
 
 unittest
@@ -207,12 +206,14 @@ unittest
 
     Examples:
 --------------------
-assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
-assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+assertThrown!StringException(enforceEx!StringException(false, "Error!"));
 
-assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
-                            std.datetime.TimeOfDay(12, 0, 0))) ==
-       `assertThrown failed: No AssertError was thrown.`);
+//Exception is the default.
+assertThrown(enforceEx!StringException(false, "Error!"));
+
+assert(collectExceptionMsg!AssertError(assertThrown!StringException(
+           enforceEx!StringException(true, "Error!"))) ==
+       `assertThrown failed: No StringException was thrown.`);
 --------------------
   +/
 void assertThrown(T : Throwable = Exception, E)
@@ -243,12 +244,14 @@ void assertThrown(T : Throwable = Exception, E)
 //Verify Examples
 unittest
 {
-    assertThrown!TimeException(std.datetime.TimeOfDay(-1, 15, 30));
-    assertThrown(std.datetime.TimeOfDay(12, 15, 60));  //Exception is default.
+    assertThrown!StringException(enforceEx!StringException(false, "Error!"));
 
-    assert(collectExceptionMsg!AssertError(assertThrown!AssertError(
-                                std.datetime.TimeOfDay(12, 0, 0))) ==
-           `assertThrown failed: No AssertError was thrown.`);
+    //Exception is the default.
+    assertThrown(enforceEx!StringException(false, "Error!"));
+
+    assert(collectExceptionMsg!AssertError(assertThrown!StringException(
+               enforceEx!StringException(true, "Error!"))) ==
+           `assertThrown failed: No StringException was thrown.`);
 }
 
 unittest
@@ -498,15 +501,6 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
 T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
     if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
 {
-    import std.metastrings;
-
-    pragma(msg, Format!("Notice: As of Phobos 2.055, the version of enforceEx which " ~
-                        "constructs its exception with new E(msg) instead of " ~
-                        "new E(msg, file, line) has been scheduled for " ~
-                        "deprecation in February 2012. Please update %s's " ~
-                        "constructor so that it can be constructed with " ~
-                        "new %s(msg, file, line).", E.stringof, E.stringof));
-
     if (!value) throw new E(msg);
     return value;
 }
