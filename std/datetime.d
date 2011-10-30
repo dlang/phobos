@@ -30923,7 +30923,6 @@ public:
     void start()
     {
         assert(!_flagStarted);
-        StopWatch sw;
         _flagStarted = true;
         _timeStart = Clock.currSystemTick;
     }
