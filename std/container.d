@@ -947,10 +947,13 @@ Defines the container's primary range, which embodies a forward range.
         /// ditto
         @property T front() { return _head._payload; }
         /// ditto
-        @property void front(T value)
+        static if (isAssignable!(T, T))
         {
-            enforce(_head);
-            _head._payload = value;
+            @property void front(T value)
+            {
+                enforce(_head);
+                _head._payload = value;
+            }
         }
         /// ditto
         void popFront()
@@ -1025,10 +1028,13 @@ Forward to $(D opSlice().front(value)).
 
 Complexity: $(BIGOH 1)
      */
-    @property void front(T value)
+    static if (isAssignable!(T, T))
     {
-        enforce(_root);
-        _root._payload = value;
+        @property void front(T value)
+        {
+            enforce(_root);
+            _root._payload = value;
+        }
     }
 
     unittest
@@ -1439,6 +1445,16 @@ unittest
 unittest
 {
     auto s = make!(SList!int)(1, 2, 3);
+}
+
+unittest
+{
+    // 5193
+    static struct Data
+    {
+        const int val;
+    }
+    SList!Data list;
 }
 
 /**
