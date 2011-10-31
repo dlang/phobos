@@ -1833,13 +1833,36 @@ version(Posix) unittest
 version(StdDdoc) string readLink(C)(const(C)[] link);
 else version(Posix) string readLink(C)(const(C)[] link)
 {
-    char[2048] buffer;
-    immutable size = cenforce(core.sys.posix.unistd.readlink(toUTFz!(const char*)(link),
-                                                             buffer,
-                                                             buffer.length),
-                              link);
+    enum bufferLen = 2048;
+    enum maxCodeUnits = 6;
+    char[bufferLen] buffer;
+    auto linkPtr = toUTFz!(const char*)(link);
+    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                        buffer.ptr,
+                                                        buffer.length),
+                         link);
 
-    return to!string(buffer[0 .. (size >= buffer.length ? $ - 1 : size)]);
+    if(size <= bufferLen - maxCodeUnits)
+        return to!string(buffer[0 .. size]);
+
+    auto dynamicBuffer = new char[](bufferLen * 3 / 2);
+
+    foreach(i; 0 .. 10)
+    {
+        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                       dynamicBuffer.ptr,
+                                                       dynamicBuffer.length),
+                        link);
+        if(size <= dynamicBuffer.length - maxCodeUnits)
+        {
+            dynamicBuffer.length = size;
+            return assumeUnique(dynamicBuffer);
+        }
+
+        dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
+    }
+
+    throw new FileException(format("Path for %s is too long to read.", link));
 }
 
 version(Posix) unittest
@@ -1850,14 +1873,13 @@ version(Posix) unittest
         {
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
-            scope(failure) std.stdio.stderr.writefln("Failed file: %s", file);
 
             symlink(file, symfile);
-
-            assert(readLink(symfile) == file);
+            assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
 }
+
 
 /****************************************************
  * Get current directory.
