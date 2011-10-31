@@ -43,7 +43,7 @@ version (DigitalMarsC)
                 in real* pdval,
                 char* buf, size_t* psl, int width) __pfloatfmt;
     }
-    alias std.c.stdio._snprintf snprintf;
+    alias core.stdc.stdio._snprintf snprintf;
 }
 else
 {
