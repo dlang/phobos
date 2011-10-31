@@ -184,7 +184,8 @@ std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) std/internal/processinit
+	gammafunction errorfunction) $(addprefix std/internal/, \
+	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
