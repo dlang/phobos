@@ -1436,9 +1436,9 @@ public:
             }
 
             // Effectively -1:  chunkIndex + 1 == 0:
-            size_t workUnitIndex = size_t.max;
+            shared size_t workUnitIndex = size_t.max;
 
-            bool shouldContinue = true;
+            shared bool shouldContinue = true;
 
             void doIt() {
                 scope(failure) {
@@ -3029,11 +3029,11 @@ private enum string parallelApplyMixinRandomAccess = q{
     // Whether iteration is with or without an index variable.
     enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
 
-    size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
+    shared size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
     if(!len) return 0;
 
-    bool shouldContinue = true;
+    shared bool shouldContinue = true;
 
     void doIt() {
         scope(failure) {
@@ -3087,7 +3087,7 @@ enum string parallelApplyMixinInputRange = q{
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
 
-    bool shouldContinue = true;
+    shared bool shouldContinue = true;
 
     // The total number of elements that have been popped off range.
     // This is updated only while protected by rangeMutex;
