@@ -266,15 +266,15 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    @safe pure nothrow
+    @trusted pure //TODO: nothrow (BUG 5700)
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
     if (p1.empty)
     {
-        version (Windows)
+        version (Windows) if (isUNC(path))
         {
-            if (isUNC(path)) return to!(typeof(return))(dirSeparator);
+            return cast(typeof(return)) dirSeparator.dup;
         }
         return null;
     }
@@ -379,8 +379,7 @@ C[] dirName(C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
-    enum currentDir = cast(C[]) ".";
-    if (path.empty) return currentDir;
+    if (path.empty) return to!(typeof(return))(".");
 
     auto p = rtrimDirSeparators(path);
     if (p.empty) return path[0 .. 1];
