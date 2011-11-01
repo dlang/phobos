@@ -266,7 +266,7 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure nothrow // TODO: @safe (BUG 6169)
+    @safe pure nothrow
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -274,10 +274,7 @@ inout(C)[] baseName(C)(inout(C)[] path)
     {
         version (Windows)
         {
-            // TODO: This line means the function cannot be @safe until
-            // BUG 6169 is fixed.  (The cast is perfectly safe since it
-            // happens at compile time.)
-            if (isUNC(path)) return cast(typeof(return))(dirSeparator);
+            if (isUNC(path)) return to!(typeof(return))(dirSeparator);
         }
         return null;
     }
