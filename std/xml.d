@@ -616,7 +616,7 @@ class Document : Element
                 ((prolog != doc.prolog            )
                     ? ( prolog < doc.prolog             ? -1 : 1 ) :
                 ((super  != cast(const Element)doc)
-                    ? ( super  < cast(const Element)doc ? -1 : 1 ) :
+                    ? ( cast()super  < cast(const Element)doc ? -1 : 1 ) :
                 ((epilog != doc.epilog            )
                     ? ( epilog < doc.epilog             ? -1 : 1 ) :
             0 )));
@@ -630,7 +630,7 @@ class Document : Element
          */
         override hash_t toHash()
         {
-            return hash(prolog,hash(epilog,super.toHash));
+            return hash(prolog, hash(epilog, (cast()super).toHash()));
         }
 
         /**

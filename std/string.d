@@ -193,9 +193,6 @@ version(StdDdoc) bool iswhite(dchar c);
 else bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "iswhite",
-                            "std.ascii.isWhite or std.uni.isWhite"));
-
     return c <= 0x7F
         ? indexOf(whitespace, c) != -1
         : (c == paraSep || c == lineSep);
@@ -881,7 +878,6 @@ unittest
  */
 S tolower(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "tolower", "std.string.toLower"));
     return toLower!S(s);
 }
 
@@ -940,7 +936,6 @@ unittest
  */
 void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "tolowerInPlace", "std.string.toLowerInPlace"));
     toLowerInPlace!C(s);
 }
 
@@ -1056,7 +1051,6 @@ unittest
  */
 S toupper(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "toupper", "std.string.toUpper"));
     return toUpper!S(s);
 }
 
@@ -1115,7 +1109,6 @@ unittest
  */
 void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "toupperInPlace", "std.string.toUpperInPlace"));
     toUpperInPlace!C(s);
 }
 
@@ -1296,9 +1289,6 @@ unittest
  */
 S capwords(S)(S s) if (isSomeString!S)
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.string.capwords has been " ~
-                "scheduled for deprecation in January 2012.");
-
     return _capWords!S(s);
 }
 
@@ -1372,13 +1362,15 @@ deprecated S repeat(S)(S s, size_t n)
 
 
 /**************************************
+ * $(RED Scheduled for deprecation in January 2012.
+ *       Please use $(LREF, splitLines) instead.)
+ *
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
  * The delimiter is not included in the line.
  */
 S[] splitlines(S)(S s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "splitlines", "std.string.splitLines"));
     return splitLines!S(s);
 }
 
@@ -1480,7 +1472,6 @@ unittest
  */
 String stripl(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "stripl", "std.string.stripLeft"));
     return stripLeft!String(s);
 }
 
@@ -1516,7 +1507,6 @@ S stripLeft(S)(S s) @safe pure
  */
 String stripr(String)(String s)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "stripr", "std.string.stripRight"));
     return stripRight!String(s);
 }
 
@@ -1711,7 +1701,6 @@ unittest
  */
 S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "ljustify", "std.string.leftJustify"));
     return leftJustify!S(s, width);
 }
 
@@ -1758,7 +1747,6 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
  */
 S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "rjustify", "std.string.rightJustify"));
     return rightJustify!S(s, width);
 }
 
@@ -1871,8 +1859,6 @@ unittest
  */
 S zfill(S)(S s, int width) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "zfill",
-                            "std.string.rightJustify with a fillChar of '0'"));
     return rightJustify!S(s, width, '0');
 }
 
@@ -1890,7 +1876,6 @@ in
 }
 body
 {
-    pragma(msg, softDeprec!("2.055", "February 2012", "insert", "std.array.insertInPlace"));
     std.array.insertInPlace(s, index, sub);
     return s;
 }
@@ -1905,7 +1890,6 @@ body
  */
 S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
-    pragma(msg, softDeprec!("2.054", "January 2012", "expandtabs", "std.string.detab"));
     return detab!S(str, tabsize);
 }
 
@@ -4043,13 +4027,6 @@ unittest
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
     }
-}
-
-private template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.string.%s has been scheduled " ~
-                              "for deprecation in %s. Please use %s instead.",
-                              vers, oldFunc, date, newFunc);
 }
 
 private template hardDeprec(string vers, string date, string oldFunc, string newFunc)

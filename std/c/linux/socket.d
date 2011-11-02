@@ -92,3 +92,21 @@ enum: uint
     INADDR_BROADCAST =  0xFFFFFFFF,
     INADDR_NONE =       0xFFFFFFFF,
 }
+
+enum: int
+{
+    TCP_NODELAY =        1,     // Don't delay send to coalesce packets
+    TCP_MAXSEG =         2,     // Set maximum segment size
+    TCP_CORK =           3,     // Control sending of partial frames
+    TCP_KEEPIDLE =       4,     // Start keeplives after this period
+    TCP_KEEPINTVL =      5,     // Interval between keepalives
+    TCP_KEEPCNT =        6,     // Number of keepalives before death
+    TCP_SYNCNT =         7,     // Number of SYN retransmits
+    TCP_LINGER2 =        8,     // Life time of orphaned FIN-WAIT-2 state
+    TCP_DEFER_ACCEPT =   9,     // Wake up listener only when data arrive
+    TCP_WINDOW_CLAMP =  10,     // Bound advertised window
+    TCP_INFO =          11,     // Information about this connection.
+    TCP_QUICKACK =      12,     // Bock/reenable quick ACKs.
+    TCP_CONGESTION =    13,     // Congestion control algorithm.
+    TCP_MD5SIG =        14,     // TCP MD5 Signature (RFC2385)
+}

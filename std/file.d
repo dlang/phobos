@@ -937,10 +937,6 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
                                           out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in November 2011. Please use " ~
-                "the version of getTimes with two arguments instead.");
-
     struct_stat64 statbuf = void;
 
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -1837,13 +1833,36 @@ version(Posix) unittest
 version(StdDdoc) string readLink(C)(const(C)[] link);
 else version(Posix) string readLink(C)(const(C)[] link)
 {
-    char[2048] buffer;
-    immutable size = cenforce(core.sys.posix.unistd.readlink(toUTFz!(const char*)(link),
-                                                             buffer,
-                                                             buffer.length),
-                              link);
+    enum bufferLen = 2048;
+    enum maxCodeUnits = 6;
+    char[bufferLen] buffer;
+    auto linkPtr = toUTFz!(const char*)(link);
+    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                        buffer.ptr,
+                                                        buffer.length),
+                         link);
 
-    return to!string(buffer[0 .. (size >= buffer.length ? $ - 1 : size)]);
+    if(size <= bufferLen - maxCodeUnits)
+        return to!string(buffer[0 .. size]);
+
+    auto dynamicBuffer = new char[](bufferLen * 3 / 2);
+
+    foreach(i; 0 .. 10)
+    {
+        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                       dynamicBuffer.ptr,
+                                                       dynamicBuffer.length),
+                        link);
+        if(size <= dynamicBuffer.length - maxCodeUnits)
+        {
+            dynamicBuffer.length = size;
+            return assumeUnique(dynamicBuffer);
+        }
+
+        dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
+    }
+
+    throw new FileException(format("Path for %s is too long to read.", link));
 }
 
 version(Posix) unittest
@@ -1854,14 +1873,13 @@ version(Posix) unittest
         {
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
-            scope(failure) std.stdio.stderr.writefln("Failed file: %s", file);
 
             symlink(file, symfile);
-
-            assert(readLink(symfile) == file);
+            assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
 }
+
 
 /****************************************************
  * Get current directory.
@@ -3602,7 +3620,6 @@ void main(string[] args)
  +/
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3674,7 +3691,6 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     import std.regexp;
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
@@ -3747,7 +3763,6 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3880,14 +3895,6 @@ version(Windows)
 
         return sysTimeToDTime(sysTime);
     }
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.file.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }
 
 

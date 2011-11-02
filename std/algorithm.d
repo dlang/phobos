@@ -3701,6 +3701,9 @@ unittest
 }
 
 /**
+ *  $(RED Scheduled for deprecation. Please use $(XREF algorithm, countUntil)
+ *        instead.)
+ *
  * Same as $(D countUntil). This symbol has been scheduled for
  * deprecation because it is easily confused with the homonym function
  * in $(D std.string).
@@ -3708,8 +3711,6 @@ unittest
 sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    pragma(msg, "std.algorithm.indexOf has been scheduled for deprecation."
-            " You may want to use std.algorithm.countUntil instead.");
     return countUntil!pred(haystack, needle);
 }
 
@@ -7275,19 +7276,30 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && isRandomAccessRange!(RangeIndex)
-            && isIntegral!(ElementType!(RangeIndex)))
+    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
+        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
+        isIntegral!(ElementType!(RangeIndex)))
 {
-    // assume collection already ordered
-    size_t i;
-    auto r1 = r;
-    for (; !r1.empty; r1.popFront, ++i)
-        index[i] = i;
-    enforce(index.length == i);
+    alias Unqual!(ElementType!RangeIndex) I;
+    enforce(r.length == index.length,
+        "r and index must be same length for makeIndex.");
+    static if(I.sizeof < size_t.sizeof)
+    {
+        enforce(r.length <= I.max, "Cannot create an index with " ~
+            "element type " ~ I.stringof ~ " with length " ~ 
+            to!string(r.length) ~ "."
+        );
+    }
+    
+    for(I i = 0; i < r.length; ++i) 
+    {
+        index[cast(size_t) i] = i;
+    }
+    
     // sort the index
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
-        return binaryFun!(less)(r[a], r[b]);
+        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
     }
     sort!(indirectLess, ss)(index);
 }
@@ -7309,18 +7321,19 @@ unittest
     assert(isSorted!("*a < *b")(index1));
 
     // index using offsets
-    auto index2 = new size_t[arr.length];
+    auto index2 = new long[arr.length];
     makeIndex(arr, index2);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr[a] < arr[b];})
-            (index2));
+            ((long a, long b){
+                return arr[cast(size_t) a] < arr[cast(size_t) b];
+            })(index2));
 
     // index strings using offsets
     string[] arr1 = ["I", "have", "no", "chocolate"];
-    auto index3 = new size_t[arr1.length];
+    auto index3 = new byte[arr1.length];
     makeIndex(arr1, index3);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr1[a] < arr1[b];})
+            ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
 }
 

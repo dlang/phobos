@@ -22,6 +22,7 @@ import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
+import std.format;
 import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
@@ -83,6 +84,15 @@ private
     {
         enum bool isNarrowInteger = staticIndexOf!(Unqual!(T),
                 byte, ubyte, short, ushort) >= 0;
+    }
+
+    T toStr(T, S)(S src)
+        if (isSomeString!T)
+    {
+        auto w = appender!T();
+        FormatSpec!(typeof(T.init[0])) f;
+        formatValue(w, src, f);
+        return w.data;
     }
 }
 
@@ -351,8 +361,9 @@ unittest
 }
 
 /**
-$(RED Scheduled for deprecation in January 2012. Please use
-      method $(D opCast) instead.)
+$(RED Scheduled for deprecation in January 2012. Please define $(D opCast)
+      for user-defined types instead of a $(D to) function.
+      $(LREF to) will now use $(D opCast).)
 
 Object-_to-non-object conversions look for a method "to" of the source
 object.
@@ -379,10 +390,6 @@ unittest
 T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
         && is(typeof(S.init.to!T()) : T))
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.conv.toImpl using method " ~
-                "\"to\" has been scheduled for deprecation in January 2012. " ~
-                "Please use method opCast instead.");
-
     return value.to!T();
 }
 
@@ -441,8 +448,7 @@ T toImpl(T, S)(S src)
 // Bugzilla 3961
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct Int
     {
         int x;
@@ -467,6 +473,18 @@ unittest
         }
     }
     Int3 i3 = to!Int3(1);
+}
+
+// Bugzilla 6808
+unittest
+{
+    static struct FakeBigInt
+    {
+        this(string s){}
+    }
+
+    string s = "101";
+    auto i3 = to!FakeBigInt(s);
 }
 
 /// ditto
@@ -711,55 +729,24 @@ T toImpl(T, S)(S s)
         isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
         isSomeString!T)
 {
-    static if (isSomeString!S)
+    static if (isSomeString!S && s[0].sizeof == T.init[0].sizeof)
     {
-        // string-to-string conversion
-        static if (s[0].sizeof == T[0].sizeof)
+        // string-to-string with incompatible qualifier conversion
+        static if (is(typeof(T.init[0]) == immutable))
         {
-            // same width, only qualifier conversion
-            enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
-                || is(T == const(dchar)[]);
-            enum tIsInvariant = is(T == immutable(char)[])
-                || is(T == immutable(wchar)[]) || is(T == immutable(dchar)[]);
-            static if (tIsConst)
-            {
-                return s;
-            }
-            else static if (tIsInvariant)
-            {
-                // conversion (mutable|const) -> immutable
-                return s.idup;
-            }
-            else
-            {
-                // conversion (immutable|const) -> mutable
-                return s.dup;
-            }
+            // conversion (mutable|const) -> immutable
+            return s.idup;
         }
         else
         {
-            // width conversion
-            // we can cast because toUTFX always produces a fresh string
-            static if (T[0].sizeof == 1)
-            {
-                return cast(T) toUTF8(s);
-            }
-            else static if (T[0].sizeof == 2)
-            {
-                return cast(T) toUTF16(s);
-            }
-            else
-            {
-                static assert(T[0].sizeof == 4);
-                return cast(T) toUTF32(s);
-            }
+            // conversion (immutable|const) -> mutable
+            return s.dup;
         }
     }
     else
     {
-        Appender!T result;
-        result.put(s);
-        return result.data;
+        // other conversions always run decode/encode
+        return toStr!T(s);
     }
 }
 
@@ -809,10 +796,20 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ", in T rightBracket = "]")
+T toImpl(T, S)(S s)
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
 {
+    return toStr!T(s);
+}
+
+T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
+    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
+        isSomeString!T)
+{
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
     static if (!isInputRange!S)
     {
         alias toImpl!(T, Unqual!S) ti;
@@ -855,7 +852,7 @@ unittest
 }
 
 // Converting arrays of void
-T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T rightBracket = "]")
+T toImpl(T, S)(ref S s)
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
 {
@@ -870,6 +867,16 @@ T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ", in T right
     return cast(T) result;
 }
 
+T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
+    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
+        isSomeString!T)
+{
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
+    return toImpl(s);
+}
+
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -881,10 +888,20 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+T toImpl(T, S)(S s)
     if (isAssociativeArray!S &&
         isSomeString!T)
 {
+    return toStr!T(s);
+}
+
+T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+    if (isAssociativeArray!S &&
+        isSomeString!T)
+{
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
     alias Unqual!(typeof(T.init[0])) Char;
     auto result = appender!(Char[])();
 // hash-to-string conversion
@@ -904,10 +921,20 @@ T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":", in T separator = 
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T nullstr = "null")
+T toImpl(T, S)(S s)
     if (is(S : Object) &&
         isSomeString!T)
 {
+    return toStr!T(s);
+}
+
+T toImpl(T, S)(S s, in T nullstr)
+    if (is(S : Object) &&
+        isSomeString!T)
+{
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
     if (!s)
         return nullstr;
     return to!T(s.toString);
@@ -931,7 +958,7 @@ T toImpl(T, S)(S s)
     if (is(S == struct) && is(typeof(&S.init.toString)) &&
         isSomeString!T)
 {
-    return to!T(s.toString);
+    return toStr!T(s);
 }
 
 unittest
@@ -945,10 +972,20 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in string left = S.stringof~"(", in string separator = ", ", in string right = ")")
+T toImpl(T, S)(S s)
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
+    return toStr!T(s);
+}
+
+T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
+    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
+        isSomeString!T)
+{
+    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+                                                 "std.format.formattedWrite"));
+
     Tuple!(FieldTypeTuple!S) * t = void;
     static if ((*t).sizeof == S.sizeof)
     {
@@ -991,15 +1028,7 @@ T toImpl(T, S)(S s)
         is(S == enum) &&
         isSomeString!T)
 {
-    foreach (i, e; EnumMembers!S)
-    {
-        if (s == e)
-            return __traits(allMembers, S)[i];
-    }
-
-    // val is not a member of T, output cast(T)rawValue instead.
-    static assert(!is(OriginalType!S == S));
-    return to!T("cast(" ~ S.stringof ~ ")") ~ to!T(cast(OriginalType!S)s);
+    return toStr!T(s);
 }
 
 unittest
@@ -1047,7 +1076,7 @@ T toImpl(T, S)(S b)
     if (is(Unqual!S == bool) &&
         isSomeString!T)
 {
-    return to!T(b ? "true" : "false");
+    return toStr!T(b);
 }
 
 unittest
@@ -1064,17 +1093,7 @@ T toImpl(T, S)(S c)
     if (isSomeChar!(Unqual!S) &&
         isSomeString!T)
 {
-    alias typeof(T.init[0]) Char;
-    static if (Char.sizeof >= S.sizeof)
-    {
-        return [ c ];
-    }
-    else
-    {
-        Unqual!Char[] result;
-        encode(result, c);
-        return cast(T) result;
-    }
+    return toStr!T(c);
 }
 
 unittest
@@ -1116,55 +1135,7 @@ T toImpl(T, S)(S input)
     if (isIntegral!S && isUnsigned!S &&
         isSomeString!T)
 {
-    static if (S.sizeof < uint.sizeof)
-    {
-        // Small unsigned integers to strings.
-        return to!T(cast(uint) input);
-    }
-    else
-    {
-        // Unsigned integers (uint and ulong) to string.
-        Unqual!S value = input;
-        alias Unqual!(typeof(T.init[0])) Char;
-        static if (is(typeof(T.init[0]) == const) ||
-                is(typeof(T.init[0]) == immutable))
-        {
-            if (value < 10)
-            {
-                static immutable Char[10] digits = "0123456789";
-                // Avoid storage allocation for simple stuff
-                return digits[cast(size_t) value .. cast(size_t) value + 1];
-            }
-        }
-
-        static if (S.sizeof == uint.sizeof)
-            enum maxlength = S.sizeof * 3;
-        else
-            auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
-
-        Char[] result;
-        if (__ctfe)
-        {
-            result = new Char[maxlength];
-        }
-        else
-        {
-            result = uninitializedArray!(Char[])(maxlength);
-        }
-
-        uint ndigits = 0;
-        do
-        {
-            auto div = value / 10;
-            auto rem = value % 10;
-            const c = cast(Char) (rem + '0');
-            value = div;
-            ++ndigits;
-            result[$ - ndigits] = c;
-        }
-        while (value);
-        return cast(T) result[$ - ndigits .. $];
-    }
+    return toStr!T(input);
 }
 
 unittest
@@ -1185,46 +1156,7 @@ T toImpl(T, S)(S value)
     if (isIntegral!S && isSigned!S &&
         isSomeString!T)
 {
-    static if (S.sizeof < int.sizeof)
-    {
-        // Small signed integers to strings.
-        return to!T(cast(int) value);
-    }
-    else
-    {
-        // Signed values ($(D int) and $(D long)).
-        if (value >= 0)
-            return to!T(cast(Unsigned!S) value);
-        alias Unqual!(typeof(T.init[0])) Char;
-
-        // Cache read-only data only for const and immutable; mutable
-        // data is supposed to use allocation in all cases
-        static if (is(ElementType!T == const) || is(ElementType!T == immutable))
-        {
-            if (value > -10)
-            {
-                static immutable Char[20] data =
-                    "00-1-2-3-4-5-6-7-8-9";
-                immutable i = cast(size_t) -value * 2;
-                return data[i .. i + 2];
-            }
-        }
-
-        Char[1 + S.sizeof * 3] buffer;
-
-        auto u = -cast(Unqual!(Unsigned!S)) value;
-        uint ndigits = 1;
-        while (u)
-        {
-            immutable c = cast(char)((u % 10) + '0');
-            u /= 10;
-            buffer[$ - ndigits] = c;
-            ++ndigits;
-        }
-        assert(ndigits <= buffer.length);
-        buffer[$ - ndigits] = '-';
-        return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
-    }
+    return toStr!T(value);
 }
 
 unittest
@@ -1316,76 +1248,7 @@ T toImpl(T, S)(S value)
     if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
         isSomeString!T)
 {
-    import core.stdc.stdio;// : sprintf;
-
-    /// $(D float) to all string types.
-    static if (is(Unqual!S == float))
-    {
-        return to!T(cast(double) value);
-    }
-
-    /// $(D double) to all string types.
-    static if (is(Unqual!S == double))
-    {
-        //alias Unqual!(ElementType!T) Char;
-        char[20] buffer;
-        int len = sprintf(buffer.ptr, "%g", value);
-        return to!T(buffer[0 .. len].dup);
-    }
-
-    /// $(D real) to all string types.
-    static if (is(Unqual!S == real))
-    {
-        char[20] buffer;
-        int len = sprintf(buffer.ptr, "%Lg", value);
-        return to!T(buffer[0 .. len].dup);
-    }
-
-    /// $(D ifloat) to all string types.
-    static if (is(Unqual!S == ifloat))
-    {
-        return to!T(cast(idouble) value);
-    }
-
-    /// $(D idouble) to all string types.
-    static if (is(Unqual!S == idouble))
-    {
-        char[21] buffer;
-        int len = sprintf(buffer.ptr, "%gi", value);
-        return to!T(buffer[0 .. len].dup);
-    }
-
-    /// $(D ireal) to all string types.
-    static if (is(Unqual!S == ireal))
-    {
-        char[21] buffer;
-        int len = sprintf(buffer.ptr, "%Lgi", value);
-        //assert(len < buffer.length); // written bytes is len + 1
-        return to!T(buffer[0 .. len].dup);
-    }
-
-    /// $(D cfloat) to all string types.
-    static if (is(Unqual!S == cfloat))
-    {
-        return to!string(cast(cdouble) value);
-    }
-
-    /// $(D cdouble) to all string types.
-    static if (is(Unqual!S == cdouble))
-    {
-        char[20 + 1 + 20 + 1] buffer;
-
-        int len = sprintf(buffer.ptr, "%g+%gi", value.re, value.im);
-        return to!T(buffer[0 .. len]);
-    }
-
-    /// $(D creal) to all string types.
-    static if (is(Unqual!S == creal))
-    {
-        char[20 + 1 + 20 + 1] buffer;
-        int len = sprintf(buffer.ptr, "%Lg+%Lgi", value.re, value.im);
-        return to!T(buffer[0 .. len].dup);
-    }
+    return toStr!T(value);
 }
 
 /// ditto
@@ -1393,7 +1256,7 @@ T toImpl(T, S)(S value)
     if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
         isSomeString!T)
 {
-    return to!T(cast(size_t) value, 16u);
+    return toStr!T(cast(size_t) value);
 }
 
 /// ditto
@@ -1537,7 +1400,7 @@ unittest
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
     //hash to string conversion
-    assert(to!string(a) == "[0:1, 1:2]");
+    assert(to!string(a) == `["0":1, "1":2]`);
 }
 
 private void testIntegralToFloating(Integral, Floating)()
@@ -1725,7 +1588,7 @@ $(UL
 */
 T toImpl(T, S)(S value)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T)
+        !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
 {
     alias ElementEncodingType!S[] SV;
     static if (is(SV == S))
@@ -3360,8 +3223,7 @@ template isOctalLiteral(string num)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // ensure that you get the right types, even with embedded underscores
     auto w = octal!"100_000_000_000";
     static assert(!is(typeof(w) == int));
@@ -3577,8 +3439,7 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
-            " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a;
     int b = 42;
     assert(*emplace!int(&a, b) == 42);
@@ -3693,3 +3554,10 @@ void toTextRange(T, W)(T value, W writer)
     put(writer, buffer[i .. $]);
 }
 
+
+template softDeprec(string vers, string date, string oldFunc, string newFunc)
+{
+    enum softDeprec = Format!("Notice: As of Phobos %s, %s has been scheduled " ~
+                              "for deprecation in %s. Please use %s instead.",
+                              vers, oldFunc, date, newFunc);
+}

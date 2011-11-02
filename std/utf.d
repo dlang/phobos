@@ -35,9 +35,6 @@ version(unittest)
     import std.string;
 }
 
-//Remove when softDeprec and hardDeprec have been removed.
-import std.metastrings;
-
 
 /++
     Exception thrown on errors in std.utf functions.
@@ -1342,19 +1339,12 @@ pure wstring toUTF16(in dchar[] s)
 }
 
 /++
-    $(RED Scheduled for deprecation in February 2012.
-          Please use $(LREF toUTFz) instead.)
-
     Encodes string $(D s) into UTF-16 and returns the encoded string.
     $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
-version(StdDdoc) const(wchar)* toUTF16z(in char[] s);
-else const(wchar)* toUTF16z(C)(in C[] s)
-    if(is(Unqual!C == char))
+const(wchar)* toUTF16z(in char[] s)
 {
-    pragma(msg, softDeprec!("2.055", "February 2012", "toUTF16z", "toUTFz"));
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -1753,12 +1743,4 @@ unittest
     assert(count("a") == 1);
     assert(count("abc") == 3);
     assert(count("\u20AC100") == 4);
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.utf.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.utf.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }
