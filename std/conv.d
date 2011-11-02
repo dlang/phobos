@@ -1052,14 +1052,14 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in string left = S.stringof~"(", in string right = ")")
+T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
     static if (is(S Original == typedef))
     {
         // typedef
-        return to!T(left) ~ to!T(cast(Original) s) ~ to!T(right);
+        return left ~ to!T(cast(Original) s) ~ right;
     }
 }
 
