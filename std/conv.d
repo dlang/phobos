@@ -1052,7 +1052,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
+T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
@@ -1069,6 +1069,13 @@ version(none) unittest
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
+}
+
+unittest
+{
+    typedef int X;
+    X x = 42;
+    assert(to!dstring(x) == "X(42)");
 }
 
 /// ditto
