@@ -1071,6 +1071,13 @@ version(none) unittest
     assert(to!string(km) == "Km(42)");
 }
 
+unittest
+{
+    typedef int X;
+    X x = 42;
+    assert(to!dstring(x) == "X(42)");
+}
+
 /// ditto
 T toImpl(T, S)(S b)
     if (is(Unqual!S == bool) &&
