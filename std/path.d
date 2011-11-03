@@ -174,7 +174,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private C[] ltrimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     int i = 0;
@@ -182,7 +182,7 @@ private C[] ltrimDirSeparators(C)(C[] path)  @safe pure nothrow
     return path[i .. $];
 }
 
-private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     auto i = (cast(sizediff_t) path.length) - 1;
@@ -190,7 +190,7 @@ private C[] rtrimDirSeparators(C)(C[] path)  @safe pure nothrow
     return path[0 .. i+1];
 }
 
-private C[] trimDirSeparators(C)(C[] path)  @safe pure nothrow
+private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
@@ -265,15 +265,16 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
+inout(C)[] baseName(C)(inout(C)[] path)
+    @trusted pure //TODO: nothrow (BUG 5700)
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
     if (p1.empty)
     {
-        version (Windows)
+        version (Windows) if (isUNC(path))
         {
-            if (isUNC(path)) return to!(typeof(return))(dirSeparator);
+            return cast(typeof(return)) dirSeparator.dup;
         }
         return null;
     }
@@ -285,9 +286,9 @@ C[] baseName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
 }
 
 /// ditto
-C[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
-    (C[] path, C1[] suffix)
-    //TODO: @safe pure nothrow (because of the other baseName())
+inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
+    (inout(C)[] path, in C1[] suffix)
+    @safe pure //TODO: nothrow (because of filenameCmp())
     if (isSomeChar!C && isSomeChar!C1)
 {
     auto p = baseName(path);
@@ -374,11 +375,11 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)  //TODO: @safe pure nothrow (because of to())
+C[] dirName(C)(C[] path)
+    //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
-    enum currentDir = cast(C[]) ".";
-    if (path.empty) return currentDir;
+    if (path.empty) return to!(typeof(return))(".");
 
     auto p = rtrimDirSeparators(path);
     if (p.empty) return path[0 .. 1];
@@ -466,7 +467,7 @@ unittest
     }
     ---
 */
-C[] rootName(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
@@ -529,7 +530,7 @@ unittest
     }
     ---
 */
-C[] driveName(C)(C[] path)  @safe pure //TODO: nothrow (because of stripLeft())
+inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     version (Windows)
@@ -574,7 +575,7 @@ unittest
     }
     ---
 */
-C[] stripDrive(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     version(Windows)
     {
@@ -634,7 +635,7 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-C[] extension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return null;
@@ -695,7 +696,8 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-C[] stripExtension(C)(C[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow
+    if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return path;
@@ -836,7 +838,7 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @trusted // (BUG 4850) pure (BUG 5700) nothrow
+    @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     auto i = extSeparatorPos(path);
@@ -1569,7 +1571,7 @@ unittest
     }
 
     // CTFE
-    // Fails due to BUG 6390
+    // Fails due to BUG 6416
     //static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 }
 
@@ -1887,7 +1889,7 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assertThrown(relativePath("/foo", "bar"));
 
-        //BUG: std.algorithm.cmp is not CTFEable
+        // TODO: pathSplitter() is not CTFEable
         //static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
     }
     else version (Windows)
@@ -1902,7 +1904,7 @@ unittest
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
 
-        //BUG: 6390
+        // TODO: pathSplitter() is not CTFEable
         //static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
     }
     else static assert (0);
@@ -2018,7 +2020,7 @@ unittest
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
     (const(C1)[] filename1, const(C2)[] filename2)
-    @safe //TODO: pure nothrow (because of std.array.front())
+    @safe pure //TODO: nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
 {
     for (;;)
@@ -2123,7 +2125,7 @@ unittest
  */
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
     (const(C)[] path, const(C)[] pattern)
-    @safe nothrow //TODO: pure (because of balancedParens())
+    @safe pure nothrow
     if (isSomeChar!C)
 in
 {

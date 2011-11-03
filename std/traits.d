@@ -3149,6 +3149,7 @@ template Unqual(T)
     {
              static if (is(T U ==     const U)) alias Unqual!U Unqual;
         else static if (is(T U == immutable U)) alias Unqual!U Unqual;
+        else static if (is(T U ==     inout U)) alias Unqual!U Unqual;
         else static if (is(T U ==    shared U)) alias Unqual!U Unqual;
         else                                    alias        T Unqual;
     }
@@ -3157,6 +3158,7 @@ template Unqual(T)
              static if (is(T U == shared(const U))) alias U Unqual;
         else static if (is(T U ==        const U )) alias U Unqual;
         else static if (is(T U ==    immutable U )) alias U Unqual;
+        else static if (is(T U ==        inout U )) alias U Unqual;
         else static if (is(T U ==       shared U )) alias U Unqual;
         else                                        alias T Unqual;
     }
@@ -3167,6 +3169,7 @@ unittest
     static assert(is(Unqual!(int) == int));
     static assert(is(Unqual!(const int) == int));
     static assert(is(Unqual!(immutable int) == int));
+    static assert(is(Unqual!(inout int) == int));
     static assert(is(Unqual!(shared int) == int));
     static assert(is(Unqual!(shared(const int)) == int));
     alias immutable(int[]) ImmIntArr;
