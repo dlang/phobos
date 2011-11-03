@@ -355,8 +355,8 @@ foreach (e; map!("a + a", "a * a")(arr1))
 }
 ----
 
-You may alias $(D map) with some function(s) to a symbol and use it
-separately:
+You may alias $(D map) with some function(s) to a symbol and use
+it separately:
 
 ----
 alias map!(to!string) stringize;
@@ -784,7 +784,7 @@ unittest
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
 
     // Test the opApply case.
-    struct OpApply
+    static struct OpApply
     {
         bool actEmpty;
 
@@ -1239,7 +1239,7 @@ template filterBidirectional(alias pred)
 {
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        static struct Result
+        struct Result
         {
             alias Unqual!Range R;
             alias unaryFun!pred predFun;
@@ -1360,13 +1360,13 @@ unittest
     move(obj2, obj3);
     assert(obj3 is obj1);
 
-    struct S1 { int a = 1, b = 2; }
+    static struct S1 { int a = 1, b = 2; }
     S1 s11 = { 10, 11 };
     S1 s12;
     move(s11, s12);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    struct S2 { int a = 1; int * b; }
+    static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
     s21.b = new int;
     S2 s22;
@@ -1374,9 +1374,9 @@ unittest
     assert(s21 == s22);
 
     // Issue 5661 test(1)
-    struct S3
+    static struct S3
     {
-        struct X { int n = 0; ~this(){n = 0;} }
+        static struct X { int n = 0; ~this(){n = 0;} }
         X x;
     }
     static assert(hasElaborateDestructor!S3);
@@ -1387,9 +1387,9 @@ unittest
     assert(s32.x.n == 1);
 
     // Issue 5661 test(2)
-    struct S4
+    static struct S4
     {
-        struct X { int n = 0; this(this){n = 0;} }
+        static struct X { int n = 0; this(this){n = 0;} }
         X x;
     }
     static assert(hasElaborateCopyConstructor!S4);
@@ -1530,7 +1530,7 @@ unittest
     swap(a, b);
     assert(a == 34 && b == 42);
 
-    struct S { int x; char c; int[] y; }
+    static struct S { int x; char c; int[] y; }
     S s1 = { 0, 'z', [ 1, 2 ] };
     S s2 = { 42, 'a', [ 4, 6 ] };
     //writeln(s2.tupleof.stringof);
@@ -1549,7 +1549,7 @@ unittest
 
 unittest
 {
-    struct NoCopy
+    static struct NoCopy
     {
         this(this) { assert(0); }
         int n;
@@ -1566,7 +1566,7 @@ unittest
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
 
-    struct NoCopyHolder
+    static struct NoCopyHolder
     {
         NoCopy noCopy;
     }
@@ -1630,7 +1630,7 @@ auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
         && (hasSlicing!Range || isNarrowString!Range))
 {
-    struct Result
+    static struct Result
     {
     private:
         Range _input;
@@ -1848,7 +1848,7 @@ with any range type, but is most popular with string types.
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool))
 {
-    struct Result
+    static struct Result
     {
     private:
         Range _input;
@@ -4315,7 +4315,7 @@ unittest
     auto static wrap(R)(R r)
     if (isBidirectionalRange!R)
     {
-        struct Result
+        static struct Result
         {
             @property auto ref front() {return _range.front;}
             @property auto ref back() {return _range.back;}

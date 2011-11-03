@@ -246,10 +246,10 @@ unittest
 }
 
 /**
-Outputs $(D e) to $(D r). The exact effect is dependent upon the two
-types. which must be an output range. Several cases are accepted, as
-described below. The code snippets are attempted in order, and the
-first to compile "wins" and gets evaluated.
+Outputs $(D e) to $(D r). The exact effect is dependent upon the two 
+types. Several cases are accepted, as described below. The code snippets 
+are attempted in order, and the first to compile "wins" and gets 
+evaluated.
 
 $(BOOKTABLE ,
 
@@ -849,8 +849,8 @@ unittest
 /**
 Returns $(D true) if $(D R) is an infinite input range. An
 infinite input range is an input range that has a statically-defined
-enumerated member called $(D empty) that is always $(D false), for
-example:
+enumerated member called $(D empty) that is always $(D false),
+for example:
 
 ----
 struct MyInfiniteRange
@@ -2477,7 +2477,7 @@ assert(s.length == 0);
 assert(s.empty);
 ----
 
-In effect $(D takeOne(r)) is somewhat equivalent to $(take(r, 1)) and
+In effect $(D takeOne(r)) is somewhat equivalent to $(D take(r, 1)) and
 $(D takeNone(r)) is equivalent to $(D take(r, 0)), but in certain
 interfaces it is important to know statically that the range may only
 have at most one element.
@@ -3786,7 +3786,7 @@ and the zero-based index in the recurrence has name $(D "n"). The
 given string must return the desired value for $(D a[n]) given $(D a[n
 - 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
 state size is dictated by the number of arguments passed to the call
-to $(D recurrence). The $(D Recurrence) class itself takes care of
+to $(D recurrence). The $(D Recurrence) struct itself takes care of
 managing the recurrence's state and shifting it appropriately.
 
 Example:
@@ -4306,7 +4306,7 @@ unittest
 }
 
 /**
-   Options for the $(D FrontTransversal) and $(D Transversal) ranges
+   Options for the $(LREF FrontTransversal) and $(LREF Transversal) ranges
    (below).
 */
 enum TransverseOptions
@@ -5902,7 +5902,7 @@ enum SearchPolicy
     /**
        Searches with a step that is grows linearly (1, 2, 3,...)
        leading to a quadratic search schedule (indexes tried are 0, 1,
-       3, 5, 8, 12, 17, 23,...) Once the search overshoots its target,
+       3, 6, 10, 15, 21, 28,...) Once the search overshoots its target,
        the remaining interval is searched using binary search. The
        search is completed in $(BIGOH sqrt(n)) time. Use it when you
        are reasonably confident that the value is around the beginning
@@ -5913,8 +5913,8 @@ enum SearchPolicy
     /**
        Performs a $(LUCKY galloping search algorithm), i.e. searches
        with a step that doubles every time, (1, 2, 4, 8, ...)  leading
-       to an exponential search schedule (indexes tried are 0, 1, 2,
-       4, 8, 16, 32,...) Once the search overshoots its target, the
+       to an exponential search schedule (indexes tried are 0, 1, 3,
+       7, 15, 31, 63,...) Once the search overshoots its target, the
        remaining interval is searched using binary search. A value is
        found in $(BIGOH log(n)) time.
     */
@@ -5958,11 +5958,11 @@ enum SearchPolicy
    ----
    auto a = [ 1, 2, 3, 42, 52, 64 ];
    auto r = assumeSorted(a);
-   assert(r.canFind(3));
-   assert(!r.canFind(32));
+   assert(r.contains(3));
+   assert(!r.contains(32));
    auto r1 = sort!"a > b"(a);
-   assert(r1.canFind(3));
-   assert(!r1.canFind(32));
+   assert(r1.contains(3));
+   assert(!r1.contains(32));
    assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
    ----
 
@@ -5979,9 +5979,9 @@ enum SearchPolicy
    ----
    auto a = [ 1, 2, 3, 42, 52, 64 ];
    auto r = assumeSorted(a);
-   assert(r.canFind(42));
+   assert(r.contains(42));
    swap(a[3], a[5]);                      // illegal to break sortedness of original range
-   assert(!r.canFind(42));                // passes although it shouldn't
+   assert(!r.contains(42));                // passes although it shouldn't
    ----
 */
 struct SortedRange(Range, alias pred = "a < b")
@@ -6181,8 +6181,8 @@ if (isRandomAccessRange!Range)
    all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
    the range with elements strictly smaller than $(D value)). The search
    schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's $(WEB
-   sgi.com/tech/stl/lower_bound.html, lower_bound).
+   $(LREF SearchPolicy).  See also STL's
+   $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
 
    Example:
    ----
@@ -6205,8 +6205,8 @@ if (isRandomAccessRange!Range)
    for all $(D x) (e.g., if $(D pred) is "less than", returns the
    portion of the range with elements strictly greater than $(D
    value)). The search schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's $(WEB
-   sgi.com/tech/stl/lower_bound.html,upper_bound).
+   $(LREF SearchPolicy).  See also STL's
+   $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
 
    Example:
    ----
@@ -6382,11 +6382,11 @@ unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
-    assert(r.canFind(3));
-    assert(!r.canFind(32));
+    assert(r.contains(3));
+    assert(!r.contains(32));
     auto r1 = sort!"a > b"(a);
-    assert(r1.canFind(3));
-    assert(!r1.canFind(32));
+    assert(r1.contains(3));
+    assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
 }
 
@@ -6455,9 +6455,9 @@ unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
-    assert(r.canFind(42));
+    assert(r.contains(42));
     swap(a[3], a[5]);                  // illegal to break sortedness of original range
-    assert(!r.canFind(42));            // passes although it shouldn't
+    assert(!r.contains(42));            // passes although it shouldn't
 }
 
 unittest
@@ -6469,7 +6469,7 @@ unittest
 /**
 Assumes $(D r) is sorted by predicate $(D pred) and returns the
 corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
-keep the checking costs low, the cost is $(BIGOH(1)) in release mode
+keep the checking costs low, the cost is $(BIGOH 1) in release mode
 (no checks for sortedness are performed). In debug mode, a few random
 elements of $(D r) are checked for sortedness. The size of the sample
 is proportional $(BIGOH log(r.length)). That way, checking has no
@@ -6526,7 +6526,7 @@ unittest
     {
         auto b = a[a.length / 2];
         //auto r = sort(a);
-        //assert(r.canFind(b));
+        //assert(r.contains(b));
     }
 }
 
