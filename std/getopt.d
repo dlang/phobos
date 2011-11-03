@@ -508,7 +508,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             else static if (isArray!(typeof(*receiver)))
             {
                 // array receiver
-                *receiver ~= [ to!(typeof(*receiver[0]))(val) ];
+                *receiver ~= [ to!(typeof((*receiver)[0]))(val) ];
             }
             else static if (isAssociativeArray!(typeof(*receiver)))
             {
@@ -760,4 +760,14 @@ unittest
         );
     assert(f_linenum);
     assert(f_filename);
+}
+
+unittest
+{
+    // From bugzilla 6887
+    string[] p;
+    string[] args = ["", "-pa"];
+    getopt(args, "p", &p);
+    assert(p.length == 1);
+    assert(p[0] == "a");
 }
