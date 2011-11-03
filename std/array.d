@@ -789,6 +789,7 @@ private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
+    version(none) { // bugzilla 6874
     static if(hasLength!Range &&
               is(ElementEncodingType!Range : T) &&
               !is(T == const T) &&
@@ -814,6 +815,7 @@ private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
         // Copy stuff into array
         copy(stuff, array[pos .. pos + stuff.length]);
     }
+    } // version(none)
     else
     {
         auto app = appender!(T[])();
@@ -920,6 +922,23 @@ unittest
     assert(testVar("flipflop"d.idup, 4, '_',
                     "xyz"w, '\U00010143', '_', "abc"d, "__",
                     "flip_xyz\U00010143_abc__flop"));
+}
+
+unittest // bugzilla 6874
+{
+    // allocate some space
+    byte[] a;
+    a.length = 1;
+
+    // fill it
+    a.length = GC.sizeOf(a.ptr) - 1;
+
+    // write beyond
+    byte[] b = a[$ .. $];
+    b.insertInPlace(0, a);
+
+    // make sure that reallocation has happened
+    assert(GC.addrOf(&b[0]) == GC.addrOf(&b[$-1]));
 }
 
 /++
