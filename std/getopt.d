@@ -461,7 +461,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             enum isDelegateWithLessThanTwoParameters =
                 is(typeof(receiver) == delegate) &&
                 !is(typeof(receiver("", "")));
-            if (!isDelegateWithLessThanTwoParameters && !val && !incremental) {
+            if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
