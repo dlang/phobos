@@ -694,9 +694,9 @@ private template FunctionTypeOf_bug4333(func...)
 {
     /+@@@BUG4333@@@+/enum dummy__ = func.length;
 
-    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function))
+    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function) || is(typeof(& func[0]) Fsym == delegate))
     {
-        alias Fsym FunctionTypeOf; // HIT: function symbol
+        alias Fsym FunctionTypeOf; // HIT: (nested) function symbol
     }
     else static if (is(typeof(& func[0].opCall) Fobj == delegate))
     {
@@ -714,6 +714,7 @@ private template FunctionTypeOf_bug4333(func...)
             alias Fptr FunctionTypeOf; // HIT: function pointer
         else static if (is(T Fdlg == delegate))
             alias Fdlg FunctionTypeOf; // HIT: delegate
+        else static assert(0);
     }
     else static assert(0, "argument is not a callable object");
 }
@@ -721,17 +722,23 @@ private template FunctionTypeOf_bug4333(func...)
 unittest
 {
     int test(int a) { return 0; }
+    int propGet() @property { return 0; }
+    int propSet(int a) @property { return 0; }
     int function(int) test_fp;
     int delegate(int) test_dg;
     static assert(is( typeof(test) == FunctionTypeOf!(typeof(test)) ));
     static assert(is( typeof(test) == FunctionTypeOf!(test) ));
     static assert(is( typeof(test) == FunctionTypeOf!(test_fp) ));
     static assert(is( typeof(test) == FunctionTypeOf!(test_dg) ));
+    alias int GetterType() @property;
+    alias int SetterType(int) @property;
+    static assert(is( FunctionTypeOf!(propGet) == GetterType ));
+    static assert(is( FunctionTypeOf!(propSet) == SetterType ));
 
     interface Prop { int prop() @property; }
     Prop prop;
-    static assert(is( FunctionTypeOf!(Prop.prop) == function ));
-    static assert(is( FunctionTypeOf!(prop.prop) == function ));
+    static assert(is( FunctionTypeOf!(Prop.prop) == GetterType ));
+    static assert(is( FunctionTypeOf!(prop.prop) == GetterType ));
 
     class Callable { int opCall(int) { return 0; } }
     auto call = new Callable;
@@ -3026,9 +3033,9 @@ private template isSomeFunction_bug4333(T...)
 {
     /+@@@BUG4333@@@+/enum dummy__ = T.length;
 
-    static if (is(typeof(& T[0]) U : U*) && is(U == function))
+    static if (is(typeof(& T[0]) U : U*) && is(U == function) || is(typeof(& T[0]) U == delegate))
     {
-        // T is a function symbol.
+        // T is a (nested) function symbol.
         enum bool isSomeFunction = true;
     }
     else static if (is(T[0] W) || is(typeof(T[0]) W))
@@ -3046,6 +3053,9 @@ private template isSomeFunction_bug4333(T...)
 unittest
 {
     static real func(ref int) { return 0; }
+    static void prop() @property { }
+    void nestedFunc() { }
+    void nestedProp() @property { }
     class C
     {
         real method(ref int) { return 0; }
@@ -3057,6 +3067,9 @@ unittest
     real val;
 
     static assert(isSomeFunction!(func));
+    static assert(isSomeFunction!(prop));
+    static assert(isSomeFunction!(nestedFunc));
+    static assert(isSomeFunction!(nestedProp));
     static assert(isSomeFunction!(C.method));
     static assert(isSomeFunction!(C.prop));
     static assert(isSomeFunction!(c.prop));
