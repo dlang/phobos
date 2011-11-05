@@ -2165,7 +2165,7 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         if(p.empty)
         {
-            return (sign) ? -0 : 0;
+            return (sign) ? -0.0 : 0.0;
         }
 
         isHex = p.front == 'x' || p.front == 'X';
@@ -2463,8 +2463,8 @@ unittest
 
         assert(to!Float("1.23456E+2") == Literal!Float(1.23456E+2));
 
-        assert(to!Float("0") == 0.0);
-        assert(to!Float("-0") == -0.0);
+        assert(to!Float("0") is 0.0);
+        assert(to!Float("-0") is -0.0);
 
         assert(isnan(to!Float("nan")));
 
