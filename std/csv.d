@@ -24,9 +24,11 @@
  * Example:
  *
  * -------
+ * import std.algorithm;
+ * import std.array;
+ * import std.csv;
  * import std.stdio;
  * import std.typecons;
- * import std.csv;
  *
  * void main()
  * {
@@ -128,9 +130,6 @@ enum Malformed
  * This function simplifies the process for standard text input.
  * For other input, delimited by colon, create Records yourself.
  *
- * The $(D ErrorLevel) can be set to $(LREF Malformed).ignore if best guess
- * processing should take place.
- *
  * The $(D Contents) of the input can be provided if all the records are the
  * same type such as all integer data:
  *
@@ -145,17 +144,17 @@ enum Malformed
  * }
  * -------
  *
- * Example using a struct:
+ * Example using a struct with modified delimiter:
  *
  * -------
- * string str = "Hello,65,63.63\nWorld,123,3673.562";
+ * string str = "Hello;65;63.63\nWorld;123;3673.562";
  * struct Layout {
  *     string name;
  *     int value;
  *     double other;
  * }
  *
- * auto records = csvReader!Layout(str);
+ * auto records = csvReader!Layout(str,';');
  *
  * foreach(record; records) {
  *     writeln(record.name);
@@ -224,24 +223,27 @@ enum Malformed
  *       column is not found or the order did not match that found in the input
  *       (non-struct).
  */
-auto csvReader(Contents = string, Malformed ErrorLevel
-             = Malformed.throwException, Range)(Range input)
-    if(isInputRange!Range && isSomeChar!(ElementType!Range)
-       && !is(Contents == class))
+auto csvReader(Contents = string, Range, Separator = char)(Range input,
+                 Separator delimiter = ',', Separator quote = '"')
+               if(isInputRange!Range && isSomeChar!(ElementType!Range) 
+                  && isSomeChar!(Separator) && !is(Contents == class))
 {
-    return Records!(Contents,ErrorLevel,Range,ElementType!Range,string[])
-        (input, ',', '"');
+    return Records!(Contents,Malformed.throwException,Range,
+                    ElementType!Range,string[])
+        (input, delimiter, quote);
 }
 
 /// Ditto
-auto csvReader(Contents = string, Malformed ErrorLevel
-             = Malformed.throwException, Range, Heading)
-                (Range input, Heading heading)
-    if(isInputRange!Range && isSomeChar!(ElementType!Range)
-       && !is(Contents == class) && isInputRange!Heading)
+auto csvReader(Contents = string, Range, Heading, Separator = char)
+                (Range input, Heading heading,
+                 Separator delimiter = ',', Separator quote = '"')
+               if(isInputRange!Range && isSomeChar!(ElementType!Range) 
+                  && isSomeChar!(Separator) && !is(Contents == class) 
+                  && isInputRange!Heading && isSomeString!(ElementType!Heading))
 {
-    return Records!(Contents,ErrorLevel,Range,ElementType!Range,Heading)
-        (input, ',', '"', heading);
+    return Records!(Contents,Malformed.throwException,Range,
+                    ElementType!Range,Heading)
+        (input, heading, delimiter, quote);
 }
 
 // Test standard iteration over input.
@@ -368,8 +370,8 @@ unittest
     catch(Exception e)
     {
     }
-
-    auto records2 = csvReader!(string, Malformed.ignore)(str, ["b","a"]);
+    auto records2 = Records!(string,Malformed.ignore,string,char,string[])
+       (str, ["b","a"], ',', '"');
 
     ans = [["Hello","65"],["World","123"]];
     foreach(record; records2) {
@@ -378,7 +380,8 @@ unittest
     }
 
     str = "a,c,e\nJoe,Carpenter,300000\nFred,Fly,4";
-    records2 = csvReader!(string, Malformed.ignore)(str, ["a","b","c","d"]);
+    records2 = Records!(string,Malformed.ignore,string,char,string[])
+       (str, ["a","b","c","d"], ',', '"');
 
     ans = [["Joe","Carpenter"],["Fred","Fly"]];
     foreach(record; records2) {
@@ -400,7 +403,8 @@ unittest
 unittest
 {
     string str = "one \"quoted\"";
-    foreach(record; csvReader!(string, Malformed.ignore)(str))
+    foreach(record; Records!(string,Malformed.ignore,string,char,string[])
+            (str,',','"'))
     {
         foreach(cell; record)
         {
@@ -413,7 +417,8 @@ unittest
     {
         string a,b;
     }
-    foreach(record; csvReader!(Ans, Malformed.ignore)(str))
+    foreach(record; Records!(Ans,Malformed.ignore,string,char,string[])
+            (str,',','"'))
     {
         assert(record.a == "one \"quoted\"");
         assert(record.b == "two \"quoted\" end");
@@ -439,14 +444,15 @@ unittest
  * Range for iterating CSV records.
  *
  * This range is returned by the csvReader functions. It can be
- * created in a similar manner to allow for custom separation.
+ * created in a similar manner to allow $(D ErrorLevel) be set to $(LREF
+ * Malformed).ignore if best guess processing should take place.
  *
  * Example for integer data:
  *
  * -------
  * string str = `76;^26^;22`;
  * int[] ans = [76,26,22];
- * auto records = Records!(int,Malformed.ignore,string,char,char[])
+ * auto records = Records!(int,Malformed.ignore,string,char,string[])
  *       (str, ';', '^');
  *
  * foreach(record; records) {
@@ -458,7 +464,7 @@ unittest
 struct Records(Contents, Malformed ErrorLevel, Range, Separator, Heading)
     if(isSomeChar!Separator && isInputRange!Range
        && isSomeChar!(ElementType!Range) && !is(Contents == class)
-       && isInputRange!Heading)
+       && isInputRange!Heading && isSomeString!(ElementType!Heading))
 {
 private:
     Range _input;
@@ -522,10 +528,10 @@ public:
      *
      * -------
      * string str = `high;mean;low\n76;^26^;22`;
-     * int[] ans = [76,22];
      * auto records = Records!(int,Malformed.ignore,string,char,string[])
-     *       (str, ';', '^',["high","low"]);
+     *       (str, ["high","low"], ';', '^');
      *
+     * int[] ans = [76,22];
      * foreach(record; records) {
      *    assert(equal(record, ans));
      * }
@@ -536,7 +542,7 @@ public:
      *       matching column is not found or the order did not match that found
      *       in the input (non-struct).
      */
-    this(Range input, Separator delimiter, Separator quote, Heading colHeaders)
+    this(Range input, Heading colHeaders, Separator delimiter, Separator quote)
     {
         _input = input;
         _separator = delimiter;
