@@ -2616,13 +2616,23 @@ unittest
 }
 
 /**
-Detect whether T is a built-in numeric type (integral or floating
-point).
+Detect whether T can be implicitly converted to a built-in numeric type
+(integral or floating point).
  */
 
 template isNumeric(T)
 {
-    enum bool isNumeric = isIntegral!(T) || isFloatingPoint!(T);
+    enum bool isNumeric = is(T : real);
+}
+
+unittest
+{
+    static assert(isNumeric!int);
+    static assert(isNumeric!float);
+    enum A : real {a}
+    static assert(isNumeric!A);
+    struct B {real b;}
+    static assert(!(isNumeric!B));
 }
 
 /**
