@@ -218,7 +218,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // complex op numeric
     Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
-        if (is(R : T))
+        if (isNumeric!R)
     {
         alias typeof(return) C;
         auto w = C(this.re, this.im);
@@ -228,7 +228,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // numeric + complex,  numeric * complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
-        if ((op == "+" || op == "*") && (is(R : T)))
+        if ((op == "+" || op == "*") && (isNumeric!R))
     {
         return opBinary!(op)(r);
     }
@@ -236,7 +236,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // numeric - complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
-        if (op == "-" && is(R : T))
+        if (op == "-" && isNumeric!R)
     {
         return Complex(r - re, -im);
     }
@@ -244,7 +244,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // numeric / complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
-        if (op == "/" && is(R : T))
+        if (op == "/" && isNumeric!R)
     {
         typeof(return) w;
         alias FPTemporary!(typeof(w.re)) Tmp;
@@ -588,21 +588,8 @@ unittest
     assert (s2 == z2.toString(null, "%.8e"));
 }
 
-/* Test compatibility with enums that can be implicitly converted
- * to floating point types.
- */
-unittest
-{
-    enum A : double {a}
-    static assert(is(typeof(Complex!double(1, 1) * A.a)
-                     == Complex!double));
-    static assert(is(typeof(A.a * Complex!double(1, 1))
-                     == Complex!double));
-    static assert(is(typeof(A.a - Complex!double(1, 1))
-                     == Complex!double));
-    static assert(is(typeof(A.a / Complex!double(1, 1))
-                     == Complex!double));
-}
+
+
 
 /*  Fold Complex!(Complex!T) to Complex!T.
 
