@@ -534,7 +534,7 @@ void rename(in char[] from, in char[] to)
                             to)));
     }
     else version(Posix)
-        cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+        cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
 /***************************************************
@@ -551,7 +551,7 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
+        cenforce(core.stdc.stdio.remove(toStringz(name)) == 0,
             "Failed to remove file " ~ name);
 }
 
@@ -2653,7 +2653,7 @@ void copy(in char[] from, in char[] to)
         immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
         cenforce(fdw != -1, from);
-        scope(failure) std.c.stdio.remove(toz);
+        scope(failure) core.stdc.stdio.remove(toz);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;

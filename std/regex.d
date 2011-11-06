@@ -1,3003 +1,6795 @@
-// Written in the D programming language.
-// Regular Expressions.
+//Written in the D programming language
+/++
+  $(LUCKY Regular expressions) are commonly used method of pattern matching
+  on strings, with $(I regex) being a catchy word for a pattern in this domain
+  specific language. Typical problems usually solved by regular expressions
+  include validation of user input and ubiquitous find & replace
+  in text processing utilities.
 
-/**
-$(WEB digitalmars.com/ctg/regular.html, Regular expressions) are a
-powerful method of string pattern matching.  The regular expression
-language used in this library is the same as that commonly used,
-however, some of the very advanced forms may behave slightly
-differently. The standard observed is the $(WEB
-www.ecma-international.org/publications/standards/Ecma-262.htm, ECMA
-standard) for regular expressions.
+  Synposis:
+  ---
+  import std.regex;
+  import std.stdio;
+  void main()
+  {
+      //print out all possible dd/mm/yy(yy) dates found in user input
+      //g - global, find all matches
+      auto r = regex(r"\b[0-9][0-9]?/[0-9][0-9]?/[0-9][0-9](?:[0-9][0-9])?\b", "g");
+      foreach(line; stdin.byLine)
+      {
+        //match returns a range that can be iterated
+        //to get all of subsequent matches
+        foreach(c; match(line, r))
+            writeln(c.hit);
+      }
+  }
+  ...
 
-$(D std.regex) is designed to work only with valid UTF strings as
-input - UTF8 ($(D char)), UTF16 ($(D wchar)), or UTF32 ($(D dchar)).
-To validate untrusted input, use $(D std.utf.validate()).
+  //create static regex at compile-time, contains fast native code
+  enum ctr = ctRegex!(`^.*/([^/]+)/?$`);
 
-In the following guide, $(D pattern[]) refers to a $(WEB
-digitalmars.com/ctg/regular.html, regular expression).  The $(D
-attributes[]) refers to a string controlling the interpretation of the
-regular expression.  It consists of a sequence of one or more of the
-following characters:
+  //works just like normal regex:
+  auto m2 = match("foo/bar", ctr);   //first match found here if any
+  assert(m2);   // be sure to check if there is a match, before examining contents!
+  assert(m2.captures[1] == "bar");//captures is a range of submatches, 0 - full match
 
-$(BOOKTABLE Attribute Characters,
-$(TR $(TH Attribute) $(TH Action))
-$(TR $(TD $(B g)) $(TD global; repeat over the whole input string))
-$(TR $(TD $(B i)) $(TD case insensitive))
-$(TR $(TD $(B m)) $(TD treat as multiple lines separated by newlines)))
+  ...
 
-The $(D format[]) string has the formatting characters:
+  //result of match is directly testable with if/assert/while
+  //e.g. test if a string consists of letters:
+  assert(match("Letter", `^\p{L}+$`));
 
-$(BOOKTABLE Formatting Characters,
-$(TR $(TH Format) $(TH Replaced With))
-$(TR  $(TD $(B $$)) $(TD $))
-$(TR$(TD $(B $&)) $(TD The matched substring.))
-$(TR $(TD $(B $`)) $(TD The portion of string that precedes the matched
-substring.))
-$(TR $(TD $(B $')) $(TD The portion of string that follows the matched
-substring.))
-$(TR $(TD $(B $(DOLLAR))$(I n)) $(TD The $(I n)th capture, where $(I
-n) is a single digit 1-9 and $$(I n) is not followed by a decimal
-digit.))
-$(TR $(TD $(B $(DOLLAR))$(I nn)) $(TD The $(I nn)th
-capture, where $(I nn) is a two-digit decimal number 01-99.  If $(I
-nn)th capture is undefined or more than the number of parenthesized
-subexpressions, use the empty string instead.)))
 
-Any other $ are left as is.
+  ---
 
-References: $(WEB en.wikipedia.org/wiki/Regular_expressions,
-Wikipedia)
+  The general usage guideline is keeping regex complexity on the side of simplicity,
+  as its capabilities reside in purely character-level manipulation,
+  and as such are ill suited for tasks  involving higher level invariants
+  like matching an integer number $(U bounded) in [a,b] interval.
+  Checks of this sort of are better addressed by additional post-processing.
+
+  The basic syntax shouldn't surprize experienced users of regular expressions.
+  Thankfully, nowdays the web is bustling with resources to help newcomers, and a good
+ $(WEB www.regular-expressions.info, reference with tutorial ) on regular expressions
+  could be found.
+
+  This library uses ECMAScript syntax flavor with the following extensions:
+  $(UL
+    $(LI Named subexpressions, with Python syntax. )
+    $(LI Unicode properties such as Scripts, Blocks and common binary properties e.g Alphabetic, White_Space, Hex_Digit etc.)
+    $(LI Arbitrary length and complexity lookbehind, including lookahead in lookbehind and vise-versa.)
+  )
+
+  $(REG_START Pattern syntax )
+  $(I std.regex operates on codepoint level,
+    'character' in this table denotes single unicode codepoint.)
+  $(REG_TABLE
+    $(REG_TITLE Pattern element, Semantics )
+    $(REG_TITLE Atoms, Match single characters )
+    $(REG_ROW any character except [|*+?(), Matches the character itself. )
+    $(REG_ROW ., In single line mode matches any charcter.
+      Otherwise it matches any character except '\n' and '\r'. )
+    $(REG_ROW [class], Matches single character
+      that belongs to this character class. )
+    $(REG_ROW [^class], Matches single character that
+      does $(U not) belong to this character class.)
+    $(REG_ROW \cC, Matches the control character corresponding to letter C)
+    $(REG_ROW \xXX, Matches a character with hexadecimal value of XX. )
+    $(REG_ROW \uXXXX, Matches a character  with hexadecimal value of XXXX. )
+    $(REG_ROW \U00YYYYYY, Matches a character with hexadecimal value of YYYYYY. )
+    $(REG_ROW \f, Matches a formfeed character. )
+    $(REG_ROW \n, Matches a linefeed character. )
+    $(REG_ROW \r, Matches a carriage return character. )
+    $(REG_ROW \t, Matches a tab character. )
+    $(REG_ROW \v, Matches a vertical tab character. )
+    $(REG_ROW \d, Matches any unicode digit. )
+    $(REG_ROW \D, Matches any character but unicode digit. )
+    $(REG_ROW \w, Matches any word character (note: this includes numbers).)
+    $(REG_ROW \W, Matches any non-word character.)
+    $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
+    $(REG_ROW \S, Matches any character but these recognized as $(I \s ). )
+    $(REG_ROW \\, Matches \ character. )
+    $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
+    $(REG_ROW \p{PropertyName}, Matches character that belongs
+      to unicode PropertyName set.
+      Single letter abreviations could be used without surrounding {,}. )
+    $(REG_ROW  \P{PropertyName}, Matches character that does not belong
+      to unicode PropertyName set.
+      Single letter abreviations could be used without surrounding {,}. )
+    $(REG_ROW \p{InBasicLatin}, Matches any character that is part of
+        BasicLatin unicode $(U block).)
+    $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
+        BasicLatin unicode $(U block).)
+    $(REG_ROW \p{Cyrilic}, Matches any character that is part of
+        Cyrilic $(U script).)
+    $(REG_ROW \P{Cyrilic}, Matches any character except ones in
+        Cyrilic $(U script).)
+    $(REG_TITLE Quantifiers, Specify repetition of other elements)
+    $(REG_ROW *, Matches previous character/subexpression 0 or more times.
+      Greedy version - tries as many times as possible.)
+    $(REG_ROW *?, Matches previous character/subexpression 0 or more times.
+      Lazy version  - stops as early as possible.)
+    $(REG_ROW +, Matches previous character/subexpression 1 or more times.
+      Greedy version - tries as many times as possible.)
+    $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
+      Lazy version  - stops as early as possible.)
+    $(REG_ROW {n}, Matches previous character/subexpression n exactly times. )
+    $(REG_ROW {n&#44}, Matches previous character/subexpression n times or more.
+      Greedy version - tries as many times as possible. )
+    $(REG_ROW {n&#44}?, Matches previous character/subexpression n times or more.
+      Lazy version - stops as early as possible.)
+    $(REG_ROW {n&#44m}, Matches previous character/subexpression n to m times.
+      Greedy version - tries as many times as possible. )
+    $(REG_ROW {n&#44m}?, Matches previous character/subexpression n to m times.
+      Lazy version - stops as early as possible, but no less then n times.)
+    $(REG_TITLE Other, Subexpressions & alternations )
+    $(REG_ROW (regex),  Matches subexpression regex,
+      saving matched portion of text for later retrival. )
+    $(REG_ROW (?:regex), Matches subexpression regex,
+      $(U not) saving matched portion of text. Useful to speed up matching. )
+    $(REG_ROW A|B, Matches subexpression A, failing that matches B. )
+    $(REG_ROW (?P&lt;name&gt;regex), Matches named subexpression
+        regex labeling it with name 'name'.
+        When refering to matched portion of text,
+        names work like aliases in addition to direct numbers.
+     )
+    $(REG_TITLE Assertions, Match position rather then character )
+    $(REG_ROW ^, Matches at the begining of input or line (in multiline mode).)
+    $(REG_ROW $, Matches at the end of input or line (in multiline mode). )
+    $(REG_ROW \b, Matches at word boundary. )
+    $(REG_ROW \B, Matches when $(U not) at word boundary. )
+    $(REG_ROW (?=regex), Zero-width lookahead assertion.
+        Matches at a point where the subexpression
+        regex could be matched starting from current position.
+      )
+    $(REG_ROW (?!regex), Zero-width negative lookahead assertion.
+        Matches at a point where the subexpression
+        regex could $(U not ) be matched starting from current position.
+      )
+    $(REG_ROW (?<=regex), Zero-width lookbehind assertion. Matches at a point
+        where the subexpression regex could be matched ending
+        at current position (matching goes backwards).
+      )
+    $(REG_ROW  (?<!regex), Zero-width negative lookbehind assertion.
+      Matches at a point where the subexpression regex could $(U not)
+      be matched ending at current position (matching goes backwards).
+     )
+  )
+
+  $(REG_START Character classes )
+  $(REG_TABLE
+    $(REG_TITLE Pattern element, Semantics )
+    $(REG_ROW Any atom, Have the same meaning as outside of character class.)
+    $(REG_ROW a-z, Includes  characters a, b, c, ..., z. )
+    $(REG_ROW [a||b]&#44 [a--b]&#44 [a~~b]&#44 [a&&b], Where a, b are arbitrary classes,
+     means union, set difference, symmetric set difference, and intersection respectively.
+     $(I Any sequence of character class elements implicitly forms union.) )
+  )
+
+  $(REG_START Regex flags )
+  $(REG_TABLE
+    $(REG_TITLE Flag, Semantics )
+    $(REG_ROW g, Global regex, repeat over the whole input. )
+    $(REG_ROW i, Case insensitive matching. )
+    $(REG_ROW m, Multi-line mode, match ^, $ on start and end line separators
+       as well as start and end of input.)
+    $(REG_ROW s, Single-line mode, makes . match '\n' and '\r' as well. )
+    $(REG_ROW x, Free-form syntax, ignores whitespace in pattern,
+      useful for formating complex regular expressions. )
+  )
+
+  $(B Unicode support)
+
+  This library provides full Level 1 support* according to
+    $(WEB http://unicode.org/reports/tr18/, UTS 18). Specifically:
+  $(UL
+    $(LI 1.1 Hex notation via any of \uxxxx, \U00YYYYYY, \xZZ.)
+    $(LI 1.2 Unicode properties.)
+    $(LI 1.3 Character classes with set operations.)
+    $(LI 1.4 Word boundaries use full set of "word" characters.)
+    $(LI 1.5 Using simple casefolding to match case
+        insensitevely across full range of codepoints.)
+    $(LI 1.6 Respecting line breaks as any of
+        \u000A | \u000B | \u000C | \u000D | \u0085 | \u2028 | \u2029 | \u000D\u000A.)
+    $(LI 1.7 Operating on codepoint level.)
+  )
+  *With exception of point 1.1.1, as of yet, normalization of input
+    is expected to be enforced by user.
+
+  All matches returned by pattern matching functionality in this library
+  are slices of original input. Notable exception being $(D replace) family of functions
+  that generate new string from input.
+
+  License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+  Authors: Dmitry Olshansky,
+
+  API and utility constructs are based on original $(D std.regex)
+  by Walter Bright and Andrei Alexandrescu
+
+  Copyright: Copyright Dmitry Olshansky, 2011
 
 Macros:
-
-WIKI = StdRegex
-DOLLAR = $
-
-Copyright: Copyright Digital Mars 2000 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
-Source:    $(PHOBOSSRC std/_regex.d)
-*/
-/*
-         Copyright Digital Mars 2000 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
-*/
-
-/*
-Escape sequences:
-
-\nnn starts out a 1, 2 or 3 digit octal sequence, where n is an octal
-digit. If nnn is larger than 0377, then the 3rd digit is not part of
-the sequence and is not consumed.  For maximal portability, use
-exactly 3 digits.
-
-\xXX starts out a 1 or 2 digit hex sequence. X
-is a hex character. If the first character after the \x
-is not a hex character, the value of the sequence is 'x'
-and the XX are not consumed.
-For maximal portability, use exactly 2 digits.
-
-\uUUUU is a unicode sequence. There are exactly
-4 hex characters after the \u, if any are not, then
-the value of the sequence is 'u', and the UUUU are not
-consumed.
-
-Character classes:
-
-[a-b], where a is greater than b, will produce
-an error.
-
-References:
-
-http://www.unicode.org/unicode/reports/tr18/
-*/
+    REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )
+    REG_TITLE = $(TR $(TD $(B $1)) $(TD $(B $2)) )
+    REG_TABLE = <table border="1" cellspacing="0" cellpadding="5" > $0 </table>
+    REG_START = <h3><div align="center"> $0 </div></h3>
+ +/
 
 module std.regex;
 
-//debug = std_regex;                // uncomment to turn on debugging writef's
+import std.internal.uni, std.internal.uni_tab;//unicode property tables
+import std.array, std.algorithm, std.range,
+       std.conv, std.exception, std.traits, std.typetuple,
+       std.uni, std.utf, std.format, std.typecons, std.bitmanip,
+       std.functional, std.exception;
+import core.bitop, core.stdc.string, core.stdc.stdlib;
+import ascii = std.ascii;
+import std.string : representation;
 
-import core.stdc.stdlib;
-import core.stdc.string;
-import std.stdio;
-import std.string;
-import std.ascii;
-import std.outbuffer;
-import std.bitmanip;
-import std.utf;
-import std.algorithm;
-import std.array;
-import std.traits;
-import std.typecons;
-import std.typetuple;
-import std.range;
-import std.conv;
-import std.functional;
+version(unittest) debug import std.stdio;
 
-unittest
-{
-    auto r = regex("abc"w);
-    auto m = match("abc"w, r);
-    if (!m.empty) return;
-    writeln(m.pre);
-    writeln(m.hit);
-    writeln(m.post);
-    r.printProgram;
-    assert(false);
-}
-
-/** Regular expression to extract an _email address.
-References:
-
-$(WEB regular-expressions.info/_email.html, How to Find or Validate an
-Email Address); $(WEB tools.ietf.org/html/rfc2822#section-3.4.1, RFC
-2822 Internet Message Format)
- */
-enum string email =
-    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}";
-
-unittest
-{
-    assert(match("asdassfsd@", regex(email)).empty);
-    assert(!match("andrei@metalanguage.com", regex(email)).empty);
-}
-
-/** Regular expression to extract a _url */
-enum string url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?"
-    r"([\w]+:\w+@)?(([a-zA-Z]{1}([\w\-]+\.)+([\w]{2,5}))"
-    r"(:[\d]{1,5})?)?((/?\w+/)+|/?)"
-    r"(\w+\.[\w]{3,4})?([,]\w+)*((\?\w+=\w+)?(&\w+=\w+)*([,]\w*)*)?";
-
-unittest
-{
-    assert(!match("http://www.erdani.org/asd/sd?asd#eds",
-                    regex(url)).empty);
-}
-
-/****************************************************
-A $(D Regex) stores a regular expression engine. A $(D Regex) object
-is constructed from a string and compiled into an internal format for
-performance.
-
-The type parameter $(D E) specifies the character type recognized by
-the regular expression. Currently $(D char), $(D wchar), and $(D
-dchar) are supported. The encoding of the regex string and of the
-recognized strings must be the same.
-
-This object will be mostly used via a call to the $(D regex) function,
-which automatically deduces the character type.
-
-Example: Declare two variables and assign to them a $(D Regex)
-object. The first matches UTF-8 strings, the second matches UTF-32
-strings and also has the global option set.
-
----
-auto r = regex("pattern");
-auto s = regex(r"p[1-5]\s*"w, "g");
----
- */
-struct Regex(E) if (is(E == Unqual!E))
-{
 private:
-    struct regmatch_t
-    {
-        size_t startIdx, endIdx;
-    }
-    enum REA
-    {
-        global          = 1,    // has the g attribute
-        ignoreCase      = 2,    // has the i attribute
-        multiline       = 4,    // if treat as multiple lines separated by
-                            // newlines, or as a single line
-        dotmatchlf      = 8,    // if . matches \n
-    }
-    enum uint inf = ~0u;
-
-    uint re_nsub;        // number of parenthesized subexpression matches
-    uint nCounters;  //current counter (internal), number of counters
-    ubyte attributes;
-    immutable(ubyte)[] program; // pattern[] compiled into regular
-                                // expression program
-// Opcodes
-
-    enum : ubyte
-    {
-            REend,              // end of program
-            REchar,             // single character
-            REichar,            // single character, case insensitive
-            REdchar,            // single UCS character
-            REidchar,           // single wide character, case insensitive
-            REanychar,          // any character
-
-            REstring,           // string of characters
-            REistring,          // string of characters, case insensitive
-            REtestbit,          // any in bitmap, non-consuming
-            REbit,              // any in the bit map
-            REnotbit,           // any not in the bit map
-            RErange,            // any in the string
-            REnotrange,         // any not in the string
-            REor,               // a | b
-            REplus,             // 1 or more
-            REstar,             // 0 or more
-            REquest,            // 0 or 1
-            REcounter,          // begining of repetition
-            REloopg,            // loop on body of repetition (greedy)
-            REloop,             // ditto non-greedy
-            REbol,              // begining of line
-            REeol,              // end of line
-            REsave,             // save submatch position i.e. "(" & ")"
-            REgoto,             // goto offset
-            REret,              // end of subprogram
-
-            RElookahead,
-            REneglookahead,
-            RElookbehind,
-            REneglookbehind,
-            REwordboundary,
-            REnotwordboundary,
-            REdigit,
-            REnotdigit,
-            REspace,
-            REnotspace,
-            REword,
-            REnotword,
-            REbackref,
-            };
-public:
-    // @@@BUG Should be a constructor but template constructors don't work
-    // private void initialize(String)(String pattern, string attributes)
-    // {
-    //     compile(pattern, attributes);
-    // }
-
-/**
-Construct a $(D Regex) object. Compile pattern with $(D attributes)
-into an internal form for fast execution.
-
-Params:
-pattern = regular expression
-attributes = The _attributes (g, i, and m accepted)
-
-Throws: $(D Exception) if there are any compilation errors.
- */
-    this(String)(String pattern, string attributes = null)
-    {
-        compile(pattern, attributes);
-    }
-
-    unittest
-    {
-        debug(std_regex) writefln("regex.opCall.unittest()");
-        auto r1 = Regex("hello", "m");
-        string msg;
-        try
-        {
-            auto r2 = Regex("hello", "q");
-            assert(0);
-        }
-        catch (Exception ree)
-        {
-            msg = ree.toString();
-            //writefln("message: %s", ree);
-        }
-        assert(std.algorithm.countUntil(msg, "unrecognized attribute") >= 0);
-    }
-
-/**
-Returns the number of parenthesized captures
-*/
-    uint captures() const
-    {
-        return re_nsub;
-    }
-
-/* ********************************
- * Throws Exception on error
- */
-
-    public void compile(String)(String pattern, string attributes)
-    {
-        this.attributes = 0;
-        foreach (c; attributes)
-        {
-            REA att;
-
-            switch (c)
-            {
-            case 'g': att = REA.global;         break;
-            case 'i': att = REA.ignoreCase;     break;
-            case 'm': att = REA.multiline;      break;
-            default:
-                error("unrecognized attribute");
-                assert(0);
-            }
-            if (this.attributes & att)
-            {
-                error("redundant attribute");
-                assert(0);
-            }
-            this.attributes |= att;
-        }
-
-        uint oldre_nsub = re_nsub;
-        re_nsub = 0;
-
-        auto buf = new OutBuffer;
-        buf.reserve(pattern.length * 8);
-        size_t p = 0;
-        parseRegex(pattern, p, buf);
-        if (p < pattern.length)
-        {
-            error("unmatched ')'");
-        }
-        re_nsub /= 2; //start & ends -> pairs
-        postprocess(buf.data);
-
-        program = cast(immutable(ubyte)[]) buf.data;
-        buf.data = null;
-        delete buf;
-    }
-
-    void error(string msg)
-    {
-        debug(std_regex) writefln("error: %s", msg);
-        throw new Exception(msg);
-    }
-
-    //Fixup counter numbers, simplify instructions
-    private void postprocess(ubyte[] prog)
-    {
-        uint counter = 0;
-        size_t len;
-        ushort* pu;
-        nCounters = 0;
-        size_t pc = 0;
-        for (;;)
-        {
-            switch (prog[pc])
-            {
-            case REend:
-                return;
-
-            case REcounter:
-                size_t offs = pc + 1 + 2*uint.sizeof;
-                *cast(uint *)&prog[pc+1] = counter;
-                counter++;
-                nCounters = max(nCounters, counter);
-                pc += 1 + 2*uint.sizeof;
-                break;
-
-            case REloop, REloopg:
-                counter--;
-                pc += 1 + 3*uint.sizeof;
-                break;
-
-            case REret:
-            case REanychar:
-            case REbol:
-            case REeol:
-            case REwordboundary:
-            case REnotwordboundary:
-            case REdigit:
-            case REnotdigit:
-            case REspace:
-            case REnotspace:
-            case REword:
-            case REnotword:
-                pc++;
-                break;
-
-            case REbackref:
-            case REchar:
-            case REichar:
-                pc += 2;
-                break;
-
-            case REdchar:
-            case REidchar:
-                pc += 1 + dchar.sizeof;
-                break;
-
-            case REstring:
-            case REistring:
-                len = *cast(size_t *)&prog[pc+1];
-                assert(len % E.sizeof == 0);
-                pc += 1 + size_t.sizeof + len;
-                break;
-
-            case REtestbit:
-            case REbit:
-            case REnotbit:
-                pu = cast(ushort *)&prog[pc+1];
-                len = pu[1];
-                pc += 1 + 2 * ushort.sizeof + len;
-                break;
-
-            case RErange:
-            case REnotrange:
-                len = *cast(uint *)&prog[pc+1];
-                pc += 1 + uint.sizeof + len;
-                break;
-
-            case REneglookahead:
-            case RElookahead:
-            case REor:
-            case REgoto:
-                pc += 1 + uint.sizeof;
-                break;
-
-            case REsave:
-                pc += 1 + uint.sizeof;
-                break;
-
-            default:
-                assert(0);
-            }
-        }
-    }
-/* =================== Compiler ================== */
-
-    void parseRegex(String)(String pattern, ref size_t p, OutBuffer buf)
-    {
-        auto offset = buf.offset;
-        for (;;)
-        {
-            assert(p <= pattern.length);
-            if (p == pattern.length)
-            {
-                buf.write(REend);
-                return;
-            }
-            switch (pattern[p])
-            {
-            case ')':
-                return;
-
-            case '|':
-                p++;
-                auto gotooffset = buf.offset;
-                buf.write(REgoto);
-                buf.write(cast(uint)0);
-                immutable uint len1 = cast(uint) (buf.offset - offset);
-                buf.spread(offset, 1 + uint.sizeof);
-                gotooffset += 1 + uint.sizeof;
-                parseRegex(pattern, p, buf);
-                immutable len2 = cast(uint)
-                    (buf.offset - (gotooffset + 1 + uint.sizeof));
-                buf.data[offset] = REor;
-                (cast(uint *)&buf.data[offset + 1])[0] = len1;
-                (cast(uint *)&buf.data[gotooffset + 1])[0] = len2;
-                break;
-
-            default:
-                parsePiece(pattern, p, buf);
-                break;
-            }
-        }
-    }
-
-    void parsePiece(String)(String pattern, ref size_t p, OutBuffer buf)
-    {
-        uint n;
-        uint m;
-        debug(std_regex)
-        {
-            auto sss = pattern[p .. pattern.length];
-            writefln("parsePiece() '%s'", sss);
-        }
-        size_t offset = buf.offset;
-        size_t plength = pattern.length;
-        parseAtom(pattern, p, buf);
-        if (p == plength)
-            return;
-        switch (pattern[p])
-        {
-        case '*':
-            n = 0;
-            m = inf;
-            break;
-
-        case '+':
-            n = 1;
-            m = inf;
-            break;
-
-        case '?':
-            n = 0;
-            m = 1;
-            break;
-
-        case '{':       // {n} {n,} {n,m}
-            p++;
-
-            if (p == plength || !isDigit(pattern[p]))
-                error("badly formed {n,m}");
-            auto src = pattern[p..$];
-            n = parse!uint(src);
-            p = plength - src.length;
-            if (pattern[p] == '}')              // {n}
-            {
-                m = n;
-                break;
-            }
-            if (pattern[p] != ',')
-                error("',' expected in {n,m}");
-            p++;
-            if (p == plength)
-                error("unexpected end of pattern in {n,m}");
-            if (pattern[p] == /*{*/ '}')        // {n,}
-            {
-                m = inf;
-                break;
-            }
-            if (!isDigit(pattern[p]))
-                error("badly formed {n,m}");
-            src = pattern[p..$];
-            m = parse!uint(src);
-            p = plength - src.length;
-            if (pattern[p] != /*{*/ '}')
-                error("unmatched '}' in {n,m}");
-            break;
-        default:
-            return;
-        }
-        p++;
-        uint len = cast(uint)(buf.offset - offset);
-        if (p < plength && pattern[p] == '?')
-        {
-            buf.write(REloop);
-            p++;
-        }
-        else
-            buf.write(REloopg);
-        buf.write(cast(uint)n);
-        buf.write(cast(uint)m);
-        buf.write(cast(uint)len);//set jump back
-        buf.spread(offset, (1 + 2*uint.sizeof));
-        buf.data[offset] = REcounter;
-        *(cast(uint*)&buf.data[offset+1]) = 0;//reserve counter num
-        *(cast(uint*)&buf.data[offset+5]) = len;
-        return;
-    }
-
-    void parseAtom(String)(String pattern, ref size_t p, OutBuffer buf)
-    {
-        ubyte op;
-        size_t offset;
-        E c;
-
-        debug(std_regex)
-        {
-            auto sss = pattern[p .. pattern.length];
-            writefln("parseAtom() '%s'", sss);
-        }
-        if (p >= pattern.length) return;
-        c = pattern[p];
-        switch (c)
-        {
-        case '*':
-        case '+':
-        case '?':
-            error("*+? not allowed in atom");
-            assert(0);
-
-        case '(':
-            p++;
-            if (pattern[p] != '?')
-            {
-                buf.write(REsave);
-                buf.write(2 + re_nsub);
-                //handle nested groups
-                uint end = re_nsub;
-                re_nsub += 2;
-                parseRegex(pattern, p, buf);
-                buf.write(REsave);
-                buf.write(2 + end + 1);
-            }
-            else if (pattern.length > p+1)
-            {
-                p++;
-                switch (pattern[p])
-                {
-                    case ':':
-                        p++;
-                        parseRegex(pattern, p, buf);
-                        break;
-                    case '=': case '!':
-                        buf.write(pattern[p] == '=' ? RElookahead : REneglookahead);
-                        offset = buf.offset;
-                        buf.write(cast(uint)0); // reserve space for length
-                        p++;
-                        parseRegex(pattern, p, buf);
-                        *cast(uint *)&buf.data[offset] =
-                            cast(uint)(buf.offset - (offset + uint.sizeof)+1);
-                        buf.write(REret);
-                        break;
-                    default:
-                        error("any of :=! expected after '(?'");
-                        assert(0);
-                }
-            }
-            else
-            {
-                error("any of :=! expected after '(?'");
-                assert(0);
-            }
-            if (p == pattern.length || pattern[p] != ')')
-            {
-                error("')' expected");
-                assert(0);
-            }
-            p++;
-            break;
-
-        case '[':
-            parseRange(pattern, p, buf);
-            break;
-
-        case '.':
-            p++;
-            buf.write(REanychar);
-            break;
-
-        case '^':
-            p++;
-            buf.write(REbol);
-            break;
-
-        case '$':
-            p++;
-            buf.write(REeol);
-            break;
-
-        case '\\':
-            p++;
-            if (p == pattern.length)
-            {
-                error("no character past '\\'");
-                assert(0);
-            }
-            c = pattern[p];
-            switch (c)
-            {
-            case 'b':    op = REwordboundary;    goto Lop;
-            case 'B':    op = REnotwordboundary; goto Lop;
-            case 'd':    op = REdigit;           goto Lop;
-            case 'D':    op = REnotdigit;        goto Lop;
-            case 's':    op = REspace;           goto Lop;
-            case 'S':    op = REnotspace;        goto Lop;
-            case 'w':    op = REword;            goto Lop;
-            case 'W':    op = REnotword;         goto Lop;
-
-            Lop:
-                buf.write(op);
-                p++;
-                break;
-
-            case 'f':
-            case 'n':
-            case 'r':
-            case 't':
-            case 'v':
-            case 'c':
-            case 'x':
-            case 'u':
-            case '0':
-                c = cast(char)escape(pattern, p);
-                goto Lbyte;
-
-            case '1': case '2': case '3':
-            case '4': case '5': case '6':
-            case '7': case '8': case '9':
-                c -= '1';
-                if (c < re_nsub)
-                {
-                    buf.write(REbackref);
-                    buf.write(cast(ubyte)c);
-                }
-                else
-                    error("no matching back reference");
-                p++;
-                break;
-
-            default:
-                p++;
-                goto Lbyte;
-            }
-            break;
-
-        default:
-            p++;
-        Lbyte:
-            op = REchar;
-            if (attributes & REA.ignoreCase)
-            {
-                if (isAlpha(c))
-                {
-                    op = REichar;
-                    c = cast(char)std.ascii.toUpper(c);
-                }
-            }
-            if (op == REchar && c <= 0xFF)
-            {
-                // Look ahead and see if we can make this into
-                // an REstring
-                sizediff_t q = p;
-                sizediff_t len;
-
-                for (; q < pattern.length; ++q)
-                {
-                    auto qc = pattern[q];
-                    switch (qc)
-                    {
-                    case '{':
-                    case '*':
-                    case '+':
-                    case '?':
-                        if (q == p)
-                            goto Lchar;
-                        q--;
-                        break;
-
-                    case '(':   case ')':
-                    case '|':
-                    case '[':   case ']':
-                    case '.':   case '^':
-                    case '$':   case '\\':
-                    case '}':
-                        break;
-
-                    default:
-                        continue;
-                    }
-                    break;
-                }
-                len = q - p;
-                if (len > 0)
-                {
-                    debug(std_regex) writefln("writing string len %d, c = '%s'"
-                            ", pattern[p] = '%s'", len+1, c, pattern[p]);
-                    buf.reserve(5 + (1 + len) * E.sizeof);
-                    buf.write((attributes & REA.ignoreCase)
-                            ? REistring : REstring);
-                    //auto narrow = to!string(pattern[p .. p + len]);
-                    buf.write(E.sizeof * (len + 1));
-                    //buf.write(narrow.length + 1);
-                    buf.write(c);
-                    buf.write(pattern[p .. p + len]);
-                    //buf.write(narrow);
-                    p = q;
-                    break;
-                }
-            }
-            if (c >= 0x80)
-            {
-                debug(std_regex) writefln("dchar");
-                // Convert to dchar opcode
-                op = (op == REchar) ? REdchar : REidchar;
-                buf.write(op);
-                buf.write(c);
-            }
-            else
-            {
-              Lchar:
-                debug(std_regex) writefln("It's an REchar '%s'", c);
-                buf.write(op);
-                buf.write(cast(char)c);
-            }
-            break;
-        }
-    }
-
-    struct Range
-    {
-        size_t maxc;
-        size_t maxb;
-        OutBuffer buf;
-        ubyte* base;
-        BitArray bits;
-
-        this(OutBuffer buf)
-        {
-            this.buf = buf;
-            if (buf.data.length)
-                this.base = &buf.data[buf.offset];
-        }
-
-        void setbitmax(size_t u)
-        {
-            //writefln("setbitmax(x%x), maxc = x%x", u, maxc);
-            if (u <= maxc)
-                return;
-            maxc = u;
-            auto b = u / 8;
-            if (b >= maxb)
-            {
-                size_t u2 = base ? base - &buf.data[0] : 0;
-                buf.fill0(b - maxb + 1);
-                base = &buf.data[u2];
-                maxb = b + 1;
-                //bits = (cast(bit*)this.base)[0 .. maxc + 1];
-                bits.ptr = cast(size_t*)this.base;
-            }
-            bits.len = maxc + 1;
-        }
-
-        void setbit2(size_t u)
-        {
-            setbitmax(u + 1);
-            //writefln("setbit2 [x%02x] |= x%02xn", u >> 3, 1 << (u & 7));
-            bits[u] = 1;
-        }
-
-    }
-
-    int parseRange(String)(in String pattern, ref size_t p, OutBuffer buf)
-    {
-        int c;
-        int c2;
-        uint i;
-
-        uint cmax = 0x7F;
-        p++;
-        ubyte op = REbit;
-        if (p == pattern.length)
-            goto Lerr;
-        if (pattern[p] == '^')
-        {
-            p++;
-            op = REnotbit;
-            if (p == pattern.length)
-                goto Lerr;
-        }
-        buf.write(op);
-        auto offset = buf.offset;
-        buf.write(cast(uint)0);         // reserve space for length
-        buf.reserve(128 / 8);
-        auto r = Range(buf);
-        if (op == REnotbit)
-            r.setbit2(0);
-        switch (pattern[p])
-        {
-        case ']':
-        case '-':
-            c = pattern[p];
-            p++;
-            r.setbit2(c);
-            break;
-
-        default:
-            break;
-        }
-
-        enum RS { start, rliteral, dash };
-        auto rs = RS.start;
-        for (;;)
-        {
-            if (p == pattern.length)
-                goto Lerr;
-            switch (pattern[p])
-            {
-            case ']':
-                switch (rs)
-                {
-                case RS.dash:
-                    r.setbit2('-');
-                    goto case;
-                case RS.rliteral:
-                    r.setbit2(c);
-                    break;
-                case RS.start:
-                    break;
-                default:
-                    assert(0);
-                }
-                p++;
-                break;
-
-            case '\\':
-                p++;
-                r.setbitmax(cmax);
-                if (p == pattern.length)
-                    goto Lerr;
-                switch (pattern[p])
-                {
-                case 'd':
-                    for (i = '0'; i <= '9'; i++)
-                        r.bits[i] = 1;
-                    goto Lrs;
-
-                case 'D':
-                    for (i = 1; i < '0'; i++)
-                        r.bits[i] = 1;
-                    for (i = '9' + 1; i <= cmax; i++)
-                        r.bits[i] = 1;
-                    goto Lrs;
-
-                case 's':
-                    for (i = 0; i <= cmax; i++)
-                        if (isWhite(i))
-                            r.bits[i] = 1;
-                    goto Lrs;
-
-                case 'S':
-                    for (i = 1; i <= cmax; i++)
-                        if (!isWhite(i))
-                            r.bits[i] = 1;
-                    goto Lrs;
-
-                case 'w':
-                    for (i = 0; i <= cmax; i++)
-                        if (isword(cast(E) i))
-                            r.bits[i] = 1;
-                    goto Lrs;
-
-                case 'W':
-                    for (i = 1; i <= cmax; i++)
-                        if (!isword(cast(E) i))
-                            r.bits[i] = 1;
-                    goto Lrs;
-
-                Lrs:
-                    switch (rs)
-                    {
-                    case RS.dash:
-                        r.setbit2('-');
-                        goto case;
-                    case RS.rliteral:
-                        r.setbit2(c);
-                        break;
-                    default:
-                        break;
-                    }
-                    rs = RS.start;
-                    continue;
-
-                default:
-                    break;
-                }
-                c2 = escape(pattern, p);
-                goto Lrange;
-
-            case '-':
-                p++;
-                if (rs == RS.start)
-                    goto Lrange;
-                else if (rs == RS.rliteral)
-                    rs = RS.dash;
-                else if (rs == RS.dash)
-                {
-                    r.setbit2(c);
-                    r.setbit2('-');
-                    rs = RS.start;
-                }
-                continue;
-
-            default:
-                c2 = pattern[p];
-                p++;
-            Lrange:
-                switch (rs)
-                {
-                case RS.rliteral:
-                    r.setbit2(c);
-                    goto case;
-                case RS.start:
-                    c = c2;
-                    rs = RS.rliteral;
-                    break;
-
-                case RS.dash:
-                    if (c > c2)
-                    {
-                        error("inverted range in character class");
-                        return 0;
-                    }
-                    r.setbitmax(c2);
-                    for (; c <= c2; c++)
-                        r.bits[c] = 1;
-                    rs = RS.start;
-                    break;
-
-                default:
-                    assert(0);
-                }
-                continue;
-            }
-            break;
-        }
-        if (attributes & REA.ignoreCase)
-        {
-            // BUG: what about dchar?
-            r.setbitmax(0x7F);
-            for (c = 'a'; c <= 'z'; c++)
-            {
-                if (r.bits[c])
-                    r.bits[c + 'A' - 'a'] = 1;
-                else if (r.bits[c + 'A' - 'a'])
-                    r.bits[c] = 1;
-            }
-        }
-        //writefln("maxc = %d, maxb = %d",r.maxc,r.maxb);
-        (cast(ushort *)&buf.data[offset])[0] = cast(ushort)r.maxc;
-        (cast(ushort *)&buf.data[offset])[1] = cast(ushort)r.maxb;
+@safe:
+
+//uncomment to get a barrage of debug info
+//debug = fred_parser;
+//debug = fred_matching;
+//debug = fred_charset;
+
+// IR bit pattern: 0b1_xxxxx_yy
+// where yy indicates class of instruction, xxxxx for actual operation code
+//     00: atom, a normal instruction
+//     01: open, opening of a group, has length of contained IR in the low bits
+//     10: close, closing of a group, has length of contained IR in the low bits
+//     11 unused
+//
+// Loops with Q (non-greedy, with ? mark) must have the same size / other properties as non Q version
+// Possible changes:
+//* merge group, option, infinite/repeat start (to never copy during parsing of (a|b){1,2})
+//* reorganize groups to make n args easier to find, or simplify the check for groups of similar ops
+//  (like lookaround), or make it easier to identify hotspots.
+
+enum IR:uint {
+    Char              = 0b1_00000_00, //a character
+    Any               = 0b1_00001_00, //any character
+    CodepointSet      = 0b1_00010_00, //a most generic CodepointSet [...]
+    Trie              = 0b1_00011_00, //CodepointSet implemented as Trie
+    //match with any of a consecutive OrChar's in this sequence
+    //(used for case insensitive match)
+    //OrChar holds in upper two bits of data total number of OrChars in this _sequence_
+    //the drawback of this representation is that it is difficult
+    // to detect a jump in the middle of it
+    OrChar            = 0b1_00100_00,
+    Nop               = 0b1_00101_00, //no operation (padding)
+    End               = 0b1_00110_00, //end of program
+    Bol               = 0b1_00111_00, //beginning of a string ^
+    Eol               = 0b1_01000_00, //end of a string $
+    Wordboundary      = 0b1_01001_00, //boundary of a word
+    Notwordboundary   = 0b1_01010_00, //not a word boundary
+    Backref           = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
+    GroupStart        = 0b1_01100_00, //start of a group (x) (groupIndex+groupPinning(1bit))
+    GroupEnd          = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
+    Option            = 0b1_01110_00, //start of an option within an alternation x | y (length)
+    GotoEndOr         = 0b1_01111_00, //end of an option (length of the rest)
+    //... any additional atoms here
+
+    OrStart           = 0b1_00000_01, //start of alternation group  (length)
+    OrEnd             = 0b1_00000_10, //end of the or group (length,mergeIndex)
+    //with this instruction order
+    //bit mask 0b1_00001_00 could be used to test/set greediness
+    InfiniteStart     = 0b1_00001_01, //start of an infinite repetition x* (length)
+    InfiniteEnd       = 0b1_00001_10, //end of infinite repetition x* (length,mergeIndex)
+    InfiniteQStart    = 0b1_00010_01, //start of a non eager infinite repetition x*? (length)
+    InfiniteQEnd      = 0b1_00010_10, //end of non eager infinite repetition x*? (length,mergeIndex)
+    RepeatStart       = 0b1_00011_01, //start of a {n,m} repetition (length)
+    RepeatEnd         = 0b1_00011_10, //end of x{n,m} repetition (length,step,minRep,maxRep)
+    RepeatQStart      = 0b1_00100_01, //start of a non eager x{n,m}? repetition (length)
+    RepeatQEnd        = 0b1_00100_10, //end of non eager x{n,m}? repetition (length,step,minRep,maxRep)
+    //
+    LookaheadStart    = 0b1_00101_01, //begin of the lookahead group (length)
+    LookaheadEnd      = 0b1_00101_10, //end of a lookahead group (length)
+    NeglookaheadStart = 0b1_00110_01, //start of a negative lookahead (length)
+    NeglookaheadEnd   = 0b1_00110_10, //end of a negative lookahead (length)
+    LookbehindStart   = 0b1_00111_01, //start of a lookbehind (length)
+    LookbehindEnd     = 0b1_00111_10, //end of a lookbehind (length)
+    NeglookbehindStart= 0b1_01000_01, //start of a negative lookbehind (length)
+    NeglookbehindEnd  = 0b1_01000_10, //end of negative lookbehind (length)
+}
+
+//a shorthand for IR length - full length of specific opcode evaluated at compile time
+template IRL(IR code)
+{
+    enum uint IRL =  lengthOfIR(code);
+}
+
+static assert (IRL!(IR.LookaheadStart) == 3);
+
+//how many parameters follow the IR, should be optimized fixing some IR bits
+int immediateParamsIR(IR i){
+    switch (i){
+    case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
         return 1;
-
-      Lerr:
-        error("invalid range");
+    case IR.RepeatEnd, IR.RepeatQEnd:
+        return 4;
+    case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+        return 2;
+    default:
         return 0;
     }
+}
 
-    int escape(String)(in String pattern, ref size_t p)
-    in
+//full length of IR instruction inlcuding all parameters that might follow it
+int lengthOfIR(IR i)
+{
+    return 1 + immediateParamsIR(i);
+}
+
+//full length of the paired IR instruction inlcuding all parameters that might follow it
+int lengthOfPairedIR(IR i)
+{
+    return 1 + immediateParamsIR(pairedIR(i));
+}
+
+//if the operation has a merge point (this relies on the order of the ops)
+bool hasMerge(IR i)
+{
+    return (i&0b11)==0b10 && i<=IR.RepeatQEnd;
+}
+
+//is an IR that opens a "group"
+bool isStartIR(IR i)
+{
+    return (i&0b11)==0b01;
+}
+
+//is an IR that ends a "group"
+bool isEndIR(IR i)
+{
+    return (i&0b11)==0b10;
+}
+
+//is a standalone IR
+bool isAtomIR(IR i)
+{
+    return (i&0b11)==0b00;
+}
+
+//makes respective pair out of IR i, swapping start/end bits of instruction
+IR pairedIR(IR i)
+{
+    assert(isStartIR(i) || isEndIR(i));
+    return cast(IR)(i ^ 0b11);
+}
+
+//encoded IR instruction
+struct Bytecode
+{
+    uint raw;
+    //natural constraints
+    enum maxSequence = 2+4;
+    enum maxData = 1<<22;
+    enum maxRaw = 1<<31;
+
+    this(IR code, uint data)
     {
-        assert(p < pattern.length);
+        assert(data < (1<<22) && code < 256);
+        raw = code<<24 | data;
     }
-    body
+
+    this(IR code, uint data, uint seq)
     {
-        int c;
-        int i;
-        E tc;
+        assert(data < (1<<22) && code < 256 );
+        assert(seq >= 2 && seq < maxSequence);
+        raw = code<<24 | ((seq-2)<<22) | data;
+    }
 
-        c = pattern[p];         // none of the cases are multibyte
-        switch (c)
+    //store raw data
+    static Bytecode fromRaw(uint data)
+    {
+        Bytecode t;
+        t.raw = data;
+        return t;
+    }
+
+    //bit twiddling helpers
+    @property uint data() const { return raw & 0x003f_ffff; }
+
+    //ditto
+    @property uint sequence() const { return 2+((raw >>22) & 0x3); }
+
+    //ditto
+    @property IR code() const { return cast(IR)(raw>>24); }
+
+    //ditto
+    @property bool hotspot() const { return hasMerge(code); }
+
+    //test the class of this instruction
+    @property bool isAtom() const { return isAtomIR(code); }
+
+    //ditto
+    @property bool isStart() const { return isStartIR(code); }
+
+    //ditto
+    @property bool isEnd() const { return isEndIR(code); }
+
+    //number of arguments for this instruction
+    @property int args() const { return immediateParamsIR(code); }
+
+    //mark this GroupStart or GroupEnd as referenced in backreference
+    void setBackrefence()
+    {
+        assert(code == IR.GroupStart || code == IR.GroupEnd);
+        raw = raw | (1<<23);
+    }
+
+    //is referenced
+    @property bool backreference() const
+    {
+        assert(code == IR.GroupStart || code == IR.GroupEnd);
+        return cast(bool)(raw & (1<<23));
+    }
+
+    //mark as local reference (for backrefs in lookarounds)
+    void setLocalRef()
+    {
+        assert(code == IR.Backref);
+        raw = raw | (1<<23);
+    }
+
+    //is a local ref
+    @property bool localRef() const
+    {
+        assert(code == IR.Backref);
+        return cast(bool)(raw & (1<<23));
+    }
+
+    //human readable name of instruction
+    @trusted @property string mnemonic() const
+    {//@@@BUG@@@ to is @system
+        return to!string(code);
+    }
+
+    //full length of instruction
+    @property uint length() const
+    {
+        return lengthOfIR(code);
+    }
+
+    //full length of respective start/end of this instruction
+    @property uint pairedLength() const
+    {
+        return lengthOfPairedIR(code);
+    }
+
+    //returns bytecode of paired instruction (assuming this one is start or end)
+    @property Bytecode paired() const
+    {//depends on bit and struct layout order
+        assert(isStart || isEnd);
+        return Bytecode.fromRaw(raw ^ (0b11<<24));
+    }
+
+    //gets an index into IR block of the respective pair
+    uint indexOfPair(uint pc) const
+    {
+        assert(isStart || isEnd);
+        return isStart ? pc + data + length  : pc - data - lengthOfPairedIR(code);
+    }
+}
+
+static assert(Bytecode.sizeof == 4);
+
+//debugging tool, prints out instruction along with opcodes
+@trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
+{
+    auto output = appender!string();
+    formattedWrite(output,"%s", irb[pc].mnemonic);
+    switch(irb[pc].code)
+    {
+    case IR.Char:
+        formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
+        break;
+    case IR.OrChar:
+        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
+        break;
+    case IR.RepeatStart, IR.InfiniteStart, IR.Option, IR.GotoEndOr, IR.OrStart:
+        //forward-jump instructions
+        uint len = irb[pc].data;
+        formattedWrite(output, " pc=>%u", pc+len+IRL!(IR.RepeatStart));
+        break;
+    case IR.RepeatEnd, IR.RepeatQEnd: //backward-jump instructions
+        uint len = irb[pc].data;
+        formattedWrite(output, " pc=>%u min=%u max=%u step=%u"
+                , pc-len, irb[pc+3].raw, irb[pc+4].raw, irb[pc+2].raw);
+        break;
+    case IR.InfiniteEnd, IR.InfiniteQEnd, IR.OrEnd: //ditto
+        uint len = irb[pc].data;
+        formattedWrite(output, " pc=>%u", pc-len);
+        break;
+    case  IR.LookaheadEnd, IR.NeglookaheadEnd: //ditto
+        uint len = irb[pc].data;
+        formattedWrite(output, " pc=>%u", pc-len);
+        break;
+    case IR.GroupStart, IR.GroupEnd:
+        uint n = irb[pc].data;
+        string name;
+        foreach(v;dict)
+            if(v.group == n)
+            {
+                name = "'"~v.name~"'";
+                break;
+            }
+        formattedWrite(output, " %s #%u " ~ (irb[pc].backreference ? "referenced" : ""),
+                name, n);
+        break;
+    case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+        uint len = irb[pc].data;
+        uint start = irb[pc+1].raw, end = irb[pc+2].raw;
+        formattedWrite(output, " pc=>%u [%u..%u]", pc + len + IRL!(IR.LookaheadStart), start, end);
+        break;
+    case IR.Backref: case IR.CodepointSet: case IR.Trie:
+        uint n = irb[pc].data;
+        formattedWrite(output, " %u",  n);
+        if(irb[pc].code == IR.Backref)
+            formattedWrite(output, " %s", irb[pc].localRef ? "local" : "global");
+        break;
+    default://all data-free instructions
+    }
+    if(irb[pc].hotspot)
+        formattedWrite(output, " Hotspot %u", irb[pc+1].raw);
+    return output.data;
+}
+
+//another pretty printer, writes out the bytecode of a regex and where the pc is
+@trusted void prettyPrint(Sink,Char=const(char))
+    (Sink sink, const(Bytecode)[] irb, uint pc=uint.max, int indent=3, size_t index=0)
+    if (isOutputRange!(Sink,Char))
+{//formattedWrite is @system
+    while(irb.length>0)
+    {
+        formattedWrite(sink,"%3d",index);
+        if(pc==0 && irb[0].code!=IR.Char)
         {
-        case 'b':    c = '\b';  break;
-        case 'f':    c = '\f';  break;
-        case 'n':    c = '\n';  break;
-        case 'r':    c = '\r';  break;
-        case 't':    c = '\t';  break;
-        case 'v':    c = '\v';  break;
-
-            // BUG: Perl does \a and \e too, should we?
-
-        case 'c':
-            ++p;
-            if (p == pattern.length)
-                goto Lretc;
-            c = pattern[p];
-            // Note: we are deliberately not allowing dchar letters
-            if (!(('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')))
-            {
-              Lcerr:
-                error("letter expected following \\c");
-                return 0;
-            }
-            c &= 0x1F;
-            break;
-
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-            c -= '0';
-            for (i = 0; i < 2; i++)
-            {
-                p++;
-                if (p == pattern.length)
-                    goto Lretc;
-                tc = pattern[p];
-                if ('0' <= tc && tc <= '7')
-                {
-                    c = c * 8 + (tc - '0');
-                    // Treat overflow as if last
-                    // digit was not an octal digit
-                    if (c >= 0xFF)
-                    {
-                        c >>= 3;
-                        return c;
-                    }
-                }
-                else
-                    return c;
-            }
-            break;
-
-        case 'x':
-            c = 0;
-            for (i = 0; i < 2; i++)
-            {
-                p++;
-                if (p == pattern.length)
-                    goto Lretc;
-                tc = pattern[p];
-                if ('0' <= tc && tc <= '9')
-                    c = c * 16 + (tc - '0');
-                else if ('a' <= tc && tc <= 'f')
-                    c = c * 16 + (tc - 'a' + 10);
-                else if ('A' <= tc && tc <= 'F')
-                    c = c * 16 + (tc - 'A' + 10);
-                else if (i == 0)        // if no hex digits after \x
-                {
-                    // Not a valid \xXX sequence
-                    return 'x';
-                }
-                else
-                    return c;
-            }
-            break;
-
-        case 'u':
-            c = 0;
-            for (i = 0; i < 4; i++)
-            {
-                p++;
-                if (p == pattern.length)
-                    goto Lretc;
-                tc = pattern[p];
-                if ('0' <= tc && tc <= '9')
-                    c = c * 16 + (tc - '0');
-                else if ('a' <= tc && tc <= 'f')
-                    c = c * 16 + (tc - 'a' + 10);
-                else if ('A' <= tc && tc <= 'F')
-                    c = c * 16 + (tc - 'A' + 10);
-                else
-                {
-                    // Not a valid \uXXXX sequence
-                    p -= i;
-                    return 'u';
-                }
-            }
-            break;
-
-        default:
-            break;
+            for (int i=0;i<indent-2;++i)
+                put(sink,"=");
+            put(sink,"> ");
         }
-        p++;
-      Lretc:
-        return c;
-    }
-
-// BUG: should this include '$'?
-    private int isword(dchar c) { return isAlphaNum(c) || c == '_'; }
-
-    void printProgram(const(ubyte)[] prog = null)
-    {
-        if (!prog) prog = program;
-        //debug(std_regex)
+        else
         {
-            size_t len;
-            uint n;
-            uint m;
-            ushort *pu;
-            uint *puint;
-            char[] str;
-
-            writefln("printProgram()");
-            for (uint pc = 0; pc < prog.length; )
+            if(isEndIR(irb[0].code))
             {
-                writef("%3d: ", pc);
-                switch (prog[pc])
-                {
-                case REchar:
-                    writefln("\tREchar '%s'", cast(char)prog[pc + 1]);
-                    pc += 1 + cast(uint)char.sizeof;
-                    break;
-
-                case REichar:
-                    writefln("\tREichar '%s'", cast(char)prog[pc + 1]);
-                    pc += 1 + cast(uint)char.sizeof;
-                    break;
-
-                case REdchar:
-                    writefln("\tREdchar '%s'", *cast(dchar *)&prog[pc + 1]);
-                    pc += 1 + cast(uint)dchar.sizeof;
-                    break;
-
-                case REidchar:
-                    writefln("\tREidchar '%s'", *cast(dchar *)&prog[pc + 1]);
-                    pc += 1 + cast(uint)dchar.sizeof;
-                    break;
-
-                case REanychar:
-                    writefln("\tREanychar");
-                    pc++;
-                    break;
-
-                case REstring:
-                    len = *cast(size_t *)&prog[pc + 1];
-                    assert(len % E.sizeof == 0);
-                    len /=  E.sizeof;
-                    writef("\tREstring x%x*%d, ", len, E.sizeof);
-                    auto es = cast(E*) (&prog[pc + 1 + size_t.sizeof]);
-                    foreach (e; es[0 .. len])
-                    {
-                        writef("'%s' ", e);
-                    }
-                    writefln("");
-                    pc += 1 + cast(uint)size_t.sizeof + len * E.sizeof;
-                    break;
-
-                case REistring:
-                    len = *cast(size_t *)&prog[pc + 1];
-                    assert(len % E.sizeof == 0);
-                    len /=  E.sizeof;
-                    writef("\tREistring x%x*%d, ", len, E.sizeof);
-                    auto es = cast(E*) (&prog[pc + 1 + size_t.sizeof]);
-                    foreach (e; es[0 .. len])
-                    {
-                        writef("'%s' ", e);
-                    }
-                    writefln("");
-                    pc += 1 + cast(uint)size_t.sizeof + len * E.sizeof;
-                    break;
-
-                case REtestbit:
-                    pu = cast(ushort *)&prog[pc + 1];
-                    writef("\tREtestbit %d, %d: ", pu[0], pu[1]);
-                    len = pu[1];
-                    {
-                        ubyte * b = cast(ubyte*)pu;
-                        foreach (i; 0 .. len)
-                        {
-                            writef(" %x", b[i]);
-                        }
-                        writeln();
-                    }
-                    pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                    break;
-
-                case REbit:
-                    pu = cast(ushort *)&prog[pc + 1];
-                    len = pu[1];
-                    writef("\tREbit cmax=%02x, len=%d:", pu[0], len);
-                    for (n = 0; n < len; n++)
-                        writef(" %02x", prog[pc + 1 + 2 * ushort.sizeof + n]);
-                    writefln("");
-                    pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                    break;
-
-                case REnotbit:
-                    pu = cast(ushort *)&prog[pc + 1];
-                    writefln("\tREnotbit %d, %d", pu[0], pu[1]);
-                    len = pu[1];
-                    pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                    break;
-
-                case RErange:
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tRErange %d", len);
-                    // BUG: REAignoreCase?
-                    pc += 1 + cast(uint)uint.sizeof + len;
-                    break;
-
-                case REnotrange:
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREnotrange %d", len);
-                    // BUG: REAignoreCase?
-                    pc += 1 + cast(uint)uint.sizeof + len;
-                    break;
-
-                case REbol:
-                    writefln("\tREbol");
-                    pc++;
-                    break;
-
-                case REeol:
-                    writefln("\tREeol");
-                    pc++;
-                    break;
-
-                case REor:
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREor %d, pc=>%d", len,
-                            pc + 1 + uint.sizeof + len);
-                    pc += 1 + cast(uint)uint.sizeof;
-                    break;
-
-                case REgoto:
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREgoto %d, pc=>%d",
-                            len, pc + 1 + uint.sizeof + len);
-                    pc += 1 + cast(uint)uint.sizeof;
-                    break;
-
-                case REcounter:
-                    // n, len
-                    puint = cast(uint *)&prog[pc + 1];
-                    n = puint[0];
-                    len = puint[1];
-                    writefln("\tREcounter n=%u pc=>%d",
-                             n, pc + 1 + 2*uint.sizeof + len);
-                    pc += 1 + cast(uint)2*uint.sizeof;
-                    break;
-
-                case REloop:
-                case REloopg:
-                    //n, m, len
-                    puint = cast(uint *)&prog[pc + 1];
-                    n = puint[0];
-                    m = puint[1];
-                    len = puint[2];
-                    writefln("\tREloop%s min=%u max=%u pc=>%u",
-                             prog[pc] == REloopg ? "g" : "",
-                             n, m, pc-len);
-                    pc += 1 + cast(uint)uint.sizeof*3;
-                    break;
-
-                case REsave:
-                    // n
-                    n = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREsave %s n=%d ",
-                            n % 2 ? "end" :"start", n/2);
-                    pc += 1 + cast(uint)uint.sizeof;
-                    break;
-                case RElookahead:
-                     // len, ()
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tRElookahead len=%d, pc=>%d",
-                            len, pc + 1 + uint.sizeof + len);
-                    pc += 1 + cast(uint)uint.sizeof;
-                    break;
-                case REneglookahead:
-                    // len, ()
-                    len = *cast(uint *)&prog[pc + 1];
-                    writefln("\tREneglookahead len=%d, pc=>%d",
-                            len, pc + 1 + uint.sizeof + len);
-                    pc += 1 + cast(uint)uint.sizeof;
-                    break;
-
-                case REend:
-                    writefln("\tREend");
-                    return;
-
-                case REret:
-                    writefln("\tREret");
-                    pc++;
-                    break;
-
-                case REwordboundary:
-                    writefln("\tREwordboundary");
-                    pc++;
-                    break;
-
-                case REnotwordboundary:
-                    writefln("\tREnotwordboundary");
-                    pc++;
-                    break;
-
-                case REdigit:
-                    writefln("\tREdigit");
-                    pc++;
-                    break;
-
-                case REnotdigit:
-                    writefln("\tREnotdigit");
-                    pc++;
-                    break;
-
-                case REspace:
-                    writefln("\tREspace");
-                    pc++;
-                    break;
-
-                case REnotspace:
-                    writefln("\tREnotspace");
-                    pc++;
-                    break;
-
-                case REword:
-                    writefln("\tREword");
-                    pc++;
-                    break;
-
-                case REnotword:
-                    writefln("\tREnotword");
-                    pc++;
-                    break;
-
-                case REbackref:
-                    writefln("\tREbackref %d", prog[1]);
-                    pc += 2;
-                    break;
-
-                default:
-                    assert(0);
-                }
+                indent-=2;
+            }
+            if(indent>0)
+            {
+                string spaces="             ";
+                put(sink,spaces[0..(indent%spaces.length)]);
+                for (size_t i=indent/spaces.length;i>0;--i)
+                    put(sink,spaces);
             }
         }
+        if(irb[0].code==IR.Char)
+        {
+            put(sink,`"`);
+            int i=0;
+            do{
+                put(sink,cast(char[])([cast(dchar)irb[i].data]));
+                ++i;
+            } while(i<irb.length && irb[i].code==IR.Char);
+            put(sink,"\"");
+            if (pc<i){
+                put(sink,"\n");
+                for (int ii=indent+pc+1;ii>0;++ii)
+                    put(sink,"=");
+                put(sink,"^");
+            }
+            index+=i;
+            irb=irb[i..$];
+        }
+        else
+        {
+            put(sink,irb[0].mnemonic);
+            put(sink,"(");
+            formattedWrite(sink,"%d",irb[0].data);
+            int nArgs= irb[0].args;
+            for(int iarg=0;iarg<nArgs;++iarg)
+            {
+                if(iarg+1<irb.length)
+                    formattedWrite(sink,",%d",irb[iarg+1].data);
+                else
+                    put(sink,"*error* incomplete irb stream");
+            }
+            put(sink,")");
+            if(isStartIR(irb[0].code))
+            {
+                indent+=2;
+            }
+            index+=lengthOfIR(irb[0].code);
+            irb=irb[lengthOfIR(irb[0].code)..$];
+        }
+        put(sink,"\n");
     }
 }
 
-/// Ditto
-Regex!(Unqual!(ElementEncodingType!String)) regex(String)
-(String pattern, string flags = null) 
-    if (isSomeString!String)
+//index entry structure for name --> number of submatch
+struct NamedGroup
 {
-    alias Unqual!(ElementEncodingType!String) Char;
-    alias immutable(Char)[] IString;
-    static Tuple!(IString, string) lastReq = tuple(cast(IString)[],"\u0001");//most unlikely
-    static typeof(return) lastResult;
-    if (lastReq[0] == pattern && lastReq[1] == flags)
-    {
-        // cache hit
-        return lastResult;
-    }
-
-    auto result = typeof(return)(pattern, flags);
-
-    lastReq[0] = to!IString(pattern);
-    lastReq[1] = flags;
-    lastResult = result;
-
-    return result;
+    string name;
+    uint group;
 }
 
-/**
-$(D RegexMatch) is the type returned by a call to $(D match). It
-stores the matching state and can be inspected and iterated.
- */
-struct RegexMatch(Range = string)
+//holds pair of start-end markers for a submatch
+struct Group(DataIndex)
 {
-    alias typeof(Range.init[0]) E;
-    // Engine
-    alias .Regex!(Unqual!E) Regex;
-    private alias Regex.regmatch_t regmatch_t;
-    enum stackSize = 32*1024;
-/**
-Get or set the engine of the match.
-*/
-    public Regex engine;
-    // the string to search
-    Range input;
-    size_t src;                     // current source index in input[]
-    size_t src_start;           // starting index for match in input[]
-    regmatch_t[] pmatch;    // array [engine.re_nsub + 1]
-    uint curCounter;
-    uint[] counters;            //array [engine.counter]
-/*
-Build a RegexMatch from an engine.
-*/
-    private this(Regex engine)
+    DataIndex begin, end;
+    @trusted string toString() const
     {
-        this.engine = engine;
-        pmatch.length = engine.re_nsub + 1;
-        counters.length = engine.nCounters;
-        pmatch[0].startIdx = -1;
-        pmatch[0].endIdx = -1;
-    }
-
-/*
-Build a RegexMatch from an engine and an input.
-*/
-    private this(Regex engine, Range input)
-    {
-        this.engine = engine;
-        pmatch.length = engine.re_nsub + 1;
-        pmatch[0].startIdx = -1;
-        pmatch[0].endIdx = -1;
-        counters.length = engine.nCounters;
-        this.input = input;
-        // amorsate
-        test;
-    }
-
-/*
-Copy zis.
-*/
-    this(this)
-    {
-        pmatch = pmatch.dup;
-    }
-
-    // ref auto opSlice()
-    // {
-    //     return this;
-    // }
-
-/**
-Range primitives that allow incremental matching against a string.
-
-Example:
----
-import std.stdio;
-import std.regex;
-
-void main()
-{
-    foreach(m; match("abcabcabab", regex("ab")))
-    {
-        writefln("%s[%s]%s", m.pre, m.hit, m.post);
+        auto a = appender!string();
+        formattedWrite(a, "%s..%s", begin, end);
+        return a.data;
     }
 }
-// Prints:
-// [ab]cabcabab
-// abc[ab]cabab
-// abcabc[ab]ab
-// abcabcab[ab]
----
- */
-    bool empty() const
+
+//Regular expression engine/parser options:
+// global - search  all nonoverlapping matches in input
+// casefold - case insensitive matching, do casefolding on match in unicode mode
+// freeform - ignore whitespace in pattern, to match space use [ ] or \s
+// multiline - switch  ^, $ detect start and end of linesinstead of just start and end of input
+enum RegexOption: uint {
+    global = 0x1,
+    casefold = 0x2,
+    freeform = 0x4,
+    nonunicode = 0x8,
+    multiline = 0x10,
+    singleline = 0x20
+};
+alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
+static assert( RegexOption.max < 0x80);
+enum RegexInfo : uint { oneShot = 0x80 };
+
+private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
+
+//test if a given string starts with hex number of maxDigit that's a valid codepoint
+//returns it's value and skips these maxDigit chars on success, throws on failure
+dchar parseUniHex(Char)(ref Char[] str, uint maxDigit)
+{
+    enforce(str.length >= maxDigit,"incomplete escape sequence");
+    uint val;
+    for(int k=0;k<maxDigit;k++)
     {
-        return pmatch[0].startIdx == pmatch[0].startIdx.max;
+        auto current = str[k];//accepts ascii only, so it's OK to index directly
+        if('0' <= current && current <= '9')
+            val = val * 16 + current - '0';
+        else if('a' <= current && current <= 'f')
+            val = val * 16 + current -'a' + 10;
+        else if('A' <= current && current <= 'Z')
+            val = val * 16 + current - 'A' + 10;
+        else
+            throw new Exception("invalid escape sequence");
+    }
+    enforce(val <= 0x10FFFF, "invalid codepoint");
+    str = str[maxDigit..$];
+    return val;
+}
+
+//heuristic value determines maximum CodepointSet length suitable for linear search
+enum maxCharsetUsed = 6;
+
+enum maxCachedTries = 8;
+
+alias CodepointTrie!8 Trie;
+
+Trie[const(CodepointSet)] trieCache;
+
+//accessor with caching
+@trusted Trie getTrie(in CodepointSet set)
+{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
+    if(__ctfe || maxCachedTries == 0)
+        return Trie(set);
+    else
+    {
+        auto p = set in trieCache;
+        if(p)
+            return *p;
+        if(trieCache.length == maxCachedTries)
+        {
+            trieCache.clear();
+            trieCache = null;
+        }
+        return (trieCache[set] = Trie(set));
+    }
+}
+
+//property for \w character class
+@property CodepointSet wordCharacter()
+{
+    return memoizeExpr!("CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
+        .add(unicodeMe).add(unicodeNd).add(unicodePc)")();
+}
+
+@property Trie wordTrie()
+{
+    return memoizeExpr!("Trie(wordCharacter)")();
+}
+
+auto memoizeExpr(string expr)()
+{
+    if(__ctfe)
+        return mixin(expr);
+    alias typeof(mixin(expr)) T;
+    static T slot;
+    static bool initialized;
+    if(!initialized)
+    {
+        slot =  mixin(expr);
+        initialized = true;
+    }
+    return slot;
+}
+
+/+
+    fetch codepoint set corresponding to a name (InBlock or binary property)
++/
+@trusted const(CodepointSet) getUnicodeSet(in char[] name, bool negated,  bool casefold)
+{
+    alias comparePropertyName ucmp;
+    CodepointSet s;
+
+    //unicode property
+    //helper: direct access with a sanity check
+    if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
+    {
+        s.add(unicodeLu).add(unicodeLl).add(unicodeLt)
+            .add(unicodeLo).add(unicodeLm);
+    }
+    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
+    {
+        s.add(unicodeLl).add(unicodeLu).add(unicodeLt);//Title case
+    }
+    else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
+    {
+        s.add(unicodeMn).add(unicodeMc).add(unicodeMe);
+    }
+    else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
+    {
+        s.add(unicodePc).add(unicodePd).add(unicodePs).add(unicodePe)
+            .add(unicodePi).add(unicodePf).add(unicodePo);
+    }
+    else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
+    {
+        s.add(unicodeSm).add(unicodeSc).add(unicodeSk).add(unicodeSo);
+    }
+    else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
+    {
+        s.add(unicodeZs).add(unicodeZl).add(unicodeZp);
+    }
+    else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
+    {
+        s.add(unicodeCo).add(unicodeLo).add(unicodeNo)
+            .add(unicodeSo).add(unicodePo);
+    }
+    else if(ucmp(name, "any") == 0)
+        s.add(Interval(0,0x10FFFF));
+    else if(ucmp(name, "ascii") == 0)
+        s.add(Interval(0,0x7f));
+    else
+    {
+        version(fred_perfect_hashing)
+        {
+            uint key = phash(name);
+            if(key >= PHASHNKEYS || ucmp(name,unicodeProperties[key].name) != 0)
+                enforce(0, "invalid property name");
+            s = cast(CodepointSet)unicodeProperties[key].set;
+        }
+        else
+        {
+            auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
+            //creating empty Codepointset is a workaround
+            auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
+            enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
+            s = range[eq].set.dup;
+        }
     }
 
-    /// Ditto
-    void popFront()
+    if(casefold)
+        s = caseEnclose(s);
+    if(negated)
+        s.negate();
+    return cast(const CodepointSet)s;
+}
+
+//basic stack, just in case it gets used anywhere else then Parser
+@trusted struct Stack(T, bool CTFE=false)
+{
+    static if(!CTFE)
+        Appender!(T[]) stack;//compiles but bogus at CTFE
+    else
+    {
+        struct Proxy
+        {
+            T[] data;
+            void put(T val)
+            {
+                data ~= val;
+            }
+            void shrinkTo(size_t sz){   data = data[0..sz]; }
+        }
+        Proxy stack;
+    }
+    @property bool empty(){ return stack.data.empty; }
+    void push(T item)
+    {
+        stack.put(item);
+    }
+    @property ref T top()
     {
         assert(!empty);
-        test;
+        return stack.data[$-1];
     }
-
-    /// Ditto
-    RegexMatch!(Range) front()
+    @property size_t length() {  return stack.data.length; }
+    T pop()
     {
-        return this;
+        assert(!empty);
+        auto t = stack.data[$-1];
+        stack.shrinkTo(stack.data.length-1);
+        return t;
     }
-
-    /// Ditto
-    static if (isForwardRange!Range)
-    {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret.input = input.save;
-            return ret;
-        }
-    }
-
-    unittest
-    {
-        // @@@BUG@@@ This doesn't work if a client module uses -unittest
-        // uint i;
-        // foreach (m; match(to!(Range)("abcabcabab"), regex(to!(Range)("ab"))))
-        // {
-        //     ++i;
-        //     assert(m.hit == "ab");
-        //     //writefln("%s[%s]%s", m.pre, m.hit, m.post);
-        // }
-        // assert(i == 4);
-    }
-
-    unittest
-    {
-        // @@@BUG@@@ This doesn't work if a client module uses -unittest
-        // debug(std_regex) writefln("regex.search.unittest()");
-
-        // int i;
-        // //foreach(m; RegexMatch("ab").search("abcabcabab"))
-        // foreach(m; .match("abcabcabab", regex("ab")))
-        // {
-        //     auto s = std.string.format("%s[%s]%s", m.pre, m.hit, m.post);
-        //     if (i == 0) assert(s == "[ab]cabcabab");
-        //     else if (i == 1) assert(s == "abc[ab]cabab");
-        //     else if (i == 2) assert(s == "abcabc[ab]ab");
-        //     else if (i == 3) assert(s == "abcabcab[ab]");
-        //     else assert(0);
-        //     i++;
-        // }
-        // assert(i == 4);
-    }
-
-    struct Captures
-    {
-        private Range input;
-        private regmatch_t[] matches;
-
-        ref auto opSlice()
-        {
-            return this;
-        }
-
-        @property bool empty()
-        {
-            return matches.empty;
-        }
-
-        @property Range front()
-        {
-            return input[matches[0].startIdx .. matches[0].endIdx];
-        }
-
-        void popFront() {  matches.popFront; }
-
-        @property Range back()
-        {
-            return input[matches[$-1].startIdx .. matches[$-1].endIdx];
-        }
-
-        void popBack() { matches.popBack; }
-
-        @property typeof(this) save()
-        {
-            return this;
-        }
-
-        @property size_t length()
-        {
-            return matches.length;
-        }
-
-        Range opIndex(size_t n)
-        {
-            assert(n < length, text("length = ", length, ", requested match = ", n));
-            return input[matches[n].startIdx .. matches[n].endIdx];
-        }
-    }
-
-/******************
-Retrieve the captured parenthesized matches, in the form of a
-random-access range. The first element in the range is always the full
-match.
-
-Example:
-----
-foreach (m; match("abracadabra", "(.)a(.)"))
-{
-    foreach (c; m.captures)
-        write(c, ';');
-    writeln();
 }
-// writes:
-// rac;r;c;
-// dab;d;b;
-----
- */
-    public Captures captures()
+
+//safety limits
+enum maxGroupNumber = 2^^19;
+enum maxLookaroundDepth = 16;
+// *Bytecode.sizeof, i.e. 1Mb of bytecode alone
+enum maxCompiledLength = 2^^18;
+//amounts to up to 4 Mb of auxilary table for matching
+enum maxCumulativeRepetitionLength = 2^^20;
+
+template BasicElementOf(Range)
+{
+    alias Unqual!(ElementEncodingType!Range) BasicElementOf;
+}
+
+struct Parser(R, bool CTFE=false)
+    if (isForwardRange!R && is(ElementType!R : dchar))
+{
+    enum infinite = ~0u;
+    dchar _current;
+    bool empty;
+    R pat, origin;       //keep full pattern for pretty printing error messages
+    Bytecode[] ir;       //resulting bytecode
+    uint re_flags = 0;   //global flags e.g. multiline + internal ones
+    Stack!(uint, CTFE) fixupStack;  //stack of opened start instructions
+    NamedGroup[] dict;   //maps name -> user group number
+    //current num of group, group nesting level and repetitions step
+    Stack!(uint, CTFE) groupStack;
+    uint nesting = 0;
+    uint lookaroundNest = 0;
+    uint counterDepth = 0; //current depth of nested counted repetitions
+    const(CodepointSet)[] charsets;  //
+    const(Trie)[] tries; //
+    uint[] backrefed; //bitarray for groups
+
+    @trusted this(S)(R pattern, S flags)
+        if(isSomeString!S)
     {
-        return Captures(input, empty ? [] : pmatch);
-    }
-
-    unittest
-    {
-        // @@@BUG@@@ This doesn't work if a client module uses -unittest
-        // auto app = appender!string();
-        // foreach (m; match("abracadabra", "(.)a(.)"))
-        // {
-        //     assert(m.captures.length == 3);
-        //     foreach (c; m.captures)
-        //         app.put(c), app.put(';');
-        // }
-        // assert(app.data == "rac;r;c;dab;d;b;");
-    }
-
-/*******************
-Returns the slice of the input that precedes the matched substring.
- */
-    public Range pre()
-    {
-        return input[0 .. pmatch[0].startIdx != pmatch[0].startIdx.max
-                ? pmatch[0].startIdx : $];
-    }
-
-/**
-The matched portion of the input.
-*/
-    public Range hit()
-    {
-        assert(pmatch[0].startIdx <= pmatch[0].endIdx
-                && pmatch[0].endIdx <= input.length,
-                text(pmatch[0].startIdx, " .. ", pmatch[0].endIdx,
-                        " vs. ", input.length));
-        return input[pmatch[0].startIdx .. pmatch[0].endIdx];
-    }
-
-/*******************
-Returns the slice of the input that follows the matched substring.
- */
-    public Range post()
-    {
-        return input[pmatch[0].endIdx < $ ? pmatch[0].endIdx : $ .. $];
-    }
-
-/**
-Returns $(D hit) (converted to $(D string) if necessary).
-*/
-    string toString()
-    {
-        return to!string(hit);
-    }
-
-/* ************************************************
- * Find regular expression matches in s[]. Replace those matches
- * with a new string composed of format[] merged with the result of the
- * matches.
- * If global, replace all matches. Otherwise, replace first match.
- * Returns: the new string
- */
-    private Range replaceAll(String)(String format)
-    {
-        auto result = input;
-        size_t lastindex = 0;
-        size_t offset = 0;
-        for (;;)
-        {
-            if (!test(lastindex))
-                break;
-
-            auto so = pmatch[0].startIdx;
-            auto eo = pmatch[0].endIdx;
-
-            auto replacement = replace(format);
-/+
-            // Optimize by using std.string.replace if possible - Dave Fladebo
-            auto slice = result[offset + so .. offset + eo];
-            if (attributes & REA.global &&              // global, so replace all
-                    !(attributes & REA.ignoreCase) &&   // not ignoring case
-                    !(attributes & REA.multiline) &&    // not multiline
-                    pattern == slice &&                 // simple pattern
-                                                // (exact match, no
-                                                // special characters)
-                    format == replacement)              // simple format, not $ formats
-            {
-                debug(std_regex)
-                {
-                    auto sss = result[offset + so .. offset + eo];
-                    writefln("pattern: %s, slice: %s, format: %s, replacement: %s",
-                            pattern,
-                            sss,
-                            format,
-                            replacement);
-                }
-                result = std.string.replace(result, slice, replacement);
-                break;
-            }
-+/
-            result = replaceSlice(result,
-                    result[offset + so .. offset + eo], replacement);
-
-            if (engine.attributes & engine.REA.global)
-            {
-                offset += replacement.length - (eo - so);
-
-                if (lastindex == eo)
-                    lastindex++;                // always consume some source
-                else
-                    lastindex = eo;
-            }
-            else
-                break;
-        }
-        return result;
-    }
-
-/*
- * Test s[] starting at startindex against regular expression.
- * Returns: 0 for no match, !=0 for match
- */
-
-    private bool test(size_t startindex = size_t.max)
-    {
-        if (startindex == size_t.max)
-        {
-            if (pmatch[0].endIdx != pmatch[0].endIdx.max)
-            {
-                startindex = pmatch[0].endIdx;
-                if (startindex >= input.length)
-                {
-                    pmatch[0].startIdx = pmatch[0].startIdx.max;
-                    pmatch[0].endIdx = pmatch[0].endIdx.max;
-                    return false;                   // fail
-                }
-                if (pmatch[0].endIdx == pmatch[0].startIdx)
-                    startindex += std.utf.stride(input, pmatch[0].endIdx);
-            }
-            else
-               startindex = 0;
-        }
-        debug (regex) writefln("Regex.test(input[] = '%s', startindex = %d)",
-                input, startindex);
-
-        //engine.printProgram(engine.program);
-        pmatch[0].startIdx = -1;
-        pmatch[0].endIdx = -1;
-
-        // First character optimization
-        Unqual!(typeof(Range.init[0])) firstc = 0;
-        if (engine.program[0] == engine.REchar)
-        {
-            firstc = engine.program[1];
-            if (engine.attributes & engine.REA.ignoreCase && isAlpha(firstc))
-                firstc = 0;
-        }
-        ubyte* pmemory = cast(ubyte *)alloca(stackSize);
-        ubyte[] memory = pmemory ? pmemory[0..stackSize] : new ubyte [stackSize];
-        for (;; ++startindex)
-        {
-            if (firstc)
-            {
-                if (startindex == input.length)
-                {
-                    break;                      // no match
-                }
-                if (input[startindex] != firstc)
-                {
-                    startindex++;
-                    if (!chr(startindex, firstc))       // 1st char not found
-                        break;                          // no match
-                }
-            }
-            foreach (i; 1 .. engine.re_nsub + 1)//subs considered empty matches
-            {
-                pmatch[i].startIdx = 0;
-                pmatch[i].endIdx = 0;
-            }
-            src_start = src = startindex;
-
-            if (trymatch(0, memory))
-            {
-                pmatch[0].startIdx = startindex;
-                pmatch[0].endIdx = src;
-                return true;
-            }
-            // If possible match must start at beginning, we are done
-            if (engine.program[0] == engine.REbol)
-            {
-                if (!(engine.attributes & engine.REA.multiline)) break;
-                // Scan for the next \n
-                if (!chr(startindex, '\n'))
-                    break;              // no match if '\n' not found
-            }
-            if (startindex == input.length)
-                break;
-            debug(std_regex)
-            {
-                auto sss = input[startindex + 1 .. input.length];
-                writefln("Starting new try: '%s'", sss);
-            }
-        }
-        pmatch[0].startIdx = pmatch[0].startIdx.max;
-        pmatch[0].endIdx = pmatch[0].endIdx.max;
-        return false;  // no match
-    }
-
-    /**
-       Returns whether string $(D_PARAM s) matches $(D_PARAM this).
-    */
-    //alias test opEquals;
-
-    private bool chr(ref size_t si, E c)
-    {
-        for (; si < input.length; si++)
-        {
-            if (input[si] == c)
-                return 1;
-        }
-        return 0;
-    }
-
-    private static sizediff_t icmp(E[] a, E[] b)
-    {
-        static if (is(Unqual!(E) == char))
-        {
-            return .icmp(a, b);
-        }
-        else static if (is(E : dchar))
-        {
-            for (size_t i, j;; ++i, ++j)
-            {
-                if (j == b.length) return i != a.length;
-                if (i == a.length) return -1;
-                immutable x = std.uni.toLower(a[i]),
-                    y = std.uni.toLower(b[j]);
-                if (x == y) continue;
-                return x - y;
-            }
-        }
+        pat = origin = pattern;
+        if(!__ctfe)
+            ir.reserve(pat.length);
+        parseFlags(flags);
+        _current = ' ';//a safe default for freeform parsing
+        next();
+        if(__ctfe)
+            parseRegex();
         else
         {
-            for (size_t i, j;; ++i, ++j)
+            try
             {
-                if (j == b.length) return i != a.length;
-                if (i == a.length) return -1;
-                immutable x = a[i], y = b[j];
-                if (x == y) continue;
-                return x - y;
+                parseRegex();
+            }
+            catch(Exception e)
+            {
+                error(e.msg);//also adds pattern location
+            }
+        }
+        put(Bytecode(IR.End, 0));
+    }
+
+    //mark referenced groups for latter processing
+    void markBackref(uint n)
+    {
+        if(n/32 >= backrefed.length)
+            backrefed.length = n/32 + 1;
+        backrefed[n/32] |= 1<<(n & 31);
+    }
+
+    @property dchar current(){ return _current; }
+
+    bool _next()
+    {
+        if(pat.empty)
+        {
+            empty =  true;
+            return false;
+        }
+        //for CTFEability
+        size_t idx=0;
+        _current = decode(pat, idx);
+        pat = pat[idx..$];
+        return true;
+    }
+
+    void skipSpace()
+    {
+        while(isWhite(current) && _next()){ }
+    }
+
+    bool next()
+    {
+        if(re_flags & RegexOption.freeform)
+        {
+            bool r = _next();
+            skipSpace();
+            return r;
+        }
+        else
+            return _next();
+    }
+
+    void put(Bytecode code)
+    {
+        enforce(ir.length < maxCompiledLength
+                , "maximum compiled pattern length is exceeded");
+        if(__ctfe)
+        {
+            ir = ir ~ code;
+        }
+        else
+            ir ~= code;
+    }
+
+    void putRaw(uint number)
+    {
+        enforce(ir.length < maxCompiledLength
+                , "maximum compiled pattern length is exceeded");
+        ir ~= Bytecode.fromRaw(number);
+    }
+
+    //parsing number with basic overflow check
+    uint parseDecimal()
+    {
+        uint r=0;
+        while(ascii.isDigit(current))
+        {
+            if(r >= (uint.max/10))
+                error("Overflow in decimal number");
+            r = 10*r + cast(uint)(current-'0');
+            if(!next())
+                break;
+        }
+        return r;
+    }
+
+    //parse control code of form \cXXX, c assumed to be the current symbol
+    dchar parseControlCode()
+    {
+        enforce(next(), "Unfinished escape sequence");
+        enforce(('a' <= current && current <= 'z') || ('A' <= current && current <= 'Z'),
+            "Only letters are allowed after \\c");
+        return current & 0x1f;
+    }
+
+    //
+    @trusted void parseFlags(S)(S flags)
+    {//@@@BUG@@@ text is @system
+        foreach(ch; flags)//flags are ASCII anyway
+        {
+        L_FlagSwitch:
+            switch(ch)
+            {
+
+                foreach(i, op; __traits(allMembers, RegexOption))
+                {
+                    case RegexOptionNames[i]:
+                            if(re_flags & mixin("RegexOption."~op))
+                                throw new RegexException(text("redundant flag specified: ",ch));
+                            re_flags |= mixin("RegexOption."~op);
+                            break L_FlagSwitch;
+                }
+                default:
+                    if(__ctfe)
+                       assert(text("unknown regex flag '",ch,"'"));
+                    else
+                        new RegexException(text("unknown regex flag '",ch,"'"));
             }
         }
     }
 
-/* *************************************************
- * Match input against a section of the program[].
- * Returns:
- *      1 if successful match
- *      0 no match
- */
-
-    private bool trymatch(uint pc, ubyte[] memory)
+    //parse and store IR for regex pattern
+    @trusted void parseRegex()
     {
-        /*
-         * All variables related to position in input are size_t
-         * almost anything else reasonably fits into uint
-         */
-        uint pop;
-        size_t lastState = 0; //top of backtrack stack
-        uint matchesToSave = 0; //number of currently used entries in pmatch
-        size_t[] trackers;
-        struct StateTail
+        fixupStack.push(0);
+        groupStack.push(1);//0 - whole match
+        auto maxCounterDepth = counterDepth;
+        uint fix;//fixup pointer
+
+        while(!empty)
         {
-            //this structure is preceeded by all matches, then by all counters
-            size_t src;
-            uint pc, counter, matches, size;
-        }
-        bool backtrack()
-        {
-            if (lastState == 0)
-                return false;
-            auto tail = cast(StateTail *)&memory[lastState - StateTail.sizeof];
-            pc = tail.pc;
-            src = tail.src;
-            matchesToSave = tail.matches;
-            curCounter = tail.counter;
-            lastState -= tail.size;
-            debug(std_regex)
-                writefln("\tBacktracked pc=>%d src='%s'", pc, input[src..$]);
-            auto matchPtr = cast(regmatch_t*)&memory[lastState];
-            pmatch[1..matchesToSave+1]  = matchPtr[0..matchesToSave];
-            pmatch[matchesToSave+1..$] = regmatch_t(0, 0);//remove any stale matches here
-            if (!counters.empty)
+            debug(fred_parser)
+                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.stack.data);
+            switch(current)
             {
-                auto counterPtr = cast(uint*)(matchPtr+matchesToSave);
-                counters[0..curCounter+1] = counterPtr[0..curCounter+1];
+            case '(':
+                next();
+                nesting++;
+                uint nglob;
+                fixupStack.push(cast(uint)ir.length);
+                if(current == '?')
+                {
+                    next();
+                    switch(current)
+                    {
+                    case ':':
+                        put(Bytecode(IR.Nop, 0));
+                        next();
+                        break;
+                    case '=':
+                        genLookaround(IR.LookaheadStart);
+                        next();
+                        break;
+                    case '!':
+                        genLookaround(IR.NeglookaheadStart);
+                        next();
+                        break;
+                    case 'P':
+                        next();
+                        if(current != '<')
+                            error("Expected '<' in named group");
+                        string name;
+                        while(next() && isAlpha(current))
+                        {
+                            name ~= current;
+                        }
+                        if(current != '>')
+                            error("Expected '>' closing named group");
+                        next();
+                        nglob = groupStack.top++;
+                        enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
+                        auto t = NamedGroup(name, nglob);
+
+                        if(__ctfe)
+                        {
+                            size_t ind;
+                            for(ind=0; ind <dict.length; ind++)
+                                if(t.name >= dict[ind].name)
+                                    break;
+                            insertInPlaceAlt(dict, ind, t);
+                        }
+                        else
+                        {
+                            auto d = assumeSorted!"a.name < b.name"(dict);
+                            auto ind = d.lowerBound(t).length;
+                            insertInPlaceAlt(dict, ind, t);
+                        }
+                        put(Bytecode(IR.GroupStart, nglob));
+                        break;
+                    case '<':
+                        next();
+                        if(current == '=')
+                            genLookaround(IR.LookbehindStart);
+                        else if(current == '!')
+                            genLookaround(IR.NeglookbehindStart);
+                        else
+                            error("'!' or '=' expected after '<'");
+                        next();
+                        break;
+                    default:
+                        error(" ':', '=', '<', 'P' or '!' expected after '(?' ");
+                    }
+                }
+                else
+                {
+                    nglob = groupStack.top++;
+                    enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
+                    put(Bytecode(IR.GroupStart, nglob));
+                }
+                break;
+            case ')':
+                enforce(nesting, "Unmatched ')'");
+                nesting--;
+                next();
+                fix = fixupStack.pop();
+                switch(ir[fix].code)
+                {
+                case IR.GroupStart:
+                    put(Bytecode(IR.GroupEnd,ir[fix].data));
+                    parseQuantifier(fix);
+                    break;
+                case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+                    assert(lookaroundNest);
+                    fixLookaround(fix);
+                    lookaroundNest--;
+                    put(ir[fix].paired);
+                    break;
+                case IR.Option: //| xxx )
+                    //two fixups: last option + full OR
+                    finishAlternation(fix);
+                    fix = fixupStack.top;
+                    switch(ir[fix].code)
+                    {
+                    case IR.GroupStart:
+                        fixupStack.pop();
+                        put(Bytecode(IR.GroupEnd,ir[fix].data));
+                        parseQuantifier(fix);
+                        break;
+                    case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+                        assert(lookaroundNest);
+                        lookaroundNest--;
+                        fix = fixupStack.pop();
+                        fixLookaround(fix);
+                        put(ir[fix].paired);
+                        break;
+                    default://(?:xxx)
+                        fixupStack.pop();
+                        parseQuantifier(fix);
+                    }
+                    break;
+                default://(?:xxx)
+                    parseQuantifier(fix);
+                }
+                break;
+            case '|':
+                next();
+                fix = fixupStack.top;
+                if(ir.length > fix && ir[fix].code == IR.Option)
+                {
+                    ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix);
+                    put(Bytecode(IR.GotoEndOr, 0));
+                    fixupStack.top = cast(uint)ir.length; //replace latest fixup for Option
+                    put(Bytecode(IR.Option, 0));
+                    break;
+                }
+                //start a new option
+                if(fixupStack.length == 1)//only root entry
+                    fix = -1;
+                uint len = cast(uint)ir.length - fix;
+                insertInPlaceAlt(ir, fix+1, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                assert(ir[fix+1].code == IR.OrStart);
+                put(Bytecode(IR.GotoEndOr, 0));
+                fixupStack.push(fix+1); //fixup for StartOR
+                fixupStack.push(cast(uint)ir.length); //for Option
+                put(Bytecode(IR.Option, 0));
+                break;
+            default://no groups or whatever
+                uint start = cast(uint)ir.length;
+                parseAtom();
+                parseQuantifier(start);
+            }
+        }
+
+        if(fixupStack.length != 1)
+        {
+            fix = fixupStack.pop();
+            enforce(ir[fix].code == IR.Option, "no matching ')'");
+            finishAlternation(fix);
+            enforce(fixupStack.length == 1, "no matching ')'");
+        }
+    }
+
+    //helper function, finalizes IR.Option, fix points to the first option of sequence
+    void finishAlternation(uint fix)
+    {
+        enforce(ir[fix].code == IR.Option, "no matching ')'");
+        ir[fix] = Bytecode(ir[fix].code, cast(uint)ir.length - fix - IRL!(IR.OrStart));
+        fix = fixupStack.pop();
+        enforce(ir[fix].code == IR.OrStart, "no matching ')'");
+        ir[fix] = Bytecode(IR.OrStart, cast(uint)ir.length - fix - IRL!(IR.OrStart));
+        put(Bytecode(IR.OrEnd, cast(uint)ir.length - fix - IRL!(IR.OrStart)));
+        uint pc = fix + IRL!(IR.OrStart);
+        while(ir[pc].code == IR.Option)
+        {
+            pc = pc + ir[pc].data;
+            if(ir[pc].code != IR.GotoEndOr)
+                break;
+            ir[pc] = Bytecode(IR.GotoEndOr, cast(uint)(ir.length - pc - IRL!(IR.OrEnd)));
+            pc += IRL!(IR.GotoEndOr);
+        }
+        put(Bytecode.fromRaw(0));
+    }
+
+    //parse and store IR for atom-quantifier pair
+    @trusted void parseQuantifier(uint offset)
+    {//moveAll is @system
+        uint replace = ir[offset].code == IR.Nop;
+        if(empty && !replace)
+            return;
+        uint min, max;
+        switch(current)
+        {
+        case '*':
+            min = 0;
+            max = infinite;
+            break;
+        case '?':
+            min = 0;
+            max = 1;
+            break;
+        case '+':
+            min = 1;
+            max = infinite;
+            break;
+        case '{':
+            enforce(next(), "Unexpected end of regex pattern");
+            enforce(ascii.isDigit(current), "First number required in repetition");
+            min = parseDecimal();
+            if(current == '}')
+                max = min;
+            else if(current == ',')
+            {
+                next();
+                if(ascii.isDigit(current))
+                    max = parseDecimal();
+                else if(current == '}')
+                    max = infinite;
+                else
+                    error("Unexpected symbol in regex pattern");
+                skipSpace();
+                if(current != '}')
+                    error("Unmatched '{' in regex pattern");
+            }
+            else
+                error("Unexpected symbol in regex pattern");
+            break;
+        default:
+            if(replace)
+            {
+                moveAllAlt(ir[offset+1..$],ir[offset..$-1]);
+                ir.length -= 1;
+            }
+            return;
+        }
+        uint len = cast(uint)ir.length - offset - replace;
+        bool greedy = true;
+        //check only if we managed to get new symbol
+        if(next() && current == '?')
+        {
+            greedy = false;
+            next();
+        }
+        if(max != infinite)
+        {
+            if(min != 1 || max != 1)
+            {
+                Bytecode op = Bytecode(greedy ? IR.RepeatStart : IR.RepeatQStart, len);
+                if(replace)
+                    ir[offset] = op;
+                else
+                    insertInPlaceAlt(ir, offset, op);
+                put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
+                put(Bytecode.init); //hotspot
+                putRaw(1);
+                putRaw(min);
+                putRaw(max);
+                counterDepth = std.algorithm.max(counterDepth, nesting+1);
+            }
+        }
+        else if(min) //&& max is infinite
+        {
+            if(min != 1)
+            {
+                Bytecode op = Bytecode(greedy ? IR.RepeatStart : IR.RepeatQStart, len);
+                if(replace)
+                    ir[offset] = op;
+                else
+                    insertInPlaceAlt(ir, offset, op);
+                offset += 1;//so it still points to the repeated block
+                put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
+                put(Bytecode.init); //hotspot
+                putRaw(1);
+                putRaw(min);
+                putRaw(min);
+                counterDepth = std.algorithm.max(counterDepth, nesting+1);
+            }
+            else if(replace)
+            {
+                if(__ctfe)//CTFE workaround: no moveAll and length -= x;
+                {
+                    ir = ir[0..offset] ~ ir[offset+1..$];
+                }
+                else
+                {
+                    moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                    ir.length -= 1;
+                }
+            }
+            put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
+            enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
+            ir ~= ir[offset .. offset+len];
+            //IR.InfinteX is always a hotspot
+            put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
+            put(Bytecode.init); //merge index
+        }
+        else//vanila {0,inf}
+        {
+            Bytecode op = Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len);
+            if(replace)
+                ir[offset] = op;
+            else
+                insertInPlaceAlt(ir, offset, op);
+            //IR.InfinteX is always a hotspot
+            put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
+            put(Bytecode.init); //merge index
+
+        }
+    }
+
+    //parse and store IR for atom
+    void parseAtom()
+    {
+        if(empty)
+            return;
+        switch(current)
+        {
+        case '*', '?', '+', '|', '{', '}':
+            error("'*', '+', '?', '{', '}' not allowed in atom");
+            break;
+        case '.':
+            put(Bytecode(IR.Any, 0));
+            next();
+            break;
+        case '[':
+            parseCharset();
+            break;
+        case '\\':
+            enforce(_next(), "Unfinished escape sequence");
+            parseEscape();
+            break;
+        case '^':
+            put(Bytecode(IR.Bol, 0));
+            next();
+            break;
+        case '$':
+            put(Bytecode(IR.Eol, 0));
+            next();
+            break;
+        default:
+            if(re_flags & RegexOption.casefold)
+            {
+                dchar[5] data;
+                auto range = getCommonCasing(current, data);
+                assert(range.length <= 5);
+                if(range.length == 1)
+                    put(Bytecode(IR.Char, range[0]));
+                else
+                    foreach(v; range)
+                        put(Bytecode(IR.OrChar, v, cast(uint)range.length));
+            }
+            else
+                put(Bytecode(IR.Char, current));
+            next();
+        }
+    }
+
+    //generate code for start of lookaround: (?= (?! (?<= (?<!
+    void genLookaround(IR opcode)
+    {
+        put(Bytecode(opcode, 0));
+        put(Bytecode.fromRaw(0));
+        put(Bytecode.fromRaw(0));
+        groupStack.push(0);
+        lookaroundNest++;
+        enforce(lookaroundNest <= maxLookaroundDepth
+                , "maximum lookaround depth is exceeded");
+    }
+
+    //fixup lookaround with start at offset fix
+    void fixLookaround(uint fix)
+    {
+        ir[fix] = Bytecode(ir[fix].code
+                           , cast(uint)ir.length - fix - IRL!(IR.LookaheadStart));
+        auto g = groupStack.pop();
+        assert(!groupStack.empty);
+        ir[fix+1] = Bytecode.fromRaw(groupStack.top);
+        //groups are cumulative across lookarounds
+        ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
+        groupStack.top += g;
+    }
+
+    //CodepointSet operations relatively in order of priority
+    enum Operator:uint {
+        Open=0, Negate,  Difference, SymDifference, Intersection, Union, None
+    };
+
+    //parse unit of CodepointSet spec, most notably escape sequences and char ranges
+    //also fetches next set operation
+    Tuple!(CodepointSet,Operator) parseCharTerm()
+    {
+        enum State{ Start, Char, Escape, Dash, DashEscape };
+        Operator op = Operator.None;;
+        dchar last;
+        CodepointSet set;
+        State state = State.Start;
+
+        static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
+        {
+            if(re_flags & RegexOption.casefold)
+            {
+                dchar[5] chars;
+                auto range = getCommonCasing(ch, chars);
+                foreach(v; range)
+                    set.add(v);
+            }
+            else
+                set.add(ch);
+        }
+
+        L_CharTermLoop:
+        for(;;)
+        {
+            final switch(state)
+            {
+            case State.Start:
+                switch(current)
+                {
+                case '[':
+                    op = Operator.Union;
+                    goto case;
+                case ']':
+                    break L_CharTermLoop;
+                case '\\':
+                    state = State.Escape;
+                    break;
+                default:
+                    state = State.Char;
+                    last = current;
+                }
+                break;
+            case State.Char:
+                switch(current)
+                {
+                case '|':
+                    if(last == '|')
+                    {
+                        op = Operator.Union;
+                        next();
+                        break L_CharTermLoop;
+                    }
+                    goto default;
+                case '-':
+                    if(last == '-')
+                    {
+                        op = Operator.Difference;
+                        next();
+                        break L_CharTermLoop;
+                    }
+                    state = State.Dash;
+                    break;
+                case '~':
+                    if(last == '~')
+                    {
+                        op = Operator.SymDifference;
+                        next();
+                        break L_CharTermLoop;
+                    }
+                    goto default;
+                case '&':
+                    if(last == '&')
+                    {
+                        op = Operator.Intersection;
+                        next();
+                        break L_CharTermLoop;
+                    }
+                    goto default;
+                case '\\':
+                    set.add(last);
+                    state = State.Escape;
+                    break;
+                case '[':
+                    op = Operator.Union;
+                    goto case;
+                case ']':
+                    set.add(last);
+                    break L_CharTermLoop;
+                default:
+                    addWithFlags(set, last, re_flags);
+                    last = current;
+                }
+                break;
+            case State.Escape:
+                switch(current)
+                {
+                case 'f':
+                    last = '\f';
+                    state = State.Char;
+                    break;
+                case 'n':
+                    last = '\n';
+                    state = State.Char;
+                    break;
+                case 'r':
+                    last = '\r';
+                    state = State.Char;
+                    break;
+                case 't':
+                    last = '\t';
+                    state = State.Char;
+                    break;
+                case 'v':
+                    last = '\v';
+                    state = State.Char;
+                    break;
+                case 'c':
+                    last = parseControlCode();
+                    state = State.Char;
+                    break;
+                case '\\', '[', ']':
+                    last = current;
+                    state = State.Char;
+                    break;
+                case 'p':
+                    set.add(parseUnicodePropertySpec(false));
+                    state = State.Start;
+                    continue L_CharTermLoop; //next char already fetched
+                case 'P':
+                    set.add(parseUnicodePropertySpec(true));
+                    state = State.Start;
+                    continue L_CharTermLoop; //next char already fetched
+                case 'x':
+                    last = parseUniHex(pat, 2);
+                    state = State.Char;
+                    break;
+                case 'u':
+                    last = parseUniHex(pat, 4);
+                    state = State.Char;
+                    break;
+                case 'U':
+                    last = parseUniHex(pat, 8);
+                    state = State.Char;
+                    break;
+                case 'd':
+                    set.add(unicodeNd);
+                    state = State.Start;
+                    break;
+                case 'D':
+                    set.add(unicodeNd.dup.negate);
+                    state = State.Start;
+                    break;
+                case 's':
+                    set.add(unicodeWhite_Space);
+                    state = State.Start;
+                    break;
+                case 'S':
+                    set.add(unicodeWhite_Space.dup.negate);
+                    state = State.Start;
+                    break;
+                case 'w':
+                    set.add(wordCharacter);
+                    state = State.Start;
+                    break;
+                case 'W':
+                    set.add(wordCharacter.dup.negate);
+                    state = State.Start;
+                    break;
+                default:
+                    assert(0);
+                }
+                break;
+            case State.Dash:
+                switch(current)
+                {
+                case '[':
+                    op = Operator.Union;
+                    goto case;
+                case ']':
+                    //means dash is a single char not an interval specifier
+                    addWithFlags(set, last, re_flags);
+                    set.add('-');
+                    break L_CharTermLoop;
+                 case '-'://set Difference again
+                    addWithFlags(set, last, re_flags);
+                    op = Operator.Difference;
+                    next();//skip '-'
+                    break L_CharTermLoop;
+                case '\\':
+                    state = State.DashEscape;
+                    break;
+                default:
+                    enforce(last <= current, "inverted range");
+                    if(re_flags & RegexOption.casefold)
+                    {
+                        for(uint ch = last; ch <= current; ch++)
+                            addWithFlags(set, ch, re_flags);
+                    }
+                    else
+                        set.add(Interval(last, current));
+                    state = State.Start;
+                }
+                break;
+            case State.DashEscape:  //xxxx-\yyyy
+                uint end;
+                switch(current)
+                {
+                case 'f':
+                    end = '\f';
+                    break;
+                case 'n':
+                    end = '\n';
+                    break;
+                case 'r':
+                    end = '\r';
+                    break;
+                case 't':
+                    end = '\t';
+                    break;
+                case 'v':
+                    end = '\v';
+                    break;
+                case '\\', '[', ']':
+                    end = current;
+                    break;
+                case 'c':
+                    end = parseControlCode();
+                    break;
+                case 'x':
+                    end = parseUniHex(pat, 2);
+                    break;
+                case 'u':
+                    end = parseUniHex(pat, 4);
+                    break;
+                case 'U':
+                    end = parseUniHex(pat, 8);
+                    break;
+                default:
+                    error("invalid escape sequence");
+                }
+                enforce(last <= end,"inverted range");
+                set.add(Interval(last,end));
+                state = State.Start;
+                break;
+            }
+            enforce(next(), "unexpected end of CodepointSet");
+        }
+        return tuple(set, op);
+    }
+
+    alias Stack!(CodepointSet, CTFE) ValStack;
+    alias Stack!(Operator, CTFE) OpStack;
+
+    //parse and store IR for CodepointSet
+    void parseCharset()
+    {
+        ValStack vstack;
+        OpStack opstack;
+        //
+        static bool apply(Operator op, ref ValStack stack)
+        {
+            switch(op)
+            {
+            case Operator.Negate:
+                stack.top.negate;
+                break;
+            case Operator.Union:
+                auto s = stack.pop();//2nd operand
+                enforce(!stack.empty, "no operand for '||'");
+                stack.top.add(s);
+                break;
+            case Operator.Difference:
+                auto s = stack.pop();//2nd operand
+                enforce(!stack.empty, "no operand for '--'");
+                stack.top.sub(s);
+                break;
+            case Operator.SymDifference:
+                auto s = stack.pop();//2nd operand
+                enforce(!stack.empty, "no operand for '~~'");
+                stack.top.symmetricSub(s);
+                break;
+            case Operator.Intersection:
+                auto s = stack.pop();//2nd operand
+                enforce(!stack.empty, "no operand for '&&'");
+                stack.top.intersect(s);
+                break;
+            default:
+                return false;
             }
             return true;
         }
-        void memoize(uint newpc)
+        static bool unrollWhile(alias cond)(ref ValStack vstack, ref OpStack opstack)
         {
-            auto stateSize = (counters.empty ? 0 : (curCounter+1)*uint.sizeof)
-                    + matchesToSave*regmatch_t.sizeof;
-            if (memory.length < lastState + stateSize + StateTail.sizeof)
-                memory.length += memory.length; //reallocates on heap
-            auto matchPtr = cast(regmatch_t*)&memory[lastState];
-            matchPtr[0..matchesToSave] = pmatch[1..matchesToSave+1];
-            if (!counters.empty)
+            while(cond(opstack.top))
             {
-                auto counterPtr = cast(uint*)(matchPtr + matchesToSave);
-                counterPtr[0..curCounter+1] = counters[0..curCounter+1];
-            }
-            lastState += stateSize;
-            auto tail = cast(StateTail *) &memory[lastState];
-            tail.pc = newpc;
-            tail.src = src;
-            tail.matches = matchesToSave;
-            tail.counter = curCounter;
-            tail.size = cast(uint)(stateSize + StateTail.sizeof);
-            lastState += StateTail.sizeof;
-        }
-        debug(std_regex)
-        {
-            auto sss = input[src .. input.length];
-            writefln("Regex.trymatch(pc = %d, src = '%s')",
-                    pc, sss);
-        }
-        auto srcsave = src;
-        for (;;)
-        {
-            //writefln("\top = %d", program[pc]);
-            switch (engine.program[pc])
-            {
-            case engine.REchar:
-                if (src == input.length)
-                    goto Lnomatch;
-                debug(std_regex) writefln("\tREchar '%s', src = '%s'",
-                                    engine.program[pc + 1], input[src]);
-                if (engine.program[pc + 1] != input[src])
-                    goto Lnomatch;
-                src++;
-                pc += 1 + cast(uint)char.sizeof;
-                break;
-
-            case engine.REichar:
-                if (src == input.length)
-                    goto Lnomatch;
-                debug(std_regex) writefln("\tREichar '%s', src = '%s'",
-                                    engine.program[pc + 1], input[src]);
-                size_t c1 = engine.program[pc + 1];
-                size_t c2 = input[src];
-                if (c1 != c2)
-                {
-                    if (isLower(cast(E) c2))
-                        c2 = std.ascii.toUpper(cast(E) c2);
-                    else
-                        goto Lnomatch;
-                    if (c1 != c2)
-                        goto Lnomatch;
-                }
-                src++;
-                pc += 1 + cast(uint)char.sizeof;
-                break;
-
-            case engine.REdchar:
-                if (src == input.length)
-                    goto Lnomatch;
-                debug(std_regex) writefln("\tREdchar '%s', src = '%s'",
-                                    *(cast(dchar *)&engine.program[pc + 1]), input[src]);
-                if (*(cast(dchar *)&engine.program[pc + 1]) != input[src])
-                    goto Lnomatch;
-                src++;
-                pc += 1 + cast(uint)dchar.sizeof;
-                break;
-
-            case engine.REidchar:
-                if (src == input.length)
-                    goto Lnomatch;
-                debug(std_regex) writefln("\tREidchar '%s', src = '%s'",
-                                    *(cast(dchar *)&engine.program[pc + 1]), input[src]);
-                size_t c1 = *(cast(dchar *)&engine.program[pc + 1]);
-                size_t c2 = input[src];
-                if (c1 != c2)
-                {
-                    if (isLower(cast(E) c2))
-                        c2 = std.ascii.toUpper(cast(E) c2);
-                    else
-                        goto Lnomatch;
-                    if (c1 != c2)
-                        goto Lnomatch;
-                }
-                src++;
-                pc += 1 + cast(uint)dchar.sizeof;
-                break;
-
-            case engine.REanychar:
-                debug(std_regex) writefln("\tREanychar");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (!(engine.attributes & engine.REA.dotmatchlf)
-                    && input[src] == '\n')
-                    goto Lnomatch;
-                src += std.utf.stride(input, src);
-                pc++;
-                break;
-
-            case engine.REstring:
-                auto len = *cast(size_t *)&engine.program[pc + 1];
-                assert(len % E.sizeof == 0);
-                len /= E.sizeof;
-                debug(std_regex)
-                {
-                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    writefln("\tREstring x%x, '%s'", len, sssa);
-                }
-                if (src + len > input.length)
-                    goto Lnomatch;
-                if (memcmp(&engine.program[pc + 1 + size_t.sizeof],
-                                &input[src], len * E.sizeof))
-                    goto Lnomatch;
-                src += len;
-                pc += 1 + size_t.sizeof + cast(uint)len * E.sizeof;
-                break;
-
-            case engine.REistring:
-                auto len = *cast(size_t *)&engine.program[pc + 1];
-                assert(len % E.sizeof == 0);
-                len /= E.sizeof;
-                debug(std_regex)
-                {
-                    auto sssa = (&engine.program[pc + 1 + size_t.sizeof])[0 .. len];
-                    writefln("\tREistring x%x, '%s'", len, sssa);
-                }
-                if (src + len > input.length)
-                    goto Lnomatch;
-                if (icmp(
-                   (cast(E*)&engine.program[pc+1+size_t.sizeof])[0..len],
-                      input[src .. src + len]))
-                    goto Lnomatch;
-                src += len;
-                pc += 1 + size_t.sizeof + cast(uint)len * E.sizeof;
-                break;
-
-            case engine.REtestbit:
-                auto pu = (cast(ushort *)&engine.program[pc + 1]);
-                if (src == input.length)
-                    goto Lnomatch;
-                debug(std_regex) writefln("\tREtestbit %d, %d, '%s', x%02x",
-                                    pu[0], pu[1], input[src], input[src]);
-                auto len = pu[1];
-                size_t c1 = input[src];
-                if (c1 <= pu[0] &&
-                   !((&(engine.program[pc + 1 + 4]))[c1 >> 3] & (1 << (c1 & 7))))
-                    goto Lnomatch;
-                pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                break;
-
-            case engine.REbit:
-                if (src == input.length)
-                    goto Lnomatch;
-                auto pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(std_regex) writefln("\tREbit %d, %d, '%s'",
-                                    pu[0], pu[1], input[src]);
-                auto len = pu[1];
-                size_t c1 = input[src];
-                if (c1 > pu[0])
-                    goto Lnomatch;
-                if (!((&engine.program[pc + 1 + 4])[c1 >> 3] & (1 << (c1 & 7))))
-                    goto Lnomatch;
-                src++;
-                pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                break;
-
-            case engine.REnotbit:
-                if (src == input.length)
-                    goto Lnomatch;
-                auto pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(std_regex) writefln("\tREnotbit %d, %d, '%s'",
-                                    pu[0], pu[1], input[src]);
-                auto len = pu[1];
-                size_t c1 = input[src];
-                if (c1 <= pu[0] &&
-                        ((&engine.program[pc + 1 + 4])[c1 >> 3] & (1 << (c1 & 7))))
-                    goto Lnomatch;
-                src++;
-                pc += 1 + 2 * cast(uint)ushort.sizeof + len;
-                break;
-
-            case engine.RErange:
-                auto len = *cast(uint *)&engine.program[pc + 1];
-                debug(std_regex) writefln("\tRErange %d", len);
-                if (src == input.length)
-                    goto Lnomatch;
-                // BUG: REA.ignoreCase?
-                if (memchr(cast(char*)&engine.program[pc + 1 + uint.sizeof],
-                                input[src], len) == null)
-                    goto Lnomatch;
-                src++;
-                pc += 1 + cast(uint)uint.sizeof + len;
-                break;
-
-            case engine.REnotrange:
-                auto len = *cast(uint *)&engine.program[pc + 1];
-                debug(std_regex) writefln("\tREnotrange %d", len);
-                if (src == input.length)
-                    goto Lnomatch;
-                // BUG: REA.ignoreCase?
-                if (memchr(cast(char*)&engine.program[pc + 1 + uint.sizeof],
-                                input[src], len) != null)
-                    goto Lnomatch;
-                src++;
-                pc += 1 + cast(uint)uint.sizeof + len;
-                break;
-
-            case engine.REbol:
-                debug(std_regex) writefln("\tREbol");
-                if (src == 0)
-                {
-                }
-                else if (engine.attributes & engine.REA.multiline)
-                {
-                    if (input[src - 1] != '\n')
-                        goto Lnomatch;
-                }
-                else
-                    goto Lnomatch;
-                pc++;
-                break;
-
-            case engine.REeol:
-                debug(std_regex) writefln("\tREeol");
-                if (src == input.length)
-                {
-                }
-                else if (engine.attributes & engine.REA.multiline
-                        && input[src] == '\n')
-                    src++;
-                else
-                    goto Lnomatch;
-                pc++;
-                break;
-
-            case engine.REor:
-                auto len = (cast(uint *)&engine.program[pc + 1])[0];
-                debug(std_regex) writefln("\tREor %d", len);
-                pop = pc + 1 + cast(uint)uint.sizeof;
-                memoize(pop+len); // remember 2nd branch
-                pc = pop;         // proceed with 1st branch
-                break;
-
-            case engine.REgoto:
-                debug(std_regex) writefln("\tREgoto");
-                auto len = (cast(uint *)&engine.program[pc + 1])[0];
-                pc += 1 + cast(uint)uint.sizeof + len;
-                break;
-
-            case engine.REcounter:
-                // n
-                auto puint = cast(uint *)&engine.program[pc + 1];
-                curCounter = puint[0];
-                auto len = puint[1];
-                counters[curCounter] = 0;
-                if (trackers.empty)
-                {
-                    auto ptracker = cast(size_t *)alloca(counters.length*size_t.sizeof);
-                    if (ptracker)
-                        trackers = ptracker[0..counters.length];
-                    else
-                        trackers = new size_t[counters.length];
-                }
-                trackers[curCounter] = size_t.max;
-                pc += len + 1 + cast(uint)2*uint.sizeof;
-                break;
-
-            case engine.REloop:
-            case engine.REloopg:
-                // n, m, len
-                auto puint = cast(uint *)&engine.program[pc + 1];
-                auto n = puint[0];
-                auto m = puint[1];
-                auto len = puint[2];
-
-                debug(std_regex)
-                    writefln("\tREloop%s min=%u, max=%u pc=>%d",
-                        (engine.program[pc] == engine.REloopg) ? "g" : "",
-                        n, m, pc - len);
-                if (counters[curCounter] < n)
-                {
-                    counters[curCounter]++;
-                    pc = pc - len;
-                    break;
-                }
-                else if (counters[curCounter] == m
-                        || trackers[curCounter] == src)
-                {//proceed with outer loops
-                    curCounter--;
-                    pc += 1 + cast(uint)uint.sizeof*3;
-                    break;
-                }
-                counters[curCounter]++;
-                if (engine.program[pc] == engine.REloop)
-                {
-                    memoize(pc-len); //memoize next step of loop
-                    curCounter--;
-                    pc += 1 + cast(uint)uint.sizeof*3; // proceed with outer loop
-                }
-                else    // maximal munch
-                {
-                    curCounter--;
-                    memoize(pc + 1 + cast(uint)uint.sizeof*3);
-                    curCounter++;
-                    pc = pc - len; //move on with the loop
-                    trackers[curCounter] = src;
-                }
-                break;
-
-            case engine.REsave:
-                // n
-                debug(std_regex) writefln("\tREsave");
-                auto n = *cast(uint *)&engine.program[pc + 1];
-                (cast(size_t*)pmatch)[n] = src;
-                debug(std_regex)
-                {
-                    if (n % 2)
-                        writefln("\tmatch # %d at %d .. %d", n/2,
-                                 pmatch[n/2].startIdx, pmatch[n/2].endIdx);
-                }
-                matchesToSave = max(n/2, matchesToSave);
-                pc += cast(uint)uint.sizeof+1;
-                break;
-
-            case engine.RElookahead:
-            case engine.REneglookahead:
-                // len, ()
-                debug(std_regex)
-                    writef("\t%s", engine.program[pc] == engine.RElookahead ?
-                        "RElookahead" : "REneglookahead");
-                auto len = *cast(uint*)&engine.program[pc+1];
-                pop = pc + 1 + cast(uint)uint.sizeof;
-                bool invert = engine.program[pc] == engine.REneglookahead ? true : false;
-                auto tmp_match = trymatch(pop, memory[lastState..$]);
-                //inverse the match if negative lookahead
-                tmp_match = tmp_match ^ invert;
-                if (!tmp_match)
-                    goto Lnomatch;
-                pc = pop + len;
-                break;
-
-            case engine.REret:
-                debug(std_regex) writefln("\tREret");
-                src = srcsave;
-                return 1;
-
-            case engine.REend:
-                debug(std_regex) writefln("\tREend");
-                return 1;               // successful match
-
-            case engine.REwordboundary:
-                debug(std_regex) writefln("\tREwordboundary");
-                if (src > 0 && src < input.length)
-                {
-                    size_t c1 = input[src - 1];
-                    size_t c2 = input[src];
-                    if (!((engine.isword(cast(E)c1) && !engine.isword(cast(E)c2)) ||
-                       (!engine.isword(cast(E)c1) && engine.isword(cast(E)c2))))
-                        goto Lnomatch;
-                }
-                pc++;
-                break;
-
-            case engine.REnotwordboundary:
-                debug(std_regex) writefln("\tREnotwordboundary");
-                if (src == 0 || src == input.length)
-                    goto Lnomatch;
-                size_t c1 = input[src - 1];
-                size_t c2 = input[src];
-                if (
-                    (engine.isword(cast(E)c1) && !engine.isword(cast(E)c2)) ||
-                    (!engine.isword(cast(E)c1) && engine.isword(cast(E)c2))
-                    )
-                    goto Lnomatch;
-                pc++;
-                break;
-
-            case engine.REdigit:
-                debug(std_regex) writefln("\tREdigit");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (!isDigit(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REnotdigit:
-                debug(std_regex) writefln("\tREnotdigit");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (isDigit(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REspace:
-                debug(std_regex) writefln("\tREspace");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (!isWhite(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REnotspace:
-                debug(std_regex) writefln("\tREnotspace");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (isWhite(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REword:
-                debug(std_regex) writefln("\tREword");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (!engine.isword(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REnotword:
-                debug(std_regex) writefln("\tREnotword");
-                if (src == input.length)
-                    goto Lnomatch;
-                if (engine.isword(input[src]))
-                    goto Lnomatch;
-                src++;
-                pc++;
-                break;
-
-            case engine.REbackref:
-            {
-                auto n = engine.program[pc + 1];
-                debug(std_regex) writefln("\tREbackref %d", n);
-
-                auto so = pmatch[n + 1].startIdx;
-                auto eo = pmatch[n + 1].endIdx;
-                auto len = eo - so;
-                                debug(std_regex) writefln("len \t%d", len);
-                if (src + len > input.length)
-                    goto Lnomatch;
-
-                else if (engine.attributes & engine.REA.ignoreCase)
-                {
-                    if (icmp(input[src .. src + len], input[so .. eo]))
-                        goto Lnomatch;
-                }
-                else if (memcmp(&input[src], &input[so], len * E.sizeof))
-                    goto Lnomatch;
-                src += len;
-                pc += 2;
-                break;
-            }
-
-            default:
-                assert(0);
-Lnomatch:
-                if (!backtrack())
-                {
-                    src = srcsave;
+                debug(fred_charset)
+                    writeln(opstack.stack.data);
+                if(!apply(opstack.pop(),vstack))
+                    return false;//syntax error
+                if(opstack.empty)
                     return false;
+            }
+            return true;
+        }
+
+        L_CharsetLoop:
+        do
+        {
+            switch(current)
+            {
+            case '[':
+                opstack.push(Operator.Open);
+                enforce(next(), "unexpected end of CodepointSet");
+                if(current == '^')
+                {
+                    opstack.push(Operator.Negate);
+                    enforce(next(), "unexpected end of CodepointSet");
                 }
+                //[] is prohibited
+                enforce(current != ']', "wrong CodepointSet");
+                goto default;
+            case ']':
+                enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack)
+                        , "CodepointSet syntax error");
+                enforce(!opstack.empty, "unmatched ']'");
+                opstack.pop();
+                next();
+                if(opstack.empty)
+                    break L_CharsetLoop;
+                auto pair  = parseCharTerm();
+                if(!pair[0].empty)//not only operator e.g. -- or ~~
+                {
+                    vstack.top.add(pair[0]);//apply union
+                }
+                if(pair[1] != Operator.None)
+                {
+                    if(opstack.top == Operator.Union)
+                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
+                    opstack.push(pair[1]);
+                }
+                break;
+            //
+            default://yet another pair of term(op)?
+                auto pair = parseCharTerm();
+                if(pair[1] != Operator.None)
+                {
+                    if(opstack.top == Operator.Union)
+                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
+                    opstack.push(pair[1]);
+                }
+                vstack.push(pair[0]);
+            }
+
+        }while(!empty || !opstack.empty);
+        while(!opstack.empty)
+            apply(opstack.pop(),vstack);
+        assert(vstack.length == 1);
+        charsetToIr(vstack.top);
+    }
+    //try to generate optimal IR code for this CodepointSet
+    @trusted void charsetToIr(in CodepointSet set)
+    {//@@@BUG@@@ writeln is @system
+        uint chars = set.chars();
+        if(chars < Bytecode.maxSequence)
+        {
+            switch(chars)
+            {
+                case 1:
+                    put(Bytecode(IR.Char, set.ivals[0]));
+                    break;
+                case 0:
+                    error("empty CodepointSet not allowed");
+                    break;
+                default:
+                    foreach(ch; set[])
+                        put(Bytecode(IR.OrChar, ch, chars));
             }
         }
-        assert(0);
+        else
+        {
+            if(set.ivals.length > maxCharsetUsed)
+            {
+                auto t  = getTrie(set);
+                put(Bytecode(IR.Trie, cast(uint)tries.length));
+                tries ~= t;
+                debug(fred_allocation) writeln("Trie generated");
+            }
+            else
+            {
+                put(Bytecode(IR.CodepointSet, cast(uint)charsets.length));
+                tries ~= Trie.init;
+            }
+            charsets ~= set;
+            assert(charsets.length == tries.length);
+        }
     }
 
-// p is following the \ char
-/* ==================== replace ======================= */
+    //parse and generate IR for escape stand alone escape sequence
+    @trusted void parseEscape()
+    {//accesses array of appender
+
+        switch(current)
+        {
+        case 'f':   next(); put(Bytecode(IR.Char, '\f')); break;
+        case 'n':   next(); put(Bytecode(IR.Char, '\n')); break;
+        case 'r':   next(); put(Bytecode(IR.Char, '\r')); break;
+        case 't':   next(); put(Bytecode(IR.Char, '\t')); break;
+        case 'v':   next(); put(Bytecode(IR.Char, '\v')); break;
+
+        case 'd':
+            next();
+            charsetToIr(unicodeNd);
+            break;
+        case 'D':
+            next();
+            charsetToIr(unicodeNd.dup.negate);
+            break;
+        case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
+        case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
+        case 's':
+            next();
+            charsetToIr(unicodeWhite_Space);
+            break;
+        case 'S':
+            next();
+            charsetToIr(unicodeWhite_Space.dup.negate);
+            break;
+        case 'w':
+            next();
+            charsetToIr(wordCharacter);
+            break;
+        case 'W':
+            next();
+            charsetToIr(wordCharacter.dup.negate);
+            break;
+        case 'p': case 'P':
+            auto CodepointSet = parseUnicodePropertySpec(current == 'P');
+            charsetToIr(CodepointSet);
+            break;
+        case 'x':
+            uint code = parseUniHex(pat, 2);
+            next();
+            put(Bytecode(IR.Char,code));
+            break;
+        case 'u': case 'U':
+            uint code = parseUniHex(pat, current == 'u' ? 4 : 8);
+            next();
+            put(Bytecode(IR.Char, code));
+            break;
+        case 'c': //control codes
+            Bytecode code = Bytecode(IR.Char, parseControlCode());
+            next();
+            put(code);
+            break;
+        case '0':
+            next();
+            put(Bytecode(IR.Char, 0));//NUL character
+            break;
+        case '1': .. case '9':
+            uint nref = cast(uint)current - '0';
+            uint maxBackref;
+            foreach(v; groupStack.stack.data)
+                maxBackref += v;
+            uint localLimit = maxBackref - groupStack.top;
+            enforce(nref < maxBackref, "Backref to unseen group");
+            //perl's disambiguation rule i.e.
+            //get next digit only if there is such group number
+            while(nref < maxBackref && next() && ascii.isDigit(current))
+            {
+                nref = nref * 10 + current - '0';
+            }
+            if(nref >= maxBackref)
+                nref /= 10;
+
+            if(nref >= localLimit)
+            {
+                put(Bytecode(IR.Backref, nref-localLimit));
+                ir[$-1].setLocalRef();
+            }
+            else
+                put(Bytecode(IR.Backref, nref));
+            markBackref(nref);
+            break;
+        default:
+            auto op = Bytecode(IR.Char, current);
+            next();
+            put(op);
+        }
+    }
+
+    //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
+    //\ - assumed to be processed, p - is current
+    const(CodepointSet) parseUnicodePropertySpec(bool negated)
+    {
+        alias comparePropertyName ucmp;
+        enum MAX_PROPERTY = 128;
+        char[MAX_PROPERTY] result;
+        uint k=0;
+        enforce(next());
+        if(current == '{')
+        {
+            while(k<MAX_PROPERTY && next() && current !='}' && current !=':')
+                if(current != '-' && current != ' ' && current != '_')
+                    result[k++] = cast(char)ascii.toLower(current);
+            enforce(k != MAX_PROPERTY, "invalid property name");
+            enforce(current == '}', "} expected ");
+        }
+        else
+        {//single char properties e.g.: \pL, \pN ...
+            enforce(current < 0x80, "invalid property name");
+            result[k++] = cast(char)current;
+        }
+        auto s = getUnicodeSet(result[0..k], negated
+                         , cast(bool)(re_flags & RegexOption.casefold));
+        enforce(!s.empty, "unrecognized unicode property spec");
+        next();
+        return s;
+    }
+
+    //
+    @trusted void error(string msg)
+    {
+        auto app = appender!string();
+        ir = null;
+        formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
+                       msg, origin[0..$-pat.length], pat);
+        throw new RegexException(app.data);
+    }
+
+    alias BasicElementOf!R Char;
+    //packages parsing results into a RegEx object
+    @property Regex!Char program()
+    {
+        return Regex!Char(this);
+    }
+}
+
+
+/++
+    $(D Regex) object holds regular expression pattern in compiled form.
+    Instances of this object are constructed via calls to $(D regex).
+    This is an intended form for caching and storage of frequently
+    used regular expressions.
++/
+public struct Regex(Char)
+{
+    //temporary workaround for identifier lookup
+    const(CodepointSet)[] charsets; //
+    Bytecode[] ir;      //compiled bytecode of pattern
+
+    /++
+        Test if this object doesn't contain any compiled pattern.
+        Example:
+        ---
+        Regex!char r;
+        assert(r.empty);
+        r = regex("");//note: "" is a valid regex pattern
+        assert(!r.empty);
+        ---
+    +/
+    @property bool empty() const nothrow {  return ir is null; }
+
+private:
+    NamedGroup[] dict;  //maps name -> user group number
+    uint ngroup;        //number of internal groups
+    uint maxCounterDepth; //max depth of nested {n,m} repetitions
+    uint hotspotTableSize; //number of entries in merge table
+    uint threadCount;
+    uint flags;         //global regex flags
+    const(Trie)[]  tries; //
+    uint[] backrefed; //bit array of backreferenced submatches
+    Kickstart!Char kickstart;
+
+    //bit access helper
+    uint isBackref(uint n)
+    {
+        if(n/32 >= backrefed.length)
+            return 0;
+        return backrefed[n/32] & (1<<(n&31));
+    }
+
+    //check if searching is not needed
+    void checkIfOneShot()
+    {
+        if(flags & RegexOption.multiline)
+            return;
+    L_CheckLoop:
+        for(uint i=0; i<ir.length; i+=ir[i].length)
+        {
+            switch(ir[i].code)
+            {
+                case IR.Bol:
+                    flags |= RegexInfo.oneShot;
+                    break L_CheckLoop;
+                case IR.GroupStart, IR.GroupEnd, IR.Eol, IR.Wordboundary, IR.Notwordboundary:
+                    break;
+                default:
+                    break L_CheckLoop;
+            }
+        }
+    }
+
+    /+
+        lightweight post process step,
+        only essentials
+    +/
+    @trusted void lightPostprocess()
+    {//@@@BUG@@@ write is @system
+        struct FixedStack(T)
+        {
+            T[] arr;
+            uint _top;
+            //this(T[] storage){   arr = storage; _top = -1; }
+            @property ref T top(){  assert(!empty); return arr[_top]; }
+            void push(T x){  arr[++_top] = x; }
+            T pop() { assert(!empty);   return arr[_top--]; }
+            @property bool empty(){   return _top == -1; }
+        }
+        auto counterRange = FixedStack!uint(new uint[maxCounterDepth+1], -1);
+        counterRange.push(1);
+        ulong cumRange = 0;
+        for(uint i=0; i<ir.length; i+=ir[i].length)
+        {
+            if(ir[i].hotspot)
+            {
+                assert(i + 1 < ir.length
+                       , "unexpected end of IR while looking for hotspot");
+                ir[i+1] = Bytecode.fromRaw(hotspotTableSize);
+                hotspotTableSize += counterRange.top;
+            }
+            switch(ir[i].code)
+            {
+            case IR.RepeatStart, IR.RepeatQStart:
+                uint repEnd = cast(uint)(i + ir[i].data + IRL!(IR.RepeatStart));
+                assert(ir[repEnd].code == ir[i].paired.code);
+                uint max = ir[repEnd + 4].raw;
+                ir[repEnd+2].raw = counterRange.top;
+                ir[repEnd+3].raw *= counterRange.top;
+                ir[repEnd+4].raw *= counterRange.top;
+                ulong cntRange = cast(ulong)(max)*counterRange.top;
+                cumRange += cntRange;
+                enforce(cumRange < maxCumulativeRepetitionLength
+                        , "repetition length limit is exceeded");
+                counterRange.push(cast(uint)cntRange + counterRange.top);
+                threadCount += counterRange.top;
+                break;
+            case IR.RepeatEnd, IR.RepeatQEnd:
+                threadCount += counterRange.top;
+                counterRange.pop();
+                break;
+            case IR.GroupStart:
+                if(isBackref(ir[i].data))
+                    ir[i].setBackrefence();
+                threadCount += counterRange.top;
+                break;
+            case IR.GroupEnd:
+                if(isBackref(ir[i].data))
+                    ir[i].setBackrefence();
+                threadCount += counterRange.top;
+                break;
+            default:
+                threadCount += counterRange.top;
+            }
+        }
+        checkIfOneShot();
+        if(!(flags & RegexInfo.oneShot))
+            kickstart = Kickstart!Char(this, new uint[](256));
+        debug(fred_allocation) writefln("IR processed, max threads: %d", threadCount);
+    }
+
+    //IR code validator - proper nesting, illegal instructions, etc.
+    @trusted void validate()
+    {//@@@BUG@@@ text is @system
+        for(uint pc=0; pc<ir.length; pc+=ir[pc].length)
+        {
+            if(ir[pc].isStart || ir[pc].isEnd)
+            {
+                uint dest = ir[pc].indexOfPair(pc);
+                assert(dest < ir.length, text("Wrong length in opcode at pc="
+                                              , pc, " ", dest, " vs ", ir.length));
+                assert(ir[dest].paired ==  ir[pc],
+                        text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
+            }
+            else if(ir[pc].isAtom)
+            {
+
+            }
+            else
+               assert(0, text("Unknown type of instruction at pc=", pc));
+        }
+    }
+
+    //print out disassembly a program's IR
+    @trusted debug public void print() const
+    {//@@@BUG@@@ write is system
+        import std.stdio;
+        writefln("PC\tINST\n");
+        prettyPrint(delegate void(const(char)[] s){ write(s); },ir);
+        writefln("\n");
+        for(uint i=0; i<ir.length; i+=ir[i].length)
+        {
+            writefln("%d\t%s ", i, disassemble(ir, i, dict));
+        }
+        writeln("Total merge table size: ", hotspotTableSize);
+        writeln("Max counter nesting depth: ", maxCounterDepth);
+    }
+
+    //
+    this(S,bool x)(Parser!(S,x) p)
+    {
+        if(__ctfe)//CTFE something funky going on with array
+            ir = p.ir.dup;
+        else
+            ir = p.ir;
+        dict = p.dict;
+        ngroup = p.groupStack.top;
+        maxCounterDepth = p.counterDepth;
+        flags = p.re_flags;
+        charsets = p.charsets;
+        tries = p.tries;
+        backrefed = p.backrefed;
+        lightPostprocess();
+        debug(fred_parser)
+        {
+            print();
+        }
+        debug validate();
+    }
+}
+
+//
+@trusted uint lookupNamedGroup(String)(NamedGroup[] dict,String name)
+{//equal is @system?
+    //@@@BUG@@@ assumeSorted kills "-inline"
+    //auto fnd = assumeSorted(map!"a.name"(dict)).lowerBound(name).length;
+    uint fnd;
+    for(fnd = 0; fnd<dict.length; fnd++)
+        if(equal(dict[fnd].name,name))
+            break;
+    enforce(fnd < dict.length, text("no submatch named ", name));
+    return dict[fnd].group;
+}
+
+//whether ch is one of unicode newline sequences
+bool endOfLine(dchar front, bool seenCr)
+{
+    return ((front == '\n') ^ seenCr) || front == '\r'
+    || front == NEL || front == LS || front == PS;
+}
+
+//
+bool startOfLine(dchar back, bool seenNl)
+{
+    return ((back == '\r') ^ seenNl) || back == '\n'
+    || back == NEL || back == LS || back == PS;
+}
+
+//Test if bytecode starting at pc in program 're' can match given codepoint
+//Returns: length of matched atom if test is positive, 0 - can't tell, -1 if doesn't match
+int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
+{
+    static assert(IRL!(IR.OrChar) == 1);//used in code processing IR.OrChar
+    for(;;)
+        switch(re.ir[pc].code)
+        {
+        case IR.OrChar:
+            uint len = re.ir[pc].sequence;
+            uint end = pc + len;
+            if(re.ir[pc].data != front && re.ir[pc+1].data != front)
+            {
+                for(pc = pc+2; pc<end; pc++)
+                    if(re.ir[pc].data == front)
+                        break;
+                if(pc == end)
+                    return -1;
+            }
+            return 0;
+        case IR.Char:
+            if(front == re.ir[pc].data)
+                return 0;
+            else
+                return -1;
+        case IR.Any:
+            return 0;
+        case IR.CodepointSet:
+            if(re.charsets[re.ir[pc].data].scanFor(front))
+                return 0;
+            else
+                return -1;
+        case IR.GroupStart, IR.GroupEnd:
+            pc += IRL!(IR.GroupStart);
+            break;
+        case IR.Trie:
+            if(re.tries[re.ir[pc].data][front])
+                return IRL!(IR.Trie);
+            else
+                return -1;
+        default:
+            return 0;
+        }
+}
 
 /*
-After a match was found, this function will take the match results
-and, using the format string, generate and return a new string.
- */
-
-    private Range replace(String)(String format)
+    Useful utility for self-testing, an infinite range of string samples
+    that _have_ to match given compiled regex.
+    Caveats: supports only a simple subset of bytecode.
+*/
+@trusted public struct SampleGenerator(Char)
+{
+    import std.random;
+    const(Regex!Char) re;
+    Appender!(char[]) app;
+    uint limit, seed;
+    Xorshift gen;
+    //generator for pattern r, with soft maximum of threshold elements
+    //and a given random seed
+    this(in Regex!Char r, uint threshold, uint randomSeed)
     {
-        return replace3(format, input, pmatch[0 .. engine.re_nsub + 1]);
+        re = r;
+        limit = threshold;
+        seed = randomSeed;
+        app = appender!(Char[])();
+        compose();
     }
 
-// Static version that doesn't require a Regex object to be created
-
-    private static Range replace3(String)(String format, Range input,
-            regmatch_t[] pmatch)
+    uint rand(uint x)
     {
-        Range result;
-        uint c2;
-        sizediff_t startIdx;
-        sizediff_t endIdx;
-        int i;
+        uint r = gen.front % x;
+        gen.popFront();
+        return r;
+    }
 
-        result.length = format.length;
-        result.length = 0;
-        for (size_t f = 0; f < format.length; f++)
+    void compose()
+    {
+        uint pc = 0, counter = 0, dataLenOld = uint.max;
+        for(;;)
         {
-            char c = format[f];
-          L1:
-            if (c != '$')
+            switch(re.ir[pc].code)
             {
-                result ~= c;
-                continue;
-            }
-            ++f;
-            if (f == format.length)
-            {
-                result ~= '$';
-                break;
-            }
-            c = format[f];
-            switch (c)
-            {
-            case '&':
-                startIdx = pmatch[0].startIdx;
-                endIdx = pmatch[0].endIdx;
-                goto Lstring;
-
-            case '`':
-                startIdx = 0;
-                endIdx = pmatch[0].startIdx;
-                goto Lstring;
-
-            case '\'':
-                startIdx = pmatch[0].endIdx;
-                endIdx = input.length;
-                goto Lstring;
-
-            case '0': case '1': case '2': case '3': case '4':
-            case '5': case '6': case '7': case '8': case '9':
-                i = c - '0';
-                if (f + 1 == format.length)
-                {
-                    if (i == 0)
+            case IR.Char:
+                    formattedWrite(app,"%s", cast(dchar)re.ir[pc].data);
+                    pc += IRL!(IR.Char);
+                    break;
+                case IR.OrChar:
+                    uint len = re.ir[pc].sequence;
+                    formattedWrite(app, "%s", cast(dchar)re.ir[pc + rand(len)].data);
+                    pc += len;
+                    break;
+                case IR.CodepointSet:
+                case IR.Trie:
+                    auto set = re.charsets[re.ir[pc].data];
+                    auto x = rand(set.ivals.length/2);
+                    auto y = rand(set.ivals[x*2+1] - set.ivals[2*x]);
+                    formattedWrite(app, "%s", cast(dchar)(set.ivals[2*x]+y));
+                    pc += IRL!(IR.CodepointSet);
+                    break;
+                case IR.Any:
+                    uint x;
+                    do
                     {
-                        result ~= '$';
-                        result ~= c;
-                        continue;
+                        x = rand(0x11_000);
+                    }while(x == '\r' || x == '\n' || !isValidDchar(x));
+                    formattedWrite(app, "%s", cast(dchar)x);
+                    pc += IRL!(IR.Any);
+                    break;
+                case IR.GotoEndOr:
+                    pc += IRL!(IR.GotoEndOr)+re.ir[pc].data;
+                    assert(re.ir[pc].code == IR.OrEnd);
+                    goto case;
+                case IR.OrEnd:
+                    pc += IRL!(IR.OrEnd);
+                    break;
+                case IR.OrStart:
+                    pc += IRL!(IR.OrStart);
+                    goto case;
+                case IR.Option:
+                    uint next = pc + re.ir[pc].data + IRL!(IR.Option);
+                    uint nOpt = 0;
+                    //queue next Option
+                    while(re.ir[next].code == IR.Option)
+                    {
+                        nOpt++;
+                        next += re.ir[next].data + IRL!(IR.Option);
                     }
+                    nOpt++;
+                    nOpt = rand(nOpt);
+                    for(;nOpt; nOpt--)
+                    {
+                        pc += re.ir[pc].data + IRL!(IR.Option);
+                    }
+                    assert(re.ir[pc].code == IR.Option);
+                    pc += IRL!(IR.Option);
+                    break;
+                case IR.RepeatStart:case IR.RepeatQStart:
+                    pc += IRL!(IR.RepeatStart)+re.ir[pc].data;
+                    goto case IR.RepeatEnd;
+                case IR.RepeatEnd:
+                case IR.RepeatQEnd:
+                    uint len = re.ir[pc].data;
+                    uint step = re.ir[pc+2].raw;
+                    uint min = re.ir[pc+3].raw;
+                    if(counter < min)
+                    {
+                        counter += step;
+                        pc -= len;
+                        break;
+                    }
+                    uint max = re.ir[pc+4].raw;
+                    if(counter < max)
+                    {
+                        if(app.data.length < limit && rand(3) > 0)
+                        {
+                            pc -= len;
+                            counter += step;
+                        }
+                        else
+                        {
+                            counter = counter%step;
+                            pc += IRL!(IR.RepeatEnd);
+                        }
+                    }
+                    else
+                    {
+                        counter = counter%step;
+                        pc += IRL!(IR.RepeatEnd);
+                    }
+                    break;
+                case IR.InfiniteStart, IR.InfiniteQStart:
+                    pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
+                    goto case IR.InfiniteEnd; //both Q and non-Q
+                case IR.InfiniteEnd:
+                case IR.InfiniteQEnd:
+                    uint len = re.ir[pc].data;
+                    if(app.data.length == dataLenOld)
+                    {
+                        pc += IRL!(IR.InfiniteEnd);
+                        break;
+                    }
+                    dataLenOld = app.data.length;
+                    if(app.data.length < limit && rand(3) > 0)
+                        pc = pc - len;
+                    else
+                        pc = pc + IRL!(IR.InfiniteEnd);
+                    break;
+                case IR.GroupStart, IR.GroupEnd:
+                    pc += IRL!(IR.GroupStart);
+                    break;
+                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+                default:
+                    return;
+            }
+        }
+    }
+
+    @property Char[] front()
+    {
+        return app.data;
+    }
+
+    @property empty(){  return false; }
+
+    void popFront()
+    {
+        app.shrinkTo(0);
+        compose();
+    }
+}
+
+/++
+    A $(D StaticRegex) is $(D Regex) object that contains specially
+    generated machine code to speed up matching.
+    Implicitly convertible to normal $(D Regex),
+    however doing so will result in loosing this additional capability.
++/
+public struct StaticRegex(Char)
+{
+private:
+    alias BacktrackingMatcher!(true) Matcher;
+    alias bool function(ref Matcher!Char) MatchFn;
+    MatchFn nativeFn;
+public:
+    Regex!Char _regex;
+    alias _regex this;
+    this(Regex!Char re, MatchFn fn)
+    {
+        _regex = re;
+        nativeFn = fn;
+
+    }
+
+}
+
+//utility for shiftOr, returns a minimum number of bytes to test in a Char
+uint effectiveSize(Char)()
+{
+    static if(is(Char == char))
+        return 1;
+    else static if(is(Char == wchar))
+        return 2;
+    else static if(is(Char == dchar))
+        return 3;
+    else
+        static assert(0);
+}
+
+/*
+    Kickstart engine using ShiftOr algorithm,
+    a bit parallel technique for inexact string searching.
+*/
+struct ShiftOr(Char)
+{
+private:
+    uint[] table;
+    uint fChar;
+    uint n_length;
+    enum charSize =  effectiveSize!Char();
+    //maximum number of chars in CodepointSet to process
+    enum uint charsetThreshold = 32_000;
+    static struct ShiftThread
+    {
+        uint[] tab;
+        uint mask;
+        uint idx;
+        uint pc, counter, hops;
+        this(uint newPc, uint newCounter, uint[] table)
+        {
+            pc = newPc;
+            counter = newCounter;
+            mask = 1;
+            idx = 0;
+            hops = 0;
+            tab = table;
+        }
+
+        void setMask(uint idx, uint mask)
+        {
+            tab[idx] |= mask;
+        }
+
+        void setInvMask(uint idx, uint mask)
+        {
+            tab[idx] &= ~mask;
+        }
+
+        void set(alias setBits=setInvMask)(dchar ch)
+        {
+            static if(charSize == 3)
+            {
+                uint val = ch, tmask = mask;
+                setBits(val&0xFF, tmask);
+                tmask <<= 1;
+                val >>= 8;
+                setBits(val&0xFF, tmask);
+                tmask <<= 1;
+                val >>= 8;
+                assert(val <= 0x10);
+                setBits(val, tmask);
+                tmask <<= 1;
+            }
+            else
+            {
+                Char[dchar.sizeof/Char.sizeof] buf;
+                uint tmask = mask;
+                size_t total = encode(buf, ch);
+                for(size_t i=0; i<total; i++, tmask<<=1)
+                {
+                    static if(charSize == 1)
+                        setBits(buf[i], tmask);
+                    else static if(charSize == 2)
+                    {
+                        setBits(buf[i]&0xFF, tmask);
+                        tmask <<= 1;
+                        setBits(buf[i]>>8, tmask);
+                    }
+                }
+            }
+        }
+        void add(dchar ch){ return set!setInvMask(ch); }
+        void advance(uint s)
+        {
+            mask <<= s;
+            idx += s;
+        }
+        @property bool full(){    return !mask; }
+    }
+
+    static ShiftThread fork(ShiftThread t, uint newPc, uint newCounter)
+    {
+        ShiftThread nt = t;
+        nt.pc = newPc;
+        nt.counter = newCounter;
+        return nt;
+    }
+
+    @trusted static ShiftThread fetch(ref ShiftThread[] worklist)
+    {
+        auto t = worklist[$-1];
+        worklist.length -= 1;
+        if(!__ctfe)
+            worklist.assumeSafeAppend();
+        return t;
+    }
+
+    static uint charLen(uint ch)
+    {
+        assert(ch <= 0x10FFFF);
+        return codeLength!Char(cast(dchar)ch)*charSize;
+    }
+
+public:
+    @trusted this(const ref Regex!Char re, uint[] memory)
+    {
+        assert(memory.length == 256);
+        fChar = uint.max;
+    L_FindChar:
+        for(size_t i = 0;;)
+        {
+            switch(re.ir[i].code)
+            {
+                case IR.Char:
+                    fChar = re.ir[i].data;
+                    static if(charSize != 3)
+                    {
+                        Char buf[dchar.sizeof/Char.sizeof];
+                        encode(buf, fChar);
+                        fChar = buf[0];
+                    }
+                    fChar = fChar & 0xFF;
+                    break L_FindChar;
+                case IR.GroupStart, IR.GroupEnd:
+                    i += IRL!(IR.GroupStart);
+                    break;
+                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                    i += IRL!(IR.Bol);
+                    break;
+                default:
+                    break L_FindChar;
+            }
+        }
+        table = memory;
+        table[] =  uint.max;
+        ShiftThread[] trs;
+        ShiftThread t = ShiftThread(0, 0, table);
+        //locate first fixed char if any
+        n_length = 32;
+        for(;;)
+        {
+        L_Eval_Thread:
+            for(;;)
+            {
+                switch(re.ir[t.pc].code)
+                {
+                case IR.Char:
+                    uint s = charLen(re.ir[t.pc].data);
+                    if(t.idx+s > n_length)
+                        goto L_StopThread;
+                    t.add(re.ir[t.pc].data);
+                    t.advance(s);
+                    t.pc += IRL!(IR.Char);
+                    break;
+                case IR.OrChar://assumes IRL!(OrChar) == 1
+                    uint len = re.ir[t.pc].sequence;
+                    uint end = t.pc + len;
+                    uint[Bytecode.maxSequence] s;
+                    uint numS;
+                    for(uint i = 0; i<len; i++)
+                    {
+                        auto x = charLen(re.ir[t.pc+i].data);
+                        if(countUntil(s[0..numS], x) < 0)
+                           s[numS++] = x;
+                    }
+                    for(uint i = t.pc; i < end; i++)
+                    {
+                        t.add(re.ir[i].data);
+                    }
+                    for(uint i=0; i<numS; i++)
+                    {
+                        auto tx = fork(t, t.pc + len, t.counter);
+                        if(tx.idx + s[i] <= n_length)
+                        {
+                            tx.advance(s[i]);
+                            trs ~= tx;
+                        }
+                    }
+                    if(!trs.empty)
+                        t = fetch(trs);
+                    else
+                        goto L_StopThread;
+                    break;
+                case IR.CodepointSet:
+                case IR.Trie:
+                    auto set = re.charsets[re.ir[t.pc].data];
+                    uint[4] s;
+                    uint numS;
+                    static if(charSize == 3)
+                    {
+                        s[0] = charSize;
+                        numS = 1;
+                    }
+                    else
+                    {
+                        static if(charSize == 1)
+                            static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
+                        else //== 2
+                            static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
+                        auto srange = assumeSorted!"a<=b"(set.ivals);
+                        for(uint i = 0; i<codeBounds.length/2; i++)
+                        {
+                            auto start = srange.lowerBound(codeBounds[2*i]).length;
+                            auto end = srange.lowerBound(codeBounds[2*i+1]).length;
+                            if(end > start || (end == start && (end & 1)))
+                               s[numS++] = (i+1)*charSize;
+                        }
+                    }
+                    if(numS == 0 || t.idx + s[numS-1] > n_length)
+                        goto L_StopThread;
+                    auto  chars = set.chars;
+                    if(chars > charsetThreshold)
+                        goto L_StopThread;
+                    foreach(ch; set[])
+                    {
+                        //avoid surrogate pairs
+                        if(0xD800 <= ch && ch <= 0xDFFF)
+                            continue;
+                        t.add(ch);
+                    }
+                    for(uint i=0; i<numS; i++)
+                    {
+                        auto tx =  fork(t, t.pc + IRL!(IR.CodepointSet), t.counter);
+                        tx.advance(s[i]);
+                        trs ~= tx;
+                    }
+                    if(!trs.empty)
+                        t = fetch(trs);
+                    else
+                        goto L_StopThread;
+                    break;
+                case IR.Any:
+                    goto L_StopThread;
+
+                case IR.GotoEndOr:
+                    t.pc += IRL!(IR.GotoEndOr)+re.ir[t.pc].data;
+                    assert(re.ir[t.pc].code == IR.OrEnd);
+                    goto case;
+                case IR.OrEnd:
+                    t.pc += IRL!(IR.OrEnd);
+                    break;
+                case IR.OrStart:
+                    t.pc += IRL!(IR.OrStart);
+                    goto case;
+                case IR.Option:
+                    uint next = t.pc + re.ir[t.pc].data + IRL!(IR.Option);
+                    //queue next Option
+                    if(re.ir[next].code == IR.Option)
+                    {
+                        trs ~= fork(t, next, t.counter);
+                    }
+                    t.pc += IRL!(IR.Option);
+                    break;
+                case IR.RepeatStart:case IR.RepeatQStart:
+                    t.pc += IRL!(IR.RepeatStart)+re.ir[t.pc].data;
+                    goto case IR.RepeatEnd;
+                case IR.RepeatEnd:
+                case IR.RepeatQEnd:
+                    uint len = re.ir[t.pc].data;
+                    uint step = re.ir[t.pc+2].raw;
+                    uint min = re.ir[t.pc+3].raw;
+                    if(t.counter < min)
+                    {
+                        t.counter += step;
+                        t.pc -= len;
+                        break;
+                    }
+                    uint max = re.ir[t.pc+4].raw;
+                    if(t.counter < max)
+                    {
+                        trs ~= fork(t, t.pc - len, t.counter + step);
+                        t.counter = t.counter%step;
+                        t.pc += IRL!(IR.RepeatEnd);
+                    }
+                    else
+                    {
+                        t.counter = t.counter%step;
+                        t.pc += IRL!(IR.RepeatEnd);
+                    }
+                    break;
+                case IR.InfiniteStart, IR.InfiniteQStart:
+                    t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteStart);
+                    goto case IR.InfiniteEnd; //both Q and non-Q
+                case IR.InfiniteEnd:
+                case IR.InfiniteQEnd:
+                    uint len = re.ir[t.pc].data;
+                    uint pc1, pc2; //branches to take in priority order
+                    if(++t.hops == 32)
+                        goto L_StopThread;
+                    pc1 = t.pc + IRL!(IR.InfiniteEnd);
+                    pc2 = t.pc - len;
+                    trs ~= fork(t, pc2, t.counter);
+                    t.pc = pc1;
+                    break;
+                case IR.GroupStart, IR.GroupEnd:
+                    t.pc += IRL!(IR.GroupStart);
+                    break;
+                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                    t.pc += IRL!(IR.Bol);
+                    break;
+                case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
+                    t.pc += IRL!(IR.LookaheadStart) + IRL!(IR.LookaheadEnd) + re.ir[t.pc].data;
+                    break;
+                default:
+                L_StopThread:
+                    assert(re.ir[t.pc].code >= 0x80);
+                    debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
+                    n_length = min(t.idx, n_length);
+                    break L_Eval_Thread;
+                }
+            }
+            if(trs.empty)
+                break;
+            t = fetch(trs);
+        }
+        debug(fred_search)
+        {
+            writeln("Min length: ", n_length);
+        }
+    }
+
+    @property bool empty() const {  return n_length == 0; }
+
+    @property uint length() const{ return n_length/charSize; }
+
+    // lookup compatible bit pattern in haystack, return starting index
+    // has a useful trait: if supplied with valid UTF indexes,
+    // returns only valid UTF indexes
+    // (that given the haystack in question is valid UTF string)
+    @trusted size_t search(const(Char)[] haystack, size_t idx)
+    {
+        assert(!empty);
+        auto p = cast(const(ubyte)*)(haystack.ptr+idx);
+        uint state = uint.max;
+        uint limit = 1u<<(n_length - 1u);
+        debug(fred_search) writefln("Limit: %32b",limit);
+        if(fChar != uint.max)
+        {
+            const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
+            while(p != end)
+            {
+                if(!~state)
+                {
+                    for(;;)
+                    {
+                        p = cast(ubyte*)memchr(p, fChar, end - p);
+                        if(!p)
+                            return haystack.length;
+                        if(!(cast(size_t)p & (Char.sizeof-1)))
+                            break;
+                        if(++p == end)
+                            return haystack.length;
+                    }
+                    state = ~1u;
+                    assert((cast(size_t)p & (Char.sizeof-1)) == 0);
+                    static if(charSize == 3)
+                    {
+                        state = (state<<1) | table[p[1]];
+                        state = (state<<1) | table[p[2]];
+                        p += 3;
+                    }
+                }
+                //first char is already tested, see if that's all
+                if(!(state & limit))//division rounds down for dchar
+                    return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                        -length+1;
+                static if(charSize == 3)
+                {
+                    state = (state<<1) | table[p[1]];
+                    state = (state<<1) | table[p[2]];
+                    state = (state<<1) | table[p[3]];
+                    p+=4;
                 }
                 else
                 {
-                    c2 = format[f + 1];
-                    if (c2 >= '0' && c2 <= '9')
-                    {
-                        i = (c - '0') * 10 + (c2 - '0');
-                        f++;
-                    }
-                    if (i == 0)
-                    {
-                        result ~= '$';
-                        result ~= c;
-                        c = cast(char)c2;
-                        goto L1;
-                    }
+                    state = (state<<1) | table[p[1]];
+                    p++;
                 }
-
-                if (i < pmatch.length)
-                {
-                    startIdx = pmatch[i].startIdx;
-                    endIdx = pmatch[i].endIdx;
-                    goto Lstring;
-                }
-                break;
-
-            Lstring:
-                if (startIdx != endIdx)
-                    result ~= input[startIdx .. endIdx];
-                break;
-
-            default:
-                result ~= '$';
-                result ~= c;
-                break;
+                debug(fred_search) writefln("State: %32b", state);
             }
+        }
+        else
+        {
+            //in this path we have to shift first
+            static if(charSize == 3)
+            {
+                const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
+                while(p != end)
+                {
+                    state = (state<<1) | table[p[0]];
+                    state = (state<<1) | table[p[1]];
+                    state = (state<<1) | table[p[2]];
+                    p += 4;
+                    if(!(state & limit))//division rounds down for dchar
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                        -length;
+                }
+            }
+            else
+            {
+                auto len = cast(ubyte*)(haystack.ptr + haystack.length) - p;
+                size_t i  = 0;
+                if(len & 1)
+                {
+                    state = (state<<1) | table[p[i++]];
+                    if(!(state & limit))
+                        return idx+i/Char.sizeof-length;
+                }
+                while(i<len)
+                {
+                    state = (state<<1) | table[p[i++]];
+                    if(!(state & limit))
+                        return idx+i/Char.sizeof
+                            -length;
+                    state = (state<<1) | table[p[i++]];
+                    if(!(state & limit))
+                        return idx+i/Char.sizeof
+                            -length;
+                    debug(fred_search) writefln("State: %32b", state);
+                }
+            }
+        }
+        return haystack.length;
+    }
+
+    @system debug static void dump(uint[] table)
+    {//@@@BUG@@@ writef(ln) is @system
+        for(size_t i=0; i<table.length; i+=4)
+        {
+            writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
+        }
+    }
+}
+
+unittest
+{
+
+    @trusted void test_fixed(alias Kick)()
+    {
+        foreach(i, v; TypeTuple!(char, wchar, dchar))
+        {
+            alias v Char;
+            alias immutable(v)[] String;
+            auto r = regex(to!String(`abc$`));
+            auto kick = Kick!Char(r, new uint[256]);
+            assert(kick.length == 3, text(Kick.stringof," ",v.stringof, " == ", kick.length));
+            auto r2 = regex(to!String(`(abc){2}a+`));
+            kick = Kick!Char(r2, new uint[256]);
+            assert(kick.length == 7, text(Kick.stringof,v.stringof," == ", kick.length));
+            auto r3 = regex(to!String(`\b(a{2}b{3}){2,4}`));
+            kick = Kick!Char(r3, new uint[256]);
+            assert(kick.length == 10, text(Kick.stringof,v.stringof," == ", kick.length));
+            auto r4 = regex(to!String(`\ba{2}c\bxyz`));
+            kick = Kick!Char(r4, new uint[256]);
+            assert(kick.length == 6, text(Kick.stringof,v.stringof, " == ", kick.length));
+            auto r5 = regex(to!String(`\ba{2}c\b`));
+            kick = Kick!Char(r5, new uint[256]);
+            size_t x = kick.search("aabaacaa", 0);
+            assert(x == 3, text(Kick.stringof,v.stringof," == ", kick.length));
+            x = kick.search("aabaacaa", x+1);
+            assert(x == 8, text(Kick.stringof,v.stringof," == ", kick.length));
+        }
+    }
+    @trusted void test_flex(alias Kick)()
+    {
+        foreach(i, v;TypeTuple!(char, wchar, dchar))
+        {
+            alias v Char;
+            alias immutable(v)[] String;
+            auto r = regex(to!String(`abc[a-z]`));
+            auto kick = Kick!Char(r, new uint[256]);
+            auto x = kick.search(to!String("abbabca"), 0);
+            assert(x == 3, text("real x is ", x, " ",v.stringof));
+
+            auto r2 = regex(to!String(`(ax|bd|cdy)`));
+            String s2 = to!String("abdcdyabax");
+            kick = Kick!Char(r2, new uint[256]);
+            x = kick.search(s2, 0);
+            assert(x == 1, text("real x is ", x));
+            x = kick.search(s2, x+1);
+            assert(x == 3, text("real x is ", x));
+            x = kick.search(s2, x+1);
+            assert(x == 8, text("real x is ", x));
+            auto rdot = regex(to!String(`...`));
+            kick = Kick!Char(rdot, new uint[256]);
+            assert(kick.length == 0);
+            auto rN = regex(to!String(`a(b+|c+)x`));
+            kick = Kick!Char(rN, new uint[256]);
+            assert(kick.length == 3);
+            assert(kick.search("ababx",0) == 2);
+            assert(kick.search("abaacba",0) == 3);//expected inexact
+
+        }
+    }
+    test_fixed!(ShiftOr)();
+    test_flex!(ShiftOr)();
+}
+
+alias ShiftOr Kickstart;
+
+//Simple UTF-string abstraction compatible with stream interface
+struct Input(Char)
+    if(is(Char :dchar))
+{
+    alias size_t DataIndex;
+    alias const(Char)[] String;
+    String _origin;
+    size_t _index;
+
+    //constructs Input object out of plain string
+    this(String input, size_t idx=0)
+    {
+        _origin = input;
+        _index = idx;
+    }
+
+    //codepoint at current stream position
+    bool nextChar(ref dchar res, ref size_t pos)
+    {
+        if(_index == _origin.length)
+            return false;
+        pos = _index;
+        res = std.utf.decode(_origin, _index);
+        return true;
+    }
+    @property bool atEnd(){
+        return _index==_origin.length;
+    }
+    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
+    {
+        size_t idx = kick.search(_origin, _index);
+        _index = idx;
+        return nextChar(res, pos);
+    }
+
+    //index of at End position
+    @property size_t lastIndex(){   return _origin.length; }
+
+    //support for backtracker engine, might not be present
+    void reset(size_t index){   _index = index;  }
+
+    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+
+    struct BackLooper
+    {
+        alias size_t DataIndex;
+        String _origin;
+        size_t _index;
+        this(Input input)
+        {
+            _origin = input._origin;
+            _index = input._index;
+        }
+        @trusted bool nextChar(ref dchar res,ref size_t pos)
+        {
+            if(_index == 0)
+                return false;
+            _index -= std.utf.strideBack(_origin, _index);
+            if(_index == 0)
+                return false;
+            pos = _index;
+            res = _origin[0.._index].back;
+            return true;
+        }
+        @property atEnd(){ return _index==0 || _index==std.utf.strideBack(_origin, _index); }
+        @property auto loopBack(){   return Input(_origin, _index); }
+
+        //support for backtracker engine, might not be present
+        void reset(size_t index){   _index = index+std.utf.stride(_origin, index);  }
+
+        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+        //index of at End position
+        @property size_t lastIndex(){   return 0; }
+    }
+    @property auto loopBack(){   return BackLooper(this); }
+}
+
+// Test stream against simple UTF-string stream abstraction (w/o normalization and such)
+struct StreamTester(Char)
+    if (is(Char:dchar))
+{
+    alias ulong DataIndex;
+    alias const(Char)[] String;
+    Input!(Char) refStream;
+    String allStr;
+    StreamCBuf!(Char) stream;
+    size_t[] splits;
+    size_t pos;
+
+    //adds the next chunk to the stream
+    bool addNextChunk()
+    {
+        if(splits.length<pos)
+        {
+            ++pos;
+            if(pos<splits.length)
+            {
+                assert(splits[pos-1]<=splits[pos],"splits is not ordered");
+                stream.addChunk(allStr[splits[pos-1]..splits[pos]]);
+            }
+            else
+            {
+                stream.addChunk(allStr[splits[pos-1]..$]);
+                stream.hasEnd=true;
+            }
+            return true;
+        }
+        else
+            return false;
+    }
+
+    //constructs Input object out of plain string
+    this(String input, size_t[] splits)
+    {
+        allStr=input;
+        refStream=Input!(Char)(input,splits);
+        stream=new StreamCBuf!(Char)();
+        pos=0;
+        if (splits.length) {
+            stream.addChunk(allStr);
+            stream.hasEnd=true;
+        }
+        else
+            stream.addChunk(allStr[0..splits[0]]);
+    }
+
+    //codepoint at current stream position
+    bool nextChar(ref dchar res, ref size_t pos)
+    {
+        bool ret=stream.nextChar(res,pos);
+        dchar refRes;
+        size_t refPos;
+        if(!res)
+        {
+            if (stream.hasEnd && refStream.nextChar(refRes,refPos))
+            {
+                throw new Exception("stream eneded too early");
+            }
+            return false;
+        }
+        else
+        {
+            bool refRet=refStream.nextChar(refRes,refPos);
+            enforce(refRet==ret,"stream contiinued past end");
+            enforce(refRes==res,"incorrect char "~res~" vs "~refRes);
+            enforce(refPos==(pos &~(255UL<<48)),"incorrect pos, string wans't normalized???");
+            return true;
+        }
+    }
+
+    @property bool atEnd()
+    {
+        enforce(!stream.atEnd || refStream.atEnd,"stream ended too early");
+        return stream.atEnd;
+    }
+
+    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref ulong pos)
+    {
+        bool ret=stream.search(kick,res,pos);
+        dchar refRes;
+        size_t refPos;
+        if(ret)
+        {
+            bool refRet=refStream.search(kick,refRes,refPos);
+            enforce(refRet,"stream found spurious kickstart match");
+            enforce(refRes==res,"stream found different kickstart match "~res~" vs "~refRes);
+            enforce(refPos==(pos &~(255UL<<48)),"stream found different pos for kickstart match, non normalized input?: "~to!string(pos)~" vs "~to!string(refPos));
+        }
+        else if(hasEnd)
+        {
+            enforce(!refStream.search(kick,refRes,refPos),"stream missed kickstart match");
+        }
+        return ret;
+    }
+
+    //index of at End position
+    @property size_t lastIndex(){   return _origin.length; }
+
+    String opSlice(size_t start, size_t end)
+    {
+        return _origin[start..end];
+    }
+
+    struct BackLooper
+    {
+        alias ulong DataIndex;
+        Input!(Char).BackLooper refBacklooper;
+        StreamCBuf!(Char).BackLooper backlooper;
+        ulong startPos;
+
+        this(Input!(Char).BackLooper refBacklooper,StreamCBuf!(Char).BackLooper backlooper)
+        {
+            this.refBacklooper=refBacklooper;
+            this.backlooper=backlooper;
+        }
+        bool nextChar(ref dchar res,ref ulong pos)
+        {
+            bool ret=backlooper.nextChar(res,pos);
+            if(ret)
+            {
+                dchar refRes;
+                size_t refPos;
+                bool refRet=refBacklooper.nextChar(refRes,refPos);
+                enforce(refRet,"stream backlooper goes back beyond start");
+                enforce(refRes==res,"stream backlooper has different char "~res~" vs "~refRes);
+                enforce(refPos==(pos &~(255UL<<48)),"stream backlooper has different pos: "~to!string(pos)~" vs "~to!string(refPos));
+            }
+            else if (refBacklooper.nextChar(refPos,refPos))
+            {
+                enforce(refPos+historySize<=(startPos &~(255UL<<48)),"stream backlooper stopped before historyWindow");
+            }
+            return ret;
+        }
+        @property atEnd(){
+            if(backlooper.atEnd)
+            {
+                dchar res;
+                size_t pos;
+                if (refBacklooper.nextChar(res,pos))
+                {
+                    // this should be mostly true for already normalized/decoded stuff
+                    enforce(pos+backlooper.streamBuf.historySize<=(startPos &~(255UL<<48)),"backlooper stream ended too early");
+                }
+            }
+            else
+            {
+                enforce(backlooper.atEnd,"backlooper stream did not end");
+            }
+            return backlooper.atEnd;
+        }
+        @property auto loopBack(){   return Input(_origin, _index); }
+
+        //support for backtracker engine, might not be present
+        void reset(size_t index){   _index = index+std.utf.stride(_origin, index);  }
+
+        String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+        //index of at End position
+        @property size_t lastIndex(){   return 0; }
+    }
+    @property auto loopBack(){   return BackLooper(this); }
+}
+
+//both helperd below are internal, on its own are quite "explosive"
+
+//unsafe, no initialization of elements
+@system T[] mallocArray(T)(size_t len)
+{
+    return (cast(T*)malloc(len*T.sizeof))[0..len];
+}
+
+//very unsafe, no initialization
+@system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
+{
+    auto ret = (cast(T*)chunk.ptr)[0..len];
+    chunk = chunk[len*T.sizeof..$];
+    return ret;
+}
+
+/+
+    BacktrackingMatcher implements backtracking scheme of matching
+    regular expressions.
++/
+template BacktrackingMatcher(bool CTregex)
+{
+    @trusted struct BacktrackingMatcher(Char, Stream=Input!Char)
+        if(is(Char : dchar))
+    {
+        alias Stream.DataIndex DataIndex;
+        struct State
+        {//top bit in pc is set if saved along with matches
+            DataIndex index;
+            uint pc, counter, infiniteNesting;
+        }
+        static assert(State.sizeof % size_t.sizeof == 0);
+        enum stateSize = State.sizeof / size_t.sizeof;
+        enum initialStack = 1<<16;
+        alias const(Char)[] String;
+        static if(CTregex)
+            alias StaticRegex!Char RegEx;
+        else
+            alias Regex!Char RegEx;
+        RegEx re;      //regex program
+        //Stream state
+        Stream s;
+        DataIndex index;
+        dchar front;
+        bool exhausted;
+        //backtracking machine state
+        uint pc, counter;
+        DataIndex lastState = 0;    //top of state stack
+        DataIndex[] trackers;
+        static if(!CTregex)
+            uint infiniteNesting;
+        size_t[] memory;
+        //local slice of matches, global for backref
+        Group!DataIndex[] matches, backrefed;
+
+        static if(__traits(hasMember,Stream, "search"))
+        {
+            enum kicked = true;
+        }
+        else
+            enum kicked = false;
+
+        static size_t initialMemory(const ref RegEx re)
+        {
+            return (re.ngroup+1)*DataIndex.sizeof //trackers
+                + stackSize(re)*size_t.sizeof;
+        }
+
+        static size_t stackSize(const ref RegEx re)
+        {
+            return initialStack*(stateSize + re.ngroup*(Group!DataIndex).sizeof/size_t.sizeof)+1;
+        }
+
+        @property bool atStart(){ return index == 0; }
+
+        @property bool atEnd(){ return index == s.lastIndex && s.atEnd; }
+
+        void next()
+        {
+            if(!s.nextChar(front, index))
+                index = s.lastIndex;
+        }
+
+        void search()
+        {
+            static if(kicked)
+            {
+                if(!s.search(re.kickstart, front, index))
+                {
+                    index = s.lastIndex;
+                }
+            }
+            else
+                next();
+        }
+
+        //
+        void newStack()
+        {
+            auto chunk = mallocArray!(size_t)(stackSize(re));
+            chunk[0] = cast(size_t)(memory.ptr);
+            memory = chunk[1..$];
+        }
+
+        void initialize(ref RegEx program, Stream stream, void[] memBlock)
+        {
+            re = program;
+            s = stream;
+            exhausted = false;
+            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
+            memory = cast(size_t[])memBlock;
+            memory[0] = 0; //hidden pointer
+            memory = memory[1..$];
+            backrefed = null;
+        }
+
+        //
+        this(ref RegEx program, Stream stream, void[] memBlock)
+        {
+            initialize(program, stream, memBlock);
+            next();
+        }
+
+        //
+        this(ref RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
+        {
+            initialize(program, stream, memBlock);
+            front = ch;
+            index = idx;
+        }
+
+        //
+        bool matchFinalize()
+        {
+            size_t start = index;
+            if(matchImpl())
+            {//stream is updated here
+                matches[0].begin = start;
+                matches[0].end = index;
+                if(!(re.flags & RegexOption.global) || atEnd)
+                    exhausted = true;
+                if(start == index)//empty match advances input
+                    next();
+                return true;
+            }
+            else
+                return false;
+        }
+
+        //lookup next match, fill matches with indices into input
+        bool match(Group!DataIndex matches[])
+        {
+            debug(fred_matching)
+            {
+                writeln("------------------------------------------");
+            }
+            if(exhausted) //all matches collected
+                return false;
+            this.matches = matches;
+            if(re.flags & RegexInfo.oneShot)
+            {
+                exhausted = true;
+                DataIndex start = index;
+                auto m = matchImpl();
+                if(m)
+                {
+                    matches[0].begin = start;
+                    matches[0].end = index;
+                }
+                return m;
+            }
+            static if(kicked)
+                auto searchFn = re.kickstart.empty ? &this.next :&this.search;
+            else
+                auto searchFn = &this.next;
+            for(;;)
+            {
+
+                if(matchFinalize())
+                    return true;
+                else
+                {
+                    if(atEnd)
+                        break;
+                    searchFn();
+                    if(atEnd)
+                    {
+                        exhausted = true;
+                        return matchFinalize();
+                    }
+                }
+
+            }
+            exhausted = true;
+            return false;
+        }
+
+        /+
+            match subexpression against input,
+            results are stored in matches
+        +/
+        bool matchImpl()
+        {
+            static if(CTregex && is(typeof(re.nativeFn(this))))
+            {
+                if(re.nativeFn)
+                {
+                    version(fred_ct) debug writeln("using C-T matcher");
+                    return re.nativeFn(this);
+                }
+            }
+            else
+            {
+                pc = 0;
+                counter = 0;
+                lastState = 0;
+                infiniteNesting = -1;//intentional
+                auto start = s._index;
+                debug(fred_matching)
+                    writeln("Try match starting at ", s[index..s.lastIndex]);
+                for(;;)
+                {
+                    debug(fred_matching)
+                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s"
+                            , pc, counter, disassemble(re.ir, pc, re.dict)
+                            , front, s._index);
+                    switch(re.ir[pc].code)
+                    {
+                    case IR.OrChar://assumes IRL!(OrChar) == 1
+                        if(atEnd)
+                            goto L_backtrack;
+                        uint len = re.ir[pc].sequence;
+                        uint end = pc + len;
+                        if(re.ir[pc].data != front && re.ir[pc+1].data != front)
+                        {
+                            for(pc = pc+2; pc<end; pc++)
+                                if(re.ir[pc].data == front)
+                                    break;
+                            if(pc == end)
+                                goto L_backtrack;
+                        }
+                        pc = end;
+                        next();
+                        break;
+                    case IR.Char:
+                        if(atEnd || front != re.ir[pc].data)
+                            goto L_backtrack;
+                        pc += IRL!(IR.Char);
+                        next();
+                    break;
+                    case IR.Any:
+                        if(atEnd || (!(re.flags & RegexOption.singleline)
+                                && (front == '\r' || front == '\n')))
+                            goto L_backtrack;
+                        pc += IRL!(IR.Any);
+                        next();
+                        break;
+                    case IR.CodepointSet:
+                        if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
+                            goto L_backtrack;
+                        next();
+                        pc += IRL!(IR.CodepointSet);
+                        break;
+                    case IR.Trie:
+                        if(atEnd || !re.tries[re.ir[pc].data][front])
+                            goto L_backtrack;
+                        next();
+                        pc += IRL!(IR.Trie);
+                        break;
+                    case IR.Wordboundary:
+                        dchar back;
+                        DataIndex bi;
+                        //at start & end of input
+                        if(atStart && wordTrie[front])
+                        {
+                            pc += IRL!(IR.Wordboundary);
+                            break;
+                        }
+                        else if(atEnd && s.loopBack.nextChar(back, bi)
+                                && wordTrie[back])
+                        {
+                            pc += IRL!(IR.Wordboundary);
+                            break;
+                        }
+                        else if(s.loopBack.nextChar(back, index))
+                        {
+                            bool af = wordTrie[front];
+                            bool ab = wordTrie[back];
+                            if(af ^ ab)
+                            {
+                                pc += IRL!(IR.Wordboundary);
+                                break;
+                            }
+                        }
+                        goto L_backtrack;
+                    case IR.Notwordboundary:
+                        dchar back;
+                        DataIndex bi;
+                        //at start & end of input
+                        if(atStart && wordTrie[front])
+                            goto L_backtrack;
+                        else if(atEnd && s.loopBack.nextChar(back, bi)
+                                && wordTrie[back])
+                            goto L_backtrack;
+                        else if(s.loopBack.nextChar(back, index))
+                        {
+                            bool af = wordTrie[front];
+                            bool ab = wordTrie[back];
+                            if(af ^ ab)
+                                goto L_backtrack;
+                        }
+                        pc += IRL!(IR.Wordboundary);
+                        break;
+                    case IR.Bol:
+                        dchar back;
+                        DataIndex bi;
+                        if(atStart)
+                            pc += IRL!(IR.Bol);
+                        else if((re.flags & RegexOption.multiline)
+                            && s.loopBack.nextChar(back,bi)
+                            && endOfLine(back, front == '\n'))
+                        {
+                            pc += IRL!(IR.Bol);
+                        }
+                        else
+                            goto L_backtrack;
+                        break;
+                    case IR.Eol:
+                        dchar back;
+                        DataIndex bi;
+                        debug(fred_matching) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                        //no matching inside \r\n
+                        if(atEnd || ((re.flags & RegexOption.multiline)
+                            && s.loopBack.nextChar(back,bi)
+                            && endOfLine(front, back == '\r')))
+                        {
+                            pc += IRL!(IR.Eol);
+                        }
+                        else
+                            goto L_backtrack;
+                        break;
+                    case IR.InfiniteStart, IR.InfiniteQStart:
+                        trackers[infiniteNesting+1] = index;
+                        pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
+                        //now pc is at end IR.Infininite(Q)End
+                        uint len = re.ir[pc].data;
+                        int test;
+                        if(re.ir[pc].code == IR.InfiniteEnd)
+                        {
+                            test = quickTestFwd(pc+IRL!(IR.InfiniteEnd), front, re);
+                            if(test >= 0)
+                                pushState(pc+IRL!(IR.InfiniteEnd), counter);
+                            infiniteNesting++;
+                            pc -= len;
+                        }
+                        else
+                        {
+                            test = quickTestFwd(pc - len, front, re);
+                            if(test >= 0)
+                            {
+                                infiniteNesting++;
+                                pushState(pc - len, counter);
+                                infiniteNesting--;
+                            }
+                            pc += IRL!(IR.InfiniteEnd);
+                        }
+                        break;
+                    case IR.RepeatStart, IR.RepeatQStart:
+                        pc += re.ir[pc].data + IRL!(IR.RepeatStart);
+                        break;
+                    case IR.RepeatEnd:
+                    case IR.RepeatQEnd:
+                        //len, step, min, max
+                        uint len = re.ir[pc].data;
+                        uint step =  re.ir[pc+2].raw;
+                        uint min = re.ir[pc+3].raw;
+                        uint max = re.ir[pc+4].raw;
+                        if(counter < min)
+                        {
+                            counter += step;
+                            pc -= len;
+                        }
+                        else if(counter < max)
+                        {
+                            if(re.ir[pc].code == IR.RepeatEnd)
+                            {
+                                pushState(pc + IRL!(IR.RepeatEnd), counter%step);
+                                counter += step;
+                                pc -= len;
+                            }
+                            else
+                            {
+                                pushState(pc - len, counter + step);
+                                counter = counter%step;
+                                pc += IRL!(IR.RepeatEnd);
+                            }
+                        }
+                        else
+                        {
+                            counter = counter%step;
+                            pc += IRL!(IR.RepeatEnd);
+                        }
+                        break;
+                    case IR.InfiniteEnd:
+                    case IR.InfiniteQEnd:
+                        uint len = re.ir[pc].data;
+                        debug(fred_matching) writeln("Infinited nesting:", infiniteNesting);
+                        assert(infiniteNesting < trackers.length);
+
+                        if(trackers[infiniteNesting] == index)
+                        {//source not consumed
+                            pc += IRL!(IR.InfiniteEnd);
+                            infiniteNesting--;
+                            break;
+                        }
+                        else
+                            trackers[infiniteNesting] = index;
+                        int test;
+                        if(re.ir[pc].code == IR.InfiniteEnd)
+                        {
+                            test = quickTestFwd(pc+IRL!(IR.InfiniteEnd), front, re);
+                            if(test >= 0)
+                            {
+                                infiniteNesting--;
+                                pushState(pc + IRL!(IR.InfiniteEnd), counter);
+                                infiniteNesting++;
+                            }
+                            pc -= len;
+                        }
+                        else
+                        {
+                            test = quickTestFwd(pc-len, front, re);
+                            if(test >= 0)
+                                pushState(pc-len, counter);
+                            pc += IRL!(IR.InfiniteEnd);
+                            infiniteNesting--;
+                        }
+                        break;
+                    case IR.OrEnd:
+                        pc += IRL!(IR.OrEnd);
+                        break;
+                    case IR.OrStart:
+                        pc += IRL!(IR.OrStart);
+                        goto case;
+                    case IR.Option:
+                        uint len = re.ir[pc].data;
+                        if(re.ir[pc+len].code == IR.GotoEndOr)//not a last one
+                        {
+                            pushState(pc + len + IRL!(IR.Option), counter); //remember 2nd branch
+                        }
+                        pc += IRL!(IR.Option);
+                        break;
+                    case IR.GotoEndOr:
+                        pc = pc + re.ir[pc].data + IRL!(IR.GotoEndOr);
+                        break;
+                    case IR.GroupStart:
+                        uint n = re.ir[pc].data;
+                        matches[n].begin = index;
+                        debug(fred_matching)  writefln("IR group #%u starts at %u", n, index);
+                        pc += IRL!(IR.GroupStart);
+                        break;
+                    case IR.GroupEnd:
+                        uint n = re.ir[pc].data;
+                        matches[n].end = index;
+                        debug(fred_matching) writefln("IR group #%u ends at %u", n, index);
+                        pc += IRL!(IR.GroupEnd);
+                        break;
+                    case IR.LookaheadStart:
+                    case IR.NeglookaheadStart:
+                        uint len = re.ir[pc].data;
+                        auto save = index;
+                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        scope(exit) free(mem.ptr);
+                        auto matcher = BacktrackingMatcher(re, s, mem, front, index);
+                        matcher.matches = matches[ms .. me];
+                        matcher.backrefed = backrefed.empty ? matches : backrefed;
+                        matcher.re.ir = re.ir[pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)];
+                        bool match = matcher.matchImpl() ^ (re.ir[pc].code == IR.NeglookaheadStart);
+                        s.reset(save);
+                        next();
+                        if(!match)
+                            goto L_backtrack;
+                        else
+                        {
+                            pc += IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd);
+                        }
+                        break;
+                    case IR.LookbehindStart:
+                    case IR.NeglookbehindStart:
+                        uint len = re.ir[pc].data;
+                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        scope(exit) free(mem.ptr);
+                        auto backMatcher = BacktrackingMatcher!(Char, typeof(s.loopBack))(re, s.loopBack, mem);
+                        backMatcher.matches = matches[ms .. me];
+                        backMatcher.re.ir = re.ir[pc .. pc+IRL!(IR.LookbehindStart)+len];
+                        backMatcher.backrefed  = backrefed.empty ? matches : backrefed;
+                        bool match = backMatcher.matchBackImpl() ^ (re.ir[pc].code == IR.NeglookbehindStart);
+                        if(!match)
+                            goto L_backtrack;
+                        else
+                        {
+                            pc += IRL!(IR.LookbehindStart)+len+IRL!(IR.LookbehindEnd);
+                        }
+                        break;
+                    case IR.Backref:
+                        uint n = re.ir[pc].data;
+                        auto referenced = re.ir[pc].localRef
+                                ? s[matches[n].begin .. matches[n].end]
+                                : s[backrefed[n].begin .. backrefed[n].end];
+                        while(!atEnd && !referenced.empty && front == referenced.front)
+                        {
+                            next();
+                            referenced.popFront();
+                        }
+                        if(referenced.empty)
+                            pc++;
+                        else
+                            goto L_backtrack;
+                        break;
+                        case IR.Nop:
+                        pc += IRL!(IR.Nop);
+                        break;
+                    case IR.LookaheadEnd:
+                    case IR.NeglookaheadEnd:
+                    case IR.End:
+                        return true;
+                    default:
+                        assert(0);
+                    L_backtrack:
+                        if(!popState())
+                        {
+                            s.reset(start);
+                            return false;
+                        }
+                    }
+                }
+            }
+            assert(0);
+        }
+
+        @property size_t stackAvail()
+        {
+            return memory.length - lastState;
+        }
+
+        bool prevStack()
+        {
+            size_t* prev = memory.ptr-1;
+            prev = cast(size_t*)*prev;//take out hidden pointer
+            if(!prev)
+                return false;
+            free(memory.ptr);//last segment is freed in RegexMatch
+            immutable size = initialStack*(stateSize + 2*re.ngroup);
+            memory = prev[0..size];
+            lastState = size;
+            return true;
+        }
+
+        void stackPush(T)(T val)
+            if(!isDynamicArray!T)
+        {
+            *cast(T*)&memory[lastState] = val;
+            enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
+            lastState += delta;
+            debug(fred_matching) writeln("push element SP= ", lastState);
+        }
+
+        void stackPush(T)(T[] val)
+        {
+            static assert(T.sizeof % size_t.sizeof == 0);
+            (cast(T*)&memory[lastState])[0..val.length]
+                = val[0..$];
+            lastState += val.length*(T.sizeof/size_t.sizeof);
+            debug(fred_matching) writeln("push array SP= ", lastState);
+        }
+
+        void stackPop(T)(ref T val)
+            if(!isDynamicArray!T)
+        {
+            enum delta = (T.sizeof+size_t.sizeof/2)/size_t.sizeof;
+            lastState -= delta;
+            val = *cast(T*)&memory[lastState];
+            debug(fred_matching) writeln("pop element SP= ", lastState);
+        }
+
+        void stackPop(T)(ref T[] val)
+        {
+            lastState -= val.length*(T.sizeof/size_t.sizeof);
+            val[0..$] = (cast(T*)&memory[lastState])[0..val.length];
+            debug(fred_matching) writeln("pop array SP= ", lastState);
+        }
+
+        static if(!CTregex)
+        {
+            //helper function, saves engine state
+            void pushState(uint pc, uint counter)
+            {
+                if(stateSize + matches.length > stackAvail)
+                {
+                    newStack();
+                    lastState = 0;
+                }
+                *cast(State*)&memory[lastState] =
+                    State(index, pc, counter, infiniteNesting);
+                lastState += stateSize;
+                memory[lastState..lastState+2*matches.length] = cast(size_t[])matches[];
+                lastState += 2*matches.length;
+                debug(fred_matching)
+                    writefln("Saved(pc=%s) front: %s src: %s"
+                             , pc, front, s[index..s.lastIndex]);
+            }
+
+            //helper function, restores engine state
+            bool popState()
+            {
+                if(!lastState)
+                    return prevStack();
+                lastState -= 2*matches.length;
+                auto pm = cast(size_t[])matches;
+                pm[] = memory[lastState .. lastState+2*matches.length];
+                lastState -= stateSize;
+                State* state = cast(State*)&memory[lastState];
+                index = state.index;
+                pc = state.pc;
+                counter = state.counter;
+                infiniteNesting = state.infiniteNesting;
+                debug(fred_matching)
+                {
+                    writefln("Restored matches", front, s[index .. s.lastIndex]);
+                    foreach(i, m; matches)
+                        writefln("Sub(%d) : %s..%s", i, m.begin, m.end);
+                }
+                s.reset(index);
+                next();
+                debug(fred_matching)
+                    writefln("Backtracked (pc=%s) front: %s src: %s"
+                    , pc, front, s[index..s.lastIndex]);
+                return true;
+            }
+
+            /+
+                Match subexpression against input, executing re.ir backwards.
+                Results are stored in matches
+            +/
+
+            bool matchBackImpl()
+            {
+                pc = cast(uint)re.ir.length-1;
+                counter = 0;
+                lastState = 0;
+                infiniteNesting = -1;//intentional
+                auto start = index;
+                debug(fred_matching)
+                    writeln("Try matchBack at ",retro(s[index..s.lastIndex]));
+                for(;;)
+                {
+                    debug(fred_matching)
+                        writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s"
+                        , pc, counter, disassemble(re.ir, pc, re.dict)
+                        , front, retro(s[index..s.lastIndex]));
+                    switch(re.ir[pc].code)
+                    {
+                    case IR.OrChar://assumes IRL!(OrChar) == 1
+                        if(atEnd)
+                            goto L_backtrack;
+                        uint len = re.ir[pc].sequence;
+                        uint end = pc - len;
+                        if(re.ir[pc].data != front && re.ir[pc-1].data != front)
+                        {
+                            for(pc = pc-2; pc>end; pc--)
+                                if(re.ir[pc].data == front)
+                                    break;
+                            if(pc == end)
+                                goto L_backtrack;
+                        }
+                        pc = end;
+                        next();
+                        break;
+                    case IR.Char:
+                        if(atEnd || front != re.ir[pc].data)
+                            goto L_backtrack;
+                        pc--;
+                        next();
+                    break;
+                    case IR.Any:
+                        if(atEnd || (!(re.flags & RegexOption.singleline)
+                                && (front == '\r' || front == '\n')))
+                            goto L_backtrack;
+                        pc--;
+                        next();
+                        break;
+                    case IR.CodepointSet:
+                        if(atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
+                            goto L_backtrack;
+                        next();
+                        pc--;
+                        break;
+                    case IR.Trie:
+                        if(atEnd || !re.tries[re.ir[pc].data][front])
+                            goto L_backtrack;
+                        next();
+                        pc--;
+                        break;
+                    case IR.Wordboundary:
+                        dchar back;
+                        DataIndex bi;
+                        //at start & end of input
+                        if(atStart && wordTrie[front])
+                        {
+                            pc--;
+                            break;
+                        }
+                        else if(atEnd && s.loopBack.nextChar(back, bi)
+                                && wordTrie[back])
+                        {
+                            pc--;
+                            break;
+                        }
+                        else if(s.loopBack.nextChar(back, index))
+                        {
+                            bool af = wordTrie[front];
+                            bool ab = wordTrie[back];
+                            if(af ^ ab)
+                            {
+                                pc--;
+                                break;
+                            }
+                        }
+                        goto L_backtrack;
+                    case IR.Notwordboundary:
+                        dchar back;
+                        DataIndex bi;
+                        //at start & end of input
+                        if(atStart && wordTrie[front])
+                            goto L_backtrack;
+                        else if(atEnd && s.loopBack.nextChar(back, bi)
+                                && wordTrie[back])
+                            goto L_backtrack;
+                        else if(s.loopBack.nextChar(back, index))
+                        {
+                            bool af = wordTrie[front];
+                            bool ab = wordTrie[back];
+                            if(af ^ ab)
+                                goto L_backtrack;
+                        }
+                        pc--;
+                        break;
+                    case IR.Bol:
+                        dchar back;
+                        DataIndex bi;
+                        if(atStart)
+                            pc--;
+                        else if((re.flags & RegexOption.multiline)
+                            && s.loopBack.nextChar(back,bi)
+                            && endOfLine(back, front == '\n'))
+                        {
+                            pc--;
+                        }
+                        else
+                            goto L_backtrack;
+                        break;
+                    case IR.Eol:
+                        dchar back;
+                        DataIndex bi;
+                        debug(fred_matching)
+                            writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                        //no matching inside \r\n
+                        if((re.flags & RegexOption.multiline)
+                                && s.loopBack.nextChar(back,bi)
+                            && endOfLine(front, back == '\r'))
+                        {
+                            pc -= IRL!(IR.Eol);
+                        }
+                        else
+                            goto L_backtrack;
+                        break;
+                    case IR.InfiniteStart, IR.InfiniteQStart:
+                        uint len = re.ir[pc].data;
+                        assert(infiniteNesting < trackers.length);
+                        if(trackers[infiniteNesting] == index)
+                        {//source not consumed
+                            pc--; //out of loop
+                            infiniteNesting--;
+                            break;
+                        }
+                        else
+                            trackers[infiniteNesting] = index;
+                        if(re.ir[pc].code == IR.InfiniteStart)//greedy
+                        {
+                            infiniteNesting--;
+                            pushState(pc-1, counter);//out of loop
+                            infiniteNesting++;
+                            pc += len;
+                        }
+                        else
+                        {
+                            pushState(pc+len, counter);
+                            pc--;
+                            infiniteNesting--;
+                        }
+                        break;
+                    case IR.InfiniteEnd:
+                    case IR.InfiniteQEnd://now it's a start
+                        uint len = re.ir[pc].data;
+                        trackers[infiniteNesting+1] = index;
+                        pc -= len+IRL!(IR.InfiniteStart);
+                        assert(re.ir[pc].code == IR.InfiniteStart
+                            || re.ir[pc].code == IR.InfiniteQStart);
+                        debug(fred_matching)
+                            writeln("(backmatch) Infinite nesting:", infiniteNesting);
+                        if(re.ir[pc].code == IR.InfiniteStart)//greedy
+                        {
+                            pushState(pc-1, counter);
+                            infiniteNesting++;
+                            pc += len;
+                        }
+                        else
+                        {
+                            infiniteNesting++;
+                            pushState(pc + len, counter);
+                            infiniteNesting--;
+                            pc--;
+                        }
+                        break;
+                    case IR.RepeatStart, IR.RepeatQStart:
+                        uint len = re.ir[pc].data;
+                        uint tail = pc + len + 1;
+                        uint step =  re.ir[tail+2].raw;
+                        uint min = re.ir[tail+3].raw;
+                        uint max = re.ir[tail+4].raw;
+                        if(counter < min)
+                        {
+                            counter += step;
+                            pc += len;
+                        }
+                        else if(counter < max)
+                        {
+                            if(re.ir[pc].code == IR.RepeatStart)//greedy
+                            {
+                                pushState(pc-1, counter%step);
+                                counter += step;
+                                pc += len;
+                            }
+                            else
+                            {
+                                pushState(pc + len, counter + step);
+                                counter = counter%step;
+                                pc--;
+                            }
+                        }
+                        else
+                        {
+                            counter = counter%step;
+                            pc--;
+                        }
+                        break;
+                    case IR.RepeatEnd:
+                    case IR.RepeatQEnd:
+                        pc -= re.ir[pc].data+IRL!(IR.RepeatStart);
+                        assert(re.ir[pc].code == IR.RepeatStart || re.ir[pc].code == IR.RepeatQStart);
+                        goto case IR.RepeatStart;
+                    case IR.OrEnd:
+                        uint len = re.ir[pc].data;
+                        pc -= len;
+                        assert(re.ir[pc].code == IR.Option);
+                        len = re.ir[pc].data;
+                        auto pc_save = pc+len-1;
+                        pc = pc + len + IRL!(IR.Option);
+                        while(re.ir[pc].code == IR.Option)
+                        {
+                            pushState(pc-IRL!(IR.GotoEndOr)-1, counter);
+                            len = re.ir[pc].data;
+                            pc += len + IRL!(IR.Option);
+                        }
+                        assert(re.ir[pc].code == IR.OrEnd);
+                        pc--;
+                        if(pc != pc_save)
+                        {
+                            pushState(pc, counter);
+                            pc = pc_save;
+                        }
+                        break;
+                    case IR.OrStart:
+                        assert(0);
+                    case IR.Option:
+                        assert(re.ir[pc].code == IR.Option);
+                        pc += re.ir[pc].data + IRL!(IR.Option);
+                        if(re.ir[pc].code == IR.Option)
+                        {
+                            pc--;//hackish, assumes size of IR.Option == 1
+                            if(re.ir[pc].code == IR.GotoEndOr)
+                            {
+                                pc += re.ir[pc].data + IRL!(IR.GotoEndOr);
+                            }
+
+                        }
+                        assert(re.ir[pc].code == IR.OrEnd);
+                        pc -= re.ir[pc].data + IRL!(IR.OrStart)+1;
+                        break;
+                    case IR.GotoEndOr:
+                        assert(0);
+                    case IR.GroupStart:
+                        uint n = re.ir[pc].data;
+                        matches[n].begin = index;
+                        debug(fred_matching)  writefln("IR group #%u starts at %u", n, index);
+                        pc --;
+                        break;
+                    case IR.GroupEnd:
+                        uint n = re.ir[pc].data;
+                        matches[n].end = index;
+                        debug(fred_matching) writefln("IR group #%u ends at %u", n, index);
+                        pc --;
+                        break;
+                    case IR.LookaheadStart:
+                    case IR.NeglookaheadStart:
+                        assert(0);
+                    case IR.LookaheadEnd:
+                    case IR.NeglookaheadEnd:
+                        uint len = re.ir[pc].data;
+                        pc -= len + IRL!(IR.LookaheadStart);
+                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        scope(exit) free(mem.ptr);
+                        auto matcher = BacktrackingMatcher!(Char, typeof(s.loopBack))(re, s.loopBack, mem);
+                        matcher.matches = matches[ms .. me];
+                        matcher.backrefed  = backrefed.empty ? matches : backrefed;
+                        matcher.re.ir = re.ir[pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)];
+                        bool match = matcher.matchImpl() ^ (re.ir[pc].code == IR.NeglookaheadStart);
+                        if(!match)
+                            goto L_backtrack;
+                        else
+                        {
+                            pc --;
+                        }
+                        break;
+                    case IR.LookbehindEnd:
+                    case IR.NeglookbehindEnd:
+                        uint len = re.ir[pc].data;
+                        pc -= len + IRL!(IR.LookbehindStart);
+                        auto save = index;
+                        uint ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
+                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        scope(exit) free(mem.ptr);
+                        auto matcher = BacktrackingMatcher(re, s, mem, front, index);
+                        matcher.re.ngroup =  me - ms;
+                        matcher.matches = matches[ms .. me];
+                        matcher.backrefed = backrefed.empty ? matches : backrefed;
+                        matcher.re.ir = re.ir[pc .. pc+IRL!(IR.LookbehindStart)+len];
+                        bool match = matcher.matchBackImpl() ^ (re.ir[pc].code == IR.NeglookbehindStart);
+                        s.reset(save);
+                        next();
+                        if(!match)
+                            goto L_backtrack;
+                        else
+                        {
+                            pc --;
+                        }
+                        break;
+                    case IR.Backref:
+                        uint n = re.ir[pc].data;
+                        auto referenced = re.ir[pc].localRef
+                                ? s[matches[n].begin .. matches[n].end]
+                                : s[backrefed[n].begin .. backrefed[n].end];
+                        while(!atEnd && !referenced.empty && front == referenced.front)
+                        {
+                            next();
+                            referenced.popFront();
+                        }
+                        if(referenced.empty)
+                            pc--;
+                        else
+                            goto L_backtrack;
+                        break;
+                        case IR.Nop:
+                        pc --;
+                        break;
+                    case IR.LookbehindStart:
+                    case IR.NeglookbehindStart:
+                        return true;
+                    default:
+                        assert(re.ir[pc].code < 0x80);
+                        pc --; //data
+                        break;
+                    L_backtrack:
+                        if(!popState())
+                        {
+                            s.reset(start);
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+    }
+}
+
+//very shitty string formatter, $$ replaced with next argument converted to string
+@trusted string ctSub( U...)(string format, U args)
+{
+    bool seenDollar;
+    foreach(i, ch; format)
+    {
+        if(ch == '$')
+        {
+            if(seenDollar)
+            {
+                static if(args.length > 0)
+                {
+                    return  format[0..i-1] ~ to!string(args[0])
+                        ~ ctSub(format[i+1..$], args[1..$]);
+                }
+                else
+                    assert(0);
+            }
+            else
+                seenDollar = true;
+        }
+        else
+            seenDollar = false;
+
+    }
+    return format;
+}
+
+//generate code for TypeTuple(S, S+1, S+2, ... E)
+@system string ctGenSeq(int S, int E)
+{
+    string s = "alias TypeTuple!(";
+    if(S < E)
+        s ~= to!string(S);
+    for(int i=S+1; i<E;i++)
+    {
+        s ~= ", ";
+        s ~= to!string(i);
+    }
+    return s ~") Sequence;";
+}
+
+//alias to TypeTuple(S, S+1, S+2, ... E)
+template Sequence(int S, int E)
+{
+    mixin(ctGenSeq(S,E));
+}
+
+struct CtContext
+{
+    //dirty flags
+    bool counter, infNesting;
+    int nInfLoops; // to make a unique advancement counter per loop
+    int match, total_matches;
+
+
+    //state of codegenerator
+    struct CtState
+    {
+        string code;
+        int addr;
+    }
+
+    this(Char)(Regex!Char re)
+    {
+        match = 1;
+        total_matches = re.ngroup;
+    }
+
+    //restore state having current context
+    string restoreCode()
+    {
+        string text;
+        //stack is checked in L_backtrack
+        text ~= counter
+            ? "
+                    stackPop(counter);"
+            : "
+                    counter = 0;";
+        if(match < total_matches)
+        {
+            text ~= ctSub("
+                    stackPop(matches[1..$$]);", match);
+            text ~= ctSub("
+                    matches[$$..$] = typeof(matches[0]).init;", match);
+        }
+        else
+            text ~= "
+                    stackPop(matches[1..$]);";
+        return text;
+    }
+
+    //save state having current context
+    string saveCode(uint pc, string count_expr="counter")
+    {
+        string text = ctSub("
+                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
+                    {
+                        newStack();
+                        lastState = 0;
+                    }", match-1, cast(int)counter + 2);
+        if(match < total_matches)
+            text ~= ctSub("
+                    stackPush(matches[1..$$]);", match);
+        else
+            text ~= "
+                    stackPush(matches[1..$]);";
+        text ~= counter ? ctSub("
+                    stackPush($$);", count_expr) : "";
+        text ~= ctSub("
+                    stackPush(index); stackPush($$); \n", pc);
+        return text;
+    }
+
+    //
+    CtState ctGenBlock(Bytecode[] ir, int addr)
+    {
+        CtState result;
+        result.addr = addr;
+        while(!ir.empty)
+        {
+            auto n = ctGenGroup(ir, result.addr);
+            result.code ~= n.code;
+            result.addr = n.addr;
         }
         return result;
     }
 
-/* ***********************************
- * Like replace(char[] format), but uses old style formatting:
-                <table border=1 cellspacing=0 cellpadding=5>
-                <th>Format
-                <th>Description
-                <tr>
-                <td><b>&</b>
-                <td>replace with the match
-                </tr>
-                <tr>
-                <td><b>\</b><i>n</i>
-                <td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
-                </tr>
-                <tr>
-                <td><b>\</b><i>c</i>
-                <td>replace with char <i>c</i>.
-                </tr>
-                </table>
-*/
-
-    deprecated private string replaceOld(string format)
+    //
+    CtState ctGenGroup(ref Bytecode[] ir, int addr)
     {
-        string result;
-
-//writefln("replace: this = %p so = %d, eo = %d", this, pmatch[0].startIdx, pmatch[0].endIdx);
-//writefln("3input = '%s'", input);
-        result.length = format.length;
-        result.length = 0;
-        for (size_t i; i < format.length; i++)
+        CtState r;
+        assert(!ir.empty);
+        switch(ir[0].code)
         {
-            char c = format[i];
-            switch (c)
-            {
-            case '&':
-                result ~= to!string(
-                    input[pmatch[0].startIdx .. pmatch[0].endIdx]);
-                break;
+        case IR.InfiniteStart, IR.InfiniteQStart, IR.RepeatStart, IR.RepeatQStart:
+            bool infLoop =
+                ir[0].code == IR.InfiniteStart || ir[0].code == IR.InfiniteQStart;
+            infNesting = infNesting || infLoop;
+            if(infLoop)
+                nInfLoops++;
+            counter = counter ||
+                ir[0].code == IR.RepeatStart || ir[0].code == IR.RepeatQStart;
+            uint len = ir[0].data;
+            auto nir = ir[ir[0].length .. ir[0].length+len];
+            r = ctGenBlock(nir, addr+1);
+            //start/end codegen
+            //r.addr is at last test+ jump of loop, addr+1 is body of loop
+            nir = ir[ir[0].length+len..$];
+            r.code = ctGenFixupCode(ir[0..ir[0].length], addr, r.addr) ~ r.code;
+            r.code ~= ctGenFixupCode(nir, r.addr, addr+1);
+            r.addr += 2;   //account end instruction + restore state
+            ir = nir;
+            break;
+        case IR.OrStart:
+            uint len = ir[0].data;
+            auto nir = ir[ir[0].length .. ir[0].length+len];
+            r = ctGenAlternation(nir, addr);
+            ir = ir[ir[0].length+len..$];
+            assert(ir[0].code == IR.OrEnd);
+            ir = ir[ir[0].length..$];
+            break;
+        default:
+            assert(ir[0].isAtom,  text(ir[0].mnemonic));
+            r = ctGenAtom(ir, addr);
+        }
+        return r;
+    }
 
-            case '\\':
-                if (i + 1 < format.length)
-                {
-                    c = format[++i];
-                    if (c >= '1' && c <= '9')
+    //generate source for bytecode contained  in OrStart ... OrEnd
+    CtState ctGenAlternation(Bytecode[] ir, int addr)
+    {
+        CtState[] pieces;
+        CtState r;
+        enum optL = IRL!(IR.Option);
+        for(;;)
+        {
+            assert(ir[0].code == IR.Option);
+            auto len = ir[0].data;
+            auto nir = ir[optL .. optL+len-IRL!(IR.GotoEndOr)];
+            if(optL+len < ir.length  && ir[optL+len].code == IR.Option)//not a last option
+            {
+                r = ctGenBlock(nir, addr+2);//space for Option + restore state
+                //r.addr+1 to account GotoEndOr  at end of branch
+                r.code = ctGenFixupCode(ir[0 .. ir[0].length], addr, r.addr+1) ~ r.code;
+                addr = r.addr+1;//leave space for GotoEndOr
+                pieces ~= r;
+                ir = ir[optL+len..$];
+            }
+            else
+            {
+                pieces ~= ctGenBlock(ir[optL..$], addr);
+                addr = pieces[$-1].addr;
+                break;
+            }
+
+        }
+        r = pieces[0];
+        for(uint i=1; i<pieces.length; i++)
+        {
+            r.code ~= ctSub(`
+                case $$:
+                    goto case $$; `, pieces[i-1].addr, addr);
+            r.code ~= pieces[i].code;
+        }
+        r.addr = addr;
+        return r;
+    }
+
+    // generate fixup code for instruction in ir,
+    // fixup means it has an alternative way for control flow
+    string ctGenFixupCode(ref Bytecode[] ir, int addr, int fixup)
+    {
+        string r;
+        string testCode;
+        r = ctSub(`
+                case $$: debug(fred_matching) writeln("$$");`,
+                    addr, addr);
+        switch(ir[0].code)
+        {
+        case IR.InfiniteStart, IR.InfiniteQStart:
+            r ~= ctSub( `
+                    tracker_$$ = DataIndex.max;
+                    goto case $$;`, nInfLoops-1, fixup);
+            ir = ir[ir[0].length..$];
+            break;
+        case IR.InfiniteEnd:
+            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd)..$],addr+1);
+            r ~= ctSub( `
+                    if(tracker_$$ == index)
+                    {//source not consumed
+                        goto case $$;
+                    }
+                    tracker_$$ = index;
+
+                    $$
                     {
-                        uint j = c - '0';
-                        if (j <= engine.re_nsub && pmatch[j].startIdx
-                                != pmatch[j].endIdx)
-                            result ~= to!string
-                                (input[pmatch[j].startIdx .. pmatch[j].endIdx]);
+                        $$
+                    }
+                    goto case $$;
+                case $$: //restore state and go out of loop
+                    $$
+                    goto case;`, nInfLoops-1, addr+2
+                    , nInfLoops-1, testCode, saveCode(addr+1)
+                    , fixup, addr+1, restoreCode());
+            ir = ir[ir[0].length..$];
+            break;
+        case IR.InfiniteQEnd:
+            testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd)..$],addr+1);
+            r ~= ctSub( `
+                    if(tracker_$$ == index)
+                    {//source not consumed
+                        goto case $$;
+                    }
+                    tracker_$$ = index;
+
+                    $$
+                    {
+                        $$
+                        goto case $$;
+                    }
+                    else
+                        goto case $$;
+                case $$://restore state and go inside loop
+                    $$
+                    goto case $$;`, nInfLoops-1, addr+2, nInfLoops-1
+                        , testCode, saveCode(addr+1)
+                        , addr+2, fixup, addr+1, restoreCode(), fixup);
+            ir = ir[ir[0].length..$];
+            break;
+        case IR.RepeatStart, IR.RepeatQStart:
+            r ~= ctSub( `
+                    goto case $$;`, fixup);
+            ir = ir[ir[0].length..$];
+            break;
+         case IR.RepeatEnd, IR.RepeatQEnd:
+            //len, step, min, max
+            uint len = ir[0].data;
+            uint step = ir[2].raw;
+            uint min = ir[3].raw;
+            uint max = ir[4].raw;
+            r ~= ctSub(`
+                    if(counter < $$)
+                    {
+                        debug(fred_matching) writeln("RepeatEnd min case pc=", $$);
+                        counter += $$;
+                        goto case $$;
+                    }`,  min, addr, step, fixup);
+            if(ir[0].code == IR.RepeatEnd)
+            {
+                string counter_expr = ctSub("counter % $$", step);
+                r ~= ctSub(`
+                    else if(counter < $$)
+                    {
+                            $$
+                            counter += $$;
+                            goto case $$;
+                    }`, max, saveCode(addr+1, counter_expr), step, fixup);
+            }
+            else
+            {
+                string counter_expr = ctSub("counter % $$", step);
+                r ~= ctSub(`
+                    else if(counter < $$)
+                    {
+                        $$
+                        counter = counter % $$;
+                        goto case $$;
+                    }`, max, saveCode(addr+1,counter_expr), step, addr+2);
+            }
+            r ~= ctSub(`
+                    else
+                    {
+                        counter = counter % $$;
+                        goto case $$;
+                    }
+                case $$: //restore state
+                    $$
+                    goto case $$;`, step, addr+2, addr+1, restoreCode()
+                        , ir[0].code == IR.RepeatEnd ? addr+2 : fixup );
+            ir = ir[ir[0].length..$];
+            break;
+        case IR.Option:
+                r ~= ctSub( `
+                    {
+                        $$
+                    }
+                    goto case $$;
+                case $$://restore thunk to go to the next group
+                    $$
+                    goto case $$;`, saveCode(addr+1), addr+2
+                        , addr+1, restoreCode(), fixup);
+                ir = ir[ir[0].length..$];
+                break;
+        default:
+            assert(0, text(ir[0].mnemonic));
+        }
+        return r;
+    }
+
+
+    string ctQuickTest(Bytecode[] ir, int id)
+    {
+        uint pc=0;
+        while(pc < ir.length && ir[pc].isAtom)
+        {
+            if(ir[pc].code == IR.GroupStart || ir[pc].code == IR.GroupEnd)
+            {
+                pc++;
+            }
+            else
+            {
+                auto code = ctAtomCode(ir[pc..$], -1);
+                return ctSub(`
+                    int test_$$()
+                    {
+                        $$ //$$
+                    }
+                    if(test_$$() >= 0)`, id, code ? code : "return 0;"
+                        , ir[pc].mnemonic, id);
+            }
+        }
+        return "";
+    }
+
+    //process & generate source for simple bytecodes at front of ir using address addr
+    CtState ctGenAtom(ref Bytecode[] ir, int addr)
+    {
+        CtState result;
+        result.code = ctAtomCode(ir, addr);
+        ir.popFrontN(ir[0].code == IR.OrChar ? ir[0].sequence : ir[0].length);
+        result.addr = addr + 1;
+        return result;
+    }
+
+    //D code for atom at ir using address addr, addr < 0 means quickTest
+    string ctAtomCode(Bytecode[] ir, int addr)
+    {
+        string code;
+        string bailOut, nextInstr;
+        if(addr < 0)
+        {
+            bailOut = "return -1;";
+            nextInstr = "return 0;";
+        }
+        else
+        {
+            bailOut = "goto L_backtrack;";
+            nextInstr = ctSub("goto case $$;", addr+1);
+            code ~=  ctSub( `
+                 case $$: debug(fred_matching) writeln("#$$");
+                    `, addr, addr);
+        }
+        switch(ir[0].code)
+        {
+        case IR.OrChar://assumes IRL!(OrChar) == 1
+            code ~=  ctSub(`
+                    if(atEnd)
+                        $$`, bailOut);
+            uint len = ir[0].sequence;
+            for(uint i = 0; i<len; i++)
+            {
+                code ~= ctSub( `
+                    if(front == $$)
+                    {
+                        $$
+                        $$
+                    }`,   ir[i].data, addr >= 0 ? "next();" :"", nextInstr);
+            }
+            code ~= ctSub( `
+                $$`, bailOut);
+            break;
+        case IR.Char:
+            code ~= ctSub( `
+                    if(atEnd || front != $$)
+                        $$
+                    $$
+                    $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
+            break;
+        case IR.Any:
+            code ~= ctSub( `
+                    if(atEnd || (!(re.flags & RegexOption.singleline)
+                                && (front == '\r' || front == '\n')))
+                        $$
+                    $$
+                    $$`, bailOut, addr >= 0 ? "next();" :"",nextInstr);
+            break;
+        case IR.CodepointSet:
+            code ~= ctSub( `
+                    if(atEnd || !re.charsets[$$].scanFor(front))
+                        $$
+                    $$
+                $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
+            break;
+        case IR.Trie:
+            code ~= ctSub( `
+                    if(atEnd || !re.tries[$$][front])
+                        $$
+                    $$
+                $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
+            break;
+        case IR.Wordboundary:
+            code ~= ctSub( `
+                    dchar back;
+                    DataIndex bi;
+                    if(atStart && wordTrie[front])
+                    {
+                        $$
+                    }
+                    else if(atEnd && s.loopBack.nextChar(back, bi)
+                            && wordTrie[back])
+                    {
+                        $$
+                    }
+                    else if(s.loopBack.nextChar(back, bi))
+                    {
+                        bool af = wordTrie[front];
+                        bool ab = wordTrie[back];
+                        if(af ^ ab)
+                        {
+                            $$
+                        }
+                    }
+                    $$`
+                , nextInstr, nextInstr, nextInstr, bailOut);
+            break;
+        case IR.Notwordboundary:
+            code ~= ctSub( `
+                    dchar back;
+                    DataIndex bi;
+                    //at start & end of input
+                    if(atStart && wordTrie[front])
+                        $$
+                    else if(atEnd && s.loopBack.nextChar(back, bi)
+                            && wordTrie[back])
+                        $$
+                    else if(s.loopBack.nextChar(back, index))
+                    {
+                        bool af = wordTrie[front];
+                        bool ab = wordTrie[back];
+                        if(af ^ ab)
+                            $$
+                    }
+                    $$`, bailOut, bailOut, bailOut, nextInstr);
+
+            break;
+        case IR.Bol:
+            code ~= ctSub(`
+                    dchar back;
+                    DataIndex bi;
+                    if(atStart || ((re.flags & RegexOption.multiline)
+                        && s.loopBack.nextChar(back,bi)
+                        && endOfLine(back, front == '\n')))
+                    {
+                        $$
+                    }
+                    else
+                        $$`, nextInstr, bailOut);
+
+            break;
+        case IR.Eol:
+            code ~= ctSub(`
+                    dchar back;
+                    DataIndex bi;
+                    debug(fred_matching) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                    //no matching inside \r\n
+                    if(atEnd || ((re.flags & RegexOption.multiline)
+                             && s.loopBack.nextChar(back,bi)
+                            && endOfLine(front, back == '\r')))
+                    {
+                        $$
+                    }
+                    else
+                        $$`, nextInstr, bailOut);
+
+            break;
+        case IR.GroupStart:
+            code ~= ctSub(`
+                    matches[$$].begin = index;
+                    $$`, ir[0].data, nextInstr);
+            match = ir[0].data+1;
+            break;
+        case IR.GroupEnd:
+            code ~= ctSub(`
+                    matches[$$].end = index;
+                    $$`, ir[0].data, nextInstr);
+            break;
+        case IR.Backref:
+            string mStr = ir[0].localRef
+                ? ctSub("matches[$$].begin .. matches[$$].end];", ir[0].data, ir[0].data)
+                : ctSub("s[backrefed[$$].begin .. backrefed[$$].end];",ir[0].data, ir[0].data);
+            code ~= ctSub( `
+                    $$
+                    while(!atEnd && !referenced.empty && front == referenced.front)
+                    {
+                        next();
+                        referenced.popFront();
+                    }
+                    if(referenced.empty)
+                        $$
+                    else
+                        $$`, mStr, nextInstr, bailOut);
+            break;
+        case IR.Nop:
+        case IR.End:
+            break;
+        default:
+            assert(0, text(ir[0].mnemonic, "is not supported yet"));
+        }
+        return code;
+    }
+
+    //generate D code for the whole regex
+    public string ctGenRegEx(Char)(ref Regex!Char re)
+    {
+        auto bdy = ctGenBlock(re.ir, 0);
+        auto r = `
+            with(matcher)
+            {
+            pc = 0;
+            counter = 0;
+            lastState = 0;
+            auto start = s._index;`;
+        for(int i=0; i<nInfLoops; i++)
+            r ~= ctSub(`
+            size_t tracker_$$;`, i);
+        r ~= `
+            goto StartLoop;
+            debug(fred_matching) writeln("Try CT matching  starting at ",s[index..s.lastIndex]);
+        L_backtrack:
+            if(lastState || prevStack())
+            {
+                stackPop(pc);
+                stackPop(index);
+                s.reset(index);
+                next();
+            }
+            else
+            {
+                s.reset(start);
+                return false;
+            }
+        StartLoop:
+            switch(pc)
+            {
+        `;
+        r ~= bdy.code;
+        r ~= ctSub(`
+                case $$: break;`,bdy.addr);
+        r ~= `
+            default:
+                assert(0);
+            }
+            return true;
+            }
+        `;
+        return r;
+    }
+
+}
+
+string ctGenRegExCode(Char)(Regex!Char re)
+{
+    auto context = CtContext(re);
+    return context.ctGenRegEx(re);
+}
+
+//State of VM thread
+struct Thread(DataIndex)
+{
+    Thread* next;    //intrusive linked list
+    uint pc;
+    uint counter;    //loop counter
+    uint uopCounter; //counts micro operations inside one macro instruction (e.g. BackRef)
+    Group!DataIndex[1] matches;
+}
+
+//head-tail singly-linked list
+struct ThreadList(DataIndex)
+{
+    Thread!DataIndex* tip=null, toe=null;
+    //add new thread to the start of list
+    void insertFront(Thread!DataIndex* t)
+    {
+        if(tip)
+        {
+            t.next = tip;
+            tip = t;
+        }
+        else
+        {
+            t.next = null;
+            tip = toe = t;
+        }
+    }
+    //add new thread to the end of list
+    void insertBack(Thread!DataIndex* t)
+    {
+        if(toe)
+        {
+            toe.next = t;
+            toe = t;
+        }
+        else
+            tip = toe = t;
+        toe.next = null;
+    }
+    //move head element out of list
+    Thread!DataIndex* fetch()
+    {
+        auto t = tip;
+        if(tip == toe)
+            tip = toe = null;
+        else
+            tip = tip.next;
+        return t;
+    }
+    //non-destructive iteration of ThreadList
+    struct ThreadRange
+    {
+        const(Thread!DataIndex)* ct;
+        this(ThreadList tlist){ ct = tlist.tip; }
+        @property bool empty(){ return ct is null; }
+        @property const(Thread!DataIndex)* front(){ return ct; }
+        @property popFront()
+        {
+            assert(ct);
+            ct = ct.next;
+        }
+    }
+    @property bool empty()
+    {
+        return tip == null;
+    }
+    ThreadRange opSlice()
+    {
+        return ThreadRange(this);
+    }
+}
+
+//direction parameter for thompson one-shot match evaluator
+enum OneShot { Fwd, Bwd };
+
+/+
+   Thomspon matcher does all matching in lockstep,
+   never looking at the same char twice
++/
+@trusted struct ThompsonMatcher(Char, Stream=Input!Char)
+    if(is(Char : dchar))
+{
+    alias Stream.DataIndex DataIndex;
+    alias const(Char)[] String;
+    enum threadAllocSize = 16;
+    Thread!DataIndex* freelist;
+    ThreadList!DataIndex clist, nlist;
+    DataIndex[] merge;
+    Group!DataIndex[] backrefed;
+    Regex!Char re;           //regex program
+    Stream s;
+    dchar front;
+    DataIndex index;
+    DataIndex genCounter;    //merge trace counter, goes up on every dchar
+    size_t threadSize;
+    bool matched;
+    bool exhausted;
+    static if(__traits(hasMember,Stream, "search"))
+    {
+        enum kicked = true;
+    }
+    else
+        enum kicked = false;
+
+    static size_t getThreadSize(const ref Regex!Char re)
+    {
+        return re.ngroup
+            ? (Thread!DataIndex).sizeof + (re.ngroup-1)*(Group!DataIndex).sizeof
+            : (Thread!DataIndex).sizeof - (Group!DataIndex).sizeof;
+    }
+
+    static size_t initialMemory(const ref Regex!Char re)
+    {
+        return getThreadSize(re)*re.threadCount + re.hotspotTableSize*size_t.sizeof;
+    }
+
+    //true if it's start of input
+    @property bool atStart(){   return index == 0; }
+
+    //true if it's end of input
+    @property bool atEnd(){  return index == s.lastIndex && s.atEnd; }
+
+    bool next()
+    {
+        if(!s.nextChar(front, index))
+        {
+            index =  s.lastIndex;
+            return false;
+        }
+        return true;
+    }
+
+    static if(kicked)
+    {
+        bool search()
+        {
+
+            if(!s.search(re.kickstart, front, index))
+            {
+                index = s.lastIndex;
+                return false;
+            }
+            return true;
+        }
+    }
+
+    this()(Regex!Char program, Stream stream, void[] memory)
+    {
+        re = program;
+        s = stream;
+        threadSize = getThreadSize(re);
+        prepareFreeList(re.threadCount, memory);
+        if(re.hotspotTableSize)
+        {
+            merge = arrayInChunk!(DataIndex)(re.hotspotTableSize, memory);
+            merge[] = 0;
+        }
+        genCounter = 0;
+    }
+
+    this(S)(ref ThompsonMatcher!(Char,S) matcher, Bytecode[] piece, Stream stream)
+    {
+        s = stream;
+        re = matcher.re;
+        re.ir = piece;
+        threadSize = matcher.threadSize;
+        merge = matcher.merge;
+        genCounter = matcher.genCounter;
+        freelist = matcher.freelist;
+    }
+
+    this(this)
+    {
+        merge[] = 0;
+        debug(fred_allocation) writeln("ThompsonVM postblit!");
+        //free list is  efectively shared ATM
+    }
+
+    enum MatchResult{
+        NoMatch,
+        PartialMatch,
+        Match,
+    }
+
+    //match the input and fill matches
+    bool match(Group!DataIndex[] matches)
+    {
+        debug(fred_matching)
+            writeln("------------------------------------------");
+        if(exhausted)
+        {
+
+            return false;
+        }
+        if(re.flags & RegexInfo.oneShot)
+        {
+            next();
+            exhausted = true;
+            return matchOneShot!(OneShot.Fwd)(matches)==MatchResult.Match;
+        }
+        static if(kicked)
+            auto searchFn = re.kickstart.empty ? &this.next : &this.search;
+        else
+            auto searchFn = &this.next;
+        if((!matched) && clist.empty)
+        {
+           searchFn();
+        }
+        else//char in question is  fetched in prev call to match
+        {
+            matched = false;
+        }
+
+        if(!atEnd)//if no char
+            for(;;)
+            {
+                genCounter++;
+                debug(fred_matching)
+                {
+                    writefln("Threaded matching threads at  %s", s[index..s.lastIndex]);
+                    foreach(t; clist[])
+                    {
+                        assert(t);
+                        writef("pc=%s ",t.pc);
+                        write(t.matches);
+                        writeln();
+                    }
+                }
+                for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
+                {
+                    eval!true(t, matches);
+                }
+                if(!matched)//if we already have match no need to push the engine
+                    eval!true(createStart(index), matches);//new thread staring at this position
+                else if(nlist.empty)
+                {
+                    debug(fred_matching) writeln("Stopped  matching before consuming full input");
+                    break;//not a partial match for sure
+                }
+                clist = nlist;
+                nlist = (ThreadList!DataIndex).init;
+                if(clist.tip is null)
+                {
+                    if(!searchFn())
+                        break;
+                }
+                else if(!next()){
+                    if (!atEnd) return false;
+                    exhausted = true;
+                    break;
+                }
+            }
+        else
+            exhausted = true;
+        genCounter++; //increment also on each end
+        debug(fred_matching) writefln("Threaded matching threads at end");
+        //try out all zero-width posibilities
+        for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
+        {
+            eval!false(t, matches);
+        }
+        if(!matched)
+            eval!false(createStart(index), matches);//new thread starting at end of input
+        if(matched && !(re.flags & RegexOption.global))
+           exhausted = true;
+        return matched;
+    }
+
+    /+
+        handle succesful threads
+    +/
+    void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches)
+    {
+        matches.ptr[0..re.ngroup] = t.matches.ptr[0..re.ngroup];
+        debug(fred_matching)
+        {
+            writef("FOUND pc=%s prog_len=%s",
+                    t.pc, re.ir.length);
+            if(!matches.empty)
+                writefln(": %s..%s", matches[0].begin, matches[0].end);
+            foreach(v; matches)
+                writefln("%d .. %d", v.begin, v.end);
+        }
+        matched = true;
+    }
+
+    /+
+        match thread against codepoint, cutting trough all 0-width instructions
+        and taking care of control flow, then add it to nlist
+    +/
+    void eval(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
+    {
+        ThreadList!DataIndex worklist;
+        debug(fred_matching) writeln("Evaluating thread");
+        for(;;)
+        {
+            debug(fred_matching)
+            {
+                writef("\tpc=%s [", t.pc);
+                foreach(x; worklist[])
+                    writef(" %s ", x.pc);
+                writeln("]");
+            }
+            switch(re.ir[t.pc].code)
+            {
+            case IR.End:
+                finish(t, matches);
+                matches[0].end = index; //fix endpoint of the whole match
+                recycle(t);
+                //cut off low priority threads
+                recycle(clist);
+                recycle(worklist);
+                debug(fred_matching) writeln("Finished thread ", matches);
+                return;
+            case IR.Wordboundary:
+                dchar back;
+                DataIndex bi;
+                //at start & end of input
+                if(atStart && wordTrie[front])
+                {
+                    t.pc += IRL!(IR.Wordboundary);
+                    break;
+                }
+                else if(atEnd && s.loopBack.nextChar(back, bi)
+                        && wordTrie[back])
+                {
+                    t.pc += IRL!(IR.Wordboundary);
+                    break;
+                }
+                else if(s.loopBack.nextChar(back, index))
+                {
+                    bool af = wordTrie[front];
+                    bool ab = wordTrie[back];
+                    if(af ^ ab)
+                    {
+                        t.pc += IRL!(IR.Wordboundary);
                         break;
                     }
                 }
-                result ~= c;
+                recycle(t);
+                t = worklist.fetch();
+                if(!t)
+                    return;
                 break;
-
-            default:
-                result ~= c;
+            case IR.Notwordboundary:
+                dchar back;
+                DataIndex bi;
+                //at start & end of input
+                if(atStart && wordTrie[front])
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                else if(atEnd && s.loopBack.nextChar(back, bi)
+                        && wordTrie[back])
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                else if(s.loopBack.nextChar(back, index))
+                {
+                    bool af = wordTrie[front];
+                    bool ab = wordTrie[back]  != 0;
+                    if(af ^ ab)
+                    {
+                        recycle(t);
+                        t = worklist.fetch();
+                        if(!t)
+                            return;
+                        break;
+                    }
+                }
+                t.pc += IRL!(IR.Wordboundary);
                 break;
+            case IR.Bol:
+                dchar back;
+                DataIndex bi;
+                if(atStart
+                    ||( (re.flags & RegexOption.multiline)
+                    && s.loopBack.nextChar(back,bi)
+                    && startOfLine(back, front == '\n')))
+                {
+                    t.pc += IRL!(IR.Bol);
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                }
+                break;
+            case IR.Eol:
+                debug(fred_matching) writefln("EOL (front 0x%x) %s",  front, s[index..s.lastIndex]);
+                dchar back;
+                DataIndex bi;
+                //no matching inside \r\n
+                if(atEnd || ((re.flags & RegexOption.multiline)
+                    && endOfLine(front, s.loopBack.nextChar(back, bi)
+                        && back == '\r')))
+                {
+                    t.pc += IRL!(IR.Eol);
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                }
+                break;
+            case IR.InfiniteStart, IR.InfiniteQStart:
+                t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteStart);
+                goto case IR.InfiniteEnd; //both Q and non-Q
+            case IR.RepeatStart, IR.RepeatQStart:
+                t.pc += re.ir[t.pc].data + IRL!(IR.RepeatStart);
+                goto case IR.RepeatEnd; //both Q and non-Q
+            case IR.RepeatEnd:
+            case IR.RepeatQEnd:
+                //len, step, min, max
+                uint len = re.ir[t.pc].data;
+                uint step =  re.ir[t.pc+2].raw;
+                uint min = re.ir[t.pc+3].raw;
+                if(t.counter < min)
+                {
+                    t.counter += step;
+                    t.pc -= len;
+                    break;
+                }
+                if(merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                uint max = re.ir[t.pc+4].raw;
+                if(t.counter < max)
+                {
+                    if(re.ir[t.pc].code == IR.RepeatEnd)
+                    {
+                        //queue out-of-loop thread
+                        worklist.insertFront(fork(t, t.pc + IRL!(IR.RepeatEnd),  t.counter % step));
+                        t.counter += step;
+                        t.pc -= len;
+                    }
+                    else
+                    {
+                        //queue into-loop thread
+                        worklist.insertFront(fork(t, t.pc - len,  t.counter + step));
+                        t.counter %= step;
+                        t.pc += IRL!(IR.RepeatEnd);
+                    }
+                }
+                else
+                {
+                    t.counter %= step;
+                    t.pc += IRL!(IR.RepeatEnd);
+                }
+                break;
+            case IR.InfiniteEnd:
+            case IR.InfiniteQEnd:
+                if(merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                uint len = re.ir[t.pc].data;
+                uint pc1, pc2; //branches to take in priority order
+                if(re.ir[t.pc].code == IR.InfiniteEnd)
+                {
+                    pc1 = t.pc - len;
+                    pc2 = t.pc + IRL!(IR.InfiniteEnd);
+                }
+                else
+                {
+                    pc1 = t.pc + IRL!(IR.InfiniteEnd);
+                    pc2 = t.pc - len;
+                }
+                static if(withInput)
+                {
+                    int test = quickTestFwd(pc1, front, re);
+                    if(test > 0)
+                    {
+                        nlist.insertBack(fork(t, pc1 + test, t.counter));
+                        t.pc = pc2;
+                    }
+                    else if(test == 0)
+                    {
+                        worklist.insertFront(fork(t, pc2, t.counter));
+                        t.pc = pc1;
+                    }
+                    else
+                        t.pc = pc2;
+                }
+                else
+                {
+                    worklist.insertFront(fork(t, pc2, t.counter));
+                    t.pc = pc1;
+                }
+                break;
+            case IR.OrEnd:
+                if(merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, s[index..s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                    t.pc += IRL!(IR.OrEnd);
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, s[index..s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                }
+                break;
+            case IR.OrStart:
+                t.pc += IRL!(IR.OrStart);
+                goto case;
+            case IR.Option:
+                uint next = t.pc + re.ir[t.pc].data + IRL!(IR.Option);
+                //queue next Option
+                if(re.ir[next].code == IR.Option)
+                {
+                    worklist.insertFront(fork(t, next, t.counter));
+                }
+                t.pc += IRL!(IR.Option);
+                break;
+            case IR.GotoEndOr:
+                t.pc = t.pc + re.ir[t.pc].data + IRL!(IR.GotoEndOr);
+                goto case IR.OrEnd;
+            case IR.GroupStart:
+                uint n = re.ir[t.pc].data;
+                t.matches.ptr[n].begin = index;
+                t.pc += IRL!(IR.GroupStart);
+                break;
+            case IR.GroupEnd:
+                uint n = re.ir[t.pc].data;
+                t.matches.ptr[n].end = index;
+                t.pc += IRL!(IR.GroupEnd);
+                break;
+            case IR.Backref:
+                uint n = re.ir[t.pc].data;
+                Group!DataIndex* source = re.ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
+                assert(source);
+                if(source[n].begin == source[n].end)//zero-width Backref!
+                {
+                    t.pc += IRL!(IR.Backref);
+                }
+                else static if(withInput)
+                {
+                    size_t idx = source[n].begin + t.uopCounter;
+                    size_t end = source[n].end;
+                    if(s[idx..end].front == front)
+                    {
+                        t.uopCounter += std.utf.stride(s[idx..end], 0);
+                        if(t.uopCounter + source[n].begin == source[n].end)
+                        {//last codepoint
+                            t.pc += IRL!(IR.Backref);
+                            t.uopCounter = 0;
+                        }
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                break;
+            case IR.LookbehindStart:
+            case IR.NeglookbehindStart:
+                auto matcher =
+                    ThompsonMatcher!(Char, typeof(s.loopBack))
+                    (this, re.ir[t.pc..t.pc+re.ir[t.pc].data+IRL!(IR.LookbehindStart)], s.loopBack);
+                matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
+                matcher.backrefed = backrefed.empty ? t.matches : backrefed;
+                //backMatch
+                matcher.next(); //load first character from behind
+                bool match = (matcher.matchOneShot!(OneShot.Bwd)(t.matches)==MatchResult.Match) ^ (re.ir[t.pc].code == IR.LookbehindStart);
+                freelist = matcher.freelist;
+                genCounter = matcher.genCounter;
+                if(match)
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                else
+                    t.pc += re.ir[t.pc].data + IRL!(IR.LookbehindStart) + IRL!(IR.LookbehindEnd);
+                break;
+            case IR.LookaheadEnd:
+            case IR.NeglookaheadEnd:
+                t.pc = re.ir[t.pc].indexOfPair(t.pc);
+                assert(re.ir[t.pc].code == IR.LookaheadStart || re.ir[t.pc].code == IR.NeglookaheadStart);
+                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+                finish(t, matches.ptr[ms..me]);
+                recycle(t);
+                //cut off low priority threads
+                recycle(clist);
+                recycle(worklist);
+                return;
+            case IR.LookaheadStart:
+            case IR.NeglookaheadStart:
+                auto save = index;
+                uint len = re.ir[t.pc].data;
+                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+                bool positive = re.ir[t.pc].code == IR.LookaheadStart;
+                auto matcher = ThompsonMatcher(this, re.ir[t.pc .. t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart)], s);
+                matcher.front = front;
+                matcher.index = index;
+                matcher.re.ngroup = me - ms;
+                matcher.backrefed = backrefed.empty ? t.matches : backrefed;
+                bool nomatch = (matcher.matchOneShot!(OneShot.Fwd)(t.matches, IRL!(IR.LookaheadStart)) == MatchResult.Match) ^ positive;
+                freelist = matcher.freelist;
+                genCounter = matcher.genCounter;
+                s.reset(index);
+                next();
+                if(nomatch)
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                }
+                else
+                    t.pc += len + IRL!(IR.LookaheadEnd) + IRL!(IR.LookaheadStart);
+                break;
+            case IR.LookbehindEnd:
+            case IR.NeglookbehindEnd:
+                assert(0);
+            case IR.Nop:
+                t.pc += IRL!(IR.Nop);
+                break;
+            static if(withInput)
+            {
+                case IR.OrChar:
+                    uint len = re.ir[t.pc].sequence;
+                    uint end = t.pc + len;
+                    static assert(IRL!(IR.OrChar) == 1);
+                    for(; t.pc<end; t.pc++)
+                        if(re.ir[t.pc].data == front)
+                            break;
+                    if(t.pc != end)
+                    {
+                       t.pc = end;
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                case IR.Char:
+                    if(front == re.ir[t.pc].data)
+                    {
+                        t.pc += IRL!(IR.Char);
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                case IR.Any:
+                    t.pc += IRL!(IR.Any);
+                    if(!(re.flags & RegexOption.singleline)
+                            && (front == '\r' || front == '\n'))
+                        recycle(t);
+                    else
+                        nlist.insertBack(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                case IR.CodepointSet:
+                    if(re.charsets[re.ir[t.pc].data].scanFor(front))
+                    {
+                        t.pc += IRL!(IR.CodepointSet);
+                        nlist.insertBack(t);
+                    }
+                    else
+                    {
+                        recycle(t);
+                    }
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                case IR.Trie:
+                    if(re.tries[re.ir[t.pc].data][front])
+                    {
+                        t.pc += IRL!(IR.Trie);
+                        nlist.insertBack(t);
+                    }
+                    else
+                    {
+                        recycle(t);
+                    }
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    break;
+                default:
+                    assert(0, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
+            }
+            else
+            {
+                default:
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(t)
+                       break;
+                    else
+                        return;
+            }
             }
         }
-        return result;
+
     }
-} // end of class RegexMatch
-
-unittest
-{
-    debug(std_regex) writefln("regex.replace.unittest()");
-    auto r = match("1ab2ac3", regex("a[bc]", "g"));
-    auto result = r.replaceAll("x$&y");
-    auto i = std.string.cmp(result, "1xaby2xacy3");
-    assert(i == 0);
-
-    r = match("1ab2ac3", regex("ab", "g"));
-    result = r.replaceAll("xy");
-    i = std.string.cmp(result, "1xy2ac3");
-    assert(i == 0);
-
-    r = match("wyda", regex("(giba)"));
-    assert(r.captures.length == 0);
-}
-
-unittest
-{
-    //@@@
-    assert(!match("abc", regex(".b.")).empty);
-    assert(match("abc", regex(".b..")).empty);
-}
-
-//------------------------------------------------------------------------------
-
-/**
-Matches a string against a regular expression. This is the main entry
-to the module's functionality. A call to $(D match(input, regex))
-returns a $(D RegexMatch) object that can be used for direct
-inspection or for iterating over all matches (if the regular
-expression was built with the "g" option).
- */
-RegexMatch!(Range) match(Range, Engine)(Range r, Engine engine)
-if (is(Unqual!Engine == Regex!(Unqual!(typeof(Range.init[0])))))
-{
-    return typeof(return)(engine, r);
-}
-
-RegexMatch!(Range) match(Range, E)(Range r, E[] engine, string opt = null)
-//if (is(Engine == Regex!(Unqual!(ElementType!(Range)))))
-{
-    return typeof(return)(regex(engine, opt), r);
-}
-
-unittest
-{
-
-    string abr = "abracadabra";
-    "abracadabra".match(regex("a[b-e]", "g"));
-    abr.match(regex("a[b-e]", "g"));
-    "abracadabra".match("a[b-e]", "g");
-    abr.match("a[b-e]", "g");
-    // Created and placed in public domain by Don Clugston
-    auto re = regex(`bc\x20r[\40]s`, "i");
-    auto m = match("aBC r s", re);
-    static assert(isForwardRange!(typeof(m)));
-    static assert(isRandomAccessRange!(typeof(m.captures())));
-
-    assert(m.pre=="a");
-    assert(m.hit=="BC r s");
-    auto m2 = match("7xxyxxx", regex(`^\d([a-z]{2})\D\1`));
-    assert(!m2.empty);
-    assert(m2.hit=="7xxyxx");
-    // Just check the parsing.
-    auto m3 = match("dcbxx", regex(`ca|b[\d\]\D\s\S\w-\W]`));
-    assert(!m3.empty);
-    auto m4 = match("xy", regex(`[^\ca-\xFa\r\n\b\f\t\v\0123]{2,485}$`));
-    assert(m4.empty);
-    auto m5 = match("xxx", regex(`^^\r\n\b{13,}\f{4}\t\v\u02aF3a\w\W`));
-    assert(m5.empty);
-    auto m6 = match("xxy", regex(`.*y`));
-    assert(!m6.empty);
-    assert(m6.hit=="xxy");
-    auto m7 = match("QWDEfGH"d, regex("(ca|b|defg)+"d, "i"));
-    assert(!m7.empty);
-    assert(m7.hit=="DEfG");
-    auto m8 = match("dcbxx"w, regex(`a?\B\s\S`w));
-    assert(m8.empty);
-    auto m9 = match("dcbxx"d, regex(`[-w]`d));
-    assert(m9.empty);
-    auto m10 = match("dcbsfd"w,
-            regex(`aB[c-fW]dB|\d|\D|\u012356|\w|\W|\s|\S`w, "i"));
-    assert(!m10.empty);
-    auto m11 = match("dcbsfd", regex(`[]a-]`));
-    assert(m11.empty);
-    //m.replaceOld(`a&b\1c`);
-    m.replace(`a$&b$'$1c`);
-}
-
-/******************************************************
-Search string for matches with regular expression pattern with
-attributes.  Replace the first match with string generated from $(D
-format). If the regular expression has the $(D "g") (global)
-attribute, continue and replace all matches.
-
-Params:
-input = Range to search.
-regex = Regular expression pattern.
-format = Replacement string format.
-
-Returns:
-The resulting string.
-
-Example:
----
-s = "ark rapacity";
-assert(replace(s, regex("r"), "c") == "ack rapacity");
-assert(replace(s, regex("r", "g"), "c") == "ack capacity");
----
-
-The replacement format can reference the matches using the $&amp;, $$,
-$', $`, $0 .. $99 notation:
-
----
-assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
----
- */
-
-Range replace(Range, Engine, String)(Range input, Engine regex, String format)
-if (is(Unqual!Engine == Regex!(Unqual!(typeof(Range.init[0])))))
-{
-    return RegexMatch!(Range)(regex, input).replaceAll(format);
-}
-
-unittest
-{
-    debug(std_regex) writefln("regex.sub.unittest");
-    assert(replace("hello", regex("ll"), "ss") == "hesso");
-    assert(replace("barat", regex("a"), "A") == "bArat");
-    assert(replace("barat", regex("a", "g"), "A") == "bArAt");
-    auto s = "ark rapacity";
-    assert(replace(s, regex("r"), "c") == "ack rapacity");
-    assert(replace(s, regex("r", "g"), "c") == "ack capacity");
-    assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
-}
-
-// @@@BUG@@@ workaround for bug 5003
-private bool _dummyTest(Engine)(ref Engine r, size_t idx)
-{
-    return r.test(idx);
-}
-
-// @@@BUG@@@ workaround for bug 5003
-private ubyte _dummyAttributes(Engine)(ref Engine r)
-{
-    return r.attributes;
-}
-
-/*******************************************************
-Search string for matches with regular expression pattern with
-attributes.  Pass each match to function $(D fun).  Replace each match
-with the return value from dg.
-
-Params:
-s = String to search.
-pattern = Regular expression pattern.
-dg = Delegate
-
-Returns: the resulting string.
-Example:
-Capitalize the letters 'a' and 'r':
----
-string baz(RegexMatch!(string) m)
-{
-    return std.string.toUpper(m.hit);
-}
-auto s = replace!(baz)("Strap a rocket engine on a chicken.",
-        regex("[ar]", "g"));
-assert(s == "StRAp A Rocket engine on A chicken.");
----
- */
-
-Range replace(alias fun, Range, Regex)
-(Range s, Regex rx)
-{
-    auto r = match(s, rx);
-
-    auto result = s;
-    size_t lastindex = 0;
-    size_t offset = 0;
-    // @@@BUG@@@ workaround for bug 5003
-    while (_dummyTest(r, lastindex))
+    enum uint RestartPc=uint.max;
+    //match the input, evaluating IR without searching
+    MatchResult matchOneShot(OneShot direction)(Group!DataIndex[] matches, uint startPc=0)
     {
-        auto so = r.pmatch[0].startIdx;
-        auto eo = r.pmatch[0].endIdx;
-        auto replacement = unaryFun!(fun)(r);
-/+
-        // Optimize by using std.string.replace if possible - Dave Fladebo
-        auto slice = result[offset + so .. offset + eo];
-        if (rx.attributes & rx.REA.global &&            // global, so replace all
-                !(rx.attributes & rx.REA.ignoreCase) && // not ignoring case
-                !(rx.attributes & rx.REA.multiline) &&  // not multiline
-                pattern == slice) // simple pattern (exact match, no
-                                  // special characters)
+        debug(fred_matching)
         {
-            debug(std_regex)
-            {
-                auto sss = result[offset + so .. offset + eo];
-                writefln("pattern: %s, slice: %s, replacement: %s",
-                    pattern,
-                    sss,
-                    replacement);
-            result = std.string.replace(result, slice, replacement);
-            break;
+            writefln("---------------single shot match %s----------------- ",
+                     direction == OneShot.Fwd ? "forward" : "backward");
         }
-+/
-        result = replaceSlice(result, result[offset + so .. offset + eo],
-                replacement);
-
-        // @@@BUG@@@ workaround for bug 5003
-        if (_dummyAttributes(rx) & rx.REA.global)
-        {
-            offset += replacement.length - (eo - so);
-
-            if (lastindex == eo)
-                lastindex++;            // always consume some source
-            else
-                lastindex = eo;
-        }
+        static if(direction == OneShot.Fwd)
+            alias eval evalFn;
         else
-            break;
+            alias evalBack evalFn;
+        assert(clist == (ThreadList!DataIndex).init || startPc==RestartPc); // incorrect after a partial match
+        assert(nlist == (ThreadList!DataIndex).init || startPc==RestartPc);
+        if(!atEnd)//if no char
+        {
+            if (startPc!=RestartPc){
+                auto startT = createStart(index);
+                static if(direction == OneShot.Fwd)
+                    startT.pc = startPc;
+                else
+                    startT.pc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
+                genCounter++;
+                evalFn!true(startT, matches);
+            }
+            for(;;)
+            {
+                genCounter++;
+                debug(fred_matching)
+                {
+                    static if(direction == OneShot.Fwd)
+                        writefln("Threaded matching (forward) threads at  %s",  s[index..s.lastIndex]);
+                    else
+                        writefln("Threaded matching (backward) threads at  %s", retro(s[index..s.lastIndex]));
+                    foreach(t; clist[])
+                    {
+                        assert(t);
+                        writef("pc=%s ",t.pc);
+                        write(t.matches);
+                        writeln();
+                    }
+                }
+                for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
+                {
+                    evalFn!true(t, matches);
+                }
+                if(nlist.empty)
+                {
+                    debug(fred_matching) writeln("Stopped  matching before consuming full input");
+                    break;//not a partial match for sure
+                }
+                clist = nlist;
+                nlist = (ThreadList!DataIndex).init;
+                if(!next()){
+                    if (!atEnd) return MatchResult.PartialMatch;
+                    break;
+                }
+            }
+        }
+        genCounter++; //increment also on each end
+        debug(fred_matching) writefln("Threaded matching (%s) threads at end",
+                                      direction == OneShot.Fwd ? "forward" : "backward");
+        //try out all zero-width posibilities
+        for(Thread!DataIndex* t = clist.fetch(); t; t = clist.fetch())
+        {
+            evalFn!false(t, matches);
+        }
+        return (matched?MatchResult.Match:MatchResult.NoMatch);
     }
 
-    return result;
+    /+
+        a version of eval that executes IR backwards
+    +/
+    void evalBack(bool withInput)(Thread!DataIndex* t, Group!DataIndex[] matches)
+    {
+        ThreadList!DataIndex worklist;
+        debug(fred_matching) writeln("Evaluating thread backwards");
+        do
+        {
+            debug(fred_matching)
+            {
+                writef("\tpc=%s [", t.pc);
+                foreach(x; worklist[])
+                    writef(" %s ", x.pc);
+                writeln("]");
+            }
+            debug(fred_matching) writeln(disassemble(re.ir, t.pc));
+            switch(re.ir[t.pc].code)
+            {
+            case IR.Wordboundary:
+                dchar back;
+                DataIndex bi;
+                //at start & end of input
+                if(atStart && wordTrie[front])
+                {
+                    t.pc--;
+                    break;
+                }
+                else if(atEnd && s.loopBack.nextChar(back, bi)
+                        && wordTrie[back])
+                {
+                    t.pc--;
+                    break;
+                }
+                else if(s.loopBack.nextChar(back, index))
+                {
+                    bool af = wordTrie[front];
+                    bool ab = wordTrie[back];
+                    if(af ^ ab)
+                    {
+                        t.pc--;
+                        break;
+                    }
+                }
+                recycle(t);
+                t = worklist.fetch();
+                break;
+            case IR.Notwordboundary:
+                dchar back;
+                DataIndex bi;
+                //at start & end of input
+                if(atStart && wordTrie[front])
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    break;
+                }
+                else if(atEnd && s.loopBack.nextChar(back, bi)
+                        && wordTrie[back])
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    break;
+                }
+                else if(s.loopBack.nextChar(back, index))
+                {
+                    bool af = wordTrie[front];
+                    bool ab = wordTrie[back];
+                    if(af ^ ab)
+                    {
+                        recycle(t);
+                        t = worklist.fetch();
+                        break;
+                    }
+                }
+                t.pc--;
+                break;
+            case IR.Bol:
+                dchar back;
+                DataIndex bi;
+                if(atStart
+                    ||((re.flags & RegexOption.multiline)
+                    && s.loopBack.nextChar(back,bi)
+                    && startOfLine(back, front == '\n')))
+                {
+                    t.pc--;
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                }
+                break;
+            case IR.Eol:
+                debug(fred_matching) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                dchar back;
+                DataIndex bi;
+                //no matching inside \r\n
+                if((re.flags & RegexOption.multiline)
+                    && endOfLine(front, s.loopBack.nextChar(back, bi)
+                        && back == '\r'))
+                {
+                    t.pc--;
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                }
+                break;
+            case IR.InfiniteStart, IR.InfiniteQStart:
+                uint len = re.ir[t.pc].data;
+                uint mIdx = t.pc + len + IRL!(IR.InfiniteEnd); //we're always pointed at the tail of instruction
+                if(merge[re.ir[mIdx].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[mIdx].raw+t.counter] );
+                    merge[re.ir[mIdx].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[mIdx].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    break;
+                }
+                if(re.ir[t.pc].code == IR.InfiniteStart)//greedy
+                {
+                    worklist.insertFront(fork(t, t.pc-1, t.counter));
+                    t.pc += len;
+                }
+                else
+                {
+                    worklist.insertFront(fork(t, t.pc+len, t.counter));
+                    t.pc--;
+                }
+                break;
+            case IR.InfiniteEnd:
+            case IR.InfiniteQEnd://now it's a start
+                uint len = re.ir[t.pc].data;
+                t.pc -= len+IRL!(IR.InfiniteStart);
+                assert(re.ir[t.pc].code == IR.InfiniteStart || re.ir[t.pc].code == IR.InfiniteQStart);
+                goto case IR.InfiniteStart;
+            case IR.RepeatStart, IR.RepeatQStart:
+                uint len = re.ir[t.pc].data;
+                uint tail = t.pc + len + IRL!(IR.RepeatStart);
+                uint step =  re.ir[tail+2].raw;
+                uint min = re.ir[tail+3].raw;
+
+                if(t.counter < min)
+                {
+                    t.counter += step;
+                    t.pc += len;
+                    break;
+                }
+                uint max = re.ir[tail+4].raw;
+                if(merge[re.ir[tail+1].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[tail+1].raw+t.counter] );
+                    merge[re.ir[tail+1].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[tail+1].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    break;
+                }
+                if(t.counter < max)
+                {
+                    if(re.ir[t.pc].code == IR.RepeatStart)//greedy
+                    {
+                        worklist.insertFront(fork(t, t.pc-1, t.counter%step));
+                        t.counter += step;
+                        t.pc += len;
+                    }
+                    else
+                    {
+                        worklist.insertFront(fork(t, t.pc + len, t.counter + step));
+                        t.counter = t.counter%step;
+                        t.pc--;
+                    }
+                }
+                else
+                {
+                    t.counter = t.counter%step;
+                    t.pc--;
+                }
+                break;
+            case IR.RepeatEnd:
+            case IR.RepeatQEnd:
+                t.pc -= re.ir[t.pc].data+IRL!(IR.RepeatStart);
+                assert(re.ir[t.pc].code == IR.RepeatStart || re.ir[t.pc].code == IR.RepeatQStart);
+                goto case IR.RepeatStart;
+            case IR.OrEnd:
+                uint len = re.ir[t.pc].data;
+                t.pc -= len;
+                assert(re.ir[t.pc].code == IR.Option);
+                len = re.ir[t.pc].data;
+                t.pc = t.pc + len; //to IR.GotoEndOr or just before IR.OrEnd
+                break;
+            case IR.OrStart:
+                uint len = re.ir[t.pc].data;
+                uint mIdx = t.pc + len + IRL!(IR.OrEnd); //should point to the end of OrEnd
+                if(merge[re.ir[mIdx].raw+t.counter] < genCounter)
+                {
+                    debug(fred_matching) writefln("A thread(t.pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[mIdx].raw+t.counter] );
+                    merge[re.ir[mIdx].raw+t.counter] = genCounter;
+                }
+                else
+                {
+                    debug(fred_matching) writefln("A thread(t.pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                                    t.pc, index, genCounter, merge[re.ir[mIdx].raw+t.counter] );
+                    recycle(t);
+                    t = worklist.fetch();
+                    break;
+                }
+                t.pc--;
+                break;
+            case IR.Option:
+                assert(re.ir[t.pc].code == IR.Option);
+                t.pc += re.ir[t.pc].data + IRL!(IR.Option);
+                if(re.ir[t.pc].code == IR.Option)
+                {
+                    t.pc--;//hackish, assumes size of IR.Option == 1
+                    if(re.ir[t.pc].code == IR.GotoEndOr)
+                    {
+                        t.pc += re.ir[t.pc].data + IRL!(IR.GotoEndOr);
+                    }
+                }
+                assert(re.ir[t.pc].code == IR.OrEnd);
+                t.pc -= re.ir[t.pc].data + 1;
+                break;
+            case IR.GotoEndOr:
+                assert(re.ir[t.pc].code == IR.GotoEndOr);
+                uint npc = t.pc+IRL!(IR.GotoEndOr);
+                assert(re.ir[npc].code == IR.Option);
+                worklist.insertFront(fork(t, npc + re.ir[npc].data, t.counter));//queue next branch
+                t.pc--;
+                break;
+            case IR.GroupStart:
+                uint n = re.ir[t.pc].data;
+                t.matches.ptr[n].begin = index;
+                t.pc--;
+                break;
+            case IR.GroupEnd:
+                uint n = re.ir[t.pc].data;
+                t.matches.ptr[n].end = index;
+                t.pc--;
+                break;
+            case IR.Backref:
+                uint n = re.ir[t.pc].data;
+                auto source = re.ir[t.pc].localRef ?  t.matches.ptr : backrefed.ptr;
+                assert(source);
+                if(source[n].begin == source[n].end)//zero-width Backref!
+                {
+                    t.pc--;
+                }
+                else static if(withInput)
+                {
+                    size_t idx = source[n].begin + t.uopCounter;
+                    size_t end = source[n].end;
+                    if(s[idx..end].front == front)//could be a BUG in backward matching
+                    {
+                        t.uopCounter += std.utf.stride(s[idx..end], 0);
+                        if(t.uopCounter + source[n].begin == source[n].end)
+                        {//last codepoint
+                            t.pc--;
+                            t.uopCounter = 0;
+                        }
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                }
+                else
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                }
+                break;
+
+            case IR.LookbehindStart:
+            case IR.NeglookbehindStart:
+                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+                finish(t, matches.ptr[ms .. me]);
+                recycle(t);
+                //cut off low priority threads
+                recycle(clist);
+                recycle(worklist);
+                return;
+            case IR.LookaheadStart:
+            case IR.NeglookaheadStart:
+                assert(0);
+            case IR.LookaheadEnd:
+            case IR.NeglookaheadEnd:
+                uint len = re.ir[t.pc].data;
+                t.pc -= len + IRL!(IR.LookaheadStart);
+                bool positive = re.ir[t.pc].code == IR.LookaheadStart;
+                auto matcher = ThompsonMatcher!(Char, typeof(s.loopBack))
+                    (this
+                    , re.ir[t.pc .. t.pc+len+IRL!(IR.LookbehindStart)+IRL!(IR.LookbehindEnd)]
+                    , s.loopBack);
+                matcher.re.ngroup = re.ir[t.pc+2].raw - re.ir[t.pc+1].raw;
+                matcher.backrefed = backrefed.empty ? t.matches : backrefed;
+                matcher.next(); //fetch a char, since direction was reversed
+                bool match = (matcher.matchOneShot!(OneShot.Fwd)(t.matches, IRL!(IR.LookaheadStart)) == MatchResult.Match) ^ positive;
+                freelist = matcher.freelist;
+                if(match)
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                }
+                else
+                    t.pc--;
+                break;
+            case IR.LookbehindEnd:
+            case IR.NeglookbehindEnd:
+                auto save = index;
+                uint len = re.ir[t.pc].data;
+                t.pc -= len + IRL!(IR.LookbehindStart);
+                uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+                bool positive = re.ir[t.pc].code == IR.LookbehindStart;
+                auto matcher = ThompsonMatcher(this, re.ir[t.pc .. t.pc+len+IRL!(IR.LookbehindStart)], s);
+                matcher.front = front;
+                matcher.index = index;
+                matcher.re.ngroup = me - ms;
+                matcher.backrefed = backrefed.empty ? t.matches : backrefed;
+                bool nomatch = (matcher.matchOneShot!(OneShot.Bwd)(t.matches) == MatchResult.Match) ^ positive;
+                freelist = matcher.freelist;
+                s.reset(index);
+                next();
+                if(nomatch)
+                {
+                    recycle(t);
+                    t = worklist.fetch();
+                    if(!t)
+                        return;
+                    //
+                }
+                else
+                    t.pc--;
+                break;
+            case IR.Nop:
+                t.pc--;
+                break;
+            static if(withInput)
+            {
+                case IR.OrChar://assumes IRL!(OrChar) == 1
+                    uint len = re.ir[t.pc].sequence;
+                    uint end = t.pc - len;
+                    for(; t.pc>end; t.pc--)
+                        if(re.ir[t.pc].data == front)
+                            break;
+                    if(t.pc != end)
+                    {
+                        t.pc = end;
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                    break;
+                case IR.Char:
+                    if(front == re.ir[t.pc].data)
+                    {
+                        t.pc--;
+                        nlist.insertBack(t);
+                    }
+                    else
+                        recycle(t);
+                    t = worklist.fetch();
+                    break;
+                case IR.Any:
+                    t.pc--;
+                    if(!(re.flags & RegexOption.singleline)
+                            && (front == '\r' || front == '\n'))
+                        recycle(t);
+                    else
+                        nlist.insertBack(t);
+                    t = worklist.fetch();
+                    break;
+                case IR.CodepointSet:
+                    if(re.charsets[re.ir[t.pc].data].scanFor(front))
+                    {
+                        t.pc--;
+                        nlist.insertBack(t);
+                    }
+                    else
+                    {
+                        recycle(t);
+                    }
+                    t = worklist.fetch();
+                    break;
+                case IR.Trie:
+                    if(re.tries[re.ir[t.pc].data][front])
+                    {
+                        t.pc--;
+                        nlist.insertBack(t);
+                    }
+                    else
+                    {
+                        recycle(t);
+                    }
+                    t = worklist.fetch();
+                    break;
+                default:
+                    assert(re.ir[t.pc].code < 0x80, "Unrecognized instruction " ~ re.ir[t.pc].mnemonic);
+                    t.pc--;
+            }
+            else
+            {
+                default:
+                    if(re.ir[t.pc].code < 0x80)
+                        t.pc--;
+                    else
+                    {
+                        recycle(t);
+                        t = worklist.fetch();
+                    }
+            }
+            }
+        }while(t);
+    }
+
+    //get a dirty recycled Thread
+    Thread!DataIndex* allocate()
+    {
+        assert(freelist, "not enough preallocated memory");
+        Thread!DataIndex* t = freelist;
+        freelist = freelist.next;
+        return t;
+    }
+
+    //link memory into a free list of Threads
+    void prepareFreeList(size_t size, ref void[] memory)
+    {
+        void[] mem = memory[0 .. threadSize*size];
+        memory = memory[threadSize*size..$];
+        freelist = cast(Thread!DataIndex*)&mem[0];
+        size_t i;
+        for(i=threadSize; i<threadSize*size; i+=threadSize)
+            (cast(Thread!DataIndex*)&mem[i-threadSize]).next = cast(Thread!DataIndex*)&mem[i];
+        (cast(Thread!DataIndex*)&mem[i-threadSize]).next = null;
+    }
+
+    //dispose a thread
+    void recycle(Thread!DataIndex* t)
+    {
+        t.next = freelist;
+        freelist = t;
+    }
+
+    //dispose list of threads
+    void recycle(ref ThreadList!DataIndex list)
+    {
+        auto t = list.tip;
+        while(t)
+        {
+            auto next = t.next;
+            recycle(t);
+            t = next;
+        }
+        list = list.init;
+    }
+
+    //creates a copy of master thread with given pc
+    Thread!DataIndex* fork(Thread!DataIndex* master, uint pc, uint counter)
+    {
+        auto t = allocate();
+        t.matches.ptr[0..re.ngroup] = master.matches.ptr[0..re.ngroup];
+        t.pc = pc;
+        t.counter = counter;
+        t.uopCounter = 0;
+        return t;
+    }
+
+    //creates a start thread
+    Thread!DataIndex*  createStart(DataIndex index)
+    {
+        auto t = allocate();
+        t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
+        t.matches[0].begin = index;
+        t.pc = 0;
+        t.counter = 0;
+        t.uopCounter = 0;
+        return t;
+    }
 }
 
-unittest
+/++
+    $(D Captures) object contains submatches captured during a call
+    to $(D match) or iteration over $(D RegexMatch) range.
+
+    First element of range is the whole match.
+
+    Example, showing basic operations on $(D Captures):
+    ----
+    import std.regex;
+    import std.range;
+
+    void main()
+    {
+        auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
+        auto c = m.captures;
+        assert(c.pre == "@");// part of input preceeding match
+        assert(c.post == "#"); // immediately after match
+        assert(c.hit == c[0] && c.hit == "abc");// the whole match
+        assert(c[2] =="b");
+        assert(c.front == "abc");
+        c.popFront();
+        assert(c.front == "a");
+        assert(c.back == "c");
+        c.popBack();
+        assert(c.back == "b");
+        popFrontN(c, 2);
+        assert(c.empty);
+    }
+    ----
++/
+@trusted struct Captures(R,DIndex)
+    if(isSomeString!R)
+{//@trusted because of union inside
+    alias DIndex DataIndex;
+    alias R String;
+private:
+    R _input;
+    bool _empty;
+    enum smallString = 3;
+    union
+    {
+        Group!DataIndex[] big_matches;
+        Group!DataIndex[smallString] small_matches;
+    }
+    uint f, b;
+    uint ngroup;
+    NamedGroup[] names;
+
+    this(alias Engine)(ref RegexMatch!(R,Engine) rmatch)
+    {
+        _input = rmatch._input;
+        ngroup = rmatch._engine.re.ngroup;
+        names = rmatch._engine.re.dict;
+        newMatches();
+        b = ngroup;
+        f = 0;
+    }
+
+    @property Group!DataIndex[] matches()
+    {
+       return ngroup > smallString ? big_matches : small_matches[0..ngroup];
+    }
+
+    void newMatches()
+    {
+        if(ngroup > smallString)
+            big_matches = new Group!DataIndex[ngroup];
+    }
+
+public:
+    ///Slice of input prior to the match.
+    @property R pre()
+    {
+        return _empty ? _input[] : _input[0 .. matches[0].begin];
+    }
+
+    ///Slice of input immediately after the match.
+    @property R post()
+    {
+        return _empty ? _input[] : _input[matches[0].end .. $];
+    }
+
+    ///Slice of matched portion of input.
+    @property R hit()
+    {
+        assert(!_empty);
+        return _input[matches[0].begin .. matches[0].end];
+    }
+
+    ///Range interface.
+    @property R front()
+    {
+        assert(!empty);
+        return _input[matches[f].begin .. matches[f].end];
+    }
+
+    ///ditto
+    @property R back()
+    {
+        assert(!empty);
+        return _input[matches[b-1].begin .. matches[b-1].end];
+    }
+
+    ///ditto
+    void popFront()
+    {
+        assert(!empty);
+        ++f;
+    }
+
+    ///ditto
+    void popBack()
+    {
+        assert(!empty);
+        --b;
+    }
+
+    ///ditto
+    @property bool empty() const { return _empty || f >= b; }
+
+    ///ditto
+    R opIndex()(size_t i) /*const*/ //@@@BUG@@@
+    {
+        assert(f+i < b,text("requested submatch number ", i,"is out of range"));
+        assert(matches[f+i].begin <= matches[f+i].end, text("wrong match: ", matches[f+i].begin, "..", matches[f+i].end));
+        return _input[matches[f+i].begin..matches[f+i].end];
+    }
+
+    /++
+        Lookup named submatch.
+
+        ---
+        import std.regex;
+        import std.range;
+
+        auto m = match("a = 42;", regex(`(?P<var>\w+)\s*=\s*(?P<value>\d+);`));
+        auto c = m.captures;
+        assert(c["var"] == "a");
+        assert(c["value"] == "42");
+        popFrontN(c, 2);
+        //named groups are unaffected by range primitives
+        assert(c["var"] =="a");
+        assert(c.front == "42");
+        ----
+    +/
+    R opIndex(String)(String i) /*const*/ //@@@BUG@@@
+        if(isSomeString!String)
+    {
+        size_t index = lookupNamedGroup(names, i);
+        return _input[matches[index].begin..matches[index].end];
+    }
+
+    ///Number of matches in this object.
+    @property size_t length() const { return b-f;  }
+
+    ///A hook for compatibility with original std.regex.
+    @property ref captures(){ return this; }
+}
+
+/++
+    A regex engine state, as returned by $(D match) family of functions.
+
+    Effectively it's a forward range of Captures!R, produced
+    by lazily searching for matches in a given input.
+
+    alias Engine specifies an engine type to use during matching,
+    and is automatically deduced in a call to $(D match)/$(D bmatch).
++/
+@trusted public struct RegexMatch(R, alias Engine=ThompsonMatcher)
+    if(isSomeString!R)
 {
-    //debug(std_regex) writefln("regex.sub.unittest");
-    string foo(RegexMatch!(string) r) { return "ss"; }
-    auto r = replace!(foo)("hello", regex("ll"));
-    assert(r == "hesso");
+private:
+    alias BasicElementOf!R Char;
+    alias Engine!Char EngineType;
+    EngineType _engine;
+    R _input;
+    Captures!(R,EngineType.DataIndex) _captures;
+    void[] _memory;
 
-    string bar(RegexMatch!(string) r) { return "l"; }
-    r = replace!(bar)("hello", regex("l", "g"));
-    assert(r == "hello");
+    this(RegEx)(RegEx prog, R input)
+    {
+        _input = input;
+        immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
+        _memory = (enforce(malloc(size))[0..size]);
+        scope(failure) free(_memory.ptr);
+        *cast(size_t*)_memory.ptr = 1;
+        _engine = EngineType(prog, Input!Char(input), _memory[size_t.sizeof..$]);
+        _captures = Captures!(R,EngineType.DataIndex)(this);
+        _captures._empty = !_engine.match(_captures.matches);
+        debug(fred_counter) writefln("RefCount (ctor): %d", *cast(size_t*)_memory.ptr);
+    }
 
-    string baz(RegexMatch!(string) m)
+public:
+    this(this)
+    {
+        if(_memory.ptr)
+        {
+            ++*cast(size_t*)_memory.ptr;
+            debug(fred_counter) writefln("RefCount (postblit): %d", *cast(size_t*)_memory.ptr);
+        }
+    }
+
+    ~this()
+    {
+        if(_memory.ptr && --*cast(size_t*)_memory.ptr == 0)
+        {
+            free(cast(void*)_memory.ptr);
+            debug(fred_counter) writefln("RefCount (dtor): %d", *cast(size_t*)_memory.ptr);
+        }
+    }
+
+    ///Shorthands for front.pre, front.post, front.hit.
+    @property R pre()
+    {
+        return _captures.pre;
+    }
+
+    ///ditto
+    @property R post()
+    {
+        return _captures.post;
+    }
+
+    ///ditto
+    @property R hit()
+    {
+        return _captures.hit;
+    }
+
+    /++
+        Functionality for processing subsequent matches of global regexes via range interface:
+        ---
+        import std.regex;
+        auto m = match("Hello, world!", regex(`\w+`, "g"));
+        assert(m.front.hit == "Hello");
+        m.popFront();
+        assert(m.front.hit == "world");
+        m.popFront();
+        assert(m.empty);
+        ---
+    +/
+    @property auto front()
+    {
+        return _captures;
+    }
+
+    ///ditto
+    void popFront()
+    { //previous one can have escaped references from Capture object
+        _captures.newMatches();
+        _captures._empty = !_engine.match(_captures.matches);
+    }
+
+    ///ditto
+    auto save(){ return this; }
+
+    ///Test if this match object is empty.
+    @property bool empty(){ return _captures._empty; }
+
+    ///Same as !(x.empty), provided for its convenience  in conditional statements.
+    T opCast(T:bool)(){ return !empty; }
+
+    /// Same as .front, provided for compatibility with original std.regex.
+    @property auto captures(){ return _captures; }
+
+}
+
+/++
+    Compile regular expression pattern for the later execution.
+    Returns: $(D Regex) object that works on inputs having
+    the same character width as $(D pattern).
+
+    Params:
+    pattern = Regular expression
+    flags = The _attributes (g, i, m and x accepted)
+
+    Throws: $(D RegexException) if there were any errors during compilation.
++/
+public auto regex(S)(S pattern, const(char)[] flags="")
+    if(isSomeString!(S))
+{
+    if(!__ctfe)
+    {
+        auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
+        Regex!(BasicElementOf!S) r = parser.program;
+        return r;
+    }
+    else
+    {
+        auto parser = Parser!(Unqual!(typeof(pattern)), true)(pattern, flags);
+        Regex!(BasicElementOf!S) r = parser.program;
+        return r;
+    }
+}
+
+
+template ctRegexImpl(alias pattern, string flags=[])
+{
+    enum r = regex(pattern, flags);
+    alias BasicElementOf!(typeof(pattern)) Char;
+    enum source = ctGenRegExCode(r);
+    alias BacktrackingMatcher!(true) Matcher;
+    @trusted bool func(ref Matcher!Char matcher)
+    {
+        version(fred_ct) debug pragma(msg, source);
+        mixin(source);
+    }
+    enum nr = StaticRegex!Char(r, &func);
+}
+
+/++
+    Experimental feature.
+
+    Compile regular expression using CTFE
+    and generate optimized native machine code for matching it.
+
+    Returns: StaticRegex object for faster matching.
+
+    Params:
+    pattern = Regular expression
+    flags = The _attributes (g, i, m and x accepted)
++/
+public template ctRegex(alias pattern, alias flags=[])
+{
+    enum ctRegex = ctRegexImpl!(pattern, flags).nr;
+}
+
+/++
+    Start matching $(D input) to regex pattern $(D re),
+    using Thompson NFA matching scheme.
+
+    This is the $(U recommended) method for matching regular expression.
+
+    $(D re) parameter can be one of three types:
+    $(UL
+      $(LI Plain string, in which case it's compiled to bytecode before matching. )
+      $(LI Regex!char (wchar/dchar) that contains pattern in form of
+        precompiled  bytecode. )
+      $(LI StaticRegex!char (wchar/dchar) that contains pattern in form of
+        specially crafted native code. )
+    )
+    Returns: a $(D RegexMatch) object holding engine state after first match.
++/
+
+public auto match(R, RegEx)(R input, RegEx re)
+    if(is(RegEx == Regex!(BasicElementOf!R)))
+{
+    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(re, input);
+}
+
+///ditto
+public auto match(R, String)(R input, String re)
+    if(isSomeString!String)
+{
+    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(regex(re), input);
+}
+
+public auto match(R, RegEx)(R input, RegEx re)
+    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+{
+    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
+}
+
+/++
+    Start matching $(D input) to regex pattern $(D re),
+    using traditional $(LUCKY backtracking) matching scheme.
+
+    $(D re) parameter can be one of three types:
+    $(UL
+      $(LI Plain string, in which case it's compiled to bytecode before matching. )
+      $(LI Regex!char (wchar/dchar) that contains pattern in form of
+        precompiled  bytecode. )
+      $(LI StaticRegex!char (wchar/dchar) that contains pattern in form of
+        specially crafted native code. )
+    )
+
+    Returns: a $(D RegexMatch) object holding engine
+    state after first match.
+
++/
+public auto bmatch(R, RegEx)(R input, RegEx re)
+    if(is(RegEx == Regex!(BasicElementOf!R)))
+{
+    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(re, input);
+}
+
+///ditto
+public auto bmatch(R, String)(R input, String re)
+    if(isSomeString!String)
+{
+    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(regex(re), input);
+}
+
+public auto bmatch(R, RegEx)(R input, RegEx re)
+    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+{
+    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
+}
+
+/++
+    Construct a new string from $(D input) by replacing each match with
+    a string generated from match according to $(D format) specifier.
+
+    To replace all occurances use regex with "g" flag, otherwise
+    only first occurrence gets replaced.
+
+    Params:
+    input = string to search
+    re = compiled regular expression to use
+    format = format string to generate replacements from
+
+    Example:
+    ---
+    //Comify a number
+    auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
+    assert(replace("12000 + 42100 = 56000", com, ",") == "12,000 + 42,100 = 56,100");
+    ---
+
+    The format string can reference parts of match using the following notation.
+    $(REG_TABLE
+        $(REG_TITLE Format specifier, Replaced by )
+        $(REG_ROW $&amp;, the whole match. )
+        $(REG_ROW $`, part of input $(I preceding) the match. )
+        $(REG_ROW $', part of input $(I following) the match. )
+        $(REG_ROW $$, '$' character. )
+        $(REG_ROW \c &#44 where c is any character, the character c itself. )
+        $(REG_ROW \\, '\' character. )
+        $(REG_ROW &#36;1 .. &#36;99, submatch number 1 to 99 respectively. )
+    )
+    ---
+    assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
+    ---
++/
+public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R format)
+  if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R))
+     || is(RegEx == StaticRegex!(BasicElementOf!R)))
+{
+    auto app = appender!(R)();
+    auto matches = scheme(input, re);
+    size_t offset = 0;
+    foreach(ref m; matches)
+    {
+        app.put(m.pre[offset .. $]);
+        replaceFmt(format, m.captures, app);
+        offset = m.pre.length + m.hit.length;
+    }
+    app.put(input[offset .. $]);
+    return app.data;
+}
+
+/++
+    Search string for matches using regular expression pattern $(D re)
+    and pass captures for each match to user-defined functor $(D fun).
+
+    To replace all occurrances use regex with "g" flag, otherwise
+    only first occurrence gets replaced.
+
+    Returns: new string with all matches replaced by return values of $(D fun).
+
+    Params:
+    s = string to search
+    re = compiled regular expression
+    fun = delegate to use
+
+    Example:
+    Capitalize the letters 'a' and 'r':
+    ---
+    string baz(Captures!(string) m)
     {
         return std.string.toUpper(m.hit);
     }
     auto s = replace!(baz)("Strap a rocket engine on a chicken.",
             regex("[ar]", "g"));
     assert(s == "StRAp A Rocket engine on A chicken.");
+    ---
++/
+public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegEx re)
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+{
+    auto app = appender!(R)();
+    auto matches = scheme(input, re);
+    size_t offset = 0;
+    foreach(m; matches)
+    {
+        app.put(m.pre[offset .. $]);
+        app.put(fun(m));
+        offset = m.pre.length + m.hit.length;
+    }
+    app.put(input[offset .. $]);
+    return app.data;
 }
 
-//------------------------------------------------------------------------------
+//produce replacement string from format using captures for substitue
+public @trusted void replaceFmt(R, Capt, OutR)
+    (R format, Capt captures, OutR sink, bool ignoreBadSubs=false)
+    if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
+        isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
+{
+    enum State { Normal, Escape, Dollar };
+    auto state = State.Normal;
+    size_t offset;
+L_Replace_Loop:
+    while(!format.empty)
+        final switch(state)
+        {
+        case State.Normal:
+            for(offset = 0; offset < format.length; offset++)//no decoding
+            {
+                switch(format[offset])
+                {
+                case '\\':
+                    state = State.Escape;
+                    sink.put(format[0 .. offset]);
+                    format = format[offset+1 .. $];//safe since special chars are ascii only
+                    continue L_Replace_Loop;
+                case '$':
+                    state = State.Dollar;
+                    sink.put(format[0 .. offset]);
+                    format = format[offset+1 .. $];//ditto
+                    continue L_Replace_Loop;
+                default:
+                }
+            }
+            sink.put(format[0 .. offset]);
+            format = format[offset .. $];
+            break;
+        case State.Escape:
+            offset = std.utf.stride(format, 0);
+            sink.put(format[0 .. offset]);
+            format = format[offset .. $];
+            state = State.Normal;
+            break;
+        case State.Dollar:
+            if(ascii.isDigit(format[0]))
+            {
+                uint digit = parse!uint(format);
+                enforce(ignoreBadSubs || digit < captures.length, text("invalid submatch number ", digit));
+                if(digit < captures.length)
+                    sink.put(captures[digit]);
+            }
+            else if(format[0] == '{')
+            {
+                auto x = find!"!std.ascii.isAlpha(a)"(format[1..$]);
+                enforce(!x.empty && x[0] == '}', "no matching '}' in replacement format");
+                auto name = format[1 .. $ - x.length];
+                format = x[1..$];
+                enforce(!name.empty, "invalid name in ${...} replacement format");
+                sink.put(captures[name]);
+            }
+            else if(format[0] == '&')
+            {
+                sink.put(captures[0]);
+                format = format[1 .. $];
+            }
+            else if(format[0] == '`')
+            {
+                sink.put(captures.pre);
+                format = format[1 .. $];
+            }
+            else if(format[0] == '\'')
+            {
+                sink.put(captures.post);
+                format = format[1 .. $];
+            }
+            else if(format[0] == '$')
+            {
+                sink.put(format[0 .. 1]);
+                format = format[1 .. $];
+            }
+            state = State.Normal;
+            break;
+        }
+    enforce(state == State.Normal, "invalid format string in regex replace");
+}
 
-/**
-Range that splits another range using a regular expression as a
+/++
+Range that splits a string using a regular expression as a
 separator.
 
 Example:
 ----
 auto s1 = ", abc, de,  fg, hi, ";
 assert(equal(splitter(s1, regex(", *")),
-    ["", "abc", "de", "fg", "hi", ""][]));
+    ["", "abc", "de", "fg", "hi", ""]));
 ----
- */
-struct Splitter(Range)
++/
+public struct Splitter(Range, alias Engine=ThompsonMatcher)
+    if(isSomeString!Range)
 {
+private:
     Range _input;
     size_t _offset;
-    alias Regex!(Unqual!(typeof(Range.init[0]))) Rx;
-    // Rx _rx;
-    RegexMatch!(Range) _match;
+    alias RegexMatch!(Range, Engine) Rx;
+    Rx _match;
 
-    this(Range input, Rx separator)
-    {
+    @trusted this(Range input, Regex!(BasicElementOf!Range) separator)
+    {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
+        separator.flags |= RegexOption.global;
         if (_input.empty)
         {
-            // there is nothing to match at all, make _offset > 0
+            //there is nothing to match at all, make _offset > 0
             _offset = 1;
         }
         else
         {
-            _match = match(_input, separator);
+            _match = Rx(separator, _input);
         }
     }
 
-    // @@@BUG 2674 and 2675
-    // this(this)
-    // {
-    //     _match.pmatch = _match.pmatch.dup;
-    // }
-
-    ref auto opSlice()
+public:
+    auto ref opSlice()
     {
-        return this;
+        return this.save();
     }
 
+    ///Forward range primitives.
     @property Range front()
     {
-        //write("[");scope(success) writeln("]");
         assert(!empty && _offset <= _match.pre.length
                 && _match.pre.length <= _input.length);
         return _input[_offset .. min($, _match.pre.length)];
     }
 
+    ///ditto
     @property bool empty()
     {
         return _offset > _input.length;
     }
 
+    ///ditto
     void popFront()
     {
-        //write("[");scope(success) writeln("]");
         assert(!empty);
         if (_match.empty)
         {
-            // No more separators, work is done here
+            //No more separators, work is done here
             _offset = _input.length + 1;
         }
         else
         {
-            // skip past the separator
+            //skip past the separator
             _offset = _match.pre.length + _match.hit.length;
             _match.popFront;
         }
     }
 
-    static if (isForwardRange!Range)
+    ///ditto
+    @property auto save()
     {
-        @property typeof(this) save()
-        {
-            auto ret = this;
-            ret._input = _input.save;
-            ret._match = _match.save;
-            return ret;
-        }
+        return this;
     }
 }
 
-/// Ditto
-Splitter!(Range) splitter(Range, Regex)(Range r, Regex pat)
-if (is(Unqual!(typeof(Range.init[0])) == char))
+///A helper function, creates a $(D Spliiter) on range $(D r) separated by regex $(D pat).
+public Splitter!(Range) splitter(Range, RegEx)(Range r, RegEx pat)
+    if( is(BasicElementOf!Range : dchar) && is(RegEx == Regex!(BasicElementOf!Range)))
 {
-    static assert(is(Unqual!(typeof(Range.init[0])) == char),
-        Unqual!(typeof(Range.init[0])).stringof);
     return Splitter!(Range)(r, pat);
 }
 
-unittest
-{
-    auto s1 = ", abc, de,  fg, hi, ";
-    auto sp1 = splitter(s1, regex(", *"));
-    auto w1 = ["", "abc", "de", "fg", "hi", ""];
-    assert(equal(sp1, w1[]));
-
-    auto s2 = ", abc, de,  fg, hi";
-    auto sp2 = splitter(s2, regex(", *"));
-    auto w2 = ["", "abc", "de", "fg", "hi"];
-    //foreach (e; sp2) writeln(e);
-    assert(equal(sp2, w2[]));
-}
-
-unittest
-{
-    char[] s1 = ", abc, de,  fg, hi, ".dup;
-    auto sp2 = splitter(s1, regex(", *"));
-}
-
-String[] split(String)(String input, Regex!(char) rx)
+///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
+public @trusted String[] split(String, RegEx)(String input, RegEx rx)
+    if(isSomeString!String && is(RegEx == Regex!(BasicElementOf!String)))
 {
     auto a = appender!(String[])();
-    foreach (e; splitter(input, rx))
-    {
+    foreach(e; splitter(input, rx))
         a.put(e);
-    }
     return a.data;
 }
 
-unittest
+///Exception object thrown in case of errors during regex compilation.
+public class RegexException : Exception
 {
-    auto s1 = ", abc, de,  fg, hi, ";
-    auto w1 = ["", "abc", "de", "fg", "hi", ""];
-    assert(equal(split(s1, regex(", *")), w1[]));
+    ///
+    @trusted this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {//@@@BUG@@@ Exception constructor is not @safe
+        super(msg, file, line);
+    }
 }
 
-/*
- *  Copyright (C) 2000-2005 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright and Andrei Alexandrescu
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
+//--------------------- TEST SUITE ---------------------------------
+version(unittest)
+{
+@system:
 
+unittest
+{//sanity checks
+    regex("(a|b)*");
+    regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
+    regex("abc|edf|ighrg");
+    auto r1 = regex("abc");
+    auto r2 = regex("(gylba)");
+    assert(match("abcdef", r1).hit == "abc");
+    assert(!match("wida",r2));
+    assert(bmatch("abcdef", r1).hit == "abc");
+    assert(!bmatch("wida", r2));
+    assert(match("abc", "abc".dup));
+    assert(bmatch("abc", "abc".dup));
+    Regex!char rc;
+    assert(rc.empty);
+    rc = regex("test");
+    assert(!rc.empty);
+}
 
 /* The test vectors in this file are altered from Henry Spencer's regexp
    test code. His copyright notice is:
@@ -3031,423 +6823,634 @@ unittest
         string result;
         string format;
         string replace;
+        string flags;
     };
 
-    static TestVectors tv[] = [
-        {  "(a)\\1",    "abaab","y",    "&",    "aa" },
-        {  "abc",       "abc",  "y",    "&",    "abc" },
-        {  "abc",       "xbc",  "n",    "-",    "-" },
-        {  "abc",       "axc",  "n",    "-",    "-" },
-        {  "abc",       "abx",  "n",    "-",    "-" },
-        {  "abc",       "xabcy","y",    "&",    "abc" },
-        {  "abc",       "ababc","y",    "&",    "abc" },
-        {  "ab*c",      "abc",  "y",    "&",    "abc" },
-        {  "ab*bc",     "abc",  "y",    "&",    "abc" },
-        {  "ab*bc",     "abbc", "y",    "&",    "abbc" },
-        {  "ab*bc",     "abbbbc","y",   "&",    "abbbbc" },
-        {  "ab+bc",     "abbc", "y",    "&",    "abbc" },
-        {  "ab+bc",     "abc",  "n",    "-",    "-" },
-        {  "ab+bc",     "abq",  "n",    "-",    "-" },
-        {  "ab+bc",     "abbbbc","y",   "&",    "abbbbc" },
-        {  "ab?bc",     "abbc", "y",    "&",    "abbc" },
-        {  "ab?bc",     "abc",  "y",    "&",    "abc" },
-        {  "ab?bc",     "abbbbc","n",   "-",    "-" },
-        {  "ab?c",      "abc",  "y",    "&",    "abc" },
-        {  "^abc$",     "abc",  "y",    "&",    "abc" },
-        {  "^abc$",     "abcc", "n",    "-",    "-" },
-        {  "^abc",      "abcc", "y",    "&",    "abc" },
-        {  "^abc$",     "aabc", "n",    "-",    "-" },
-        {  "abc$",      "aabc", "y",    "&",    "abc" },
-        {  "^",         "abc",  "y",    "&",    "" },
-        {  "$",         "abc",  "y",    "&",    "" },
-        {  "a.c",       "abc",  "y",    "&",    "abc" },
-        {  "a.c",       "axc",  "y",    "&",    "axc" },
-        {  "a.*c",      "axyzc","y",    "&",    "axyzc" },
-        {  "a.*c",      "axyzd","n",    "-",    "-" },
-        {  "a[bc]d",    "abc",  "n",    "-",    "-" },
-        {  "a[bc]d",    "abd",  "y",    "&",    "abd" },
-        {  "a[b-d]e",   "abd",  "n",    "-",    "-" },
-        {  "a[b-d]e",   "ace",  "y",    "&",    "ace" },
-        {  "a[b-d]",    "aac",  "y",    "&",    "ac" },
-        {  "a[-b]",     "a-",   "y",    "&",    "a-" },
-        {  "a[b-]",     "a-",   "y",    "&",    "a-" },
-        {  "a[b-a]",    "-",    "c",    "-",    "-" },
-        {  "a[]b",      "-",    "c",    "-",    "-" },
-        {  "a[",        "-",    "c",    "-",    "-" },
-        {  "a]",        "a]",   "y",    "&",    "a]" },
-        {  "a[]]b",     "a]b",  "y",    "&",    "a]b" },
-        {  "a[^bc]d",   "aed",  "y",    "&",    "aed" },
-        {  "a[^bc]d",   "abd",  "n",    "-",    "-" },
-        {  "a[^-b]c",   "adc",  "y",    "&",    "adc" },
-        {  "a[^-b]c",   "a-c",  "n",    "-",    "-" },
-        {  "a[^]b]c",   "a]c",  "n",    "-",    "-" },
-        {  "a[^]b]c",   "adc",  "y",    "&",    "adc" },
-        {  "ab|cd",     "abc",  "y",    "&",    "ab" },
-        {  "ab|cd",     "abcd", "y",    "&",    "ab" },
-        {  "()ef",      "def",  "y",    "&-\\1",        "ef-" },
-        {  "()*",       "-",    "y",    "-",    "-" },
-        {  "*a",        "-",    "c",    "-",    "-" },
-        {  "^*",        "-",    "y",    "-",    "-" },
-        {  "$*",        "-",    "y",    "-",    "-" },
-        {  "(*)b",      "-",    "c",    "-",    "-" },
-        {  "$b",        "b",    "n",    "-",    "-" },
-        {  "a\\",       "-",    "c",    "-",    "-" },
-        {  "a\\(b",     "a(b",  "y",    "&-\\1",        "a(b-" },
-        {  "a\\(*b",    "ab",   "y",    "&",    "ab" },
-        {  "a\\(*b",    "a((b", "y",    "&",    "a((b" },
-        {  "a\\\\b",    "a\\b", "y",    "&",    "a\\b" },
-        {  "abc)",      "-",    "c",    "-",    "-" },
-        {  "(abc",      "-",    "c",    "-",    "-" },
-        {  "((a))",     "abc",  "y",    "&-\\1-\\2",    "a-a-a" },
-        {  "(a)b(c)",   "abc",  "y",    "&-\\1-\\2",    "abc-a-c" },
-        {  "a+b+c",     "aabbabc","y",  "&",    "abc" },
-        {  "a**",       "-",    "c",    "-",    "-" },
-        {  "a*?a",      "aa",   "y",    "&",    "a" },
-        {  "(a*)*",     "aaa",  "y",    "-",    "-" },
-        {  "(a*)+",     "aaa",  "y",    "-",    "-" },
-        {  "(a|)*",     "-",    "y",    "-",    "-" },
-        {  "(a*|b)*",   "aabb", "y",    "-",    "-" },
-        {  "(a|b)*",    "ab",   "y",    "&-\\1",        "ab-b" },
-        {  "(a+|b)*",   "ab",   "y",    "&-\\1",        "ab-b" },
-        {  "(a+|b)+",   "ab",   "y",    "&-\\1",        "ab-b" },
-        {  "(a+|b)?",   "ab",   "y",    "&-\\1",        "a-a" },
-        {  "[^ab]*",    "cde",  "y",    "&",    "cde" },
-        {  "(^)*",      "-",    "y",    "-",    "-" },
-        {  "(ab|)*",    "-",    "y",    "-",    "-" },
-        {  ")(",        "-",    "c",    "-",    "-" },
-        {  "",  "abc",  "y",    "&",    "" },
-        {  "abc",       "",     "n",    "-",    "-" },
-        {  "a*",        "",     "y",    "&",    "" },
-        {  "([abc])*d", "abbbcd",       "y",    "&-\\1",        "abbbcd-c" },
-        {  "([abc])*bcd", "abcd",       "y",    "&-\\1",        "abcd-a" },
-        {  "a|b|c|d|e", "e",    "y",    "&",    "e" },
-        {  "(a|b|c|d|e)f", "ef",        "y",    "&-\\1",        "ef-e" },
-        {  "((a*|b))*", "aabb", "y",    "-",    "-" },
-        {  "abcd*efg",  "abcdefg",      "y",    "&",    "abcdefg" },
-        {  "ab*",       "xabyabbbz",    "y",    "&",    "ab" },
-        {  "ab*",       "xayabbbz",     "y",    "&",    "a" },
-        {  "(ab|cd)e",  "abcde",        "y",    "&-\\1",        "cde-cd" },
-        {  "[abhgefdc]ij",      "hij",  "y",    "&",    "hij" },
-        {  "^(ab|cd)e", "abcde",        "n",    "x\\1y",        "xy" },
-        {  "(abc|)ef",  "abcdef",       "y",    "&-\\1",        "ef-" },
-        {  "(a|b)c*d",  "abcd", "y",    "&-\\1",        "bcd-b" },
-        {  "(ab|ab*)bc",        "abc",  "y",    "&-\\1",        "abc-a" },
-        {  "a([bc]*)c*",        "abc",  "y",    "&-\\1",        "abc-bc" },
-        {  "a([bc]*)(c*d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-bc-d" },
-        {  "a([bc]+)(c*d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-bc-d" },
-        {  "a([bc]*)(c+d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-b-cd" },
-        {  "a[bcd]*dcdcde",     "adcdcde",      "y",    "&",    "adcdcde" },
-        {  "a[bcd]+dcdcde",     "adcdcde",      "n",    "-",    "-" },
-        {  "(ab|a)b*c", "abc",  "y",    "&-\\1",        "abc-ab" },
-        {  "((a)(b)c)(d)",      "abcd", "y",    "\\1-\\2-\\3-\\4",      "abc-a-b-d" },
-        {  "[a-zA-Z_][a-zA-Z0-9_]*",    "alpha",        "y",    "&",    "alpha" },
-        {  "^a(bc+|b[eh])g|.h$",        "abh",  "y",    "&-\\1",        "bh-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",    "effgz",        "y",    "&-\\1-\\2",    "effgz-effgz-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",    "ij",   "y",    "&-\\1-\\2",    "ij-ij-j" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",    "effg", "n",    "-",    "-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",    "bcdd", "n",    "-",    "-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",    "reffgz",       "y",    "&-\\1-\\2",    "effgz-effgz-" },
-        {  "(((((((((a)))))))))",       "a",    "y",    "&",    "a" },
-        {  "multiple words of text",    "uh-uh",        "n",    "-",    "-" },
-        {  "multiple words",    "multiple words, yeah", "y",    "&",    "multiple words" },
-        {  "(.*)c(.*)", "abcde",        "y",    "&-\\1-\\2",    "abcde-ab-de" },
-        {  "\\((.*), (.*)\\)",  "(a, b)",       "y",    "(\\2, \\1)",   "(b, a)" },
-        {  "abcd",      "abcd", "y",    "&-\\&-\\\\&",  "abcd-&-\\abcd" },
-        {  "a(bc)d",    "abcd", "y",    "\\1-\\\\1-\\\\\\1",    "bc-\\1-\\bc" },
-        {  "[k]",                       "ab",   "n",    "-",    "-" },
-        {  "[ -~]*",                    "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~]*",         "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~ -~]*",              "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~ -~ -~]*",           "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~ -~ -~ -~]*",        "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~ -~ -~ -~ -~]*",     "abc",  "y",    "&",    "abc" },
-        {  "[ -~ -~ -~ -~ -~ -~ -~]*",  "abc",  "y",    "&",    "abc" },
-        {  "a{2}",      "candy",                "n",    "",     "" },
-        {  "a{2}",      "caandy",               "y",    "&",    "aa" },
-        {  "a{2}",      "caaandy",              "y",    "&",    "aa" },
-        {  "a{2,}",     "candy",                "n",    "",     "" },
-        {  "a{2,}",     "caandy",               "y",    "&",    "aa" },
-        {  "a{2,}",     "caaaaaandy",           "y",    "&",    "aaaaaa" },
-        {  "a{1,3}",    "cndy",                 "n",    "",     "" },
-        {  "a{1,3}",    "candy",                "y",    "&",    "a" },
-        {  "a{1,3}",    "caandy",               "y",    "&",    "aa" },
-        {  "a{1,3}",    "caaaaaandy",           "y",    "&",    "aaa" },
-        {  "e?le?",     "angel",                "y",    "&",    "el" },
-        {  "e?le?",     "angle",                "y",    "&",    "le" },
-        {  "\\bn\\w",   "noonday",              "y",    "&",    "no" },
-        {  "\\wy\\b",   "possibly yesterday",   "y",    "&",    "ly" },
-        {  "\\w\\Bn",   "noonday",              "y",    "&",    "on" },
-        {  "y\\B\\w",   "possibly yesterday",   "y",    "&",    "ye" },
-        {  "\\cJ",      "abc\ndef",             "y",    "&",    "\n" },
-        {  "\\d",       "B2 is",                "y",    "&",    "2" },
-        {  "\\D",       "B2 is",                "y",    "&",    "B" },
-        {  "\\s\\w*",   "foo bar",              "y",    "&",    " bar" },
-        {  "\\S\\w*",   "foo bar",              "y",    "&",    "foo" },
-        {  "abc",       "ababc",                "y",    "&",    "abc" },
-        {  "apple(,)\\sorange\\1",      "apple, orange, cherry, peach", "y", "&", "apple, orange," },
-        {  "(\\w+)\\s(\\w+)",           "John Smith", "y", "\\2, \\1", "Smith, John" },
-        {  "\\n\\f\\r\\t\\v",           "abc\n\f\r\t\vdef", "y", "&", "\n\f\r\t\v" },
-        {  ".*c",       "abcde",                "y",    "&",    "abc" },
-        {  "^\\w+((;|=)\\w+)+$", "some=host=tld", "y", "&-\\1-\\2", "some=host=tld-=tld-=" },
-        {  "^\\w+((\\.|-)\\w+)+$", "some.host.tld", "y", "&-\\1-\\2", "some.host.tld-.tld-." },
-        {  "q(a|b)*q",  "xxqababqyy",           "y",    "&-\\1",        "qababq-b" },
-        {  "^(a)(b){0,1}(c*)",   "abcc", "y", "\\1 \\2 \\3", "a b cc" },
-        {  "^(a)((b){0,1})(c*)", "abcc", "y", "\\1 \\2 \\3", "a b b" },
-        {  "^(a)(b)?(c*)",       "abcc", "y", "\\1 \\2 \\3", "a b cc" },
-        {  "^(a)((b)?)(c*)",     "abcc", "y", "\\1 \\2 \\3", "a b b" },
-        {  "^(a)(b){0,1}(c*)",   "acc",  "y", "\\1 \\2 \\3", "a  cc" },
-        {  "^(a)((b){0,1})(c*)", "acc",  "y", "\\1 \\2 \\3", "a  " },
-        {  "^(a)(b)?(c*)",       "acc",  "y", "\\1 \\2 \\3", "a  cc" },
-        {  "^(a)((b)?)(c*)",     "acc",  "y", "\\1 \\2 \\3", "a  " },
-        {"(?:ab){3}",       "_abababc",  "y","&-\\1","ababab-" },
-        {"(?:a(?:x)?)+",    "aaxaxx",     "y","&-\\1-\\2","aaxax--" },
-        {"foo.(?=bar)",     "foobar foodbar", "y","&-\\1", "food-" },
-        {"(?:(.)(?!\\1))+",  "12345678990", "y", "&-\\1", "12345678-8" },
+    enum TestVectors tv[] = [
+        TestVectors(  "(a)b\\1",   "abaab","y",    "$&",    "aba" ),
+        TestVectors(  "()b\\1",     "aaab", "y",    "$&",    "b" ),
+        TestVectors(  "abc",       "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "abc",       "xbc",  "n",    "-",    "-" ),
+        TestVectors(  "abc",       "axc",  "n",    "-",    "-" ),
+        TestVectors(  "abc",       "abx",  "n",    "-",    "-" ),
+        TestVectors(  "abc",       "xabcy","y",    "$&",    "abc" ),
+        TestVectors(  "abc",       "ababc","y",    "$&",    "abc" ),
+        TestVectors(  "ab*c",      "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "ab*bc",     "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "ab*bc",     "abbc", "y",    "$&",    "abbc" ),
+        TestVectors(  "ab*bc",     "abbbbc","y",   "$&",    "abbbbc" ),
+        TestVectors(  "ab+bc",     "abbc", "y",    "$&",    "abbc" ),
+        TestVectors(  "ab+bc",     "abc",  "n",    "-",    "-" ),
+        TestVectors(  "ab+bc",     "abq",  "n",    "-",    "-" ),
+        TestVectors(  "ab+bc",     "abbbbc","y",   "$&",    "abbbbc" ),
+        TestVectors(  "ab?bc",     "abbc", "y",    "$&",    "abbc" ),
+        TestVectors(  "ab?bc",     "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "ab?bc",     "abbbbc","n",   "-",    "-" ),
+        TestVectors(  "ab?c",      "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "^abc$",     "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "^abc$",     "abcc", "n",    "-",    "-" ),
+        TestVectors(  "^abc",      "abcc", "y",    "$&",    "abc" ),
+        TestVectors(  "^abc$",     "aabc", "n",    "-",    "-" ),
+        TestVectors(  "abc$",      "aabc", "y",    "$&",    "abc" ),
+        TestVectors(  "^",         "abc",  "y",    "$&",    "" ),
+        TestVectors(  "$",         "abc",  "y",    "$&",    "" ),
+        TestVectors(  "a.c",       "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "a.c",       "axc",  "y",    "$&",    "axc" ),
+        TestVectors(  "a.*c",      "axyzc","y",    "$&",    "axyzc" ),
+        TestVectors(  "a.*c",      "axyzd","n",    "-",    "-" ),
+        TestVectors(  "a[bc]d",    "abc",  "n",    "-",    "-" ),
+        TestVectors(  "a[bc]d",    "abd",  "y",    "$&",    "abd" ),
+        TestVectors(  "a[b-d]e",   "abd",  "n",    "-",    "-" ),
+        TestVectors(  "a[b-d]e",   "ace",  "y",    "$&",    "ace" ),
+        TestVectors(  "a[b-d]",    "aac",  "y",    "$&",    "ac" ),
+        TestVectors(  "a[-b]",     "a-",   "y",    "$&",    "a-" ),
+        TestVectors(  "a[b-]",     "a-",   "y",    "$&",    "a-" ),
+        TestVectors(  "a[b-a]",    "-",    "c",    "-",    "-" ),
+        TestVectors(  "a[]b",      "-",    "c",    "-",    "-" ),
+        TestVectors(  "a[",        "-",    "c",    "-",    "-" ),
+        TestVectors(  "a]",        "a]",   "y",    "$&",    "a]" ),
+        TestVectors(  "a[\\]]b",     "a]b",  "y",  "$&",    "a]b" ),
+        TestVectors(  "a[^bc]d",   "aed",  "y",    "$&",    "aed" ),
+        TestVectors(  "a[^bc]d",   "abd",  "n",    "-",    "-" ),
+        TestVectors(  "a[^-b]c",   "adc",  "y",    "$&",    "adc" ),
+        TestVectors(  "a[^-b]c",   "a-c",  "n",    "-",    "-" ),
+        TestVectors(  "a[^\\]b]c",   "adc",  "y",  "$&",    "adc" ),
+        TestVectors(  "ab|cd",     "abc",  "y",    "$&",    "ab" ),
+        TestVectors(  "ab|cd",     "abcd", "y",    "$&",    "ab" ),
+        TestVectors(  "()ef",      "def",  "y",    "$&-$1",        "ef-" ),
+        TestVectors(  "()*",       "-",    "y",    "-",    "-" ),
+        TestVectors(  "*a",        "-",    "c",    "-",    "-" ),
+        TestVectors(  "^*",        "-",    "y",    "-",    "-" ),
+        TestVectors(  "$*",        "-",    "y",    "-",    "-" ),
+        TestVectors(  "(*)b",      "-",    "c",    "-",    "-" ),
+        TestVectors(  "$b",        "b",    "n",    "-",    "-" ),
+        TestVectors(  "a\\",       "-",    "c",    "-",    "-" ),
+        TestVectors(  "a\\(b",     "a(b",  "y",    "$&-$1",        "a(b-" ),
+        TestVectors(  "a\\(*b",    "ab",   "y",    "$&",    "ab" ),
+        TestVectors(  "a\\(*b",    "a((b", "y",    "$&",    "a((b" ),
+        TestVectors(  "a\\\\b",    "a\\b", "y",    "$&",    "a\\b" ),
+        TestVectors(  "abc)",      "-",    "c",    "-",    "-" ),
+        TestVectors(  "(abc",      "-",    "c",    "-",    "-" ),
+        TestVectors(  "((a))",     "abc",  "y",    "$&-$1-$2",    "a-a-a" ),
+        TestVectors(  "(a)b(c)",   "abc",  "y",    "$&-$1-$2",    "abc-a-c" ),
+        TestVectors(  "a+b+c",     "aabbabc","y",  "$&",    "abc" ),
+        TestVectors(  "a**",       "-",    "c",    "-",    "-" ),
+        TestVectors(  "a*?a",      "aa",   "y",    "$&",    "a" ),
+        TestVectors(  "(a*)*",     "aaa",  "y",    "-",    "-" ),
+        TestVectors(  "(a*)+",     "aaa",  "y",    "-",    "-" ),
+        TestVectors(  "(a|)*",     "-",    "y",    "-",    "-" ),
+        TestVectors(  "(a*|b)*",   "aabb", "y",    "-",    "-" ),
+        TestVectors(  "(a|b)*",    "ab",   "y",    "$&-$1",        "ab-b" ),
+        TestVectors(  "(a+|b)*",   "ab",   "y",    "$&-$1",        "ab-b" ),
+        TestVectors(  "(a+|b)+",   "ab",   "y",    "$&-$1",        "ab-b" ),
+        TestVectors(  "(a+|b)?",   "ab",   "y",    "$&-$1",        "a-a" ),
+        TestVectors(  "[^ab]*",    "cde",  "y",    "$&",    "cde" ),
+        TestVectors(  "(^)*",      "-",    "y",    "-",    "-" ),
+        TestVectors(  "(ab|)*",    "-",    "y",    "-",    "-" ),
+        TestVectors(  ")(",        "-",    "c",    "-",    "-" ),
+        TestVectors(  "",  "abc",  "y",    "$&",    "" ),
+        TestVectors(  "abc",       "",     "n",    "-",    "-" ),
+        TestVectors(  "a*",        "",     "y",    "$&",    "" ),
+        TestVectors(  "([abc])*d", "abbbcd",       "y",    "$&-$1",        "abbbcd-c" ),
+        TestVectors(  "([abc])*bcd", "abcd",       "y",    "$&-$1",        "abcd-a" ),
+        TestVectors(  "a|b|c|d|e", "e",    "y",    "$&",    "e" ),
+        TestVectors(  "(a|b|c|d|e)f", "ef",        "y",    "$&-$1",        "ef-e" ),
+        TestVectors(  "((a*|b))*", "aabb", "y",    "-",    "-" ),
+        TestVectors(  "abcd*efg",  "abcdefg",      "y",    "$&",    "abcdefg" ),
+        TestVectors(  "ab*",       "xabyabbbz",    "y",    "$&",    "ab" ),
+        TestVectors(  "ab*",       "xayabbbz",     "y",    "$&",    "a" ),
+        TestVectors(  "(ab|cd)e",  "abcde",        "y",    "$&-$1",        "cde-cd" ),
+        TestVectors(  "[abhgefdc]ij",      "hij",  "y",    "$&",    "hij" ),
+        TestVectors(  "^(ab|cd)e", "abcde",        "n",    "x$1y",        "xy" ),
+        TestVectors(  "(abc|)ef",  "abcdef",       "y",    "$&-$1",        "ef-" ),
+        TestVectors(  "(a|b)c*d",  "abcd",         "y",    "$&-$1",        "bcd-b" ),
+        TestVectors(  "(ab|ab*)bc",        "abc",  "y",    "$&-$1",        "abc-a" ),
+        TestVectors(  "a([bc]*)c*",        "abc",  "y",    "$&-$1",        "abc-bc" ),
+        TestVectors(  "a([bc]*)(c*d)",     "abcd", "y",    "$&-$1-$2",    "abcd-bc-d" ),
+        TestVectors(  "a([bc]+)(c*d)",     "abcd", "y",    "$&-$1-$2",    "abcd-bc-d" ),
+        TestVectors(  "a([bc]*)(c+d)",     "abcd", "y",    "$&-$1-$2",    "abcd-b-cd" ),
+        TestVectors(  "a[bcd]*dcdcde",     "adcdcde",      "y",    "$&",    "adcdcde" ),
+        TestVectors(  "a[bcd]+dcdcde",     "adcdcde",      "n",    "-",    "-" ),
+        TestVectors(  "(ab|a)b*c", "abc",           "y",    "$&-$1",        "abc-ab" ),
+        TestVectors(  "((a)(b)c)(d)",      "abcd",  "y",    "$1-$2-$3-$4",      "abc-a-b-d" ),
+        TestVectors(  "[a-zA-Z_][a-zA-Z0-9_]*",    "alpha",        "y",    "$&",    "alpha" ),
+        TestVectors(  "^a(bc+|b[eh])g|.h$",        "abh",  "y",    "$&-$1",        "bh-" ),
+        TestVectors(  "(bc+d$|ef*g.|h?i(j|k))",    "effgz",        "y",    "$&-$1-$2",    "effgz-effgz-" ),
+        TestVectors(  "(bc+d$|ef*g.|h?i(j|k))",    "ij",   "y",    "$&-$1-$2",    "ij-ij-j" ),
+        TestVectors(  "(bc+d$|ef*g.|h?i(j|k))",    "effg", "n",    "-",    "-" ),
+        TestVectors(  "(bc+d$|ef*g.|h?i(j|k))",    "bcdd", "n",    "-",    "-" ),
+        TestVectors(  "(bc+d$|ef*g.|h?i(j|k))",    "reffgz",       "y",    "$&-$1-$2",    "effgz-effgz-" ),
+        TestVectors(  "(((((((((a)))))))))",       "a",    "y",    "$&",    "a" ),
+        TestVectors(  "multiple words of text",    "uh-uh",        "n",    "-",    "-" ),
+        TestVectors(  "multiple words",    "multiple words, yeah", "y",    "$&",    "multiple words" ),
+        TestVectors(  "(.*)c(.*)", "abcde",                "y",    "$&-$1-$2",    "abcde-ab-de" ),
+        TestVectors(  "\\((.*), (.*)\\)",  "(a, b)",       "y",    "($2, $1)",   "(b, a)" ),
+        TestVectors(  "abcd",      "abcd",                   "y",    "$&-&-$$$&",  "abcd-&-$abcd" ),
+        TestVectors(  "a(bc)d",    "abcd",                 "y",    "$1-$$1-$$$1",    "bc-$1-$bc" ),
+        TestVectors(  "[k]",                       "ab",   "n",    "-",    "-" ),
+        TestVectors(  "[ -~]*",                    "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~]*",                 "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~ -~]*",              "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~ -~ -~]*",           "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~ -~ -~ -~]*",        "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~ -~ -~ -~ -~]*",     "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "[ -~ -~ -~ -~ -~ -~ -~]*",  "abc",  "y",    "$&",    "abc" ),
+        TestVectors(  "a{2}",      "candy",                "n",    "",     "" ),
+        TestVectors(  "a{2}",      "caandy",               "y",    "$&",    "aa" ),
+        TestVectors(  "a{2}",      "caaandy",              "y",    "$&",    "aa" ),
+        TestVectors(  "a{2,}",     "candy",                "n",    "",     "" ),
+        TestVectors(  "a{2,}",     "caandy",               "y",    "$&",    "aa" ),
+        TestVectors(  "a{2,}",     "caaaaaandy",           "y",    "$&",    "aaaaaa" ),
+        TestVectors(  "a{1,3}",    "cndy",                 "n",    "",     "" ),
+        TestVectors(  "a{1,3}",    "candy",                "y",    "$&",    "a" ),
+        TestVectors(  "a{1,3}",    "caandy",               "y",    "$&",    "aa" ),
+        TestVectors(  "a{1,3}",    "caaaaaandy",           "y",    "$&",    "aaa" ),
+        TestVectors(  "e?le?",     "angel",                "y",    "$&",    "el" ),
+        TestVectors(  "e?le?",     "angle",                "y",    "$&",    "le" ),
+        TestVectors(  "\\bn\\w",   "noonday",              "y",    "$&",    "no" ),
+        TestVectors(  "\\wy\\b",   "possibly yesterday",   "y",    "$&",    "ly" ),
+        TestVectors(  "\\w\\Bn",   "noonday",              "y",    "$&",    "on" ),
+        TestVectors(  "y\\B\\w",   "possibly yesterday",   "y",    "$&",    "ye" ),
+        TestVectors(  "\\cJ",      "abc\ndef",             "y",    "$&",    "\n" ),
+        TestVectors(  "\\d",       "B2 is",                "y",    "$&",    "2" ),
+        TestVectors(  "\\D",       "B2 is",                "y",    "$&",    "B" ),
+        TestVectors(  "\\s\\w*",   "foo bar",              "y",    "$&",    " bar" ),
+        TestVectors(  "\\S\\w*",   "foo bar",              "y",    "$&",    "foo" ),
+        TestVectors(  "abc",       "ababc",                "y",    "$&",    "abc" ),
+        TestVectors(  "apple(,)\\sorange\\1",      "apple, orange, cherry, peach", "y", "$&", "apple, orange," ),
+        TestVectors(  "(\\w+)\\s(\\w+)",           "John Smith", "y", "$2, $1", "Smith, John" ),
+        TestVectors(  "\\n\\f\\r\\t\\v",           "abc\n\f\r\t\vdef", "y", "$&", "\n\f\r\t\v" ),
+        TestVectors(  ".*c",       "abcde",                        "y",    "$&",    "abc" ),
+        TestVectors(  "^\\w+((;|=)\\w+)+$", "some=host=tld",    "y", "$&-$1-$2", "some=host=tld-=tld-=" ),
+        TestVectors(  "^\\w+((\\.|-)\\w+)+$", "some.host.tld",    "y", "$&-$1-$2", "some.host.tld-.tld-." ),
+        TestVectors(  "q(a|b)*q",  "xxqababqyy",                "y",    "$&-$1",        "qababq-b" ),
+        TestVectors(  "^(a)(b){0,1}(c*)",   "abcc", "y", "$1 $2 $3", "a b cc" ),
+        TestVectors(  "^(a)((b){0,1})(c*)", "abcc", "y", "$1 $2 $3", "a b b" ),
+        TestVectors(  "^(a)(b)?(c*)",       "abcc", "y", "$1 $2 $3", "a b cc" ),
+        TestVectors(  "^(a)((b)?)(c*)",     "abcc", "y", "$1 $2 $3", "a b b" ),
+        TestVectors(  "^(a)(b){0,1}(c*)",   "acc",  "y", "$1 $2 $3", "a  cc" ),
+        TestVectors(  "^(a)((b){0,1})(c*)", "acc",  "y", "$1 $2 $3", "a  " ),
+        TestVectors(  "^(a)(b)?(c*)",       "acc",  "y", "$1 $2 $3", "a  cc" ),
+        TestVectors(  "^(a)((b)?)(c*)",     "acc",  "y", "$1 $2 $3", "a  " ),
+        TestVectors(  "(?:ab){3}",       "_abababc","y", "$&-$1",    "ababab-" ),
+        TestVectors(  "(?:a(?:x)?)+",    "aaxaxx",  "y", "$&-$1-$2", "aaxax--" ),
+        TestVectors(  `\W\w\W`,         "aa b!ca",  "y", "$&",       " b!"),
+//more repetitions:
+        TestVectors(  "(?:a{2,4}b{1,3}){1,2}",  "aaabaaaabbb", "y", "$&", "aaabaaaabbb" ),
+        TestVectors(  "(?:a{2,4}b{1,3}){1,2}?", "aaabaaaabbb", "y", "$&", "aaab" ),
+//groups:
+        TestVectors(  "(abc)|(edf)|(xyz)",     "xyz",             "y",   "$1-$2-$3","--xyz"),
+        TestVectors(  "(?P<q>\\d+)/(?P<d>\\d+)",     "2/3",       "y",     "${d}/${q}",    "3/2"),
+//set operations:
+        TestVectors(  "[a-z--d-f]",                  " dfa",      "y",   "$&",     "a"),
+        TestVectors(  "[abc[pq--acq]]{2}",           "bqpaca",    "y",   "$&",     "pa"),
+        TestVectors(  "[a-z9&&abc0-9]{3}",           "z90a0abc",  "y",   "$&",     "abc"),
+        TestVectors(  "[0-9a-f~~0-5a-z]{2}",         "g0a58x",    "y",   "$&",     "8x"),
+        TestVectors(  "[abc[pq]xyz[rs]]{4}",         "cqxr",      "y",   "$&",     "cqxr"),
+        TestVectors(  "[abcdf--[ab&&[bcd]][acd]]",   "abcdefgh",  "y",   "$&",     "f"),
+//unicode blocks & properties:
+        TestVectors(  `\P{Inlatin1suppl ement}`, "\u00c2!", "y", "$&", "!"),
+        TestVectors(  `\p{InLatin-1 Supplement}\p{in-mathematical-operators}\P{Inlatin1suppl ement}`, "\u00c2\u2200\u00c3\u2203.", "y", "$&", "\u00c3\u2203."),
+        TestVectors(  `[-+*/\p{in-mathematical-operators}]{2}`,    "a+\u2212",    "y",    "$&",    "+\u2212"),
+        TestVectors(  `\p{Ll}+`,                      "XabcD",    "y",  "$&",      "abc"),
+        TestVectors(  `\p{Lu}+`,                      "абвГДЕ",   "y",  "$&",      "ГДЕ"),
+        TestVectors(  `^\p{Currency Symbol}\p{Sc}`    "$₤",       "y",  "$&",      "$₤"),
+        TestVectors(  `\p{Common}\p{Thai}`            "!ฆ",       "y",  "$&",      "!ฆ"),
+        TestVectors(  `[\d\s]*\D`,  "12 \t3\U00001680\u0F20_2",   "y",  "$&", "12 \t3\U00001680\u0F20_"),
+        TestVectors(  `[c-wф]фф`, "ффф", "y", "$&", "ффф"),
+//case insensitive:
+        TestVectors(   `^abcdEf$`,           "AbCdEF"               "y",   "$&", "AbCdEF",      "i"),
+        TestVectors(   `Русский язык`,    "рУсскИй ЯзЫк",           "y",   "$&", "рУсскИй ЯзЫк",     "i"),
+        TestVectors(   `ⒶⒷⓒ` ,        "ⓐⓑⒸ",                   "y",   "$&", "ⓐⓑⒸ",      "i"),
+        TestVectors(   "\U00010400{2}",  "\U00010428\U00010400 ",   "y",   "$&", "\U00010428\U00010400", "i"),
+        TestVectors(   `[adzУ-Я]{4}`,    "DzюА"                     "y",   "$&", "DzЮа", "i"),
+        TestVectors(   `\p{L}\p{Lu}{10}`, "абвгдеЖЗИКЛ",            "y",   "$&", "абвгдеЖЗИКЛ", "i"),
+        TestVectors(   `(?:Dåb){3}`,  "DåbDÅBdÅb",                  "y",   "$&", "DåbDÅBdÅb", "i"),
+//escapes:
+        TestVectors(    `\u0041\u005a\U00000065\u0001`,         "AZe\u0001",       "y",   "$&", "AZe\u0001"),
+        TestVectors(    `\u`,               "",   "c",   "-",  "-"),
+        TestVectors(    `\U`,               "",   "c",   "-",  "-"),
+        TestVectors(    `\u003`,            "",   "c",   "-",  "-"),
+        TestVectors(    `[\x00-\x7f]{4}`,        "\x00\x09ab",   "y", "$&", "\x00\x09ab"),
+        TestVectors(    `[\cJ\cK\cA-\cD]{3}\cQ`, "\x01\x0B\x0A\x11", "y", "$&", "\x01\x0B\x0A\x11"),
+        TestVectors(    `\r\n\v\t\f\\`,     "\r\n\v\t\f\\",   "y",   "$&", "\r\n\v\t\f\\"),
+        TestVectors(    `[\u0003\u0001]{2}`,  "\u0001\u0003",         "y",   "$&", "\u0001\u0003"),
+        TestVectors(    `^[\u0020-\u0080\u0001\n-\r]{8}`,  "abc\u0001\v\f\r\n",  "y",   "$&", "abc\u0001\v\f\r\n"),
+        TestVectors(    `\w+\S\w+`, "ab7!44c",  "y", "$&", "ab7!44c"),
+        TestVectors(    `\b\w+\b`,  " abde4 ",  "y", "$&", "abde4"),
+        TestVectors(    `\b\w+\b`,  " abde4",   "y", "$&", "abde4"),
+        TestVectors(    `\b\w+\b`,  "abde4 ",   "y", "$&", "abde4"),
+        TestVectors(    `\pL\pS`,   "a\u02DA",  "y", "$&", "a\u02DA"),
+        TestVectors(    `\pX`,      "",         "c", "-",  "-"),
+// ^, $, \b, \B, multiline :
+        TestVectors(    `\r.*?$`,    "abc\r\nxy", "y", "$&", "\r\nxy", "sm"),
+        TestVectors(    `^a$^b$`,    "a\r\nb\n",  "n", "$&", "-", "m"),
+        TestVectors(    `^a$\r\n^b$`,"a\r\nb\n",  "y", "$&", "a\r\nb", "m"),
+        TestVectors(    `^$`,        "\r\n",      "y", "$&", "", "m"),
+        TestVectors(    `^a$\nx$`,   "a\nx\u2028","y", "$&", "a\nx", "m"),
+        TestVectors(    `^a$\nx$`,   "a\nx\u2029","y", "$&", "a\nx", "m"),
+        TestVectors(    `^a$\nx$`,   "a\nx\u0085","y", "$&", "a\nx","m"),
+        TestVectors(    `^x$`,       "\u2028x",   "y", "$&", "x", "m"),
+        TestVectors(    `^x$`,       "\u2029x",   "y", "$&", "x", "m"),
+        TestVectors(    `^x$`,       "\u0085x",   "y", "$&", "x", "m"),
+        TestVectors(    `\b^.`,      "ab",        "y", "$&", "a"),
+        TestVectors(    `\B^.`,      "ab",        "n", "-",  "-"),
+        TestVectors(    `^ab\Bc\B`,  "\r\nabcd",  "y", "$&", "abc", "m"),
+        TestVectors(    `^.*$`,      "12345678",  "y", "$&", "12345678"),
 
+// luckily obtained regression on incremental matching in backtracker
+        TestVectors(  `^(?:(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*([^ ]*)\s*#|# (?:\w|_)+=((?:\w|_)+))`,
+            "0020  ; White_Space # ", "y", "$1-$2-$3", "--0020"),
+//lookahead
+        TestVectors(    "(foo.)(?=(bar))",     "foobar foodbar", "y", "$&-$1-$2", "food-food-bar" ),
+        TestVectors(    `\b(\d+)[a-z](?=\1)`,  "123a123",        "y", "$&-$1", "123a-123" ),
+        TestVectors(    `\$(?!\d{3})\w+`,      "$123 $abc",      "y", "$&", "$abc"),
+        TestVectors(    `(abc)(?=(ed(f))\3)`,    "abcedff",      "y", "-", "-"),
+        TestVectors(    `\b[A-Za-z0-9.]+(?=(@(?!gmail)))`, "a@gmail,x@com",  "y", "$&-$1", "x-@"),
+        TestVectors(    `x()(abc)(?=(d)(e)(f)\2)`,   "xabcdefabc", "y", "$&", "xabc"),
+        TestVectors(    `x()(abc)(?=(d)(e)(f)()\3\4\5)`,   "xabcdefdef", "y", "$&", "xabc"),
+//lookback
+        TestVectors(    `(?<=(ab))\d`,    "12ba3ab4",    "y",   "$&-$1", "4-ab",  "i"),
+        TestVectors(    `\w(?<!\d)\w`,   "123ab24",  "y",   "$&", "ab"),
+        TestVectors(    `(?<=Dåb)x\w`,  "DåbDÅBxdÅb",  "y",   "$&", "xd", "i"),
+        TestVectors(    `(?<=(ab*c))x`,   "abbbbcxac",  "y",   "$&-$1", "x-abbbbc"),
+        TestVectors(    `(?<=(ab*?c))x`,   "abbbbcxac",  "y",   "$&-$1", "x-abbbbc"),
+        TestVectors(    `(?<=(a.*?c))x`,   "ababbcxac",  "y",   "$&-$1", "x-abbc"),
+        TestVectors(    `(?<=(a{2,4}b{1,3}))x`,   "yyaaaabx",  "y",   "$&-$1", "x-aaaab"),
+        TestVectors(    `(?<=((?:a{2,4}b{1,3}){1,2}))x`,   "aabbbaaaabx",  "y",   "$&-$1", "x-aabbbaaaab"),
+        TestVectors(    `(?<=((?:a{2,4}b{1,3}){1,2}?))x`,   "aabbbaaaabx",  "y",   "$&-$1", "x-aaaab"),
+        TestVectors(    `(?<=(abc|def|aef))x`,    "abcx", "y",        "$&-$1",  "x-abc"),
+        TestVectors(    `(?<=(abc|def|aef))x`,    "aefx", "y",        "$&-$1",  "x-aef"),
+        TestVectors(    `(?<=(abc|dabc))(x)`,    "dabcx", "y",        "$&-$1-$2",  "x-abc-x"),
+        TestVectors(    `(?<=(|abc))x`,        "dabcx", "y",        "$&-$1",  "x-"),
+        TestVectors(    `(?<=((ab|da)*))x`,    "abdaabx", "y",        "$&-$2-$1",  "x-ab-abdaab"),
+        TestVectors(    `a(?<=(ba(?<=(aba)(?<=aaba))))`, "aabaa", "y", "$&-$1-$2", "a-ba-aba"),
+        TestVectors(    `.(?<!b).`,   "bax",  "y", "$&", "ax"),
+        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y", "$&", "x"),
+//mixed lookaround
+        TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
+        TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
         ];
-
-    int i;
-    sizediff_t a;
-    uint c;
-    sizediff_t start;
-    sizediff_t end;
-    TestVectors tvd;
-
-    foreach (Char; TypeTuple!(char, wchar, dchar))
+    string produceExpected(M,String)(auto ref M m, String fmt)
     {
-        alias immutable(Char)[] String;
-        String produceExpected(Range)(RegexMatch!(Range) m, String fmt)
+        auto app = appender!(String)();
+        replaceFmt(fmt, m.captures, app, true);
+        return app.data;
+    }
+    void run_tests(alias matchFn)()
+    {
+        int i;
+        foreach(Char; TypeTuple!( char, wchar, dchar))
         {
-            String result;
-            while (!fmt.empty)
-                switch (fmt.front)
+            alias immutable(Char)[] String;
+            String produceExpected(M,Range)(auto ref M m, Range fmt)
+            {
+                auto app = appender!(String)();
+                replaceFmt(fmt, m.captures, app, true);
+                return app.data;
+            }
+            Regex!(Char) r;
+            foreach(a, tvd; tv)
+            {
+                uint c = tvd.result[0];
+                debug(fred_test) writeln(" Test #", a, " pattern: ", tvd.pattern, " with Char = ", Char.stringof);
+                try
                 {
-                    case '\\':
-                        fmt.popFront();
-                        if (!isDigit(fmt.front) )
-                        {
-                            result ~= fmt.front;
-                            fmt.popFront();
-                            break;
-                        }
-                        auto nmatch = parse!uint(fmt);
-                        if (nmatch < m.captures.length)
-                            result ~= m.captures[nmatch];
-                    break;
-                    case '&':
-                        result ~= m.hit;
-                        fmt.popFront();
-                    break;
-                    default:
-                        result ~= fmt.front;
-                        fmt.popFront();
+                    i = 1;
+                    r = regex(to!(String)(tvd.pattern), tvd.flags);
                 }
-            return result;
-        }
-        Regex!(Char) r;
-        start = 0;
-        end = tv.length;
-
-        for (a = start; a < end; a++)
-        {
-//             writef("width: %d tv[%d]: pattern='%s' input='%s' result=%s"
-//                     " format='%s' replace='%s'\n",
-//                     Char.sizeof, a,
-//                     tv[a].pattern,
-//                     tv[a].input,
-//                     tv[a].result,
-//                     tv[a].format,
-//                     tv[a].replace);
-
-            tvd = tv[a];
-
-            c = tvd.result[0];
-
-            try
-            {
-                i = 1;
-                r = regex(to!(String)(tvd.pattern));
-            }
-            catch (Exception e)
-            {
-                i = 0;
-            }
-
-            //writefln("\tcompile() = %d", i);
-            assert((c == 'c') ? !i : i);
-
-            if (c != 'c')
-            {
-                auto m = match(to!(String)(tvd.input), r);
-                i = !m.empty;
-                //writefln("\ttest() = %d", i);
-                //fflush(stdout);
-                assert((c == 'y') ? i : !i, text("Match failed pattern: ", tvd.pattern));
-                if (c == 'y')
+                catch (RegexException e)
                 {
-                    auto result = produceExpected(m, to!(String)(tvd.format));
-                    assert(result == to!String(tvd.replace),
-                           text("Mismatch pattern: ", tvd.pattern," expected:",
-                                tvd.replace, " vs ", result));
+                    i = 0;
+                    debug(fred_test) writeln(e.msg);
                 }
 
+                assert((c == 'c') ? !i : i, "failed to compile pattern "~tvd.pattern);
+
+                if(c != 'c')
+                {
+                    auto m = matchFn(to!(String)(tvd.input), r);
+                    i = !m.empty;
+                    assert((c == 'y') ? i : !i, text(matchFn.stringof ~": failed to match pattern #", a ,": ", tvd.pattern));
+                    if(c == 'y')
+                    {
+                        auto result = produceExpected(m, to!(String)(tvd.format));
+                        assert(result == to!String(tvd.replace), text(matchFn.stringof ~": mismatch pattern #", a, ": ", tvd.pattern," expected: ",
+                                    tvd.replace, " vs ", result));
+                    }
+                }
             }
         }
-
-        try
-        {
-            r = regex(to!(String)("a\\.b"), "i");
-        }
-        catch (Exception e)
-        {
-            assert(0);
-        }
-        assert(!match(to!(String)("A.b"), r).empty);
-        assert(!match(to!(String)("a.B"), r).empty);
-        assert(!match(to!(String)("A.B"), r).empty);
-        assert(!match(to!(String)("a.b"), r).empty);
+        debug(fred_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
-}
-
-template loadFile(Types...)
-{
-    Tuple!(Types)[] loadFile(Char)(string filename, Regex!(Char) rx)
+    static string generate(uint n,uint[] black_list...)
     {
-        auto result = appender!(typeof(return));
-        auto f = File(filename);
-        scope(exit) f.close;
-        RegexMatch!(Char[]) match;
-        foreach (line; f.byLine())
+        string s = "TypeTuple!(";
+        for(uint i=0; i<n; i++)
         {
-            match = .match(line, rx);
-            Tuple!(Types) t;
-            foreach (i, unused; t.field)
+            uint j;
+            for(j =0; j<black_list.length; j++)
+                if(i == black_list[j])
+                    break;
+            if(j == black_list.length)
             {
-                t[i] = to!(typeof(t[i]))(match.captures[i + 1]);
+                s ~= to!string(i);
+                s ~= ",";
             }
-            result.put(t);
         }
-        return result.data;
+        s ~= ")";
+        return s;
     }
-}
-
-unittest
-{
-// DAC: This doesn't create the file before running the test!
-pragma(msg, " --- std.regex("~ __LINE__.stringof ~") broken test --- ");
-/+
-    string tmp = "/tmp/deleteme";
-    std.file.write(tmp, "1 abc\n2 defg\n3 hijklm");
-    auto t = loadFile!(uint, string)(tmp, regex("([0-9])+ +(.+)"));
-    //writeln(t);
-
-    assert(t[0] == tuple(1, "abc"));
-    assert(t[1] == tuple(2, "defg"));
-    assert(t[2] == tuple(3, "hijklm"));
-+/
-}
-
-unittest
-{
-    auto str = "foo";
-    string[] re_strs = [
-        r"^(a|b|)fo[oas]$",
-        r"^(a|o|)fo[oas]$",
-        r"^(a|)foo$",
-        r"^(a|)foo$",
-        r"^(h|)foo$",
-        r"(h|)foo",
-        r"(h|a|)fo[oas]",
-        r"^(a|b|)fo[o]$",
-        r"[abf][ops](o|oo|)(h|a|)",
-        r"(h|)[abf][ops](o|oo|)",
-        r"(c|)[abf][ops](o|oo|)"
-    ];
-
-    foreach (re_str; re_strs)
+    //CTFE parsing
+    version(fred_ct)
+    void ct_tests()
     {
-        auto re = regex(re_str);
-        auto matches= match(str, re);
-        assert(!matches.empty);
-        // writefln("'%s' matches '%s' ? %s", str, re_str, !matches.empty);
-        // if (matches.empty)
-        //     re.printProgram();
+        foreach(a, v; mixin(generate(140,38,39,40,52,55,57,62,63,67,80,190,191,192)))
+        {
+            enum tvd = tv[v];
+            enum r = regex(tvd.pattern, tvd.flags);
+            auto nr = regex(tvd.pattern, tvd.flags);
+
+            debug(fred_test)
+            {
+                writeln(" Test #", a, " pattern: ", tvd.pattern);
+                if(!equal(r.ir, nr.ir))
+                {
+                    writeln("C-T version :");
+                    r.print();
+                    writeln("R-T version :");
+                    nr.print();
+                    assert(0, text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
+                }
+            }
+            else
+                assert(equal(r.ir, nr.ir), text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
+
+        }
+        debug(fred_test) writeln("!!! FReD C-T test done !!!");
+    }
+
+    version(fred_ct)
+        ct_tests();
+    else
+    {
+        run_tests!bmatch(); //backtracker
+        run_tests!match(); //thompson VM
+    }
+}
+ version(fred_ct)
+ {
+    unittest
+    {
+        auto cr = ctRegex!("abc");
+        assert(bmatch("abc",cr).hit == "abc");
+        auto cr2 = ctRegex!("ab*c");
+        assert(bmatch("abbbbc",cr2).hit == "abbbbc");
+        auto cr3 = ctRegex!("^abc$");
+        assert(bmatch("abc",cr3).hit == "abc");
+        auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
+        assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
+        auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
+        assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
+        auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
+        assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
+        auto cr7 = ctRegex!(`\r.*?$`,"m");
+        assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
+        auto greed =  ctRegex!("<packet.*?/packet>");
+        assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
+                == "<packet>text</packet>");
+        auto cr8 = ctRegex!("^(a)(b)?(c*)");
+        auto m8 = bmatch("abcc",cr8);
+        assert(m8);
+        assert(m8.captures[1] == "a");
+        assert(m8.captures[2] == "b");
+        assert(m8.captures[3] == "cc");
+        auto cr9 = ctRegex!("q(a|b)*q");
+        auto m9 = match("xxqababqyy",cr9);
+        assert(m9);
+        assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
+
+        auto rtr = regex("a|b|c");
+        enum ctr = regex("a|b|c");
+        assert(equal(rtr.ir,ctr.ir));
+        //CTFE parser BUG is triggered by group
+        //in the middle of alternation (at least not first and not last)
+        version(fred_bug)
+        {
+        enum testCT = regex(`abc|(edf)|xyz`);
+        auto testRT = regex(`abc|(edf)|xyz`);
+        debug
+        {
+            writeln("C-T version :");
+            testCT.print();
+            writeln("R-T version :");
+            testRT.print();
+
+        }
+
+        }
+
+    }
+
+    unittest
+    {
+        enum cx = ctRegex!"(A|B|C)";
+        auto mx = match("B",cx);
+        assert(mx);
+        assert(equal(mx.captures, [ "B", "B"]));
+        enum cx2 = ctRegex!"(A|B)*";
+        assert(match("BAAA",cx2));
+        enum cx3 = ctRegex!("a{3,4}","i");
+        auto mx3 = match("AaA",cx3);
+        assert(mx3);
+        assert(mx3.captures[0] == "AaA");
+        enum cx4 = ctRegex!(`^a{3,4}?[a-zA-Z0-9~]{1,2}`,"i");
+        auto mx4 = match("aaaabc", cx4);
+        assert(mx4);
+        assert(mx4.captures[0] == "aaaab");
+        auto cr8 = ctRegex!("(a)(b)?(c*)");
+        auto m8 = bmatch("abcc",cr8);
+        assert(m8);
+        assert(m8.captures[1] == "a");
+        assert(m8.captures[2] == "b");
+        assert(m8.captures[3] == "cc");
+        auto cr9 = ctRegex!(".*$", "gm");
+        auto m9 = match("First\rSecond");
+        assert(m9);
+        assert(equal(map!"a.hit"(m9.captures), ["First", "", "Second"]));
+    }
+}
+else
+{
+    unittest
+    {
+    //global matching
+        void test_body(alias matchFn)()
+        {
+            string s = "a quick brown fox jumps over a lazy dog";
+            auto r1 = regex("\\b[a-z]+\\b","g");
+            string[] test;
+            foreach(m; matchFn(s, r1))
+                test ~= m.hit;
+            assert(equal(test, [ "a", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog"]));
+            auto free_reg = regex(`
+
+                abc
+                \s+
+                "
+                (
+                        [^"]+
+                    |   \\ "
+                )+
+                "
+                z
+            `, "x");
+            auto m = match(`abc  "quoted string with \" inside"z`,free_reg);
+            assert(m);
+            string mails = " hey@you.com no@spam.net ";
+            auto rm = regex(`@(?<=\S+@)\S+`,"g");
+            assert(equal(map!"a[0]"(matchFn(mails, rm)), ["@you.com", "@spam.net"]));
+            auto m2 = matchFn("First line\nSecond line",regex(".*$","gm"));
+            assert(equal(map!"a[0]"(m2), ["First line", "", "Second line"]));
+            auto m2a = matchFn("First line\nSecond line",regex(".+$","gm"));
+            assert(equal(map!"a[0]"(m2a), ["First line", "Second line"]));
+            auto m2b = matchFn("First line\nSecond line",regex(".+?$","gm"));
+            assert(equal(map!"a[0]"(m2b), ["First line", "Second line"]));
+            debug(fred_test) writeln("!!! FReD FLAGS test done "~matchFn.stringof~" !!!");
+        }
+        test_body!bmatch();
+        test_body!match();
+    }
+
+    //tests for accomulated std.regex issues and other regressions
+    unittest
+    {
+        void test_body(alias matchFn)()
+        {
+            //issue 5857
+            //matching goes out of control if ... in (...){x} has .*/.+
+            auto c = matchFn("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
+            assert(c[0] == "axxxzayyyyyzd");
+            assert(c[1] == "ayyyyyz");
+            auto c2 = matchFn("axxxayyyyyd",regex("(a.*){2}d")).captures;
+            assert(c2[0] == "axxxayyyyyd");
+            assert(c2[1] == "ayyyyy");
+            //issue 2108
+            //greedy vs non-greedy
+            auto nogreed = regex("<packet.*?/packet>");
+            assert(matchFn("<packet>text</packet><packet>text</packet>", nogreed).hit
+                   == "<packet>text</packet>");
+            auto greed =  regex("<packet.*/packet>");
+            assert(matchFn("<packet>text</packet><packet>text</packet>", greed).hit
+                   == "<packet>text</packet><packet>text</packet>");
+            //issue 4574
+            //empty successful match still advances the input
+            string[] pres, posts, hits;
+            foreach(m; matchFn("abcabc", regex("","g"))) {
+                pres ~= m.pre;
+                posts ~= m.post;
+                assert(m.hit.empty);
+
+            }
+            auto heads = [
+                "abcabc",
+                "abcab",
+                "abca",
+                "abc",
+                "ab",
+                "a",
+                ""
+            ];
+            auto tails = [
+                "abcabc",
+                 "bcabc",
+                  "cabc",
+                   "abc",
+                    "bc",
+                     "c",
+                      ""
+            ];
+            assert(pres == array(retro(heads)));
+            assert(posts == tails);
+            //issue 6076
+            //regression on .*
+            auto re = regex("c.*|d");
+            auto m = matchFn("mm", re);
+            assert(!m);
+            debug(fred_test) writeln("!!! FReD REGRESSION test done "~matchFn.stringof~" !!!");
+            auto rprealloc = regex(`((.){5}.{1,10}){5}`);
+            auto arr = array(replicate('0',100));
+            auto m2 = matchFn(arr, rprealloc);
+            assert(m2);
+        }
+        test_body!bmatch();
+        test_body!match();
+    }
+    //@@@BUG@@@ template function doesn't work inside unittest block
+    version(unittest)
+    Cap.String baz(Cap)(Cap m)
+    if (is(Cap==Captures!(Cap.String,Cap.DataIndex)))
+    {
+        return std.string.toUpper(m.hit);
+    }
+
+    // tests for replace
+    unittest
+    {
+        void test(alias matchFn)()
+        {
+            foreach(i, v; TypeTuple!(string, wstring, dstring))
+            {
+                alias v String;
+                assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
+                       == to!String("ack rapacity"));
+                assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r"), "g"), to!String("c"))
+                       == to!String("ack capacity"));
+                assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
+                       == to!String("[n]oon"));
+                assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
+                       == to!String(": test2 test1 :"));
+                auto s = std.regex.replace!(baz!(Captures!(String,size_t)))(to!String("Strap a rocket engine on a chicken."),
+                        regex(to!String("[ar]"), "g"));
+                assert(s == "StRAp A Rocket engine on A chicken.");
+            }
+            debug(fred_test) writeln("!!! Replace test done "~matchFn.stringof~"  !!!");
+        }
+        test!(bmatch)();
+        test!(match)();
+    }
+
+    // tests for splitter
+    unittest
+    {
+        auto s1 = ", abc, de,     fg, hi, ";
+        auto sp1 = splitter(s1, regex(", *"));
+        auto w1 = ["", "abc", "de", "fg", "hi", ""];
+        assert(equal(sp1, w1));
+
+        auto s2 = ", abc, de,  fg, hi";
+        auto sp2 = splitter(s2, regex(", *"));
+        auto w2 = ["", "abc", "de", "fg", "hi"];
+
+        uint cnt;
+        foreach(e; sp2) {
+            assert(w2[cnt++] == e);
+        }
+        assert(equal(sp2, w2));
+    }
+
+    unittest
+    {
+        char[] s1 = ", abc, de,  fg, hi, ".dup;
+        auto sp2 = splitter(s1, regex(", *"));
+    }
+
+    unittest
+    {
+        auto s1 = ", abc, de,  fg, hi, ";
+        auto w1 = ["", "abc", "de", "fg", "hi", ""];
+        assert(equal(split(s1, regex(", *")), w1[]));
     }
 }
 
-//issue 5857
-//matching goes out of control if ... in (...){x} has .*/.+
-unittest
-{
-    auto c = match("axxxzayyyyyzd",regex("(a.*z){2}d")).captures;
-    assert(c[0] == "axxxzayyyyyzd");
-    assert(c[1] == "ayyyyyz");
-    auto c2 = match("axxxayyyyyd",regex("(a.*){2}d")).captures;
-    assert(c2[0] == "axxxayyyyyd");
-    assert(c2[1] == "ayyyyy");
 }
-
-//issue 2108
-//greedy vs non-greedy
-unittest
-{
-    auto nogreed = regex("<packet.*?/packet>");
-    assert(match("<packet>text</packet><packet>text</packet>", nogreed).hit
-           == "<packet>text</packet>");
-    auto greed =  regex("<packet.*/packet>");
-    assert(match("<packet>text</packet><packet>text</packet>", greed).hit
-           == "<packet>text</packet><packet>text</packet>");
-
-}
-
-//issue 4574
-//empty successful match still advances the input
-unittest
-{
-    string[] pres, posts, hits;
-    foreach(m; match("abcabc", regex(""))) {
-        pres ~= m.pre;
-        posts ~= m.post;
-        assert(m.hit.empty);
-
-    }
-    auto heads = [
-        "abcabc",
-        "abcab",
-        "abca",
-        "abc",
-        "ab",
-        "a",
-        ""
-    ];
-     auto tails = [
-        "abcabc",
-         "bcabc",
-          "cabc",
-           "abc",
-            "bc",
-             "c",
-              ""
-    ];
-    assert(pres == array(retro(heads)));
-    assert(posts == tails);
-}
-
-//issue 6076
-//regression on .*
-unittest
-{
-    auto re = regex("c.*|d");
-    auto m = match("mm", re);
-    assert(m.empty);
-    auto re2 = regex(`^(.*)\(([0-9]*)\):(.*)$`);
-    m = match("file.d(37): huhu", re2);
-    assert(!m.empty);
-    assert(m.captures[1] == "file.d");
-    assert(m.captures[2] == "37");
-    assert(m.captures[3] == " huhu");
-}
-
-//issue 6261
-//regression: doesn't allow mutable patterns 
-unittest{ regex("foo".dup); }

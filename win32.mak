@@ -134,6 +134,7 @@ SRCS_3 = std\variant.d \
 	std\parallelism.d \
 	std\gregorian.d \
     std\mathspecial.d \
+        std\internal\uni.d std\internal\uni_tab.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
@@ -990,5 +991,4 @@ svn:
 	#$(CP) $(SRC_ETC) $(SVN)\etc\
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\
-
 
