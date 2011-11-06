@@ -72,12 +72,37 @@ import std.range;
 import std.traits;
 
 /**
+ * Exception containing the row and column for when an Exception was thrown.
+ *
+ * This Exception will have one of the following as part of its next property.
+ *
+ * $(UL
+ *     $(LI IncompletCellException)
+ *     $(LI ConvException)
+ *  )
+ */
+class CSVException : Exception {
+    ///
+    uint row, col;
+    this(uint row, uint col, Exception e) {
+        super("(Row: " ~ to!string(row) ~ 
+              ", Col: " ~ to!string(col) ~ ") CSV Parse Failure", e);
+        this.row = row;
+        this.col = col;
+    }
+}
+
+/**
  * Exception thrown when a Token is identified to not be completed: a quote is
  * found in an unquoted field, data continues after a closing quote, or the
  * quoted field was not closed before data was empty.
+ *
+ * This Exception will be part of CSVException unless using $(LREF
+ * csvNextToken) directly.
  */
 class IncompleteCellException : Exception
 {
+    /// Data pulled from input before finding a problem
     string partialData;
     this(string cellPartial, string msg)
     {
@@ -215,13 +240,13 @@ enum Malformed
  *      each record.
  *
  * Throws:
- *       IncompleteCellException When a quote is found in an unquoted field,
- *       data continues after a closing quote, or the quoted field was not
- *       closed before data was empty.
+ *       $(LREF CSVException) When a quote is found in an unquoted field,
+ *       data continues after a closing quote, the quoted field was not
+ *       closed before data was empty, or a conversion failed.
  *
- *       HeadingMismatchException  when a heading is provided but a matching
- *       column is not found or the order did not match that found in the input
- *       (non-struct).
+ *       $(LREF HeadingMismatchException)  when a heading is provided but a
+ *       matching column is not found or the order did not match that found in
+ *       the input (non-struct).
  */
 auto csvReader(Contents = string, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
@@ -367,7 +392,7 @@ unittest
         records = csvReader(str, ["b","a"]);
         assert(0);
     }
-    catch(Exception e)
+    catch(HeadingMismatchException e)
     {
     }
     auto records2 = Records!(string,Malformed.ignore,string,char,string[])
@@ -471,6 +496,7 @@ private:
     Separator _separator;
     Separator _quote;
     size_t[] indices;
+    uint _row;
     bool _empty;
     static if(is(Contents == struct))
     {
@@ -538,7 +564,7 @@ public:
      * -------
      *
      * Throws:
-     *       HeadingMismatchException  when a heading is provided but a
+     *       $(LREF HeadingMismatchException)  when a heading is provided but a
      *       matching column is not found or the order did not match that found
      *       in the input (non-struct).
      */
@@ -634,13 +660,9 @@ public:
      * Part of the $(XREF range, InputRange) interface.
      *
      * Throws:
-     *       IncompleteCellException When a quote is found in an unquoted field,
-     *       data continues after a closing quote, or the quoted field was not
-     *       closed before data was empty.
-     *
-     *       ConvException when conversion fails.
-     *
-     *       ConvOverflowException when conversion overflows.
+     *       $(LREF CSVException) When a quote is found in an unquoted field,
+     *       data continues after a closing quote, the quoted field was not
+     *       closed before data was empty, or a conversion failed.
      */
     void popFront()
     {
@@ -673,6 +695,7 @@ public:
     {
         if(_empty)
             return;
+        _row++;
         static if(is(Contents == struct))
         {
             recordRange = typeof(recordRange)
@@ -683,31 +706,43 @@ public:
             recordRange = typeof(recordRange)
                                  (&_input, _separator, _quote, indices);
         }
+
+        recordRange._row = _row;
+
         static if(is(Contents == struct))
         {
+            uint col;
+
             size_t colIndex;
-            foreach(colData; recordRange)
+            try
             {
-                scope(exit) colIndex++;
-                if(indices.length > 0)
+                foreach(colData; recordRange)
                 {
-                    foreach(ti, ToType; FieldTypeTuple!(Contents))
+                    col++;
+                    scope(exit) colIndex++;
+                    if(indices.length > 0)
                     {
-                        if(indices[ti] == colIndex)
+                        foreach(ti, ToType; FieldTypeTuple!(Contents))
+                        {
+                            if(indices[ti] == colIndex)
+                            {
+                                recordContent.tupleof[ti] = to!ToType(colData);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
                             recordContent.tupleof[ti] = to!ToType(colData);
                         }
                     }
                 }
-                else
-                {
-                    foreach(ti, ToType; FieldTypeTuple!(Contents))
-                    {
-                        recordContent.tupleof[ti] = to!ToType(colData);
-                    }
-                }
             }
-
+            catch(ConvException e)
+            {
+                throw new CSVException(_row, col, e);
+            }
         }
     }
 }
@@ -737,6 +772,7 @@ private:
     Contents curContentsoken;
     typeof(appender!(char[])()) _front;
     bool _empty;
+    uint _col, _row;
     size_t[] _popCount;
 public:
     /*
@@ -812,13 +848,9 @@ public:
      * Part of the $(XREF range, InputRange) interface.
      *
      * Throws:
-     *       IncompleteCellException When a quote is found in an unquoted field,
-     *       data continues after a closing quote, or the quoted field was not
-     *       closed before data was empty.
-     *
-     *       ConvException when conversion fails.
-     *
-     *       ConvOverflowException when conversion overflows.
+     *       $(LREF CSVException) When a quote is found in an unquoted field,
+     *       data continues after a closing quote, the quoted field was not
+     *       closed before data was empty, or a conversion failed.
      */
     void popFront()
     {
@@ -852,33 +884,49 @@ public:
     {
         foreach(i; 0..skipNum)
         {
+            _col++;
             _front.shrinkTo(0);
             if((*_input).front == _separator)
                 (*_input).popFront();
-            csvNextToken!(ErrorLevel, Range, Separator)
+            try
+            {
+                csvNextToken!(ErrorLevel, Range, Separator)
                                    (*_input, _front, _separator, _quote,false);
+            }
+            catch(Exception e)
+            {
+                throw new CSVException(_row, _col, e);
+            }
         }
     }
 
     private void prime()
     {
-        csvNextToken!(ErrorLevel, Range, Separator)
+        _col++;
+        try
+        {
+            csvNextToken!(ErrorLevel, Range, Separator)
                                (*_input, _front, _separator, _quote,false);
+            auto skipNum = _popCount.empty ? 0 : _popCount.front;
+            if(!_popCount.empty)
+                _popCount.popFront();
 
-        auto skipNum = _popCount.empty ? 0 : _popCount.front;
-        if(!_popCount.empty)
-            _popCount.popFront();
+            if(skipNum == size_t.max) {
+                while(!recordEnd())
+                    prime(1);
+                _empty = true;
+                return;
+            }
 
-        if(skipNum == size_t.max) {
-            while(!recordEnd())
-                prime(1);
-            _empty = true;
-            return;
+            if(skipNum)
+                prime(skipNum);
+            curContentsoken = to!Contents(_front.data);
+        }
+        catch(Exception e)
+        {
+            throw new CSVException(_row, _col, e);
         }
 
-        if(skipNum)
-            prime(skipNum);
-        curContentsoken = to!Contents(_front.data);
     }
 }
 
