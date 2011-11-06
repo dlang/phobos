@@ -671,7 +671,7 @@ private template isSame(ab...)
     }
     else static if (!__traits(compiles, expectType!(ab[0])) &&
                     !__traits(compiles, expectType!(ab[1])) &&
-                     __traits(compiles, ab[0] == ab[1]))
+                     __traits(compiles, expectBool!(ab[0] == ab[1])))
     {
         static if (!__traits(compiles, &ab[0]) ||
                    !__traits(compiles, &ab[1]))
@@ -685,17 +685,21 @@ private template isSame(ab...)
     }
 }
 private template expectType(T) {}
+private template expectBool(bool b) {}
 
 unittest
 {
     static assert( isSame!(int, int));
     static assert(!isSame!(int, short));
 
-    enum a = 1, b = 1, c = 2;
+    enum a = 1, b = 1, c = 2, s = "a", t = "a";
     static assert( isSame!(1, 1));
     static assert( isSame!(a, 1));
     static assert( isSame!(a, b));
     static assert(!isSame!(b, c));
+    static assert( isSame!("a", "a"));
+    static assert( isSame!(s, "a"));
+    static assert( isSame!(s, t));
     static assert(!isSame!(1, "1"));
     static assert(!isSame!(a, "a"));
     static assert( isSame!(isSame, isSame));
@@ -718,6 +722,7 @@ unittest
     static assert(!isSame!(foo, bar));
     static assert(!isSame!(bar, baz));
     static assert( isSame!(baz, baz));
+    static assert(!isSame!(foo, 0));
 
     int  x, y;
     real z;
@@ -725,6 +730,7 @@ unittest
     static assert(!isSame!(x, y));
     static assert(!isSame!(y, z));
     static assert( isSame!(z, z));
+    static assert(!isSame!(x, 0));
 }
 
 /*
