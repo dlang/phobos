@@ -6808,9 +6808,7 @@ unittest
     assert(equal(pts3, pts2));
 }
 
-// @@@BUG1904
-/*private*/
-size_t getPivot(alias less, Range)(Range r)
+private size_t getPivot(alias less, Range)(Range r)
 {
     // This algorithm sorts the first, middle and last elements of r,
     // then returns the index of the middle element.  In effect, it uses the
@@ -6850,9 +6848,7 @@ size_t getPivot(alias less, Range)(Range r)
     return mid;
 }
 
-// @@@BUG1904
-/*private*/
-void optimisticInsertionSort(alias less, Range)(Range r)
+private void optimisticInsertionSort(alias less, Range)(Range r)
 {
     alias binaryFun!(less) pred;
     if(r.length < 2) {
@@ -6903,9 +6899,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-// @@@BUG1904
-/*private*/
-void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
+private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
     enum size_t optimisticInsertionSortGetsBetter = 25;

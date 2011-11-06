@@ -29852,9 +29852,7 @@ private:
         _enforceValidTZFile(!tzFile.eof());
         tzFile.rawRead(buff);
 
-        // @@@BUG@@@ 4414 forces us to save the result rather than use it directly.
-        auto bigEndian = cast(ubyte[T.sizeof])buff;
-        return bigEndianToNative!T(bigEndian);
+        return bigEndianToNative!T(cast(ubyte[T.sizeof])buff);
     }
 
     /+
