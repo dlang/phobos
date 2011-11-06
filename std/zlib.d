@@ -173,7 +173,7 @@ void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
     {
         destbuf.length = destlen;
         zs.next_out = cast(typeof(zs.next_out)) &destbuf[olddestlen];
-        zs.avail_out = destlen-olddestlen;
+        zs.avail_out = to!uint(destlen - olddestlen);
         olddestlen = destlen;
 
         err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
@@ -484,11 +484,11 @@ class UnCompress
 
         if (!inited)
         {
-	    int windowBits = 15;
-	    if(format == HeaderFormat.gzip)
-	        windowBits += 16;
+        int windowBits = 15;
+        if(format == HeaderFormat.gzip)
+            windowBits += 16;
             else if(format == HeaderFormat.determineFromData)
-	        windowBits += 32;
+            windowBits += 32;
 
             err = inflateInit2(&zs, windowBits);
             if (err)
