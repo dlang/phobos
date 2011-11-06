@@ -42,6 +42,22 @@
  * }
  * -------
  *
+ * When a file contains a heading the Contents can be specified as an
+ * associative array. Passing null to signafy that a heading is pressent.
+ *
+ * -------
+ * auto text = "Name,Occupation,Salary\r"
+ *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
+ *
+ * foreach(record; csvReader!(string[string])
+ *         (text,cast(string[])null))
+ * {
+ *     writefln("%s works as a %s and earns $%s per year",
+ *              record["Name"], record["Occupation"], 
+ *              record["Salary"]);
+ * }
+ * -------
+ *
  * This module allows content to be iterated by record stored in a struct
  * or into a range of fields. Upon detection of an error an
  * IncompleteCellException is thrown (can be disabled). csvNextToken has been
@@ -83,8 +99,8 @@ import std.traits;
  */
 class CSVException : Exception {
     ///
-    uint row, col;
-    this(uint row, uint col, Exception e) {
+    size_t row, col;
+    this(size_t row, size_t col, Exception e) {
         super("(Row: " ~ to!string(row) ~ 
               ", Col: " ~ to!string(col) ~ ") CSV Parse Failure", e);
         this.row = row;
@@ -251,7 +267,8 @@ enum Malformed
 auto csvReader(Contents = string, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && isSomeChar!(ElementType!Range) 
-                  && isSomeChar!(Separator) && !is(Contents == class))
+                  && isSomeChar!(Separator) && !is(Contents == class)
+                  && !is(Contents T : T[U], U : string))
 {
     return Records!(Contents,Malformed.throwException,Range,
                     ElementType!Range,string[])
@@ -264,7 +281,8 @@ auto csvReader(Contents = string, Range, Heading, Separator = char)
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && isSomeChar!(ElementType!Range) 
                   && isSomeChar!(Separator) && !is(Contents == class) 
-                  && isInputRange!Heading && isSomeString!(ElementType!Heading))
+                  && isForwardRange!Heading 
+                  && isSomeString!(ElementType!Heading))
 {
     return Records!(Contents,Malformed.throwException,Range,
                     ElementType!Range,Heading)
@@ -465,6 +483,23 @@ unittest
     assert(record.front == "three");
 }
 
+
+// Test associative array support
+unittest
+{
+  string str = "1;2;3\n34;65;63\n34;65;63";
+ 
+  auto records = csvReader!(string[string])(str,["3","1"],';');
+  int count;
+  foreach(record; records)
+  {
+      count++;
+      assert(record["1"] == "34");
+      assert(record["3"] == "63");
+  }
+  assert(count == 2);
+}
+
 /**
  * Range for iterating CSV records.
  *
@@ -489,7 +524,7 @@ unittest
 struct Records(Contents, Malformed ErrorLevel, Range, Separator, Heading)
     if(isSomeChar!Separator && isInputRange!Range
        && isSomeChar!(ElementType!Range) && !is(Contents == class)
-       && isInputRange!Heading && isSomeString!(ElementType!Heading))
+       && isForwardRange!Heading && isSomeString!(ElementType!Heading))
 {
 private:
     Range _input;
@@ -502,6 +537,11 @@ private:
     {
         Contents recordContent;
         Record!(Range, ErrorLevel, Range, Separator) recordRange;
+    }
+    else static if(is(Contents T : T[U], U : string))
+    {
+        Contents recordContent;
+        Record!(T, ErrorLevel, Range, Separator) recordRange;
     }
     else
         Record!(Contents, ErrorLevel, Range, Separator) recordRange;
@@ -606,7 +646,11 @@ public:
 
         static if(!is(Contents == struct))
         {
-            static if(ErrorLevel == Malformed.ignore)
+            static if(is(Contents T : T[U], U : string))
+            {
+                sort(indices);
+            }
+            else static if(ErrorLevel == Malformed.ignore)
             {
                 sort(indices);
             }
@@ -638,6 +682,10 @@ public:
     {
         assert(!empty);
         static if(is(Contents == struct))
+        {
+            return recordContent;
+        }
+        else static if(is(Contents T : T[U], U : string))
         {
             return recordContent;
         }
@@ -709,16 +757,30 @@ public:
 
         recordRange._row = _row;
 
-        static if(is(Contents == struct))
+        static if(is(Contents T : T[U], U : string))
         {
-            uint col;
+            T[U] aa;
+            try
+            {
+                for(; !recordRange.empty; recordRange.popFront())
+                {
+                    aa[heading[recordRange._col-1]] = recordRange.front;
+                }
+            }
+            catch(ConvException e)
+            {
+                throw new CSVException(_row, recordRange._col, e);
+            }
 
+            recordContent = aa;
+        }
+        else static if(is(Contents == struct))
+        {
             size_t colIndex;
             try
             {
                 foreach(colData; recordRange)
                 {
-                    col++;
                     scope(exit) colIndex++;
                     if(indices.length > 0)
                     {
@@ -741,7 +803,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(_row, col, e);
+                throw new CSVException(_row, colIndex, e);
             }
         }
     }
@@ -772,7 +834,7 @@ private:
     Contents curContentsoken;
     typeof(appender!(char[])()) _front;
     bool _empty;
-    uint _col, _row;
+    size_t _col, _row;
     size_t[] _popCount;
 public:
     /*
