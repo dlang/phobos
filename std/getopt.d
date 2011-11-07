@@ -771,3 +771,12 @@ unittest
     assert(p.length == 1);
     assert(p[0] == "a");
 }
+
+unittest
+{
+    // From bugzilla 6888
+    int[string] foo;
+    auto args = ["", "-t", "a=1"];
+    getopt(args, "t", &foo);
+    assert(foo == ["a":1]);
+}
