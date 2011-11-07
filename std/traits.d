@@ -3098,9 +3098,10 @@ unittest
 Exactly the same as the builtin traits:
 $(D ___traits(_isAbstractFunction, method)).
  */
-template isAbstractFunction(alias method)
+template isAbstractFunction(method...)
+    if (method.length == 1)
 {
-    enum bool isAbstractFunction  = __traits(isAbstractFunction, method);
+    enum bool isAbstractFunction  = __traits(isAbstractFunction, method[0]);
 }
 
 
