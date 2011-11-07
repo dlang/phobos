@@ -78,7 +78,9 @@ else version(Posix)
                SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE,
                TCP_KEEPIDLE, TCP_KEEPINTVL;
     else version(OSX)
-        private import std.c.osx.socket;
+        import std.c.osx.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
+               IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
+               SD_RECEIVE, SD_SEND, SD_BOTH, INADDR_NONE;
     else version(FreeBSD)
     {
         import core.sys.posix.sys.socket;
