@@ -671,7 +671,7 @@ usually used for compile-time reflection purposes.
 template FunctionTypeOf(func...)
     if (func.length == 1 && isCallable!(func))
 {
-    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function) || is(typeof(& func[0]) Fsym == delegate))
+    static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function)/*@@@BUG6902@@@ workaround || is(typeof(& func[0]) Fsym == delegate)*/)
     {
         alias Fsym FunctionTypeOf; // HIT: (nested) function symbol
     }
@@ -691,8 +691,12 @@ template FunctionTypeOf(func...)
             alias Fptr FunctionTypeOf; // HIT: function pointer
         else static if (is(T Fdlg == delegate))
             alias Fdlg FunctionTypeOf; // HIT: delegate
+        else static if (is(typeof(& func[0]) Fsym == delegate)) //@@@BUG6902@@@
+            alias Fsym FunctionTypeOf; // HIT: nested @property function symbol
         else static assert(0);
     }
+    else static if (is(typeof(& func[0]) Fsym == delegate)) //@@@BUG6902@@@
+        alias Fsym FunctionTypeOf; // HIT: nested @property function symbol
     else static assert(0);
 }
 
