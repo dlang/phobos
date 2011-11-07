@@ -24,6 +24,7 @@ import std.conv;       // to, assumeUnique
 import std.exception;  // enforce, assumeUnique
 import std.range;      // walkLength
 import std.traits;     // isSomeChar, isSomeString
+import std.typetuple;  // TypeTuple
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -549,92 +550,104 @@ size_t toUTFindex(in dchar[] str, size_t n) @safe pure nothrow
         $(D UTFException) if $(D str[index]) is not the start of a valid UTF
         sequence.
   +/
-dchar decode(in char[] str, ref size_t index) @safe pure
+dchar decode(S)(in S str, ref size_t index) @trusted pure
+    if(is(S : const(char[])))
+in
+{
+    assert(index < str.length, "Attempted to decode past the end of a string");
+}
 out (result)
 {
     assert(isValidDchar(result));
 }
 body
 {
-    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
-
-    immutable len = str.length;
-    dchar V;
-    size_t i = index;
-    char u = str[i];
-
-    if (u & 0x80)
-    {
-        /* The following encodings are valid, except for the 5 and 6 byte
-         * combinations:
-         *  0xxxxxxx
-         *  110xxxxx 10xxxxxx
-         *  1110xxxx 10xxxxxx 10xxxxxx
-         *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-         *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-         *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-         */
-        uint n = 1;
-        for (; ; n++)
-        {
-            if (n > 4)
-                goto Lerr;      // only do the first 4 of 6 encodings
-            if (((u << n) & 0x80) == 0)
-            {
-                if (n == 1)
-                    goto Lerr;
-                break;
-            }
-        }
-
-        // Pick off (7 - n) significant bits of B from first byte of octet
-        V = cast(dchar)(u & ((1 << (7 - n)) - 1));
-
-        if (i + n > len)
-            goto Lerr;          // off end of string
-
-        /* The following combinations are overlong, and illegal:
-         *  1100000x (10xxxxxx)
-         *  11100000 100xxxxx (10xxxxxx)
-         *  11110000 1000xxxx (10xxxxxx 10xxxxxx)
-         *  11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
-         *  11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
-         */
-        auto u2 = str[i + 1];
-        if ((u & 0xFE) == 0xC0 ||
-            (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
-            (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
-            (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
-            (u == 0xFC && (u2 & 0xFC) == 0x80))
-            goto Lerr;          // overlong combination
-
-        foreach (j; 1 .. n)
-        {
-            u = str[i + j];
-            if ((u & 0xC0) != 0x80)
-                goto Lerr;          // trailing bytes are 10xxxxxx
-            V = (V << 6) | (u & 0x3F);
-        }
-        if (!isValidDchar(V))
-            goto Lerr;
-        i += n;
-    }
+    if (str[index] < 0x80)
+        return str[index++];
     else
+        return decodeImpl(str.ptr + index, str.length - index, index);
+}
+
+/*
+ * This function does it's own bounds checking to give a more useful
+ * error message when attempting to decode past the end of a string.
+ * Subsequently it uses a pointer instead of an array to avoid
+ * redundant bounds checking.
+ */
+private dchar decodeImpl(const(char)* pstr, size_t length, ref size_t index) @trusted pure
+in
+{
+    assert(pstr[0] & 0x80);
+}
+body
+{
+    /* The following encodings are valid, except for the 5 and 6 byte
+     * combinations:
+     *  0xxxxxxx
+     *  110xxxxx 10xxxxxx
+     *  1110xxxx 10xxxxxx 10xxxxxx
+     *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     */
+
+    /* Dchar bitmask for different numbers of UTF-8 code units.
+     */
+    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+
+    ubyte fst = pstr[0], tmp=void;
+    dchar d = fst; // upper control bits are masked out later
+    fst <<= 1;
+
+    foreach(i; TypeTuple!(1, 2, 3))
     {
-        V = cast(dchar)u;
-        i++;
+        if (i == length)
+            goto Ebounds;
+
+        tmp = pstr[i];
+
+        if ((tmp & 0xC0) != 0x80)
+            goto Eutf;
+
+        d = (d << 6) | (tmp & 0x3F);
+        fst <<= 1;
+
+        if (!(fst & 0x80)) // no more bytes
+        {
+            d &= bitMask[i]; // mask out control bits
+
+            // overlong, could have been encoded with i bytes
+            if ((d & ~bitMask[i - 1]) == 0)
+                goto Eutf;
+
+            // check for surrogates only needed for 3 bytes
+            static if (i == 2)
+            {
+                if (!isValidDchar(d))
+                    goto Eutf;
+            }
+
+            index += i + 1;
+            return d;
+        }
     }
 
-    index = i;
-    return V;
+    static UTFException exception(in char[] str, string msg)
+    {
+        uint[4] sequence = void;
+        size_t i;
+        do
+        {
+            sequence[i] = str[i];
+        } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
 
-  Lerr:
-    uint[4] sequence;
-    size_t seqLen = 0;
-    for(size_t j = index; seqLen < 4 && j < len && (str[j] & 0x80) && !(str[j] & 0xC0); ++j, ++seqLen)
-        sequence[j] = str[j];
+        return (new UTFException(msg, i)).setSequence(sequence[0 .. i]);
+    }
 
-    throw (new UTFException("Invalid UTF-8 sequence", i)).setSequence(sequence[0 .. seqLen]);
+ Eutf:
+    throw exception(pstr[0 .. length], "Invalid UTF-8 sequence");
+ Ebounds:
+    throw exception(pstr[0 .. length], "Attempted to decode past the end of a string");
 }
 
 unittest
@@ -709,60 +722,65 @@ unittest
 }
 
 /// ditto
-dchar decode(in wchar[] str, ref size_t index) @safe pure
+dchar decode(S)(in S str, ref size_t index) @trusted pure
+    if(is(S : const(wchar[])))
+in
+{
+    assert(index < str.length, "Attempted to decode past the end of a string");
+}
 out (result)
 {
     assert(isValidDchar(result));
 }
 body
 {
-    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
+    if (str[index] < 0xD800)
+        return str[index++];
+    else
+        return decodeImpl(str.ptr + index, str.length - index, index);
+}
 
+/// ditto
+private dchar decodeImpl(const(wchar)* pstr, size_t length, ref size_t index) @trusted pure
+in
+{
+    assert(pstr[0] >= 0xD800);
+}
+body
+{
     string msg;
-    dchar V;
-    size_t i = index;
-    uint u = str[i];
+    uint u = pstr[0];
 
-    if (u & ~0x7F)
+    if (u >= 0xD800 && u <= 0xDBFF)
     {
-        if (u >= 0xD800 && u <= 0xDBFF)
+        if (length == 1)
         {
-            uint u2;
-
-            if (i + 1 == str.length)
-            {
-                msg = "surrogate UTF-16 high value past end of string";
-                goto Lerr;
-            }
-            u2 = str[i + 1];
-            if (u2 < 0xDC00 || u2 > 0xDFFF)
-            {
-                msg = "surrogate UTF-16 low value out of range";
-                goto Lerr;
-            }
-            u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
-            i += 2;
-        }
-        else if (u >= 0xDC00 && u <= 0xDFFF)
-        {
-            msg = "unpaired surrogate UTF-16 value";
+            msg = "surrogate UTF-16 high value past end of string";
             goto Lerr;
         }
-        else
-            i++;
-        // Note: u+FFFE and u+FFFF are specifically permitted by the
-        // Unicode standard for application internal use (see isValidDchar)
+        immutable uint u2 = pstr[1];
+        if (u2 < 0xDC00 || u2 > 0xDFFF)
+        {
+            msg = "surrogate UTF-16 low value out of range";
+            goto Lerr;
+        }
+        u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
+        index += 2;
+    }
+    else if (u >= 0xDC00 && u <= 0xDFFF)
+    {
+        msg = "unpaired surrogate UTF-16 value";
+        goto Lerr;
     }
     else
-    {
-        i++;
-    }
+        ++index;
+    // Note: u+FFFE and u+FFFF are specifically permitted by the
+    // Unicode standard for application internal use (see isValidDchar)
 
-    index = i;
     return cast(dchar)u;
 
   Lerr:
-    throw (new UTFException(msg)).setSequence(str[i]);
+    throw (new UTFException(msg)).setSequence(pstr[0]);
 }
 
 unittest
@@ -775,22 +793,27 @@ unittest
 
 
 /// ditto
-dchar decode(in dchar[] str, ref size_t index) @safe pure
+dchar decode(S)(in S str, ref size_t index) @safe pure
+    if(is(S : const(dchar[])))
+in
 {
-    enforceEx!UTFException(index < str.length, "Attempted to decode past the end of a string");
-
-    size_t i = index;
-    dchar c = str[i];
-
-    if (!isValidDchar(c))
-        goto Lerr;
-    index = i + 1;
-    return c;
-
-  Lerr:
-    throw (new UTFException("Invalid UTF-32 value")).setSequence(c);
+    assert(index < str.length, "Attempted to decode past the end of a string");
+}
+body
+{
+    if (str[index] < 0xD800)
+        return str[index++];
+    else
+        return decodeImpl(str, index);
 }
 
+/// ditto
+private dchar decodeImpl(in dchar[] str, ref size_t index) @safe pure
+{
+    if (!isValidDchar(str[index]))
+        throw (new UTFException("Invalid UTF-32 value")).setSequence(str[index]);
+    return str[index++];
+}
 
 /* =================== Encode ======================= */
 
