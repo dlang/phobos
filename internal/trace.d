@@ -811,7 +811,46 @@ void _trace_pro_n()
         ret                             ;
     }
       else version (D_InlineAsm_X86_64)
-            static assert(0);
+    asm
+    {   naked                           ;
+        push    RAX                     ;
+        push    RCX                     ;
+        push    RDX                     ;
+        push    RSI                     ;
+        push    RDI                     ;
+        push    R8                      ;
+        push    R9                      ;
+        push    R10                     ;
+        push    R11                     ;
+        mov     RCX,9*8[RSP]            ;
+        xor     RAX,RAX                 ;
+        mov     AL,[RCX]                ;
+        cmp     AL,0xFF                 ;
+        jne     L1                      ;
+        cmp     byte ptr 1[RCX],0       ;
+        jne     L1                      ;
+        mov     AX,2[RCX]               ;
+        add     9*8[RSP],3              ;
+        add     RCX,3                   ;
+    L1: inc     RAX                     ;
+        inc     RCX                     ;
+        add     9*8[RSP],RAX            ;
+        dec     RAX                     ;
+        push    RCX                     ;
+        push    RAX                     ;
+        call    trace_pro               ;
+        add     RSP,16                  ;
+        pop     R11                     ;
+        pop     R10                     ;
+        pop     R8                      ;
+        pop     R9                      ;
+        pop     RDI                     ;
+        pop     RSI                     ;
+        pop     RDX                     ;
+        pop     RCX                     ;
+        pop     RAX                     ;
+        ret                             ;
+    }
       else
             static assert(0);
   }
@@ -911,10 +950,40 @@ void _trace_epi_n()
         ret     ;
     }
    }
-      else version (D_InlineAsm_X86_64)
-            static assert(0);
-      else
-            static assert(0);
+   else version (D_InlineAsm_X86_64)
+   {
+    asm
+    {   naked           ;
+        push    RAX     ;
+        push    RCX     ;
+        push    RDX     ;
+        push    RSI     ;
+        push    RDI     ;
+        push    R8      ;
+        push    R9      ;
+        push    R10     ;
+        push    R11     ;
+        /* Don't worry about saving XMM0/1 or ST0/1
+         * Hope trace_epi() doesn't change them
+         */
+    }
+    trace_epi();
+    asm
+    {
+        pop     R11     ;
+        pop     R10     ;
+        pop     R9      ;
+        pop     R8      ;
+        pop     RDI     ;
+        pop     RSI     ;
+        pop     RDX     ;
+        pop     RCX     ;
+        pop     RAX     ;
+        ret             ;
+    }
+   }
+   else
+        static assert(0);
   }
   else
   {
