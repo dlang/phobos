@@ -9,7 +9,7 @@
 #	make unittest
 #		Build libphobos.a, build and run unit tests
 
-LIB=libphobos.a
+LIB=lib$(MODEL)/libphobos.a
 
 MAKEFILE=osx.mak
 MODEL=32
@@ -80,16 +80,6 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 
 ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak openbsd.mak solaris.mak
-
-SRCS= \
-	internal/aaA.d internal/adi.d \
-	internal/aApply.d internal/aApplyR.d internal/memset.d \
-	internal/arraycast.d internal/arraycat.d \
-	internal/switch.d internal/qsort.d internal/invariant.d \
-	internal/dmain2.d internal/cast.d internal/obj.d \
-	internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
-	internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
-
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o \
@@ -239,6 +229,17 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS) \
 	$(SRC_STD_C_POSIX)
 
+
+SRCS= \
+	internal/aaA.d internal/adi.d \
+	internal/aApply.d internal/aApplyR.d internal/memset.d \
+	internal/arraycast.d internal/arraycat.d \
+	internal/switch.d internal/qsort.d internal/invariant.d \
+	internal/dmain2.d internal/cast.d internal/obj.d \
+	internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
+	internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
+
+
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 #	rm -f $(LIB)
 #	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
@@ -249,7 +250,7 @@ unittest :
 	./unittest
 
 cov : $(SRCS) $(LIB)
-	$(DMD) -cov -unittest -ofcov -m$(MODEL) unittest.d $(SRCS) $(LIB)
+	$(DMD) -m$(MODEL) -cov -unittest -version=Unittest -ofcov unittest.d $(SRCS) $(LIB) -L-ldl
 	./cov
 
 dynamic : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
