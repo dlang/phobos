@@ -461,7 +461,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             enum isDelegateWithLessThanTwoParameters =
                 is(typeof(receiver) == delegate) &&
                 !is(typeof(receiver("", "")));
-            if (!isDelegateWithLessThanTwoParameters && !val && !incremental) {
+            if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
@@ -770,4 +770,13 @@ unittest
     getopt(args, "p", &p);
     assert(p.length == 1);
     assert(p[0] == "a");
+}
+
+unittest
+{
+    // From bugzilla 6888
+    int[string] foo;
+    auto args = ["", "-t", "a=1"];
+    getopt(args, "t", &foo);
+    assert(foo == ["a":1]);
 }
