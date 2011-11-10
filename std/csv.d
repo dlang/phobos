@@ -21,6 +21,8 @@
  *     $(LI Each record should contain the same number of fields (not enforced))
  *   )
  *
+ * Where any input range of characters is accepted for recieving input.
+ *
  * Example:
  *
  * -------
@@ -42,7 +44,7 @@
  * }
  * -------
  *
- * When a file contains a heading the Contents can be specified as an
+ * When a input contains a heading the Contents can be specified as an
  * associative array. Passing null to signafy that a heading is pressent.
  *
  * -------
@@ -52,8 +54,8 @@
  * foreach(record; csvReader!(string[string])
  *         (text,cast(string[])null))
  * {
- *     writefln("%s works as a %s and earns $%s per year",
- *              record["Name"], record["Occupation"], 
+ *     writefln("%s works as a %s and earns $%s per year.",
+ *              record["Name"], record["Occupation"],
  *              record["Salary"]);
  * }
  * -------
@@ -93,7 +95,7 @@ import std.traits;
  * This Exception will have one of the following as part of its next property.
  *
  * $(UL
- *     $(LI IncompletCellException)
+ *     $(LI IncompleteCellException)
  *     $(LI ConvException)
  *  )
  */
@@ -101,7 +103,7 @@ class CSVException : Exception {
     ///
     size_t row, col;
     this(size_t row, size_t col, Exception e) {
-        super("(Row: " ~ to!string(row) ~ 
+        super("(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") CSV Parse Failure", e);
         this.row = row;
         this.col = col;
@@ -179,7 +181,6 @@ enum Malformed
  * int[] ans = [76,26,22];
  * auto records = csvReader!int(str);
  *
- * int count;
  * foreach(record; records) {
  *     assert(equal(record, ans));
  * }
@@ -252,7 +253,7 @@ enum Malformed
  * nulls) prevents just sending null or [] as a header.
  *
  * Returns:
- *      $(LREF Records) struct which provides a $(XREF range, InputRange) of
+ *      $(LREF Records) struct which provides a $(XREF range, isInputRange) of
  *      each record.
  *
  * Throws:
@@ -266,7 +267,7 @@ enum Malformed
  */
 auto csvReader(Contents = string, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && isSomeChar!(ElementType!Range) 
+               if(isInputRange!Range && isSomeChar!(ElementType!Range)
                   && isSomeChar!(Separator) && !is(Contents == class)
                   && !is(Contents T : T[U], U : string))
 {
@@ -279,9 +280,9 @@ auto csvReader(Contents = string, Range, Separator = char)(Range input,
 auto csvReader(Contents = string, Range, Heading, Separator = char)
                 (Range input, Heading heading,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && isSomeChar!(ElementType!Range) 
-                  && isSomeChar!(Separator) && !is(Contents == class) 
-                  && isForwardRange!Heading 
+               if(isInputRange!Range && isSomeChar!(ElementType!Range)
+                  && isSomeChar!(Separator) && !is(Contents == class)
+                  && isForwardRange!Heading
                   && isSomeString!(ElementType!Heading))
 {
     return Records!(Contents,Malformed.throwException,Range,
@@ -488,7 +489,7 @@ unittest
 unittest
 {
   string str = "1;2;3\n34;65;63\n34;65;63";
- 
+
   auto records = csvReader!(string[string])(str,["3","1"],';');
   int count;
   foreach(record; records)
@@ -498,6 +499,45 @@ unittest
       assert(record["3"] == "63");
   }
   assert(count == 2);
+}
+
+// Test restricted range
+unittest
+{
+    import std.typecons;
+    struct InputRange
+    {
+        wstring text;
+
+        this(wstring txt)
+        {
+            text = txt;
+        }
+
+        auto empty()
+        {
+            return text.empty();
+        }
+
+        auto popFront()
+        {
+            text.popFront();
+        }
+
+        wchar front()
+        {
+            return text[0];
+        }
+    }
+    auto ir = InputRange("Name,Occupation,Salary\r"w
+          "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"w);
+
+    foreach(record; csvReader(ir, cast(string[])null))
+        foreach(cell; record) {}
+    foreach(record; csvReader!(Tuple!(string,string,int))
+            (ir,cast(string[])null)) {}
+    foreach(record; csvReader!(string[string])
+            (ir,cast(string[])null)) {}
 }
 
 /**
@@ -536,7 +576,7 @@ private:
     static if(is(Contents == struct))
     {
         Contents recordContent;
-        Record!(Range, ErrorLevel, Range, Separator) recordRange;
+        Record!(string, ErrorLevel, Range, Separator) recordRange;
     }
     else static if(is(Contents T : T[U], U : string))
     {
@@ -556,7 +596,7 @@ public:
      * assert(records.heading == ["a","b","c"]);
      * -------
      */
-    Range[] heading;
+    string[] heading;
 
     /**
      * Constructor to initialize the input, delimiter and quote for input
@@ -620,7 +660,7 @@ public:
             colToIndex[h] = size_t.max;
         }
 
-        auto r = Record!(Range, ErrorLevel, Range, Separator)
+        auto r = Record!(string, ErrorLevel, Range, Separator)
             (&_input, _separator, _quote, indices);
 
         size_t colIndex;
@@ -670,7 +710,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      *
      * Returns:
      *      If $(D Contents) is a struct, the struct will be filled with record
@@ -697,7 +737,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      */
     @property bool empty()
     {
@@ -705,7 +745,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -796,7 +836,8 @@ public:
                     {
                         foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
-                            recordContent.tupleof[ti] = to!ToType(colData);
+                            if(ti == colIndex)
+                                recordContent.tupleof[ti] = to!ToType(colData);
                         }
                     }
                 }
@@ -874,7 +915,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      */
     @property Contents front()
     {
@@ -883,7 +924,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      */
     @property bool empty()
     {
@@ -907,7 +948,7 @@ public:
 
 
     /**
-     * Part of the $(XREF range, InputRange) interface.
+     * Part of the $(XREF range, isInputRange) interface.
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
