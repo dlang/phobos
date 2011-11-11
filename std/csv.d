@@ -2,7 +2,7 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from a input range.
+ * from a input range of dchar.
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
@@ -20,8 +20,6 @@
  *     $(LI Double quotes in a field are escaped with a double quote)
  *     $(LI Each record should contain the same number of fields (not enforced))
  *   )
- *
- * Where any input range of characters is accepted for recieving input.
  *
  * Example:
  *
@@ -44,8 +42,8 @@
  * }
  * -------
  *
- * When a input contains a heading the Contents can be specified as an
- * associative array. Passing null to signafy that a heading is pressent.
+ * When a input contains a header the Contents can be specified as an
+ * associative array. Passing null to signify that a header is prescient.
  *
  * -------
  * auto text = "Name,Occupation,Salary\r"
@@ -121,19 +119,19 @@ class CSVException : Exception {
 class IncompleteCellException : Exception
 {
     /// Data pulled from input before finding a problem
-    string partialData;
-    this(string cellPartial, string msg)
+    dstring partialData;
+
+    this(string msg)
     {
         super(msg);
-        partialData = cellPartial;
     }
 }
 
 /**
- * Exception thrown when a heading is provided but a matching column is not
+ * Exception thrown when a header is provided but a matching column is not
  * found or the order did not match that found in the input (non-struct).
  */
-class HeadingMismatchException : Exception
+class HeaderMismatchException : Exception
 {
     this(string msg)
     {
@@ -205,10 +203,10 @@ enum Malformed
  * }
  * -------
  *
- * An optional $(D heading) can be provided. The first record will be read in
- * as the heading. If $(D Contents) is a struct then the heading provided is
+ * An optional $(D header) can be provided. The first record will be read in
+ * as the header. If $(D Contents) is a struct then the header provided is
  * expected to correspond to the fields in the struct. When $(D Contents) is
- * non-struct the $(D heading) must be provided in the same order as the input
+ * non-struct the $(D header) must be provided in the same order as the input
  * or an exception is thrown.
  *
  * Read only column "b":
@@ -224,7 +222,7 @@ enum Malformed
  * }
  * -------
  *
- * Read from heading of different order:
+ * Read from header of different order:
  *
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
@@ -239,14 +237,14 @@ enum Malformed
  * -------
  *
  * The header can also be left empty if the input contains a header but
- * all columns should be iterated. The heading from the input can always
- * be accessed from the heading field.
+ * all columns should be iterated. The header from the input can always
+ * be accessed from the header field.
  *
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
  * auto records = csvReader(str, cast(string[])null);
  *
- * assert(records.heading == ["a","b","c"]);
+ * assert(records.header == ["a","b","c"]);
  * -------
  *
  * $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=2394, IFTI fails for
@@ -261,33 +259,45 @@ enum Malformed
  *       data continues after a closing quote, the quoted field was not
  *       closed before data was empty, or a conversion failed.
  *
- *       $(LREF HeadingMismatchException)  when a heading is provided but a
+ *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
  *       the input (non-struct).
  */
-auto csvReader(Contents = string, Range, Separator = char)(Range input,
+auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && isSomeChar!(ElementType!Range)
+               if(isInputRange!Range && is(ElementType!Range == dchar)
                   && isSomeChar!(Separator) && !is(Contents == class)
                   && !is(Contents T : T[U], U : string))
 {
-    return Records!(Contents,Malformed.throwException,Range,
+    return Records!(Contents,ErrorLevel,Range,
                     ElementType!Range,string[])
         (input, delimiter, quote);
 }
 
 /// Ditto
-auto csvReader(Contents = string, Range, Heading, Separator = char)
-                (Range input, Heading heading,
+auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Header, Separator = char)
+                (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && isSomeChar!(ElementType!Range)
+               if(isInputRange!Range && is(ElementType!Range == dchar)
                   && isSomeChar!(Separator) && !is(Contents == class)
-                  && isForwardRange!Heading
-                  && isSomeString!(ElementType!Heading))
+                  && isForwardRange!Header
+                  && isSomeString!(ElementType!Header))
 {
-    return Records!(Contents,Malformed.throwException,Range,
-                    ElementType!Range,Heading)
-        (input, heading, delimiter, quote);
+    return Records!(Contents,ErrorLevel,Range,
+                    ElementType!Range,Header)
+        (input, header, delimiter, quote);
+}
+
+auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Header, Separator = char)
+                (Range input, Header header,
+                 Separator delimiter = ',', Separator quote = '"')
+               if(isInputRange!Range && is(ElementType!Range == dchar)
+                  && isSomeChar!(Separator) && !is(Contents == class)
+                  && is(Header : void*))
+{
+    return Records!(Contents,ErrorLevel,Range,
+                    ElementType!Range,string[])
+        (input, cast(string[])null, delimiter, quote);
 }
 
 // Test standard iteration over input.
@@ -317,9 +327,9 @@ unittest
     assert(records.empty);
 }
 
-// Test structure conversion interface.
+// Test structure conversion interface with unicode.
 unittest {
-    string str = "Hello,65,63.63\nWorld,123,3673.562";
+    wstring str = "\U00010143Hello,65,63.63\nWorld,123,3673.562"w;
     struct Layout
     {
         string name;
@@ -328,7 +338,7 @@ unittest {
     }
 
     Layout ans[2];
-    ans[0].name = "Hello";
+    ans[0].name = "\U00010143Hello";
     ans[0].value = 65;
     ans[0].other = 663.63;
     ans[1].name = "World";
@@ -361,10 +371,10 @@ unittest
     }
 }
 
-// Test struct & header interface
+// Test struct & header interface and same unicode
 unittest
 {
-    string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
+    string str = "a,b,c\nHello,65,63.63\n➊➋➂❹,123,3673.562";
     struct Layout
     {
         int value;
@@ -378,7 +388,7 @@ unittest
     ans[0].name = "Hello";
     ans[0].value = 65;
     ans[0].other = 63.63;
-    ans[1].name = "World";
+    ans[1].name = "➊➋➂❹";
     ans[1].value = 123;
     ans[1].other = 3673.562;
 
@@ -411,10 +421,10 @@ unittest
         records = csvReader(str, ["b","a"]);
         assert(0);
     }
-    catch(HeadingMismatchException e)
+    catch(HeaderMismatchException e)
     {
     }
-    auto records2 = Records!(string,Malformed.ignore,string,char,string[])
+    auto records2 = csvReader!(string,Malformed.ignore)
        (str, ["b","a"], ',', '"');
 
     ans = [["Hello","65"],["World","123"]];
@@ -424,7 +434,7 @@ unittest
     }
 
     str = "a,c,e\nJoe,Carpenter,300000\nFred,Fly,4";
-    records2 = Records!(string,Malformed.ignore,string,char,string[])
+    records2 = csvReader!(string,Malformed.ignore)
        (str, ["a","b","c","d"], ',', '"');
 
     ans = [["Joe","Carpenter"],["Fred","Fly"]];
@@ -440,15 +450,14 @@ unittest
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader(str, ["a"]);
 
-    assert(records.heading == ["a","b","c"]);
+    assert(records.header == ["a","b","c"]);
 }
 
 // Test unchecked read
 unittest
 {
     string str = "one \"quoted\"";
-    foreach(record; Records!(string,Malformed.ignore,string,char,string[])
-            (str,',','"'))
+    foreach(record; csvReader!(string,Malformed.ignore)(str))
     {
         foreach(cell; record)
         {
@@ -461,11 +470,27 @@ unittest
     {
         string a,b;
     }
-    foreach(record; Records!(Ans,Malformed.ignore,string,char,string[])
-            (str,',','"'))
+    foreach(record; csvReader!(Ans,Malformed.ignore)(str))
     {
         assert(record.a == "one \"quoted\"");
         assert(record.b == "two \"quoted\" end");
+    }
+}
+
+// Test partial data returned
+unittest
+{
+    string str = "\"one\nnew line";
+
+    try
+    {
+        foreach(record; csvReader(str))
+        {}
+        assert(0);
+    }
+    catch (IncompleteCellException ice)
+    {
+        assert(ice.partialData == "one\nnew line");
     }
 }
 
@@ -485,12 +510,12 @@ unittest
 }
 
 
-// Test associative array support
+// Test associative array support with unicode separator
 unittest
 {
-  string str = "1;2;3\n34;65;63\n34;65;63";
+  string str = "1❁2❁3\n34❁65❁63\n34❁65❁63";
 
-  auto records = csvReader!(string[string])(str,["3","1"],';');
+  auto records = csvReader!(string[string])(str,["3","1"],'❁');
   int count;
   foreach(record; records)
   {
@@ -507,9 +532,9 @@ unittest
     import std.typecons;
     struct InputRange
     {
-        wstring text;
+        dstring text;
 
-        this(wstring txt)
+        this(dstring txt)
         {
             text = txt;
         }
@@ -524,13 +549,13 @@ unittest
             text.popFront();
         }
 
-        wchar front()
+        dchar front()
         {
             return text[0];
         }
     }
-    auto ir = InputRange("Name,Occupation,Salary\r"w
-          "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"w);
+    auto ir = InputRange("Name,Occupation,Salary\r"d
+          "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
     foreach(record; csvReader(ir, cast(string[])null))
         foreach(cell; record) {}
@@ -561,10 +586,10 @@ unittest
  * -------
  *
  */
-struct Records(Contents, Malformed ErrorLevel, Range, Separator, Heading)
+struct Records(Contents, Malformed ErrorLevel, Range, Separator, Header)
     if(isSomeChar!Separator && isInputRange!Range
-       && isSomeChar!(ElementType!Range) && !is(Contents == class)
-       && isForwardRange!Heading && isSomeString!(ElementType!Heading))
+       && is(ElementType!Range == dchar) && !is(Contents == class)
+       && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
     Range _input;
@@ -587,20 +612,20 @@ private:
         Record!(Contents, ErrorLevel, Range, Separator) recordRange;
 public:
     /**
-     * Heading from the input in array form.
+     * Header from the input in array form.
      *
      * -------
      * string str = "a,b,c\nHello,65,63.63";
      * auto records = csvReader(str, ["a"]);
      *
-     * assert(records.heading == ["a","b","c"]);
+     * assert(records.header == ["a","b","c"]);
      * -------
      */
-    string[] heading;
+    string[] header;
 
     /**
      * Constructor to initialize the input, delimiter and quote for input
-     * without a heading.
+     * without a header.
      *
      * -------
      * string str = `76;^26^;22`;
@@ -630,7 +655,7 @@ public:
 
     /**
      * Constructor to initialize the input, delimiter and quote for input
-     * with a heading.
+     * with a header.
      *
      * -------
      * string str = `high;mean;low\n76;^26^;22`;
@@ -644,11 +669,11 @@ public:
      * -------
      *
      * Throws:
-     *       $(LREF HeadingMismatchException)  when a heading is provided but a
+     *       $(LREF HeaderMismatchException)  when a header is provided but a
      *       matching column is not found or the order did not match that found
      *       in the input (non-struct).
      */
-    this(Range input, Heading colHeaders, Separator delimiter, Separator quote)
+    this(Range input, Header colHeaders, Separator delimiter, Separator quote)
     {
         _input = input;
         _separator = delimiter;
@@ -666,7 +691,7 @@ public:
         size_t colIndex;
         foreach(col; r)
         {
-            heading ~= col;
+            header ~= col;
             auto ptr = col in colToIndex;
             if(ptr)
                 *ptr = colIndex;
@@ -679,7 +704,7 @@ public:
         {
             immutable index = colToIndex[h];
             static if(ErrorLevel != Malformed.ignore)
-                enforceEx!(HeadingMismatchException)(index < size_t.max,
+                enforceEx!(HeaderMismatchException)(index < size_t.max,
                         "Header not found: " ~ to!string(h));
             indices[i++] = index;
         }
@@ -696,7 +721,7 @@ public:
             }
             else
             {
-                enforceEx!(HeadingMismatchException)(isSorted(indices),
+                enforceEx!(HeaderMismatchException)(isSorted(indices),
                            "Header in input does not match specified header.");
             }
         }
@@ -804,7 +829,7 @@ public:
             {
                 for(; !recordRange.empty; recordRange.popFront())
                 {
-                    aa[heading[recordRange._col-1]] = recordRange.front;
+                    aa[header[recordRange._col-1]] = recordRange.front;
                 }
             }
             catch(ConvException e)
@@ -873,7 +898,7 @@ private:
     Separator _separator;
     Separator _quote;
     Contents curContentsoken;
-    typeof(appender!(char[])()) _front;
+    typeof(appender!(dchar[])()) _front;
     bool _empty;
     size_t _col, _row;
     size_t[] _popCount;
@@ -891,7 +916,7 @@ public:
         _input = input;
         _separator = delimiter;
         _quote = quote;
-        _front = appender!(char[])();
+        _front = appender!(dchar[])();
         _popCount = indices.dup;
 
         // If a header was given, each call to popFront will need
@@ -993,7 +1018,7 @@ public:
                 (*_input).popFront();
             try
             {
-                csvNextToken!(ErrorLevel, Range, Separator)
+                csvNextToken!(Range, ErrorLevel, Separator)
                                    (*_input, _front, _separator, _quote,false);
             }
             catch(Exception e)
@@ -1007,20 +1032,26 @@ public:
     {
         _col++;
         try
-        {
-            csvNextToken!(ErrorLevel, Range, Separator)
+            csvNextToken!(Range, ErrorLevel, Separator)
                                (*_input, _front, _separator, _quote,false);
-            auto skipNum = _popCount.empty ? 0 : _popCount.front;
-            if(!_popCount.empty)
-                _popCount.popFront();
+        catch(IncompleteCellException ice)
+        {
+            ice.partialData = _front.data.idup;
+            throw ice;
+        }
+        auto skipNum = _popCount.empty ? 0 : _popCount.front;
+        if(!_popCount.empty)
+            _popCount.popFront();
 
-            if(skipNum == size_t.max) {
-                while(!recordEnd())
-                    prime(1);
-                _empty = true;
-                return;
-            }
+        if(skipNum == size_t.max) {
+            while(!recordEnd())
+                prime(1);
+            _empty = true;
+            return;
+        }
 
+        try
+        {
             if(skipNum)
                 prime(skipNum);
             curContentsoken = to!Contents(_front.data);
@@ -1071,13 +1102,14 @@ public:
  * quotes
  *
  */
-void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
-                           Range, Separator)
-                          (ref Range input, ref Appender!(char[]) ans,
+void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
+                           Separator, Output)
+                          (ref Range input, ref Output ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
                           if(isSomeChar!Separator && isInputRange!Range
-                             && isSomeChar!(ElementType!Range))
+                             && is(ElementType!Range == dchar)
+                             && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
     bool escQuote;
@@ -1114,7 +1146,7 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
             {
                 // Not quoted, but quote found
                 static if(ErrorLevel == Malformed.throwException)
-                    throw new IncompleteCellException(ans.data.idup,
+                    throw new IncompleteCellException(
                           "Quote located in unquoted token");
                 else static if(ErrorLevel == Malformed.ignore)
                     ans.put(quote);
@@ -1153,7 +1185,7 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
                 if(escQuote)
                 {
                     static if(ErrorLevel == Malformed.throwException)
-                        throw new IncompleteCellException(ans.data.idup,
+                        throw new IncompleteCellException(
                           "Content continues after end quote, " ~
                           "or needs to be escaped.");
                     else static if(ErrorLevel == Malformed.ignore)
@@ -1167,7 +1199,7 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
 
     static if(ErrorLevel == Malformed.throwException)
         if(quoted && (input.empty || input.front == '\n' || input.front == '\r'))
-            throw new IncompleteCellException(ans.data.idup,
+            throw new IncompleteCellException(
                   "Data continues on future lines or trailing quote");
 
 }
@@ -1175,11 +1207,11 @@ void csvNextToken(Malformed ErrorLevel = Malformed.throwException,
 // Test csvNextToken on simplest form and correct format.
 unittest
 {
-    string str = "Hello,65,63.63\nWorld,123,3673.562";
+    string str = "\U00010143Hello,65,63.63\nWorld,123,3673.562";
 
-    auto a = appender!(char[]);
-    csvNextToken(str,a,',','"');
-    assert(a.data == "Hello");
+    auto a = appender!(dchar[]);
+    csvNextToken!string(str,a,',','"');
+    assert(a.data == "\U00010143Hello");
     assert(str == ",65,63.63\nWorld,123,3673.562");
 
     str.popFront();
@@ -1218,8 +1250,8 @@ unittest
 {
     string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
 
-    auto a = appender!(char[]);
-    csvNextToken(str,a,',','"');
+    auto a = appender!(dchar[]);
+    csvNextToken!string(str,a,',','"');
     assert(a.data == "one");
     assert(str == `,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix");
 
@@ -1258,7 +1290,7 @@ unittest
 unittest
 {
     string str = "one,";
-    auto a = appender!(char[]);
+    auto a = appender!(dchar[]);
     csvNextToken(str,a,',','"');
     assert(a.data == "one");
     assert(str == ",");
@@ -1273,15 +1305,16 @@ unittest
 {
     string str = "\"one\nnew line";
 
+    typeof(appender!(dchar[])()) a;
     try
     {
-    auto a = appender!(char[]);
+        a = appender!(dchar[]);
         csvNextToken(str,a,',','"');
         assert(0);
     }
     catch (IncompleteCellException ice)
     {
-        assert(ice.partialData == "one\nnew line");
+        assert(a.data == "one\nnew line");
         assert(str == "");
     }
 
@@ -1289,24 +1322,24 @@ unittest
 
     try
     {
-    auto a = appender!(char[]);
+        a = appender!(dchar[]);
         csvNextToken(str,a,',','"');
         assert(0);
     }
     catch (IncompleteCellException ice)
     {
-        assert(ice.partialData == "Hello world");
+        assert(a.data == "Hello world");
         assert(str == "\"");
     }
 
     str = "one, two \"quoted\" end";
 
-    auto a = appender!(char[]);
-    csvNextToken!(Malformed.ignore)(str,a,',','"');
+    a = appender!(dchar[]);
+    csvNextToken!(string,Malformed.ignore)(str,a,',','"');
     assert(a.data == "one");
     str.popFront();
     a.shrinkTo(0);
-    csvNextToken!(Malformed.ignore)(str,a,',','"');
+    csvNextToken!(string,Malformed.ignore)(str,a,',','"');
     assert(a.data == " two \"quoted\" end");
 }
 
@@ -1316,15 +1349,15 @@ unittest
 {
     string str = `one|two|/three "quoted"/|//`;
 
-    auto a = appender!(char[]);
+    auto a = appender!(dchar[]);
     csvNextToken(str,a, '|','/');
-    assert(a.data == "one");
+    assert(a.data == "one"d);
     assert(str == `|two|/three "quoted"/|//`);
 
     str.popFront();
     a.shrinkTo(0);
     csvNextToken(str,a, '|','/');
-    assert(a.data == "two");
+    assert(a.data == "two"d);
     assert(str == `|/three "quoted"/|//`);
 
     str.popFront();
@@ -1336,5 +1369,5 @@ unittest
     str.popFront();
     a.shrinkTo(0);
     csvNextToken(str,a, '|','/');
-    assert(a.data == "");
+    assert(a.data == ""d);
 }
