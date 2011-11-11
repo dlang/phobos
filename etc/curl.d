@@ -395,7 +395,8 @@ unittest
  *
  * See_Also: $(LREF Http.Method)
  */
-T[] put(Conn = AutoConnection, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData, Conn conn = Conn())
+T[] put(Conn = AutoConnection, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData, 
+                                                  Conn conn = Conn())
 if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) && 
      (is(T == char) || is(T == ubyte)) )
 {
@@ -975,11 +976,6 @@ static struct AsyncLineInputRange(Char)
     
     private Tid workerTid;
     private State running;
-    //    static if ( is(Conn : Http) ) 
-    //    {
-    //        public string[string] headers;
-    //        public Http.StatusLine statusLine;
-    //    }
 
     this(Tid tid, size_t transmitBuffers, size_t bufferSize) 
     {
@@ -1118,11 +1114,6 @@ static struct AsyncChunkInputRange
     
     private Tid workerTid;
     private State running;
-    //    static if ( is(Conn : Http) ) 
-    //    {
-    //        public string[string] headers;
-    //        public Http.StatusLine statusLine;
-    //    }
 
     this(Tid tid, size_t transmitBuffers, size_t chunkSize) 
     {
@@ -1246,73 +1237,6 @@ unittest
            "byLineAsync!Http() returns unexpected content: " ~ to!string(line));
 }
 
-/*
-unittest { 
-
-    if (!true) {
-        auto http = Http("www.d-p-l.org");
-        http.setCookie("fisk=43");
-        writeln(get("www.d-p-l.org", http));
-    }
-
-    if (!true) writeln(get!Http("www.d-p-l.org"));
-    if (!true) writeln(get!Ftp("ftp://ftp.digitalmars.com/sieve.ds"));
-
-    if (!true) writeln(get("www.d-p-l.org"));
-    if (!true) writeln(get("ftp://ftp.digitalmars.com/sieve.ds"));
-
-    int[] testdata = [72, 101, 108, 108, 111, 32, 
-                      119, 111, 114, 108, 100];
-    // Not working
-    if (!true) writeln(put!Http(testUrl2, testdata));
-    // Not working
-    if (!true) writeln(put(testUrl2, testdata));
-
-    if (!true)
-        foreach (line; byLine("ftp://ftp.digitalmars.com/sieve.ds")) { 
-            writeln("LINE IS : " ~ line);
-        }
-
-    if (true) {
-        auto http = Http(testUrl2);
-        http.setCookie("fisk=43");
-        http.postData = "this is a test";
-
-        foreach (line; byLine(testUrl2, KeepTerminator.no, '\x0a', http)) { 
-            writeln("LINE IS : " ~ line);
-        }
-    }
-
-    if (!true)
-        foreach (line; byChunk("ftp://ftp.digitalmars.com/sieve.ds", 10)) { 
-            writeln("CHUNK IS : " ~ to!string(line));
-        }
-
-    if (!true)
-        foreach (line; byLineAsync!Ftp("ftp://ftp.digitalmars.com/sieve.ds")) { 
-            writeln("LINE IS : " ~ line);
-        }
-
-    if (!true)
-        foreach (line; byLineAsync("www.d-p-l.org")) { 
-            writeln("LINE IS : " ~ line);
-        }
-
-    if (!true)
-        foreach (line; byChunkAsync!Ftp("ftp://ftp.digitalmars.com/sieve.ds", 20)) { 
-            writeln("CHUNK IS : ", line);
-        }
-
-    if (!true)
-        foreach (line; byChunkAsync("www.d-p-l.org",20)) { 
-            writeln("CHUNK IS : ", line);
-        }
-
-    writeln("done");
-
-    exit(0);
-}
-*/
 
 /**
   Mixin template for all supported curl protocols. 
@@ -1565,7 +1489,10 @@ private mixin template Protocol()
       * ----
       * import etc.curl, std.stdio;
       * auto client = new Http("d-p-l.org");
-      * client.onReceive = (ubyte[] data) { writeln("Got data", to!(const(char)[])(data)); return data.length;};
+      * client.onReceive = (ubyte[] data) { 
+      *     writeln("Got data", to!(const(char)[])(data)); 
+      *     return data.length;
+      * };
       * client.perform();
       * ----
       */
@@ -3243,28 +3170,9 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
                 encodingScheme = EncodingScheme.create(client.p.charset);
             }
         };
-        //Proto._preAsyncOnReceive(res, encodingScheme, fromTid);
     } else {
         encodingScheme = EncodingScheme.create(client.encoding);
     }
-
-    /*
-      Only postData string and not streaming supported
-    if (requestParams.method == Method.post || 
-        requestParams.method == Method.put) 
-    {
-        client.onSend = delegate size_t(void[] buf) {
-            receiveTimeout(0, (bool x) { client.shutdown(); });
-            if (!client.isValid) return CurlReadFunc.abort;
-            size_t minlen = min(buf.length, requestParams.postData.length);
-            buf[0..minlen] = cast(void[])requestParams.postData[0..minlen];
-            requestParams.postData = requestParams.postData[minlen..$];
-            return minlen;
-        };
-        this.contentLength = requestParams.postData.length;
-    }
-        //    client._preAsyncPerform(requestParams);
-        */
 
     // Start the request
     CURLcode code;
@@ -3275,7 +3183,6 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     catch (Exception ex)
     {
         prioritySend(fromTid, cast(immutable(Exception)) ex);
-        //        fromTid.send(thisTid(), client);
         fromTid.send(thisTid(), message(true)); // signal done
         return;
     }
@@ -3285,19 +3192,15 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         if (aborted && (code == CurlError.aborted_by_callback || 
                         code == CurlError.write_error))
         {
-            //            fromTid.send(thisTid(), client);
             fromTid.send(thisTid(), message(true)); // signal done
             return;
         }
         prioritySend(fromTid, cast(immutable(CurlException)) 
                      new CurlException(client.p.curl.errorString(code)));
-        //        fromTid.send(thisTid(), client);
+
         fromTid.send(thisTid(), message(true)); // signal done
         return;
     }
-
-    //    static if ( is(Proto == Http) ) 
-    //        client._finalizeProtocol(res, fromTid);
 
     // Send remaining data that is not a full chunk size
     static if ( is(Terminator == void) ) 
@@ -3305,94 +3208,9 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     else 
         _finalizeAsyncLines(bufferValid, buffer, fromTid);
     
-    //    if (client.isValid) 
-    //        client.shutdown();
-
-    //   fromTid.send(thisTid(), client);
     fromTid.send(thisTid(), message(true)); // signal done
 }
             
-
-unittest 
-{
-    if (!netAllowed) return;
-    // Verify that sync and async versions of a request gives the same results.
-    /*
-    auto syncline = Http.get(testUrl1).byLine();
-    foreach (asyncline; Http.getAsync(testUrl1).byLine()) 
-    {
-        assert(asyncline == syncline.front, 
-               "Get async by line does not give the same result as get sync by line");
-        syncline.popFront();
-    }
-
-    auto syncchunk = Http.get(testUrl1).byChunk(100);
-    foreach (asyncchunk; Http.getAsync(testUrl1).byChunk(100)) 
-    {
-        assert(asyncchunk == syncchunk.front, 
-               "Get async by chunk does not give the same result as get sync by chunk");
-        syncchunk.popFront();
-    }
-    */
-}
-
-/*
-unittest 
-{
-    
-    if (!netAllowed) return;    
-    
-    // GET with custom data receivers 
-    auto http = Http("http://www.d-p-l.org");
-    http.onReceiveHeader = (const(char)[] key, 
-                            const(char)[] value) { writeln(key ~ ": " ~ value); };
-    http.onReceive = (ubyte[] data) { /+ drop +/ return data.length; };
-    http.perform();
-    
-    // POST with timeouts
-    http.url("http://d-programming-language.appspot.com/testUrl2");
-    http.onReceive = (ubyte[] data) { writeln(data); return data.length; };
-    http.connectTimeout(dur!"seconds"(10));
-    http.dataTimeout(dur!"seconds"(10));  
-    http.dnsTimeout(dur!"seconds"(10));
-    http.postData = "The quick....";
-    http.perform();
-    
-    // PUT with data senders 
-    string msg = "Hello world";
-    http.onSend = delegate size_t(void[] data) { 
-        if (!msg.length) return 0; 
-        auto m = cast(void[])msg;
-        auto l = m.length;
-        data[0..l] = m[0..$];  
-        msg.length = 0;
-        return l;
-    };
-    http.method = Http.Method.put; // defaults to POST
-    // Defaults to chunked transfer if not specified. Don't want that now.
-    http.contentLength = 11; 
-    http.perform();
-    
-    // FTP
-    //    Ftp.get("ftp://ftp.digitalmars.com/sieve.ds", "./downloaded-file");
-    
-    http.method = Http.Method.get;
-    http.url = "http://upload.wikimedia.org/wikipedia/commons/5/53/Wikipedia-logo-en-big.png";
-    http.onReceive = delegate(ubyte[] data) { return data.length; };
-    http.onProgress = (size_t dltotal, size_t dlnow, 
-                       size_t ultotal, size_t ulnow) {
-        writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
-        return 0;
-    };
-    http.perform();
-    
-    //    foreach (chunk; Http.getAsync("http://www.d-p-l.org").byChunk(100)) 
-    //    {
-    //        stdout.rawWrite(chunk);
-    //    }
-}
-*/
-
 version (unittest) 
 {
   private auto netAllowed() 
