@@ -312,12 +312,15 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     enum len = args.length;
     void function(Writer, const(void)*, ref FormatSpec!Char) funs[len] = void;
     const(void)* argsAddresses[len] = void;
-    foreach (i, arg; args)
+    if (!__ctfe)
     {
-        funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
-        // We can safely cast away shared because all data is either
-        // immutable or completely owned by this function.
-        argsAddresses[i] = cast(const(void*)) &args[ i ];
+        foreach (i, arg; args)
+        {
+            funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
+            // We can safely cast away shared because all data is either
+            // immutable or completely owned by this function.
+            argsAddresses[i] = cast(const(void*)) &args[ i ];
+        }
     }
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
@@ -384,13 +387,19 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             foreach (i; spec.indexStart - 1 .. spec.indexEnd)
             {
                 if (funs.length <= i) break;
-                funs[i](w, argsAddresses[i], spec);
+                if (__ctfe)
+                    formatNth(w, spec, i, args);
+                else
+                    funs[i](w, argsAddresses[i], spec);
             }
             if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
         }
         else
         {
-            funs[currentArg](w, argsAddresses[currentArg], spec);
+            if (__ctfe)
+                formatNth(w, spec, currentArg, args);
+            else
+                funs[currentArg](w, argsAddresses[currentArg], spec);
             ++currentArg;
         }
     }
@@ -895,7 +904,10 @@ struct FormatSpec(Char)
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
+              if (!__ctfe)  // workaround for strange CTFE error
                 trailing.popFront();
+              else
+                trailing = trailing[std.utf.stride(trailing, 0) .. $];
             }
         }
         return false;
@@ -1175,7 +1187,7 @@ if (isFloatingPoint!D)
         }
         return;
     }
-    enforce(std.string.indexOf("fgFGaAeEs", fs.spec) >= 0,
+    enforce(std.algorithm.find("fgFGaAeEs", fs.spec).length,
             new FormatException("floating"));
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
@@ -2211,6 +2223,31 @@ private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, ref Form
     formatValue(w, *cast(D*) arg, f);
 }
 
+private void formatNth(Writer, Char, A...)(Writer w, ref FormatSpec!Char f, size_t index, A args)
+{
+    static string gencode(size_t count)()
+    {
+        string result;
+        foreach (n; 0 .. count)
+        {
+            auto num = to!string(n);
+            result ~=
+                "case "~num~":"~
+                "    formatValue(w, args["~num~"], f);"~
+                "    break;";
+        }
+        return result;
+    }
+
+    switch (index)
+    {
+        mixin(gencode!(A.length)());
+
+        default:
+            assert(0, "n = "~cast(char)(index + '0'));
+    }
+}
+
 unittest
 {
     int[] a = [ 1, 3, 2 ];
@@ -2836,13 +2873,43 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
 
     T val2;
     formattedRead(input, fmt, &val2);
+    static if (isAssociativeArray!T)
+    if (__ctfe)
+    {
+        alias val aa1;
+        alias val2 aa2;
+        //assert(aa1 == aa2);
+
+        assert(aa1.length == aa2.length);
+
+        assert(aa1.keys == aa2.keys);
+
+        //assert(aa1.values == aa2.values);
+        assert(aa1.values.length == aa2.values.length);
+        foreach (i; 0 .. aa1.values.length)
+            assert(aa1.values[i] == aa2.values[i]);
+
+        //foreach (i, key; aa1.keys)
+        //    assert(aa1.values[i] == aa1[key]);
+        //foreach (i, key; aa2.keys)
+        //    assert(aa2.values[i] == aa2[key]);
+        return;
+    }
     enforceEx!AssertError(
             val == val2,
             input, fn, ln);
 }
 
+version(unittest)
+@property void checkCTFEable(alias dg)()
+{
+    static assert({ dg(); return true; }());
+    dg();
+}
+
 unittest
 {
+    void booleanTest()
     {
         auto b = true;
         formatReflectTest(b, "%s",  `true`);
@@ -2853,6 +2920,7 @@ unittest
         formatReflectTest(b, "%x",  `1`);
     }
 
+    void integerTest()
     {
         auto n = 127;
         formatReflectTest(n, "%s",  `127`);
@@ -2863,6 +2931,7 @@ unittest
         formatReflectTest(n, "%x",  `7f`);
     }
 
+    void floatingTest()
     {
         auto f = 3.14;
         formatReflectTest(f, "%s",  `3.14`);
@@ -2871,6 +2940,7 @@ unittest
         formatReflectTest(f, "%g",  `3.14`);
     }
 
+    void charTest()
     {
         auto c = 'a';
         formatReflectTest(c, "%s",  `a`);
@@ -2882,6 +2952,7 @@ unittest
         formatReflectTest(c, "%x",  `61`);
     }
 
+    void strTest()
     {
         auto s = "hello";
         formatReflectTest(s, "%s",                      `hello`);
@@ -2890,6 +2961,7 @@ unittest
         formatReflectTest(s, "[%(<%c>%| $ %)]",         `[<h> $ <e> $ <l> $ <l> $ <o>]`);
     }
 
+    void daTest()
     {
         auto a = [1,2,3,4];
         formatReflectTest(a, "%s",                      `[1, 2, 3, 4]`);
@@ -2897,6 +2969,7 @@ unittest
         formatReflectTest(a, "[%(<%s>%| $ %)]",         `[<1> $ <2> $ <3> $ <4>]`);
     }
 
+    void saTest()
     {
         int[4] sa = [1,2,3,4];
         formatReflectTest(sa, "%s",                     `[1, 2, 3, 4]`);
@@ -2904,12 +2977,25 @@ unittest
         formatReflectTest(sa, "[%(<%s>%| $ %)]",        `[<1> $ <2> $ <3> $ <4>]`);
     }
 
+    void aaTest()
     {
         auto aa = [1:"hello", 2:"world"];
         formatReflectTest(aa, "%s",                     `[1:"hello", 2:"world"]`);
         formatReflectTest(aa, "[%(%s->%s, %)]",         `[1->"hello", 2->"world"]`);
         formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  `{[1=hello]; [2=world]}`);
     }
+
+    checkCTFEable!({
+        booleanTest();
+        integerTest();
+        if (!__ctfe) floatingTest();    // snprintf
+        charTest();
+        strTest();
+        daTest();
+        saTest();
+        aaTest();
+        return true;
+    });
 }
 
 //------------------------------------------------------------------------------
