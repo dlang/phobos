@@ -747,12 +747,12 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
             popFront();
         }
 
-        @property bool empty() 
+        @property @safe bool empty() 
         {
             return !currentValid;
         }
             
-        @property Char[] front() 
+        @property @safe Char[] front() 
         {
             enforce(currentValid, new CurlException("Cannot call front() on empty range"));
             return current;
@@ -847,7 +847,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
             this.chunkSize = chunkSize;
         }
         
-        @property auto empty() 
+        @property @safe auto empty() 
         {
             return offset == len;
         }
@@ -859,7 +859,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
             return _bytes[offset..nextOffset];
         }
         
-        void popFront() 
+        @safe void popFront() 
         {
             offset = offset + chunkSize;
             if (offset > len) offset = len;
@@ -1673,7 +1673,7 @@ struct Http
 { 
     mixin Protocol;
 
-    /// Authentication method equal to $(EXREF c_curl, CurlAuth)
+    /// Authentication method equal to $(ECXREF curl, CurlAuth)
     alias CurlAuth AuthMethod;
 
     static private uint defaultMaxRedirects = 10;
@@ -1702,7 +1702,7 @@ struct Http
 
     private RefCounted!Impl p;
 
-    /** Time condition enumeration as an alias of $(EXREF c_curl, CurlTimeCond)
+    /** Time condition enumeration as an alias of $(ECXREF curl, CurlTimeCond)
 
         $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
@@ -2115,7 +2115,7 @@ struct Http
         string reason;       /// HTTP status line reason string.
         
         /// Reset this status line
-        void reset() 
+        @safe void reset() 
         { 
             majorVersion = 0;
             minorVersion = 0;
@@ -2535,7 +2535,7 @@ struct Curl
     /**
        Set a string curl option.
        Params:
-       option = A $(EXREF c_curl, CurlOption) as found in the curl documentation
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
        value = The string
     */
     void set(CURLoption option, const(char)[] value) 
@@ -2553,7 +2553,7 @@ struct Curl
     /**
        Set a long curl option.
        Params:
-       option = A $(EXREF c_curl, CurlOption) as found in the curl documentation
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
        value = The long
     */
     void set(CURLoption option, long value) 
@@ -2565,7 +2565,7 @@ struct Curl
     /**
        Set a void* curl option.
        Params:
-       option = A $(EXREF c_curl, CurlOption) as found in the curl documentation
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
        value = The pointer
     */
     void set(CURLoption option, void* value) 
@@ -2577,7 +2577,7 @@ struct Curl
     /**
        Clear a pointer option.
        Params:
-       option = A $(EXREF c_curl, CurlOption) as found in the curl documentation
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
     */
     void clear(CURLoption option) 
     {
@@ -2711,11 +2711,11 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives a seek offset and a seek position 
-      *            $(EXREF c_curl, CurlSeekPos)
+      *            $(ECXREF curl, CurlSeekPos)
       *
       * Returns:
       * The callback returns the success state of the seeking 
-      * $(EXREF c_curl, CurlSeek)
+      * $(ECXREF curl, CurlSeek)
       *
       * Example:
       * ----
@@ -2746,7 +2746,7 @@ struct Curl
       *
       * Params:
       * callback = the callback that receives the socket and socket type 
-      * $(EXREF c_curl, CurlSockType)
+      * $(ECXREF curl, CurlSockType)
       *
       * Returns:
       * Return 0 from the callback to signal success, return 1 to signal error 
@@ -2913,12 +2913,12 @@ private:
     Entry * freeList;
 public:
 
-    bool empty() 
+    @safe bool empty() 
     {
         return root == null;
     }
 
-    void push(DATA d) 
+    @safe nothrow void push(DATA d) 
     {
         if (freeList == null) 
         {
@@ -2933,8 +2933,9 @@ public:
         root.next = oldroot;
     }
 
-    DATA pop() 
+    @safe DATA pop() 
     {
+        enforce(root != null, new Exception("pop() called on empty pool"));
         DATA d = root.data;
         Entry * n = root.next;
         root.next = freeList;
