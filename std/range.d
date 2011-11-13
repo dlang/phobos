@@ -222,11 +222,11 @@ template isInputRange(R)
 {
     enum bool isInputRange = is(typeof(
     {
-        R r;              // can define a range object
+        R r = void;       // can define a range object
         if (r.empty) {}   // can test for empty
         r.popFront();     // can invoke popFront()
         auto h = r.front; // can get the front of the range
-    }()));
+    }));
 }
 
 unittest
@@ -403,7 +403,12 @@ supports the operation $(D put(r, e)) as defined above.
  */
 template isOutputRange(R, E)
 {
-    enum bool isOutputRange = is(typeof({ R r; E e; put(r, e); }()));
+    enum bool isOutputRange = is(typeof(
+    {
+        R r = void;
+        E e;
+        put(r, e);
+    }));
 }
 
 unittest
@@ -454,7 +459,7 @@ template isForwardRange(R)
 {
     enum bool isForwardRange = isInputRange!R && is(typeof(
     {
-        R r1;
+        R r1 = void;
         R r2 = r1.save; // can call "save" against a range object
     }));
 }
@@ -490,10 +495,14 @@ $(D r.empty) has, or would have, returned $(D false).))
  */
 template isBidirectionalRange(R)
 {
-    enum bool isBidirectionalRange = isForwardRange!R
-        // @@@BUG@@@: parens shouldn't be needed here
-        && is(typeof(R.init.back()) == typeof(R.init.front()))
-        && is(typeof({ R r; r.popBack(); }));
+    enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
+    {
+        R r = void;
+        r.popBack();
+        auto t = r.back;
+        auto w = r.front;
+        static assert(is(typeof(t) == typeof(w)));
+    }));
 }
 
 unittest
@@ -550,11 +559,15 @@ are bidirectional ranges only.
  */
 template isRandomAccessRange(R)
 {
-    enum bool isRandomAccessRange =
-        (isBidirectionalRange!R || isForwardRange!R && isInfinite!R)
-        && is(typeof(R.init[1]))
-        && !isNarrowString!R
-        && (hasLength!R || isInfinite!R);
+    enum bool isRandomAccessRange = is(typeof(
+    {
+        static assert(isBidirectionalRange!R ||
+                      isForwardRange!R && isInfinite!R);
+        R r = void;
+        auto e = r[1];
+        static assert(!isNarrowString!R);
+        static assert(hasLength!R || isInfinite!R);
+    }));
 }
 
 unittest
@@ -593,6 +606,36 @@ unittest
     static assert(isRandomAccessRange!(int[]));
 }
 
+unittest
+{
+    // Test fix for bug 6935.
+    struct R
+    {
+        @disable this();
+
+        @disable static @property R init();
+
+        @property bool empty() const { return false; }
+        @property int front() const { return 0; }
+        void popFront() {}
+
+        @property R save() { return this; }
+
+        int back() const { return 0; }
+        void popBack(){}
+
+        int opIndex(size_t n) const { return 0; }
+        @property size_t length() const { return 0; }
+
+        void put(int e){  }
+    }
+    static assert(isInputRange!R);
+    static assert(isForwardRange!R);
+    static assert(isBidirectionalRange!R);
+    static assert(isRandomAccessRange!R);
+    static assert(isOutputRange!(R, int));
+}
+
 /**
 Returns $(D true) iff the range supports the $(D moveFront) primitive,
 as well as $(D moveBack) and $(D moveAt) if it's a bidirectional or
@@ -602,20 +645,27 @@ and friends.
  */
 template hasMobileElements(R)
 {
-    enum bool hasMobileElements = is(typeof({
-        R r;
+    enum bool hasMobileElements = is(typeof(
+    {
+        R r = void;
         return moveFront(r);
-    })) && (!isBidirectionalRange!R || is(typeof({
-        R r;
+    }))
+    && (!isBidirectionalRange!R || is(typeof(
+    {
+        R r = void;
         return moveBack(r);
-    }))) && (!isRandomAccessRange!R || is(typeof({
-        R r;
+    })))
+    && (!isRandomAccessRange!R || is(typeof(
+    {
+        R r = void;
         return moveAt(r, 0);
     })));
 }
 
-unittest {
-    static struct HasPostblit {
+unittest
+{
+    static struct HasPostblit
+    {
         this(this) {}
     }
 
@@ -633,7 +683,7 @@ $(D T). If $(D R) is not a range, $(D ElementType!R) is $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof({return R.init.front();}()) T))
+    static if (is(typeof({ R r = void; return r.front; }()) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -662,7 +712,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof(R.init[0]) ElementEncodingType;
+        alias typeof({ R r = void; return r[0]; }()) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -698,7 +748,7 @@ template hasSwappableElements(R)
 {
     enum bool hasSwappableElements = isForwardRange!R && is(typeof(
     {
-        R r;
+        R r = void;
         swap(r.front, r.front);             // can swap elements of the range
     }));
 }
@@ -727,7 +777,7 @@ template hasAssignableElements(R)
 {
     enum bool hasAssignableElements = isForwardRange!R && is(typeof(
     {
-        R r;
+        R r = void;
         static assert(isForwardRange!(R)); // range is forward
         auto e = r.front;
         r.front = e;                       // can assign elements of the range
@@ -747,11 +797,15 @@ can be passed by reference and have their address taken.
 */
 template hasLvalueElements(R)
 {
-    enum bool hasLvalueElements =
-        is(typeof(&R.init.front()) == ElementType!(R)*);
+    enum bool hasLvalueElements = is(typeof(
+    {
+        R r = void;
+        static assert(is(typeof(&r.front) == ElementType!(R)*));
+    }));
 }
 
-unittest {
+unittest
+{
     static assert(hasLvalueElements!(int[]));
     static assert(!hasLvalueElements!(typeof(iota(3))));
 }
@@ -773,8 +827,11 @@ range-oriented algorithms.
  */
 template hasLength(R)
 {
-    enum bool hasLength = is(typeof(R.init.length) : ulong) &&
-        !isNarrowString!R;
+    enum bool hasLength = !isNarrowString!R && is(typeof(
+    {
+        R r = void;
+        static assert(is(typeof(r.length) : ulong));
+    }));
 }
 
 unittest
@@ -790,7 +847,7 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D Range) is an infinite input range. An
+Returns $(D true) if $(D R) is an infinite input range. An
 infinite input range is an input range that has a statically-defined
 enumerated member called $(D empty) that is always $(D false), for
 example:
@@ -804,10 +861,10 @@ struct MyInfiniteRange
 ----
  */
 
-template isInfinite(Range)
+template isInfinite(R)
 {
-    static if (isInputRange!Range && is(char[1 + Range.empty]))
-        enum bool isInfinite = !Range.empty;
+    static if (isInputRange!R && is(char[1 + R.empty]))
+        enum bool isInfinite = !R.empty;
     else
         enum bool isInfinite = false;
 }
@@ -819,21 +876,21 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D Range) offers a slicing operator with
+Returns $(D true) if $(D R) offers a slicing operator with
 integral boundaries, that in turn returns an input range type. The
 following code should compile for $(D hasSlicing) to be $(D true):
 
 ----
-Range r;
+R r;
 auto s = r[1 .. 2];
 static assert(isInputRange!(typeof(s)));
 ----
  */
-template hasSlicing(Range)
+template hasSlicing(R)
 {
-    enum bool hasSlicing = !isNarrowString!Range && is(typeof(
+    enum bool hasSlicing = !isNarrowString!R && is(typeof(
     {
-        Range r;
+        R r = void;
         auto s = r[1 .. 2];
         static assert(isInputRange!(typeof(s)));
     }));
@@ -847,6 +904,9 @@ unittest
     struct B { int[] opSlice(uint, uint); }
     static assert(hasSlicing!(B));
     static assert(!hasSlicing!string);
+
+    struct C { @disable this(); int[] opSlice(size_t, size_t); }
+    static assert(hasSlicing!(C));
 }
 
 /**
@@ -2896,7 +2956,7 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
-private template lengthType(R) { alias typeof(R.init.length) lengthType; }
+private template lengthType(R) { alias typeof({ R r = void; return r.length; }()) lengthType; }
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
