@@ -1993,42 +1993,42 @@ struct Gcx
                     }
                     else version (OSX)
                     {
-                        version (X86_64)
-                        {
-                            x86_thread_state64_t   state = void;
-                            mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
+			version (X86_64)
+			{
+			    x86_thread_state64_t   state = void;
+			    mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
 
-                            if (thread_get_state(t.machid,
-                                                 x86_THREAD_STATE64,
-                                                 &state,
-                                                 &count) != KERN_SUCCESS)
-                            {
-                                assert(0);
-                            }
-                            debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.rsp, t.stackBottom);
+			    if (thread_get_state(t.machid,
+						 x86_THREAD_STATE64,
+						 &state,
+						 &count) != KERN_SUCCESS)
+			    {
+				assert(0);
+			    }
+			    debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.rsp, t.stackBottom);
 
-                            mark(cast(void *)state.rsp, t.stackBottom);
-                            mark(&state.rax, &state.r15);
-                        }
-                        else version (X86)
-                        {
-                            x86_thread_state32_t   state = void;
-                            mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
+			    mark(cast(void *)state.rsp, t.stackBottom);
+			    mark(&state.rax, &state.r15);
+			}
+			else version (X86)
+			{
+			    x86_thread_state32_t   state = void;
+			    mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
 
-                            if (thread_get_state(t.machid,
-                                                 x86_THREAD_STATE32,
-                                                 &state,
-                                                 &count) != KERN_SUCCESS)
-                            {
-                                assert(0);
-                            }
-                            debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.esp, t.stackBottom);
+			    if (thread_get_state(t.machid,
+						 x86_THREAD_STATE32,
+						 &state,
+						 &count) != KERN_SUCCESS)
+			    {
+				assert(0);
+			    }
+			    debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.esp, t.stackBottom);
 
-                            mark(cast(void *)state.esp, t.stackBottom);
-                            mark(&state.eax, &state.esp);
-                        }
-                        else
-                            static assert(0, "architecture not supported");
+			    mark(cast(void *)state.esp, t.stackBottom);
+			    mark(&state.eax, &state.esp);
+			}
+			else
+			    static assert(0, "architecture not supported");
                     }
                     else version (Posix) // Don't do this on OSX
                     {
@@ -2042,8 +2042,8 @@ struct Gcx
                         else
                             mark(t.stackBottom, t.stackTop);
                     }
-                    else
-                        static assert(0, "architecture not supported");
+		    else
+			static assert(0, "architecture not supported");
                 }
             }
         }
