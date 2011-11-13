@@ -11,8 +11,8 @@ public import std.c.linux.pthread;
 
 private import std.c.stdio;
 
-alias int time_t;
-alias int __time_t;
+alias c_long time_t;
+alias c_long __time_t;
 alias int pid_t;
 alias long off_t;
 alias long blkcnt_t;
@@ -21,7 +21,7 @@ alias int dev_t;
 alias uint gid_t;
 alias uint id_t;
 alias ulong ino64_t;
-alias uint ino_t;
+alias ulong ino_t;
 alias ushort mode_t;
 alias ushort nlink_t;
 alias uint uid_t;
@@ -31,7 +31,7 @@ alias uint fsfilcnt_t;
 struct timespec
 {
     time_t tv_sec;
-    int tv_nsec;
+    c_long tv_nsec;
 }
 
 
@@ -88,27 +88,86 @@ enum
     O_SYMLINK   = 0x200000,
 }
 
-struct struct_stat
+version (X86)
 {
-    dev_t st_dev;
-    ino_t st_ino;
-    mode_t st_mode;
-    nlink_t st_nlink;
-    uid_t st_uid;
-    gid_t st_gid;
-    dev_t st_rdev;
-    timespec st_atimespec;
-    timespec st_mtimespec;
-    timespec st_ctimespec;
-    off_t st_size;
-    blkcnt_t st_blocks;
-    blksize_t st_blksize;
-    uint st_flags;
-    uint st_gen;
-    int st_lspare;
-    long st_qspare[2];
+    /* This doesn't match the new OSX headers. This is because this
+     * is for fstat(), and the newer version of struct_stat is for _fstat_$INODE64()
+     */
+    struct struct_stat
+    {
+        dev_t st_dev;
+        uint st_ino;
+        mode_t st_mode;
+        nlink_t st_nlink;
+        uid_t st_uid;
+        gid_t st_gid;
+        dev_t st_rdev;
+        timespec st_atimespec;
+        timespec st_mtimespec;
+        timespec st_ctimespec;
+        off_t st_size;
+        blkcnt_t st_blocks;
+        blksize_t st_blksize;
+        uint st_flags;
+        uint st_gen;
+        int st_lspare;
+        long st_qspare[2];
+    }
+    static assert(struct_stat.sizeof == 96);
 }
-static assert(struct_stat.sizeof == 96);
+else
+{
+    /* Use with the newer _fstat_$INODE64 etc. functions
+     */
+    struct struct_stat
+    {
+        dev_t st_dev;
+        mode_t st_mode;
+        nlink_t st_nlink;
+        ino_t st_ino;
+        uid_t st_uid;
+        gid_t st_gid;
+        dev_t st_rdev;
+        timespec st_atimespec;
+        timespec st_mtimespec;
+        timespec st_ctimespec;
+        timespec st_birthtimespec;
+        off_t st_size;
+        blkcnt_t st_blocks;
+        blksize_t st_blksize;
+        uint st_flags;
+        uint st_gen;
+        int st_lspare;
+        long st_qspare[2];
+    }
+    version (X86)
+        static assert(struct_stat.sizeof == 108);
+    else
+        static assert(struct_stat.sizeof == 144);
+
+    struct struct_stat64
+    {
+        dev_t st_dev;
+        mode_t st_mode;
+        nlink_t st_nlink;
+        ino_t st_ino;
+        uid_t st_uid;
+        gid_t st_gid;
+        dev_t st_rdev;
+        timespec st_atimespec;
+        timespec st_mtimespec;
+        timespec st_ctimespec;
+        timespec st_birthtimespec;
+        off_t st_size;
+        blkcnt_t st_blocks;
+        blksize_t st_blksize;
+        uint st_flags;
+        uint st_gen;
+        int st_lspare;
+        long st_qspare[2];
+    }
+    static assert(struct_stat64.sizeof == struct_stat.sizeof);
+}
 
 enum : int
 {
@@ -174,7 +233,7 @@ extern (C)
 
 struct timeval
 {
-    int tv_sec;
+    time_t tv_sec;
     int tv_usec;
 }
 
@@ -195,8 +254,8 @@ struct tm
     int tm_wday;
     int tm_yday;
     int tm_isdst;
-    int tm_gmtoff;
-    int tm_zone;
+    c_long tm_gmtoff;
+    char* tm_zone;
 }
 
 extern (C)
