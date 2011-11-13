@@ -14,6 +14,17 @@ alias char[] string;
 alias wchar[] wstring;
 alias dchar[] dstring;
 
+version (X86_64)
+{
+    alias long c_long;
+    alias ulong c_ulong;
+}
+else
+{
+    alias int c_long;
+    alias uint c_ulong;
+}
+
 extern (C)
 {   int printf(char *, ...);
     void trace_term();

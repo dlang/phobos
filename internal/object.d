@@ -56,6 +56,20 @@ alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
 
 alias size_t hash_t;
 
+/**
+ * Handy alias's for C's long and unsigned long types, which vary in size.
+ */
+version (X86_64)
+{
+    alias long c_long;
+    alias ulong c_ulong;
+}
+else
+{
+    alias int c_long;
+    alias uint c_ulong;
+}
+
 extern (C)
 {   /// C's printf function.
     int printf(char *, ...);
@@ -323,8 +337,8 @@ class ClassInfo : Object
     {
         if (flags & 8 && !defaultConstructor)
             return null;
-        if (flags & 64) // abstract 
-            return null; 
+        if (flags & 64) // abstract
+            return null;
         Object o = _d_newclass(this);
         if (flags & 8 && defaultConstructor)
         {
@@ -758,7 +772,7 @@ class TypeInfo_Function : TypeInfo
 
         return this is o ||
                 ((c = cast(TypeInfo_Function)o) !is null &&
-//		 this.deco == c.deco);
+//               this.deco == c.deco);
                  this.next == c.next);
     }
 
@@ -785,7 +799,7 @@ class TypeInfo_Delegate : TypeInfo
 
         return this is o ||
                 ((c = cast(TypeInfo_Delegate)o) !is null &&
-//		 this.deco == c.deco);
+//               this.deco == c.deco);
                  this.next == c.next);
     }
 
