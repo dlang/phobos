@@ -2588,7 +2588,7 @@ string expandTilde(string inputPath)
             assert(char_pos >= 0);
 
             // Search end of C string
-            size_t end = std.c.string.strlen(c_path);
+            size_t end = core.stdc.string.strlen(c_path);
 
             // Remove trailing path separator, if any
             if (end && isDirSeparator(c_path[end - 1]))
@@ -2646,7 +2646,7 @@ string expandTilde(string inputPath)
 
             while (1)
             {
-                extra_memory = std.c.stdlib.malloc(extra_memory_size);
+                extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
                 if (extra_memory == null)
                     goto Lerror;
 
@@ -2667,20 +2667,20 @@ string expandTilde(string inputPath)
                     goto Lerror;
 
                 // extra_memory isn't large enough
-                std.c.stdlib.free(extra_memory);
+                core.stdc.stdlib.free(extra_memory);
                 extra_memory_size *= 2;
             }
 
             path = combineCPathWithDPath(result.pw_dir, path, last_char);
 
         Lnotfound:
-            std.c.stdlib.free(extra_memory);
+            core.stdc.stdlib.free(extra_memory);
             return path;
 
         Lerror:
             // Errors are going to be caused by running out of memory
             if (extra_memory)
-                std.c.stdlib.free(extra_memory);
+                core.stdc.stdlib.free(extra_memory);
             onOutOfMemoryError();
             return null;
         }
@@ -2782,12 +2782,12 @@ version(Windows)
     enum string linesep = "\r\n";   // / String used to separate lines.
     enum string curdir = ".";       // / String representing the current directory.
     enum string pardir = "..";      // / String representing the parent directory.
-    
+
     static assert(sep.length == 1 && altsep.length == 1);
     private bool isSep(dchar ch) {
         return ch == sep[0] || ch == altsep[0];
     }
-    
+
     private bool isSepOrDriveSep(dchar ch) {
         return isSep(ch) || ch == ':';
     }
@@ -2808,7 +2808,7 @@ version(Posix)
     enum string linesep = "\n";
     enum string curdir = ".";       // / String representing the current directory.
     enum string pardir = "..";      // / String representing the parent directory.
-    
+
     static assert(sep.length == 1 && altsep.length == 0);
     private bool isSep(dchar ch) {
         return ch == sep[0];

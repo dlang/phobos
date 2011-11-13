@@ -1942,8 +1942,8 @@ version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
-    scope(exit) std.c.stdlib.free(p);
-    return p[0 .. std.c.string.strlen(p)].idup;
+    scope(exit) core.stdc.stdlib.free(p);
+    return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
 unittest
@@ -2657,14 +2657,14 @@ void copy(in char[] from, in char[] to)
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;
-            auto buf = std.c.stdlib.malloc(BUFSIZ);
+            auto buf = core.stdc.stdlib.malloc(BUFSIZ);
             if (!buf)
             {
                 BUFSIZ = 4096;
-                buf = std.c.stdlib.malloc(BUFSIZ);
+                buf = core.stdc.stdlib.malloc(BUFSIZ);
                 buf || assert(false, "Out of memory in std.file.copy");
             }
-            scope(exit) std.c.stdlib.free(buf);
+            scope(exit) core.stdc.stdlib.free(buf);
 
             for (auto size = statbuf.st_size; size; )
             {
@@ -3040,8 +3040,8 @@ private struct DirIteratorImpl
                     return false;
                 }
             }
-            while( std.c.string.strcmp(findinfo.cFileName.ptr, ".") == 0
-                    || std.c.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
+            while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
+                    || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
                 if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
@@ -3091,8 +3091,8 @@ private struct DirIteratorImpl
             for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
-                   std.c.string.strcmp(fdata.d_name.ptr, "..") )
+                if(core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
+                   core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
                 {
                     _cur._init(_stack.data[$-1].dirpath, fdata);
                     return true;
@@ -3831,8 +3831,8 @@ version(Windows)
             do
             {
                 // Skip "." and ".."
-                if(std.c.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
-                   std.c.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
+                if(core.stdc.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
+                   core.stdc.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
                 {
                     continue;
                 }
@@ -3858,8 +3858,8 @@ else version(Posix)
         for(dirent* fdata; (fdata = readdir(h)) != null; )
         {
             // Skip "." and ".."
-            if(!std.c.string.strcmp(fdata.d_name.ptr, ".") ||
-               !std.c.string.strcmp(fdata.d_name.ptr, ".."))
+            if(!core.stdc.string.strcmp(fdata.d_name.ptr, ".") ||
+               !core.stdc.string.strcmp(fdata.d_name.ptr, ".."))
             {
                 continue;
             }
