@@ -1763,6 +1763,10 @@ void rmdir(in char[] pathname)
         original = The file to link from.
         link     = The symlink to create.
 
+    Note:
+        Relative paths are relative to the current working directory,
+        not the files being linked to or from.
+
     Throws:
         $(D FileException) on error (which includes if the symlink already
         exists).
