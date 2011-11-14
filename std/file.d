@@ -83,30 +83,32 @@ else version (Posix)
 {
     version (OSX)
     {
-        struct struct_stat64        // distinguish it from the stat() function
+        import core.stdc.config : c_long;
+        // struct prefix to distinguish it from the stat() function.
+        // Ported from /usr/include/sys/stat.h on an OS X Lion box.
+        struct struct_stat64
         {
-            uint st_dev;        /// device
-            ushort st_mode;
-            ushort st_nlink;        /// link count
+            dev_t st_dev;        /// device
+            mode_t st_mode;
+            nlink_t st_nlink;    /// link count
             ulong st_ino;        /// file serial number
-            uint st_uid;        /// user ID of file's owner
-            uint st_gid;        /// user ID of group's owner
-            uint st_rdev;        /// if device then device number
+            uid_t st_uid;        /// user ID of file's owner
+            gid_t st_gid;        /// user ID of group's owner
+            dev_t st_rdev;       /// if device then device number
 
-            int st_atime;
-            uint st_atimensec;
-            int st_mtime;
-            uint st_mtimensec;
-            int st_ctime;
-            uint st_ctimensec;
-            int st_birthtime;
-            uint st_birthtimensec;
+            time_t st_atime;
+            c_long st_atimensec;
+            time_t st_mtime;
+            c_long st_mtimensec;
+            time_t st_ctime;
+            c_long st_ctimensec;
+            time_t st_birthtime;
+            c_long st_birthtimensec;
 
-            ulong st_size;
-            long st_blocks;        /// number of allocated 512 byte blocks
-            int st_blksize;        /// optimal I/O block size
+            off_t st_size;
+            blkcnt_t st_blocks;      /// number of allocated 512 byte blocks
+            blksize_t st_blksize;    /// optimal I/O block size
 
-            ulong st_ino64;
             uint st_flags;
             uint st_gen;
             int st_lspare; /* RESERVED: DO NOT USE! */
