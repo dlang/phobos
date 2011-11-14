@@ -235,7 +235,7 @@ struct CodepointSet
 
     //Make this set a symmetric difference with $(D set).
     //Algebra: this = this ~ set (i.e. (this || set) -- (this && set)).
-    @trusted ref symmetricSub(in CodepointSet set)
+    @trusted ref CodepointSet symmetricSub(in CodepointSet set)
     {
         auto a = CodepointSet(ivals.dup);
         a.intersect(set);
