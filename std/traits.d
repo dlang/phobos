@@ -390,7 +390,7 @@ unittest
     static assert(functionAttributes!(Test2.pure_const) == FA.pure_);
     static assert(functionAttributes!(Test2.pure_sharedconst) == FA.pure_);
 
-    static assert(functionAttributes!((int a) {}) == (FA.safe | FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!((int a) {}) == FA.none);
 }
 
 
@@ -3493,7 +3493,7 @@ unittest
     static assert(mangledName!(removeDummyEnvelope) ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
-    static assert(mangledName!((int a) { return a+x; })[$ - 9 .. $] == "MFNbNfiZi");    // nothrow safe
+    static assert(mangledName!((int a) { return a+x; })[$ - 5 .. $] == "MFiZi");
 }
 
 
