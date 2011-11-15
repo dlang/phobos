@@ -50,31 +50,39 @@ $(TR $(TH Function Name) $(TH Description)
 )
 $(LEADINGROW High level)
 $(TR $(TDNW $(LREF download)) $(TD $(D
-download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file")) downloads file from url to file system.)
+download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file")) 
+downloads file from url to file system.)
 )
 $(TR $(TDNW $(LREF upload)) $(TD $(D
-upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");) uploads file from file system to url.)
+upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");) 
+uploads file from file system to url.)
 )
 $(TR $(TDNW $(LREF get)) $(TD $(D
 get("d-p-l.org")) returns a string containing the d-p-l.org web page.)
 )
 $(TR $(TDNW $(LREF put)) $(TD $(D
-put("d-p-l.org", "Hi")) returns a string containing the d-p-l.org web page. after a HTTP PUT of "hi")
+put("d-p-l.org", "Hi")) returns a string containing 
+the d-p-l.org web page. after a HTTP PUT of "hi")
 )
 $(TR $(TDNW $(LREF post)) $(TD $(D
-post("d-p-l.org", "Hi")) returns a string containing the d-p-l.org web page. after a HTTP POST of "hi")
+post("d-p-l.org", "Hi")) returns a string containing 
+the d-p-l.org web page. after a HTTP POST of "hi")
 )
 $(TR $(TDNW $(LREF byLine)) $(TD $(D
-byLine("d-p-l.org")) returns a range of strings containing the d-p-l.org web page.)
+byLine("d-p-l.org")) returns a range of strings containing the 
+d-p-l.org web page.)
 )
 $(TR $(TDNW $(LREF byChunk)) $(TD $(D
-byChunk("d-p-l.org", 10)) returns a range of ubyte[10] containing the d-p-l.org web page.)
+byChunk("d-p-l.org", 10)) returns a range of ubyte[10] containing the 
+d-p-l.org web page.)
 )
 $(TR $(TDNW $(LREF byLineAsync)) $(TD $(D
-byLineAsync("d-p-l.org")) returns a range of strings containing the d-p-l.org web page asynchronously.)
+byLineAsync("d-p-l.org")) returns a range of strings containing the d-p-l.org web
+ page asynchronously.)
 )
 $(TR $(TDNW $(LREF byChunkAsync)) $(TD $(D
-byChunkAsync("d-p-l.org", 10)) returns a range of ubyte[10] containing the d-p-l.org web page asynchronously.)
+byChunkAsync("d-p-l.org", 10)) returns a range of ubyte[10] containing the 
+d-p-l.org web page asynchronously.)
 )
 $(LEADINGROW Low level
 )
@@ -188,8 +196,8 @@ extern (C) void exit(int);
   * inspecting the url parameter.
   *
   * The rules for guessing the protocol are:
-  * * if url starts with ftp://, ftps:// or ftp. then Ftp connection is assumed
-  * * Http connection otherwise
+  * 1, if url starts with ftp://, ftps:// or ftp. then Ftp connection is assumed.
+  * 2, Http connection otherwise.
   *
   * Example:
   * ---
@@ -455,16 +463,20 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
         auto trimmed = url.findSplitAfter("ftp://")[1].findSplitAfter("ftps://")[1];
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
-        enforce(t[0].length > minDomainNameLength, new CurlException("Invalid ftp url for delete " ~ url));
+        enforce(t[0].length > minDomainNameLength, 
+                new CurlException("Invalid ftp url for delete " ~ url));
         conn.url = t[0];
 
-        enforce(t[1].length > 0, new CurlException("No filename specified to delete for url " ~ url));
+        enforce(t[1].length > 0, 
+                new CurlException("No filename specified to delete for url " ~ url));
         conn.addCommand("DELE " ~ t[1]);
         conn.perform();
     }
     else
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
+        if (url.startsWith("ftp://") || 
+            url.startsWith("ftps://") || 
+            url.startsWith("ftp."))
             return del!(Ftp,T)(url, Ftp());
         else 
             return del!(Http,T)(url, Http());
@@ -491,7 +503,9 @@ unittest
  *
  * See_Also: $(LREF Http.Method)
  */
-T[] options(T = char, OptionsUnit)(const(char)[] url, const(OptionsUnit)[] optionsData, Http conn = Http())
+T[] options(T = char, OptionsUnit)(const(char)[] url, 
+                                   const(OptionsUnit)[] optionsData, 
+                                   Http conn = Http())
 if (is(T == char) || is(T == ubyte))
 {
     conn.method = Http.Method.options;
@@ -576,7 +590,8 @@ unittest
 
 auto _basicHttp(T)(const(char)[] url, const(void)[] sendData, Http client)
 {
-    scope (exit) {
+    scope (exit) 
+    {
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
@@ -591,7 +606,7 @@ auto _basicHttp(T)(const(char)[] url, const(void)[] sendData, Http client)
     };
 
     if (sendData !is null && 
-        (client.method == Http.Method.post || client.method == Http.Method.put)) 
+        (client.method == Http.Method.post || client.method == Http.Method.put))
     {
         client.contentLength = sendData.length;
         client.onSend = delegate size_t(void[] buf) {
@@ -668,7 +683,8 @@ auto _basicFtp(T)(const(char)[] url, const(void)[] sendData, Ftp client)
         return data.length;
     };
 
-    if (sendData !is null && sendData.length != 0) {
+    if (sendData !is null && sendData.length != 0) 
+    {
         client.onSend = delegate size_t(void[] buf) {
             size_t minLen = min(buf.length, sendData.length);
             if (minLen == 0) return 0;
@@ -1026,10 +1042,14 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
-            return byLineAsync(url, postData, keepTerminator, terminator, transmitBuffers, Ftp());
+        if (url.startsWith("ftp://") || 
+            url.startsWith("ftps://") || 
+            url.startsWith("ftp."))
+            return byLineAsync(url, postData, keepTerminator, 
+                               terminator, transmitBuffers, Ftp());
         else
-            return byLineAsync(url, postData, keepTerminator, terminator, transmitBuffers, Http());
+            return byLineAsync(url, postData, keepTerminator, 
+                               terminator, transmitBuffers, Http());
     }
     else
     {
@@ -1047,18 +1067,22 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
         static if ( is(Conn : Http) )
         {
             connDup.p.headersOut = null;
-            connDup.method = conn.method == Http.Method.undefined ? Http.Method.get : conn.method; 
+            connDup.method = conn.method == Http.Method.undefined ? 
+                Http.Method.get : conn.method; 
             if (postData !is null)
                 {
                 if (connDup.method == Http.Method.put)
                 {
-                    connDup.handle.set(CurlOption.infilesize_large, postData.length);
+                    connDup.handle.set(CurlOption.infilesize_large, 
+                                       postData.length);
                 } else {
                     // post 
                     connDup.method = Http.Method.post;
-                    connDup.handle.set(CurlOption.postfieldsize_large, postData.length);
+                    connDup.handle.set(CurlOption.postfieldsize_large, 
+                                       postData.length);
                 }
-                connDup.handle.set(CurlOption.copypostfields, cast(void*) postData.ptr);
+                connDup.handle.set(CurlOption.copypostfields, 
+                                   cast(void*) postData.ptr);
             }
             tid.send(cast(ulong)connDup.handle.handle);
             tid.send(connDup.method);
@@ -1069,7 +1093,8 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
             tid.send(Http.Method.undefined);
         }
         connDup.p.curl.handle = null; // make sure handle is not freed
-        return AsyncLineInputRange!Char(tid, transmitBuffers, Conn.defaultAsyncStringBufferSize);
+        return AsyncLineInputRange!Char(tid, transmitBuffers, 
+                                        Conn.defaultAsyncStringBufferSize);
     }
 }
 
@@ -1081,12 +1106,17 @@ auto byLineAsync(Conn = AutoConnection, Terminator = char, Char = char)
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
-            return byLineAsync(url, cast(void[])null, keepTerminator, terminator, transmitBuffers, Ftp());
+        if (url.startsWith("ftp://") || 
+            url.startsWith("ftps://") || 
+            url.startsWith("ftp."))
+            return byLineAsync(url, cast(void[])null, keepTerminator, 
+                               terminator, transmitBuffers, Ftp());
         else
-            return byLineAsync(url, cast(void[])null, keepTerminator, terminator, transmitBuffers, Http());
+            return byLineAsync(url, cast(void[])null, keepTerminator, 
+                               terminator, transmitBuffers, Http());
     } else {
-        return byLineAsync(url, cast(void[])null, keepTerminator, terminator, transmitBuffers, conn);
+        return byLineAsync(url, cast(void[])null, keepTerminator, 
+                           terminator, transmitBuffers, conn);
     }
 }
 
@@ -1152,7 +1182,8 @@ static struct AsyncChunkInputRange
  * ----
  *
  * Returns:
- * A range of ubyte[chunkSize] with the content of the resource pointer to by the url
+ * A range of ubyte[chunkSize] with the content of the resource pointer 
+ * to by the url
  */
 auto byChunkAsync(Conn = AutoConnection, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData, 
@@ -1162,10 +1193,14 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
-            return byChunkAsync(url, postData, chunkSize, transmitBuffers, Ftp());
+        if (url.startsWith("ftp://") || 
+            url.startsWith("ftps://") || 
+            url.startsWith("ftp."))
+            return byChunkAsync(url, postData, chunkSize, 
+                                transmitBuffers, Ftp());
         else 
-            return byChunkAsync(url, postData, chunkSize, transmitBuffers, Http());
+            return byChunkAsync(url, postData, chunkSize, 
+                                transmitBuffers, Http());
     }
     else
     {
@@ -1181,18 +1216,22 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
         static if ( is(Conn : Http) )
         {
             connDup.p.headersOut = null;
-            connDup.method = conn.method == Http.Method.undefined ? Http.Method.get : conn.method; 
+            connDup.method = conn.method == Http.Method.undefined ? 
+                Http.Method.get : conn.method; 
             if (postData !is null)
             {
                 if (connDup.method == Http.Method.put)
                 {
-                    connDup.handle.set(CurlOption.infilesize_large, postData.length);
+                    connDup.handle.set(CurlOption.infilesize_large, 
+                                       postData.length);
                 } else {
                     // post 
                     connDup.method = Http.Method.post;
-                    connDup.handle.set(CurlOption.postfieldsize_large, postData.length);
+                    connDup.handle.set(CurlOption.postfieldsize_large, 
+                                       postData.length);
                 }
-                connDup.handle.set(CurlOption.copypostfields, cast(void*) postData.ptr);
+                connDup.handle.set(CurlOption.copypostfields, 
+                                   cast(void*) postData.ptr);
             }
             tid.send(cast(ulong)connDup.handle.handle);
             tid.send(connDup.method);
@@ -1209,18 +1248,24 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 
 /// ditto
 auto byChunkAsync(Conn = AutoConnection)
-           (const(char)[] url, size_t chunkSize = 1024, size_t transmitBuffers = 10,
+           (const(char)[] url, 
+            size_t chunkSize = 1024, size_t transmitBuffers = 10, 
             Conn conn = Conn())
 if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
-            return byChunkAsync(url, cast(void[])null, chunkSize, transmitBuffers, Ftp());
+        if (url.startsWith("ftp://") || 
+            url.startsWith("ftps://") || 
+            url.startsWith("ftp."))
+            return byChunkAsync(url, cast(void[])null, chunkSize, 
+                                transmitBuffers, Ftp());
         else
-            return byChunkAsync(url, cast(void[])null, chunkSize, transmitBuffers, Http());
+            return byChunkAsync(url, cast(void[])null, chunkSize, 
+                                transmitBuffers, Http());
     } else {
-        return byChunkAsync(url, cast(void[])null, chunkSize, transmitBuffers, conn);
+        return byChunkAsync(url, cast(void[])null, chunkSize, 
+                            transmitBuffers, conn);
     }
 }
 
@@ -1537,9 +1582,10 @@ private mixin template Protocol()
   Returns: Tuple of ubytes read and the $(D Char[]) characters decoded.
            Not all ubytes are guaranteed to be read in case of decoding error.
 */
-private Tuple!(size_t,Char[]) decodeString(Char = char)(const(ubyte)[] data, 
-                                                        EncodingScheme scheme,
-                                                        size_t maxChars = size_t.max) 
+private Tuple!(size_t,Char[]) 
+decodeString(Char = char)(const(ubyte)[] data, 
+                          EncodingScheme scheme,
+                          size_t maxChars = size_t.max)
 {
     Char[] res;
     size_t startLen = data.length;
@@ -2005,7 +2051,8 @@ struct Http
             string fieldName = m.captures[1].toLower.idup;
             if (fieldName == "content-type")
             {
-                auto mct = match(cast(char[]) m.captures[2], regex("charset=([^;]*)"));
+                auto mct = match(cast(char[]) m.captures[2], 
+                                 regex("charset=([^;]*)"));
                 if (!mct.empty && mct.captures.length > 1)
                     p.charset = mct.captures[1].idup;
             }
@@ -2086,7 +2133,6 @@ struct Http
 
     /** <a name="Http.Method"/ >The standard HTTP methods :
      *  $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.1, _RFC2616 Section 5.1.1)
-     * 
      */
     enum Method 
     {
@@ -2126,7 +2172,8 @@ struct Http
         /// 
         string toString()
         {
-            return format(code, reason, "(" ~ to!string(majorVersion) ~ "." ~ to!string(minorVersion));
+            return format(code, reason, "(" ~ to!string(majorVersion) ~ 
+                          "." ~ to!string(minorVersion));
         }
     }
 
@@ -2243,7 +2290,8 @@ struct Ftp
      */
     void addCommand(const(char)[] command) 
     {
-        p.commands = curl_slist_append(p.commands, cast(char*) toStringz(command));
+        p.commands = curl_slist_append(p.commands, 
+                                       cast(char*) toStringz(command));
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -2308,7 +2356,8 @@ struct Smtp
         p.RefCounted.initialize();
         p.curl.initialize();
         
-        if (url.startsWith("smtps://")) {
+        if (url.startsWith("smtps://")) 
+        {
             p.curl.set(CurlOption.use_ssl, CurlUseSSL.all);
             p.curl.set(CurlOption.ssl_verifypeer, false);
             p.curl.set(CurlOption.ssl_verifyhost, 2);
@@ -2348,8 +2397,9 @@ struct Smtp
         curl_slist* recipients_list = null;
         foreach(recipient; recipients) 
         {
-            recipients_list = curl_slist_append(recipients_list, 
-                                                cast(char*)toStringz(recipient));
+            recipients_list = 
+                curl_slist_append(recipients_list, 
+                                  cast(char*)toStringz(recipient));
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
     }
@@ -2655,11 +2705,13 @@ struct Curl
     @property void onReceiveHeader(void delegate(const(char)[]) callback) 
     {
         _onReceiveHeader = (const(char)[] od) {
-            throwOnStopped("Receive header callback called on cleaned up Curl instance");
+            throwOnStopped("Receive header callback called on "
+                           "cleaned up Curl instance");
             callback(od);
         };
         set(CurlOption.writeheader, cast(void*) &this);
-        set(CurlOption.headerfunction, cast(void*) &Curl._receiveHeaderCallback);
+        set(CurlOption.headerfunction, 
+            cast(void*) &Curl._receiveHeaderCallback);
     }
 
     /**
@@ -2669,12 +2721,12 @@ struct Curl
       * callback = the callback that has a $(D void[]) buffer to be filled
       *
       * Returns:
-      * The callback returns the number of elements in the buffer that have been 
+      * The callback returns the number of elements in the buffer that have been
       * filled and are ready to send.
-      * The special value $(D Curl.abortRequest) can be returned in order to abort the
-      * current request.
-      * The special value $(D Curl.pauseRequest) can be returned in order to pause the
-      * current request.
+      * The special value $(D Curl.abortRequest) can be returned in 
+      * order to abort the current request.
+      * The special value $(D Curl.pauseRequest) can be returned in order to 
+      * pause the current request.
       *
       * Example:
       * ----
@@ -2766,7 +2818,8 @@ struct Curl
                                                CurlSockType) callback) 
     {
         _onSocketOption = (curl_socket_t sock, CurlSockType st) {
-            throwOnStopped("Socket option callback called on cleaned up Curl instance");
+            throwOnStopped("Socket option callback called on "
+                           "cleaned up Curl instance");
             return callback(sock, st);
         };
         set(CurlOption.sockoptdata, cast(void*) &this);
@@ -2805,7 +2858,8 @@ struct Curl
                                            size_t ulNow) callback) 
     {
         _onProgress = (size_t dlt, size_t dln, size_t ult, size_t uln) {
-            throwOnStopped("Progress callback called on cleaned up Curl instance");
+            throwOnStopped("Progress callback called on cleaned "
+                           "up Curl instance");
             return callback(dlt, dln, ult, uln);
         };
         set(CurlOption.noprogress, 0);
@@ -3066,10 +3120,12 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                 {
                     static if (isArray!Terminator)
                         fromTid.send(thisTid(), 
-                                     message(cast(immutable(Unit)[])buffer[0..$-terminator.length]));
+                                     message(cast(immutable(Unit)[])
+                                             buffer[0..$-terminator.length]));
                     else
                         fromTid.send(thisTid(), 
-                                     message(cast(immutable(Unit)[])buffer[0..$-1]));
+                                     message(cast(immutable(Unit)[])
+                                             buffer[0..$-1]));
                 }
                 bufferValid = false;
             } 
