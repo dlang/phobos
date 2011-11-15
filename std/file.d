@@ -50,7 +50,7 @@ else
 
 version (unittest)
 {
-    import core.thread : Thread;
+    import core.thread;
 
     private string deleteme()
     {
