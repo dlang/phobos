@@ -868,13 +868,9 @@ extern (C) real rndtonl(real x);
  *      $(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-
-@safe pure nothrow
-{
-    float sqrt(float x);    /* intrinsic */
-    double sqrt(double x);  /* intrinsic */ /// ditto
-    real sqrt(real x);      /* intrinsic */ /// ditto
-}
+float sqrt(float x) @safe pure nothrow;    /* intrinsic */
+double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
+real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
 
 @trusted pure nothrow {  // Should be @safe.  See bugs 4628, 4630.
     // Create explicit overloads for integer sqrts.  No ddoc for these because
@@ -1814,7 +1810,7 @@ real fabs(real x) @safe pure nothrow;      /* intrinsic */
  * The hypotenuse is the value of the square root of
  * the sums of the squares of x and y:
  *
- *      sqrt($(POW x, 2) + $(POW y, 2))
+ *      sqrt($(POWER x, 2) + $(POWER y, 2))
  *
  * Note that hypot(x, y), hypot(y, x) and
  * hypot(x, -y) are equivalent.
@@ -1842,7 +1838,7 @@ real hypot(real x, real y) @safe pure nothrow
 
     real u = fabs(x);
     real v = fabs(y);
-    if (!(u >= v))  // check for NaN as well.
+    if (u !>= v)  // check for NaN as well.
     {
         v = u;
         u = fabs(y);
