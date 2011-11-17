@@ -110,7 +110,7 @@ foreach (line; byLineAsync("d-p-l.org", "Post data"))
     writeln(line);
 
 // Get using a line range and proxy settings
-auto client = new Http();
+auto client = Http();
 client.proxy = "1.2.3.4";
 foreach (line; byLine("d-p-l.org", client))
     writeln(line);
@@ -232,11 +232,11 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
 {
     static if (is(Conn : Http))
     {
-        auto client = new Ftp(url);
+        auto client = Ftp(url);
     }
     else static if (is(Conn : Ftp))
     {
-        auto client = new Ftp(url);
+        auto client = Ftp(url);
     }
     else
     {
@@ -276,12 +276,12 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
 {
     static if (is(Conn : Http))
     {
-        auto client = new Http(url);
+        auto client = Http(url);
         client.method = Http.Method.put;
     }
     else static if (is(Conn : Ftp))
     {
-        auto client = new Ftp(url);
+        auto client = Ftp(url);
     }
     else
     {
@@ -1501,7 +1501,7 @@ private mixin template Protocol()
      * ----
      * import etc.curl;
      * string msg = "Hello world";
-     * auto client = new Http("d-p-l.org");
+     * auto client = Http("d-p-l.org");
      * client.onSend = delegate size_t(void[] data) { 
      *     auto m = cast(void[])msg;
      *     size_t length = m.length > data.length ? data.length : m.length;
@@ -1533,7 +1533,7 @@ private mixin template Protocol()
       * Example:
       * ----
       * import etc.curl, std.stdio;
-      * auto client = new Http("d-p-l.org");
+      * auto client = Http("d-p-l.org");
       * client.onReceive = (ubyte[] data) { 
       *     writeln("Got data", to!(const(char)[])(data)); 
       *     return data.length;
@@ -1562,7 +1562,7 @@ private mixin template Protocol()
       * Example:
       * ----
       * import etc.curl, std.stdio;
-      * auto client = new Http("d-p-l.org");
+      * auto client = Http("d-p-l.org");
       * client.onProgress = delegate int(size_t dl, size_t dln, size_t ul, size_t ult) { 
       *     writeln("Progress: downloaded ", dln, " of ", dl);
       *     writeln("Progress: uploaded ", uln, " of ", ul);  
