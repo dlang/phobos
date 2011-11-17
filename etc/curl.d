@@ -109,7 +109,7 @@ string content = get("ftp.digitalmars.com/sieve.ds");
 foreach (line; byLineAsync("d-p-l.org", "Post data"))
     writeln(line);
 
-// Get using an line range and proxy settings
+// Get using a line range and proxy settings
 auto client = new Http();
 client.proxy = "1.2.3.4";
 foreach (line; byLine("d-p-l.org", client))
@@ -588,7 +588,7 @@ unittest
 }
 
 
-auto _basicHttp(T)(const(char)[] url, const(void)[] sendData, Http client)
+private auto _basicHttp(T)(const(char)[] url, const(void)[] sendData, Http client)
 {
     scope (exit) 
     {
@@ -668,7 +668,7 @@ auto _basicHttp(T)(const(char)[] url, const(void)[] sendData, Http client)
     }
 }
 
-auto _basicFtp(T)(const(char)[] url, const(void)[] sendData, Ftp client)
+private auto _basicFtp(T)(const(char)[] url, const(void)[] sendData, Ftp client)
 {
     scope (exit) client.onReceive = null;
     
@@ -1765,6 +1765,7 @@ struct Http
         this.maxRedirects = Http.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
+        dataTimeout = dur!"minutes"(2);
         version (unittest) verbose(true);
     }
 
@@ -1776,6 +1777,7 @@ struct Http
         http.maxRedirects = Http.defaultMaxRedirects;
         http.p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         http.p.method = Method.undefined;
+        http.dataTimeout = dur!"minutes"(2);
         version (unittest) http.verbose(true);
         return http;
     }
@@ -1797,6 +1799,7 @@ struct Http
         copy.p.headersOut = newlist;
         copy.p.curl.set(CurlOption.httpheader, copy.p.headersOut);
         copy.p.curl = p.curl.dup();
+        copy.dataTimeout = dur!"minutes"(2);
         return copy;
     }
 
@@ -1893,7 +1896,7 @@ struct Http
        Http status line of last response. One call to perform may
        result in several requests because of redirection.
     */
-    @property StatusLine statusLine() 
+    @property StatusLine statusLine()
     {
         return p.status;
     }
@@ -2215,6 +2218,7 @@ struct Ftp
         p.curl.initialize();
         p.curl.set(CurlOption.url, url);
         p.encoding = "ISO-8859-1";
+        dataTimeout(dur!"minutes"(2));
         version (unittest) verbose(true);
     }
 
@@ -2224,6 +2228,7 @@ struct Ftp
         ftp.p.RefCounted.initialize();
         ftp.p.curl.initialize();
         ftp.p.encoding = "ISO-8859-1";
+        ftp.dataTimeout(dur!"minutes"(2));
         version (unittest) ftp.verbose(true);
         return ftp;
     }
@@ -2260,6 +2265,7 @@ struct Ftp
         }
         copy.p.commands = newlist;
         copy.p.curl.set(CurlOption.postquote, copy.p.commands);
+        copy.dataTimeout(dur!"minutes"(2));
         return copy;
     }
 
@@ -2327,7 +2333,7 @@ struct Ftp
   * smtp.mailTo = ["<to.addr@gmail.com>"];
   * smtp.mailFrom = "<from.addr@gmail.com>";
   * smtp.message = "Example Message";
-  * smtp.perform;
+  * smtp.perform();
   * ---
   *
   * See_Also: $(WEB www.ietf.org/rfc/rfc2821.txt, RFC2821)
@@ -2369,6 +2375,7 @@ struct Smtp
         }
  
         p.curl.set(CurlOption.url, url);
+        dataTimeout(dur!"minutes"(2));
     }
 
     /**
@@ -2431,6 +2438,13 @@ class CurlException : Exception
     this(const(char)[] msg) { super(msg.idup); }
 }
 
+/// An timeout exception class for curl.
+class CurlTimeoutException : CurlException 
+{
+    /// Construct a CurlTimeoutException with given error message.
+    this(const(char)[] msg) { super(msg); }
+}
+
 /**
   Wrapper class to provide a better interface to libcurl than using the plain C
   API.  It is recommended to use the $(D Http)/$(D Ftp) etc. classes instead
@@ -2478,6 +2492,7 @@ struct Curl
         handle = curl_easy_init();
         enforce(handle, new CurlException("Curl instance couldn't be initialized"));
         stopped = false;
+        set(CurlOption.nosignal, 1);
     }
 
     /**
@@ -2537,11 +2552,15 @@ struct Curl
 
         copy.clear(CurlOption.cookiejar); // disable writing cookies to file
         copy.clear(CurlOption.postfields);
+        copy.set(CurlOption.nosignal, 1);
         return copy;
     }
 
     private void _check(CURLcode code) 
     {
+        enforce(code != CurlError.operation_timedout,
+                new CurlTimeoutException(errorString(code)));
+
         enforce(code == CurlError.ok,
                 new CurlException(errorString(code)));
     }
@@ -2957,15 +2976,13 @@ private static Message!T message(T)(T data)
 // Pool of to be used for reusing buffers
 private struct Pool(DATA) 
 {
-private:
-    struct Entry 
+    private struct Entry 
     {
         DATA data;
         Entry * next;
     };
-    Entry * root;
-    Entry * freeList;
-public:
+    private Entry * root;
+    private Entry * freeList;
 
     @safe bool empty() 
     {
