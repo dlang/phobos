@@ -1911,7 +1911,8 @@ struct Http
     void setCookieJar(const(char)[] path) 
     {
         p.curl.set(CurlOption.cookiefile, path);
-        p.curl.set(CurlOption.cookiejar, path);
+        if (path.length)
+            p.curl.set(CurlOption.cookiejar, path);
     }
 
     /// Flush cookie jar to disk.
