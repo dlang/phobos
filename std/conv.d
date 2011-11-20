@@ -1052,7 +1052,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
+deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
@@ -2655,7 +2655,7 @@ unittest
 }
 
 // Parsing typedefs forwards to their host types
-Target parse(Target, Source)(ref Source s)
+deprecated Target parse(Target, Source)(ref Source s)
     if (isSomeString!Source &&
         is(Target == typedef))
 {
