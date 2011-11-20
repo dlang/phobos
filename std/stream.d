@@ -971,10 +971,10 @@ class Stream : InputStream, OutputStream {
             q[0 .. s.length] = s[];
           } else if (arguments[j] is typeid(wchar[]*)) {
             auto q = va_arg!(const(wchar)[]*)(args);
-            *q = toUTF16(s);
+            *q = toUTF!(const wchar)(s);
           } else if (arguments[j] is typeid(dchar[]*)) {
             auto q = va_arg!(const(dchar)[]*)(args);
-            *q = toUTF32(s);
+            *q = toUTF!(const dchar)(s);
           }
           j++;
           i++;
@@ -1168,9 +1168,8 @@ class Stream : InputStream, OutputStream {
   }
 
   private void doFormatCallback(dchar c) {
-    char[4] buf;
-    auto b = std.utf.toUTF8(buf, c);
-    writeString(b);
+    char[4] buf = void;
+    writeString(buf[0 .. std.utf.encode(buf, c)]);
   }
 
   // writes data to stream using writef() syntax,

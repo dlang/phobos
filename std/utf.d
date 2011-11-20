@@ -1187,6 +1187,13 @@ void validate(S)(in S str) @safe pure
     Converts $(D str) from its character type to the requested character type.
     A new string is always allocated, even if both the type of $(D str) the
     return type are identical (including if they're both $(D immutable)).
+
+    So, $(D toUTF) is for the cases when you want to guarantee that converting
+    to one of the string types will allocate a new string, but in the general
+    case $(XREF conv, to) should be used, since it doesn't allocate a new
+    string unless it has to (e.g. $(D to!string("hello world")) won't do any
+    allocations, whereas $(D toUTF!(immutable char)("hello world")) will
+    allocate an entirely new string).
   +/
 C1[] toUTF(C1, C2)(const(C2)[] str) @trusted
     if(isSomeChar!C1 && isSomeChar!C2)
@@ -1850,69 +1857,6 @@ unittest
     //toUTF16z compile properly for the various string types.
     foreach(S; TypeTuple!(string, wstring, dstring))
         static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
-}
-
-
-/* ================================ tests ================================== */
-
-unittest
-{
-    debug(utf) printf("utf.toUTF.unittest\n");
-
-    string c;
-    wstring w;
-    dstring d;
-
-    c = "hello";
-    w = toUTF16(c);
-    assert(w == "hello");
-    d = toUTF32(c);
-    assert(d == "hello");
-    c = toUTF8(w);
-    assert(c == "hello");
-    d = toUTF32(w);
-    assert(d == "hello");
-
-    c = toUTF8(d);
-    assert(c == "hello");
-    w = toUTF16(d);
-    assert(w == "hello");
-
-
-    c = "hel\u1234o";
-    w = toUTF16(c);
-    assert(w == "hel\u1234o");
-    d = toUTF32(c);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(w);
-    assert(c == "hel\u1234o");
-    d = toUTF32(w);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(d);
-    assert(c == "hel\u1234o");
-    w = toUTF16(d);
-    assert(w == "hel\u1234o");
-
-
-    c = "he\U0010AAAAllo";
-    w = toUTF16(c);
-    //foreach (wchar c; w) printf("c = x%x\n", c);
-    //foreach (wchar c; cast(wstring)"he\U0010AAAAllo") printf("c = x%x\n", c);
-    assert(w == "he\U0010AAAAllo");
-    d = toUTF32(c);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(w);
-    assert(c == "he\U0010AAAAllo");
-    d = toUTF32(w);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(d);
-    assert(c == "he\U0010AAAAllo");
-    w = toUTF16(d);
-    assert(w == "he\U0010AAAAllo");
 }
 
 

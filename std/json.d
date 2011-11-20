@@ -167,7 +167,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                         val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                                 }
                                 char[4] buf = void;
-                                str.put(toUTF8(buf, val));
+                                str.put(buf[0 .. encode(buf, val)]);
                                 break;
 
                         default:

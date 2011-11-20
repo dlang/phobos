@@ -1969,9 +1969,8 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  This is enforced by the function's in-contract.
 
  Supercedes:
- This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
- std.utf.toUTF32()
- (but note that to!() supercedes it more conveniently).
+ This function supercedes $(XREF utf, toUTF)
+ (but note that $(XREF conv, to) supercedes it more conveniently).
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -2022,8 +2021,7 @@ body
  This is enforced by the function's in-contract.
 
  Supercedes:
- This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
- std.utf.toUTF32().
+ This function supercedes $(XREF utf, toUTF)
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
