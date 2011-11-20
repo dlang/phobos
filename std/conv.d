@@ -1052,7 +1052,7 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
+deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
 {
@@ -1061,21 +1061,6 @@ T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
         // typedef
         return left ~ to!T(cast(Original) s) ~ right;
     }
-}
-
-version(none) unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    typedef double Km;
-    Km km = 42;
-    assert(to!string(km) == "Km(42)");
-}
-
-unittest
-{
-    typedef int X;
-    X x = 42;
-    assert(to!dstring(x) == "X(42)");
 }
 
 /// ditto
@@ -2670,7 +2655,7 @@ unittest
 }
 
 // Parsing typedefs forwards to their host types
-Target parse(Target, Source)(ref Source s)
+deprecated Target parse(Target, Source)(ref Source s)
     if (isSomeString!Source &&
         is(Target == typedef))
 {
@@ -2713,15 +2698,6 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     parseCheck!s(rbracket);
 
     return result;
-}
-
-version(none) unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    typedef uint Testing;
-    auto s = "123";
-    auto t = parse!Testing(s);
-    assert(t == cast(Testing) 123);
 }
 
 unittest
