@@ -1194,6 +1194,15 @@ void validate(S)(in S str) @safe pure
     string unless it has to (e.g. $(D to!string("hello world")) won't do any
     allocations, whereas $(D toUTF!(immutable char)("hello world")) will
     allocate an entirely new string).
+
+    Examples:
+--------------------
+auto str = "hello world";
+auto wstr = toUTF!wchar(str);
+auto dstr = toUTF!(immutable dchar)(str);
+assert(equal(str, wstr));
+assert(equal(str, dstr));
+--------------------
   +/
 C1[] toUTF(C1, C2)(const(C2)[] str) @trusted
     if(isSomeChar!C1 && isSomeChar!C2)
@@ -1268,6 +1277,17 @@ C1[] toUTF(C1, C2)(const(C2)[] str) @trusted
     }
 }
 
+//Verify Examples.
+unittest
+{
+    import std.algorithm;
+    auto str = "hello world";
+    auto wstr = toUTF!wchar(str);
+    auto dstr = toUTF!(immutable dchar)(str);
+    assert(equal(str, wstr));
+    assert(equal(str, dstr));
+}
+
 unittest
 {
     import std.algorithm;
@@ -1305,9 +1325,162 @@ unittest
             auto result2 = toUTF!(const C)(str2);
             auto result3 = toUTF!(immutable C)(str3);
 
-            assert(equal(str1, result1));
-            assert(equal(str2, result2));
-            assert(equal(str3, result3));
+            assert(equal(str1, result1), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str2, result2), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str3, result3), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+        }
+    }
+}
+
+
+/++
+    Version of $(LREF toUTF) which outputs the result to the given output range
+    rather than returning it.
+
+    Examples:
+--------------------
+auto str = "hello world";
+auto app = appender!wstring();
+toUTF!wchar(app, str);
+assert(equal(str, app.data));
+--------------------
+  +/
+void toUTF(C1, C2, R)(R outRange, const(C2)[] str)
+    if(isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(R, C1))
+{
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        validate(str);
+
+        static if(is(typeof(put(outRange, str))))
+            put(outRange, str);
+        else
+        {
+            foreach(C1 codeUnit; str)
+                put(outRange, codeUnit);
+        }
+    }
+    else static if(is(Unqual!C1 == dchar))
+    {
+        immutable len = str.length;
+
+        static if(is(Unqual!C2 == wchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                put(outRange, c);
+                ++i;
+            }
+            else
+                put(outRange, decode(str, i));
+        }
+    }
+    else
+    {
+        immutable len = str.length;
+
+        static if(is(Unqual!C1 == wchar) && is(Unqual!C2 == dchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                ++i;
+                put(outRange, cast(Unqual!C1)c);
+            }
+            else
+            {
+                static if(is(Unqual!C1 == char))
+                    char[4] buf;
+                else static if(is(Unqual!C1 == wchar))
+                    wchar[2] buf;
+
+                static if(is(Unqual!C2 == char) || is(Unqual!C2 == wchar))
+                    auto result = buf[0 .. encode(buf, decode(str, i))];
+                else
+                {
+                    auto result = buf[0 .. encode(buf, c)];
+                    ++i;
+                }
+
+                static if(is(typeof(put(outRange, buf[]))))
+                    put(outRange, result);
+                else
+                {
+                    foreach(C1 codeUnit; result)
+                        put(outRange, codeUnit);
+                }
+            }
+        }
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    import std.algorithm;
+    auto str = "hello world";
+    auto app = appender!wstring();
+    toUTF!wchar(app, str);
+    assert(equal(str, app.data));
+}
+
+unittest
+{
+    import std.algorithm;
+    import std.typetuple;
+
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        //We're doing this instead of to!S, because std.conv.to uses toUTF, and
+        //we don't want to use toUTF to test itself.
+        static if(is(immutable Unqual!(ElementEncodingType!S) == ElementEncodingType!S))
+            enum dup = ".idup";
+        else
+            enum dup = ".dup";
+
+        static if(is(Unqual!(ElementEncodingType!S) == char))
+            enum suffix = "" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+            enum suffix = "w" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == dchar))
+            enum suffix = "d" ~ dup;
+
+        S str1 = mixin(`"hello world"` ~ suffix);
+
+        S str2 = mixin(`"\U00068d0c\u0039\u04a0\ubfde\u0c50\u02c6\u0534\U000a92b4\u0051` ~
+                        `\u0074\uf0a4\u002c\U000afd07\u4153\u060c\U0008a651"` ~ suffix);
+
+        S str3 = mixin(`"\u0021\U00071e2f\ufecc\U0008b0bd\u0023\u0495\U000c1010\u000a` ~
+                        `\u011a\u5311\u7513\u024f\u01af\U000c11fa\u0070\u9163"` ~ suffix);
+
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            auto result1 = appender!(C[]);
+            auto result2 = appender!(const(C)[]);
+            auto result3 = appender!(immutable(C)[]);
+
+            toUTF!C(result1, str1);
+            toUTF!(const C)(result2, str2);
+            toUTF!(immutable C)(result3, str3);
+
+            assert(equal(str1, result1.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str2, result2.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str3, result3.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
         }
     }
 }
