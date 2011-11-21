@@ -1,3 +1,14 @@
+$(VERSION 057, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI As typedef has been deprecated, overloads of std.conv.to which use
+           typedef have now been deprecated.)
+     )
+
+    $(LIBBUGSFIXED
+     )
+ )
+
 $(VERSION 056, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
