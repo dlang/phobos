@@ -7898,10 +7898,13 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -8453,10 +8456,10 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+    deprecated static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString, tz);
@@ -12791,10 +12794,13 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -13108,10 +13114,10 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
+    deprecated static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
@@ -14511,10 +14517,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -14725,10 +14734,10 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+    deprecated static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
@@ -17692,10 +17701,13 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -17964,10 +17976,10 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
+    deprecated static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
