@@ -6,6 +6,7 @@ $(VERSION 057, ddd mm, 2011, =================================================,
      )
 
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
      )
  )
 
