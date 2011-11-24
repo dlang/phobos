@@ -2835,6 +2835,7 @@ public:
 
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
+        import std.stdio;
         for(size_t i=0; i<table.length; i+=4)
         {
             writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
