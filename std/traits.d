@@ -1527,12 +1527,12 @@ unittest
 }
 
 /**
-   Yields $(D true) if and only if $(D T) is a $(D struct) or a $(D
-   class) that defines a symbol called $(D name).
+   Yields $(D true) if and only if $(D T) is an aggregate that defines
+   a symbol called $(D name).
  */
 template hasMember(T, string name)
 {
-    static if (is(T == struct) || is(T == class))
+    static if (is(T == struct) || is(T == class) || is(T == union) || is(T == interface))
     {
         enum bool hasMember =
             staticIndexOf!(name, __traits(allMembers, T)) != -1;
@@ -1555,6 +1555,10 @@ unittest
     static assert(hasMember!(C1, "blah"));
     struct C2 { int blah(); }
     static assert(hasMember!(C2, "blah"));
+
+    // 6973
+    import std.range;
+    static assert(isOutputRange!(OutputRange!int, int));
 }
 
 
