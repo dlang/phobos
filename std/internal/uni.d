@@ -622,21 +622,22 @@ public:
 }
 
 
-version(fred_trie_test)
-unittest//a very sloow test
+@system unittest//a very sloow test
 {
+    import std.conv;
     uint max_char, max_data;
+    alias CodepointTrie!8 Trie;
     Trie t;
-    t = wordTrie;
+    auto wordSet =
+        CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
+        .add(unicodeMe).add(unicodeNd).add(unicodePc);
+    t = Trie(wordSet);
     assert(t['a']);
     assert(!t[' ']);
     CodepointSet set;
     set.add(unicodeAlphabetic);
     for(size_t i=1;i<set.ivals.length; i++)
         assert(set.ivals[i-1] < set.ivals[i],text(set.ivals[i-1], "  ",set.ivals[i]));
-    t = wordTrie;
-    assert(t['a']);
-    assert(!t[' ']);
     foreach(up; unicodeProperties)
     {
         t = Trie(up.set);

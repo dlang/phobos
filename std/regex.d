@@ -1521,7 +1521,7 @@ struct Parser(R, bool CTFE=false)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '\\', '[', ']':
+                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
                     last = current;
                     state = State.Char;
                     break;
@@ -1570,7 +1570,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 default:
-                    assert(0);
+                    enforce(false, "invalid escape sequence");
                 }
                 break;
             case State.Dash:
@@ -1623,7 +1623,7 @@ struct Parser(R, bool CTFE=false)
                 case 'v':
                     end = '\v';
                     break;
-                case '\\', '[', ']':
+                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
                     end = current;
                     break;
                 case 'c':
@@ -2081,8 +2081,8 @@ private:
                 uint dest = ir[pc].indexOfPair(pc);
                 assert(dest < ir.length, text("Wrong length in opcode at pc="
                                               , pc, " ", dest, " vs ", ir.length));
-                assert(ir[dest].paired ==  ir[pc],
-                        text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
+                assert(ir[dest].paired ==  ir[pc]
+                       ,text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
             }
             else if(ir[pc].isAtom)
             {
@@ -7383,6 +7383,9 @@ else
             auto arr = array(replicate('0',100));
             auto m2 = matchFn(arr, rprealloc);
             assert(m2);
+            assert(collectException(
+                    regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
+                    ) is null);
         }
         test_body!bmatch();
         test_body!match();
