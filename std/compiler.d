@@ -18,44 +18,15 @@
  */
 module std.compiler;
 
-immutable
-{
-    /// Vendor specific string naming the compiler, for example: "Digital Mars D".
-    string name = __VENDOR__;
+pragma(msg, "std.compiler has been deprecated in favor of core.compiler in druntime");
 
-    /// Master list of D compiler vendors.
-    enum Vendor
-    {
-        unknown = 0,     /// Compiler vendor could not be detected
-        digitalMars = 1, /// Digital Mars D (DMD)
-        gnu = 2,         /// GNU D Compiler (GDC)
-        llvm = 3,        /// LLVM D Compiler (LDC)
-        dotNET = 4,      /// D.NET
-        sdc = 5,         /// Stupid D Compiler (SDC)
-    }
+public import core.compiler;
 
-    /// Which vendor produced this compiler.
-    version(StdDdoc)          Vendor vendor;
-    else version(DigitalMars) Vendor vendor = Vendor.digitalMars;
-    else version(GNU)         Vendor vendor = Vendor.gnu;
-    else version(LDC)         Vendor vendor = Vendor.llvm;
-    else version(D_NET)       Vendor vendor = Vendor.dotNET;
-    else version(SDC)         Vendor vendor = Vendor.sdc;
-    else                      Vendor vendor = Vendor.unknown;
+alias core.compiler.compilerName name;
+alias core.compiler.compilerVendor vendor;
 
+alias core.compiler.compilerMajor version_major;
+alias core.compiler.compilerMinor version_minor;
 
-    /**
-     * The vendor specific version number, as in
-     * version_major.version_minor
-     */
-    uint version_major = __VERSION__ / 1000;
-    uint version_minor = __VERSION__ % 1000;    /// ditto
-
-
-    /**
-     * The version of the D Programming Language Specification
-     * supported by the compiler.
-     */
-    uint D_major = 2;
-    uint D_minor = 0;
-}
+alias core.compiler.languageMajor D_major;
+alias core.compiler.languageMinor D_minor;
