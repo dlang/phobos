@@ -128,7 +128,32 @@ else version (Posix)
     }
     else
     {
-        version(X86)
+        version(D_LP64)
+        {
+            struct struct_stat64
+            {
+                ulong st_dev;
+                ulong st_ino;
+                ulong st_nlink;
+                uint  st_mode;
+                uint  st_uid;
+                uint  st_gid;
+                int   __pad0;
+                ulong st_rdev;
+                long  st_size;
+                long  st_blksize;
+                long  st_blocks;
+                long  st_atime;
+                ulong st_atimensec;
+                long  st_mtime;
+                ulong st_mtimensec;
+                long  st_ctime;
+                ulong st_ctimensec;
+                long[3]  __unused;
+            }
+            static assert(struct_stat64.sizeof == 144);
+        }
+        else
         {
             struct struct_stat64        // distinguish it from the stat() function
             {
@@ -154,31 +179,6 @@ else version (Posix)
                 ulong st_ino64;
             }
             //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }
-        else version (X86_64)
-        {
-            struct struct_stat64
-            {
-                ulong st_dev;
-                ulong st_ino;
-                ulong st_nlink;
-                uint  st_mode;
-                uint  st_uid;
-                uint  st_gid;
-                int   __pad0;
-                ulong st_rdev;
-                long  st_size;
-                long  st_blksize;
-                long  st_blocks;
-                long  st_atime;
-                ulong st_atimensec;
-                long  st_mtime;
-                ulong st_mtimensec;
-                long  st_ctime;
-                ulong st_ctimensec;
-                long[3]  __unused;
-            }
-            static assert(struct_stat64.sizeof == 144);
         }
 
         extern(C) int fstat64(int, struct_stat64*);
