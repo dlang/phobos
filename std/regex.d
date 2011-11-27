@@ -2763,7 +2763,7 @@ public:
                             return haystack.length;
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == 0);
+                    assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
                     static if(charSize == 3)
                     {
                         state = (state<<1) | table[p[1]];
