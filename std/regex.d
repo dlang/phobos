@@ -2747,6 +2747,7 @@ public:
         if(fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
+            const orginalAlign = cast(size_t)p & (Char.sizeof-1);
             while(p != end)
             {
                 if(!~state)
@@ -2756,7 +2757,7 @@ public:
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
-                        if(!(cast(size_t)p & (Char.sizeof-1)))
+                        if((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if(++p == end)
                             return haystack.length;
