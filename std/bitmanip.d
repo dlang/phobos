@@ -356,10 +356,7 @@ struct BitArray
 {
     size_t len;
     size_t* ptr;
-    version(D_LP64)
-        enum bitsPerSizeT = 64;
-    else
-        enum bitsPerSizeT = 32;
+    enum bitsPerSizeT = size_t.sizeof * 8;
 
     @property const size_t dim()
     {
