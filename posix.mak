@@ -246,10 +246,6 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 ifeq ($(MODEL),64)
-DISABLED_TESTS += std/conv
-# not reduced yet. I hate reducing this file
-# passes on debug, segv on release
-
 DISABLED_TESTS += std/format
 # Still not passing, time to pull out the next issue.
 
@@ -337,3 +333,4 @@ html_consolidated :
 	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
+
