@@ -1363,8 +1363,20 @@ immutable or shared.) $(LI a delegate that is not shared.))
 
 template hasUnsharedAliasing(T...)
 {
-    enum hasUnsharedAliasing = hasRawUnsharedAliasing!(T) ||
-        anySatisfy!(unsharedDelegate, T) || hasUnsharedObjects!(T);
+    static if (!T.length)
+    {
+        enum hasUnsharedAliasing = false;
+    }
+    else static if (T.length == 1)
+    {
+        enum hasUnsharedAliasing = hasRawUnsharedAliasing!(T[0]) ||
+            anySatisfy!(unsharedDelegate, T[0]) || hasUnsharedObjects!(T[0]);
+    }
+    else
+    {
+        enum hasUnsharedAliasing = hasUnsharedAliasing!(T[0]) ||
+            hasUnsharedAliasing!(T[1..$]);
+    }
 }
 
 // Specialization to special-case std.typecons.Rebindable.
@@ -1408,6 +1420,14 @@ unittest
     static assert(!hasUnsharedAliasing!(Rebindable!(immutable Object)));
     static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
     static assert(hasUnsharedAliasing!(Rebindable!(Object)));
+    
+    /* Issue 6979 */
+    static assert(!hasUnsharedAliasing!(int, shared(int)*));
+    static assert(hasUnsharedAliasing!(int, int*));
+    static assert(hasUnsharedAliasing!(int, const(int)[]));
+    static assert(hasUnsharedAliasing!(int, shared(int)*, Rebindable!(Object)));
+    static assert(!hasUnsharedAliasing!(shared(int)*, Rebindable!(shared Object)));
+    static assert(!hasUnsharedAliasing!());
 }
 
 /**
