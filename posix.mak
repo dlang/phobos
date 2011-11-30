@@ -287,7 +287,7 @@ install : release
 	sudo cp $(LIB) /usr/lib/
 
 $(DRUNTIME) :
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak -m$(MODEL)
 
 ###########################################################
 # html documentation
