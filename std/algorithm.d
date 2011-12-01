@@ -3776,7 +3776,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         return _input.front;
     }
 
-    bool predSatisfied()
+    private bool predSatisfied()
     {
         static if (is(Sentinel == void))
             return unaryFun!pred(_input.front);
