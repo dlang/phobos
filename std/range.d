@@ -512,8 +512,8 @@ unittest
     struct B
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
     }
     static assert(!isBidirectionalRange!(B));
     struct C
@@ -577,26 +577,26 @@ unittest
     struct B
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
     }
     static assert(!isRandomAccessRange!(B));
     struct C
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
         void popBack();
-        int back();
+        @property int back();
     }
     static assert(!isRandomAccessRange!(C));
     struct D
     {
-        bool empty();
+        @property bool empty();
         @property D save();
-        int front();
+        @property int front();
         void popFront();
-        int back();
+        @property int back();
         void popBack();
         ref int opIndex(uint);
         @property size_t length();
@@ -621,7 +621,7 @@ unittest
 
         @property R save() { return this; }
 
-        int back() const { return 0; }
+        @property int back() const { return 0; }
         void popBack(){}
 
         int opIndex(size_t n) const { return 0; }
@@ -1002,7 +1002,7 @@ if (isBidirectionalRange!(Unqual!Range))
             @property auto ref front() { return source.back; }
             void popFront() { source.popBack(); }
             @property auto ref back() { return source.front; }
-            void popBack() { source.popFront; }
+            void popBack() { source.popFront(); }
 
             static if(is(typeof(.moveBack(source))))
             {
@@ -1607,7 +1607,7 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                 foreach (i, Unused; R)
                 {
                     if (source[i].empty) continue;
-                    source[i].popFront;
+                    source[i].popFront();
                     return;
                 }
             }
@@ -1941,7 +1941,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         public Rs source;
         private size_t _current = size_t.max;
 
-        bool empty()
+        @property bool empty()
         {
             foreach (i, Unused; Rs)
             {
@@ -2002,7 +2002,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
-            auto save()
+            @property auto save()
             {
                 Result result;
                 result._current = _current;
@@ -2015,7 +2015,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
         static if (allSatisfy!(hasLength, Rs))
         {
-            size_t length()
+            @property size_t length()
             {
                 size_t result;
                 foreach (i, R; Rs)
@@ -2659,7 +2659,7 @@ size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
         foreach (i; 0 .. n)
         {
             if (r.empty) return i;
-            r.popBack;
+            r.popBack();
         }
     }
     return n;
@@ -2817,7 +2817,7 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
         /// Ditto
         void popFront()
         {
-            _current.popFront;
+            _current.popFront();
             if (_current.empty) _current = _original;
         }
 
@@ -2947,7 +2947,7 @@ unittest // For infinite ranges
     struct InfRange
     {
         void popFront() { }
-        int front() { return 0; }
+        @property int front() { return 0; }
         enum empty = false;
     }
 
@@ -3023,7 +3023,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
     }
     else
     {
-        bool empty()
+        @property bool empty()
         {
             final switch (stoppingPolicy)
             {
@@ -3734,7 +3734,7 @@ unittest {
     foreach(a, b; ls) {}
 
     // Make sure StoppingPolicy.requireSameLength throws.
-    arr2.popBack;
+    arr2.popBack();
     ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
@@ -4348,7 +4348,7 @@ struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
     alias Unqual!(Ror) RangeOfRanges;
-    alias typeof(RangeOfRanges.init.front().front()) ElementType;
+    alias typeof(RangeOfRanges.init.front.front) ElementType;
 
     private void prime()
     {
@@ -4356,13 +4356,13 @@ struct FrontTransversal(Ror,
         {
             while (!_input.empty && _input.front.empty)
             {
-                _input.popFront;
+                _input.popFront();
             }
             static if (isBidirectionalRange!RangeOfRanges)
             {
                 while (!_input.empty && _input.back.empty)
                 {
-                    _input.popBack;
+                    _input.popBack();
                 }
             }
         }
@@ -4374,7 +4374,7 @@ struct FrontTransversal(Ror,
     this(RangeOfRanges input)
     {
         _input = input;
-        prime;
+        prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
             //     && hasLength!(.ElementType!RangeOfRanges))
@@ -4431,8 +4431,8 @@ struct FrontTransversal(Ror,
     void popFront()
     {
         assert(!empty);
-        _input.popFront;
-        prime;
+        _input.popFront();
+        prime();
     }
 
     /// Ditto
@@ -4461,8 +4461,8 @@ struct FrontTransversal(Ror,
         void popBack()
         {
             assert(!empty);
-            _input.popBack;
-            prime;
+            _input.popBack();
+            prime();
         }
 
         /// Ditto
@@ -4629,13 +4629,13 @@ struct Transversal(Ror,
         {
             while (!_input.empty && _input.front.length <= _n)
             {
-                _input.popFront;
+                _input.popFront();
             }
             static if (isBidirectionalRange!RangeOfRanges)
             {
                 while (!_input.empty && _input.back.length <= _n)
                 {
-                    _input.popBack;
+                    _input.popBack();
                 }
             }
         }
@@ -4648,7 +4648,7 @@ struct Transversal(Ror,
     {
         _input = input;
         _n = n;
-        prime;
+        prime();
         static if (opt == TransverseOptions.enforceNotJagged)
         {
             if (empty) return;
@@ -4705,8 +4705,8 @@ struct Transversal(Ror,
     void popFront()
     {
         assert(!empty);
-        _input.popFront;
-        prime;
+        _input.popFront();
+        prime();
     }
 
     /// Ditto
@@ -4735,8 +4735,8 @@ struct Transversal(Ror,
         void popBack()
         {
             assert(!empty);
-            _input.popBack;
-            prime;
+            _input.popBack();
+            prime();
         }
 
         /// Ditto
@@ -4853,13 +4853,13 @@ unittest
         ror.front = 5;
         scope(exit) ror.front = 2;
         assert(x[0][1] == 5);
-        assert(ror.moveFront == 5);
+        assert(ror.moveFront() == 5);
     }
     {
         ror.back = 999;
         scope(exit) ror.back = 4;
         assert(x[1][1] == 999);
-        assert(ror.moveBack == 999);
+        assert(ror.moveBack() == 999);
     }
     {
         ror[0] = 999;
@@ -4905,7 +4905,7 @@ struct Transposed(RangeOfRanges)
         foreach (ref e; _input)
         {
             if (e.empty) continue;
-            e.popFront;
+            e.popFront();
         }
     }
 
@@ -5378,7 +5378,7 @@ unittest
 {
     struct R
     {
-        ref int front() { static int x = 42; return x; }
+        @property ref int front() { static int x = 42; return x; }
         this(this){}
     }
     R r;
@@ -5746,7 +5746,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     return .moveBack(_range);
                 }
 
-                @property void popBack() { return _range.popBack; }
+                @property void popBack() { return _range.popBack(); }
 
                 static if (hasAssignableElements!R) {
                     @property void back(E newVal) {

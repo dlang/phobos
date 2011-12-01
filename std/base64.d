@@ -1518,7 +1518,7 @@ unittest
             auto f = File("testingEncoder");
             scope(exit)
             {
-                f.close;
+                f.close();
                 assert(!f.isOpen);
                 std.file.remove("testingEncoder");
             }
@@ -1537,7 +1537,7 @@ unittest
             auto f = File("testingDecoder");
             scope(exit)
             {
-                f.close;
+                f.close();
                 assert(!f.isOpen);
                 std.file.remove("testingDecoder");
             }

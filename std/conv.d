@@ -937,7 +937,7 @@ T toImpl(T, S)(S s, in T nullstr)
 
     if (!s)
         return nullstr;
-    return to!T(s.toString);
+    return to!T(s.toString());
 }
 
 unittest
@@ -1507,7 +1507,7 @@ unittest
         {
             foreach (Floating; AllFloats)
             {
-                testFloatingToIntegral!(Floating, Integral);
+                testFloatingToIntegral!(Floating, Integral)();
             }
         }
     }
@@ -1517,7 +1517,7 @@ unittest
         {
             foreach (Floating; AllFloats)
             {
-                testIntegralToFloating!(Integral, Floating);
+                testIntegralToFloating!(Integral, Floating)();
             }
         }
     }
@@ -3049,28 +3049,28 @@ enum y = octal!160;
 auto z = octal!"1_000_000u";
 ----
  */
-int octal(string num)()
+@property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
 {
     return octal!(int, num);
 }
 
 /// Ditto
-long octal(string num)()
+@property long octal(string num)()
     if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
 {
     return octal!(long, num);
 }
 
 /// Ditto
-uint octal(string num)()
+@property uint octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
 {
     return octal!(int, num);
 }
 
 /// Ditto
-ulong octal(string num)()
+@property ulong octal(string num)()
     if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
 {
     return octal!(long, num);
@@ -3093,7 +3093,7 @@ template octal(alias s)
 
     assert(a == 8);
 */
-T octal(T, string num)()
+@property T octal(T, string num)()
     if (isOctalLiteral!num)
 {
     ulong pow = 1;

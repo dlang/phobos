@@ -52,7 +52,7 @@ version (unittest)
 {
     import core.thread;
 
-    private string deleteme()
+    private @property string deleteme()
     {
         static _deleteme = "deleteme.dmd.unittest";
         static _first = true;
@@ -229,7 +229,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Windows) this(in char[] name,
-                          uint errno = GetLastError,
+                          uint errno = .GetLastError(),
                           string file = __FILE__,
                           size_t line = __LINE__)
     {
@@ -248,7 +248,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Posix) this(in char[] name,
-                        uint errno = .getErrno,
+                        uint errno = .getErrno(),
                         string file = __FILE__,
                         size_t line = __LINE__)
     {
@@ -3572,7 +3572,7 @@ slurp(Types...)(string filename, in char[] format)
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
-    scope(exit) f.close;
+    scope(exit) f.close();
     foreach (line; f.byLine())
     {
         formattedRead(line, format, &toAdd);

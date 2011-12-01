@@ -865,7 +865,7 @@ version (Win32)
 
     unittest
     {
-        auto dt = getUTCtime;
+        auto dt = getUTCtime();
         auto ft = d_time2FILETIME(dt);
         auto dt1 = FILETIME2d_time(&ft);
         assert(dt == dt1, text(dt, " != ", dt1));
@@ -1191,12 +1191,12 @@ ulong[] benchmark(fun...)(uint times, ulong[] result = null)
     result.length = 0;
     foreach (i, Unused; fun)
     {
-        immutable t = getUTCtime;
+        immutable t = getUTCtime();
         foreach (j; 0 .. times)
         {
             fun[i]();
         }
-        immutable delta = getUTCtime - t;
+        immutable delta = getUTCtime() - t;
         result ~= cast(uint)delta;
     }
     foreach (ref e; result)

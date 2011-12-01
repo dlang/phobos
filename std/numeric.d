@@ -1170,7 +1170,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         auto t = a.front - b.front;
         result += t * t;
@@ -1188,7 +1188,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; ; a.popFront, b.popFront)
+    for (; ; a.popFront(), b.popFront())
     {
         if (a.empty)
         {
@@ -1226,7 +1226,7 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         result += a.front * b.front;
     }
@@ -1293,14 +1293,14 @@ unittest
     double[] b = [ 4., 6., ];
     assert(dotProduct(a, b) == 16);
     assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
-    
+
     // Make sure the unrolled loop codepath gets tested.
-    static const x = 
+    static const x =
         [1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
-    static const y = 
+    static const y =
         [2.0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     assert(dotProduct(x, y) == 2280);
-    
+
     // Test in CTFE
     enum ctfeDot = dotProduct(x, y);
     static assert(ctfeDot == 2280);
@@ -1319,7 +1319,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front, t2 = b.front;
         norma += t1 * t1;
@@ -1464,7 +1464,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
         if (t1 == 0) continue;
@@ -1509,7 +1509,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
         immutable t2 = b.front;
@@ -1538,7 +1538,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
     limit *= 2;
-    for (; !a.empty; a.popFront, b.popFront)
+    for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
         immutable t2 = b.front;
@@ -1813,11 +1813,11 @@ string[] s = ["Hello", "brave", "new", "world"];
 string[] t = ["Hello", "new", "world"];
 auto simIter = gapWeightedSimilarityIncremental(s, t, 1);
 assert(simIter.front == 3); // three 1-length matches
-simIter.popFront;
+simIter.popFront();
 assert(simIter.front == 3); // three 2-length matches
-simIter.popFront;
+simIter.popFront();
 assert(simIter.front == 1); // one 3-length match
-simIter.popFront;
+simIter.popFront();
 assert(simIter.empty);     // no more match
 ----
 
@@ -1981,12 +1981,12 @@ t.length) time.
 Returns the gapped similarity at the current match length (initially
 1, grows with each call to $(D popFront)).
  */
-    F front() { return currentValue; }
+    @property F front() { return currentValue; }
 
 /**
 Returns whether there are more matches.
  */
-    bool empty() {
+    @property bool empty() {
         if (currentValue) return false;
         if (kl) {
             free(kl);
@@ -2012,11 +2012,11 @@ unittest
     auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
     //foreach (e; simIter) writeln(e);
     assert(simIter.front == 3); // three 1-length matches
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.front == 3, text(simIter.front)); // three 2-length matches
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.front == 1); // one 3-length matches
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.empty);     // no more match
 
     s = ["Hello"];
@@ -2028,21 +2028,21 @@ unittest
     t = ["Hello"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
     assert(simIter.front == 1); // one match
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.empty);
 
     s = ["Hello", "world"];
     t = ["Hello"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
     assert(simIter.front == 1); // one match
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.empty);
 
     s = ["Hello", "world"];
     t = ["Hello", "yah", "world"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
     assert(simIter.front == 2); // two 1-gram matches
-    simIter.popFront;
+    simIter.popFront();
     assert(simIter.front == 0.5, text(simIter.front)); // one 2-gram match, 1 gap
 }
 
@@ -2058,7 +2058,7 @@ unittest
     {
         //writeln(e);
         assert(e == witness.front);
-        witness.popFront;
+        witness.popFront();
     }
     witness = [ 3., 1.3125, 0.25 ];
     sim = GapWeightedSimilarityIncremental!(string[])(
@@ -2069,7 +2069,7 @@ unittest
     {
         //writeln(e);
         assert(e == witness.front);
-        witness.popFront;
+        witness.popFront();
     }
     assert(witness.empty);
 }
@@ -2567,7 +2567,7 @@ struct Stride(R) {
         return range[index * _nSteps];
     }
 
-    E front() {
+    E front() @property {
         return range[0];
     }
 

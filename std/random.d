@@ -233,7 +233,7 @@ $(D x0).
                     ~ LinearCongruentialEngine.stringof);
         }
         _x = modulus ? (x0 % modulus) : x0;
-        popFront;
+        popFront();
     }
 
 /**
@@ -343,12 +343,12 @@ unittest
     foreach (e; checking0)
     {
         assert(rnd0.front == e);
-        rnd0.popFront;
+        rnd0.popFront();
     }
     // Test the 10000th invocation
     // Correct value taken from:
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
-    rnd0.seed;
+    rnd0.seed();
     popFrontN(rnd0, 9999);
     assert(rnd0.front == 1043618065);
 
@@ -360,13 +360,13 @@ unittest
     foreach (e; checking)
     {
         assert(rnd.front == e);
-        rnd.popFront;
+        rnd.popFront();
     }
 
     // Test the 10000th invocation
     // Correct value taken from:
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
-    rnd.seed;
+    rnd.seed();
     popFrontN(rnd, 9999);
     assert(rnd.front == 399268537);
 }
@@ -443,7 +443,7 @@ Parameter for the generator.
             //mt[mti] &= ResultType.max;
             /* for >32 bit machines */
         }
-        popFront;
+        popFront();
     }
 
 /**
@@ -561,7 +561,7 @@ unittest
     }
     {
         Mt19937 gen;
-        gen.popFront;
+        gen.popFront();
         //popFrontN(gen, 1);  // skip 1 element
         b = gen.front;
     }
@@ -814,16 +814,16 @@ auto n = rnd.front;
 ----
 */
 
-uint unpredictableSeed()
+@property uint unpredictableSeed()
 {
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded) {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
+        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
         seeded = true;
     }
-    rand.popFront;
+    rand.popFront();
     return cast(uint) (TickDuration.currSystemTick().length ^ rand.front);
 }
 
@@ -849,7 +849,7 @@ Global random number generator used by various functions in this
 module whenever no generator is specified. It is allocated per-thread
 and initialized to an unpredictable value for each thread.
  */
-ref Random rndGen()
+@property ref Random rndGen()
 {
     static Random result;
     static bool initialized;
@@ -1149,14 +1149,14 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
 size_t dice(Range)(Range proportions)
 if (isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range)
 {
-    return diceImpl(rndGen(), proportions);
+    return diceImpl(rndGen, proportions);
 }
 
 /// Ditto
 size_t dice(Num)(Num[] proportions...)
 if (isNumeric!Num)
 {
-    return diceImpl(rndGen(), proportions);
+    return diceImpl(rndGen, proportions);
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
@@ -1217,7 +1217,7 @@ struct RandomCover(Range, Random)
         _input = input;
         _rnd = rnd;
         _chosen.length = _input.length;
-        popFront;
+        popFront();
     }
 
     static if (hasLength!Range)
@@ -1326,7 +1326,7 @@ struct RandomSample(R, Random = void)
 
     // If we're using the default thread-local random number generator then
     // we shouldn't store a copy of it here.  Random == void is a sentinel
-    // for this.  If we're using a user-specified generator then we have no 
+    // for this.  If we're using a user-specified generator then we have no
     // choice but to store a copy.
     static if(!is(Random == void))
     {
@@ -1350,7 +1350,7 @@ Constructor.
         enforce(_toSelect <= _available);
         // we should skip some elements initially so we don't always
         // start with the first
-        prime;
+        prime();
     }
 
 /**
@@ -1361,7 +1361,7 @@ Constructor.
         return _toSelect == 0;
     }
 
-    auto ref front()
+    @property auto ref front()
     {
         assert(!empty);
         return _input.front;
@@ -1370,11 +1370,11 @@ Constructor.
 /// Ditto
     void popFront()
     {
-        _input.popFront;
+        _input.popFront();
         --_available;
         --_toSelect;
         ++_index;
-        prime;
+        prime();
     }
 
 /// Ditto
@@ -1408,12 +1408,12 @@ Returns the index of the visited record.
             static if(is(Random == void))
             {
                 auto r = uniform(0, _available);
-            } 
+            }
             else
             {
                 auto r = uniform(0, _available, gen);
             }
-            
+
             if (r < _toSelect)
             {
                 // chosen!
@@ -1421,7 +1421,7 @@ Returns the index of the visited record.
             }
             // not chosen, retry
             assert(!_input.empty);
-            _input.popFront;
+            _input.popFront();
             ++_index;
             --_available;
             assert(_available > 0);
@@ -1437,7 +1437,7 @@ if(isInputRange!R)
 }
 
 /// Ditto
-auto randomSample(R)(R r, size_t n) if (hasLength!R) 
+auto randomSample(R)(R r, size_t n) if (hasLength!R)
 {
     return RandomSample!(R, void)(r, n, r.length);
 }
@@ -1452,8 +1452,8 @@ if(isInputRange!R && isInputRange!Random)
 }
 
 /// Ditto
-auto randomSample(R, Random)(R r, size_t n, Random gen) 
-if (isInputRange!R && hasLength!R && isInputRange!Random) 
+auto randomSample(R, Random)(R r, size_t n, Random gen)
+if (isInputRange!R && hasLength!R && isInputRange!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, r.length);
     ret.gen = gen;
