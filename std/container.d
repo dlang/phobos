@@ -2823,11 +2823,6 @@ struct Array(T) if (is(T == bool))
         return _store._backend._payload;
     }
 
-    private ref size_t dataCapacity()
-    {
-        return _store._backend._capacity;
-    }
-
     /**
        Defines the container's primary range.
      */
