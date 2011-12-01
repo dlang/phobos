@@ -308,6 +308,57 @@ enum AutoStart
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
 
+
+//==============================================================================
+// Section with private constants.
+//==============================================================================
+
+/++
+    Array of integers representing the last days of each month in a year.
+  +/
+private immutable int[13] lastDayNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+
+/++
+    Array of integers representing the last days of each month in a leap year.
+  +/
+private immutable int[13] lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
+
+/++
+    Array of the long names of each month.
+  +/
+private immutable string[12] longMonthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+];
+
+/++
+    Array of the short (three letter) names of each month.
+  +/
+private immutable string[12] shortMonthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+];
+
 //==============================================================================
 // Section with other types.
 //==============================================================================
@@ -11903,35 +11954,14 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
       +/
     @property ushort dayOfYear() const pure nothrow
     {
-        switch(_month)
+        if (_month >= Month.jan && _month <= Month.dec)
         {
-            case Month.jan:
-                return _day;
-            case Month.feb:
-                return cast(ushort)(31 + _day);
-            case Month.mar:
-                return cast(ushort)((isLeapYear ? 60 : 59) + _day);
-            case Month.apr:
-                return cast(ushort)((isLeapYear ? 91 : 90) + _day);
-            case Month.may:
-                return cast(ushort)((isLeapYear ? 121 : 120) + _day);
-            case Month.jun:
-                return cast(ushort)((isLeapYear ? 152 : 151) + _day);
-            case Month.jul:
-                return cast(ushort)((isLeapYear ? 182 : 181) + _day);
-            case Month.aug:
-                return cast(ushort)((isLeapYear ? 213 : 212) + _day);
-            case Month.sep:
-                return cast(ushort)((isLeapYear ? 244 : 243) + _day);
-            case Month.oct:
-                return cast(ushort)((isLeapYear ? 274 : 273) + _day);
-            case Month.nov:
-                return cast(ushort)((isLeapYear ? 305 : 304) + _day);
-            case Month.dec:
-                return cast(ushort)((isLeapYear ? 335 : 334) + _day);
-            default:
-                assert(0, "Invalid month.");
+            immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
+            auto monthIndex = _month - Month.jan;
+
+            return cast(ushort)(lastDay[monthIndex] + _day);
         }
+        assert(0, "Invalid month.");
     }
 
     //Verify Examples.
@@ -11983,172 +12013,21 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
       +/
     @property void dayOfYear(int day) pure
     {
-        if(isLeapYear)
-        {
-            if(day <= 0 || day > daysInLeapYear)
-                throw new DateTimeException("Invalid day of the year.");
+        immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
-            switch(day)
+        if(day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
+            throw new DateTimeException("Invalid day of the year.");
+
+        foreach (i; 1..lastDay.length)
+        {
+            if (day <= lastDay[i])
             {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 60:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 61: .. case 91:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 60);
-                    break;
-                }
-                case 92: .. case 121:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 91);
-                    break;
-                }
-                case 122: .. case 152:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 121);
-                    break;
-                }
-                case 153: .. case 182:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 152);
-                    break;
-                }
-                case 183: .. case 213:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 182);
-                    break;
-                }
-                case 214: .. case 244:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 213);
-                    break;
-                }
-                case 245: .. case 274:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 244);
-                    break;
-                }
-                case 275: .. case 305:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 274);
-                    break;
-                }
-                case 306: .. case 335:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 305);
-                    break;
-                }
-                case 336: .. case 366:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 335);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
+                _month = cast(Month)(cast(int)Month.jan + i - 1);
+                _day = cast(ubyte)(day - lastDay[i - 1]);
+                return;
             }
         }
-        else
-        {
-            if(day <= 0 || day > daysInYear)
-                throw new DateTimeException("Invalid day of the year.");
-
-            switch(day)
-            {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 59:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 60: .. case 90:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 59);
-                    break;
-                }
-                case 91: .. case 120:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 90);
-                    break;
-                }
-                case 121: .. case 151:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 120);
-                    break;
-                }
-                case 152: .. case 181:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 151);
-                    break;
-                }
-                case 182: .. case 212:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 181);
-                    break;
-                }
-                case 213: .. case 243:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 212);
-                    break;
-                }
-                case 244: .. case 273:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 243);
-                    break;
-                }
-                case 274: .. case 304:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 273);
-                    break;
-                }
-                case 305: .. case 334:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 304);
-                    break;
-                }
-                case 335: .. case 365:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 334);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
-            }
-        }
+        assert(0, "Invalid day of the year.");
     }
 
     version(testStdDateTime) unittest
@@ -32687,69 +32566,18 @@ unittest
   +/
 string monthToString(Month month, bool useLongName = true) pure
 {
+    if (month < Month.jan || month > Month.dec)
+    {
+        throw new DateTimeException("Invalid month: " ~  numToString(month));
+    }
+
     if(useLongName == true)
     {
-        switch(month)
-        {
-            case Month.jan:
-                return "January";
-            case Month.feb:
-                return "February";
-            case Month.mar:
-                return "March";
-            case Month.apr:
-                return "April";
-            case Month.may:
-                return "May";
-            case Month.jun:
-                return "June";
-            case Month.jul:
-                return "July";
-            case Month.aug:
-                return "August";
-            case Month.sep:
-                return "September";
-            case Month.oct:
-                return "October";
-            case Month.nov:
-                return "November";
-            case Month.dec:
-                return "December";
-            default:
-                throw new DateTimeException("Invalid month: " ~  numToString(month));
-        }
+        return longMonthNames[month - Month.jan];
     }
     else
     {
-        switch(month)
-        {
-            case Month.jan:
-                return "Jan";
-            case Month.feb:
-                return "Feb";
-            case Month.mar:
-                return "Mar";
-            case Month.apr:
-                return "Apr";
-            case Month.may:
-                return "May";
-            case Month.jun:
-                return "Jun";
-            case Month.jul:
-                return "Jul";
-            case Month.aug:
-                return "Aug";
-            case Month.sep:
-                return "Sep";
-            case Month.oct:
-                return "Oct";
-            case Month.nov:
-                return "Nov";
-            case Month.dec:
-                return "Dec";
-            default:
-                throw new DateTimeException("Invalid month: " ~  numToString(month));
-        }
+        return shortMonthNames[month - Month.jan];
     }
 }
 
