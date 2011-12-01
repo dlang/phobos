@@ -1351,6 +1351,8 @@ struct LockingTextReader
 
 unittest
 {
+    static assert(isInputRange!LockingTextReader);
+
     std.file.write("deleteme", "1 2 3");
     int x, y;
     auto f = File("deleteme");
