@@ -1029,9 +1029,19 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isIntegral!T)
 {
+    // Forward on to formatInt to handle both T and const(T)
+    // Saves duplication of code for both versions.
+    static if (isSigned!T)
+        formatInt(w, cast(long) val, f, val.sizeof, Unsigned!(T).max);
+    else
+        formatInt(w, cast(ulong) val, f, val.sizeof, T.max);
+}
+
+private void formatInt(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, size_t size, ulong mask)
+{
     FormatSpec!Char fs = f; // fs is copy for change its values.
 
-    Unqual!T arg = val;
+    T arg = val;
     if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
@@ -1040,16 +1050,38 @@ if (isIntegral!T)
             || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
-            foreach_reverse (i; 0 .. arg.sizeof)
+            foreach_reverse (i; 0 .. size)
                 put(w, begin[i]);
         }
         else
         {
-            foreach (i; 0 .. arg.sizeof)
+            foreach (i; 0 .. size)
                 put(w, begin[i]);
         }
         return;
     }
+
+    uint base =
+        fs.spec == 'x' || fs.spec == 'X' ? 16 :
+        fs.spec == 'o' ? 8 :
+        fs.spec == 'b' ? 2 :
+        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
+        0;
+    if (base == 0)
+        throw new FormatException("integral");
+
+    bool negative = (base == 10 && arg < 0);
+    if (negative)
+    {
+        arg = -arg;
+    }
+
+    // All unsigned integral types should fit in ulong.
+    formatUInt(w, (cast(ulong) arg) & mask, fs, base, negative);
+}
+
+private void formatUInt(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+{
     if (fs.precision == fs.UNSPECIFIED)
     {
         // default precision for integrals is 1
@@ -1060,6 +1092,7 @@ if (isIntegral!T)
         // if a precision is specified, the '0' flag is ignored.
         fs.flZero = false;
     }
+
     char leftPad = void;
     if (!fs.flDash && !fs.flZero)
         leftPad = ' ';
@@ -1067,15 +1100,7 @@ if (isIntegral!T)
         leftPad = '0';
     else
         leftPad = 0;
-    // format and write an integral argument
-    uint base =
-        fs.spec == 'x' || fs.spec == 'X' ? 16 :
-        fs.spec == 'o' ? 8 :
-        fs.spec == 'b' ? 2 :
-        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
-        0;
-    if (base == 0)
-        throw new FormatException("integral");
+
     // figure out sign and continue in unsigned mode
     char forcedPrefix = void;
     if (fs.flPlus) forcedPrefix = '+';
@@ -1086,18 +1111,17 @@ if (isIntegral!T)
         // non-10 bases are always unsigned
         forcedPrefix = 0;
     }
-    else if (arg < 0)
+    else if (negative)
     {
         // argument is signed
         forcedPrefix = '-';
-        arg = -arg;
     }
     // fill the digits
     char[] digits = void;
     {
         char buffer[64]; // 64 bits in base 2 at most
         uint i = buffer.length;
-        auto n = cast(Unsigned!(Unqual!T)) arg;
+        auto n = arg;
         do
         {
             --i;
@@ -1467,17 +1491,16 @@ if (isInputRange!T)
             {
                 auto fmt = FormatSpec!Char(f.nested);
                 fmt.writeUpToNextSpec(w);
-                if (fmt.spec == '(')
+                auto spec = fmt.spec;
+                formatValue(w, arr.front, fmt);
+                arr.popFront();
+                if (spec == '(')
                 {   // If element is range
-                    formatValue(w, arr.front, fmt);
-                    arr.popFront();
                     fmt.writeUpToNextSpec(w);   // always put trailing
                     if (arr.empty) break;
                 }
                 else
                 {
-                    formatValue(w, arr.front, fmt);
-                    arr.popFront();
                     if (arr.empty) break;
                     fmt.writeUpToNextSpec(w);
                 }
