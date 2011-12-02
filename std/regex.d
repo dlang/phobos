@@ -2740,7 +2740,8 @@ public:
     @trusted size_t search(const(Char)[] haystack, size_t idx)
     {
         assert(!empty);
-        auto p = cast(const(ubyte)*)(haystack.ptr+idx);
+        auto startp = cast(const(ubyte)*)(haystack.ptr+idx);
+        auto p = startp;
         uint state = uint.max;
         uint limit = 1u<<(n_length - 1u);
         debug(fred_search) writefln("Limit: %32b",limit);
@@ -2756,13 +2757,13 @@ public:
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
-                        if(!(cast(size_t)p & (Char.sizeof-1)))
+                        if(!((p-startp) & (Char.sizeof-1)))
                             break;
                         if(++p == end)
                             return haystack.length;
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == 0);
+                    assert(((p-startp) & (Char.sizeof-1)) == 0);
                     static if(charSize == 3)
                     {
                         state = (state<<1) | table[p[1]];
