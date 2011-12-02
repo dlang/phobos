@@ -6,7 +6,7 @@
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
-$(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
+$(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF balancedParens) $(MYREF
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
 $(MYREF endsWith) $(MYREF find) $(MYREF findAdjacent) $(MYREF
 findAmong) $(MYREF findSkip) $(MYREF findSplit) $(MYREF
@@ -7678,6 +7678,28 @@ unittest
 // }
 
 +/
+
+/**
+Returns $(D true) if and only if all values in $(D range) satisfy the 
+predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
+
+Examples:
+---
+assert(all!"a & 1"([1, 3, 5, 7, 9]));
+assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+---
+*/
+bool all(alias pred, R)(R range)
+if(isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+{
+    return find!(not!(unaryFun!pred))(range).empty;
+}
+
+unittest
+{
+    assert(all!"a & 1"([1, 3, 5, 7, 9]));
+    assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+}
 
 // canFind
 /**
