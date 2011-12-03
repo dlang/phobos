@@ -1521,7 +1521,7 @@ struct Parser(R, bool CTFE=false)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '\\', '[', ']':
+                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
                     last = current;
                     state = State.Char;
                     break;
@@ -1570,7 +1570,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 default:
-                    assert(0);
+                    enforce(false, "invalid escape sequence");
                 }
                 break;
             case State.Dash:
@@ -1623,7 +1623,7 @@ struct Parser(R, bool CTFE=false)
                 case 'v':
                     end = '\v';
                     break;
-                case '\\', '[', ']':
+                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
                     end = current;
                     break;
                 case 'c':
@@ -2081,8 +2081,8 @@ private:
                 uint dest = ir[pc].indexOfPair(pc);
                 assert(dest < ir.length, text("Wrong length in opcode at pc="
                                               , pc, " ", dest, " vs ", ir.length));
-                assert(ir[dest].paired ==  ir[pc],
-                        text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
+                assert(ir[dest].paired ==  ir[pc]
+                       ,text("Wrong pairing of opcodes at pc=", pc, "and pc=", dest));
             }
             else if(ir[pc].isAtom)
             {
@@ -2747,6 +2747,7 @@ public:
         if(fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
+            const orginalAlign = cast(size_t)p & (Char.sizeof-1);
             while(p != end)
             {
                 if(!~state)
@@ -2756,13 +2757,13 @@ public:
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
-                        if(!(cast(size_t)p & (Char.sizeof-1)))
+                        if((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if(++p == end)
                             return haystack.length;
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == 0);
+                    assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
                     static if(charSize == 3)
                     {
                         state = (state<<1) | table[p[1]];
@@ -7383,6 +7384,9 @@ else
             auto arr = array(replicate('0',100));
             auto m2 = matchFn(arr, rprealloc);
             assert(m2);
+            assert(collectException(
+                    regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
+                    ) is null);
         }
         test_body!bmatch();
         test_body!match();
