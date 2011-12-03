@@ -2133,10 +2133,10 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         enforce(!p.empty, bailOut());
         if (std.ascii.toLower(p.front) == 'n' &&
-                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f') &&
-                (p.popFront(), p.empty))
+                (p.popFront(), enforce(!p.empty, bailOut()), std.ascii.toLower(p.front) == 'f'))
         {
             // 'inf'
+            p.popFront();
             return sign ? -Target.infinity : Target.infinity;
         }
         goto default;
@@ -2555,6 +2555,12 @@ unittest
 {
     assertThrown!ConvException(to!real("-"));
     assertThrown!ConvException(to!real("in"));
+}
+
+// Unittest for bug 7055
+unittest
+{
+    assertThrown!ConvException(to!float("INF2"));
 }
 
 /**
