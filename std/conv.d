@@ -3364,14 +3364,15 @@ Returns: A pointer to the newly constructed object.
  */
 T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
 {
-    enforce(chunk.length >= __traits(classInstanceSize, T),
+    enum classSize = __traits(classInstanceSize, T);
+    enforce(chunk.length >= classSize,
            new ConvException("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
     enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
     auto result = cast(typeof(return)) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
-    (cast(byte[]) chunk)[] = typeid(T).init[];
+    (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
 
     // Call the ctor if any
     static if (is(typeof(result.__ctor(args))))
@@ -3463,10 +3464,20 @@ unittest
             x = y = z;
         }
     }
-    static byte[__traits(classInstanceSize, A)] buf;
-    auto a = emplace!A(cast(void[]) buf, 55);
+    void[] buf;
+
+    static byte[__traits(classInstanceSize, A)] sbuf;
+    buf = sbuf[];
+    auto a = emplace!A(buf, 55);
     assert(a.x == 55 && a.y == 55);
-    static assert(!is(typeof(emplace!A(cast(void[]) buf))));
+
+    // emplace in bigger buffer
+    buf = new byte[](__traits(classInstanceSize, A) + 10);
+    a = emplace!A(buf, 55);
+    assert(a.x == 55 && a.y == 55);
+
+    // need ctor args
+    static assert(!is(typeof(emplace!A(buf))));
 }
 
 unittest
