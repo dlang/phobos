@@ -356,12 +356,7 @@ struct BitArray
 {
     size_t len;
     size_t* ptr;
-    version(X86)
-        enum bitsPerSizeT = 32;
-    else version(X86_64)
-        enum bitsPerSizeT = 64;
-    else
-        static assert(false, "unknown platform");
+    enum bitsPerSizeT = size_t.sizeof * 8;
 
     @property const size_t dim()
     {
