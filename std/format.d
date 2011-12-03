@@ -1029,37 +1029,38 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isIntegral!T)
 {
-    // Forward on to formatInt to handle both T and const(T)
-    // Saves duplication of code for both versions.
-    static if (isSigned!T)
-        formatInt(w, cast(long) val, f, val.sizeof, Unsigned!(T).max);
-    else
-        formatInt(w, cast(ulong) val, f, val.sizeof, T.max);
-}
-
-private void formatInt(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, size_t size, ulong mask)
-{
-    FormatSpec!Char fs = f; // fs is copy for change its values.
-
-    T arg = val;
-    if (fs.spec == 'r')
+    if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto begin = cast(const char*) &arg;
+        auto begin = cast(const char*) &val;
         if (std.system.endian == Endian.littleEndian && f.flPlus
             || std.system.endian == Endian.bigEndian && f.flDash)
         {
             // must swap bytes
-            foreach_reverse (i; 0 .. size)
+            foreach_reverse (i; 0 .. val.sizeof)
                 put(w, begin[i]);
         }
         else
         {
-            foreach (i; 0 .. size)
+            foreach (i; 0 .. val.sizeof)
                 put(w, begin[i]);
         }
         return;
     }
+
+    // Forward on to formatIntegral to handle both T and const(T)
+    // Saves duplication of code for both versions.
+    static if (isSigned!T)
+        formatIntegral(w, cast(long) val, f, Unsigned!(T).max);
+    else
+        formatIntegral(w, cast(ulong) val, f, T.max);
+}
+
+private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, ulong mask)
+{
+    FormatSpec!Char fs = f; // fs is copy for change its values.
+
+    T arg = val;
 
     uint base =
         fs.spec == 'x' || fs.spec == 'X' ? 16 :
@@ -1077,10 +1078,10 @@ private void formatInt(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!C
     }
 
     // All unsigned integral types should fit in ulong.
-    formatUInt(w, (cast(ulong) arg) & mask, fs, base, negative);
+    formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUInt(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
 {
     if (fs.precision == fs.UNSPECIFIED)
     {
