@@ -575,7 +575,7 @@ unittest
 }
 
 /+
-Commented out until the insert which is scheduled for deprecation is removed.
+Commented out until the insert which has been deprecated has been removed.
 I'd love to just remove it in favor of insertInPlace, but then code would then
 use this version of insert and silently break. So, it's here so that it can
 be used once insert has not only been deprecated but removed, but until then,
@@ -923,12 +923,12 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(LREF insertInPlace) instead.)
 
     Same as $(XREF array, insertInPlace).
   +/
-void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
+deprecated void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
     insertInPlace(array, pos, stuff);
@@ -1503,7 +1503,7 @@ unittest
 }
 
 /+
-Commented out until the replace which is scheduled for deprecation is removed.
+Commented out until the replace which has been deprecated has been removed.
 I'd love to just remove it in favor of replaceInPlace, but then code would then
 use this version of replaceInPlace and silently break. So, it's here so that it
 can be used once replace has not only been deprecated but removed, but
@@ -1742,12 +1742,12 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(LREF replaceInPlace) instead.)
 
     Same as $(XREF array, replaceInPlace).
   +/
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+deprecated void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
     replaceInPlace(array, from, to, stuff);
