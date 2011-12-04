@@ -643,10 +643,10 @@ public:
         t = Trie(up.set);
         foreach(uint ch; up.set[])
             assert(t[ch], text("on ch ==", ch));
-        auto s = up.set.dup.negate.negate;
+        auto s = up.set.dup.negate().negate();
         assert(equal(cast(immutable(Interval)[])s.ivals
                      , cast(immutable(Interval)[])up.set.ivals));
-        foreach(ch; up.set.dup.negate[])
+        foreach(ch; up.set.dup.negate()[])
         {
             assert(!t[ch], text("negative on ch ==", ch));
         }
