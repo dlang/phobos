@@ -2185,7 +2185,7 @@ public:
 
 
 /// Set all of the floating-point status flags to false.
-void resetIeeeFlags() { IeeeFlags.resetIeeeFlags; }
+void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 
 /// Return a snapshot of the current state of the floating-point status flags.
 @property IeeeFlags ieeeFlags()
@@ -3908,7 +3908,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         static if (isInputRange!U)
         {
             // Two ranges
-            for (;; lhs.popFront, rhs.popFront)
+            for (;; lhs.popFront(), rhs.popFront())
             {
                 if (lhs.empty) return rhs.empty;
                 if (rhs.empty) return lhs.empty;
@@ -3919,7 +3919,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         else
         {
             // lhs is range, rhs is number
-            for (; !lhs.empty; lhs.popFront)
+            for (; !lhs.empty; lhs.popFront())
             {
                 if (!approxEqual(lhs.front, rhs, maxRelDiff, maxAbsDiff))
                     return false;

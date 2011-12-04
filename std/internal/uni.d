@@ -94,7 +94,7 @@ struct Interval
     ///
     @trusted string toString()const
     {
-        auto s = appender!string;
+        auto s = appender!string();
         formattedWrite(s,"%s..%s", begin, end);
         return s.data;
     }
@@ -442,7 +442,7 @@ struct CodepointSet
                     j = ivals[0];
             }
         }
-        auto ref save() const { return this; }
+        @property auto ref save() const { return this; }
     }
     static assert(isForwardRange!ByCodepoint);
 
@@ -534,7 +534,7 @@ public:
     {
         if(s.empty)
             return;
-        const(CodepointSet) set = s.chars > 500_000 ? (negative=true, s.dup.negate) : s;
+        const(CodepointSet) set = s.chars > 500_000 ? (negative=true, s.dup.negate()) : s;
         uint bound = 0;//set up on first iteration
         ushort emptyBlock = ushort.max;
         auto ivals  = set.ivals;

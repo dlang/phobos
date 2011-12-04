@@ -2255,15 +2255,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     {
         version(testStdDateTime)
         {
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime, 1);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime, -1);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime(), 1);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime(), -1);
         }
     }
 
@@ -30790,7 +30790,7 @@ public:
         sw.start();
         sw.stop();
         sw.reset();
-        assert(sw.peek().to!("seconds", real) == 0);
+        assert(sw.peek().to!("seconds", real)() == 0);
     }
 
 
@@ -30816,7 +30816,7 @@ public:
             doublestart = false;
         assert(!doublestart);
         sw.stop();
-        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() <= 0);
     }
 
 
@@ -30842,7 +30842,7 @@ public:
         catch(AssertError e)
             doublestop = false;
         assert(!doublestop);
-        assert((t1 - sw.peek()).to!("seconds", real) == 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() == 0);
     }
 
 
@@ -30962,7 +30962,7 @@ version(testStdDateTime) unittest
     void f1() {auto b = a;}
     void f2() {auto b = to!(string)(a);}
     auto r = benchmark!(f0, f1, f2)(10_000_000);
-    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int)());
 }
 
 version(testStdDateTime) @safe unittest
@@ -31073,7 +31073,7 @@ version(testStdDateTime) @safe unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
     //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
@@ -31084,8 +31084,8 @@ version(testStdDateTime) unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-    auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
+    auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
 }
 
 
@@ -32185,7 +32185,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();
@@ -32203,7 +32203,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();

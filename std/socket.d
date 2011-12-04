@@ -1193,7 +1193,7 @@ abstract class Address
     socklen_t nameLen() const;
 
     /// Family of this address.
-    AddressFamily addressFamily() const
+    @property AddressFamily addressFamily() const
     {
         return cast(AddressFamily) name().sa_family;
     }
@@ -2297,7 +2297,7 @@ public:
 
 
     /// Get underlying socket handle.
-    socket_t handle() const
+    @property socket_t handle() const
     {
         return sock;
     }
@@ -2351,13 +2351,13 @@ public:
 
 
     /// Get the socket's address family.
-    AddressFamily addressFamily()     // getter
+    @property AddressFamily addressFamily()
     {
         return _family;
     }
 
     /// Property that indicates if this is a valid, alive socket.
-    bool isAlive() const    // getter
+    @property bool isAlive() const
     {
         int type;
         socklen_t typesize = cast(socklen_t) type.sizeof;

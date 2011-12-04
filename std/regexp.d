@@ -790,7 +790,7 @@ class RegExp
     /*******************
      * Return the slice of the input that precedes the matched substring.
      */
-    public string pre()
+    public @property string pre()
     {
         return input[0 .. pmatch[0].rm_so];
     }
@@ -798,7 +798,7 @@ class RegExp
     /*******************
      * Return the slice of the input that follows the matched substring.
      */
-    public string post()
+    public @property string post()
     {
         return input[pmatch[0].rm_eo .. $];
     }
@@ -3361,12 +3361,12 @@ struct Splitter(Range)
         return this;
     }
 
-    Range front()
+    @property Range front()
     {
         return _input[0 .. _chunkLength];
     }
 
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
@@ -3378,7 +3378,7 @@ struct Splitter(Range)
             _input = _input[_chunkLength .. _input.length];
             return;
         }
-        advance;
+        advance();
         _input = _input[_chunkLength .. _input.length];
         _chunkLength = _input.length - search().length;
     }
