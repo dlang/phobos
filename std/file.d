@@ -899,8 +899,8 @@ version(Windows) unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011. Please use the
-          $(D getTimes) with two arguments instead.)
+    $(RED Deprecated. It will be removed in May 2012.
+          Please use the $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
 
@@ -929,14 +929,14 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesPosix(in char[] name,
-                                    out SysTime fileStatusChangeTime,
-                                    out SysTime fileAccessTime,
-                                    out SysTime fileModificationTime);
-else version(Posix) void getTimesPosix(C)(in C[] name,
-                                          out SysTime fileStatusChangeTime,
-                                          out SysTime fileAccessTime,
-                                          out SysTime fileModificationTime)
+version(StdDdoc) deprecated void getTimesPosix(in char[] name,
+                                               out SysTime fileStatusChangeTime,
+                                               out SysTime fileAccessTime,
+                                               out SysTime fileModificationTime);
+else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
+                                                     out SysTime fileStatusChangeTime,
+                                                     out SysTime fileAccessTime,
+                                                     out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
     struct_stat64 statbuf = void;
@@ -1266,11 +1266,14 @@ unittest
  $(RED Deprecated. It will be removed in February 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isDir isdir;
+deprecated @property bool isdir(in char[] name)
+{
+    return name.isDir;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1278,7 +1281,7 @@ deprecated alias isDir isdir;
     Params:
         attributes = The file attributes.
   +/
-@property bool isDir(uint attributes) nothrow
+deprecated @property bool isDir(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1407,11 +1410,14 @@ unittest
  $(RED Deprecated. It will be removed in February 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isFile isfile;
+deprecated @property bool isfile(in char[] name)
+{
+    return name.isFile;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1429,7 +1435,7 @@ deprecated alias isFile isfile;
     Params:
         attributes = The file attributes.
   +/
-@property bool isFile(uint attributes) nothrow
+deprecated @property bool isFile(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1603,7 +1609,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsSymlink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1614,7 +1620,7 @@ unittest
     Params:
         attributes = The file attributes.
   +/
-@property bool isSymLink(uint attributes) nothrow
+deprecated @property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
         return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -2084,7 +2090,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in November 2011. It will not be
+            $(RED Deprecated. It will be removed in May 2012. It will not be
                   replaced. You can use $(D attributes) to get at this
                   information if you need it.)
 
@@ -2093,7 +2099,7 @@ assert(!de2.isFile);
             Returns the last time that the status of file represented by this
             $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
           +/
-        @property SysTime timeStatusChanged();
+        deprecated @property SysTime timeStatusChanged();
 
         /++
             $(RED Deprecated. It will be removed in February 2012. Please use
@@ -2596,7 +2602,7 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
@@ -3598,7 +3604,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns the contents of the given directory.
@@ -3646,7 +3652,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
@@ -3730,7 +3736,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 }
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
