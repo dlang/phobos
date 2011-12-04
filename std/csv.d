@@ -2,7 +2,7 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from a input range of dchar.
+ * from a input range of $(D dchar).
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
@@ -42,15 +42,15 @@
  * }
  * -------
  *
- * When a input contains a header the Contents can be specified as an
- * associative array. Passing null to signify that a header is prescient.
+ * When an input contains a header the $(D Contents) can be specified as an
+ * associative array. Passing null to signify that a header is present.
  *
  * -------
  * auto text = "Name,Occupation,Salary\r"
  *     "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
  * foreach(record; csvReader!(string[string])
- *         (text,cast(string[])null))
+ *         (text, null))
  * {
  *     writefln("%s works as a %s and earns $%s per year.",
  *              record["Name"], record["Occupation"],
@@ -58,9 +58,9 @@
  * }
  * -------
  *
- * This module allows content to be iterated by record stored in a struct
- * or into a range of fields. Upon detection of an error an
- * IncompleteCellException is thrown (can be disabled). csvNextToken has been
+ * This module allows content to be iterated by record stored in a struct,
+ * class, associative array, or as a range of fields. Upon detection of an
+ * error an CSVException is thrown (can be disabled). csvNextToken has been
  * made public to allow for attempted recovery.
  *
  * Disabling exceptions will lift many restrictions specified above. A quote
@@ -88,23 +88,35 @@ import std.range;
 import std.traits;
 
 /**
- * Exception containing the row and column for when an Exception was thrown.
+ * Exception containing the row and column for when an exception was thrown.
  *
- * This Exception will have one of the following as part of its next property.
+ * Numbering of both row and col start at one and corresponds to the location
+ * in the file rather than any specified header. Special consideration should
+ * be made when there is failure to match the header see $(LREF
+ * HeaderMismatchException) for details.
  *
- * $(UL
- *     $(LI IncompleteCellException)
- *     $(LI ConvException)
- *  )
+ * When performing type conversions, $(XREF ConvException) is stored in the $(D
+ * next) field.
  */
 class CSVException : Exception {
     ///
     size_t row, col;
-    this(size_t row, size_t col, Exception e) {
-        super("(Row: " ~ to!string(row) ~
-              ", Col: " ~ to!string(col) ~ ") CSV Parse Failure", e);
+
+    this(string msg)
+    {
+        super(msg);
+    }
+
+    this(string msg, size_t row, size_t col, Exception e)
+    {
+        super(msg, e);
         this.row = row;
         this.col = col;
+    }
+
+    string toString() {
+        return "(Row: " ~ to!string(row) ~
+              ", Col: " ~ to!string(col) ~ ") " ~ msg;
     }
 }
 
@@ -112,13 +124,14 @@ class CSVException : Exception {
  * Exception thrown when a Token is identified to not be completed: a quote is
  * found in an unquoted field, data continues after a closing quote, or the
  * quoted field was not closed before data was empty.
- *
- * This Exception will be part of CSVException unless using $(LREF
- * csvNextToken) directly.
  */
-class IncompleteCellException : Exception
+class IncompleteCellException : CSVException
 {
     /// Data pulled from input before finding a problem
+    ///
+    /// This field is populated when using $(LREF csvReader)
+    /// but not by $(LREF csvNextToken) as this data will have
+    /// already been fed to the output range.
     dstring partialData;
 
     this(string msg)
@@ -128,10 +141,26 @@ class IncompleteCellException : Exception
 }
 
 /**
- * Exception thrown when a header is provided but a matching column is not
- * found or the order did not match that found in the input (non-struct).
+ * Exception thrown under different conditions based on the type of $(D
+ * Contents).
+ *
+ * Structure, Class, and Associative Array
+ * $(UL
+ *     $(LI When a header is provided but a matching column is not found)
+ *  )
+ *
+ * Other
+ * $(UL
+ *     $(LI When a header is provided but a matching column is not found)
+ *     $(LI Order did not match that found in the input)
+ *  )
+ *
+ * Since a row and column is not meaningful when a column specified by the
+ * header is not found in the data, both row and col will be zero. Otherwise
+ * row is always one and col is the first instance found in header that
+ * occurred before the previous starting an one.
  */
-class HeaderMismatchException : Exception
+class HeaderMismatchException : CSVException
 {
     this(string msg)
     {
@@ -142,7 +171,7 @@ class HeaderMismatchException : Exception
 /**
  * Determines the behavior for when an error is detected.
  *
- * Disabling exception will follow this rules:
+ * Disabling exception will follow these rules:
  * $(UL
  *     $(LI A quote can appear in a field if the field was not quoted.)
  *     $(LI If in a quoted field any quote by itself, not at the end of a
@@ -154,22 +183,18 @@ class HeaderMismatchException : Exception
  *     $(LI If the given header contains columns not found in the input they
  *     will be ignored.)
  *  )
- *
 */
 enum Malformed
 {
     /// No exceptions are thrown due to incorrect CSV.
     ignore,
-    /// Use exceptions when input is incorrect CSV.
+    /// Use exceptions when input has incorrect CSV.
     throwException
 }
 
 /**
- * Builds a $(LREF Records) struct for iterating over records found in $(D
+ * Returns an input range for iterating over records found in $(D
  * input).
- *
- * This function simplifies the process for standard text input.
- * For other input, delimited by colon, create Records yourself.
  *
  * The $(D Contents) of the input can be provided if all the records are the
  * same type such as all integer data:
@@ -179,7 +204,8 @@ enum Malformed
  * int[] ans = [76,26,22];
  * auto records = csvReader!int(str);
  *
- * foreach(record; records) {
+ * foreach(record; records)
+ * {
  *     assert(equal(record, ans));
  * }
  * -------
@@ -188,7 +214,8 @@ enum Malformed
  *
  * -------
  * string str = "Hello;65;63.63\nWorld;123;3673.562";
- * struct Layout {
+ * struct Layout
+ * {
  *     string name;
  *     int value;
  *     double other;
@@ -196,27 +223,69 @@ enum Malformed
  *
  * auto records = csvReader!Layout(str,';');
  *
- * foreach(record; records) {
+ * foreach(record; records)
+ * {
  *     writeln(record.name);
  *     writeln(record.value);
  *     writeln(record.other);
  * }
  * -------
  *
+ * Specifying $(D ErrorLevel) as Malformed.ignore will lift restrictions
+ * on the format. This example shows that an exception is not thrown when
+ * finding a quote in a field not quoted.
+ *
+ * -------
+ * string str = "A \" is now part of the data";
+ * auto records = csvReader!(string,Malformed.ignore)(str);
+ * auto record = records.front;
+ *
+ * assert(record.front == str);
+ * -------
+ *
+ * Returns:
+ *        An input range R as defined by $(XREF range, isInputRange). When $(D
+ *        Contents) is a struct, class, or an associative array, the element
+ *        type of R is $(D Contents), otherwise the element type of R is itself
+ *        a range with element type $(D Contents).
+ *
+ * Throws:
+ *       $(LREF CSVException) When a quote is found in an unquoted field,
+ *       data continues after a closing quote, the quoted field was not
+ *       closed before data was empty, or a conversion failed.
+ *
+ *       $(LREF HeaderMismatchException)  when a header is provided but a
+ *       matching column is not found or the order did not match that found in
+ *       the input. Read the exception documentation for specific details of
+ *       when the exception is thrown for different types of $(D Contents).
+ */
+auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
+                 Separator delimiter = ',', Separator quote = '"')
+               if(isInputRange!Range && is(ElementType!Range == dchar)
+                  && isSomeChar!(Separator)
+                  && !is(Contents T : T[U], U : string))
+{
+    return CsvReader!(Contents,ErrorLevel,Range,
+                    ElementType!Range,string[])
+        (input, delimiter, quote);
+}
+
+/**
  * An optional $(D header) can be provided. The first record will be read in
  * as the header. If $(D Contents) is a struct then the header provided is
  * expected to correspond to the fields in the struct. When $(D Contents) is
- * non-struct the $(D header) must be provided in the same order as the input
- * or an exception is thrown.
+ * not a type which can contain the entire record, the $(D header) must be
+ * provided in the same order as the input or an exception is thrown.
  *
  * Read only column "b":
  *
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
- * auto records = csvReader(str, ["b"]);
+ * auto records = csvReader!int(str, ["b"]);
  *
- * auto ans = [["65"],["123"]];
- * foreach(record; records) {
+ * auto ans = [[65],[123]];
+ * foreach(record; records)
+ * {
  *     assert(equal(record, ans.front));
  *     ans.popFront();
  * }
@@ -242,17 +311,26 @@ enum Malformed
  *
  * -------
  * string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
- * auto records = csvReader(str, cast(string[])null);
+ * auto records = csvReader(str, null);
  *
  * assert(records.header == ["a","b","c"]);
  * -------
  *
- * $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=2394, IFTI fails for
- * nulls) prevents just sending null or [] as a header.
- *
  * Returns:
- *      $(LREF Records) struct which provides a $(XREF range, isInputRange) of
- *      each record.
+ *        An input range R as defined by $(XREF range, isInputRange). When $(D
+ *        Contents) is a struct, class, or an associative array, the element
+ *        type of R is $(D Contents), otherwise the element type of R is itself
+ *        a range with element type $(D Contents).
+ *
+ *        The returned range provides a header field for accessing the header
+ *        from the input in array form.
+ *
+ * -------
+ * string str = "a,b,c\nHello,65,63.63";
+ * auto records = csvReader(str, ["a"]);
+ *
+ * assert(records.header == ["a","b","c"]);
+ * -------
  *
  * Throws:
  *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -261,29 +339,18 @@ enum Malformed
  *
  *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
- *       the input (non-struct).
+ *       the input. Read the exception documentation for specific details of
+ *       when the exception is thrown for different types of $(D Contents).
  */
-auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
-                 Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && is(ElementType!Range == dchar)
-                  && isSomeChar!(Separator) && !is(Contents == class)
-                  && !is(Contents T : T[U], U : string))
-{
-    return Records!(Contents,ErrorLevel,Range,
-                    ElementType!Range,string[])
-        (input, delimiter, quote);
-}
-
-/// Ditto
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && is(ElementType!Range == dchar)
-                  && isSomeChar!(Separator) && !is(Contents == class)
+                  && isSomeChar!(Separator)
                   && isForwardRange!Header
                   && isSomeString!(ElementType!Header))
 {
-    return Records!(Contents,ErrorLevel,Range,
+    return CsvReader!(Contents,ErrorLevel,Range,
                     ElementType!Range,Header)
         (input, header, delimiter, quote);
 }
@@ -292,10 +359,10 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && is(ElementType!Range == dchar)
-                  && isSomeChar!(Separator) && !is(Contents == class)
-                  && is(Header : void*))
+                  && isSomeChar!(Separator)
+                  && is(Header : typeof(null)))
 {
-    return Records!(Contents,ErrorLevel,Range,
+    return CsvReader!(Contents,ErrorLevel,Range,
                     ElementType!Range,string[])
         (input, cast(string[])null, delimiter, quote);
 }
@@ -408,39 +475,41 @@ unittest
 unittest
 {
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
-    auto records = csvReader(str, ["b"]);
+    auto records = csvReader!int(str, ["b"]);
 
-    auto ans = [["65"],["123"]];
-    foreach(record; records) {
+    auto ans = [[65],[123]];
+    foreach(record; records)
+    {
         assert(equal(record, ans.front));
         ans.popFront();
     }
 
     try
     {
-        records = csvReader(str, ["b","a"]);
+        csvReader(str, ["c","b"]);
         assert(0);
     }
     catch(HeaderMismatchException e)
     {
+        assert(e.col == 2);
     }
     auto records2 = csvReader!(string,Malformed.ignore)
        (str, ["b","a"], ',', '"');
 
-    ans = [["Hello","65"],["World","123"]];
+    auto ans2 = [["Hello","65"],["World","123"]];
     foreach(record; records2) {
-        assert(equal(record, ans.front));
-        ans.popFront();
+        assert(equal(record, ans2.front));
+        ans2.popFront();
     }
 
     str = "a,c,e\nJoe,Carpenter,300000\nFred,Fly,4";
     records2 = csvReader!(string,Malformed.ignore)
        (str, ["a","b","c","d"], ',', '"');
 
-    ans = [["Joe","Carpenter"],["Fred","Fly"]];
+    ans2 = [["Joe","Carpenter"],["Fred","Fly"]];
     foreach(record; records2) {
-        assert(equal(record, ans.front));
-        ans.popFront();
+        assert(equal(record, ans2.front));
+        ans2.popFront();
     }
 }
 
@@ -565,10 +634,10 @@ unittest
             (ir,cast(string[])null)) {}
 }
 
-/**
+/*
  * Range for iterating CSV records.
  *
- * This range is returned by the csvReader functions. It can be
+ * This range is returned by the $(LREF csvReader) functions. It can be
  * created in a similar manner to allow $(D ErrorLevel) be set to $(LREF
  * Malformed).ignore if best guess processing should take place.
  *
@@ -577,7 +646,7 @@ unittest
  * -------
  * string str = `76;^26^;22`;
  * int[] ans = [76,26,22];
- * auto records = Records!(int,Malformed.ignore,string,char,string[])
+ * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
  *       (str, ';', '^');
  *
  * foreach(record; records) {
@@ -586,9 +655,9 @@ unittest
  * -------
  *
  */
-struct Records(Contents, Malformed ErrorLevel, Range, Separator, Header)
+private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
     if(isSomeChar!Separator && isInputRange!Range
-       && is(ElementType!Range == dchar) && !is(Contents == class)
+       && is(ElementType!Range == dchar)
        && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
@@ -598,18 +667,18 @@ private:
     size_t[] indices;
     uint _row;
     bool _empty;
-    static if(is(Contents == struct))
+    static if(is(Contents == struct) || is(Contents == class))
     {
         Contents recordContent;
-        Record!(string, ErrorLevel, Range, Separator) recordRange;
+        CsvRecord!(string, ErrorLevel, Range, Separator) recordRange;
     }
     else static if(is(Contents T : T[U], U : string))
     {
         Contents recordContent;
-        Record!(T, ErrorLevel, Range, Separator) recordRange;
+        CsvRecord!(T, ErrorLevel, Range, Separator) recordRange;
     }
     else
-        Record!(Contents, ErrorLevel, Range, Separator) recordRange;
+        CsvRecord!(Contents, ErrorLevel, Range, Separator) recordRange;
 public:
     /**
      * Header from the input in array form.
@@ -630,7 +699,7 @@ public:
      * -------
      * string str = `76;^26^;22`;
      * int[] ans = [76,26,22];
-     * auto records = Records!(int,Malformed.ignore,string,char,string[])
+     * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ';', '^');
      *
      * foreach(record; records) {
@@ -659,7 +728,7 @@ public:
      *
      * -------
      * string str = `high;mean;low\n76;^26^;22`;
-     * auto records = Records!(int,Malformed.ignore,string,char,string[])
+     * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
      *       (str, ["high","low"], ';', '^');
      *
      * int[] ans = [76,22];
@@ -685,7 +754,7 @@ public:
             colToIndex[h] = size_t.max;
         }
 
-        auto r = Record!(string, ErrorLevel, Range, Separator)
+        auto r = CsvRecord!(string, ErrorLevel, Range, Separator)
             (&_input, _separator, _quote, indices);
 
         size_t colIndex;
@@ -704,12 +773,13 @@ public:
         {
             immutable index = colToIndex[h];
             static if(ErrorLevel != Malformed.ignore)
-                enforceEx!(HeaderMismatchException)(index < size_t.max,
-                        "Header not found: " ~ to!string(h));
+                if(index == size_t.max)
+                    throw new HeaderMismatchException
+                        ("Header not found: " ~ to!string(h));
             indices[i++] = index;
         }
 
-        static if(!is(Contents == struct))
+        static if(!is(Contents == struct) && !is(Contents == class))
         {
             static if(is(Contents T : T[U], U : string))
             {
@@ -721,8 +791,16 @@ public:
             }
             else
             {
-                enforceEx!(HeaderMismatchException)(isSorted(indices),
-                           "Header in input does not match specified header.");
+                if(!isSorted(indices))
+                {
+                    auto ex = new HeaderMismatchException
+                           ("Header in input does not match specified header.");
+                    findAdjacent!"a > b"(indices);
+                    ex.row = 1;
+                    ex.col = indices.front;
+
+                    throw ex;
+                }
             }
         }
 
@@ -735,18 +813,22 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      *
      * Returns:
-     *      If $(D Contents) is a struct, the struct will be filled with record
-     *      data.
+     *      If $(D Contents) is a struct, will be filled with record data.
      *
-     *      If $(D Contents) is non-struct, a $(LREF Record) will be returned.
+     *      If $(D Contents) is a class, will be filled with record data.
+     *
+     *      If $(D Contents) is a associative array, will be filled
+     *      with record data.
+     *
+     *      If $(D Contents) is non-struct, a $(LREF CsvRecord) will be returned.
      */
     @property auto front()
     {
         assert(!empty);
-        static if(is(Contents == struct))
+        static if(is(Contents == struct) || is(Contents == class))
         {
             return recordContent;
         }
@@ -762,7 +844,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      */
     @property bool empty()
     {
@@ -770,7 +852,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -834,13 +916,15 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(_row, recordRange._col, e);
+                throw new CSVException(e.msg, _row, recordRange._col, e);
             }
 
             recordContent = aa;
         }
-        else static if(is(Contents == struct))
+        else static if(is(Contents == struct) || is(Contents == class))
         {
+            static if(is(Contents == class))
+                recordContent = new typeof(recordContent)();
             size_t colIndex;
             try
             {
@@ -869,7 +953,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(_row, colIndex, e);
+                throw new CSVException(e.msg, _row, colIndex, e);
             }
         }
     }
@@ -878,7 +962,7 @@ public:
 unittest {
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
-    auto records = Records!(int,Malformed.ignore,string,char,string[])
+    auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
           (str, ';', '^');
 
     foreach(record; records)
@@ -887,10 +971,11 @@ unittest {
     }
 }
 
-/**
- * Returned by a Records when Contents is a non-struct.
+/*
+ * This input range is accessible through $(LREF CsvReader) when the
+ * requested $(D Contents) type is neither a structure or an associative array.
  */
-private struct Record(Contents, Malformed ErrorLevel, Range, Separator)
+private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
     if(!is(Contents == class) && !is(Contents == struct))
 {
 private:
@@ -940,7 +1025,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      */
     @property Contents front()
     {
@@ -949,7 +1034,7 @@ public:
     }
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      */
     @property bool empty()
     {
@@ -957,7 +1042,7 @@ public:
     }
 
     /*
-     * Record is complete when input
+     * CsvRecord is complete when input
      * is empty or starts with record break
      */
     private bool recordEnd()
@@ -973,7 +1058,7 @@ public:
 
 
     /**
-     * Part of the $(XREF range, isInputRange) interface.
+     * Part of an input range as defined by $(XREF range, isInputRange).
      *
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -1002,6 +1087,7 @@ public:
             (*_input).popFront();
 
         _front.shrinkTo(0);
+
         prime();
     }
 
@@ -1016,29 +1102,40 @@ public:
             _front.shrinkTo(0);
             if((*_input).front == _separator)
                 (*_input).popFront();
+
             try
-            {
                 csvNextToken!(Range, ErrorLevel, Separator)
                                    (*_input, _front, _separator, _quote,false);
-            }
-            catch(Exception e)
+            catch(IncompleteCellException ice)
             {
-                throw new CSVException(_row, _col, e);
+                ice.row = _row;
+                ice.col = _col;
+                ice.partialData = _front.data.idup;
+                throw ice;
+            }
+            catch(ConvException e)
+            {
+                throw new CSVException(e.msg, _row, _col, e);
             }
         }
     }
 
     private void prime()
     {
-        _col++;
         try
+        {
+            _col++;
             csvNextToken!(Range, ErrorLevel, Separator)
-                               (*_input, _front, _separator, _quote,false);
+                (*_input, _front, _separator, _quote,false);
+        }
         catch(IncompleteCellException ice)
         {
+            ice.row = _row;
+            ice.col = _col;
             ice.partialData = _front.data.idup;
             throw ice;
         }
+
         auto skipNum = _popCount.empty ? 0 : _popCount.front;
         if(!_popCount.empty)
             _popCount.popFront();
@@ -1050,17 +1147,14 @@ public:
             return;
         }
 
-        try
-        {
-            if(skipNum)
-                prime(skipNum);
-            curContentsoken = to!Contents(_front.data);
-        }
-        catch(Exception e)
-        {
-            throw new CSVException(_row, _col, e);
-        }
+        if(skipNum)
+            prime(skipNum);
 
+        try curContentsoken = to!Contents(_front.data);
+        catch(ConvException e)
+        {
+            throw new CSVException(e.msg, _row, _col, e);
+        }
     }
 }
 
