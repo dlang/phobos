@@ -73,12 +73,12 @@ void main()
         Book book;
         book.id = xml.tag.attr["id"];
 
-        xml.onEndTag["author"]       = (in Element e) { book.author      = e.text; };
-        xml.onEndTag["title"]        = (in Element e) { book.title       = e.text; };
-        xml.onEndTag["genre"]        = (in Element e) { book.genre       = e.text; };
-        xml.onEndTag["price"]        = (in Element e) { book.price       = e.text; };
-        xml.onEndTag["publish-date"] = (in Element e) { book.pubDate     = e.text; };
-        xml.onEndTag["description"]  = (in Element e) { book.description = e.text; };
+        xml.onEndTag["author"]       = (in Element e) { book.author      = e.text(); };
+        xml.onEndTag["title"]        = (in Element e) { book.title       = e.text(); };
+        xml.onEndTag["genre"]        = (in Element e) { book.genre       = e.text(); };
+        xml.onEndTag["price"]        = (in Element e) { book.price       = e.text(); };
+        xml.onEndTag["publish-date"] = (in Element e) { book.pubDate     = e.text(); };
+        xml.onEndTag["description"]  = (in Element e) { book.description = e.text(); };
 
         xml.parse();
 
@@ -639,7 +639,7 @@ class Document : Element
          */
         override string toString()
         {
-            return prolog ~ super.toString ~ epilog;
+            return prolog ~ super.toString() ~ epilog;
         }
     }
 }
@@ -863,7 +863,7 @@ class Element : Item
      */
     override hash_t toHash()
     {
-        hash_t hash = tag.toHash;
+        hash_t hash = tag.toHash();
         foreach(item;items) hash += item.toHash();
         return hash;
     }
@@ -888,8 +888,8 @@ class Element : Item
             foreach(item;items)
             {
                 Text t = cast(Text)item;
-                if (t is null) throw new DecodeException(item.toString);
-                buffer ~= decode(t.toString,mode);
+                if (t is null) throw new DecodeException(item.toString());
+                buffer ~= decode(t.toString(),mode);
             }
             return buffer;
         }
@@ -904,18 +904,18 @@ class Element : Item
         override string[] pretty(uint indent=2)
         {
 
-            if (isEmptyXML) return [ tag.toEmptyString ];
+            if (isEmptyXML) return [ tag.toEmptyString() ];
 
             if (items.length == 1)
             {
                 Text t = cast(Text)(items[0]);
                 if (t !is null)
                 {
-                    return [tag.toStartString ~ t.toString ~ tag.toEndString];
+                    return [tag.toStartString() ~ t.toString() ~ tag.toEndString()];
                 }
             }
 
-            string[] a = [ tag.toStartString ];
+            string[] a = [ tag.toStartString() ];
             foreach(item;items)
             {
                 string[] b = item.pretty(indent);
@@ -924,7 +924,7 @@ class Element : Item
                     a ~= rightJustify(s,s.length + indent);
                 }
             }
-            a ~= tag.toEndString;
+            a ~= tag.toEndString();
             return a;
         }
 
@@ -934,20 +934,20 @@ class Element : Item
          * Examples:
          * --------------
          * auto element = new Element("br");
-         * writefln(element.toString); // writes "<br />"
+         * writefln(element.toString()); // writes "<br />"
          * --------------
          */
         override string toString()
         {
-            if (isEmptyXML) return tag.toEmptyString;
+            if (isEmptyXML) return tag.toEmptyString();
 
-            string buffer = tag.toStartString;
-            foreach (item;items) { buffer ~= item.toString; }
-            buffer ~= tag.toEndString;
+            string buffer = tag.toStartString();
+            foreach (item;items) { buffer ~= item.toString(); }
+            buffer ~= tag.toEndString();
             return buffer;
         }
 
-        override bool isEmptyXML() { return items.length == 0; }
+        override @property bool isEmptyXML() { return items.length == 0; }
     }
 }
 
@@ -991,14 +991,14 @@ class Tag
 
         s = name;
         try { checkName(s,t); }
-        catch(Err e) { assert(false,"Invalid tag name:" ~ e.toString); }
+        catch(Err e) { assert(false,"Invalid tag name:" ~ e.toString()); }
 
         foreach(k,v;attr)
         {
             s = k;
             try { checkName(s,t); }
             catch(Err e)
-                { assert(false,"Invalid atrribute name:" ~ e.toString); }
+                { assert(false,"Invalid atrribute name:" ~ e.toString()); }
         }
     }
 
@@ -1133,7 +1133,7 @@ class Tag
          * Examples:
          * --------------
          * auto tag = new Tag("book",TagType.START);
-         * writefln(tag.toString); // writes "<book>"
+         * writefln(tag.toString()); // writes "<book>"
          * --------------
          */
         override string toString()
@@ -1167,7 +1167,7 @@ class Tag
          * if (tag.isStart) { }
          * --------------
          */
-        bool isStart() { return type == TagType.START; }
+        @property bool isStart() { return type == TagType.START; }
 
         /**
          * Returns true if the Tag is an end tag
@@ -1177,7 +1177,7 @@ class Tag
          * if (tag.isEnd) { }
          * --------------
          */
-        bool isEnd()   { return type == TagType.END;   }
+        @property bool isEnd()   { return type == TagType.END;   }
 
         /**
          * Returns true if the Tag is an empty tag
@@ -1187,7 +1187,7 @@ class Tag
          * if (tag.isEmpty) { }
          * --------------
          */
-        bool isEmpty() { return type == TagType.EMPTY; }
+        @property bool isEmpty() { return type == TagType.EMPTY; }
     }
 }
 
@@ -1269,7 +1269,7 @@ class Comment : Item
      */
     override const string toString() { return "<!--" ~ content ~ "-->"; }
 
-    override const bool isEmptyXML() { return false; } /// Returns false always
+    override @property const bool isEmptyXML() { return false; } /// Returns false always
 }
 
 /**
@@ -1348,7 +1348,7 @@ class CData : Item
      */
     override const string toString() { return cdata ~ content ~ "]]>"; }
 
-    override const bool isEmptyXML() { return false; } /// Returns false always
+    override @property const bool isEmptyXML() { return false; } /// Returns false always
 }
 
 /**
@@ -1428,7 +1428,7 @@ class Text : Item
     /**
      * Returns true if the content is the empty string
      */
-    override const bool isEmptyXML() { return content.length == 0; }
+    override @property const bool isEmptyXML() { return content.length == 0; }
 }
 
 /**
@@ -1507,7 +1507,7 @@ class XMLInstruction : Item
      */
     override const string toString() { return "<!" ~ content ~ ">"; }
 
-    override const bool isEmptyXML() { return false; } /// Returns false always
+    override @property const bool isEmptyXML() { return false; } /// Returns false always
 }
 
 /**
@@ -1586,7 +1586,7 @@ class ProcessingInstruction : Item
      */
     override const string toString() { return "<?" ~ content ~ "?>"; }
 
-    override const bool isEmptyXML() { return false; } /// Returns false always
+    override @property const bool isEmptyXML() { return false; } /// Returns false always
 }
 
 /**
@@ -1619,7 +1619,7 @@ abstract class Item
     }
 
     /// Returns true if the item represents empty XML text
-    abstract const bool isEmptyXML();
+    abstract @property const bool isEmptyXML();
 }
 
 /**
@@ -1725,7 +1725,7 @@ class ElementParser
      * The Tag at the start of the element being parsed. You can read this to
      * determine the tag's name and attributes.
      */
-    const const(Tag) tag() { return tag_; }
+    const @property const(Tag) tag() { return tag_; }
 
     /**
      * Register a handler which will be called whenever a start tag is
@@ -2718,7 +2718,7 @@ EOS";
     };
 
     xml.onEndTag["Test"] = (in Element e) {
-        assert(e.text == "What & Up Second");
+        assert(e.text() == "What & Up Second");
     };
     xml.parse();
 }
@@ -2800,7 +2800,7 @@ class CheckException : XMLException
         if (line != 0) s = format("Line %d, column %d: ",line,column);
         s ~= msg;
         s ~= '\n';
-        if (err !is null) s = err.toString ~ s;
+        if (err !is null) s = err.toString() ~ s;
         return s;
     }
 }

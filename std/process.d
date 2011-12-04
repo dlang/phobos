@@ -351,7 +351,7 @@ version (Windows) string shell(string cmd)
     foreach (ref e; 0 .. 8)
     {
         formattedWrite(a, "%x", rndGen.front);
-        rndGen.popFront;
+        rndGen.popFront();
     }
     auto filename = a.data;
     scope(exit) if (exists(filename)) remove(filename);
@@ -369,7 +369,7 @@ version (Posix) string shell(string cmd)
     {
         result ~= line;
     }
-    f.close;
+    f.close();
     return result;
 }
 

@@ -863,7 +863,7 @@ class ErrnoException : Exception
     uint errno;                 // operating system error code
     this(string msg, string file = null, size_t line = 0)
     {
-        errno = getErrno;
+        errno = getErrno();
         version (linux)
         {
             char[1024] buf = void;

@@ -333,8 +333,8 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
-    static assert(!__traits(compiles, popFront!(immutable int[])));
-    static assert(!__traits(compiles, popFront!(void[])));
+    static assert(!__traits(compiles, popFront!(immutable int[])()));
+    static assert(!__traits(compiles, popFront!(void[])()));
 }
 
 // Specialization for narrow strings. The necessity of
@@ -1234,7 +1234,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
         return result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
@@ -1326,7 +1326,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
         return cast(typeof(return)) result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
@@ -2291,7 +2291,7 @@ struct SimpleSlice(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }
@@ -2437,7 +2437,7 @@ struct SimpleSliceLvalue(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }

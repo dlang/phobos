@@ -380,9 +380,9 @@ private:
             // TODO: The following test evaluates to true for shared objects.
             //       Use __traits for now until this is sorted out.
             // else static if (is(typeof((*zis).toString)))
-            else static if (__traits(compiles, {(*zis).toString;}))
+            else static if (__traits(compiles, {(*zis).toString();}))
             {
-                *target = (*zis).toString;
+                *target = (*zis).toString();
                 break;
             }
             else
@@ -560,7 +560,7 @@ public:
      * ----
      */
 
-    bool hasValue() const
+    @property bool hasValue() const
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
@@ -582,7 +582,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    T * peek(T)()
+    @property T * peek(T)()
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -594,7 +594,7 @@ public:
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
 
-    TypeInfo type() const
+    @property TypeInfo type() const
     {
         TypeInfo result;
         fptr(OpID.getTypeInfo, null, &result);
@@ -608,7 +608,7 @@ public:
      * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
      */
 
-    bool convertsTo(T)()
+    @property bool convertsTo(T)()
     {
         TypeInfo info = typeid(T);
         return fptr(OpID.testConversion, null, &info) == 0;
@@ -648,7 +648,7 @@ public:
      * VariantException).
      */
 
-    T get(T)() if (!is(T == const))
+    @property T get(T)() if (!is(T == const))
     {
         union Buf
         {
@@ -664,7 +664,7 @@ public:
         return buf.result;
     }
 
-    T get(T)() const if (is(T == const))
+    @property T get(T)() const if (is(T == const))
     {
         union Buf
         {
@@ -690,7 +690,7 @@ public:
      * VariantException).
      */
 
-    T coerce(T)()
+    @property T coerce(T)()
     {
         static if (isNumeric!(T))
         {
@@ -716,7 +716,7 @@ public:
         }
         else static if (isSomeString!(T))
         {
-            return to!(T)(toString);
+            return to!(T)(toString());
         }
         else
         {
@@ -1168,8 +1168,8 @@ static class VariantException : Exception
     this(TypeInfo source, TypeInfo target)
     {
         super("Variant: attempting to use incompatible types "
-                            ~ source.toString
-                            ~ " and " ~ target.toString);
+                            ~ source.toString()
+                            ~ " and " ~ target.toString());
         this.source = source;
         this.target = target;
     }
@@ -1230,7 +1230,7 @@ unittest
     // assign
     a = *b.peek!(int);
     // comparison
-    assert(a == b, a.type.toString ~ " " ~ b.type.toString);
+    assert(a == b, a.type.toString() ~ " " ~ b.type.toString());
     auto c = Variant("this is a string");
     assert(a != c);
     // comparison via implicit conversions
@@ -1250,8 +1250,8 @@ unittest
     assert(failed); // :o)
 
     // toString tests
-    a = Variant(42); assert(a.toString == "42");
-    a = Variant(42.22); assert(a.toString == "42.22");
+    a = Variant(42); assert(a.toString() == "42");
+    a = Variant(42.22); assert(a.toString() == "42.22");
 
     // coerce tests
     a = Variant(42.22); assert(a.coerce!(int) == 42);
@@ -1272,7 +1272,7 @@ unittest
 //     a = Big.init;
 
     // hash
-    assert(a.toHash != 0);
+    assert(a.toHash() != 0);
 }
 
 // tests adapted from

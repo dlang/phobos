@@ -1452,7 +1452,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
                 _path = rtrimDirSeparators(_path[0 .. i+1]);
             }
         }
-        auto save() { return this; }
+        @property auto save() { return this; }
 
 
     private:
@@ -1549,7 +1549,7 @@ unittest
     // save()
     auto ps1 = pathSplitter("foo/bar/baz");
     auto ps2 = ps1.save();
-    ps1.popFront;
+    ps1.popFront();
     assert (equal2(ps1, ["bar", "baz"]));
     assert (equal2(ps2, ["foo", "bar", "baz"]));
 

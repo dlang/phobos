@@ -2873,7 +2873,7 @@ unittest {
 
     struct Range
     {
-        uint front() { assert(0); }
+        @property uint front() { assert(0); }
         void popFront() { assert(0); }
         enum bool empty = false;
     }

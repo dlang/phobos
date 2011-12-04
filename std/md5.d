@@ -143,7 +143,7 @@ string d = getDigestString(a, b, c);
 string getDigestString(in void[][] data...)
 {
     MD5_CTX ctx;
-    ctx.start;
+    ctx.start();
     foreach (datum; data) {
         ctx.update(datum);
     }

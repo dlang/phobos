@@ -1550,7 +1550,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'D':
-                    set.add(unicodeNd.dup.negate);
+                    set.add(unicodeNd.dup.negate());
                     state = State.Start;
                     break;
                 case 's':
@@ -1558,7 +1558,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'S':
-                    set.add(unicodeWhite_Space.dup.negate);
+                    set.add(unicodeWhite_Space.dup.negate());
                     state = State.Start;
                     break;
                 case 'w':
@@ -1566,7 +1566,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'W':
-                    set.add(wordCharacter.dup.negate);
+                    set.add(wordCharacter.dup.negate());
                     state = State.Start;
                     break;
                 default:
@@ -1665,7 +1665,7 @@ struct Parser(R, bool CTFE=false)
             switch(op)
             {
             case Operator.Negate:
-                stack.top.negate;
+                stack.top.negate();
                 break;
             case Operator.Union:
                 auto s = stack.pop();//2nd operand
@@ -1816,7 +1816,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'D':
             next();
-            charsetToIr(unicodeNd.dup.negate);
+            charsetToIr(unicodeNd.dup.negate());
             break;
         case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
         case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
@@ -1826,7 +1826,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'S':
             next();
-            charsetToIr(unicodeWhite_Space.dup.negate);
+            charsetToIr(unicodeWhite_Space.dup.negate());
             break;
         case 'w':
             next();
@@ -1834,7 +1834,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'W':
             next();
-            charsetToIr(wordCharacter.dup.negate);
+            charsetToIr(wordCharacter.dup.negate());
             break;
         case 'p': case 'P':
             auto CodepointSet = parseUnicodePropertySpec(current == 'P');
@@ -6731,7 +6731,7 @@ public:
         {
             //skip past the separator
             _offset = _match.pre.length + _match.hit.length;
-            _match.popFront;
+            _match.popFront();
         }
     }
 
