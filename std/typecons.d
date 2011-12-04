@@ -2883,16 +2883,20 @@ Flag!"encryption".no).
 */
 struct Yes
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.yes; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.yes;
+    }
 }
 //template yes(string name) { enum Flag!name yes = Flag!name.yes; }
 
 /// Ditto
 struct No
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.no; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.no;
+    }
 }
 //template no(string name) { enum Flag!name no = Flag!name.no; }
 
