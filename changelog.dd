@@ -1,3 +1,28 @@
+$(VERSION 057, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI Replacement of std.regex module.)
+      $(LI As typedef has been deprecated, overloads of std.conv.to which use
+           typedef have now been deprecated.)
+     )
+
+    $(LIBBUGSFIXED
+        $(LI Unlisted bug: std.conv: Fix to!float("-0"))
+        $(LI Unlisted bug: std.conv: Fix bug in emplace)
+        $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
+        $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
+        $(LI $(BUGZILLA 6887): Regression of getopt)
+        $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
+        $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
+        $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
+        $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
+        $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
+        $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
+        $(LI $(BUGZILLA 7039): Posix 2.057 Makefile error breaking 64bit build)
+        $(LI $(BUGZILLA 7055): to!float("INF2") == 2)
+     )
+ )
+
 $(VERSION 056, ddd mm, 2011, =================================================,
 
     $(WHATSNEW

@@ -1631,9 +1631,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     else if (stuff.length <= to - from)
     {
         // replacement reduces length
-        // BUG 2128
-        //immutable stuffEnd = from + stuff.length;
-        auto stuffEnd = from + stuff.length;
+        immutable stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff;
         array = remove(array, tuple(stuffEnd, to));
     }

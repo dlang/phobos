@@ -1363,7 +1363,7 @@ deprecated S repeat(S)(S s, size_t n)
 
 /**************************************
  * $(RED Scheduled for deprecation in January 2012.
- *       Please use $(LREF, splitLines) instead.)
+ *       Please use $(LREF splitLines) instead.)
  *
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
