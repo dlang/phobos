@@ -50,9 +50,9 @@ else
 
 version (unittest)
 {
-    import core.thread : Thread;
+    import core.thread;
 
-    private string deleteme()
+    private @property string deleteme()
     {
         static _deleteme = "deleteme.dmd.unittest";
         static _first = true;
@@ -83,30 +83,32 @@ else version (Posix)
 {
     version (OSX)
     {
-        struct struct_stat64        // distinguish it from the stat() function
+        import core.stdc.config : c_long;
+        // struct prefix to distinguish it from the stat() function.
+        // Ported from /usr/include/sys/stat.h on an OS X Lion box.
+        struct struct_stat64
         {
-            uint st_dev;        /// device
-            ushort st_mode;
-            ushort st_nlink;        /// link count
+            dev_t st_dev;        /// device
+            mode_t st_mode;
+            nlink_t st_nlink;    /// link count
             ulong st_ino;        /// file serial number
-            uint st_uid;        /// user ID of file's owner
-            uint st_gid;        /// user ID of group's owner
-            uint st_rdev;        /// if device then device number
+            uid_t st_uid;        /// user ID of file's owner
+            gid_t st_gid;        /// user ID of group's owner
+            dev_t st_rdev;       /// if device then device number
 
-            int st_atime;
-            uint st_atimensec;
-            int st_mtime;
-            uint st_mtimensec;
-            int st_ctime;
-            uint st_ctimensec;
-            int st_birthtime;
-            uint st_birthtimensec;
+            time_t st_atime;
+            c_long st_atimensec;
+            time_t st_mtime;
+            c_long st_mtimensec;
+            time_t st_ctime;
+            c_long st_ctimensec;
+            time_t st_birthtime;
+            c_long st_birthtimensec;
 
-            ulong st_size;
-            long st_blocks;        /// number of allocated 512 byte blocks
-            int st_blksize;        /// optimal I/O block size
+            off_t st_size;
+            blkcnt_t st_blocks;      /// number of allocated 512 byte blocks
+            blksize_t st_blksize;    /// optimal I/O block size
 
-            ulong st_ino64;
             uint st_flags;
             uint st_gen;
             int st_lspare; /* RESERVED: DO NOT USE! */
@@ -126,7 +128,32 @@ else version (Posix)
     }
     else
     {
-        version(X86)
+        version(D_LP64)
+        {
+            struct struct_stat64
+            {
+                ulong st_dev;
+                ulong st_ino;
+                ulong st_nlink;
+                uint  st_mode;
+                uint  st_uid;
+                uint  st_gid;
+                int   __pad0;
+                ulong st_rdev;
+                long  st_size;
+                long  st_blksize;
+                long  st_blocks;
+                long  st_atime;
+                ulong st_atimensec;
+                long  st_mtime;
+                ulong st_mtimensec;
+                long  st_ctime;
+                ulong st_ctimensec;
+                long[3]  __unused;
+            }
+            static assert(struct_stat64.sizeof == 144);
+        }
+        else
         {
             struct struct_stat64        // distinguish it from the stat() function
             {
@@ -152,31 +179,6 @@ else version (Posix)
                 ulong st_ino64;
             }
             //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }
-        else version (X86_64)
-        {
-            struct struct_stat64
-            {
-                ulong st_dev;
-                ulong st_ino;
-                ulong st_nlink;
-                uint  st_mode;
-                uint  st_uid;
-                uint  st_gid;
-                int   __pad0;
-                ulong st_rdev;
-                long  st_size;
-                long  st_blksize;
-                long  st_blocks;
-                long  st_atime;
-                ulong st_atimensec;
-                long  st_mtime;
-                ulong st_mtimensec;
-                long  st_ctime;
-                ulong st_ctimensec;
-                long[3]  __unused;
-            }
-            static assert(struct_stat64.sizeof == 144);
         }
 
         extern(C) int fstat64(int, struct_stat64*);
@@ -227,7 +229,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Windows) this(in char[] name,
-                          uint errno = GetLastError,
+                          uint errno = .GetLastError(),
                           string file = __FILE__,
                           size_t line = __LINE__)
     {
@@ -246,7 +248,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Posix) this(in char[] name,
-                        uint errno = .getErrno,
+                        uint errno = .getErrno(),
                         string file = __FILE__,
                         size_t line = __LINE__)
     {
@@ -534,7 +536,7 @@ void rename(in char[] from, in char[] to)
                             to)));
     }
     else version(Posix)
-        cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
+        cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
 /***************************************************
@@ -551,7 +553,7 @@ void remove(in char[] name)
                 name);
     }
     else version(Posix)
-        cenforce(std.c.stdio.remove(toStringz(name)) == 0,
+        cenforce(core.stdc.stdio.remove(toStringz(name)) == 0,
             "Failed to remove file " ~ name);
 }
 
@@ -897,8 +899,8 @@ version(Windows) unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011. Please use the
-          $(D getTimes) with two arguments instead.)
+    $(RED Deprecated. It will be removed in May 2012.
+          Please use the $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
 
@@ -927,20 +929,16 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesPosix(in char[] name,
-                                    out SysTime fileStatusChangeTime,
-                                    out SysTime fileAccessTime,
-                                    out SysTime fileModificationTime);
-else version(Posix) void getTimesPosix(C)(in C[] name,
-                                          out SysTime fileStatusChangeTime,
-                                          out SysTime fileAccessTime,
-                                          out SysTime fileModificationTime)
+version(StdDdoc) deprecated void getTimesPosix(in char[] name,
+                                               out SysTime fileStatusChangeTime,
+                                               out SysTime fileAccessTime,
+                                               out SysTime fileModificationTime);
+else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
+                                                     out SysTime fileStatusChangeTime,
+                                                     out SysTime fileAccessTime,
+                                                     out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
-    pragma(msg, "Notice: As of Phobos 2.054, std.file.getTimesPosix has been " ~
-                "scheduled for deprecation in November 2011. Please use " ~
-                "the version of getTimes with two arguments instead.");
-
     struct_stat64 statbuf = void;
 
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
@@ -1268,11 +1266,14 @@ unittest
  $(RED Deprecated. It will be removed in February 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isDir isdir;
+deprecated @property bool isdir(in char[] name)
+{
+    return name.isDir;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1280,7 +1281,7 @@ deprecated alias isDir isdir;
     Params:
         attributes = The file attributes.
   +/
-@property bool isDir(uint attributes) nothrow
+deprecated @property bool isDir(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1409,11 +1410,14 @@ unittest
  $(RED Deprecated. It will be removed in February 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isFile isfile;
+deprecated @property bool isfile(in char[] name)
+{
+    return name.isFile;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1431,7 +1435,7 @@ deprecated alias isFile isfile;
     Params:
         attributes = The file attributes.
   +/
-@property bool isFile(uint attributes) nothrow
+deprecated @property bool isFile(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1605,7 +1609,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsSymlink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1616,7 +1620,7 @@ unittest
     Params:
         attributes = The file attributes.
   +/
-@property bool isSymLink(uint attributes) nothrow
+deprecated @property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
         return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1767,6 +1771,10 @@ void rmdir(in char[] pathname)
         original = The file to link from.
         link     = The symlink to create.
 
+    Note:
+        Relative paths are relative to the current working directory,
+        not the files being linked to or from.
+
     Throws:
         $(D FileException) on error (which includes if the symlink already
         exists).
@@ -1837,13 +1845,36 @@ version(Posix) unittest
 version(StdDdoc) string readLink(C)(const(C)[] link);
 else version(Posix) string readLink(C)(const(C)[] link)
 {
-    char[2048] buffer;
-    immutable size = cenforce(core.sys.posix.unistd.readlink(toUTFz!(const char*)(link),
-                                                             buffer,
-                                                             buffer.length),
-                              link);
+    enum bufferLen = 2048;
+    enum maxCodeUnits = 6;
+    char[bufferLen] buffer;
+    auto linkPtr = toUTFz!(const char*)(link);
+    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                        buffer.ptr,
+                                                        buffer.length),
+                         link);
 
-    return to!string(buffer[0 .. (size >= buffer.length ? $ - 1 : size)]);
+    if(size <= bufferLen - maxCodeUnits)
+        return to!string(buffer[0 .. size]);
+
+    auto dynamicBuffer = new char[](bufferLen * 3 / 2);
+
+    foreach(i; 0 .. 10)
+    {
+        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
+                                                       dynamicBuffer.ptr,
+                                                       dynamicBuffer.length),
+                        link);
+        if(size <= dynamicBuffer.length - maxCodeUnits)
+        {
+            dynamicBuffer.length = size;
+            return assumeUnique(dynamicBuffer);
+        }
+
+        dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
+    }
+
+    throw new FileException(format("Path for %s is too long to read.", link));
 }
 
 version(Posix) unittest
@@ -1854,14 +1885,13 @@ version(Posix) unittest
         {
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
-            scope(failure) std.stdio.stderr.writefln("Failed file: %s", file);
 
             symlink(file, symfile);
-
-            assert(readLink(symfile) == file);
+            assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
 }
+
 
 /****************************************************
  * Get current directory.
@@ -1924,8 +1954,8 @@ version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
-    scope(exit) std.c.stdlib.free(p);
-    return p[0 .. std.c.string.strlen(p)].idup;
+    scope(exit) core.stdc.stdlib.free(p);
+    return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
 unittest
@@ -2060,7 +2090,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in November 2011. It will not be
+            $(RED Deprecated. It will be removed in May 2012. It will not be
                   replaced. You can use $(D attributes) to get at this
                   information if you need it.)
 
@@ -2069,7 +2099,7 @@ assert(!de2.isFile);
             Returns the last time that the status of file represented by this
             $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
           +/
-        @property SysTime timeStatusChanged();
+        deprecated @property SysTime timeStatusChanged();
 
         /++
             $(RED Deprecated. It will be removed in February 2012. Please use
@@ -2572,7 +2602,7 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
@@ -2635,18 +2665,18 @@ void copy(in char[] from, in char[] to)
         immutable fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
         cenforce(fdw != -1, from);
-        scope(failure) std.c.stdio.remove(toz);
+        scope(failure) core.stdc.stdio.remove(toz);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;
-            auto buf = std.c.stdlib.malloc(BUFSIZ);
+            auto buf = core.stdc.stdlib.malloc(BUFSIZ);
             if (!buf)
             {
                 BUFSIZ = 4096;
-                buf = std.c.stdlib.malloc(BUFSIZ);
+                buf = core.stdc.stdlib.malloc(BUFSIZ);
                 buf || assert(false, "Out of memory in std.file.copy");
             }
-            scope(exit) std.c.stdlib.free(buf);
+            scope(exit) core.stdc.stdlib.free(buf);
 
             for (auto size = statbuf.st_size; size; )
             {
@@ -3022,8 +3052,8 @@ private struct DirIteratorImpl
                     return false;
                 }
             }
-            while( std.c.string.strcmp(findinfo.cFileName.ptr, ".") == 0
-                    || std.c.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
+            while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
+                    || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
                 if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
@@ -3073,8 +3103,8 @@ private struct DirIteratorImpl
             for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if(std.c.string.strcmp(fdata.d_name.ptr, ".")  &&
-                   std.c.string.strcmp(fdata.d_name.ptr, "..") )
+                if(core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
+                   core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
                 {
                     _cur._init(_stack.data[$-1].dirpath, fdata);
                     return true;
@@ -3548,7 +3578,7 @@ slurp(Types...)(string filename, in char[] format)
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
-    scope(exit) f.close;
+    scope(exit) f.close();
     foreach (line; f.byLine())
     {
         formattedRead(line, format, &toAdd);
@@ -3574,7 +3604,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns the contents of the given directory.
@@ -3602,7 +3632,6 @@ void main(string[] args)
  +/
 string[] listDir(C)(in C[] pathname)
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     auto result = appender!(string[])();
 
     bool listing(string filename)
@@ -3623,7 +3652,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
@@ -3674,7 +3703,6 @@ void main(string[] args)
 string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     import std.regexp;
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
@@ -3708,7 +3736,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 }
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
@@ -3747,7 +3775,6 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
-    pragma(msg, softDeprec!("2.054", "November 2011", "listDir", "dirEntries"));
     _listDir(pathname, callback);
 }
 
@@ -3816,8 +3843,8 @@ version(Windows)
             do
             {
                 // Skip "." and ".."
-                if(std.c.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
-                   std.c.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
+                if(core.stdc.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
+                   core.stdc.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
                 {
                     continue;
                 }
@@ -3843,8 +3870,8 @@ else version(Posix)
         for(dirent* fdata; (fdata = readdir(h)) != null; )
         {
             // Skip "." and ".."
-            if(!std.c.string.strcmp(fdata.d_name.ptr, ".") ||
-               !std.c.string.strcmp(fdata.d_name.ptr, ".."))
+            if(!core.stdc.string.strcmp(fdata.d_name.ptr, ".") ||
+               !core.stdc.string.strcmp(fdata.d_name.ptr, ".."))
             {
                 continue;
             }
@@ -3880,14 +3907,6 @@ version(Windows)
 
         return sysTimeToDTime(sysTime);
     }
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.file.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }
 
 

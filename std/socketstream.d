@@ -21,13 +21,11 @@
 */
 
 /**************
- * <b>SocketStream</b> is a stream for a blocking,
- * connected <b>Socket</b>.
- *
- * For Win32 systems, link with <tt>ws2_32.lib</tt>.
+ * $(D SocketStream) is a stream for a blocking,
+ * connected $(D Socket).
  *
  * Example:
- *      See <tt>/dmd/samples/d/htmlget.d</tt>
+ *      See $(SAMPLESRC htmlget.d)
  * Authors: Christopher E. Miller
  * References:
  *      $(LINK2 std_stream.html, std.stream)
@@ -41,8 +39,8 @@ private import std.stream;
 private import std.socket;
 
 /**************
- * <b>SocketStream</b> is a stream for a blocking,
- * connected <b>Socket</b>.
+ * $(D SocketStream) is a stream for a blocking,
+ * connected $(D Socket).
  */
 class SocketStream: Stream
 {
@@ -56,29 +54,29 @@ class SocketStream: Stream
          */
         this(Socket sock, FileMode mode)
         {
-                if(mode & FileMode.In)
-                        readable = true;
-                if(mode & FileMode.Out)
-                        writeable = true;
+            if(mode & FileMode.In)
+                readable = true;
+            if(mode & FileMode.Out)
+                writeable = true;
 
-                this.sock = sock;
+            this.sock = sock;
         }
 
         /**
-         * Uses mode <b>FileMode.In | FileMode.Out</b>.
+         * Uses mode $(D FileMode.In | FileMode.Out).
          */
         this(Socket sock)
         {
-                writeable = readable = true;
-                this.sock = sock;
+            writeable = readable = true;
+            this.sock = sock;
         }
 
         /**
-         * Property to get the <b>Socket</b> that is being streamed.
+         * Property to get the $(D Socket) that is being streamed.
          */
         Socket socket()
         {
-                return sock;
+            return sock;
         }
 
         /**
@@ -86,17 +84,17 @@ class SocketStream: Stream
          */
         override size_t readBlock(void* _buffer, size_t size)
         {
-          ubyte* buffer = cast(ubyte*)_buffer;
-          assertReadable();
+            ubyte* buffer = cast(ubyte*)_buffer;
+            assertReadable();
 
-          if (size == 0)
-            return size;
+            if (size == 0)
+                return size;
 
-          auto len = sock.receive(buffer[0 .. size]);
-          readEOF = cast(bool)(len == 0);
-          if (len == sock.ERROR)
-            len = 0;
-          return len;
+            auto len = sock.receive(buffer[0 .. size]);
+            readEOF = cast(bool)(len == 0);
+            if (len == sock.ERROR)
+                len = 0;
+            return len;
         }
 
         /**
@@ -104,25 +102,26 @@ class SocketStream: Stream
          */
         override size_t writeBlock(const void* _buffer, size_t size)
         {
-          ubyte* buffer = cast(ubyte*)_buffer;
-          assertWriteable();
+            ubyte* buffer = cast(ubyte*)_buffer;
+            assertWriteable();
 
-          if (size == 0)
-            return size;
+            if (size == 0)
+                return size;
 
-          auto len = sock.send(buffer[0 .. size]);
-          readEOF = cast(bool)(len == 0);
-          if (len == sock.ERROR)
-            len = 0;
-          return len;
+            auto len = sock.send(buffer[0 .. size]);
+            readEOF = cast(bool)(len == 0);
+            if (len == sock.ERROR)
+                len = 0;
+            return len;
         }
 
         /**
-         *
+         * Socket streams do not support seeking. This disabled method throws
+         * a $(D SeekException).
          */
-        override ulong seek(long offset, SeekPos whence)
+        @disable override ulong seek(long offset, SeekPos whence)
         {
-                throw new SeekException("Cannot seek a socket.");
+            throw new SeekException("Cannot seek a socket.");
         }
 
         /**
@@ -131,15 +130,16 @@ class SocketStream: Stream
          */
         override string toString()
         {
-                return sock.toString();
+            return sock.toString();
         }
 
         /**
-         * Close the <b>Socket</b>.
+         * Close the $(D Socket).
          */
         override void close()
         {
-                sock.close();
+            sock.close();
+            super.close();
         }
 }
 

@@ -308,6 +308,57 @@ enum AutoStart
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
 
+
+//==============================================================================
+// Section with private constants.
+//==============================================================================
+
+/++
+    Array of integers representing the last days of each month in a year.
+  +/
+private immutable int[13] lastDayNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+
+/++
+    Array of integers representing the last days of each month in a leap year.
+  +/
+private immutable int[13] lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
+
+/++
+    Array of the long names of each month.
+  +/
+private immutable string[12] longMonthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+];
+
+/++
+    Array of the short (three letter) names of each month.
+  +/
+private immutable string[12] shortMonthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+];
+
 //==============================================================================
 // Section with other types.
 //==============================================================================
@@ -2204,15 +2255,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     {
         version(testStdDateTime)
         {
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime, 1);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime, -1);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime(), 1);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime(), -1);
         }
     }
 
@@ -7898,10 +7949,13 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -8453,14 +8507,12 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+    deprecated static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString, tz);
     }
 
@@ -11905,35 +11957,14 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
       +/
     @property ushort dayOfYear() const pure nothrow
     {
-        switch(_month)
+        if (_month >= Month.jan && _month <= Month.dec)
         {
-            case Month.jan:
-                return _day;
-            case Month.feb:
-                return cast(ushort)(31 + _day);
-            case Month.mar:
-                return cast(ushort)((isLeapYear ? 60 : 59) + _day);
-            case Month.apr:
-                return cast(ushort)((isLeapYear ? 91 : 90) + _day);
-            case Month.may:
-                return cast(ushort)((isLeapYear ? 121 : 120) + _day);
-            case Month.jun:
-                return cast(ushort)((isLeapYear ? 152 : 151) + _day);
-            case Month.jul:
-                return cast(ushort)((isLeapYear ? 182 : 181) + _day);
-            case Month.aug:
-                return cast(ushort)((isLeapYear ? 213 : 212) + _day);
-            case Month.sep:
-                return cast(ushort)((isLeapYear ? 244 : 243) + _day);
-            case Month.oct:
-                return cast(ushort)((isLeapYear ? 274 : 273) + _day);
-            case Month.nov:
-                return cast(ushort)((isLeapYear ? 305 : 304) + _day);
-            case Month.dec:
-                return cast(ushort)((isLeapYear ? 335 : 334) + _day);
-            default:
-                assert(0, "Invalid month.");
+            immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
+            auto monthIndex = _month - Month.jan;
+
+            return cast(ushort)(lastDay[monthIndex] + _day);
         }
+        assert(0, "Invalid month.");
     }
 
     //Verify Examples.
@@ -11985,172 +12016,21 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
       +/
     @property void dayOfYear(int day) pure
     {
-        if(isLeapYear)
-        {
-            if(day <= 0 || day > daysInLeapYear)
-                throw new DateTimeException("Invalid day of the year.");
+        immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
-            switch(day)
+        if(day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
+            throw new DateTimeException("Invalid day of the year.");
+
+        foreach (i; 1..lastDay.length)
+        {
+            if (day <= lastDay[i])
             {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 60:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 61: .. case 91:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 60);
-                    break;
-                }
-                case 92: .. case 121:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 91);
-                    break;
-                }
-                case 122: .. case 152:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 121);
-                    break;
-                }
-                case 153: .. case 182:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 152);
-                    break;
-                }
-                case 183: .. case 213:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 182);
-                    break;
-                }
-                case 214: .. case 244:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 213);
-                    break;
-                }
-                case 245: .. case 274:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 244);
-                    break;
-                }
-                case 275: .. case 305:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 274);
-                    break;
-                }
-                case 306: .. case 335:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 305);
-                    break;
-                }
-                case 336: .. case 366:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 335);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
+                _month = cast(Month)(cast(int)Month.jan + i - 1);
+                _day = cast(ubyte)(day - lastDay[i - 1]);
+                return;
             }
         }
-        else
-        {
-            if(day <= 0 || day > daysInYear)
-                throw new DateTimeException("Invalid day of the year.");
-
-            switch(day)
-            {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 59:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 60: .. case 90:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 59);
-                    break;
-                }
-                case 91: .. case 120:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 90);
-                    break;
-                }
-                case 121: .. case 151:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 120);
-                    break;
-                }
-                case 152: .. case 181:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 151);
-                    break;
-                }
-                case 182: .. case 212:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 181);
-                    break;
-                }
-                case 213: .. case 243:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 212);
-                    break;
-                }
-                case 244: .. case 273:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 243);
-                    break;
-                }
-                case 274: .. case 304:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 273);
-                    break;
-                }
-                case 305: .. case 334:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 304);
-                    break;
-                }
-                case 335: .. case 365:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 334);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
-            }
-        }
+        assert(0, "Invalid day of the year.");
     }
 
     version(testStdDateTime) unittest
@@ -12793,10 +12673,13 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -13110,14 +12993,12 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
+    deprecated static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -14515,10 +14396,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -14729,14 +14613,12 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+    deprecated static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -17698,10 +17580,13 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -17970,14 +17855,12 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
+    deprecated static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
-        pragma(msg, softDeprec!("2.053", "November 2011", "fromISOExtendedString", "fromISOExtString"));
-
         return fromISOExtString!string(isoExtString);
     }
 
@@ -29860,9 +29743,7 @@ private:
         _enforceValidTZFile(!tzFile.eof());
         tzFile.rawRead(buff);
 
-        // @@@BUG@@@ 4414 forces us to save the result rather than use it directly.
-        auto bigEndian = cast(ubyte[T.sizeof])buff;
-        return bigEndianToNative!T(bigEndian);
+        return bigEndianToNative!T(cast(ubyte[T.sizeof])buff);
     }
 
     /+
@@ -30921,7 +30802,7 @@ public:
         sw.start();
         sw.stop();
         sw.reset();
-        assert(sw.peek().to!("seconds", real) == 0);
+        assert(sw.peek().to!("seconds", real)() == 0);
     }
 
 
@@ -30931,7 +30812,6 @@ public:
     void start()
     {
         assert(!_flagStarted);
-        StopWatch sw;
         _flagStarted = true;
         _timeStart = Clock.currSystemTick;
     }
@@ -30948,7 +30828,7 @@ public:
             doublestart = false;
         assert(!doublestart);
         sw.stop();
-        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() <= 0);
     }
 
 
@@ -30974,7 +30854,7 @@ public:
         catch(AssertError e)
             doublestop = false;
         assert(!doublestop);
-        assert((t1 - sw.peek()).to!("seconds", real) == 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() == 0);
     }
 
 
@@ -31094,7 +30974,7 @@ version(testStdDateTime) unittest
     void f1() {auto b = a;}
     void f2() {auto b = to!(string)(a);}
     auto r = benchmark!(f0, f1, f2)(10_000_000);
-    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int)());
 }
 
 version(testStdDateTime) @safe unittest
@@ -31205,7 +31085,7 @@ version(testStdDateTime) @safe unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
     //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
@@ -31216,8 +31096,8 @@ version(testStdDateTime) unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-    auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
+    auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
 }
 
 
@@ -32317,7 +32197,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();
@@ -32335,7 +32215,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();
@@ -32698,69 +32578,18 @@ unittest
   +/
 string monthToString(Month month, bool useLongName = true) pure
 {
+    if (month < Month.jan || month > Month.dec)
+    {
+        throw new DateTimeException("Invalid month: " ~  numToString(month));
+    }
+
     if(useLongName == true)
     {
-        switch(month)
-        {
-            case Month.jan:
-                return "January";
-            case Month.feb:
-                return "February";
-            case Month.mar:
-                return "March";
-            case Month.apr:
-                return "April";
-            case Month.may:
-                return "May";
-            case Month.jun:
-                return "June";
-            case Month.jul:
-                return "July";
-            case Month.aug:
-                return "August";
-            case Month.sep:
-                return "September";
-            case Month.oct:
-                return "October";
-            case Month.nov:
-                return "November";
-            case Month.dec:
-                return "December";
-            default:
-                throw new DateTimeException("Invalid month: " ~  numToString(month));
-        }
+        return longMonthNames[month - Month.jan];
     }
     else
     {
-        switch(month)
-        {
-            case Month.jan:
-                return "Jan";
-            case Month.feb:
-                return "Feb";
-            case Month.mar:
-                return "Mar";
-            case Month.apr:
-                return "Apr";
-            case Month.may:
-                return "May";
-            case Month.jun:
-                return "Jun";
-            case Month.jul:
-                return "Jul";
-            case Month.aug:
-                return "Aug";
-            case Month.sep:
-                return "Sep";
-            case Month.oct:
-                return "Oct";
-            case Month.nov:
-                return "Nov";
-            case Month.dec:
-                return "Dec";
-            default:
-                throw new DateTimeException("Invalid month: " ~  numToString(month));
-        }
+        return shortMonthNames[month - Month.jan];
     }
 }
 
@@ -34132,12 +33961,4 @@ template _isPrintable(T...)
     {
         enum _isPrintable = _isPrintable!(T[0]) && _isPrintable!(T[1 .. $]);
     }
-}
-
-
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum softDeprec = Format!("Notice: As of Phobos %s, std.datetime.%s has been scheduled " ~
-                              "for deprecation in %s. Please use std.datetime.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }

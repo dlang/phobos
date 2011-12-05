@@ -21,6 +21,7 @@ module std.process;
 
 
 import core.stdc.stdlib;
+import std.c.stdlib;
 import core.stdc.errno;
 import core.thread;
 import std.c.process;
@@ -277,7 +278,7 @@ version(Posix)
     {
         // No, so must traverse PATHs, looking for first match
         string[]    envPaths    =   std.string.split(
-            to!string(std.c.stdlib.getenv("PATH")), ":");
+            to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
         // Note: if any call to execve() succeeds, this process will cease
@@ -350,7 +351,7 @@ version (Windows) string shell(string cmd)
     foreach (ref e; 0 .. 8)
     {
         formattedWrite(a, "%x", rndGen.front);
-        rndGen.popFront;
+        rndGen.popFront();
     }
     auto filename = a.data;
     scope(exit) if (exists(filename)) remove(filename);
@@ -368,7 +369,7 @@ version (Posix) string shell(string cmd)
     {
         result ~= line;
     }
-    f.close;
+    f.close();
     return result;
 }
 
@@ -388,7 +389,7 @@ string getenv(in char[] name)
 {
     // Cache the last call's result
     static string lastResult;
-    auto p = std.c.stdlib.getenv(toStringz(name));
+    auto p = core.stdc.stdlib.getenv(toStringz(name));
     if (!p) return null;
     auto value = p[0 .. strlen(p)];
     if (value == lastResult) return lastResult;

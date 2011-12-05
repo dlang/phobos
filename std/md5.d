@@ -34,28 +34,22 @@
 // RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
 import std.md5;
-
-private import std.stdio;
-private import std.string;
-private import std.c.stdio;
-private import std.c.string;
+import std.stdio;
 
 void main(string[] args)
 {
-    foreach (char[] arg; args)
-         MDFile(arg);
+    foreach (arg; args)
+        mdFile(arg);
 }
 
-/* Digests a file and prints the result. */
-void MDFile(string filename)
+/// Digests a file and prints the result.
+void mdFile(string filename)
 {
-    FILE* file = enforce(fopen(filename), "Could not open file `"~filename~"'");
-    scope(exit) fclose(file);
-    ubyte digest[16];
+    ubyte[16] digest;
 
     MD5_CTX context;
     context.start();
-    foreach (ubyte buffer; chunks(file, 4096 * 1024))
+    foreach (buffer; File(filename).byChunk(4096 * 1024))
         context.update(buffer);
     context.finish(digest);
     writefln("MD5 (%s) = %s", filename, digestToString(digest));
@@ -149,7 +143,7 @@ string d = getDigestString(a, b, c);
 string getDigestString(in void[][] data...)
 {
     MD5_CTX ctx;
-    ctx.start;
+    ctx.start();
     foreach (datum; data) {
         ctx.update(datum);
     }

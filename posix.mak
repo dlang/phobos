@@ -111,7 +111,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -185,7 +185,8 @@ std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) std/internal/processinit
+	gammafunction errorfunction) $(addprefix std/internal/, \
+	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
@@ -245,11 +246,13 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-ifeq ($(MODEL),64)
-DISABLED_TESTS += std/conv
-# not reduced yet. I hate reducing this file
-# passes on debug, segv on release
+ifeq (osx,$(OS))
+# Build fat library that combines the 32 bit and the 64 bit libraries
+libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
+	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
+endif
 
+ifeq ($(MODEL),64)
 DISABLED_TESTS += std/format
 # Still not passing, time to pull out the next issue.
 
@@ -291,7 +294,7 @@ install : release
 	sudo cp $(LIB) /usr/lib/
 
 $(DRUNTIME) :
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
 
 ###########################################################
 # html documentation
@@ -340,3 +343,4 @@ html_consolidated :
 	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
+

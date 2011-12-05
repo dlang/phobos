@@ -486,7 +486,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         static if (isForwardRange!Range) {
             /**
-             * Captures a Range state. 
+             * Captures a Range state.
              *
              * Returns:
              *  a copy of $(D this).
@@ -541,7 +541,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             else
                 popFront();
         }
-        
+
 
         /**
          * Range primitive operation that checks iteration state.
@@ -594,7 +594,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 pos = -1;
                 return;
             }
-                        
+
             final switch (pos) {
             case 0:
                 first = EncodeMap[range_.front >> 2];
@@ -626,14 +626,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 range_.popFront();
                 break;
             }
-            
-            ++pos %= 4;            
+
+            ++pos %= 4;
         }
 
 
         static if (isForwardRange!Range) {
             /**
-             * Captures a Range state. 
+             * Captures a Range state.
              *
              * Returns:
              *  a copy of $(D this).
@@ -1120,7 +1120,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         static if (isForwardRange!Range) {
             /**
-             * Captures a Range state. 
+             * Captures a Range state.
              *
              * Returns:
              *  a copy of $(D this).
@@ -1191,7 +1191,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             else
                 popFront();
         }
-        
+
 
         /**
          * Range primitive operation that checks iteration state.
@@ -1231,7 +1231,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
             static if (Padding == NoPadding) {
                 bool endCondition()
-                { 
+                {
                     return range_.empty;
                 }
             } else {
@@ -1289,7 +1289,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         static if (isForwardRange!Range) {
             /**
-             * Captures a Range state. 
+             * Captures a Range state.
              *
              * Returns:
              *  a copy of $(D this).
@@ -1394,7 +1394,7 @@ unittest
         assert(Base64.encodeLength(tv["foob"].length)   == 8);
         assert(Base64.encodeLength(tv["fooba"].length)  == 8);
         assert(Base64.encodeLength(tv["foobar"].length) == 8);
-       
+
         assert(Base64.encode(tv[""])       == "");
         assert(Base64.encode(tv["f"])      == "Zg==");
         assert(Base64.encode(tv["fo"])     == "Zm8=");
@@ -1435,7 +1435,7 @@ unittest
         assert(Base64Re.encodeLength(tv["foob"].length)   == 6);
         assert(Base64Re.encodeLength(tv["fooba"].length)  == 7);
         assert(Base64Re.encodeLength(tv["foobar"].length) == 8);
-       
+
         assert(Base64Re.encode(tv[""])       == "");
         assert(Base64Re.encode(tv["f"])      == "Zg");
         assert(Base64Re.encode(tv["fo"])     == "Zm8");
@@ -1518,7 +1518,7 @@ unittest
             auto f = File("testingEncoder");
             scope(exit)
             {
-                f.close;
+                f.close();
                 assert(!f.isOpen);
                 std.file.remove("testingEncoder");
             }
@@ -1537,7 +1537,7 @@ unittest
             auto f = File("testingDecoder");
             scope(exit)
             {
-                f.close;
+                f.close();
                 assert(!f.isOpen);
                 std.file.remove("testingDecoder");
             }

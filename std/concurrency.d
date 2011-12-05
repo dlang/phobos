@@ -87,7 +87,7 @@ private
             data = Tuple!(T)( vals );
         }
 
-        auto convertsTo(T...)()
+        @property auto convertsTo(T...)()
         {
             static if( T.length == 1 )
                 return is( T[0] == Variant ) ||
@@ -96,7 +96,7 @@ private
                 return data.convertsTo!(Tuple!(T));
         }
 
-        auto get(T...)()
+        @property auto get(T...)()
         {
             static if( T.length == 1 )
             {
@@ -1292,7 +1292,7 @@ private
         /*
          *
          */
-        bool empty()
+        @property bool empty()
         {
             return m_first is null;
         }

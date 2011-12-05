@@ -333,8 +333,8 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
-    static assert(!__traits(compiles, popFront!(immutable int[])));
-    static assert(!__traits(compiles, popFront!(void[])));
+    static assert(!__traits(compiles, popFront!(immutable int[])()));
+    static assert(!__traits(compiles, popFront!(void[])()));
 }
 
 // Specialization for narrow strings. The necessity of
@@ -575,7 +575,7 @@ unittest
 }
 
 /+
-Commented out until the insert which is scheduled for deprecation is removed.
+Commented out until the insert which has been deprecated has been removed.
 I'd love to just remove it in favor of insertInPlace, but then code would then
 use this version of insert and silently break. So, it's here so that it can
 be used once insert has not only been deprecated but removed, but until then,
@@ -923,23 +923,20 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Use $(XREF array, insertInPlace) instead.)
+    $(RED Deprecated. It will be removed in May 2012.
+          Please use $(LREF insertInPlace) instead.)
 
     Same as $(XREF array, insertInPlace).
   +/
-void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
+deprecated void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
-    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
-                "Use insertInPlace instead.");
     insertInPlace(array, pos, stuff);
 }
 
 /// Ditto
 void insert(T)(ref T[] array, size_t pos, T stuff)
 {
-    pragma(msg, "std.array.insert has been scheduled for deprecation. " ~
-                "Use insertInPlace instead.");
     insertInPlace(array, pos, stuff);
 }
 
@@ -1237,7 +1234,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
         return result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
@@ -1329,7 +1326,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
         return cast(typeof(return)) result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
@@ -1506,7 +1503,7 @@ unittest
 }
 
 /+
-Commented out until the replace which is scheduled for deprecation is removed.
+Commented out until the replace which has been deprecated has been removed.
 I'd love to just remove it in favor of replaceInPlace, but then code would then
 use this version of replaceInPlace and silently break. So, it's here so that it
 can be used once replace has not only been deprecated but removed, but
@@ -1634,9 +1631,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     else if (stuff.length <= to - from)
     {
         // replacement reduces length
-        // BUG 2128
-        //immutable stuffEnd = from + stuff.length;
-        auto stuffEnd = from + stuff.length;
+        immutable stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff;
         array = remove(array, tuple(stuffEnd, to));
     }
@@ -1747,16 +1742,14 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation. Use $(XREF array, replaceInPlace) instead.)
+    $(RED Deprecated. It will be removed in May 2012.
+          Please use $(LREF replaceInPlace) instead.)
 
     Same as $(XREF array, replaceInPlace).
   +/
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+deprecated void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
-    pragma(msg, "std.array.replace(T, Range)(ref T[] array, size_t from, " ~
-                "size_t to, Range stuff) has been scheduled for deprecation. " ~
-                "Use replaceInPlace instead.");
     replaceInPlace(array, from, to, stuff);
 }
 
@@ -2298,7 +2291,7 @@ struct SimpleSlice(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }
@@ -2444,7 +2437,7 @@ struct SimpleSliceLvalue(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }
