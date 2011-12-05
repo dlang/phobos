@@ -3522,7 +3522,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     {
         static if (!hasLvalueElements!Range) {
             // Don't have lvalue access.
-            ret ~= "\tElementType!(R[" ~ to!string(ti) ~ "]) front" ~
+            ret ~= "\tUnqual!(ElementType!(R[" ~ to!string(ti) ~ "])) front" ~
                 to!string(ti) ~ ";\n";
         }
     }
@@ -3764,6 +3764,13 @@ unittest {
     // Make sure we've worked around the relevant compiler bugs and this at least
     // compiles w/ >2 ranges.
     lockstep(foo, foo, foo);
+    
+    // Make sure it works with const.
+    const(int[])[] foo = [[1, 2, 3]];
+    const(int[])[] bar = [[4, 5, 6]];
+    auto c = chain(foo, bar);
+    
+    foreach(f, b; lockstep(c, c)) {}
 }
 
 /**
