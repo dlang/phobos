@@ -3522,7 +3522,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     {
         static if (!hasLvalueElements!Range) {
             // Don't have lvalue access.
-            ret ~= "\tElementType!(R[" ~ to!string(ti) ~ "]) front" ~
+            ret ~= "\tUnqual!(ElementType!(R[" ~ to!string(ti) ~ "])) front" ~
                 to!string(ti) ~ ";\n";
         }
     }
