@@ -3766,9 +3766,9 @@ unittest {
     lockstep(foo, foo, foo);
     
     // Make sure it works with const.
-    const(int[])[] foo = [[1, 2, 3]];
-    const(int[])[] bar = [[4, 5, 6]];
-    auto c = chain(foo, bar);
+    const(int[])[] foo2 = [[1, 2, 3]];
+    const(int[])[] bar2 = [[4, 5, 6]];
+    auto c = chain(foo2, bar2);
     
     foreach(f, b; lockstep(c, c)) {}
 }
