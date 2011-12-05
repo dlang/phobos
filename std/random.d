@@ -1311,8 +1311,8 @@ range.
 Example:
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-// Print 5 random elements picked off from r
-foreach (e; randomSample(n, 5))
+// Print 5 random elements picked off from a
+foreach (e; randomSample(a, 5))
 {
     writeln(e);
 }
@@ -1433,7 +1433,7 @@ Returns the index of the visited record.
 auto randomSample(R)(R r, size_t n, size_t total)
 if(isInputRange!R)
 {
-    RandomSample!(R, void)(r, n, total);
+    return RandomSample!(R, void)(r, n, total);
 }
 
 /// Ditto
@@ -1469,6 +1469,7 @@ unittest
 
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
+    assert(randomSample(a, 5, 10).length == 5);
     assert(randomSample(a, 5, gen).length == 5);
     uint i;
     foreach (e; randomSample(randomCover(a, rndGen), 5))
