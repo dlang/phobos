@@ -872,31 +872,6 @@ float sqrt(float x) @safe pure nothrow;    /* intrinsic */
 double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
 real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
 
-@trusted pure nothrow {  // Should be @safe.  See bugs 4628, 4630.
-    // Create explicit overloads for integer sqrts.  No ddoc for these because
-    // hopefully a more elegant solution will eventually be found, so we don't
-    // want people relying too heavily on the minutiae of this, for example,
-    // by taking the address of sqrt(int) or something.
-    real sqrt(byte x) { return sqrt(cast(real) x); }
-    real sqrt(ubyte x) { return sqrt(cast(real) x); }
-    real sqrt(short x) { return sqrt(cast(real) x); }
-    real sqrt(ushort x) { return sqrt(cast(real) x); }
-    real sqrt(int x) { return sqrt(cast(real) x); }
-    real sqrt(uint x) { return sqrt(cast(real) x); }
-    real sqrt(long x) { return sqrt(cast(real) x); }
-    real sqrt(ulong x) { return sqrt(cast(real) x); }
-}
-
-unittest {
-    alias TypeTuple!(byte, ubyte, short, ushort,
-                     int, uint, long, ulong, float, double, real) Numerics;
-    foreach(T; Numerics) {
-        immutable T two = 2;
-        assert(approxEqual(sqrt(two), SQRT2),
-            "sqrt unittest failed on type " ~ T.stringof);
-    }
-}
-
 creal sqrt(creal z) @safe pure nothrow
 {
     creal c;
