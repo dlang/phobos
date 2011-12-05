@@ -1,9 +1,18 @@
 $(VERSION 057, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-      $(LI Replacement of std.regex module.)
+      $(LI Major overhaul of std.regex module's implementation.)
       $(LI As typedef has been deprecated, overloads of std.conv.to which use
            typedef have now been deprecated.)
+      $(LI std.array.insert has been deprecated. Please use std.array.insertInPlace instead.)
+      $(LI The overload of std.array.replace which replaces in place has been deprecated.
+           Please use std.array.replaceInPlace instead.)
+      $(LI The toISOExtendedString and fromISOExtendedString functions on SysTime, Date,
+           TimeOfDay, and DateTime in std.datetime have been deprecated. Please use
+           toISOExtString and fromISOExtString instead.)
+      $(LI std.file.getTimesPosix has been deprecated. Please use std.file.getTimes instead.)
+      $(LI The overloads for isDir, isFile, and isSymlink in std.file which take a uint
+           have been deprecated. Please use attrIsDir, attrIsFile, and attrIsSymlink instead.)
      )
 
     $(LIBBUGSFIXED
