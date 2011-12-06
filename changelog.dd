@@ -28,6 +28,8 @@ $(VERSION 057, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
         $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
         $(LI $(BUGZILLA 7039): Posix 2.057 Makefile error breaking 64bit build)
+        $(LI $(BUGZILLA 7040): Phobos must use "version/else version" blocks for proper
+                               documentation generation.)
         $(LI $(BUGZILLA 7055): to!float("INF2") == 2)
      )
  )
