@@ -24,6 +24,8 @@ $(VERSION 057, ddd mm, 2011, =================================================,
         $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
         $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
         $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
+        $(LI $(BUGZILLA 6976): GetLastError called as property
+        $(LI $(BUGZILLA 6977): getErrno called as property in std.stdio
         $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
         $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
         $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
