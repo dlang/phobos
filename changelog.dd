@@ -18,12 +18,15 @@ $(VERSION 057, ddd mm, 2011, =================================================,
     $(LIBBUGSFIXED
         $(LI Unlisted bug: std.conv: Fix to!float("-0"))
         $(LI Unlisted bug: std.conv: Fix bug in emplace)
+        $(LI Unlisted bug: std.file broken on OS X x86_64 due to wrong stat64 declaration.)
         $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
         $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
         $(LI $(BUGZILLA 6887): Regression of getopt)
         $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
         $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
         $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
+        $(LI $(BUGZILLA 6976): GetLastError called as property
+        $(LI $(BUGZILLA 6977): getErrno called as property in std.stdio
         $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
         $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
         $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
