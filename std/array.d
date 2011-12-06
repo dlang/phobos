@@ -901,7 +901,7 @@ unittest // bugzilla 6874
     a.length = 1;
 
     // fill it
-    a.length = GC.sizeOf(a.ptr) - 1;
+    a.length = a.capacity;
 
     // write beyond
     byte[] b = a[$ .. $];
