@@ -18,6 +18,7 @@ $(VERSION 057, ddd mm, 2011, =================================================,
     $(LIBBUGSFIXED
         $(LI Unlisted bug: std.conv: Fix to!float("-0"))
         $(LI Unlisted bug: std.conv: Fix bug in emplace)
+        $(LI Unlisted bug: std.file broken on OS X x86_64 due to wrong stat64 declaration.)
         $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
         $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
         $(LI $(BUGZILLA 6887): Regression of getopt)
