@@ -3129,6 +3129,142 @@ template isAbstractFunction(method...)
 }
 
 
+/**
+Checks if the runtime type of $(D a) is, or is implicitly castable to,
+or is derived from type $(D T).
+
+Example:
+----
+class Foo {}
+
+assert(  isType!Foo(new Foo()) );
+assert( !isType!Foo(new Object()) );
+
+assert(  isType!double(3) );
+assert( !isType!string(3) );
+----
+ */
+template isType(T)
+{
+    bool isType(Ta)(Ta a)
+    {
+        static if (is(Ta : T))
+            return true;
+        else static if (!is(Ta : Object) || !is(T : Object))
+            return false;
+        else static if (!__traits(compiles, cast(T)a))
+            return false;
+        else
+            return cast(T)a !is null;
+    }
+}
+
+unittest
+{
+    class Foo {}
+    class Bar {}
+    auto f = new Foo();
+
+    assert(  isType!int(3)    );
+    assert(  isType!double(3) );
+    assert( !isType!string(3) );
+    assert( !isType!Foo(3)    );
+
+    assert(  isType!Foo(f)             );
+    assert( !isType!Foo(new Object())  );
+    assert(  isType!Object(f)          );
+    assert(  isType!Foo(cast(Object)f) );
+    assert( !isType!Bar(f)             );
+    assert( !isType!int(f)             );
+}
+
+/**
+Checks if the runtime type of $(D a) is, or is implicitly castable to,
+or is derived from any of the $(D TList) types.
+
+Example:
+----
+class Foo {}
+
+assert(  isAnyType!(int,string,Foo)(new C()) );
+assert( !isAnyType!(int,string,Foo)(2.5) );
+----
+ */
+template isAnyType(TList...)
+{
+    bool isAnyType(T)(T val)
+    {
+        foreach (TTest; TList)
+        {
+            if (isType!TTest(val))
+                return true;
+        }
+
+        return false;
+    }
+}
+
+/**
+Checks if the runtime type of $(D a) is, or is implicitly castable to,
+or is derived from all of the $(D TList) types.
+
+Example:
+----
+class A {}
+class B : A {}
+class C : B {}
+
+assert(  isAllTypes!(A,B,C)(new C()) );
+assert( !isAllTypes!(A,B,C)(new A()) );
+assert( !isAllTypes!(A,B,C)(3) );
+----
+ */
+template isAllTypes(TList...)
+{
+    bool isAllTypes(T)(T val)
+    {
+        foreach (TTest; TList)
+        {
+            if (!isType!TTest(val))
+                return false;
+        }
+
+        return true;
+    }
+}
+
+unittest
+{
+    class Foo {}
+    class Bar {}
+    auto f = new Foo();
+
+    assert(  isAnyType !(int, double)(3) );
+    assert(  isAllTypes!(int, double)(3) );
+    assert(  isAnyType !(int, Foo)(3)    );
+    assert( !isAllTypes!(int, Foo)(3)    );
+    assert( !isAnyType !(Foo, Object)(3) );
+
+    assert(  isAnyType !(Foo, Object)(f) );
+    assert(  isAllTypes!(Foo, Object)(f) );
+    assert(  isAnyType !(int, Foo)(f)    );
+    assert( !isAllTypes!(int, Foo)(f)    );
+    assert(  isAnyType !(Bar, Foo)(f)    );
+    assert( !isAllTypes!(Bar, Foo)(f)    );
+    assert( !isAnyType !(int, Bar)(f)    );
+
+    assert(  isAnyType!(int,string,Foo)(new Foo()) );
+    assert( !isAnyType!(int,string,Foo)(2.5) );
+
+    class A {}
+    class B : A {}
+    class C : B {}
+
+    assert(  isAllTypes!(A,B,C)(new C()) );
+    assert( !isAllTypes!(A,B,C)(new A()) );
+    assert( !isAllTypes!(A,B,C)(3) );
+}
+
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // General Types
