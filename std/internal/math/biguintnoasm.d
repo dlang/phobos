@@ -52,8 +52,8 @@ unittest
     uint [] c = new uint[40];
     for (size_t i = 0; i < a.length; ++i)
     {
-        if (i&1) a[i]=0x8000_0000 + i;
-        else a[i]=i;
+        if (i&1) a[i]=cast(uint)0x8000_0000 + i;
+        else a[i]=cast(uint)i;
         b[i]= 0x8000_0003;
     }
     c[19]=0x3333_3333;
