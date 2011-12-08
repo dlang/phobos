@@ -1063,19 +1063,35 @@ static struct AsyncLineInputRange(Char)
  * If $(D postData) is non-null the method will be set to $(D post) for Http
  * requests.
  *
+ * The background thread will buffer up to transmitBuffers number of lines
+ * before is stops receiving data from network. When the main thread reads the
+ * lines from the range it frees up buffers and allows for the background thread
+ * to receive more data from the network.
+ *
+ * If no data is available and the main thread access the range it will block
+ * until data becomes available. An exception to this is the $(D wait(Duration))
+ * method on the range. This method will wait at maximum for the specified
+ * duration and return true if data is available.
+ * 
  * $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html, _curl_easy_setopt)
  * 
  * Example:
  * ----
  * import etc.curl, std.stdio;
+ * // Get some pages in the background
+ * auto range1 = byLineAsync("www.google.com");
+ * auto range2 = byLineAsync("www.wikipedia.org"); 
  * foreach (line; byLineAsync("d-p-l.org")) 
  *     writeln(line);
+ *
+ * // Lines already fetched in the background and ready
+ * foreach (line; range1) writeln(line);
+ * foreach (line; range2) writeln(line);
  * ----
  *
  * Returns:
  * A range of strings with the content of the resource pointer to by the
- * url. The range has a wait(Duration) method that waits for the specified
- * duration and returns true if data is available in the range.
+ * url.
  */
 auto byLineAsync(Conn = AutoConnection, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData, 
@@ -1216,19 +1232,35 @@ static struct AsyncChunkInputRange
  * If $(D postData) is non-null the method will be set to $(D post) for Http
  * requests.
  *
+ * The background thread will buffer up to transmitBuffers number of chunks
+ * before is stops receiving data from network. When the main thread reads the
+ * chunks from the range it frees up buffers and allows for the background
+ * thread to receive more data from the network.
+ *
+ * If no data is available and the main thread access the range it will block
+ * until data becomes available. An exception to this is the $(D wait(Duration))
+ * method on the range. This method will wait at maximum for the specified
+ * duration and return true if data is available.
+ *
  * $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html, _curl_easy_setopt)
  * 
  * Example:
  * ----
  * import etc.curl, std.stdio;
- * foreach (chunk; byChunkAsync("d-p-l.org", 100)) 
+ * // Get some pages in the background
+ * auto range1 = byChunkAsync("www.google.com", 100);
+ * auto range2 = byChunkAsync("www.wikipedia.org"); 
+ * foreach (chunk; byChunkAsync("d-p-l.org")) 
  *     writeln(chunk); // chunk is ubyte[100]
+ *
+ * // Chunks already fetched in the background and ready
+ * foreach (chunk; range1) writeln(chunk);
+ * foreach (chunk; range2) writeln(chunk);
  * ----
  *
  * Returns:
  * A range of ubyte[chunkSize] with the content of the resource pointer to by
- * the url. The range has a wait(Duration) method that waits for the specified
- * duration and returns true if data is available in the range.
+ * the url.
  */
 auto byChunkAsync(Conn = AutoConnection, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData, 
