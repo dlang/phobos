@@ -943,6 +943,48 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
         units = null;
     }
     
+    /** Wait for duration or until data is available and return true if data is
+         available
+    */
+    bool wait(Duration d)
+    {
+        if (state == State.gotUnits)
+            return true;
+        
+        Duration noDur = dur!"hnsecs"(0);
+        StopWatch sw;
+        sw.start();
+        while (state != State.gotUnits && d > noDur)
+        {
+            final switch (state) 
+            {
+            case State.needUnits:
+                receiveTimeout(d,
+                        (Tid origin, Message!(immutable(Unit)[]) _data) { 
+                            if (origin != workerTid)
+                                return false;
+                            units = cast(Unit[]) _data.data;
+                            state = State.gotUnits;
+                            return true;
+                        },
+                        (Tid origin, Message!bool f) { 
+                            if (origin != workerTid)
+                                return false;
+                            state = state.done;
+                            return true;
+                        }
+                        );
+                break;
+            case State.gotUnits: return true;
+            case State.done:
+                return false;
+            }
+            d -= cast(Duration)sw.peek();
+            sw.reset();
+        }
+        return state == State.gotUnits;
+    }
+
     enum State 
     {
         needUnits,
@@ -1031,7 +1073,9 @@ static struct AsyncLineInputRange(Char)
  * ----
  *
  * Returns:
- * A range of strings with the content of the resource pointer to by the url
+ * A range of strings with the content of the resource pointer to by the
+ * url. The range has a wait(Duration) method that waits for the specified
+ * duration and returns true if data is available in the range.
  */
 auto byLineAsync(Conn = AutoConnection, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData, 
@@ -1182,8 +1226,9 @@ static struct AsyncChunkInputRange
  * ----
  *
  * Returns:
- * A range of ubyte[chunkSize] with the content of the resource pointer 
- * to by the url
+ * A range of ubyte[chunkSize] with the content of the resource pointer to by
+ * the url. The range has a wait(Duration) method that waits for the specified
+ * duration and returns true if data is available in the range.
  */
 auto byChunkAsync(Conn = AutoConnection, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData, 
