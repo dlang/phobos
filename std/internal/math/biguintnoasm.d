@@ -52,7 +52,7 @@ unittest
     uint [] c = new uint[40];
     for (size_t i = 0; i < a.length; ++i)
     {
-        if (i&1) a[i]=cast(uint)0x8000_0000 + i;
+        if (i&1) a[i]=cast(uint)(0x8000_0000 + i);
         else a[i]=cast(uint)i;
         b[i]= 0x8000_0003;
     }
@@ -289,11 +289,11 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
 unittest
 {
     uint [] aa = new uint[101];
-    for (size_t i = 0; i < aa.length; ++i)
+    for (uint i = 0; i < aa.length; ++i)
         aa[i] = 0x8765_4321 * (i+3);
     uint overflow = multibyteMul(aa, aa, 0x8EFD_FCFB, 0x33FF_7461);
     uint r = multibyteDivAssign(aa, 0x8EFD_FCFB, overflow);
-    for (size_t i=0; i<aa.length; ++i)
+    for (uint i=0; i<aa.length; ++i)
     {
         assert(aa[i] == 0x8765_4321 * (i+3));
     }
