@@ -1420,7 +1420,7 @@ unittest
     static assert(!hasUnsharedAliasing!(Rebindable!(immutable Object)));
     static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
     static assert(hasUnsharedAliasing!(Rebindable!(Object)));
-    
+
     /* Issue 6979 */
     static assert(!hasUnsharedAliasing!(int, shared(int)*));
     static assert(hasUnsharedAliasing!(int, int*));
@@ -1992,7 +1992,7 @@ private template MemberFunctionTupleImpl(C, string name)
      */
     template CollectOverloads(Node)
     {
-        static if (__traits(hasMember, Node, name))
+        static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
         {
             // Get all overloads in sight (not hidden).
             alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
