@@ -5489,6 +5489,57 @@ unittest
     assert(range == [3, 2, 1]);
 }
 
+/**
+Reverses $(D r) in-place, where $(D r) is a narrow string (having
+elements of type $(D char) or $(D wchar)). UTF sequences consisting of
+multiple code units are preserved properly.
+
+Example:
+----
+char[] arr = "hello\U00010143\u0100\U00010143".dup;
+reverse(arr);
+assert(arr == "\U00010143\u0100\U00010143olleh");
+----
+*/
+void reverse(Char)(Char[] s)
+if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
+{
+    auto r = representation(s);
+    for (size_t i = 0; i < s.length; )
+    {
+        immutable step = std.utf.stride(s, i);
+        if (step > 1)
+        {
+            .reverse(r[i .. i + step]);
+            i += step;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+    reverse(r);
+}
+
+unittest
+{
+    void test(string a, string b)
+    {
+        auto c = a.dup;
+        reverse(c);
+        assert(c == b, c ~ " != " ~ b);
+    }
+
+    test("a", "a");
+    test(" ", " ");
+    test("\u2029", "\u2029");
+    test("\u0100", "\u0100");
+    test("\u0430", "\u0430");
+    test("\U00010143", "\U00010143");
+    test("abcdefcdef", "fedcfedcba");
+    test("hello\U00010143\u0100\U00010143", "\U00010143\u0100\U00010143olleh");
+}
+
 // bringToFront
 /**
 The $(D bringToFront) function has considerable flexibility and
