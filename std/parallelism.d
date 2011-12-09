@@ -371,8 +371,8 @@ Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
        call site, only to $(D args) in this struct.
 */
 struct Task(alias fun, Args...) {
-    private AbstractTask base = {runTask : &impl};
-    private alias base this;
+    AbstractTask base = {runTask : &impl};
+    alias base this;
 
     private @property AbstractTask* basePtr() {
         return &base;
