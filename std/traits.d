@@ -2226,6 +2226,8 @@ template ImplicitConversionTargets(T)
         alias TypeTuple!(wchar, dchar, int, uint, long, ulong,
             float, double, real)
             ImplicitConversionTargets;
+    else static if (is(T : typeof(null)))
+        alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
     // @@@BUG@@@ this should work
