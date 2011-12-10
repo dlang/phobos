@@ -245,6 +245,9 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 #	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
+libphobos.a :
+	lipo lib32/libphobos.a lib64/libphobos.a -create -output libphobos.a
+
 unittest :
 	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS)
 	./unittest

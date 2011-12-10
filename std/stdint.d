@@ -155,8 +155,17 @@ alias ulong uint_fast64_t;
 
 /* Integer pointer holders */
 
-alias int   intptr_t;
-alias uint uintptr_t;
+static if (size_t.sizeof == 4)
+{
+    alias int   intptr_t;
+    alias uint uintptr_t;
+}
+else static if (size_t.sizeof == 8)
+{
+    alias long  intptr_t;
+    alias ulong uintptr_t;
+}
+else static assert(0);
 
 /* Greatest width integer types */
 
