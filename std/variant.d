@@ -1485,3 +1485,10 @@ unittest
     a.func1();
     Variant b = Variant(a);
 }
+
+unittest
+{
+    // bug 7070
+    Variant v;
+    v = null;
+}
