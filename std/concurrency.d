@@ -38,7 +38,7 @@
  *     send(tid, 42);
  *    
  *     // Receive the result code.  
- *     auto wasSuccessful = receiveOnly!(int);
+ *     auto wasSuccessful = receiveOnly!(bool);
  *     assert(wasSuccessful);
  *     writeln("Successfully printed number.");
  * }
