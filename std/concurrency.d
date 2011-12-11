@@ -12,6 +12,38 @@
  * specialized handle called a Tid.  It is effectively a subclass of Cid, with
  * additional features specific to in-process messaging.
  *
+ * Synposis:
+ * ---
+ * import std.stdio;
+ * import std.concurrency;
+ *
+ * void spawnedFunc(Tid tid)
+ * {
+ *     // Receive a message from the owner thread.
+ *     receive(
+ *         (int i) { writeln("Received the number ", i);}
+ *     );
+ * 
+ *     // Send a message back to the owner thread
+ *     // indicating success.
+ *     send(tid, true);
+ * }
+ *
+ * void main() 
+ * {
+ *     // Start spawnedFunc in a new thread.
+ *     auto tid = spawn(&spawnedFunc, thisTid);
+ *
+ *     // Send the number 42 to this new thread.
+ *     send(tid, 42);
+ *    
+ *     // Receive the result code.  
+ *     auto wasSuccessful = receiveOnly!(bool);
+ *     assert(wasSuccessful);
+ *     writeln("Successfully printed number.");
+ * }
+ * ---
+ *
  * Copyright: Copyright Sean Kelly 2009 - 2010.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Sean Kelly
@@ -193,7 +225,8 @@ static ~this()
 
 
 /**
- *
+ * Thrown on calls to $(D receiveOnly) if a message other than the type
+ * the receiving thread expected is sent.
  */
 class MessageMismatch : Exception
 {
@@ -205,7 +238,8 @@ class MessageMismatch : Exception
 
 
 /**
- *
+ * Thrown on calls to $(D receive) if the thread that spawned the receiving
+ * thread has terminated and no more messages exist.
  */
 class OwnerTerminated : Exception
 {
@@ -220,7 +254,7 @@ class OwnerTerminated : Exception
 
 
 /**
- *
+ * Thrown if a linked thread has terminated.
  */
 class LinkTerminated : Exception
 {
@@ -235,7 +269,9 @@ class LinkTerminated : Exception
 
 
 /**
- *
+ * Thrown if a message was sent to a thread via 
+ * $(XREF concurrency, prioritySend) and the receiver does not have a handler
+ * for a message of this type.
  */
 class PriorityMessageException : Exception
 {
@@ -245,12 +281,16 @@ class PriorityMessageException : Exception
         message = vals;
     }
 
+    /**
+     * The message that was sent.
+     */
     Variant message;
 }
 
 
 /**
- *
+ * Thrown on mailbox crowding if the mailbox is configured with
+ * $(D OnCrowding.throwException).
  */
 class MailboxFull : Exception
 {
@@ -311,11 +351,11 @@ private:
 
 
 /**
- * Executes the supplied function in a new context represented by Tid.  The
+ * Executes the supplied function in a new context represented by $(D Tid).  The
  * calling context is designated as the owner of the new context.  When the
- * owner context terminated an OwnerTerminated message will be sent to the
- * new context, causing an OwnerTerminated exception to be thrown on
- * receive().
+ * owner context terminated an $(D OwnerTerminated) message will be sent to the
+ * new context, causing an $(D OwnerTerminated) exception to be thrown on
+ * $(D receive()).
  *
  * Params:
  *  fn   = The function to execute.
@@ -323,6 +363,38 @@ private:
  *
  * Returns:
  *  A Tid representing the new context.
+ *
+ * Notes:  
+ *  $(D args) must not have unshared aliasing.  In other words, all arguments
+ *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
+ *  pointer indirection.  This is necessary for enforcing isolation among
+ *  threads.
+ *
+ * Example:
+ * ---
+ * import std.stdio;
+ *
+ * void f1(string str) 
+ * {
+ *     writeln(str);
+ * }
+ *
+ * void f2(char[] str) 
+ * {
+ *     writeln(str);
+ * }
+ * 
+ * void main() 
+ * {
+ *     auto str = "Hello, world";
+ *
+ *     // Works:  string is immutable.
+ *     auto tid1 = spawn(&f1, str);  
+ * 
+ *     // Fails:  char[] has mutable aliasing.
+ *     auto tid2 = spawn(&f2, str.dup);
+ * }
+ * ---
  */
 Tid spawn(T...)( void function(T) fn, T args )
 {
@@ -385,7 +457,8 @@ private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
 
 
 /**
- * Sends the supplied value to the context represented by tid.
+ * Sends the supplied value to the context represented by tid.  As with
+ * $(XREF concurrency, spawn), $(D T) must not have unshared aliasing.
  */
 void send(T...)( Tid tid, T vals )
 {
@@ -396,7 +469,9 @@ void send(T...)( Tid tid, T vals )
 
 
 /**
- *
+ * Send a message to $(D tid) but place it at the front of $(D tid)'s message
+ * queue instead of at the back.  This function is typically used for 
+ * out-of-band communication, to signal exceptional conditions, etc.
  */
 void prioritySend(T...)( Tid tid, T vals )
 {
@@ -426,7 +501,30 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
 
 
 /**
+ * Receive a message from another thread, or block if no messages of the 
+ * specified types are available.  This function works by pattern matching
+ * a message against a set of delegates and executing the first match found.
+ * 
+ * If a delegate that accepts a $(XREF variant, Variant) is included as
+ * the last argument to $(D receive), it will match any message that was not
+ * matched by an earlier delegate.  If more than one argument is sent,
+ * the $(D Variant) will contain a $(XREF typecons, Tuple) of all values
+ * sent.
  *
+ * Example:
+ * ---
+ * import std.stdio;
+ * import std.variant;
+ * 
+ * void spawnedFunction()
+ * {
+ *     receive(
+ *         (int i) { writeln("Received an int."); },
+ *         (float f) { writeln("Received a float."); },
+ *         (Variant v) { writeln("Received some other type."); }
+ *     );
+ * }
+ * ---
  */
 void receive(T...)( T ops )
 {
@@ -464,7 +562,31 @@ private template receiveOnlyRet(T...)
 }
 
 /**
+ * Receives only messages with arguments of types $(D T).
  *
+ * Throws:  $(D MessageMismatch) if a message of types other than $(D T)
+ *          is received.
+ *
+ * Returns: The received message.  If $(D T.length) is greater than one,
+ *          the message will be packed into a $(XREF typecons, Tuple).
+ *
+ * Example:
+ * ---
+ * import std.concurrency;
+
+ * void spawnedFunc()
+ * {
+ *     auto msg = receiveOnly!(int, string)();
+ *     assert(msg[0] == 42);
+ *     assert(msg[1] == "42");
+ * }
+ * 
+ * void main() 
+ * {
+ *     auto tid = spawn(&spawnedFunc);
+ *     send(tid, 42, "42");
+ * }
+ * ---
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 {
