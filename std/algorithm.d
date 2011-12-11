@@ -437,6 +437,8 @@ template map(fun...) if (fun.length >= 1)
                 {
                     return _input.length;
                 }
+                
+                alias length opDollar;
             }
 
             static if (hasSlicing!R)
@@ -483,6 +485,7 @@ unittest
     const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
     auto squares = map!("a * a")(arr1Const);
+    assert(squares[$ - 1] == 16);
     assert(equal(squares, [ 1, 4, 9, 16 ][]));
     assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
 
@@ -3264,6 +3267,8 @@ public:
     {
         return needle.length;
     }
+    
+    alias length opDollar;
 }
 
 /// Ditto
@@ -7928,6 +7933,8 @@ public:
             }
             return result;
         }
+        
+        alias length opDollar;
     }
 }
 
