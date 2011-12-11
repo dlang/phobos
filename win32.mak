@@ -59,7 +59,7 @@ SVN=\svnproj\phobos\phobos
 
 ## Location of where to write the html documentation files
 
-DOCSRC = ../docsrc
+DOCSRC = .
 STDDOC = $(DOCSRC)/std.ddoc
 
 DOC=..\..\html\d\phobos
