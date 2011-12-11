@@ -17,8 +17,6 @@
  * import std.stdio;
  * import std.concurrency;
  *
- * enum int success = 1;
- * 
  * void spawnedFunc(Tid tid)
  * {
  *     // Receive a message from the owner thread.
@@ -26,8 +24,9 @@
  *         (int i) { writeln("Received the number ", i);}
  *     );
  * 
- *     // Send a message back to the owner thread.
- *     send(tid, success);
+ *     // Send a message back to the owner thread
+ *     // indicating success.
+ *     send(tid, true);
  * }
  *
  * void main() 
@@ -39,8 +38,8 @@
  *     send(tid, 42);
  *    
  *     // Receive the result code.  
- *     auto resultCode = receiveOnly!(int);
- *     assert(resultCode == success);
+ *     auto wasSuccessful = receiveOnly!(int);
+ *     assert(wasSuccessful);
  *     writeln("Successfully printed number.");
  * }
  * ---
