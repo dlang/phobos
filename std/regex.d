@@ -1521,7 +1521,8 @@ struct Parser(R, bool CTFE=false)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',','
+                ,'*','+','(',')','{','}':
                     last = current;
                     state = State.Char;
                     break;
@@ -1623,7 +1624,8 @@ struct Parser(R, bool CTFE=false)
                 case 'v':
                     end = '\v';
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',','
+                ,'*','+','(',')','{','}':
                     end = current;
                     break;
                 case 'c':
