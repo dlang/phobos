@@ -1051,7 +1051,7 @@ Address[] getAddress(in char[] hostname, ushort port)
         auto ih = new InternetHost;
         if (!ih.getHostByName(hostname))
             throw new AddressException(
-                        "Unable to resolve host '" ~ assumeUnique(hostname) ~ "'");
+                        text("Unable to resolve host '", hostname, "'"));
 
         Address[] results;
         foreach (uint addr; ih.addrList)
@@ -1468,7 +1468,7 @@ public:
             if(!ih.getHostByName(addr))
                 //throw new AddressException("Invalid internet address");
                 throw new AddressException(
-                          "Unable to resolve host '" ~ assumeUnique(addr) ~ "'");
+                          text("Unable to resolve host '", addr, "'"));
             uiaddr = ih.addrList[0];
         }
         sin.sin_family = AddressFamily.INET;
