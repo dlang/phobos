@@ -4825,19 +4825,7 @@ assert(std.algorithm.equal(rbt[], [5]));
         foreach(i, e; elems)
             toRemove[i] = e;
 
-        immutable lenBefore = length;
-
-        foreach(e; toRemove)
-        {
-            auto beg = _firstGreaterEqual(e);
-            if(beg is _end || _less(e, beg.value))
-                // no values are equal
-                continue;
-            beg.remove(_end);
-            --_length;
-        }
-
-        return lenBefore - length;
+        return removeKey(toRemove[]);
     }
 
     /++ Ditto +/
