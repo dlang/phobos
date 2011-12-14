@@ -35,7 +35,7 @@ performing common tasks. Futhermore it provides <a href="std_range.html">$(D
 range)</a> access to protocols supported by libcurl both synchronously and
 asynchronously.
 
-A high level and a low level API are available. The high level API is build
+A high level and a low level API are available. The high level API is built
 entirely on top of the low level one. 
 
 The high level API is for commonly used functionality such as HTTP/FTP get. The
@@ -86,9 +86,9 @@ d-p-l.org web page asynchronously.)
 )
 $(LEADINGROW Low level
 )
-$(TR $(TDNW $(LREF Http)) $(TD $(D Http) class for advanced usage))
-$(TR $(TDNW $(LREF Ftp)) $(TD $(D Ftp) class for advanced usage))
-$(TR $(TDNW $(LREF Smtp)) $(TD $(D Smtp) class for advanced usage))
+$(TR $(TDNW $(LREF Http)) $(TD $(D Http) struct for advanced usage))
+$(TR $(TDNW $(LREF Ftp)) $(TD $(D Ftp) struct for advanced usage))
+$(TR $(TDNW $(LREF Smtp)) $(TD $(D Smtp) struct for advanced usage))
 )
 
 
@@ -146,7 +146,7 @@ Copyright: Copyright Jonas Drewsen 2011-2012
 License:  <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:  Jonas Drewsen
 Credits:  The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl). 
-          LibCurl is licensed under a MIT/X derivate license.
+          LibCurl is licensed under an MIT/X derivate license.
 */
 /*
          Copyright Jonas Drewsen 2011 - 2012.
@@ -189,7 +189,7 @@ version(StdDdoc) import std.stdio;
 pragma(lib, "curl");
 extern (C) void exit(int);
 
-/** Connection type used when the url should be used to auto detect protocol.
+/** Connection type used when the url should be used to auto detect the protocol.
   *  
   * This struct is used as placeholder for the connection parameter when calling
   * the high level API and the connection type (Http/Ftp) should be guessed by
@@ -240,7 +240,7 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
     }
     else
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return download!(Ftp,T)(url, saveToPath, Ftp());
         else 
             return download!(Http,T)(url, saveToPath, Http());
@@ -253,6 +253,11 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
         client.onReceive = (ubyte[] data) { return f.write(data); };
         client.perform;
     }
+}
+
+private bool isFtpUrl(const(char)[] url)
+{
+    return startsWith(url.toLower(), "ftp://", "ftps://", "ftp.") != 0;
 }
 
 unittest {
@@ -285,7 +290,7 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
     }
     else
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return upload!(Ftp,T)(loadFromPath, url, Ftp());
         else 
             return upload!(Http,T)(loadFromPath, url, Http());
@@ -338,7 +343,7 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
     }
     else
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return get!(Ftp,T)(url, Ftp());
         else 
             return get!(Http,T)(url, Http());
@@ -419,7 +424,7 @@ if ( (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection)) &&
     }
     else
     {
-        if (url.startsWith("ftp://") || url.startsWith("ftps://") || url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return put!(Ftp,T)(url, putData, Ftp());
         else 
             return put!(Http,T)(url, putData, Http());
@@ -474,9 +479,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
     }
     else
     {
-        if (url.startsWith("ftp://") || 
-            url.startsWith("ftps://") || 
-            url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return del!(Ftp,T)(url, Ftp());
         else 
             return del!(Http,T)(url, Http());
@@ -818,7 +821,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
     else
     {
         Char[] result;
-        if (url.startsWith("ftp://") || url.startsWith("ftps://"))
+        if (isFtpUrl(url))
             result = get(url, Ftp());
         else 
             result = get(url, Http());
@@ -894,7 +897,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
     else
     {
         ubyte[] result;
-        if (url.startsWith("ftp://") || url.startsWith("ftps://"))
+        if (isFtpUrl(url))
             result = get!(Ftp,ubyte)(url, Ftp());
         else 
             result = get!(Http,ubyte)(url, Http());
@@ -1073,8 +1076,6 @@ static struct AsyncLineInputRange(Char)
  * method on the range. This method will wait at maximum for the specified
  * duration and return true if data is available.
  * 
- * $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html, _curl_easy_setopt)
- * 
  * Example:
  * ----
  * import etc.curl, std.stdio;
@@ -1102,9 +1103,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || 
-            url.startsWith("ftps://") || 
-            url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return byLineAsync(url, postData, keepTerminator, 
                                terminator, transmitBuffers, Ftp());
         else
@@ -1166,9 +1165,7 @@ auto byLineAsync(Conn = AutoConnection, Terminator = char, Char = char)
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || 
-            url.startsWith("ftps://") || 
-            url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return byLineAsync(url, cast(void[])null, keepTerminator, 
                                terminator, transmitBuffers, Ftp());
         else
@@ -1242,8 +1239,6 @@ static struct AsyncChunkInputRange
  * method on the range. This method will wait at maximum for the specified
  * duration and return true if data is available.
  *
- * $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html, _curl_easy_setopt)
- * 
  * Example:
  * ----
  * import etc.curl, std.stdio;
@@ -1270,9 +1265,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || 
-            url.startsWith("ftps://") || 
-            url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return byChunkAsync(url, postData, chunkSize, 
                                 transmitBuffers, Ftp());
         else 
@@ -1332,9 +1325,7 @@ if (is(Conn : Http) || is(Conn : Ftp) || is(Conn : AutoConnection))
 {
     static if (is(Conn : AutoConnection))
     {
-        if (url.startsWith("ftp://") || 
-            url.startsWith("ftps://") || 
-            url.startsWith("ftp."))
+        if (isFtpUrl(url))
             return byChunkAsync(url, cast(void[])null, chunkSize, 
                                 transmitBuffers, Ftp());
         else
@@ -1564,7 +1555,7 @@ private mixin template Protocol()
     /**
      * The event handler that gets called when data is needed for sending. The
      * length of the $(D void[]) specifies the maximum number of bytes that can
-     * be send.
+     * be sent.
      *
      * Returns:
      * The callback returns the number of elements in the buffer that have been 
@@ -2440,7 +2431,7 @@ struct Smtp
         p.RefCounted.initialize();
         p.curl.initialize();
         
-        if (url.startsWith("smtps://")) 
+        if (url.toLower().startsWith("smtps://")) 
         {
             p.curl.set(CurlOption.use_ssl, CurlUseSSL.all);
             p.curl.set(CurlOption.ssl_verifypeer, false);
@@ -2448,7 +2439,7 @@ struct Smtp
         }
         else
         {
-            enforce(url.startsWith("smtp://"), 
+            enforce(url.toLower().startsWith("smtp://"), 
                     new CurlException("The url must be for the smtp protocol."));
         }
  
@@ -2524,9 +2515,9 @@ class CurlTimeoutException : CurlException
 }
 
 /**
-  Wrapper class to provide a better interface to libcurl than using the plain C
-  API.  It is recommended to use the $(D Http)/$(D Ftp) etc. classes instead
-  unless raw access to libcurl is needed.
+  Wrapper to provide a better interface to libcurl than using the plain C API.
+  It is recommended to use the $(D Http)/$(D Ftp) etc. structs instead unless
+  raw access to libcurl is needed.
 */
 struct Curl 
 {
