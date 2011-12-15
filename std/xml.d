@@ -1817,7 +1817,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onText(Handler handler) { textHandler = handler; }
+    @property void onText(Handler handler) { textHandler = handler; }
 
     /**
      * Register an alternative handler which will be called whenever text
@@ -1864,7 +1864,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onCData(Handler handler) { cdataHandler = handler; }
+    @property void onCData(Handler handler) { cdataHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a comment is
@@ -1885,7 +1885,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onComment(Handler handler) { commentHandler = handler; }
+    @property void onComment(Handler handler) { commentHandler = handler; }
 
     /**
      * Register a handler which will be called whenever a processing
@@ -1906,7 +1906,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onPI(Handler handler) { piHandler = handler; }
+    @property void onPI(Handler handler) { piHandler = handler; }
 
     /**
      * Register a handler which will be called whenever an XML instruction is
@@ -1929,7 +1929,7 @@ class ElementParser
      * };
      * --------------
      */
-    void onXI(Handler handler) { xiHandler = handler; }
+    @property void onXI(Handler handler) { xiHandler = handler; }
 
     /**
      * Parse an XML element.
