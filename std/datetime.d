@@ -30402,6 +30402,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
         case "Africa/Windhoek": return "Namibia Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
+        case "America/Bahia": return "Bahia Standard Time";
         case "America/Bogota": return "SA Pacific Standard Time";
         case "America/Buenos_Aires": return "Argentina Standard Time";
         case "America/Caracas": return "Venezuela Standard Time";
@@ -30554,6 +30555,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Atlantic Standard Time": return "America/Halifax";
         case "Azerbaijan Standard Time": return "Asia/Baku";
         case "Azores Standard Time": return "Atlantic/Azores";
+        case "Bahia Standard Time": return "America/Bahia";
         case "Bangladesh Standard Time": return "Asia/Dhaka";
         case "Canada Central Standard Time": return "America/Regina";
         case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
