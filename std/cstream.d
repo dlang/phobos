@@ -53,12 +53,12 @@ class CFile : Stream {
    * Property to get or set the underlying file for this stream.
    * Setting the file marks the stream as open.
    */
-  FILE* file() { return cfile; }
+  @property FILE* file() { return cfile; }
 
   /**
    * Ditto
    */
-  void file(FILE* cfile) {
+  @property void file(FILE* cfile) {
     this.cfile = cfile;
     isopen = true;
   }
