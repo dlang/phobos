@@ -1585,8 +1585,11 @@ $(UL
   $(LI When the source is a wide string, it is first converted to a narrow
        string and then parsed.)
   $(LI When the source is a narrow string, normal text parsing occurs.))
+
+Params:
+  opts = optional parameters that passed to $(D parse) function, like. $(D radix).
 */
-T toImpl(T, S)(S value)
+T toImpl(T, S, Options...)(S value, Options opts)
     if (isDynamicArray!S && isSomeString!S &&
         !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
 {
@@ -1603,7 +1606,7 @@ T toImpl(T, S)(S value)
             convError!(SV, T)(v);
         }
     }
-    return parse!T(v);
+    return parse!T(v, opts);
 }
 
 unittest
@@ -1615,6 +1618,10 @@ unittest
         assert(to!int(a) == 123);
         assert(to!double(a) == 123);
     }
+
+    // 6255
+    auto n = to!int("FF", 16);
+    assert(n == 255);
 }
 
 /***************************************************************
