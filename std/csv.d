@@ -608,7 +608,7 @@ unittest
             text = txt;
         }
 
-        auto empty()
+        @property auto empty()
         {
             return text.empty();
         }
@@ -618,7 +618,7 @@ unittest
             text.popFront();
         }
 
-        dchar front()
+        @property dchar front()
         {
             return text[0];
         }
@@ -1168,7 +1168,7 @@ public:
  * -------
  * string str = "65,63\n123,3673";
  *
- * auto a = appender!(char[]);
+ * auto a = appender!(char[])();
  *
  * csvNextToken(str,a,',','"');
  * assert(a.data == "65");
@@ -1303,7 +1303,7 @@ unittest
 {
     string str = "\U00010143Hello,65,63.63\nWorld,123,3673.562";
 
-    auto a = appender!(dchar[]);
+    auto a = appender!(dchar[])();
     csvNextToken!string(str,a,',','"');
     assert(a.data == "\U00010143Hello");
     assert(str == ",65,63.63\nWorld,123,3673.562");
@@ -1344,7 +1344,7 @@ unittest
 {
     string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
 
-    auto a = appender!(dchar[]);
+    auto a = appender!(dchar[])();
     csvNextToken!string(str,a,',','"');
     assert(a.data == "one");
     assert(str == `,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix");
@@ -1384,7 +1384,7 @@ unittest
 unittest
 {
     string str = "one,";
-    auto a = appender!(dchar[]);
+    auto a = appender!(dchar[])();
     csvNextToken(str,a,',','"');
     assert(a.data == "one");
     assert(str == ",");
@@ -1402,7 +1402,7 @@ unittest
     typeof(appender!(dchar[])()) a;
     try
     {
-        a = appender!(dchar[]);
+        a = appender!(dchar[])();
         csvNextToken(str,a,',','"');
         assert(0);
     }
@@ -1416,7 +1416,7 @@ unittest
 
     try
     {
-        a = appender!(dchar[]);
+        a = appender!(dchar[])();
         csvNextToken(str,a,',','"');
         assert(0);
     }
@@ -1428,7 +1428,7 @@ unittest
 
     str = "one, two \"quoted\" end";
 
-    a = appender!(dchar[]);
+    a = appender!(dchar[])();
     csvNextToken!(string,Malformed.ignore)(str,a,',','"');
     assert(a.data == "one");
     str.popFront();
@@ -1443,7 +1443,7 @@ unittest
 {
     string str = `one|two|/three "quoted"/|//`;
 
-    auto a = appender!(dchar[]);
+    auto a = appender!(dchar[])();
     csvNextToken(str,a, '|','/');
     assert(a.data == "one"d);
     assert(str == `|two|/three "quoted"/|//`);
