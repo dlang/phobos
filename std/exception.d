@@ -778,7 +778,7 @@ that points to $(D target)'s representation or somewhere inside
 it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
 internal pointers.
 */
-bool pointsTo(S, T)(ref const S source, ref const T target) @trusted pure nothrow
+bool pointsTo(S, T, Tdummy=void)(ref const S source, ref const T target) @trusted pure nothrow
 {
     static if (is(S P : U*, U))
     {
@@ -803,6 +803,12 @@ bool pointsTo(S, T)(ref const S source, ref const T target) @trusted pure nothro
     {
         return false;
     }
+}
+// for shared objects
+bool pointsTo(S, T)(ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    alias pointsTo!(shared(S), shared(T), void) ptsTo;  // do instantiate explicitly
+    return ptsTo(source, target);
 }
 
 unittest

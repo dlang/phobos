@@ -1555,10 +1555,10 @@ unittest
             assert(!attrIsSymlink(getAttributes(fakeSymFile)));
             assert(!attrIsSymlink(getLinkAttributes(fakeSymFile)));
 
-            assert(isFile(getAttributes(fakeSymFile)));
-            assert(isFile(getLinkAttributes(fakeSymFile)));
-            assert(!isDir(getAttributes(fakeSymFile)));
-            assert(!isDir(getLinkAttributes(fakeSymFile)));
+            assert(attrIsFile(getAttributes(fakeSymFile)));
+            assert(attrIsFile(getLinkAttributes(fakeSymFile)));
+            assert(!attrIsDir(getAttributes(fakeSymFile)));
+            assert(!attrIsDir(getLinkAttributes(fakeSymFile)));
 
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
@@ -1578,11 +1578,11 @@ unittest
             assert(!attrIsSymlink(getAttributes(symfile)));
             assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-            assert(isDir(getAttributes(symfile)));
-            assert(!isDir(getLinkAttributes(symfile)));
+            assert(attrIsDir(getAttributes(symfile)));
+            assert(!attrIsDir(getLinkAttributes(symfile)));
 
-            assert(!isFile(getAttributes(symfile)));
-            assert(!isFile(getLinkAttributes(symfile)));
+            assert(!attrIsFile(getAttributes(symfile)));
+            assert(!attrIsFile(getLinkAttributes(symfile)));
         }
 
         if("/usr/include/assert.h".exists)
@@ -1598,11 +1598,11 @@ unittest
             assert(!attrIsSymlink(getAttributes(symfile)));
             assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-            assert(!isDir(getAttributes(symfile)));
-            assert(!isDir(getLinkAttributes(symfile)));
+            assert(!attrIsDir(getAttributes(symfile)));
+            assert(!attrIsDir(getLinkAttributes(symfile)));
 
-            assert(isFile(getAttributes(symfile)));
-            assert(!isFile(getLinkAttributes(symfile)));
+            assert(attrIsFile(getAttributes(symfile)));
+            assert(!attrIsFile(getLinkAttributes(symfile)));
         }
     }
 }
@@ -1801,11 +1801,11 @@ version(Posix) unittest
         assert(!attrIsSymlink(getAttributes(symfile)));
         assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-        assert(isDir(getAttributes(symfile)));
-        assert(!isDir(getLinkAttributes(symfile)));
+        assert(attrIsDir(getAttributes(symfile)));
+        assert(!attrIsDir(getLinkAttributes(symfile)));
 
-        assert(!isFile(getAttributes(symfile)));
-        assert(!isFile(getLinkAttributes(symfile)));
+        assert(!attrIsFile(getAttributes(symfile)));
+        assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 
     if("/usr/include/assert.h".exists)
@@ -1822,11 +1822,11 @@ version(Posix) unittest
         assert(!attrIsSymlink(getAttributes(symfile)));
         assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-        assert(!isDir(getAttributes(symfile)));
-        assert(!isDir(getLinkAttributes(symfile)));
+        assert(!attrIsDir(getAttributes(symfile)));
+        assert(!attrIsDir(getLinkAttributes(symfile)));
 
-        assert(isFile(getAttributes(symfile)));
-        assert(!isFile(getLinkAttributes(symfile)));
+        assert(attrIsFile(getAttributes(symfile)));
+        assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 }
 
@@ -2852,7 +2852,7 @@ void rmdirRecurse(ref DirEntry de)
         // all children, recursively depth-first
         foreach(DirEntry e; dirEntries(de.name, SpanMode.depth, false))
         {
-            isDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
+            attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
         }
 
         // the dir itself
@@ -3129,7 +3129,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : isDir(_cur.linkAttributes);
+            return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
         }
     }
 
@@ -3400,10 +3400,10 @@ unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(isDir(de.attributes));
-    assert(isDir(de.linkAttributes));
-    assert(!isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(attrIsDir(de.attributes));
+    assert(attrIsDir(de.linkAttributes));
+    assert(!attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(!attrIsSymlink(de.linkAttributes));
 
@@ -3450,12 +3450,12 @@ unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(!isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(isFile(de.attributes));
-    assert(isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(!isSymLink(de.linkAttributes));
+    assert(!attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(attrIsFile(de.attributes));
+    assert(attrIsFile(de.linkAttributes));
+    assert(!attrIsSymlink(de.attributes));
+    assert(!attrIsSymlink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3503,10 +3503,10 @@ version(linux) unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(!isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(!attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
@@ -3548,10 +3548,10 @@ version(linux) unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(!isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(!attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
@@ -3707,7 +3707,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
     {
-        if(followSymlink ? de.isDir : isDir(de.linkAttributes))
+        if(followSymlink ? de.isDir : attrIsDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }

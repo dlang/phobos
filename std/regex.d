@@ -1521,7 +1521,9 @@ struct Parser(R, bool CTFE=false)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}':
                     last = current;
                     state = State.Char;
                     break;
@@ -1623,7 +1625,9 @@ struct Parser(R, bool CTFE=false)
                 case 'v':
                     end = '\v';
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}':
                     end = current;
                     break;
                 case 'c':
@@ -6433,20 +6437,20 @@ public template ctRegex(alias pattern, alias flags=[])
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(re, input);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
-    if(isSomeString!String)
+    if(isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(regex(re), input);
 }
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
 }
@@ -6469,20 +6473,20 @@ public auto match(R, RegEx)(R input, RegEx re)
 
 +/
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(re, input);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
-    if(isSomeString!String)
+    if(isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(regex(re), input);
 }
 
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
 }
@@ -7387,6 +7391,15 @@ else
             assert(collectException(
                     regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                     ) is null);
+            foreach(ch; ['^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}'])
+            {
+                assert(match(to!string(ch),regex(`[\`~ch~`]`)));
+                assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
+                if(ch != '-') //'--' is an operator
+                    assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
+            }
         }
         test_body!bmatch();
         test_body!match();
