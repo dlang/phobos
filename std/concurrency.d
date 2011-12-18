@@ -165,7 +165,7 @@ private
     {
         foreach( i, t1; T )
         {
-            static assert( is( t1 == function ) || is( t1 == delegate ) );
+            static assert( isFunctionPointer!t1 || isDelegate!t1 );
             alias ParameterTypeTuple!(t1) a1;
             alias ReturnType!(t1) r1;
 
@@ -177,7 +177,7 @@ private
 
                 foreach( t2; T[i+1 .. $] )
                 {
-                    static assert( is( t2 == function ) || is( t2 == delegate ) );
+                    static assert( isFunctionPointer!t2 || isDelegate!t2 );
                     alias ParameterTypeTuple!(t2) a2;
 
                     static assert( !is( a1 == a2 ),
@@ -550,6 +550,20 @@ unittest
                        {
                            receive( (int x) {}, (int x) {} );
                        } ) );
+}
+
+// Make sure receive() works with free functions as well.
+version (unittest)
+{
+    private void receiveFunction(int x) {}
+}
+unittest
+{
+    assert( __traits( compiles,
+                      {
+                          receive( &receiveFunction );
+                          receive( &receiveFunction, (Variant x) {} );
+                      } ) );
 }
 
 
