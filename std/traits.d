@@ -1420,7 +1420,7 @@ unittest
     static assert(!hasUnsharedAliasing!(Rebindable!(immutable Object)));
     static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
     static assert(hasUnsharedAliasing!(Rebindable!(Object)));
-    
+
     /* Issue 6979 */
     static assert(!hasUnsharedAliasing!(int, shared(int)*));
     static assert(hasUnsharedAliasing!(int, int*));
@@ -1992,7 +1992,7 @@ private template MemberFunctionTupleImpl(C, string name)
      */
     template CollectOverloads(Node)
     {
-        static if (__traits(hasMember, Node, name))
+        static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
         {
             // Get all overloads in sight (not hidden).
             alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
@@ -2226,6 +2226,8 @@ template ImplicitConversionTargets(T)
         alias TypeTuple!(wchar, dchar, int, uint, long, ulong,
             float, double, real)
             ImplicitConversionTargets;
+    else static if (is(T : typeof(null)))
+        alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
     // @@@BUG@@@ this should work
@@ -2873,7 +2875,7 @@ unittest {
 
     struct Range
     {
-        uint front() { assert(0); }
+        @property uint front() { assert(0); }
         void popFront() { assert(0); }
         enum bool empty = false;
     }

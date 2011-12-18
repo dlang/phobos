@@ -333,8 +333,8 @@ unittest
     auto a = [ 1, 2, 3 ];
     a.popFront();
     assert(a == [ 2, 3 ]);
-    static assert(!__traits(compiles, popFront!(immutable int[])));
-    static assert(!__traits(compiles, popFront!(void[])));
+    static assert(!__traits(compiles, popFront!(immutable int[])()));
+    static assert(!__traits(compiles, popFront!(void[])()));
 }
 
 // Specialization for narrow strings. The necessity of
@@ -538,10 +538,12 @@ b = b.dup;
 assert(overlap(a, b).empty);
 ----
 */
-T[] overlap(T)(T[] r1, T[] r2) @trusted pure nothrow
+inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
-    static T* max(T* a, T* b) nothrow { return a > b ? a : b; }
-    static T* min(T* a, T* b) nothrow { return a < b ? a : b; }
+    alias inout(T) U;
+    static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
+    static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
+
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
@@ -575,7 +577,7 @@ unittest
 }
 
 /+
-Commented out until the insert which is scheduled for deprecation is removed.
+Commented out until the insert which has been deprecated has been removed.
 I'd love to just remove it in favor of insertInPlace, but then code would then
 use this version of insert and silently break. So, it's here so that it can
 be used once insert has not only been deprecated but removed, but until then,
@@ -923,12 +925,12 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(LREF insertInPlace) instead.)
 
     Same as $(XREF array, insertInPlace).
   +/
-void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
+deprecated void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
     insertInPlace(array, pos, stuff);
@@ -1234,7 +1236,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
         return result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
@@ -1326,7 +1328,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
         return cast(typeof(return)) result;
     }
     else
-        return copy(iter, appender!(typeof(return))).data;
+        return copy(iter, appender!(typeof(return))()).data;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
@@ -1503,7 +1505,7 @@ unittest
 }
 
 /+
-Commented out until the replace which is scheduled for deprecation is removed.
+Commented out until the replace which has been deprecated has been removed.
 I'd love to just remove it in favor of replaceInPlace, but then code would then
 use this version of replaceInPlace and silently break. So, it's here so that it
 can be used once replace has not only been deprecated but removed, but
@@ -1742,12 +1744,12 @@ unittest
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(LREF replaceInPlace) instead.)
 
     Same as $(XREF array, replaceInPlace).
   +/
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+deprecated void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
     replaceInPlace(array, from, to, stuff);
@@ -1802,7 +1804,7 @@ unittest
     Returns an array that is $(D s) with $(D slice) replaced by
     $(D replacement[]).
  +/
-T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
+inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
 {
     // Verify that slice[] really is a slice of s[]
@@ -1810,15 +1812,14 @@ in
 }
 body
 {
-    auto result = new Unqual!(typeof(s[0]))[
-        s.length - slice.length + replacement.length];
+    auto result = new T[s.length - slice.length + replacement.length];
     immutable so = slice.ptr - s.ptr;
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement;
     result[so + replacement.length .. result.length] =
         s[so + slice.length .. s.length];
 
-    return cast(T[]) result;
+    return cast(inout(T)[]) result;
 }
 
 unittest
@@ -2291,7 +2292,7 @@ struct SimpleSlice(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }
@@ -2437,7 +2438,7 @@ struct SimpleSliceLvalue(T)
             foreach (p; _b .. _e)
             {
                 *p = anotherSlice.front;
-                anotherSlice.popFront;
+                anotherSlice.popFront();
             }
         }
     }

@@ -376,7 +376,7 @@ public:
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    long toInt() pure const
+    int toInt() pure const
     {
         return (sign ? -1 : 1) *
           (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max))

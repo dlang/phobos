@@ -1521,7 +1521,9 @@ struct Parser(R, bool CTFE=false)
                     last = parseControlCode();
                     state = State.Char;
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}':
                     last = current;
                     state = State.Char;
                     break;
@@ -1550,7 +1552,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'D':
-                    set.add(unicodeNd.dup.negate);
+                    set.add(unicodeNd.dup.negate());
                     state = State.Start;
                     break;
                 case 's':
@@ -1558,7 +1560,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'S':
-                    set.add(unicodeWhite_Space.dup.negate);
+                    set.add(unicodeWhite_Space.dup.negate());
                     state = State.Start;
                     break;
                 case 'w':
@@ -1566,7 +1568,7 @@ struct Parser(R, bool CTFE=false)
                     state = State.Start;
                     break;
                 case 'W':
-                    set.add(wordCharacter.dup.negate);
+                    set.add(wordCharacter.dup.negate());
                     state = State.Start;
                     break;
                 default:
@@ -1623,7 +1625,9 @@ struct Parser(R, bool CTFE=false)
                 case 'v':
                     end = '\v';
                     break;
-                case '\\', '-', '[', ']', '(', ')', '*', '+', '?':
+                case '[',']','\\','^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}':
                     end = current;
                     break;
                 case 'c':
@@ -1665,7 +1669,7 @@ struct Parser(R, bool CTFE=false)
             switch(op)
             {
             case Operator.Negate:
-                stack.top.negate;
+                stack.top.negate();
                 break;
             case Operator.Union:
                 auto s = stack.pop();//2nd operand
@@ -1816,7 +1820,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'D':
             next();
-            charsetToIr(unicodeNd.dup.negate);
+            charsetToIr(unicodeNd.dup.negate());
             break;
         case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
         case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
@@ -1826,7 +1830,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'S':
             next();
-            charsetToIr(unicodeWhite_Space.dup.negate);
+            charsetToIr(unicodeWhite_Space.dup.negate());
             break;
         case 'w':
             next();
@@ -1834,7 +1838,7 @@ struct Parser(R, bool CTFE=false)
             break;
         case 'W':
             next();
-            charsetToIr(wordCharacter.dup.negate);
+            charsetToIr(wordCharacter.dup.negate());
             break;
         case 'p': case 'P':
             auto CodepointSet = parseUnicodePropertySpec(current == 'P');
@@ -6433,20 +6437,20 @@ public template ctRegex(alias pattern, alias flags=[])
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(re, input);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
-    if(isSomeString!String)
+    if(isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(regex(re), input);
 }
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
 }
@@ -6469,20 +6473,20 @@ public auto match(R, RegEx)(R input, RegEx re)
 
 +/
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(re, input);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
-    if(isSomeString!String)
+    if(isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(regex(re), input);
 }
 
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if(is(RegEx == StaticRegex!(BasicElementOf!R)))
+    if(isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(re, input);
 }
@@ -6731,7 +6735,7 @@ public:
         {
             //skip past the separator
             _offset = _match.pre.length + _match.hit.length;
-            _match.popFront;
+            _match.popFront();
         }
     }
 
@@ -7387,6 +7391,15 @@ else
             assert(collectException(
                     regex(r"^(import|file|binary|config)\s+([^\(]+)\(?([^\)]*)\)?\s*$")
                     ) is null);
+            foreach(ch; ['^','$','.','|','?',',','-',';',':'
+                ,'#','&','%','/','<','>','`'
+                ,'*','+','(',')','{','}'])
+            {
+                assert(match(to!string(ch),regex(`[\`~ch~`]`)));
+                assert(!match(to!string(ch),regex(`[^\`~ch~`]`)));
+                if(ch != '-') //'--' is an operator
+                    assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
+            }
         }
         test_body!bmatch();
         test_body!match();

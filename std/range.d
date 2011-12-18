@@ -246,9 +246,9 @@ unittest
 }
 
 /**
-Outputs $(D e) to $(D r). The exact effect is dependent upon the two 
-types. Several cases are accepted, as described below. The code snippets 
-are attempted in order, and the first to compile "wins" and gets 
+Outputs $(D e) to $(D r). The exact effect is dependent upon the two
+types. Several cases are accepted, as described below. The code snippets
+are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
 $(BOOKTABLE ,
@@ -512,8 +512,8 @@ unittest
     struct B
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
     }
     static assert(!isBidirectionalRange!(B));
     struct C
@@ -577,26 +577,26 @@ unittest
     struct B
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
     }
     static assert(!isRandomAccessRange!(B));
     struct C
     {
         void popFront();
-        bool empty();
-        int front();
+        @property bool empty();
+        @property int front();
         void popBack();
-        int back();
+        @property int back();
     }
     static assert(!isRandomAccessRange!(C));
     struct D
     {
-        bool empty();
+        @property bool empty();
         @property D save();
-        int front();
+        @property int front();
         void popFront();
-        int back();
+        @property int back();
         void popBack();
         ref int opIndex(uint);
         @property size_t length();
@@ -621,7 +621,7 @@ unittest
 
         @property R save() { return this; }
 
-        int back() const { return 0; }
+        @property int back() const { return 0; }
         void popBack(){}
 
         int opIndex(size_t n) const { return 0; }
@@ -1002,7 +1002,7 @@ if (isBidirectionalRange!(Unqual!Range))
             @property auto ref front() { return source.back; }
             void popFront() { source.popBack(); }
             @property auto ref back() { return source.front; }
-            void popBack() { source.popFront; }
+            void popBack() { source.popFront(); }
 
             static if(is(typeof(.moveBack(source))))
             {
@@ -1607,7 +1607,7 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                 foreach (i, Unused; R)
                 {
                     if (source[i].empty) continue;
-                    source[i].popFront;
+                    source[i].popFront();
                     return;
                 }
             }
@@ -1941,7 +1941,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         public Rs source;
         private size_t _current = size_t.max;
 
-        bool empty()
+        @property bool empty()
         {
             foreach (i, Unused; Rs)
             {
@@ -2002,7 +2002,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
-            auto save()
+            @property auto save()
             {
                 Result result;
                 result._current = _current;
@@ -2015,7 +2015,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
         static if (allSatisfy!(hasLength, Rs))
         {
-            size_t length()
+            @property size_t length()
             {
                 size_t result;
                 foreach (i, R; Rs)
@@ -2659,7 +2659,7 @@ size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
         foreach (i; 0 .. n)
         {
             if (r.empty) return i;
-            r.popBack;
+            r.popBack();
         }
     }
     return n;
@@ -2817,7 +2817,7 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
         /// Ditto
         void popFront()
         {
-            _current.popFront;
+            _current.popFront();
             if (_current.empty) _current = _original;
         }
 
@@ -2947,7 +2947,7 @@ unittest // For infinite ranges
     struct InfRange
     {
         void popFront() { }
-        int front() { return 0; }
+        @property int front() { return 0; }
         enum empty = false;
     }
 
@@ -3023,7 +3023,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
     }
     else
     {
-        bool empty()
+        @property bool empty()
         {
             final switch (stoppingPolicy)
             {
@@ -3522,7 +3522,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     {
         static if (!hasLvalueElements!Range) {
             // Don't have lvalue access.
-            ret ~= "\tElementType!(R[" ~ to!string(ti) ~ "]) front" ~
+            ret ~= "\tUnqual!(ElementType!(R[" ~ to!string(ti) ~ "])) front" ~
                 to!string(ti) ~ ";\n";
         }
     }
@@ -3727,14 +3727,14 @@ unittest {
     }
 
     assert(arr1 == [7,9,11,13,15]);
-    
+
     // Make sure StoppingPolicy.requireSameLength doesn't throw.
     auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     foreach(a, b; ls) {}
 
     // Make sure StoppingPolicy.requireSameLength throws.
-    arr2.popBack;
+    arr2.popBack();
     ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
     try {
@@ -3764,6 +3764,13 @@ unittest {
     // Make sure we've worked around the relevant compiler bugs and this at least
     // compiles w/ >2 ranges.
     lockstep(foo, foo, foo);
+    
+    // Make sure it works with const.
+    const(int[])[] foo2 = [[1, 2, 3]];
+    const(int[])[] bar2 = [[4, 5, 6]];
+    auto c = chain(foo2, bar2);
+    
+    foreach(f, b; lockstep(c, c)) {}
 }
 
 /**
@@ -4233,7 +4240,7 @@ unittest
     assert(equal(r, [0, -3][]));
     rSlice = r[1..2];
     assert(equal(rSlice, [-3]));
-    
+
     r = iota(0, -7, -3);
     assert(equal(r, [0, -3, -6][]));
     rSlice = r[1..3];
@@ -4348,7 +4355,7 @@ struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
     alias Unqual!(Ror) RangeOfRanges;
-    alias typeof(RangeOfRanges.init.front().front()) ElementType;
+    alias typeof(RangeOfRanges.init.front.front) ElementType;
 
     private void prime()
     {
@@ -4356,13 +4363,13 @@ struct FrontTransversal(Ror,
         {
             while (!_input.empty && _input.front.empty)
             {
-                _input.popFront;
+                _input.popFront();
             }
             static if (isBidirectionalRange!RangeOfRanges)
             {
                 while (!_input.empty && _input.back.empty)
                 {
-                    _input.popBack;
+                    _input.popBack();
                 }
             }
         }
@@ -4374,7 +4381,7 @@ struct FrontTransversal(Ror,
     this(RangeOfRanges input)
     {
         _input = input;
-        prime;
+        prime();
         static if (opt == TransverseOptions.enforceNotJagged)
             // (isRandomAccessRange!RangeOfRanges
             //     && hasLength!(.ElementType!RangeOfRanges))
@@ -4431,8 +4438,8 @@ struct FrontTransversal(Ror,
     void popFront()
     {
         assert(!empty);
-        _input.popFront;
-        prime;
+        _input.popFront();
+        prime();
     }
 
     /// Ditto
@@ -4461,8 +4468,8 @@ struct FrontTransversal(Ror,
         void popBack()
         {
             assert(!empty);
-            _input.popBack;
-            prime;
+            _input.popBack();
+            prime();
         }
 
         /// Ditto
@@ -4629,13 +4636,13 @@ struct Transversal(Ror,
         {
             while (!_input.empty && _input.front.length <= _n)
             {
-                _input.popFront;
+                _input.popFront();
             }
             static if (isBidirectionalRange!RangeOfRanges)
             {
                 while (!_input.empty && _input.back.length <= _n)
                 {
-                    _input.popBack;
+                    _input.popBack();
                 }
             }
         }
@@ -4648,7 +4655,7 @@ struct Transversal(Ror,
     {
         _input = input;
         _n = n;
-        prime;
+        prime();
         static if (opt == TransverseOptions.enforceNotJagged)
         {
             if (empty) return;
@@ -4705,8 +4712,8 @@ struct Transversal(Ror,
     void popFront()
     {
         assert(!empty);
-        _input.popFront;
-        prime;
+        _input.popFront();
+        prime();
     }
 
     /// Ditto
@@ -4735,8 +4742,8 @@ struct Transversal(Ror,
         void popBack()
         {
             assert(!empty);
-            _input.popBack;
-            prime;
+            _input.popBack();
+            prime();
         }
 
         /// Ditto
@@ -4791,11 +4798,11 @@ struct Transversal(Ror,
                 _input[n][_n] = val;
             }
         }
-        
+
         /// Ditto
         static if(hasLength!RangeOfRanges)
         {
-            @property size_t length() 
+            @property size_t length()
             {
                 return _input.length;
             }
@@ -4853,13 +4860,13 @@ unittest
         ror.front = 5;
         scope(exit) ror.front = 2;
         assert(x[0][1] == 5);
-        assert(ror.moveFront == 5);
+        assert(ror.moveFront() == 5);
     }
     {
         ror.back = 999;
         scope(exit) ror.back = 4;
         assert(x[1][1] == 999);
-        assert(ror.moveBack == 999);
+        assert(ror.moveBack() == 999);
     }
     {
         ror[0] = 999;
@@ -4905,7 +4912,7 @@ struct Transposed(RangeOfRanges)
         foreach (ref e; _input)
         {
             if (e.empty) continue;
-            e.popFront;
+            e.popFront();
         }
     }
 
@@ -4959,7 +4966,7 @@ $(D indices) may include only a subset of the elements of $(D source) and
 may also repeat elements.
 
 $(D Source) must be a random access range.  The returned range will be
-bidirectional or random-access if $(D Indices) is bidirectional or 
+bidirectional or random-access if $(D Indices) is bidirectional or
 random-access, respectively.
 
 Examples:
@@ -4985,21 +4992,21 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
         this._source = source;
         this._indices = indices;
     }
-    
+
     /// Range primitives
-    @property auto ref front() 
+    @property auto ref front()
     {
         assert(!empty);
         return _source[_indices.front];
     }
-    
+
     /// Ditto
     void popFront()
     {
         assert(!empty);
         _indices.popFront();
     }
-    
+
     static if(isInfinite!Indices)
     {
         enum bool empty = false;
@@ -5007,22 +5014,22 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
     else
     {
         /// Ditto
-        @property bool empty() 
+        @property bool empty()
         {
             return _indices.empty;
         }
     }
-    
+
     static if(isForwardRange!Indices)
     {
         /// Ditto
-        @property typeof(this) save() 
+        @property typeof(this) save()
         {
             // Don't need to save _source because it's never consumed.
             return typeof(this)(_source, _indices.save);
         }
     }
-    
+
     /// Ditto
     static if(hasAssignableElements!Source)
     {
@@ -5032,8 +5039,8 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
             return _source[_indices.front] = newVal;
         }
     }
-    
-    
+
+
     static if(hasMobileElements!Source)
     {
         /// Ditto
@@ -5043,16 +5050,16 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
             return .moveAt(_source, _indices.front);
         }
     }
-    
+
     static if(isBidirectionalRange!Indices)
     {
         /// Ditto
-        @property auto ref back() 
+        @property auto ref back()
         {
             assert(!empty);
             return _source[_indices.back];
         }
-        
+
         /// Ditto
         void popBack()
         {
@@ -5069,8 +5076,8 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
                 return _source[_indices.back] = newVal;
             }
         }
-        
-        
+
+
         static if(hasMobileElements!Source)
         {
             /// Ditto
@@ -5090,7 +5097,7 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
             return _indices.length;
         }
     }
-    
+
     static if(isRandomAccessRange!Indices)
     {
         /// Ditto
@@ -5098,24 +5105,24 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
         {
             return _source[_indices[index]];
         }
-    
+
         /// Ditto
         typeof(this) opSlice(size_t a, size_t b)
         {
             return typeof(this)(_source, _indices[a..b]);
         }
-        
-        
+
+
         static if(hasAssignableElements!Source)
-        {   
+        {
             /// Ditto
             auto opIndexAssign(ElementType!Source newVal, size_t index)
             {
                 return _source[_indices[index]] = newVal;
             }
         }
-        
-        
+
+
         static if(hasMobileElements!Source)
         {
             /// Ditto
@@ -5125,10 +5132,10 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
             }
         }
     }
-    
-    // All this stuff is useful if someone wants to index an Indexed 
+
+    // All this stuff is useful if someone wants to index an Indexed
     // without adding a layer of indirection.
-    
+
     /**
     Returns the source range.
     */
@@ -5136,7 +5143,7 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
     {
         return _source;
     }
-    
+
     /**
     Returns the indices range.
     */
@@ -5144,14 +5151,14 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
     {
         return _indices;
     }
-   
+
     static if(isRandomAccessRange!Indices)
     {
         /**
         Returns the physical index into the source range corresponding to a
         given logical index.  This is useful, for example, when indexing
         an $(D Indexed) without adding another layer of indirection.
-        
+
         Examples:
         ---
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
@@ -5163,7 +5170,7 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
             return _indices[logicalIndex];
         }
     }
-    
+
 private:
     Source _source;
     Indices _indices;
@@ -5184,19 +5191,19 @@ unittest
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
         assert(ind.physicalIndex(0) == 1);
     }
-    
+
     auto source = [1, 2, 3, 4, 5];
     auto indices = [4, 3, 1, 2, 0, 4];
     auto ind = indexed(source, indices);
     assert(equal(ind, [5, 4, 2, 3, 1, 5]));
-    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));    
+    assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));
 
     // When elements of indices are duplicated and Source has lvalue elements,
     // these are aliased in ind.
     ind[0]++;
     assert(ind[0] == 6);
     assert(ind[5] == 6);
-    
+
     foreach(DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
@@ -5207,8 +5214,8 @@ unittest
 }
 
 /**
-This range iterates over fixed-sized chunks of size $(D chunkSize) of a 
-$(D source) range.  $(D Source) must be an input range with slicing and length.  
+This range iterates over fixed-sized chunks of size $(D chunkSize) of a
+$(D source) range.  $(D Source) must be an input range with slicing and length.
 If $(D source.length) is not evenly divisible by $(D chunkSize), the back
 element of this range will contain fewer than $(D chunkSize) elements.
 
@@ -5224,35 +5231,35 @@ assert(chunks.front == chunks[0]);
 assert(chunks.length == 3);
 ---
 */
-struct Chunks(Source) if(hasSlicing!Source && hasLength!Source) 
+struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
 {
-    /// 
-    this(Source source, size_t chunkSize) 
+    ///
+    this(Source source, size_t chunkSize)
     {
         this._source = source;
         this._chunkSize = chunkSize;
     }
-    
+
     /// Range primitives.
     @property auto front()
     {
         assert(!empty);
         return _source[0..min(_chunkSize, _source.length)];
     }
-    
+
     /// Ditto
     void popFront()
     {
         assert(!empty);
         popFrontN(_source, _chunkSize);
     }
-    
+
     /// Ditto
     @property bool empty()
     {
         return _source.empty;
     }
-    
+
     static if(isForwardRange!Source)
     {
         /// Ditto
@@ -5268,7 +5275,7 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
         immutable end = min(_source.length, (index + 1) * _chunkSize);
         return _source[index * _chunkSize..end];
     }
-    
+
     /// Ditto
     typeof(this) opSlice(size_t lower, size_t upper)
     {
@@ -5276,22 +5283,22 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
         immutable end = min(_source.length, upper * _chunkSize);
         return typeof(this)(_source[start..end], _chunkSize);
     }
-    
+
     /// Ditto
     @property size_t length()
     {
-        return (_source.length / _chunkSize) + 
+        return (_source.length / _chunkSize) +
             (_source.length % _chunkSize > 0);
     }
-    
+
     /// Ditto
     @property auto back()
     {
         assert(!empty);
-        
+
         immutable remainder = _source.length % _chunkSize;
         immutable len = _source.length;
-        
+
         if(remainder == 0)
         {
             // Return a full chunk.
@@ -5302,15 +5309,15 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
             return _source[len - remainder..len];
         }
     }
-    
+
     /// Ditto
     void popBack()
     {
         assert(!empty);
-        
+
         immutable remainder = _source.length % _chunkSize;
         immutable len = _source.length;
-        
+
         if(remainder == 0)
         {
             _source = _source[0..len - _chunkSize];
@@ -5320,7 +5327,7 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
             _source = _source[0..len - remainder];
         }
     }
-   
+
 private:
     Source _source;
     size_t _chunkSize;
@@ -5343,7 +5350,7 @@ unittest
     assert(chunks.front == chunks[0]);
     assert(chunks.length == 3);
     assert(equal(retro(array(chunks)), array(retro(chunks))));
-    
+
     auto chunks2 = chunks.save;
     chunks.popFront();
     assert(chunks[0] == [5, 6, 7, 8]);
@@ -5351,7 +5358,7 @@ unittest
     chunks2.popBack();
     assert(chunks2[1] == [5, 6, 7, 8]);
     assert(chunks2.length == 2);
-    
+
     static assert(isRandomAccessRange!(typeof(chunks)));
 }
 
@@ -5378,7 +5385,7 @@ unittest
 {
     struct R
     {
-        ref int front() { static int x = 42; return x; }
+        @property ref int front() { static int x = 42; return x; }
         this(this){}
     }
     R r;
@@ -5746,7 +5753,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     return .moveBack(_range);
                 }
 
-                @property void popBack() { return _range.popBack; }
+                @property void popBack() { return _range.popBack(); }
 
                 static if (hasAssignableElements!R) {
                     @property void back(E newVal) {

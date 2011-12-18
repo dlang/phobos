@@ -35,13 +35,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -nofloat -w -d
+DFLAGS=-O -release -nofloat -w -d -property
 #DFLAGS=-unittest -g -d
 #DFLAGS=-unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -nofloat -w -d
+UDFLAGS=-O -nofloat -w -d -property
 
 ## C compiler
 
@@ -59,7 +59,7 @@ SVN=\svnproj\phobos\phobos
 
 ## Location of where to write the html documentation files
 
-DOCSRC = ../docsrc
+DOCSRC = .
 STDDOC = $(DOCSRC)/std.ddoc
 
 DOC=..\..\html\d\phobos
@@ -255,6 +255,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
 	$(DOC)\std_net_isemail.html \
+	$(DOC)\etc_c_curl.html \
+	$(DOC)\etc_c_sqlite3.html \
+	$(DOC)\etc_c_zlib.html \
 	$(DOC)\phobos.html
 
 SRC=	unittest.d crc32.d index.d
@@ -922,6 +925,15 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
+
+$(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
+
+$(DOC)\etc_c_sqlite3.html : $(STDDOC) etc\c\sqlite3.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_sqlite3.html $(STDDOC) etc\c\sqlite3.d
+
+$(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_zlib.html $(STDDOC) etc\c\zlib.d
 
 
 ######################################################

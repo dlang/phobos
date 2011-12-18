@@ -69,8 +69,8 @@ version(D_InlineAsm_X86)
         if (hyperThreading)     feats ~= "HTT";
 
         return format(
-            "Vendor string:    %s\n", vendor,
-            "Processor string: %s\n", processor,
+            "Vendor string:    %s\n", vendor(),
+            "Processor string: %s\n", processor(),
             "Signature:        Family=%d Model=%d Stepping=%d\n", family, model, stepping,
             "Features:         %s\n", feats,
             "Multithreading:   %d threads / %d cores\n", threadsPerCPU, coresPerCPU);
@@ -114,6 +114,8 @@ version(D_InlineAsm_X86)
     /// Returns number of cores in CPU
     alias core.cpuid.coresPerCPU coresPerCPU;
 
+    @property
+    {
     /// Is this an Intel processor?
     bool intel()                {return manufac==INTEL;}
     /// Is this an AMD processor?
@@ -125,6 +127,7 @@ version(D_InlineAsm_X86)
     uint model()                {return core.cpuid.model;}
     /// Returns family
     uint family()               {return core.cpuid.family;}
+    }
 
     shared static this()
     {
@@ -164,6 +167,8 @@ else
     auto vendor()             {return "unknown vendor"; }
     auto processor()          {return "unknown processor"; }
 
+    @property
+    {
     bool mmx()                  {return false; }
     bool fxsr()                 {return false; }
     bool sse()                  {return false; }
@@ -188,4 +193,5 @@ else
     uint stepping()             {return 0; }
     uint model()                {return 0; }
     uint family()               {return 0; }
+    }
 }

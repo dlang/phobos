@@ -84,7 +84,7 @@ class MmFile
     version(linux) this(File file, Mode mode = Mode.read, ulong size = 0,
             void* address = null, size_t window = 0)
     {
-        this(file.fileno, mode, size, address, window);
+        this(file.fileno(), mode, size, address, window);
     }
 
     version(linux) private this(int fildes, Mode mode, ulong size,
