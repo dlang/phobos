@@ -28536,19 +28536,26 @@ private:
     }
 
 
-    static shared LocalTime _localTime;
+    static __gshared LocalTime _localTime;
 
 
     static immutable(LocalTime) singleton()
     {
-        //The double if is so that the synchronized block is only
-        //used when it's actually needed.
-        if(!_localTime)
+        import core.atomic;
+
+        //atomicLoad and atomicStore are necessary, because shared does
+        //not yet implement the memory fences required for double-checked
+        //locking to work correctly with it.
+        auto temp = cast(shared LocalTime)_localTime;
+        if(!atomicLoad!(msync.acq)(temp))
         {
             synchronized
             {
-                if(!_localTime)
-                    _localTime = cast(shared(LocalTime))new immutable(LocalTime)();
+                if(!temp)
+                {
+                    atomicStore!(msync.rel)(temp, cast(shared LocalTime)new immutable(LocalTime));
+                    _localTime = cast(LocalTime)temp;
+                }
             }
         }
 
@@ -28683,19 +28690,26 @@ private:
     }
 
 
-    static shared UTC _utc;
+    static __gshared UTC _utc;
 
 
     static immutable(UTC) singleton()
     {
-        //The double if is so that the synchronized block is only
-        //used when it's actually needed.
-        if(!_utc)
+        import core.atomic;
+
+        //atomicLoad and atomicStore are necessary, because shared does
+        //not yet implement the memory fences required for double-checked
+        //locking to work correctly with it.
+        auto temp = cast(shared UTC)_utc;
+        if(!atomicLoad!(msync.acq)(temp))
         {
             synchronized
             {
-                if(!_utc)
-                    _utc = cast(shared(UTC))new immutable(UTC)();
+                if(!temp)
+                {
+                    atomicStore!(msync.rel)(temp, cast(shared UTC)new immutable(UTC));
+                    _utc = cast(UTC)temp;
+                }
             }
         }
 
