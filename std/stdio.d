@@ -929,7 +929,24 @@ Range that reads one line at a time. */
         /// Range primitive implementations.
         @property bool empty() const
         {
-            return !file.isOpen;
+            if (!file.isOpen) return true;
+            if (line !is null) return false;
+
+            // First read ever, must make sure stream is not empty. We
+            // do so by reading a character and putting it back. Doing
+            // so is guaranteed to work on all files opened in all
+            // buffering modes. Although we internally mutate the
+            // state of the file, we restore everything, which
+            // justifies the cast.
+            auto mutableFP = (cast(File*) &file).getFP();
+            auto c = fgetc(mutableFP);
+            if (c == -1)
+            {
+                return true;
+            }
+            ungetc(c, mutableFP) == c
+                || assert(false, "Bug in cstdlib implementation");
+            return false;
         }
 
         /// Ditto
@@ -944,12 +961,15 @@ Range that reads one line at a time. */
         {
             enforce(file.isOpen);
             file.readln(line, terminator);
-            assert(line !is null, "Bug in File.readln");
-            if (!line.length)
+            if (line.empty)
+            {
                 file.detach();
+            }
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
-                line.length = line.length - 1;
+            {
+                line = line.ptr[0 .. line.length - 1];
+            }
         }
     }
 
@@ -967,29 +987,44 @@ to this file. */
     {
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
-        std.file.write("testingByLine", "asd\ndef\nasdf");
-        scope(success) std.file.remove("testingByLine");
+        std.file.write("deleteme", "");
+        scope(success) std.file.remove("deleteme");
 
-        auto witness = [ "asd", "def", "asdf" ];
-        uint i;
-        auto f = File("testingByLine");
-        scope(exit)
-        {
-            f.close();
-            assert(!f.isOpen);
-        }
+        // Test empty file
+        auto f = File("deleteme");
         foreach (line; f.byLine())
         {
-            assert(line == witness[i++]);
+            assert(false);
         }
-        assert(i == witness.length);
-        i = 0;
-        f.rewind();
-        foreach (line; f.byLine(KeepTerminator.yes))
+        f.close();
+
+        static void test(string txt, string[] witness,
+                KeepTerminator kt = KeepTerminator.no)
         {
-            assert(line == witness[i++] ~ '\n' || i == witness.length);
+            uint i;
+            std.file.write("deleteme", txt);
+            auto f = File("deleteme");
+            scope(exit)
+            {
+                f.close();
+                assert(!f.isOpen);
+            }
+            foreach (line; f.byLine(kt))
+            {
+                assert(line == witness[i++]);
+            }
+            assert(i == witness.length, text(i, " != ", witness.length));
         }
-        assert(i == witness.length);
+
+        test("", null);
+        test("\n", [ "" ]);
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+
+        test("", null, KeepTerminator.yes);
+        test("\n", [ "\n" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
     }
 
     template byRecord(Fields...)
@@ -1098,17 +1133,17 @@ In case of an I/O error, an $(D StdioException) is thrown.
 
     unittest
     {
-        scope(failure) printf("Failed test at line %d\n", __LINE__);
+         scope(failure) printf("Failed test at line %d\n", __LINE__);
 
-        std.file.write("testingByChunk", "asd\ndef\nasdf");
+        std.file.write("deleteme", "asd\ndef\nasdf");
 
         auto witness = ["asd\n", "def\n", "asdf" ];
-        auto f = File("testingByChunk");
+        auto f = File("deleteme");
         scope(exit)
         {
             f.close();
             assert(!f.isOpen);
-            std.file.remove("testingByChunk");
+            std.file.remove("deleteme");
         }
 
         uint i;
@@ -1460,7 +1495,7 @@ unittest
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
-    write(buf);
+    if (false) write(buf);
     // test write
     string file = "dmd-build-test.deleteme.txt";
     auto f = File(file, "w");
