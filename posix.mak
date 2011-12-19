@@ -263,15 +263,18 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
-	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
-	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
-	@touch -t 197001230123 $@
 # run unittest in its own directory
-	@$(RUN) $@
 # succeeded, render the file new again
-	@touch $@
+	@START_TM="`date +%s`" && \
+	  $(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	 	$(ROOT)/emptymain.d $< && \
+	  COMPILE_TM="`date +%s`" && \
+	  touch -t 197001230123 $@ && \
+	  $(RUN) $@ && \
+	  RUN_TM="`date +%s`" && \
+	  printf "%02ds+%02ds %s\n" $$[ $$COMPILE_TM - $$START_TM ] $$[ $$RUN_TM - $$COMPILE_TM ] $@ && \
+	  touch $@
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)

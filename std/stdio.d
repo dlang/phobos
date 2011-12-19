@@ -1460,7 +1460,7 @@ unittest
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
-    write(buf);
+    if (false) write(buf);
     // test write
     string file = "dmd-build-test.deleteme.txt";
     auto f = File(file, "w");
