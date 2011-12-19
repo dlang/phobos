@@ -480,9 +480,10 @@ $(D rawRead) always read in binary mode on Windows.
 
     unittest
     {
-        std.file.write("deleteme", "\r\n\n\r\n");
-        scope(exit) std.file.remove("deleteme");
-        auto f = File("deleteme", "r");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "\r\n\n\r\n");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "r");
         auto buf = f.rawRead(new char[5]);
         f.close();
         assert(buf == "\r\n\n\r\n");
@@ -527,11 +528,12 @@ $(D rawWrite) always write in binary mode on Windows.
 
     unittest
     {
-        auto f = File("deleteme", "w");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
         f.rawWrite("\r\n\n\r\n");
         f.close();
-        assert(std.file.read("deleteme") == "\r\n\n\r\n");
+        assert(std.file.read(deleteme) == "\r\n\n\r\n");
     }
 
 /**
@@ -557,8 +559,9 @@ file handle. Throws on error.
 
     unittest
     {
-        auto f = File("deleteme", "w+");
-        scope(exit) { f.close(); std.file.remove("deleteme"); }
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w+");
+        scope(exit) { f.close(); std.file.remove(deleteme); }
         f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
@@ -602,9 +605,10 @@ managed file handle. Throws on error.
 
     unittest
     {
-        std.file.write("deleteme", "abcdefghijklmnopqrstuvwqxyz");
-        scope(exit) { std.file.remove("deleteme"); }
-        auto f = File("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "abcdefghijklmnopqrstuvwqxyz");
+        scope(exit) { std.file.remove(deleteme); }
+        auto f = File(deleteme);
         auto a = new ubyte[4];
         f.rawRead(a);
         assert(f.tell == 4, text(f.tell));
@@ -768,12 +772,13 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\nworld\n");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\n");
+        scope(exit) std.file.remove(deleteme);
         foreach (C; Tuple!(char, wchar, dchar).Types)
         {
             auto witness = [ "hello\n", "world\n" ];
-            auto f = File("deleteme");
+            auto f = File(deleteme);
             uint i = 0;
             immutable(C)[] buf;
             while ((buf = f.readln!(typeof(buf))()).length)
@@ -830,10 +835,11 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\n\rworld\nhow\n\rare ya");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
         auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
-        scope(exit) std.file.remove("deleteme");
-        auto f = File("deleteme");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme);
         uint i = 0;
         char[] buf;
         while (f.readln(buf, "\n\r"))
@@ -852,10 +858,11 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\nworld\n");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\n");
+        scope(exit) std.file.remove(deleteme);
         string s;
-        auto f = File("deleteme");
+        auto f = File(deleteme);
         f.readf("%s\n", &s);
         assert(s == "hello", "["~s~"]");
     }
@@ -987,23 +994,24 @@ to this file. */
     {
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
-        std.file.write("deleteme", "");
-        scope(success) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "");
+        scope(success) std.file.remove(deleteme);
 
         // Test empty file
-        auto f = File("deleteme");
+        auto f = File(deleteme);
         foreach (line; f.byLine())
         {
             assert(false);
         }
         f.close();
 
-        static void test(string txt, string[] witness,
+        void test(string txt, string[] witness,
                 KeepTerminator kt = KeepTerminator.no)
         {
             uint i;
-            std.file.write("deleteme", txt);
-            auto f = File("deleteme");
+            std.file.write(deleteme, txt);
+            auto f = File(deleteme);
             scope(exit)
             {
                 f.close();
@@ -1037,10 +1045,12 @@ to this file. */
 
     unittest
     {
+        // auto deleteme = testFilename();
+        // rndGen.popFront();
         // scope(failure) printf("Failed test at line %d\n", __LINE__);
-        // std.file.write("deleteme", "1 2\n4 1\n5 100");
-        // scope(exit) std.file.remove("deleteme");
-        // File f = File("deleteme");
+        // std.file.write(deleteme, "1 2\n4 1\n5 100");
+        // scope(exit) std.file.remove(deleteme);
+        // File f = File(deleteme);
         // scope(exit) f.close();
         // auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
         // uint i;
@@ -1133,17 +1143,18 @@ In case of an I/O error, an $(D StdioException) is thrown.
 
     unittest
     {
-         scope(failure) printf("Failed test at line %d\n", __LINE__);
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
 
-        std.file.write("deleteme", "asd\ndef\nasdf");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "asd\ndef\nasdf");
 
         auto witness = ["asd\n", "def\n", "asdf" ];
-        auto f = File("deleteme");
+        auto f = File(deleteme);
         scope(exit)
         {
             f.close();
             assert(!f.isOpen);
-            std.file.remove("deleteme");
+            std.file.remove(deleteme);
         }
 
         uint i;
@@ -1309,9 +1320,10 @@ $(D Range) that locks the file and allows fast writing to it.
 
 unittest
 {
-    scope(exit) collectException(std.file.remove("deleteme"));
-    std.file.write("deleteme", "1 2 3");
-    auto f = File("deleteme");
+    auto deleteme = testFilename();
+    scope(exit) collectException(std.file.remove(deleteme));
+    std.file.write(deleteme, "1 2 3");
+    auto f = File(deleteme);
     assert(f.size == 5);
     assert(f.tell == 0);
 }
@@ -1388,10 +1400,11 @@ struct LockingTextReader
 unittest
 {
     static assert(isInputRange!LockingTextReader);
-
-    std.file.write("deleteme", "1 2 3");
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "1 2 3");
+    scope(exit) std.file.remove(deleteme);
     int x, y;
-    auto f = File("deleteme");
+    auto f = File(deleteme);
     f.readf("%s ", &x);
     assert(x == 1);
     f.readf("%d ", &x);
@@ -1497,12 +1510,12 @@ unittest
     void[] buf;
     if (false) write(buf);
     // test write
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-//    scope(exit) { std.file.remove(file); }
-     f.write("Hello, ",  "world number ", 42, "!");
-     f.close();
-     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    f.write("Hello, ",  "world number ", 42, "!");
+    f.close();
+    scope(exit) { std.file.remove(deleteme); }
+    assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
     // // test write on stdout
     //auto saveStdout = stdout;
     //scope(exit) stdout = saveStdout;
@@ -1555,28 +1568,28 @@ unittest
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writeln
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writeln("Hello, ",  "world number ", 42, "!");
     f.close();
     version (Windows)
         assert(cast(char[]) std.file.read(file) ==
                 "Hello, world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout.open(file, "w");
+    stdout.open(deleteme, "w");
     writeln("Hello, ",  "world number ", 42, "!");
     stdout.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
 }
 
@@ -1632,19 +1645,19 @@ unittest
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writef
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writef("Hello, %s world number %s!", "nice", 42);
     f.close();
-    assert(cast(char[]) std.file.read(file) ==  "Hello, nice world number 42!");
+    assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout.open(file, "w");
+    stdout.open(deleteme, "w");
     writef("Hello, %s world number %s!", "nice", 42);
     stdout.close();
-    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!");
+    assert(cast(char[]) std.file.read(deleteme) == "Hello, nice world number 42!");
 }
 
 /***********************************
@@ -1660,18 +1673,18 @@ unittest
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writefln
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writefln("Hello, %s world number %s!", "nice", 42);
     f.close();
     version (Windows)
         assert(cast(char[]) std.file.read(file) ==
                 "Hello, nice world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
-                cast(char[]) std.file.read(file));
+                cast(char[]) std.file.read(deleteme));
     // test write on stdout
     // auto saveStdout = stdout;
     // scope(exit) stdout = saveStdout;
@@ -1941,15 +1954,15 @@ unittest
 {
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    string file = "dmd-build-test.deleteme.txt";
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
     alias TypeTuple!(string, wstring, dstring,
                      char[], wchar[], dchar[])
         TestedWith;
     foreach (T; TestedWith) {
         // test looping with an empty file
-        std.file.write(file, "");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "");
+        auto f = File(deleteme, "r");
         foreach (T line; lines(f))
         {
             assert(false);
@@ -1957,8 +1970,8 @@ unittest
         f.close();
 
         // test looping with a file with three lines
-        std.file.write(file, "Line one\nline two\nline three\n");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three\n");
+        f.open(deleteme, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -1971,8 +1984,8 @@ unittest
         f.close();
 
         // test looping with a file with three lines, last without a newline
-        std.file.write(file, "Line one\nline two\nline three");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        f.open(deleteme, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -1991,8 +2004,8 @@ unittest
     alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
     foreach (T; TestedWith2) {
         // test looping with an empty file
-        std.file.write(file, "");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "");
+        auto f = File(deleteme, "r");
         foreach (T line; lines(f))
         {
             assert(false);
@@ -2000,8 +2013,8 @@ unittest
         f.close();
 
         // test looping with a file with three lines
-        std.file.write(file, "Line one\nline two\nline three\n");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three\n");
+        f.open(deleteme, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -2015,8 +2028,8 @@ unittest
         f.close();
 
         // test looping with a file with three lines, last without a newline
-        std.file.write(file, "Line one\nline two\nline three");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        f.open(deleteme, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -2034,8 +2047,8 @@ unittest
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
-        std.file.write(file, "Line one\nline two\nline three");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        auto f = File(deleteme, "r");
         uint i = 0;
         foreach (ulong j, T line; lines(f))
         {
@@ -2135,11 +2148,11 @@ unittest
 {
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    string file = "dmd-build-test.deleteme.txt";
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
     // test looping with an empty file
-    std.file.write(file, "");
-    auto f = File(file, "r");
+    std.file.write(deleteme, "");
+    auto f = File(deleteme, "r");
     foreach (ubyte[] line; chunks(f, 4))
     {
         assert(false);
@@ -2147,8 +2160,8 @@ unittest
     f.close();
 
     // test looping with a file with three lines
-    std.file.write(file, "Line one\nline two\nline three\n");
-    f = File(file, "r");
+    std.file.write(deleteme, "Line one\nline two\nline three\n");
+    f = File(deleteme, "r");
     uint i = 0;
     foreach (ubyte[] line; chunks(f, 3))
     {
@@ -2235,10 +2248,11 @@ __gshared
 unittest
 {
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    std.file.write("deleteme", "1 2\n4 1\n5 100");
-    scope(exit) std.file.remove("deleteme");
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "1 2\n4 1\n5 100");
+    scope(exit) std.file.remove(deleteme);
     {
-        File f = File("deleteme");
+        File f = File(deleteme);
         scope(exit) f.close();
         auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
         uint i;
@@ -2602,3 +2616,8 @@ version(linux) {
     }
 }
 
+version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
+{
+    import std.path;
+    return text("deleteme.", baseName(file), ".", line);
+}
