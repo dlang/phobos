@@ -33949,6 +33949,14 @@ unittest
     }
 }
 
+unittest
+{
+    /* Issue 6642 */
+    static assert(!hasUnsharedAliasing!Date);
+    static assert(!hasUnsharedAliasing!TimeOfDay);
+    static assert(!hasUnsharedAliasing!DateTime);
+    static assert(!hasUnsharedAliasing!SysTime);
+}
 
 template _isPrintable(T...)
 {
