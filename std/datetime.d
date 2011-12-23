@@ -28536,30 +28536,26 @@ private:
     }
 
 
-    static __gshared LocalTime _localTime;
+    static shared LocalTime _localTime;
+    static bool _initialized;
 
 
     static immutable(LocalTime) singleton()
     {
-        import core.atomic;
-
-        //atomicLoad and atomicStore are necessary, because shared does
-        //not yet implement the memory fences required for double-checked
-        //locking to work correctly with it.
-        auto temp = cast(shared LocalTime)_localTime;
-        if(!atomicLoad!(msync.acq)(temp))
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
         {
+            _initialized = true;
+
             synchronized
             {
-                if(!temp)
-                {
-                    atomicStore!(msync.rel)(temp, cast(shared LocalTime)new immutable(LocalTime));
-                    _localTime = cast(LocalTime)temp;
-                }
+                if(!_localTime)
+                    _localTime = cast(shared LocalTime)new immutable(LocalTime)();
             }
         }
 
-        return cast(immutable(LocalTime))_localTime;
+        return cast(immutable LocalTime)_localTime;
     }
 }
 
@@ -28690,30 +28686,26 @@ private:
     }
 
 
-    static __gshared UTC _utc;
+    static shared UTC _utc;
+    static bool _initialized;
 
 
     static immutable(UTC) singleton()
     {
-        import core.atomic;
-
-        //atomicLoad and atomicStore are necessary, because shared does
-        //not yet implement the memory fences required for double-checked
-        //locking to work correctly with it.
-        auto temp = cast(shared UTC)_utc;
-        if(!atomicLoad!(msync.acq)(temp))
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
         {
+            _initialized = true;
+
             synchronized
             {
-                if(!temp)
-                {
-                    atomicStore!(msync.rel)(temp, cast(shared UTC)new immutable(UTC));
-                    _utc = cast(UTC)temp;
-                }
+                if(!_utc)
+                    _utc = cast(shared UTC)new immutable(UTC)();
             }
         }
 
-        return cast(immutable(UTC))_utc;
+        return cast(immutable UTC)_utc;
     }
 }
 
