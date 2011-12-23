@@ -153,6 +153,11 @@ version(unittest)
 //highly unlikely to conflict with anything that anyone else is doing.
 private alias std.string.indexOf stds_indexOf;
 
+version(testStdDateTime) unittest
+{
+    initializeTests();
+}
+
 //Verify module example.
 version(testStdDateTime) unittest
 {
@@ -162,7 +167,7 @@ version(testStdDateTime) unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-unittest
+version(testStdDateTime) unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -27996,7 +28001,8 @@ public:
       +/
     static immutable(LocalTime) opCall() pure nothrow
     {
-        return _localTime;
+        alias pure nothrow immutable(LocalTime) function() FuncType;
+        return (cast(FuncType)&singleton)();
     }
 
 
@@ -28523,20 +28529,33 @@ public:
 
 private:
 
-    this() immutable pure
+    this() immutable
     {
         super("", "", "");
+        tzset();
     }
 
 
-    static immutable LocalTime _localTime;
+    static shared LocalTime _localTime;
+    static bool _initialized;
 
 
-    shared static this()
+    static immutable(LocalTime) singleton()
     {
-        tzset();
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
+        {
+            synchronized
+            {
+                if(!_localTime)
+                    _localTime = cast(shared LocalTime)new immutable(LocalTime)();
+            }
 
-        _localTime = new immutable(LocalTime)();
+            _initialized = true;
+        }
+
+        return cast(immutable LocalTime)_localTime;
     }
 }
 
@@ -28553,7 +28572,8 @@ public:
       +/
     static immutable(UTC) opCall() pure nothrow
     {
-        return _utc;
+        alias pure nothrow immutable(UTC) function() FuncType;
+        return (cast(FuncType)&singleton)();
     }
 
 
@@ -28666,12 +28686,26 @@ private:
     }
 
 
-    static immutable UTC _utc;
+    static shared UTC _utc;
+    static bool _initialized;
 
 
-    shared static this()
+    static immutable(UTC) singleton()
     {
-        _utc = new immutable(UTC)();
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
+        {
+            synchronized
+            {
+                if(!_utc)
+                    _utc = cast(shared UTC)new immutable(UTC)();
+            }
+
+            _initialized = true;
+        }
+
+        return cast(immutable UTC)_utc;
     }
 }
 
@@ -33458,7 +33492,7 @@ version(unittest)
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
 
-    static this()
+    void initializeTests()
     {
         immutable lt = LocalTime().utcToTZ(0);
         currLocalDiffFromUTC = dur!"hnsecs"(lt);
@@ -33949,6 +33983,14 @@ unittest
     }
 }
 
+unittest
+{
+    /* Issue 6642 */
+    static assert(!hasUnsharedAliasing!Date);
+    static assert(!hasUnsharedAliasing!TimeOfDay);
+    static assert(!hasUnsharedAliasing!DateTime);
+    static assert(!hasUnsharedAliasing!SysTime);
+}
 
 template _isPrintable(T...)
 {
