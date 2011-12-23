@@ -28546,13 +28546,13 @@ private:
         //to use memory fences properly.
         if(!_initialized)
         {
-            _initialized = true;
-
             synchronized
             {
                 if(!_localTime)
                     _localTime = cast(shared LocalTime)new immutable(LocalTime)();
             }
+
+            _initialized = true;
         }
 
         return cast(immutable LocalTime)_localTime;
@@ -28696,13 +28696,13 @@ private:
         //to use memory fences properly.
         if(!_initialized)
         {
-            _initialized = true;
-
             synchronized
             {
                 if(!_utc)
                     _utc = cast(shared UTC)new immutable(UTC)();
             }
+
+            _initialized = true;
         }
 
         return cast(immutable UTC)_utc;
