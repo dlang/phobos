@@ -257,7 +257,7 @@ unittest {
     assert(feqrel(gamma(0.5L), SQRT_PI) == real.mant_dig);
     assert(feqrel(gamma(17.25L), 4.224986665692703551570937158682064589938e13L) >= real.mant_dig-4);
 
-    assert(feqrel(gamma(1.0 / 3.L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
+    assert(feqrel(gamma(1.0 / 3.0L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
     assert(feqrel(gamma(0.25L),
         3.62560990822190831193068515586767200299516768288006L) >= real.mant_dig-1);
     assert(feqrel(gamma(1.0 / 5.0L),
