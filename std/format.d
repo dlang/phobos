@@ -1155,6 +1155,7 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
         if (leftPad == '0')
         {
             // pad with zeros
+
             fs.precision =
                 cast(typeof(fs.precision)) (spacesToPrint + digits.length);
                 //to!(typeof(fs.precision))(spacesToPrint + digits.length);
@@ -1614,7 +1615,7 @@ if (isSomeChar!T)
 }
 
 // undocumented
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if (!isSomeString!T && !isSomeChar!T)
 {
     formatValue(w, val, f);
@@ -1860,7 +1861,7 @@ const string toString();
 ---
 
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && !isInputRange!T)
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
