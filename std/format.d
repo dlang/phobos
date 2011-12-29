@@ -1794,7 +1794,7 @@ unittest
 {
     FormatSpec!char f;
     auto a = appender!string();
-    interface Whatever {};
+    interface Whatever {}
     class C : Whatever
     {
         override @property string toString() { return "ab"; }
@@ -2736,7 +2736,7 @@ version(none)unittest
     {
         char[float.sizeof] untyped;
         float typed;
-    };
+    }
     A a;
     a.typed = 5.5;
     char[] input = a.untyped[];
