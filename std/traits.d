@@ -3012,7 +3012,7 @@ unittest
     static assert(! isFunctionPointer!(foo));
     static assert(! isFunctionPointer!(bar));
 
-    static assert(!isFunctionPointer!((int a) {}));
+    static assert(isFunctionPointer!((int a) {}));
 }
 
 /**

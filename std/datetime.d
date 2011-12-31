@@ -21152,7 +21152,7 @@ unittest
         //Verify Examples.
         {
             auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-            auto func = (in Date date)
+            auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
                                 return date + dur!"days"(2);
@@ -21221,7 +21221,7 @@ unittest
         //Verify Examples.
         {
             auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-            auto func = (in Date date)
+            auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
                                 return date - dur!"days"(2);
@@ -23468,7 +23468,7 @@ unittest
 
         //Verify Examples.
         auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-        auto func = (in Date date)
+        auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -25737,7 +25737,7 @@ unittest
 
         //Verify Examples.
         auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-        auto func = (in Date date)
+        auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
                             return date - dur!"days"(2);
