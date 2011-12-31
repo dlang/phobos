@@ -365,8 +365,9 @@ T enforce(T, string file = __FILE__, size_t line = __LINE__)
 
     The whole safety and purity are inferred from $(D Dg)'s safety and purity.
  +/
-T enforce(T, Dg : void delegate(), string file = __FILE__, size_t line = __LINE__)
+T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
+    if (is(Dg : void delegate()) || is(Dg : void function()))
 {
     if (!value) dg();
     return value;
