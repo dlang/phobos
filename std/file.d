@@ -31,7 +31,8 @@ import std.metastrings; //For generating deprecation messages only. Remove once
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit : useWfuncs;
+        std.windows.syserror;
+    public import std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code

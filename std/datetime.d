@@ -123,6 +123,7 @@ import std.string;
 import std.system;
 import std.traits;
 import std.typecons;
+import std.utf;
 
 version(Windows)
 {
