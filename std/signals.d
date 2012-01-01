@@ -57,8 +57,8 @@
 module std.signals;
 
 import std.stdio;
-import std.c.stdlib : calloc, realloc, free;
-import std.outofmemory : _d_OutOfMemory;
+public import std.c.stdlib : calloc, realloc, free;
+public import std.outofmemory : _d_OutOfMemory;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
