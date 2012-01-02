@@ -252,9 +252,6 @@ libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/li
 endif
 
 ifeq ($(MODEL),64)
-DISABLED_TESTS += std/format
-# Still not passing, time to pull out the next issue.
-
 DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
 

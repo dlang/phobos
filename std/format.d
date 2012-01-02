@@ -4367,11 +4367,19 @@ unittest
     s = std.string.format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
 
-    s = std.string.format("%s", 1.2 + 3.4i);
-    assert(s == "1.2+3.4i");
+    version(X86_64)
+    {
+        pragma(msg, "several format tests disabled on x86_64 due to bug 5625");
+    }
+    else
+    {
+        s = std.string.format("%s", 1.2 + 3.4i);
+        assert(s == "1.2+3.4i");
 
-    s = std.string.format("%x %X", 1.32, 6.78f);
-    assert(s == "3ff51eb851eb851f 40D8F5C3");
+        s = std.string.format("%x %X", 1.32, 6.78f);
+        assert(s == "3ff51eb851eb851f 40D8F5C3");
+
+    }
 
     s = std.string.format("%#06.*f",2,12.345);
     assert(s == "012.35");
