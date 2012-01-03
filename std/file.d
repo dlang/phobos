@@ -31,7 +31,8 @@ import std.metastrings; //For generating deprecation messages only. Remove once
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit : useWfuncs;
+        std.windows.syserror;
+    public import std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code
@@ -747,7 +748,7 @@ unittest
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(2);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffa = accessTime1 - currTime;
@@ -758,29 +759,32 @@ unittest
         assert(abs(diffm) <= leeway);
     }
 
-    enum sleepTime = dur!"seconds"(2);
-    Thread.sleep(sleepTime);
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimes(deleteme, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+        enum sleepTime = dur!"seconds"(2);
+        Thread.sleep(sleepTime);
 
-        //There is no guarantee that the access time will be updated.
-        assert(abs(diffa) <= leeway + sleepTime);
-        assert(abs(diffm) <= leeway);
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimes(deleteme, accessTime2, modificationTime2);
+
+        {
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+
+            //There is no guarantee that the access time will be updated.
+            assert(abs(diffa) <= leeway + sleepTime);
+            assert(abs(diffm) <= leeway);
+        }
+
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 
@@ -852,7 +856,7 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(3);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffc = creationTime1 - currTime;
@@ -869,33 +873,36 @@ version(Windows) unittest
         assert(abs(diffm) <= leeway);
     }
 
-    Thread.sleep(dur!"seconds"(2));
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime creationTime2 = void;
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure)
+        Thread.sleep(dur!"seconds"(2));
+
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime creationTime2 = void;
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
+
         {
-            writefln("[%s] [%s] [%s] [%s] [%s]",
-                     accessTime2, modificationTime2, currTime, diffa, diffm);
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure)
+            {
+                writefln("[%s] [%s] [%s] [%s] [%s]",
+                         accessTime2, modificationTime2, currTime, diffa, diffm);
+            }
+
+            assert(abs(diffa) <= leeway);
+            assert(abs(diffm) <= leeway);
         }
 
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(creationTime1 == creationTime2);
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(creationTime1 == creationTime2);
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 /++

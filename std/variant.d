@@ -654,7 +654,7 @@ public:
         {
             TypeInfo info;
             T result;
-        };
+        }
         auto p = *cast(T**) &store;
         Buf buf = { typeid(T) };
         if (fptr(OpID.get, &store, &buf))
@@ -670,7 +670,7 @@ public:
         {
             TypeInfo info;
             Unqual!T result;
-        };
+        }
         auto p = *cast(T**) &store;
         Buf buf = { typeid(T) };
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))

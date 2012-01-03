@@ -387,8 +387,9 @@ unittest
 }
 ----
  */
-T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
-        && is(typeof(S.init.to!T()) : T))
+T toImpl(T, S)(S value)
+    if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
+        hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))
 {
     return value.to!T();
 }

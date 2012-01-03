@@ -67,24 +67,24 @@ version (all)
 {
     // Bring in unit test for module by referencing function in it
 
-    cmp("foo", "bar");			// string
-    fncharmatch('a', 'b');		// path
-    isNaN(1.0);				// math
-    std.conv.to!double("1.0");		// std.conv
-    OutBuffer b = new OutBuffer();	// outbuffer
-    std.ctype.tolower('A');		// ctype
-    RegExp r = new RegExp(null, null);	// regexp
+    cmp("foo", "bar");                  // string
+    fncharmatch('a', 'b');              // path
+    isNaN(1.0);                         // math
+    std.conv.to!double("1.0");          // std.conv
+    OutBuffer b = new OutBuffer();      // outbuffer
+    std.ctype.tolower('A');             // ctype
+    RegExp r = new RegExp(null, null);  // regexp
     uint ranseed = std.random.unpredictableSeed();
     thisTid();
     int a[];
-    a.reverse;				// adi
-    a.sort;				// qsort
-    std.date.getUTCtime();			// date
+    a.reverse;                          // adi
+    a.sort;                             // qsort
+    std.date.getUTCtime();                      // date
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
-    isValidDchar(cast(dchar)0);			// utf
-    std.uri.ascii2hex(0);			// uri
-    std.zlib.adler32(0,null);			// D.zlib
+    isValidDchar(cast(dchar)0);                 // utf
+    std.uri.ascii2hex(0);                       // uri
+    std.zlib.adler32(0,null);                   // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
     ubyte[16] buf;
@@ -97,7 +97,7 @@ version (all)
 
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
-	printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
+        printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
 
     int[3] x;
     x[0] = 3;
@@ -117,8 +117,8 @@ version (all)
 
     std.file.exists("foo");
 
-    foreach_reverse (dchar d; "hello"c) { ; }
-    foreach_reverse (k, dchar d; "hello"c) { ; }
+    foreach_reverse (dchar d; "hello"c) { }
+    foreach_reverse (k, dchar d; "hello"c) { }
 
     std.signals.linkin();
 

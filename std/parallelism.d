@@ -820,9 +820,9 @@ immutable uint totalCPUs;
 /*
 This class serves two purposes:
 
-1.  It distinguishes std.parallelism threads from other threads so that 
+1.  It distinguishes std.parallelism threads from other threads so that
     the std.parallelism daemon threads can be terminated.
-    
+
 2.  It adds a reference to the pool that the thread is a member of,
     which is also necessary to allow the daemon threads to be properly
     terminated.
@@ -831,14 +831,14 @@ private final class ParallelismThread : Thread {
     this(void delegate() dg) {
         super(dg);
     }
-    
+
     TaskPool pool;
 }
 
 // Kill daemon threads.
 shared static ~this() {
     auto allThreads = Thread.getAll();
-    
+
     foreach(thread; allThreads) {
         auto pthread = cast(ParallelismThread) thread;
         if(pthread is null) continue;
@@ -847,7 +847,7 @@ shared static ~this() {
         pool.stop();
         pthread.join();
     }
-}    
+}
 
 /**
 This class encapsulates a task queue and a set of worker threads.  Its purpose
@@ -1075,7 +1075,7 @@ private:
         if(item is head) {
             // Make sure head gets set properly.
             popNoSync();
-            return true;;
+            return true;
         }
         if(item is tail) {
             tail = tail.prev;
@@ -1407,7 +1407,7 @@ public:
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])
                     (len);
                 alias args args2;
-                alias Args Args2;;
+                alias Args Args2;
             }
 
             if(!len) return buf;

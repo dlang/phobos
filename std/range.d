@@ -691,7 +691,7 @@ template ElementType(R)
 
 unittest
 {
-    enum XYZ : string { a = "foo" };
+    enum XYZ : string { a = "foo" }
     auto x = front(XYZ.a);
     static assert(is(ElementType!(XYZ) : dchar));
     immutable char[3] a = "abc";
@@ -719,7 +719,7 @@ template ElementEncodingType(R)
 
 unittest
 {
-    enum XYZ : string { a = "foo" };
+    enum XYZ : string { a = "foo" }
     auto x = front(XYZ.a);
     static assert(is(ElementType!(XYZ) : dchar));
     static assert(is(ElementEncodingType!(char[]) == char));
@@ -3764,12 +3764,12 @@ unittest {
     // Make sure we've worked around the relevant compiler bugs and this at least
     // compiles w/ >2 ranges.
     lockstep(foo, foo, foo);
-    
+
     // Make sure it works with const.
     const(int[])[] foo2 = [[1, 2, 3]];
     const(int[])[] bar2 = [[4, 5, 6]];
     auto c = chain(foo2, bar2);
-    
+
     foreach(f, b; lockstep(c, c)) {}
 }
 

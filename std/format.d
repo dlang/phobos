@@ -1155,6 +1155,7 @@ private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Ch
         if (leftPad == '0')
         {
             // pad with zeros
+
             fs.precision =
                 cast(typeof(fs.precision)) (spacesToPrint + digits.length);
                 //to!(typeof(fs.precision))(spacesToPrint + digits.length);
@@ -1614,7 +1615,7 @@ if (isSomeChar!T)
 }
 
 // undocumented
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if (!isSomeString!T && !isSomeChar!T)
 {
     formatValue(w, val, f);
@@ -1793,7 +1794,7 @@ unittest
 {
     FormatSpec!char f;
     auto a = appender!string();
-    interface Whatever {};
+    interface Whatever {}
     class C : Whatever
     {
         override @property string toString() { return "ab"; }
@@ -1860,7 +1861,7 @@ const string toString();
 ---
 
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && !isInputRange!T)
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
@@ -2735,7 +2736,7 @@ version(none)unittest
     {
         char[float.sizeof] untyped;
         float typed;
-    };
+    }
     A a;
     a.typed = 5.5;
     char[] input = a.untyped[];
@@ -4366,11 +4367,19 @@ unittest
     s = std.string.format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
 
-    s = std.string.format("%s", 1.2 + 3.4i);
-    assert(s == "1.2+3.4i");
+    version(X86_64)
+    {
+        pragma(msg, "several format tests disabled on x86_64 due to bug 5625");
+    }
+    else
+    {
+        s = std.string.format("%s", 1.2 + 3.4i);
+        assert(s == "1.2+3.4i");
 
-    s = std.string.format("%x %X", 1.32, 6.78f);
-    assert(s == "3ff51eb851eb851f 40D8F5C3");
+        s = std.string.format("%x %X", 1.32, 6.78f);
+        assert(s == "3ff51eb851eb851f 40D8F5C3");
+
+    }
 
     s = std.string.format("%#06.*f",2,12.345);
     assert(s == "012.35");

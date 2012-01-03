@@ -338,7 +338,7 @@ unittest
     assert(x.value == -5.0);
 
     // test enums
-    enum ABC { A, B, C };
+    enum ABC { A, B, C }
     struct EnumTest
     {
         mixin(bitfields!(
