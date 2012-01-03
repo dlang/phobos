@@ -45,12 +45,15 @@ bool isWhite(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in January 2012. Please use
+   $(RED Deprecated. It will be removed in July 2012. Please use
    $(D isLower) instead.)
 
     Return whether $(D c) is a unicode lowercase character.
   +/
-alias isLower isUniLower;
+deprecated bool isUniLower(dchar c) @safe pure nothrow
+{
+    return isLower(c);
+}
 
 /++
     Return whether $(D c) is a unicode lowercase character.
@@ -65,12 +68,15 @@ bool isLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in January 2012. Please use
+   $(RED Deprecated. It will be removed in July 2012. Please use
    $(D isUpper) instead.)
 
     Return whether $(D c) is a unicode uppercase character.
   +/
-alias isUpper isUniUpper;
+deprecated bool isUniUpper(dchar c) @safe pure nothrow
+{
+    return isUpper(c);
+}
 
 /++
     Return whether $(D c) is a unicode uppercase character.
@@ -85,13 +91,16 @@ bool isUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in January 2012. Please use
+   $(RED Deprecated. It will be removed in July 2012. Please use
    $(D toLower) instead.)
 
     If $(D c) is a unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
-alias toLower toUniLower;
+deprecated dchar toUniLower(dchar c) @safe pure nothrow
+{
+    return toLower(c);
+}
 
 /++
     If $(D c) is a unicode uppercase character, then its lowercase equivalent
@@ -154,13 +163,16 @@ dchar toLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in January 2012. Please use
+   $(RED Deprecated. It will be removed in July 2012. Please use
    $(D toUpper) instead.)
 
     If $(D c) is a unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
-alias toUpper toUniUpper;
+deprecated dchar toUniUpper(dchar c) @safe pure nothrow
+{
+    return toUpper(c);
+}
 
 /++
     If $(D c) is a unicode lowercase character, then its uppercase equivalent
@@ -223,7 +235,7 @@ dchar toUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Scheduled for deprecation in January 2012. Please use
+   $(RED Deprecated. It will be removed in July 2012. Please use
    $(D isAlpha) instead.)
 
     Returns whether $(D c) is a unicode alpha character (general unicode
@@ -231,7 +243,10 @@ dchar toUpper(dchar c) @safe pure nothrow
 
     Standards: Unicode 5.0.0.
   +/
-alias isAlpha isUniAlpha;
+deprecated bool isUniAlpha(dchar c) @safe pure nothrow
+{
+    return isAlpha(c);
+}
 
 /++
     Returns whether $(D c) is a unicode alpha character (general unicode
