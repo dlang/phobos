@@ -1470,9 +1470,9 @@ unittest
 
         foreach(C; TypeTuple!(char, wchar, dchar))
         {
-            auto result1 = appender!(C[]);
-            auto result2 = appender!(const(C)[]);
-            auto result3 = appender!(immutable(C)[]);
+            auto result1 = appender!(C[])();
+            auto result2 = appender!(const(C)[])();
+            auto result3 = appender!(immutable(C)[])();
 
             toUTF!C(result1, str1);
             toUTF!(const C)(result2, str2);
