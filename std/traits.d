@@ -106,24 +106,24 @@ private
  * Example:
  * ---
  * import std.traits;
- * static assert(PackageName!(PackageName) == "std");
+ * static assert(packageName!(packageName) == "std");
  * ---
  */
-template PackageName(alias T)
+template packageName(alias T)
 {
     static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
     {
         static if (is(typeof(__traits(parent, T))))
         {
-            enum PackageName = PackageName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+            enum packageName = packageName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
         }
         else
         {
-            enum PackageName = T.stringof[8..$];
+            enum packageName = T.stringof[8..$];
         }
     }
     else static if (is(typeof(__traits(parent, T))))
-        alias PackageName!(__traits(parent, T)) PackageName;
+        alias packageName!(__traits(parent, T)) packageName;
     else
         static assert(false, T.stringof ~ " has no parent");
 }
@@ -131,8 +131,8 @@ template PackageName(alias T)
 unittest
 {
     import etc.c.curl;
-    static assert(PackageName!(PackageName) == "std");
-    static assert(PackageName!(curl_httppost) == "etc.c");
+    static assert(packageName!(packageName) == "std");
+    static assert(packageName!(curl_httppost) == "etc.c");
 }
 
 /**
@@ -140,25 +140,25 @@ unittest
  * Example:
  * ---
  * import std.traits;
- * static assert(ModuleName!(ModuleName) == "std.traits");
+ * static assert(moduleName!(moduleName) == "std.traits");
  * ---
  */
-template ModuleName(alias T)
+template moduleName(alias T)
 {
     static if (T.stringof.length >= 9)
         static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
 
     static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        enum ModuleName = PackageName!(T) ~ '.' ~ T.stringof[7..$];
+        enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
     else
-        alias ModuleName!(__traits(parent, T)) ModuleName;
+        alias moduleName!(__traits(parent, T)) moduleName;
 }
 
 unittest
 {
     import etc.c.curl;
-    static assert(ModuleName!(ModuleName) == "std.traits");
-    static assert(ModuleName!(curl_httppost) == "etc.c.curl");
+    static assert(moduleName!(moduleName) == "std.traits");
+    static assert(moduleName!(curl_httppost) == "etc.c.curl");
 }
 
 /**
@@ -166,44 +166,44 @@ unittest
  * Example:
  * ---
  * import std.traits;
- * static assert(FullyQualifiedName!(FullyQualifiedName) == "std.traits.FullyQualifiedName");
+ * static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
  * ---
  */
-template FullyQualifiedName(alias T)
+template fullyQualifiedName(alias T)
 {
     static if (is(typeof(__traits(parent, T))))
     {
         static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
         {
-            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
         }
         else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
         {
-            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
         }
         else
-            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
     }
     else
     {
         static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
         {
-            enum FullyQualifiedName = T.stringof[8..$];
+            enum fullyQualifiedName = T.stringof[8..$];
         }
         else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
         {
-            enum FullyQualifiedName = T.stringof[7..$];
+            enum fullyQualifiedName = T.stringof[7..$];
         }
         else
-            enum FullyQualifiedName = T.stringof;
+            enum fullyQualifiedName = T.stringof;
     }
 }
 
 unittest
 {
     import etc.c.curl;
-    static assert(FullyQualifiedName!(FullyQualifiedName) == "std.traits.FullyQualifiedName");
-    static assert(PackageName!(curl_httppost) == "etc.c.curl.curl_httppost");
+    static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
+    static assert(packageName!(curl_httppost) == "etc.c.curl.curl_httppost");
 }
 
 /***
