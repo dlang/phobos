@@ -12,7 +12,8 @@
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
- *            Shin Fujishiro
+ *            Shin Fujishiro,
+ *            $(WEB octarineparrot.com, Robert Clipsham)
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -98,6 +99,111 @@ private
         }
         return Demangle!uint(atts, mstr);
     }
+}
+
+/**
+ * Get the full package name for the given symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(PackageName!(PackageName) == "std");
+ * ---
+ */
+template PackageName(alias T)
+{
+    static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+    {
+        static if (is(typeof(__traits(parent, T))))
+        {
+            enum PackageName = PackageName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+        }
+        else
+        {
+            enum PackageName = T.stringof[8..$];
+        }
+    }
+    else static if (is(typeof(__traits(parent, T))))
+        alias PackageName!(__traits(parent, T)) PackageName;
+    else
+        static assert(false, T.stringof ~ " has no parent");
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(PackageName!(PackageName) == "std");
+    static assert(PackageName!(curl_httppost) == "etc.c");
+}
+
+/**
+ * Get the module name (including package) for the given symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(ModuleName!(ModuleName) == "std.traits");
+ * ---
+ */
+template ModuleName(alias T)
+{
+    static if (T.stringof.length >= 9)
+        static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
+
+    static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        enum ModuleName = PackageName!(T) ~ '.' ~ T.stringof[7..$];
+    else
+        alias ModuleName!(__traits(parent, T)) ModuleName;
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(ModuleName!(ModuleName) == "std.traits");
+    static assert(ModuleName!(curl_httppost) == "etc.c.curl");
+}
+
+/**
+ * Get the fully qualified name of a symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(FullyQualifiedName!(FullyQualifiedName) == "std.traits.FullyQualifiedName");
+ * ---
+ */
+template FullyQualifiedName(alias T)
+{
+    static if (is(typeof(__traits(parent, T))))
+    {
+        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+        {
+            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+        }
+        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        {
+            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
+        }
+        else
+            enum FullyQualifiedName = FullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
+    }
+    else
+    {
+        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+        {
+            enum FullyQualifiedName = T.stringof[8..$];
+        }
+        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        {
+            enum FullyQualifiedName = T.stringof[7..$];
+        }
+        else
+            enum FullyQualifiedName = T.stringof;
+    }
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(FullyQualifiedName!(FullyQualifiedName) == "std.traits.FullyQualifiedName");
+    static assert(PackageName!(curl_httppost) == "etc.c.curl.curl_httppost");
 }
 
 /***
