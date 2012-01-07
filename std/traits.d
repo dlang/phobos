@@ -213,7 +213,7 @@ unittest
 {
     import etc.c.curl;
     static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
-    static assert(packageName!(curl_httppost) == "etc.c.curl.curl_httppost");
+    static assert(fullyQualifiedName!(curl_httppost) == "etc.c.curl.curl_httppost");
 }
 
 /***
