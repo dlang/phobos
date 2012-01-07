@@ -22,6 +22,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.traits;
+import std.algorithm;
 import std.typetuple;
 import std.typecons;
 import core.vararg;
@@ -161,6 +162,7 @@ unittest
     static assert(moduleName!(curl_httppost) == "etc.c.curl");
 }
 
+
 /**
  * Get the fully qualified name of a symbol.
  * Example:
@@ -181,8 +183,12 @@ template fullyQualifiedName(alias T)
         {
             enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
         }
-        else
+        else static if (T.stringof.countUntil('(') == -1)
+        {
             enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
+        }
+        else
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[0..T.stringof.countUntil('(')];
     }
     else
     {
@@ -194,8 +200,12 @@ template fullyQualifiedName(alias T)
         {
             enum fullyQualifiedName = T.stringof[7..$];
         }
-        else
+        else static if (T.stringof.countUntil('(') == -1)
+        {
             enum fullyQualifiedName = T.stringof;
+        }
+        else
+            enum fullyQualifiedName = T.stringof[0..T.stringof.countUntil('(')];
     }
 }
 
