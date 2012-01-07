@@ -1574,7 +1574,7 @@ unittest
     f.writeln("Hello, ",  "world number ", 42, "!");
     f.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\r\n");
     else
         assert(cast(char[]) std.file.read(deleteme) ==
@@ -1679,7 +1679,7 @@ unittest
     f.writefln("Hello, %s world number %s!", "nice", 42);
     f.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\r\n");
     else
         assert(cast(char[]) std.file.read(deleteme) ==
