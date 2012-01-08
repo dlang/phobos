@@ -1898,6 +1898,8 @@ version(Posix) unittest
             assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
+
+    assertThrown!FileException(readLink("/doesnotexist"));
 }
 
 
