@@ -1856,10 +1856,10 @@ else version(Posix) string readLink(C)(const(C)[] link)
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
     auto linkPtr = toUTFz!(const char*)(link);
-    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                        buffer.ptr,
-                                                        buffer.length),
-                         link);
+    auto size = core.sys.posix.unistd.readlink(linkPtr,
+                                               buffer.ptr,
+                                               buffer.length);
+    cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1868,10 +1868,11 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                       dynamicBuffer.ptr,
-                                                       dynamicBuffer.length),
-                        link);
+        size = core.sys.posix.unistd.readlink(linkPtr,
+                                              dynamicBuffer.ptr,
+                                              dynamicBuffer.length);
+        cenforce(size != -1, link);
+
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
@@ -1897,6 +1898,8 @@ version(Posix) unittest
             assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
+
+    assertThrown!FileException(readLink("/doesnotexist"));
 }
 
 
