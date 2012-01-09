@@ -3542,28 +3542,13 @@ private enum string parallelApplyMixinRandomAccess = q{
 
             foreach(i; start..end)
             {
-                static if(hasLvalueElements!R)
+                static if(withIndex)
                 {
-                    static if(withIndex)
-                    {
-                        if(dg(i, range[i])) foreachErr();
-                    }
-                    else
-                    {
-                        if(dg(range[i])) foreachErr();
-                    }
+                    if(dg(i, range[i])) foreachErr();
                 }
                 else
                 {
-                    auto valToPass = range[i];
-                    static if(withIndex)
-                    {
-                        if(dg(i, valToPass)) foreachErr();
-                    }
-                    else
-                    {
-                        if(dg(valToPass)) foreachErr();
-                    }
+                    if(dg(range[i])) foreachErr();
                 }
             }
         }
@@ -3790,7 +3775,18 @@ private struct ParallelForeach(R)
     size_t workUnitSize;
     alias ElementType!R E;
 
-    int opApply(scope int delegate(ref E) dg)
+    static if(hasLvalueElements!R)
+    {
+        alias int delegate(ref E) NoIndexDg;
+        alias int delegate(size_t, ref E) IndexDg;
+    }
+    else
+    {
+        alias int delegate(E) NoIndexDg;
+        alias int delegate(size_t, E) IndexDg; 
+    }
+        
+    int opApply(scope NoIndexDg dg)
     {
         static if(randLen!R)
         {
@@ -3802,7 +3798,7 @@ private struct ParallelForeach(R)
         }
     }
 
-    int opApply(scope int delegate(ref size_t, ref E) dg)
+    int opApply(scope IndexDg dg)
     {
         static if(randLen!R)
         {
