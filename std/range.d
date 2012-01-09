@@ -799,8 +799,9 @@ template hasLvalueElements(R)
 {
     enum bool hasLvalueElements = is(typeof(
     {
+        void checkRef(ref ElementType!R stuff) {}
         R r = void;
-        static assert(is(typeof(&r.front) == ElementType!(R)*));
+        static assert(is(typeof(checkRef(r.front))));
     }));
 }
 
@@ -808,6 +809,9 @@ unittest
 {
     static assert(hasLvalueElements!(int[]));
     static assert(!hasLvalueElements!(typeof(iota(3))));
+    
+    auto c = chain([1, 2, 3], [4, 5, 6]);
+    static assert(hasLvalueElements!(typeof(c)));
 }
 
 /**
@@ -3495,12 +3499,17 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
 
     if (withIndex)
     {
-        ret ~= "ref size_t, ";
+        ret ~= "size_t, ";
     }
 
-    foreach (ti, Unused; Ranges)
+    foreach (ti, Type; Ranges)
     {
-        ret ~= "ref ElementType!(Ranges[" ~ to!string(ti) ~ "]), ";
+        static if(hasLvalueElements!Type)
+        {
+            ret ~= "ref ";
+        }
+        
+        ret ~= "ElementType!(Ranges[" ~ to!string(ti) ~ "]), ";
     }
 
     // Remove trailing ,
@@ -3516,38 +3525,15 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
         ret ~= "\tsize_t index = 0;\n";
     }
 
-    // For every range not offering ref return, declare a variable to statically
-    // copy to so we have lvalue access.
-    foreach(ti, Range; Ranges)
-    {
-        static if (!hasLvalueElements!Range) {
-            // Don't have lvalue access.
-            ret ~= "\tUnqual!(ElementType!(R[" ~ to!string(ti) ~ "])) front" ~
-                to!string(ti) ~ ";\n";
-        }
-    }
-
     // Check for emptiness.
     ret ~= "\twhile(";                 //someEmpty) {\n";
-    foreach(ti, Unused; Ranges) {
+    foreach(ti, Unused; Ranges) 
+    {
         ret ~= "!ranges[" ~ to!string(ti) ~ "].empty && ";
     }
     // Strip trailing &&
     ret = ret[0..$ - 4];
     ret ~= ") {\n";
-
-    // Populate the dummy variables for everything that doesn't have lvalue
-    // elements.
-    foreach(ti, Range; Ranges)
-    {
-        static if (!hasLvalueElements!Range)
-        {
-            immutable tiString = to!string(ti);
-            ret ~= "\t\tfront" ~ tiString ~ " = ranges["
-                ~ tiString ~ "].front;\n";
-        }
-    }
-
 
     // Create code to call the delegate.
     ret ~= "\t\tres = dg(";
@@ -3559,14 +3545,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
 
     foreach(ti, Range; Ranges)
     {
-        static if (hasLvalueElements!Range)
-        {
-            ret ~= "ranges[" ~ to!string(ti) ~ "].front, ";
-        }
-        else
-        {
-            ret ~= "front" ~ to!string(ti) ~ ", ";
-        }
+        ret ~= "ranges[" ~ to!string(ti) ~ "].front, ";
     }
 
     // Remove trailing ,
@@ -3703,7 +3682,8 @@ unittest {
     auto l = lockstep(foo, bar);
 
     // Should work twice.  These are forward ranges with implicit save.
-    foreach(i; 0..2) {
+    foreach(i; 0..2) 
+    {
         uint[] res1;
         float[] res2;
 
