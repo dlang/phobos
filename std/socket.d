@@ -1051,7 +1051,7 @@ Address[] getAddress(in char[] hostname, ushort port)
         auto ih = new InternetHost;
         if (!ih.getHostByName(hostname))
             throw new AddressException(
-                        "Unable to resolve host '" ~ assumeUnique(hostname) ~ "'");
+                        text("Unable to resolve host '", hostname, "'"));
 
         Address[] results;
         foreach (uint addr; ih.addrList)
@@ -1193,7 +1193,7 @@ abstract class Address
     socklen_t nameLen() const;
 
     /// Family of this address.
-    AddressFamily addressFamily() const
+    @property AddressFamily addressFamily() const
     {
         return cast(AddressFamily) name().sa_family;
     }
@@ -1468,7 +1468,7 @@ public:
             if(!ih.getHostByName(addr))
                 //throw new AddressException("Invalid internet address");
                 throw new AddressException(
-                          "Unable to resolve host '" ~ assumeUnique(addr) ~ "'");
+                          text("Unable to resolve host '", addr, "'"));
             uiaddr = ih.addrList[0];
         }
         sin.sin_family = AddressFamily.INET;
@@ -2297,7 +2297,7 @@ public:
 
 
     /// Get underlying socket handle.
-    socket_t handle() const
+    @property socket_t handle() const
     {
         return sock;
     }
@@ -2351,13 +2351,13 @@ public:
 
 
     /// Get the socket's address family.
-    AddressFamily addressFamily()     // getter
+    @property AddressFamily addressFamily()
     {
         return _family;
     }
 
     /// Property that indicates if this is a valid, alive socket.
-    bool isAlive() const    // getter
+    @property bool isAlive() const
     {
         int type;
         socklen_t typesize = cast(socklen_t) type.sizeof;

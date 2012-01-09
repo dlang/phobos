@@ -21,5 +21,5 @@ extern(C) void std_date_static_this();
 
 shared static this()
 {
-    std_date_static_this;
+    std_date_static_this();
 }

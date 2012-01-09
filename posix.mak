@@ -111,7 +111,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -141,7 +141,7 @@ else
 endif
 
 # Set DDOC, the documentation generator
-DDOC=dmd
+DDOC=$(DMD)
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -156,7 +156,7 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container contracts conv	\
-        cpuid cstream ctype date datetime datebase dateparse demangle	\
+        cpuid cstream ctype csv date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
@@ -179,7 +179,7 @@ else
 endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
@@ -245,16 +245,14 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-ifeq ($(MODEL),64)
-DISABLED_TESTS += std/format
-# Still not passing, time to pull out the next issue.
-
-DISABLED_TESTS += std/math
-# seems to infinite loop, need to reduce
+ifeq (osx,$(OS))
+# Build fat library that combines the 32 bit and the 64 bit libraries
+libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
+	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
+endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
-endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@

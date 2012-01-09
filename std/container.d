@@ -941,7 +941,7 @@ Defines the container's primary range, which embodies a forward range.
         private Node * _head;
         private this(Node * p) { _head = p; }
         /// Forward range primitives.
-        bool empty() const { return !_head; }
+        @property bool empty() const { return !_head; }
         /// ditto
         @property Range save() { return this; }
         /// ditto
@@ -2561,7 +2561,7 @@ the heap work incorrectly.
             this.percolateDown(_store, i, _length);
             if (i-- == 0) break;
         }
-        assertValid;
+        assertValid();
     }
 
 /**
@@ -2573,7 +2573,7 @@ heap.
         _payload.RefCounted.ensureInitialized();
         _store() = s;
         _length() = min(_store.length, initialSize);
-        assertValid;
+        assertValid();
     }
 
 /**
@@ -2736,7 +2736,7 @@ Replaces the largest element in the store with $(D value).
         assert(!empty);
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid;
+        assertValid();
     }
 
 /**
@@ -2760,7 +2760,7 @@ must be collected.
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
         percolateDown(_store, 0, _length);
-        assertValid;
+        assertValid();
         return true;
     }
 }
@@ -2817,15 +2817,10 @@ struct Array(T) if (is(T == bool))
     Data;
     private RefCounted!(Data, RefCountedAutoInitialize.no) _store;
 
-    private ref size_t[] data()
+    private @property ref size_t[] data()
     {
         assert(_store.RefCounted.isInitialized);
         return _store._backend._payload;
-    }
-
-    private ref size_t dataCapacity()
-    {
-        return _store._backend._capacity;
     }
 
     /**

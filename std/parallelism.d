@@ -371,8 +371,8 @@ Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
        call site, only to $(D args) in this struct.
 */
 struct Task(alias fun, Args...) {
-    private AbstractTask base = {runTask : &impl};
-    private alias base this;
+    AbstractTask base = {runTask : &impl};
+    alias base this;
 
     private @property AbstractTask* basePtr() {
         return &base;
@@ -820,9 +820,9 @@ immutable uint totalCPUs;
 /*
 This class serves two purposes:
 
-1.  It distinguishes std.parallelism threads from other threads so that 
+1.  It distinguishes std.parallelism threads from other threads so that
     the std.parallelism daemon threads can be terminated.
-    
+
 2.  It adds a reference to the pool that the thread is a member of,
     which is also necessary to allow the daemon threads to be properly
     terminated.
@@ -831,14 +831,14 @@ private final class ParallelismThread : Thread {
     this(void delegate() dg) {
         super(dg);
     }
-    
+
     TaskPool pool;
 }
 
 // Kill daemon threads.
 shared static ~this() {
     auto allThreads = Thread.getAll();
-    
+
     foreach(thread; allThreads) {
         auto pthread = cast(ParallelismThread) thread;
         if(pthread is null) continue;
@@ -847,7 +847,7 @@ shared static ~this() {
         pool.stop();
         pthread.join();
     }
-}    
+}
 
 /**
 This class encapsulates a task queue and a set of worker threads.  Its purpose
@@ -1075,7 +1075,7 @@ private:
         if(item is head) {
             // Make sure head gets set properly.
             popNoSync();
-            return true;;
+            return true;
         }
         if(item is tail) {
             tail = tail.prev;
@@ -1407,7 +1407,7 @@ public:
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])
                     (len);
                 alias args args2;
-                alias Args Args2;;
+                alias Args Args2;
             }
 
             if(!len) return buf;
@@ -1436,9 +1436,9 @@ public:
             }
 
             // Effectively -1:  chunkIndex + 1 == 0:
-            size_t workUnitIndex = size_t.max;
+            shared size_t workUnitIndex = size_t.max;
 
-            bool shouldContinue = true;
+            shared bool shouldContinue = true;
 
             void doIt() {
                 scope(failure) {
@@ -3029,11 +3029,11 @@ private enum string parallelApplyMixinRandomAccess = q{
     // Whether iteration is with or without an index variable.
     enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
 
-    size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
+    shared size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
     if(!len) return 0;
 
-    bool shouldContinue = true;
+    shared bool shouldContinue = true;
 
     void doIt() {
         scope(failure) {
@@ -3087,7 +3087,7 @@ enum string parallelApplyMixinInputRange = q{
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
 
-    bool shouldContinue = true;
+    shared bool shouldContinue = true;
 
     // The total number of elements that have been popped off range.
     // This is updated only while protected by rangeMutex;

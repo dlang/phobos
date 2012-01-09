@@ -830,7 +830,7 @@ else version(Posix)
     public:
         interval_t periodCount() const
         {
-            return microseconds;
+            return microseconds();
         }
 
         interval_t seconds() const

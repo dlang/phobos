@@ -123,6 +123,7 @@ import std.string;
 import std.system;
 import std.traits;
 import std.typecons;
+import std.utf;
 
 version(Windows)
 {
@@ -153,6 +154,11 @@ version(unittest)
 //highly unlikely to conflict with anything that anyone else is doing.
 private alias std.string.indexOf stds_indexOf;
 
+version(testStdDateTime) unittest
+{
+    initializeTests();
+}
+
 //Verify module example.
 version(testStdDateTime) unittest
 {
@@ -162,7 +168,7 @@ version(testStdDateTime) unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-unittest
+version(testStdDateTime) unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -2255,15 +2261,15 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     {
         version(testStdDateTime)
         {
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime, 1);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime, 0);
-            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime, -1);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"usecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 0), FracSec.from!"msecs"(1), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toUnixTime(), 1);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime(), 0);
+            _assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime(), -1);
         }
     }
 
@@ -7949,10 +7955,13 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -8504,10 +8513,10 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
+    deprecated static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString, tz);
@@ -12670,10 +12679,13 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -12987,10 +12999,10 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
+    deprecated static Date fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
@@ -14390,10 +14402,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -14604,10 +14619,10 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+    deprecated static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
@@ -17571,10 +17586,13 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use toISOExtString instead.)
       +/
-    alias toISOExtString toISOExtendedString;
+    deprecated string toISOExtendedString() const nothrow
+    {
+        return toISOExtString();
+    }
 
     unittest
     {
@@ -17843,10 +17861,10 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
     }
 
     /++
-        $(RED Scheduled for deprecation in November 2011.
+        $(RED Deprecated. It will be removed in May 2012.
               Please use fromISOExtString instead.)
       +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
+    deprecated static DateTime fromISOExtendedString(S)(in S isoExtString)
         if(isSomeString!(S))
     {
         return fromISOExtString!string(isoExtString);
@@ -21135,7 +21153,7 @@ unittest
         //Verify Examples.
         {
             auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-            auto func = (in Date date)
+            auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
                                 return date + dur!"days"(2);
@@ -21204,7 +21222,7 @@ unittest
         //Verify Examples.
         {
             auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
-            auto func = (in Date date)
+            auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
                                 return date - dur!"days"(2);
@@ -23451,7 +23469,7 @@ unittest
 
         //Verify Examples.
         auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-        auto func = (in Date date)
+        auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
                             return date + dur!"days"(2);
@@ -25720,7 +25738,7 @@ unittest
 
         //Verify Examples.
         auto interval = NegInfInterval!Date(Date(2010, 9, 9));
-        auto func = (in Date date)
+        auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
                             return date - dur!"days"(2);
@@ -27984,7 +28002,8 @@ public:
       +/
     static immutable(LocalTime) opCall() pure nothrow
     {
-        return _localTime;
+        alias pure nothrow immutable(LocalTime) function() FuncType;
+        return (cast(FuncType)&singleton)();
     }
 
 
@@ -28511,20 +28530,33 @@ public:
 
 private:
 
-    this() immutable pure
+    this() immutable
     {
         super("", "", "");
+        tzset();
     }
 
 
-    static immutable LocalTime _localTime;
+    static shared LocalTime _localTime;
+    static bool _initialized;
 
 
-    shared static this()
+    static immutable(LocalTime) singleton()
     {
-        tzset();
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
+        {
+            synchronized
+            {
+                if(!_localTime)
+                    _localTime = cast(shared LocalTime)new immutable(LocalTime)();
+            }
 
-        _localTime = new immutable(LocalTime)();
+            _initialized = true;
+        }
+
+        return cast(immutable LocalTime)_localTime;
     }
 }
 
@@ -28541,7 +28573,8 @@ public:
       +/
     static immutable(UTC) opCall() pure nothrow
     {
-        return _utc;
+        alias pure nothrow immutable(UTC) function() FuncType;
+        return (cast(FuncType)&singleton)();
     }
 
 
@@ -28654,12 +28687,26 @@ private:
     }
 
 
-    static immutable UTC _utc;
+    static shared UTC _utc;
+    static bool _initialized;
 
 
-    shared static this()
+    static immutable(UTC) singleton()
     {
-        _utc = new immutable(UTC)();
+        //TODO Make this use double-checked locking once shared has been fixed
+        //to use memory fences properly.
+        if(!_initialized)
+        {
+            synchronized
+            {
+                if(!_utc)
+                    _utc = cast(shared UTC)new immutable(UTC)();
+            }
+
+            _initialized = true;
+        }
+
+        return cast(immutable UTC)_utc;
     }
 }
 
@@ -30390,6 +30437,7 @@ string tzDatabaseNameToWindowsTZName(string tzName)
         case "Africa/Windhoek": return "Namibia Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
+        case "America/Bahia": return "Bahia Standard Time";
         case "America/Bogota": return "SA Pacific Standard Time";
         case "America/Buenos_Aires": return "Argentina Standard Time";
         case "America/Caracas": return "Venezuela Standard Time";
@@ -30542,6 +30590,7 @@ string windowsTZNameToTZDatabaseName(string tzName)
         case "Atlantic Standard Time": return "America/Halifax";
         case "Azerbaijan Standard Time": return "Asia/Baku";
         case "Azores Standard Time": return "Atlantic/Azores";
+        case "Bahia Standard Time": return "America/Bahia";
         case "Bangladesh Standard Time": return "Asia/Dhaka";
         case "Canada Central Standard Time": return "America/Regina";
         case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
@@ -30790,7 +30839,7 @@ public:
         sw.start();
         sw.stop();
         sw.reset();
-        assert(sw.peek().to!("seconds", real) == 0);
+        assert(sw.peek().to!("seconds", real)() == 0);
     }
 
 
@@ -30816,7 +30865,7 @@ public:
             doublestart = false;
         assert(!doublestart);
         sw.stop();
-        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() <= 0);
     }
 
 
@@ -30842,7 +30891,7 @@ public:
         catch(AssertError e)
             doublestop = false;
         assert(!doublestop);
-        assert((t1 - sw.peek()).to!("seconds", real) == 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() == 0);
     }
 
 
@@ -30962,7 +31011,7 @@ version(testStdDateTime) unittest
     void f1() {auto b = a;}
     void f2() {auto b = to!(string)(a);}
     auto r = benchmark!(f0, f1, f2)(10_000_000);
-    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
+    writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int)());
 }
 
 version(testStdDateTime) @safe unittest
@@ -31073,7 +31122,7 @@ version(testStdDateTime) @safe unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
     //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
@@ -31084,8 +31133,8 @@ version(testStdDateTime) unittest
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1); // OK
-    auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
+    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
+    auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
 }
 
 
@@ -32185,7 +32234,7 @@ version(testStdDateTime) @safe unittest
 {
     @safe static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();
@@ -32203,7 +32252,7 @@ version(testStdDateTime) unittest
 {
     static void func(TickDuration td)
     {
-        assert(td.to!("seconds", real) <>= 0);
+        assert(td.to!("seconds", real)() <>= 0);
     }
 
     auto mt = measureTime!(func)();
@@ -33444,7 +33493,7 @@ version(unittest)
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
 
-    static this()
+    void initializeTests()
     {
         immutable lt = LocalTime().utcToTZ(0);
         currLocalDiffFromUTC = dur!"hnsecs"(lt);
@@ -33935,6 +33984,14 @@ unittest
     }
 }
 
+unittest
+{
+    /* Issue 6642 */
+    static assert(!hasUnsharedAliasing!Date);
+    static assert(!hasUnsharedAliasing!TimeOfDay);
+    static assert(!hasUnsharedAliasing!DateTime);
+    static assert(!hasUnsharedAliasing!SysTime);
+}
 
 template _isPrintable(T...)
 {
