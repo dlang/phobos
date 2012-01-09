@@ -799,8 +799,9 @@ template hasLvalueElements(R)
 {
     enum bool hasLvalueElements = is(typeof(
     {
+        void checkRef(ref ElementType!R stuff) {}
         R r = void;
-        static assert(is(typeof(&r.front) == ElementType!(R)*));
+        static assert(is(typeof(checkRef(r.front))));
     }));
 }
 
@@ -808,6 +809,9 @@ unittest
 {
     static assert(hasLvalueElements!(int[]));
     static assert(!hasLvalueElements!(typeof(iota(3))));
+    
+    auto c = chain([1, 2, 3], [4, 5, 6]);
+    static assert(hasLvalueElements!(typeof(c)));
 }
 
 /**
