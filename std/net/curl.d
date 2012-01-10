@@ -2090,7 +2090,7 @@ struct HTTP
 
     private CurlCode _perform(bool throwOnError = true)
     {
-        p.status.reset;
+        p.status.reset();
 
         final switch (p.method)
         {
@@ -2744,7 +2744,7 @@ struct FTP
     FTP dup()
     {
         FTP copy = FTP();
-        copy.p.encoding = p.encoding;;
+        copy.p.encoding = p.encoding;
         copy.p.curl = p.curl.dup();
         curl_slist* cur = p.commands;
         curl_slist* newlist = null;
