@@ -791,39 +791,11 @@ private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
        (is(ElementType!Range : T) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    static if(hasLength!Range &&
-              is(ElementEncodingType!Range : T) &&
-              !is(T == const T) &&
-              !is(T == immutable T))
-    {
-        immutable
-            delta = stuff.length,
-            oldLength = array.length,
-            newLength = oldLength + delta;
-
-        // Reallocate the array to make space for new content
-        array = (cast(T*) core.memory.GC.realloc(array.ptr,
-                        newLength * array[0].sizeof))[0 .. newLength];
-        assert(array.length == newLength);
-
-        // Move data in pos .. pos + stuff.length to the end of the array
-        foreach_reverse (i; pos .. oldLength)
-        {
-            // This will be guaranteed to not throw
-            move(array[i], array[i + delta]);
-        }
-
-        // Copy stuff into array
-        copy(stuff, array[pos .. pos + stuff.length]);
-    }
-    else
-    {
-        auto app = appender!(T[])();
-        app.put(array[0 .. pos]);
-        app.put(stuff);
-        app.put(array[pos .. $]);
-        array = app.data;
-    }
+    auto app = appender!(T[])();
+    app.put(array[0 .. pos]);
+    app.put(stuff);
+    app.put(array[pos .. $]);
+    array = app.data;
 }
 
 
@@ -922,6 +894,23 @@ unittest
     assert(testVar("flipflop"d.idup, 4, '_',
                     "xyz"w, '\U00010143', '_', "abc"d, "__",
                     "flip_xyz\U00010143_abc__flop"));
+}
+
+unittest // bugzilla 6874
+{
+    // allocate some space
+    byte[] a;
+    a.length = 1;
+
+    // fill it
+    a.length = a.capacity;
+
+    // write beyond
+    byte[] b = a[$ .. $];
+    b.insertInPlace(0, a);
+
+    // make sure that reallocation has happened
+    assert(GC.addrOf(&b[0]) == GC.addrOf(&b[$-1]));
 }
 
 /++
