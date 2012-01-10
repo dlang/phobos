@@ -132,13 +132,14 @@ synchronous.
 Macros:
 MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
 
-Source: $(PHOBOSSRC etc/_curl.d)
+Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License:  <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:  Jonas Drewsen
-Credits:  The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
-          LibCurl is licensed under an MIT/X derivate license.
+License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors: Jonas Drewsen. SMTP part contributed by Jimmy Cao.
+
+Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
+         LibCurl is licensed under an MIT/X derivate license.
 */
 /*
          Copyright Jonas Drewsen 2011 - 2012.
@@ -2988,7 +2989,6 @@ struct FTP
   * smtp.perform();
   * ---
   *
-  * Authors: Jimmy Cao, Jonas Drewsen
   * See_Also: $(WEB www.ietf.org/rfc/rfc2821.txt, RFC2821)
   */
 struct SMTP

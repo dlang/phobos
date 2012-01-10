@@ -164,11 +164,10 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         stream string syserror system traits typecons typetuple uni		\
         uri utf variant xml zip zlib)
 
-STD_NET_MODULES = $(addprefix std/net/, isemail)
+STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
 # OS-specific D modules
-EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket) \
-		    $(addprefix etc/, curl)
+EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket) 
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
