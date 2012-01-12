@@ -1195,6 +1195,10 @@ public:
  *       startQuoted = Whether the input should be considered to already be in
  * quotes
  *
+ * Throws:
+ *       $(LREF IncompleteCellException) When a quote is found in an unquoted
+ *       field, data continues after a closing quote, or the quoted field was
+ *       not closed before data was empty.
  */
 void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                            Separator, Output)
