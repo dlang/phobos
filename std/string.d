@@ -3492,7 +3492,6 @@ body
             c -= 'a' - 'A';
         else if (c >= 'A' && c <= 'Z')
         {
-            ;
         }
         else
         {   lastc = lastc.init;
@@ -3758,7 +3757,6 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
         {
         if (first)
         {
-            ;
         }
         else if (col + 1 + (i - wordstart) > columns)
         {
@@ -3825,9 +3823,9 @@ unittest
  *
  * A StringException will be thrown if inconsistent indentation prevents
  * the input from being outdented.
- * 
+ *
  * Works at compile-time.
- * 
+ *
  * Example:
  * ---
  * writeln(q{
@@ -3837,17 +3835,17 @@ unittest
  *     }
  * }.outdent());
  * ---
- * 
+ *
  * Output:
  * ---
- * 
+ *
  * import std.stdio;
  * void main() {
  *     writeln("Hello");
  * }
- * 
+ *
  * ---
- * 
+ *
  */
 
 S outdent(S)(S str) if(isSomeString!S)

@@ -566,7 +566,7 @@ body
     {
         uint    dw;
         ulong   qw;
-    };
+    }
     U u;
     void* data = &u.qw;
     DWORD cbData = u.qw.sizeof;

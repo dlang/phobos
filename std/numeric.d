@@ -423,7 +423,7 @@ struct CustomFloat(
             static if(flags&Flags.storeNormalized)
                 value.significand = 0;
             else
-                value.significand = cast(T_sig) 1uL << (precision - 1);;
+                value.significand = cast(T_sig) 1uL << (precision - 1);
             return value;
     }
 

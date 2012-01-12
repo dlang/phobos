@@ -636,10 +636,10 @@ private Variadic determineVariadicity(Func)()
 
 unittest
 {
-    extern(D) void novar() {};
-    extern(C) void cstyle(int, ...) {};
-    extern(D) void dstyle(...) {};
-    extern(D) void typesafe(int[]...) {};
+    extern(D) void novar() {}
+    extern(C) void cstyle(int, ...) {}
+    extern(D) void dstyle(...) {}
+    extern(D) void typesafe(int[]...) {}
 
     static assert(variadicFunctionStyle!(novar) == Variadic.no);
     static assert(variadicFunctionStyle!(cstyle) == Variadic.c);
@@ -937,7 +937,7 @@ unittest
     class C { int a; float b; }
     alias RepresentationTypeTuple!C R1;
     static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
-    
+
     /* Issue 6642 */
     struct S5 { int a; Rebindable!(immutable Object) b; }
     alias RepresentationTypeTuple!S5 R2;
@@ -1101,7 +1101,7 @@ unittest
     static assert(hasRawAliasing!(S7));
     //typedef int* S8;
     //static assert(hasRawAliasing!(S8));
-    enum S9 { a };
+    enum S9 { a }
     static assert(!hasRawAliasing!(S9));
     // indirect members
     struct S10 { S7 a; int b; }
@@ -1187,7 +1187,7 @@ unittest
     //static assert(hasRawUnsharedAliasing!(S11));
     //typedef shared int* S12;
     //static assert(hasRawUnsharedAliasing!(S12));
-    enum S13 { a };
+    enum S13 { a }
     static assert(!hasRawUnsharedAliasing!(S13));
     // indirect members
     struct S14 { S9 a; int b; }
@@ -3012,7 +3012,7 @@ unittest
     static assert(! isFunctionPointer!(foo));
     static assert(! isFunctionPointer!(bar));
 
-    static assert(!isFunctionPointer!((int a) {}));
+    static assert(isFunctionPointer!((int a) {}));
 }
 
 /**
