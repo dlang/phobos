@@ -891,7 +891,7 @@ public:
         if(_empty)
             return;
         _row++;
-        static if(is(Contents == struct))
+        static if(is(Contents == struct) || is(Contents == class))
         {
             recordRange = typeof(recordRange)
                                  (&_input, _separator, _quote, null);
