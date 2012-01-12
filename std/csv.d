@@ -925,6 +925,8 @@ public:
         {
             static if(is(Contents == class))
                 recordContent = new typeof(recordContent)();
+            else
+                recordContent = typeof(recordContent).init;
             size_t colIndex;
             try
             {
