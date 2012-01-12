@@ -1766,7 +1766,7 @@ private static:
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        alias enumerateOverloadsImpl!(C, pred, traits_allMembers!(C)).result
+        alias enumerateOverloadsImpl!(C, pred, __traits(allMembers, C)).result
                 enumerateOverloads;
     }
     template enumerateOverloadsImpl(C, alias pred, names...)
