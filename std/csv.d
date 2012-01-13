@@ -103,14 +103,14 @@ class CSVException : Exception
     ///
     size_t row, col;
 
-    this(string msg)
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
     {
-        super(msg);
+        super(msg, file, line);
     }
 
-    this(string msg, size_t row, size_t col, Exception e)
+    this(string msg, size_t row, size_t col, Exception e, string file = __FILE__, size_t line = __LINE__)
     {
-        super(msg, e);
+        super(msg, e, file, line);
         this.row = row;
         this.col = col;
     }
@@ -135,9 +135,9 @@ class IncompleteCellException : CSVException
     /// already been fed to the output range.
     dstring partialData;
 
-    this(string msg)
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
     {
-        super(msg);
+        super(msg, file, line);
     }
 }
 
@@ -163,9 +163,9 @@ class IncompleteCellException : CSVException
  */
 class HeaderMismatchException : CSVException
 {
-    this(string msg)
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
     {
-        super(msg);
+        super(msg, file, line);
     }
 }
 
