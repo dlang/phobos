@@ -407,19 +407,19 @@ unittest {
     Layout ans[2];
     ans[0].name = "\U00010143Hello";
     ans[0].value = 65;
-    ans[0].other = 663.63;
+    ans[0].other = 63.63;
     ans[1].name = "World";
-    ans[1].value = 65;
-    ans[1].other = 663.63;
+    ans[1].value = 123;
+    ans[1].other = 3673.562;
 
     auto records = csvReader!Layout(str);
 
     int count;
     foreach(record; records)
     {
-        ans[count].name = record.name;
-        ans[count].value = record.value;
-        ans[count].other = record.other;
+        assert(ans[count].name == record.name);
+        assert(ans[count].value == record.value);
+        assert(ans[count].other == record.other);
         count++;
     }
     assert(count == ans.length);
