@@ -98,7 +98,8 @@ import std.traits;
  * When performing type conversions, $(XREF ConvException) is stored in the $(D
  * next) field.
  */
-class CSVException : Exception {
+class CSVException : Exception
+{
     ///
     size_t row, col;
 
@@ -395,7 +396,8 @@ unittest
 }
 
 // Test structure conversion interface with unicode.
-unittest {
+unittest
+{
     wstring str = "\U00010143Hello,65,63.63\nWorld,123,3673.562"w;
     struct Layout
     {
@@ -961,7 +963,8 @@ public:
     }
 }
 
-unittest {
+unittest
+{
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
