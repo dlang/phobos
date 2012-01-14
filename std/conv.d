@@ -361,7 +361,7 @@ unittest
 }
 
 /**
-$(RED Scheduled for deprecation in January 2012. Please define $(D opCast)
+$(RED Deprecated. It will be removed in July 2012. Please define $(D opCast)
       for user-defined types instead of a $(D to) function.
       $(LREF to) will now use $(D opCast).)
 
@@ -387,7 +387,7 @@ unittest
 }
 ----
  */
-T toImpl(T, S)(S value)
+deprecated T toImpl(T, S)(S value)
     if (is(S : Object) && !is(T : Object) && !isSomeString!T &&
         hasMember!(S, "to") && is(typeof(S.init.to!T()) : T))
 {
