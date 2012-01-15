@@ -395,6 +395,36 @@ unittest
     assert(records.empty);
 }
 
+// Test shorter row length
+unittest
+{
+    wstring str = "one,1\ntwo\nthree"w;
+    struct Layout
+    {
+        string name;
+        int value;
+    }
+
+    Layout ans[3];
+    ans[0].name = "one";
+    ans[0].value = 1;
+    ans[1].name = "two";
+    ans[1].value = 0;
+    ans[2].name = "three";
+    ans[2].value = 0;
+
+    auto records = csvReader!(Layout,Malformed.ignore)(str);
+
+    int count;
+    foreach(record; records)
+    {
+        assert(ans[count].name == record.name);
+        assert(ans[count].value == record.value);
+        count++;
+    }
+
+}
+
 // Test structure conversion interface with unicode.
 unittest
 {
@@ -637,6 +667,16 @@ unittest
 }
 
 /*
+ * This struct is stored on the heap for when the structures
+ * are passed around.
+ */
+private struct Input(Range)
+{
+    Range range;
+    size_t row, col;
+}
+
+/*
  * Range for iterating CSV records.
  *
  * This range is returned by the $(LREF csvReader) functions. It can be
@@ -663,11 +703,10 @@ private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Heade
        && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
-    Range _input;
+    Input!(Range)* _input;
     Separator _separator;
     Separator _quote;
     size_t[] indices;
-    uint _row;
     bool _empty;
     static if(is(Contents == struct) || is(Contents == class))
     {
@@ -711,7 +750,8 @@ public:
      */
     this(Range input, Separator delimiter, Separator quote)
     {
-        _input = input;
+        _input = new Input!(Range);
+        _input.range = input;
         _separator = delimiter;
         _quote = quote;
 
@@ -746,7 +786,8 @@ public:
      */
     this(Range input, Header colHeaders, Separator delimiter, Separator quote)
     {
-        _input = input;
+        _input = new Input!(Range);
+        _input.range = input;
         _separator = delimiter;
         _quote = quote;
 
@@ -757,7 +798,7 @@ public:
         }
 
         auto r = CsvRecord!(string, ErrorLevel, Range, Separator)
-            (&_input, _separator, _quote, indices);
+            (_input, _separator, _quote, indices);
 
         size_t colIndex;
         foreach(col; r)
@@ -768,6 +809,8 @@ public:
                 *ptr = colIndex;
             colIndex++;
         }
+        // The above loop empties the header row.
+        recordRange._empty = true;
 
         indices.length = colToIndex.length;
         int i;
@@ -809,11 +852,6 @@ public:
         popFront();
     }
 
-    this(this)
-    {
-        recordRange._input = &_input;
-    }
-
     /**
      * Part of an input range as defined by $(XREF range, isInputRange).
      *
@@ -840,7 +878,6 @@ public:
         }
         else
         {
-            recordRange._input = &_input;
             return recordRange;
         }
     }
@@ -863,26 +900,25 @@ public:
      */
     void popFront()
     {
-        recordRange._input = &_input;
-
         while(!recordRange.empty)
         {
             recordRange.popFront();
         }
+        _input.col = 0;
 
-        if(!_input.empty)
+        if(!_input.range.empty)
         {
-           if(_input.front == '\r')
+           if(_input.range.front == '\r')
            {
-               _input.popFront();
-               if(_input.front == '\n')
-                   _input.popFront();
+               _input.range.popFront();
+               if(_input.range.front == '\n')
+                   _input.range.popFront();
            }
-           else if(_input.front == '\n')
-               _input.popFront();
+           else if(_input.range.front == '\n')
+               _input.range.popFront();
         }
 
-        if(_input.empty)
+        if(_input.range.empty)
             _empty = true;
 
         prime();
@@ -892,19 +928,17 @@ public:
     {
         if(_empty)
             return;
-        _row++;
+        _input.row++;
         static if(is(Contents == struct) || is(Contents == class))
         {
             recordRange = typeof(recordRange)
-                                 (&_input, _separator, _quote, null);
+                                 (_input, _separator, _quote, null);
         }
         else
         {
             recordRange = typeof(recordRange)
-                                 (&_input, _separator, _quote, indices);
+                                 (_input, _separator, _quote, indices);
         }
-
-        recordRange._row = _row;
 
         static if(is(Contents T : T[U], U : string))
         {
@@ -913,12 +947,12 @@ public:
             {
                 for(; !recordRange.empty; recordRange.popFront())
                 {
-                    aa[header[recordRange._col-1]] = recordRange.front;
+                    aa[header[_input.col-1]] = recordRange.front;
                 }
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _row, recordRange._col, e);
+                throw new CSVException(e.msg, _input.row, _input.col, e);
             }
 
             recordContent = aa;
@@ -957,7 +991,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _row, colIndex, e);
+                throw new CSVException(e.msg, _input.row, colIndex, e);
             }
         }
     }
@@ -984,13 +1018,12 @@ private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
     if(!is(Contents == class) && !is(Contents == struct))
 {
 private:
-    Range* _input;
+    Input!(Range)* _input;
     Separator _separator;
     Separator _quote;
     Contents curContentsoken;
     typeof(appender!(dchar[])()) _front;
     bool _empty;
-    size_t _col, _row;
     size_t[] _popCount;
 public:
     /*
@@ -1001,7 +1034,7 @@ public:
      *      indices = An array containing which columns will be returned.
      *             If empty, all columns are returned. List must be in order.
      */
-    this(Range* input, Separator delimiter, Separator quote, size_t[] indices)
+    this(Input!(Range)* input, Separator delimiter, Separator quote, size_t[] indices)
     {
         _input = input;
         _separator = delimiter;
@@ -1052,9 +1085,9 @@ public:
      */
     private bool recordEnd()
     {
-        if((*_input).empty
-           || (*_input).front == '\n'
-           || (*_input).front == '\r')
+        if(_input.range.empty
+           || _input.range.front == '\n'
+           || _input.range.front == '\r')
         {
             return true;
         }
@@ -1088,8 +1121,8 @@ public:
         // Separator is left on the end of input from the last call.
         // This cannot be moved to after the call to csvNextToken as
         // there may be an empty record after it.
-        if((*_input).front == _separator)
-            (*_input).popFront();
+        if(_input.range.front == _separator)
+            _input.range.popFront();
 
         _front.shrinkTo(0);
 
@@ -1103,24 +1136,24 @@ public:
     {
         foreach(i; 0..skipNum)
         {
-            _col++;
+            _input.col++;
             _front.shrinkTo(0);
-            if((*_input).front == _separator)
-                (*_input).popFront();
+            if(_input.range.front == _separator)
+                _input.range.popFront();
 
             try
                 csvNextToken!(Range, ErrorLevel, Separator)
-                                   (*_input, _front, _separator, _quote,false);
+                                   (_input.range, _front, _separator, _quote,false);
             catch(IncompleteCellException ice)
             {
-                ice.row = _row;
-                ice.col = _col;
+                ice.row = _input.row;
+                ice.col = _input.col;
                 ice.partialData = _front.data.idup;
                 throw ice;
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _row, _col, e);
+                throw new CSVException(e.msg, _input.row, _input.col, e);
             }
         }
     }
@@ -1129,14 +1162,14 @@ public:
     {
         try
         {
-            _col++;
+            _input.col++;
             csvNextToken!(Range, ErrorLevel, Separator)
-                (*_input, _front, _separator, _quote,false);
+                (_input.range, _front, _separator, _quote,false);
         }
         catch(IncompleteCellException ice)
         {
-            ice.row = _row;
-            ice.col = _col;
+            ice.row = _input.row;
+            ice.col = _input.col;
             ice.partialData = _front.data.idup;
             throw ice;
         }
@@ -1158,7 +1191,7 @@ public:
         try curContentsoken = to!Contents(_front.data);
         catch(ConvException e)
         {
-            throw new CSVException(e.msg, _row, _col, e);
+            throw new CSVException(e.msg, _input.row, _input.col, e);
         }
     }
 }
