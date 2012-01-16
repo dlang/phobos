@@ -85,6 +85,7 @@ import std.array;
 import std.conv;
 import std.exception;
 import std.range;
+import std.string;
 import std.traits;
 
 /**
@@ -422,8 +423,33 @@ unittest
         assert(ans[count].value == record.value);
         count++;
     }
-
 }
+
+// Test shorter row length exception
+unittest
+{
+    struct A
+    {
+        string a,b,c;
+    }
+
+    auto strs = ["one,1\ntwo",
+                 "one\ntwo,2,二\nthree,3,三",
+                 "one\ntwo,2\nthree,3",
+                 "one,1\ntwo\nthree,3"];
+
+    foreach(str; strs)
+    {
+        auto records = csvReader!(A)(str);
+        try
+        {
+            foreach(record; records) { }
+            assert(0);
+        }
+        catch(CSVException e) { }
+    }
+}
+
 
 // Test structure conversion interface with unicode.
 unittest
@@ -670,10 +696,12 @@ unittest
  * This struct is stored on the heap for when the structures
  * are passed around.
  */
-private struct Input(Range)
+private struct Input(Range, Malformed ErrorLevel)
 {
     Range range;
     size_t row, col;
+    static if(ErrorLevel == Malformed.throwException)
+        size_t rowLength;
 }
 
 /*
@@ -703,7 +731,7 @@ private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Heade
        && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
-    Input!(Range)* _input;
+    Input!(Range, ErrorLevel)* _input;
     Separator _separator;
     Separator _quote;
     size_t[] indices;
@@ -750,17 +778,11 @@ public:
      */
     this(Range input, Separator delimiter, Separator quote)
     {
-        _input = new Input!(Range);
+        _input = new Input!(Range, ErrorLevel);
         _input.range = input;
         _separator = delimiter;
         _quote = quote;
 
-        static if(is(Contents == struct))
-        {
-            indices.length =  FieldTypeTuple!(Contents).length;
-            foreach(i, j; FieldTypeTuple!Contents)
-                indices[i] = i;
-        }
         prime();
     }
 
@@ -786,7 +808,7 @@ public:
      */
     this(Range input, Header colHeaders, Separator delimiter, Separator quote)
     {
-        _input = new Input!(Range);
+        _input = new Input!(Range, ErrorLevel);
         _input.range = input;
         _separator = delimiter;
         _quote = quote;
@@ -904,6 +926,11 @@ public:
         {
             recordRange.popFront();
         }
+
+        static if(ErrorLevel == Malformed.throwException)
+            if(_input.rowLength == 0)
+                _input.rowLength = _input.col;
+
         _input.col = 0;
 
         if(!_input.range.empty)
@@ -919,7 +946,10 @@ public:
         }
 
         if(_input.range.empty)
+        {
             _empty = true;
+            return;
+        }
 
         prime();
     }
@@ -966,8 +996,9 @@ public:
             size_t colIndex;
             try
             {
-                foreach(colData; recordRange)
+                for(; !recordRange.empty;)
                 {
+                    auto colData = recordRange.front;
                     scope(exit) colIndex++;
                     if(indices.length > 0)
                     {
@@ -987,6 +1018,7 @@ public:
                                 recordContent.tupleof[ti] = to!ToType(colData);
                         }
                     }
+                    recordRange.popFront();
                 }
             }
             catch(ConvException e)
@@ -1018,7 +1050,7 @@ private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
     if(!is(Contents == class) && !is(Contents == struct))
 {
 private:
-    Input!(Range)* _input;
+    Input!(Range, ErrorLevel)* _input;
     Separator _separator;
     Separator _quote;
     Contents curContentsoken;
@@ -1034,7 +1066,8 @@ public:
      *      indices = An array containing which columns will be returned.
      *             If empty, all columns are returned. List must be in order.
      */
-    this(Input!(Range)* input, Separator delimiter, Separator quote, size_t[] indices)
+    this(Input!(Range, ErrorLevel)* input, Separator delimiter,
+         Separator quote, size_t[] indices)
     {
         _input = input;
         _separator = delimiter;
@@ -1115,7 +1148,22 @@ public:
         if(recordEnd())
         {
             _empty = true;
+            static if(ErrorLevel == Malformed.throwException)
+                if(_input.rowLength != 0)
+                    if(_input.col != _input.rowLength)
+                        throw new CSVException(
+                           format("Row %s's length %s does not match "
+                                  "previous length of %s.", _input.row,
+                                  _input.col, _input.rowLength));
             return;
+        } else {
+            static if(ErrorLevel == Malformed.throwException)
+                if(_input.rowLength != 0)
+                    if(_input.col > _input.rowLength)
+                        throw new CSVException(
+                           format("Row %s's length %s does not match "
+                                  "previous length of %s.", _input.row,
+                                  _input.col, _input.rowLength));
         }
 
         // Separator is left on the end of input from the last call.
