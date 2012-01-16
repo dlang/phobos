@@ -255,15 +255,15 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
         auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
-        scope (exit) f.close;
+        scope (exit) f.close();
         conn.onReceive = (ubyte[] data) { return f.write(data); };
-        conn.perform;
+        conn.perform();
     }
 }
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
     download("d-programming-language.appspot.com/testUrl1", "/tmp/downloaded-http-file");
 }
@@ -306,19 +306,19 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
         auto f = new std.stream.BufferedFile(loadFromPath, FileMode.In);
-        scope (exit) f.close;
+        scope (exit) f.close();
         conn.onSend = (void[] data)
         {
             return f.read(cast(ubyte[])data);
         };
         conn.contentLength = cast(size_t)f.size;
-        conn.perform;
+        conn.perform();
     }
 }
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     //    upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
     upload("/tmp/downloaded-http-file", "d-programming-language.appspot.com/testUrl2");
 }
@@ -368,7 +368,7 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = get(testUrl1);
     assert(res == "Hello world\n",
            "get!HTTP() returns unexpected content " ~ res);
@@ -412,7 +412,7 @@ if (is(T == char) || is(T == ubyte))
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = post(testUrl2, "Hello world");
     assert(res == "Hello world",
            "put!HTTP() returns unexpected content " ~ res);
@@ -466,7 +466,7 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = put(testUrl2, "Hello world");
     assert(res == "Hello world",
            "put!HTTP() returns unexpected content " ~ res);
@@ -503,8 +503,10 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
     else static if (is(Conn : FTP))
     {
-        auto trimmed = url.findSplitAfter("ftp://")[1].findSplitAfter("ftps://")[1];
-        auto t = trimmed.findSplitAfter("/");
+        // auto trimmed = url.findSplitAfter("ftp://")[1];
+        auto trimmed = url.findSplitAfter("ftp://");
+        auto trimmed2 = trimmed[1]; // work around bug #5790
+        auto t = trimmed2.findSplitAfter("/");
         enum minDomainNameLength = 3;
         enforceEx!CurlException(t[0].length > minDomainNameLength,
                                 text("Invalid FTP URL for delete ", url));
@@ -526,7 +528,7 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     del(testUrl1);
 }
 
@@ -566,7 +568,7 @@ if (is(T == char) || is(T == ubyte))
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = options(testUrl2, "Hello world");
     assert(res == "Hello world",
            "options!HTTP() returns unexpected content " ~ res);
@@ -574,7 +576,7 @@ unittest
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = options(testUrl1, []);
     assert(res == "Hello world\n",
            "options!HTTP() returns unexpected content " ~ res);
@@ -611,7 +613,7 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = trace(testUrl1);
     assert(res == "Hello world\n",
            "trace!HTTP() returns unexpected content " ~ res);
@@ -649,7 +651,7 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 unittest
 {
     // google appspot does not allow connect method.
-    //    if (!netAllowed) return;
+    //    if (!netAllowed()) return;
     //    auto res = connect(testUrl1);
     //    assert(res == "Hello world\n",
     //           "connect!HTTP() returns unexpected content " ~ res);
@@ -698,7 +700,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             headers[key] = value.idup;
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
-    client.perform;
+    client.perform();
     enforceEx!CurlException(statusLine.code / 100 == 2,
                             format("HTTP request returned status code %s",
                                    statusLine.code));
@@ -767,7 +769,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
         };
     }
 
-    client.perform;
+    client.perform();
 
     static if (is(T == ubyte))
     {
@@ -794,7 +796,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 }
 
 alias std.string.KeepTerminator KeepTerminator;
-
+/++
 struct ByLineBuffer(Char)
 {
     bool linePresent;
@@ -824,7 +826,7 @@ struct ByLineBuffer(Char)
     }
 
 }
-
+++/
 /** HTTP/FTP fetch content as a range of lines.
  *
  * A range of lines is returned when the request is complete. If the method or
@@ -940,7 +942,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = byLine(testUrl1);
     auto line = res.front();
     assert(line == "Hello world",
@@ -1340,7 +1342,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = byLineAsync(testUrl2, "Hello world");
     auto line = res.front();
     assert(line == "Hello world",
@@ -1543,7 +1545,7 @@ auto byChunkAsync(Conn = AutoProtocol)
 
 unittest
 {
-    if (!netAllowed) return;
+    if (!netAllowed()) return;
     auto res = byChunkAsync(testUrl2, "Hello world");
     auto line = res.front();
     assert(line == cast(ubyte[])"Hello world",
@@ -1743,7 +1745,7 @@ private mixin template Protocol()
 
     unittest
     {
-        if (!netAllowed) return;
+        if (!netAllowed()) return;
         auto http = HTTP("http://www.protected.com");
         http.onReceiveHeader =
             (in char[] key,
@@ -4039,7 +4041,7 @@ void _finalizeAsyncLines(Unit)(bool bufferValid, Unit[] buffer, Tid fromTid)
 // output (e.g. AsyncHTTPLineOutputRange).
 private static void _spawnAsync(Conn, Unit, Terminator = void)()
 {
-    Tid fromTid = receiveOnly!(Tid);
+    Tid fromTid = receiveOnly!Tid();
 
     // Get buffer to read into
     Pool!(Unit[]) freeBuffers;  // Free list of buffer objects
@@ -4052,8 +4054,8 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     static if ( !is(Terminator == void))
     {
         // Only lines reading will receive a terminator
-        auto terminator = receiveOnly!Terminator;
-        auto keepTerminator = receiveOnly!bool;
+        auto terminator = receiveOnly!Terminator();
+        auto keepTerminator = receiveOnly!bool();
 
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
@@ -4068,12 +4070,12 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     }
 
     // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = cast(CURL*)receiveOnly!(ulong);
+    auto connDup = cast(CURL*)receiveOnly!ulong();
     auto client = Conn();
     client.p.curl.handle = connDup;
 
     // receive a method for both ftp and http but just use it for http
-    auto method = receiveOnly!(HTTP.Method);
+    auto method = receiveOnly!(HTTP.Method)();
 
     client.onReceive = (ubyte[] data)
     {
