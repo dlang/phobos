@@ -372,7 +372,7 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
 // Test standard iteration over input.
 unittest
 {
-    string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
+    string str = `one,"two ""quoted"""` ~ "\n\"three\nnew line\",""\nfive,six";
     auto records = csvReader(str);
 
     int count;
