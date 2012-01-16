@@ -7408,10 +7408,13 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const nothrow
+    {
+        return Date(dayOfGregorianCal).daysInMonth;
+    }
 
     unittest
     {
@@ -12437,10 +12440,13 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return maxDay(_year, _month);
+    }
 
     unittest
     {
@@ -17365,10 +17371,13 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return _date.daysInMonth;
+    }
 
     unittest
     {
