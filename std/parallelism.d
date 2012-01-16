@@ -52,7 +52,8 @@ void main() {
     immutable n = 1_000_000_000;
     immutable delta = 1.0 / n;
 
-    real getTerm(int i) {
+    real getTerm(int i) 
+    {
         immutable x = ( i - 0.5 ) * delta;
         return delta / ( 1.0 + x * x ) ;
     }
@@ -69,65 +70,93 @@ License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
 */
 module std.parallelism;
 
-import core.thread, core.cpuid, std.algorithm, std.range, std.c.stdlib,
-    std.stdio, std.exception, std.functional, std.conv, std.math, core.memory,
-    std.traits, std.typetuple, core.stdc.string, std.typecons;
+import core.atomic;
+import core.cpuid;
+import core.exception;
+import core.memory;
+import core.sync.condition;
+import core.thread;
 
-import core.sync.condition, core.sync.mutex, core.atomic, core.exception;
+import std.algorithm;
+import std.conv;
+import std.exception;
+import std.functional;
+import std.math;
+import std.range;
+import std.traits;
+import std.typecons;
+import std.typetuple;
 
-version(OSX) {
+version(OSX)
+{
     version = useSysctlbyname;
-} else version(FreeBSD) {
+}
+else version(FreeBSD)
+{
     version = useSysctlbyname;
 }
 
-version(Windows) {
+version(Windows)
+{
     // BUGS:  Only works on Windows 2000 and above.
 
     import core.sys.windows.windows;
 
-    struct SYSTEM_INFO {
-      union {
-        DWORD  dwOemId;
-        struct {
-          WORD wProcessorArchitecture;
-          WORD wReserved;
+    struct SYSTEM_INFO
+    {
+        union
+        {
+            DWORD  dwOemId;
+            struct
+            {
+                WORD wProcessorArchitecture;
+                WORD wReserved;
+            };
         };
-      };
-      DWORD     dwPageSize;
-      LPVOID    lpMinimumApplicationAddress;
-      LPVOID    lpMaximumApplicationAddress;
-      LPVOID    dwActiveProcessorMask;
-      DWORD     dwNumberOfProcessors;
-      DWORD     dwProcessorType;
-      DWORD     dwAllocationGranularity;
-      WORD      wProcessorLevel;
-      WORD      wProcessorRevision;
+        DWORD     dwPageSize;
+        LPVOID    lpMinimumApplicationAddress;
+        LPVOID    lpMaximumApplicationAddress;
+        LPVOID    dwActiveProcessorMask;
+        DWORD     dwNumberOfProcessors;
+        DWORD     dwProcessorType;
+        DWORD     dwAllocationGranularity;
+        WORD      wProcessorLevel;
+        WORD      wProcessorRevision;
     }
 
     private extern(Windows) void GetSystemInfo(void*);
 
-    shared static this() {
+    shared static this()
+    {
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         totalCPUs = max(1, cast(uint) si.dwNumberOfProcessors);
     }
 
-} else version(linux) {
+}
+else version(linux)
+{
     import core.sys.posix.unistd;
 
-    shared static this() {
+    shared static this()
+    {
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN );
     }
-} else version(useSysctlbyname) {
+}
+else version(useSysctlbyname)
+{
     extern(C) int sysctlbyname(
         const char *, void *, size_t *, void *, size_t
     );
 
-    shared static this() {
-        version(OSX) {
+    shared static this()
+    {
+        version(OSX)
+        {
             auto nameStr = "machdep.cpu.core_count\0".ptr;
-        } else version(FreeBSD) {
+        }
+        else version(FreeBSD)
+        {
             auto nameStr = "hw.ncpu\0".ptr;
         }
 
@@ -137,7 +166,9 @@ version(Windows) {
         totalCPUs = ans;
     }
 
-} else {
+}
+else
+{
     static assert(0, "Don't know how to get N CPUs on this OS.");
 }
 
@@ -151,52 +182,63 @@ version(Windows) {
        without wrapping it.  If I didn't wrap it, casts would be required
        basically everywhere.
 */
-private void atomicSetUbyte(ref ubyte stuff, ubyte newVal) {
+private void atomicSetUbyte(ref ubyte stuff, ubyte newVal)
+{
     //core.atomic.cas(cast(shared) &stuff, stuff, newVal);
     atomicStore(*(cast(shared) &stuff), newVal);
 }
 
-private ubyte atomicReadUbyte(ref ubyte val) {
+private ubyte atomicReadUbyte(ref ubyte val)
+{
     return atomicLoad(*(cast(shared) &val));
 }
 
 // This gets rid of the need for a lot of annoying casts in other parts of the
 // code, when enums are involved.
-private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal) {
+private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
+{
     return core.atomic.cas(cast(shared) &stuff, testVal, newVal);
 }
 
 /*--------------------- Generic helper functions, etc.------------------------*/
-private template MapType(R, functions...) {
-    static if(functions.length == 0) {
+private template MapType(R, functions...)
+{
+    static if(functions.length == 0)
+    {
         alias typeof(unaryFun!(functions[0])(ElementType!(R).init)) MapType;
-    } else {
+    }
+    else
+    {
         alias typeof(adjoin!(staticMap!(unaryFun, functions))
-            (ElementType!(R).init)) MapType;
+                     (ElementType!(R).init)) MapType;
     }
 }
 
-private template ReduceType(alias fun, R, E) {
+private template ReduceType(alias fun, R, E)
+{
     alias typeof(binaryFun!(fun)(E.init, ElementType!(R).init)) ReduceType;
 }
 
-private template noUnsharedAliasing(T) {
+private template noUnsharedAliasing(T)
+{
     enum bool noUnsharedAliasing = !hasUnsharedAliasing!T;
 }
 
 // This template tests whether a function may be executed in parallel from
 // @safe code via Task.executeInNewThread().  There is an additional
 // requirement for executing it via a TaskPool.  (See isSafeReturn).
-private template isSafeTask(F) {
+private template isSafeTask(F)
+{
     enum bool isSafeTask =
-        ((functionAttributes!(F) & FunctionAttribute.safe) ||
-        (functionAttributes!(F) & FunctionAttribute.trusted)) &&
-        !(functionAttributes!F & FunctionAttribute.ref_) &&
-        (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
+    ((functionAttributes!(F) & FunctionAttribute.safe) ||
+     (functionAttributes!(F) & FunctionAttribute.trusted)) &&
+    !(functionAttributes!F & FunctionAttribute.ref_) &&
+    (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
+    allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
 
-unittest {
+unittest
+{
     alias void function() @safe F1;
     alias void function() F2;
     alias void function(uint, string) @trusted F3;
@@ -219,50 +261,67 @@ unittest {
 // the Task is terminated by the time the return value is visible in the calling
 // thread, so this is a non-issue.  It's also a non-issue for pure functions
 // since they can't read global state.
-private template isSafeReturn(T) {
-    static if(!hasUnsharedAliasing!(T.ReturnType)) {
+private template isSafeReturn(T)
+{
+    static if(!hasUnsharedAliasing!(T.ReturnType))
+    {
         enum isSafeReturn = true;
-    } else static if(T.isPure) {
+    }
+    else static if(T.isPure)
+    {
         enum isSafeReturn = true;
-    } else {
+    }
+    else
+    {
         enum isSafeReturn = false;
     }
 }
 
-private template randAssignable(R) {
+private template randAssignable(R)
+{
     enum randAssignable = isRandomAccessRange!R && hasAssignableElements!R;
 }
 
 // Work around syntactic ambiguity w.r.t. address of function return vals.
-private T* addressOf(T)(ref T val) pure nothrow {
+private T* addressOf(T)(ref T val) pure nothrow
+{
     return &val;
 }
 
-private enum TaskStatus : ubyte {
+private enum TaskStatus : ubyte
+{
     notStarted,
     inProgress,
     done
 }
 
-private template AliasReturn(alias fun, T...) {
+private template AliasReturn(alias fun, T...)
+{
     alias AliasReturnImpl!(fun, T).ret AliasReturn;
 }
 
-private template AliasReturnImpl(alias fun, T...) {
+private template AliasReturnImpl(alias fun, T...)
+{
     private T args;
     alias typeof(fun(args)) ret;
 }
 
 // Should be private, but std.algorithm.reduce is used in the zero-thread case
 // and won't work w/ private.
-template reduceAdjoin(functions...) {
-    static if(functions.length == 1) {
+template reduceAdjoin(functions...)
+{
+    static if(functions.length == 1)
+    {
         alias binaryFun!(functions[0]) reduceAdjoin;
-    } else {
-        T reduceAdjoin(T, U)(T lhs, U rhs) {
+    }
+    else
+    {
+        T reduceAdjoin(T, U)(T lhs, U rhs)
+        {
             alias staticMap!(binaryFun, functions) funs;
 
-            foreach(i, Unused; typeof(lhs.expand)) {
+            foreach(i, Unused; typeof(lhs.expand))
+            {
                 lhs.expand[i] = funs[i](lhs.expand[i], rhs);
             }
 
@@ -271,16 +330,20 @@ template reduceAdjoin(functions...) {
     }
 }
 
-private template reduceFinish(functions...) {
-    static if(functions.length == 1) {
+private template reduceFinish(functions...)
+{
+    static if(functions.length == 1)
+    {
         alias binaryFun!(functions[0]) reduceFinish;
-    } else {
-
-
-        T reduceFinish(T)(T lhs, T rhs) {
+    }
+    else
+    {
+        T reduceFinish(T)(T lhs, T rhs)
+        {
             alias staticMap!(binaryFun, functions) funs;
 
-            foreach(i, Unused; typeof(lhs.expand)) {
+            foreach(i, Unused; typeof(lhs.expand))
+            {
                 lhs.expand[i] = funs[i](lhs.expand[i], rhs.expand[i]);
             }
 
@@ -289,7 +352,8 @@ private template reduceFinish(functions...) {
     }
 }
 
-private template isAssignable(T) {
+private template isAssignable(T)
+{
     enum isAssignable = is(typeof({
         T a;
         T b;
@@ -297,15 +361,18 @@ private template isAssignable(T) {
     }));
 }
 
-private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2) {
+private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2)
+{
     enum isRoundRobin = true;
 }
 
-private template isRoundRobin(T) {
+private template isRoundRobin(T)
+{
     enum isRoundRobin = false;
 }
 
-unittest{
+unittest
+{
     static assert(isRoundRobin!(
         RoundRobinBuffer!(void delegate(char[]), bool delegate())
     ));
@@ -315,7 +382,8 @@ unittest{
 
 // This is the base "class" for all of the other tasks.  Using C-style
 // polymorphism to allow more direct control over memory allocation, etc.
-private struct AbstractTask {
+private struct AbstractTask
+{
     AbstractTask* prev;
     AbstractTask* next;
 
@@ -325,21 +393,25 @@ private struct AbstractTask {
     Throwable exception;
     ubyte taskStatus = TaskStatus.notStarted;
 
-    bool done() @property {
-        if(atomicReadUbyte(taskStatus) == TaskStatus.done) {
-            if(exception) {
-                throw exception;
-            }
-
-            return true;
+    bool done() @property
+{
+    if(atomicReadUbyte(taskStatus) == TaskStatus.done)
+    {
+        if(exception)
+        {
+            throw exception;
         }
 
-        return false;
+        return true;
     }
 
-    void job() {
-        runTask(&this);
-    }
+    return false;
+}
+
+void job()
+{
+    runTask(&this);
+}
 }
 
 /**
@@ -370,21 +442,30 @@ pointer.
 Bugs:  Changes to $(D ref) and $(D out) arguments are not propagated to the
        call site, only to $(D args) in this struct.
 */
-struct Task(alias fun, Args...) {
-    AbstractTask base = {runTask : &impl};
+struct Task(alias fun, Args...)
+{
+AbstractTask base = {runTask :
+                         &impl};
     alias base this;
 
-    private @property AbstractTask* basePtr() {
+    private @property AbstractTask* basePtr()
+    {
         return &base;
     }
 
-    private static void impl(void* myTask) {
+    private static void impl(void* myTask)
+    {
         Task* myCastedTask = cast(typeof(this)*) myTask;
-        static if(is(ReturnType == void)) {
+        static if(is(ReturnType == void))
+        {
             fun(myCastedTask._args);
-        } else static if(is(typeof(addressOf(fun(myCastedTask._args))))) {
+        }
+        else static if(is(typeof(addressOf(fun(myCastedTask._args)))))
+        {
             myCastedTask.returnVal = addressOf(fun(myCastedTask._args));
-        } else {
+        }
+        else
+        {
             myCastedTask.returnVal = fun(myCastedTask._args);
         }
     }
@@ -398,9 +479,12 @@ struct Task(alias fun, Args...) {
     The arguments the function was called with.  Changes to $(D out) and
     $(D ref) arguments will be visible here.
     */
-    static if(__traits(isSame, fun, run)) {
+    static if(__traits(isSame, fun, run))
+    {
         alias _args[1..$] args;
-    } else {
+    }
+    else
+    {
         alias _args args;
     }
 
@@ -408,11 +492,15 @@ struct Task(alias fun, Args...) {
     // The purpose of this code is to decide whether functions whose
     // return values have unshared aliasing can be executed via
     // TaskPool from @safe code.  See isSafeReturn.
-    static if(__traits(isSame, fun, run)) {
-        static if(isFunctionPointer!(_args[0])) {
+    static if(__traits(isSame, fun, run))
+    {
+        static if(isFunctionPointer!(_args[0]))
+        {
             private enum bool isPure =
-                functionAttributes!(Args[0]) & FunctionAttribute.pure_;
-        } else {
+            functionAttributes!(Args[0]) & FunctionAttribute.pure_;
+        }
+        else
+        {
             // BUG:  Should check this for delegates too, but std.traits
             //       apparently doesn't allow this.  isPure is irrelevant
             //       for delegates, at least for now since shared delegates
@@ -420,7 +508,9 @@ struct Task(alias fun, Args...) {
             private enum bool isPure = false;
         }
 
-    } else {
+    }
+    else
+    {
         // We already know that we can't execute aliases in @safe code, so
         // just put a dummy value here.
         private enum bool isPure = false;
@@ -433,44 +523,59 @@ struct Task(alias fun, Args...) {
     */
     alias typeof(fun(_args)) ReturnType;
 
-    static if(!is(ReturnType == void)) {
-        static if(is(typeof(&fun(_args)))) {
+    static if(!is(ReturnType == void))
+    {
+        static if(is(typeof(&fun(_args))))
+        {
             // Ref return.
             ReturnType* returnVal;
 
-            ref ReturnType fixRef(ReturnType* val) {
+            ref ReturnType fixRef(ReturnType* val)
+            {
                 return *val;
             }
 
-        } else {
+        }
+        else
+        {
             ReturnType returnVal;
 
-            ref ReturnType fixRef(ref ReturnType val) {
+            ref ReturnType fixRef(ref ReturnType val)
+            {
                 return val;
             }
         }
     }
 
-    private void enforcePool() {
+    private void enforcePool()
+    {
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
-    private this(Args args) {
-        static if(args.length > 0) {
+    private this(Args args)
+    {
+        static if(args.length > 0)
+        {
             _args = args;
         }
     }
 
     // Work around DMD bug 6588, allow immutable elements.
-    static if(allSatisfy!(isAssignable, Args)) {
-        typeof(this) opAssign(typeof(this) rhs) {
-            foreach(i, Type; typeof(this.tupleof)) {
+    static if(allSatisfy!(isAssignable, Args))
+    {
+        typeof(this) opAssign(typeof(this) rhs)
+        {
+            foreach(i, Type; typeof(this.tupleof))
+            {
                 this.tupleof[i] = rhs.tupleof[i];
             }
             return this;
         }
-    } else {
-        @disable typeof(this) opAssign(typeof(this) rhs) {
+    }
+    else
+    {
+        @disable typeof(this) opAssign(typeof(this) rhs)
+        {
             assert(0);
         }
     }
@@ -485,18 +590,21 @@ struct Task(alias fun, Args...) {
     $(D Task) to be available on a timescale shorter than that of an OS
     context switch.
      */
-    @property ref ReturnType spinForce() @trusted {
+    @property ref ReturnType spinForce() @trusted
+    {
         enforcePool();
 
         this.pool.tryDeleteExecute(basePtr);
 
         while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {}
 
-        if(exception) {
+        if(exception)
+        {
             throw exception;
         }
 
-        static if(!is(ReturnType == void)) {
+        static if(!is(ReturnType == void))
+        {
             return fixRef(this.returnVal);
         }
     }
@@ -510,14 +618,19 @@ struct Task(alias fun, Args...) {
     This function should be used for expensive functions, as waiting on a
     condition variable introduces latency, but avoids wasted CPU cycles.
      */
-    @property ref ReturnType yieldForce() @trusted {
+    @property ref ReturnType yieldForce() @trusted
+    {
         enforcePool();
         this.pool.tryDeleteExecute(basePtr);
 
-        if(done) {
-            static if(is(ReturnType == void)) {
+        if(done)
+        {
+            static if(is(ReturnType == void))
+            {
                 return;
-            } else {
+            }
+            else
+            {
                 return fixRef(this.returnVal);
             }
         }
@@ -525,15 +638,18 @@ struct Task(alias fun, Args...) {
         pool.waiterLock();
         scope(exit) pool.waiterUnlock();
 
-        while(atomicReadUbyte(this.taskStatus) != TaskStatus.done) {
+        while(atomicReadUbyte(this.taskStatus) != TaskStatus.done)
+        {
             pool.waitUntilCompletion();
         }
 
-        if(exception) {
+        if(exception)
+        {
             throw exception;
         }
 
-        static if(!is(ReturnType == void)) {
+        static if(!is(ReturnType == void))
+        {
             return fixRef(this.returnVal);
         }
     }
@@ -547,15 +663,21 @@ struct Task(alias fun, Args...) {
     If no other tasks are available or this $(D Task) was executed using
     $(D executeInNewThread), wait on a condition variable.
      */
-    @property ref ReturnType workForce() @trusted {
+    @property ref ReturnType workForce() @trusted
+    {
         enforcePool();
         this.pool.tryDeleteExecute(basePtr);
 
-        while(true) {
-            if(done) {  // done() implicitly checks for exceptions.
-                static if(is(ReturnType == void)) {
+        while(true)
+        {
+            if(done)    // done() implicitly checks for exceptions.
+            {
+                static if(is(ReturnType == void))
+                {
                     return;
-                } else {
+                }
+                else
+                {
                     return fixRef(this.returnVal);
                 }
             }
@@ -572,23 +694,32 @@ struct Task(alias fun, Args...) {
             }
 
 
-            if(job !is null) {
+            if(job !is null)
+            {
 
-                version(verboseUnittest) {
+                version(verboseUnittest)
+                {
                     stderr.writeln("Doing workForce work.");
                 }
 
                 pool.doJob(job);
 
-                if(done) {
-                    static if(is(ReturnType == void)) {
+                if(done)
+                {
+                    static if(is(ReturnType == void))
+                    {
                         return;
-                    } else {
+                    }
+                    else
+                    {
                         return fixRef(this.returnVal);
                     }
                 }
-            } else {
-                version(verboseUnittest) {
+            }
+            else
+            {
+                version(verboseUnittest)
+                {
                     stderr.writeln("Yield from workForce.");
                 }
 
@@ -603,7 +734,8 @@ struct Task(alias fun, Args...) {
     Throws:  Rethrows any exception thrown during the execution of the
              $(D Task).
     */
-    @property bool done() @trusted {
+    @property bool done() @trusted
+    {
         // Explicitly forwarded for documentation purposes.
         return base.done;
     }
@@ -616,17 +748,21 @@ struct Task(alias fun, Args...) {
     $(D core.thread.Thread.priority). See $(XREF parallelism, task) for
     usage example.
     */
-    void executeInNewThread() @trusted {
+    void executeInNewThread() @trusted
+    {
         pool = new TaskPool(basePtr);
     }
 
     /// Ditto
-    void executeInNewThread(int priority) @trusted {
+    void executeInNewThread(int priority) @trusted
+    {
         pool = new TaskPool(basePtr, priority);
     }
 
-    @safe ~this() {
-        if(isScoped && pool !is null && taskStatus != TaskStatus.done) {
+    @safe ~this()
+    {
+        if(isScoped && pool !is null && taskStatus != TaskStatus.done)
+        {
             yieldForce();
         }
     }
@@ -639,7 +775,8 @@ struct Task(alias fun, Args...) {
 // Calls $(D fpOrDelegate) with $(D args).  This is an
 // adapter that makes $(D Task) work with delegates, function pointers and
 // functors instead of just aliases.
-ReturnType!(F) run(F, Args...)(F fpOrDelegate, ref Args args) {
+ReturnType!(F) run(F, Args...)(F fpOrDelegate, ref Args args)
+{
     return fpOrDelegate(args);
 }
 
@@ -656,7 +793,8 @@ Examples:
 // Read two files into memory at the same time.
 import std.file;
 
-void main() {
+void main() 
+{
     // Create and execute a Task for reading foo.txt.
     auto file1Task = task!read("foo.txt");
     file1Task.executeInNewThread();
@@ -679,9 +817,11 @@ void main() {
 //
 // This implementation:               176 milliseconds.
 // Equivalent serial implementation:  280 milliseconds
-void parallelSort(T)(T[] data) {
+void parallelSort(T)(T[] data) 
+{
     // Sort small subarrays serially.
-    if(data.length < 100) {
+    if(data.length < 100) 
+    {
          std.algorithm.sort(data);
          return;
     }
@@ -705,7 +845,8 @@ void parallelSort(T)(T[] data) {
 }
 ---
 */
-auto task(alias fun, Args...)(Args args) {
+auto task(alias fun, Args...)(Args args)
+{
     return new Task!(fun, Args)(args);
 }
 
@@ -719,7 +860,8 @@ Examples:
 // pointer instead of an alias to represent std.file.read.
 import std.file;
 
-void main() {
+void main() 
+{
     // Create and execute a Task for reading foo.txt.
     auto file1Task = task(&read, "foo.txt");
     file1Task.executeInNewThread();
@@ -738,7 +880,8 @@ Notes: This function takes a non-scope delegate, meaning it can be
        takes a scope delegate.
  */
 auto task(F, Args...)(F delegateOrFp, Args args)
-if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
+if(is(typeof(delegateOrFp(args))) && !isSafeTask!F)
+{
     return new Task!(run, F, Args)(delegateOrFp, args);
 }
 
@@ -764,7 +907,8 @@ identical to the non-@safe case, but safety introduces the some restrictions.
 
 */
 @trusted auto task(F, Args...)(F fun, Args args)
-if(is(typeof(fun(args))) && isSafeTask!F) {
+if(is(typeof(fun(args))) && isSafeTask!F)
+{
     return new Task!(run, F, Args)(fun, args);
 }
 
@@ -789,7 +933,8 @@ Notes:  $(D Task) objects created using $(D scopedTask) will automatically
 call $(D Task.yieldForce) in their destructor if necessary to ensure
 the $(D Task) is complete before the stack frame they reside on is destroyed.
 */
-auto scopedTask(alias fun, Args...)(Args args) {
+auto scopedTask(alias fun, Args...)(Args args)
+{
     auto ret = Task!(fun, Args)(args);
     ret.isScoped = true;
     return ret;
@@ -797,7 +942,8 @@ auto scopedTask(alias fun, Args...)(Args args) {
 
 /// Ditto
 auto scopedTask(F, Args...)(scope F delegateOrFp, Args args)
-if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
+if(is(typeof(delegateOrFp(args))) && !isSafeTask!F)
+{
     auto ret = Task!(run, F, Args)(delegateOrFp, args);
     ret.isScoped = true;
     return ret;
@@ -805,7 +951,8 @@ if(is(typeof(delegateOrFp(args))) && !isSafeTask!F) {
 
 /// Ditto
 @trusted auto scopedTask(F, Args...)(F fun, Args args)
-if(is(typeof(fun(args))) && isSafeTask!F) {
+if(is(typeof(fun(args))) && isSafeTask!F)
+{
     auto ret = Task!(run, F, Args)(fun, args);
     ret.isScoped = true;
     return ret;
@@ -827,8 +974,10 @@ This class serves two purposes:
     which is also necessary to allow the daemon threads to be properly
     terminated.
 */
-private final class ParallelismThread : Thread {
-    this(void delegate() dg) {
+private final class ParallelismThread : Thread
+{
+    this(void delegate() dg)
+    {
         super(dg);
     }
 
@@ -836,10 +985,12 @@ private final class ParallelismThread : Thread {
 }
 
 // Kill daemon threads.
-shared static ~this() {
+shared static ~this()
+{
     auto allThreads = Thread.getAll();
 
-    foreach(thread; allThreads) {
+    foreach(thread; allThreads)
+    {
         auto pthread = cast(ParallelismThread) thread;
         if(pthread is null) continue;
         auto pool = pthread.pool;
@@ -868,7 +1019,8 @@ Occasionally it is useful to explicitly instantiate a $(D TaskPool):
     primitive (for example a mutex), and you want to parallelize the code that
     needs to run before these threads can be resumed.
  */
-final class TaskPool {
+final class TaskPool
+{
 private:
 
     // A pool can either be a regular pool or a single-task pool.  A
@@ -899,28 +1051,35 @@ private:
     // The index that the next thread to be initialized in this pool will have.
     size_t nextThreadIndex;
 
-    enum PoolState : ubyte {
+    enum PoolState : ubyte
+    {
         running,
         finishing,
         stopNow
     }
 
-    void doJob(AbstractTask* job) {
+    void doJob(AbstractTask* job)
+    {
         assert(job.taskStatus == TaskStatus.inProgress);
         assert(job.next is null);
         assert(job.prev is null);
 
-        scope(exit) {
-            if(!isSingleTask) {
+        scope(exit)
+        {
+            if(!isSingleTask)
+            {
                 waiterLock();
                 scope(exit) waiterUnlock();
                 notifyWaiters();
             }
         }
 
-        try {
+        try
+        {
             job.job();
-        } catch(Throwable e) {
+        }
+        catch(Throwable e)
+        {
             job.exception = e;
         }
 
@@ -928,7 +1087,8 @@ private:
     }
 
     // This function is used for dummy pools created by Task.executeInNewThread().
-    void doSingleTask() {
+    void doSingleTask()
+    {
         // No synchronization.  Pool is guaranteed to only have one thread,
         // and the queue is submitted to before this thread is created.
         assert(head);
@@ -939,7 +1099,8 @@ private:
 
     // This work loop is used for a "normal" task pool where a worker thread
     // does more than one task.
-    void workLoop() {
+    void workLoop()
+    {
         // Initialize thread index.
         {
             queueLock();
@@ -948,25 +1109,32 @@ private:
             nextThreadIndex++;
         }
 
-        while(atomicReadUbyte(status) != PoolState.stopNow) {
+        while(atomicReadUbyte(status) != PoolState.stopNow)
+        {
             AbstractTask* task = pop();
-            if (task is null) {
-                if(atomicReadUbyte(status) == PoolState.finishing) {
+            if (task is null)
+            {
+                if(atomicReadUbyte(status) == PoolState.finishing)
+                {
                     atomicSetUbyte(status, PoolState.stopNow);
                     return;
                 }
-            } else {
+            }
+            else
+            {
                 doJob(task);
             }
         }
     }
 
     // Pop a task off the queue.
-    AbstractTask* pop() {
+    AbstractTask* pop()
+    {
         queueLock();
         scope(exit) queueUnlock();
         auto ret = popNoSync();
-        while(ret is null && status == PoolState.running) {
+        while(ret is null && status == PoolState.running)
+        {
             wait();
             ret = popNoSync();
         }
@@ -974,26 +1142,32 @@ private:
     }
 
     AbstractTask* popNoSync()
-    out(returned) {
+    out(returned)
+    {
         /* If task.prev and task.next aren't null, then another thread
          * can try to delete this task from the pool after it's
          * alreadly been deleted/popped.
          */
-        if(returned !is null) {
+        if(returned !is null)
+        {
             assert(returned.next is null);
             assert(returned.prev is null);
         }
-    } body {
+    } 
+    body
+    {
         if(isSingleTask) return null;
 
         AbstractTask* returned = head;
-        if (head !is null) {
+        if (head !is null)
+        {
             head = head.next;
             returned.prev = null;
             returned.next = null;
             returned.taskStatus = TaskStatus.inProgress;
         }
-        if(head !is null) {
+        if(head !is null)
+        {
             head.prev = null;
         }
 
@@ -1001,28 +1175,37 @@ private:
     }
 
     // Push a task onto the queue.
-    void abstractPut(AbstractTask* task) {
+    void abstractPut(AbstractTask* task)
+    {
         queueLock();
         scope(exit) queueUnlock();
         abstractPutNoSync(task);
     }
 
     void abstractPutNoSync(AbstractTask* task)
-    in {
+    in
+    {
         assert(task);
-    } out {
+    } 
+    out
+    {
         assert(tail.prev !is tail);
         assert(tail.next is null, text(tail.prev, '\t', tail.next));
-        if(tail.prev !is null) {
+        if(tail.prev !is null)
+        {
             assert(tail.prev.next is tail, text(tail.prev, '\t', tail.next));
         }
-    } body {
+    } 
+    body
+    {
         task.next = null;
-        if (head is null) { //Queue is empty.
+        if (head is null)   //Queue is empty.
+        {
             head = task;
             tail = task;
             tail.prev = null;
-        } else {
+        }
+        else {
             assert(tail);
             task.prev = tail;
             tail.next = task;
@@ -1031,11 +1214,15 @@ private:
         notify();
     }
 
-    void abstractPutGroupNoSync(AbstractTask* h, AbstractTask* t) {
-        if(head is null) {
+    void abstractPutGroupNoSync(AbstractTask* h, AbstractTask* t)
+    {
+        if(head is null)
+        {
             head = h;
             tail = t;
-        } else {
+        }
+        else
+        {
             h.prev = tail;
             tail.next = h;
             tail = t;
@@ -1044,53 +1231,66 @@ private:
         notifyAll();
     }
 
-    void tryDeleteExecute(AbstractTask* toExecute) {
+    void tryDeleteExecute(AbstractTask* toExecute)
+    {
         if(isSingleTask) return;
 
-        if( !deleteItem(toExecute) ) {
+        if( !deleteItem(toExecute) )
+        {
             return;
         }
 
-        try {
+        try
+        {
             toExecute.job();
-        } catch(Exception e) {
+        }
+        catch(Exception e)
+        {
             toExecute.exception = e;
         }
 
         atomicSetUbyte(toExecute.taskStatus, TaskStatus.done);
     }
 
-    bool deleteItem(AbstractTask* item) {
+    bool deleteItem(AbstractTask* item)
+    {
         queueLock();
         scope(exit) queueUnlock();
         return deleteItemNoSync(item);
     }
 
-    bool deleteItemNoSync(AbstractTask* item) {
-        if(item.taskStatus != TaskStatus.notStarted) {
+    bool deleteItemNoSync(AbstractTask* item)
+    {
+        if(item.taskStatus != TaskStatus.notStarted)
+        {
             return false;
         }
         item.taskStatus = TaskStatus.inProgress;
 
-        if(item is head) {
+        if(item is head)
+        {
             // Make sure head gets set properly.
             popNoSync();
             return true;
         }
-        if(item is tail) {
+        if(item is tail)
+        {
             tail = tail.prev;
-            if(tail !is null) {
+            if(tail !is null)
+            {
                 tail.next = null;
             }
             item.next = null;
             item.prev = null;
             return true;
         }
-        if(item.next !is null) {
+        if(item.next !is null)
+        {
             assert(item.next.prev is item);  // Check queue consistency.
             item.next.prev = item.prev;
         }
-        if(item.prev !is null) {
+        if(item.prev !is null)
+        {
             assert(item.prev.next is item);  // Check queue consistency.
             item.prev.next = item.next;
         }
@@ -1099,52 +1299,65 @@ private:
         return true;
     }
 
-    void queueLock() {
+    void queueLock()
+    {
         assert(queueMutex);
         if(!isSingleTask) queueMutex.lock();
     }
 
-    void queueUnlock() {
+    void queueUnlock()
+    {
         assert(queueMutex);
         if(!isSingleTask) queueMutex.unlock();
     }
 
-    void waiterLock() {
+    void waiterLock()
+    {
         if(!isSingleTask) waiterMutex.lock();
     }
 
-    void waiterUnlock() {
+    void waiterUnlock()
+    {
         if(!isSingleTask) waiterMutex.unlock();
     }
 
-    void wait() {
+    void wait()
+    {
         if(!isSingleTask) workerCondition.wait();
     }
 
-    void notify() {
+    void notify()
+    {
         if(!isSingleTask) workerCondition.notify();
     }
 
-    void notifyAll() {
+    void notifyAll()
+    {
         if(!isSingleTask) workerCondition.notifyAll();
     }
 
-    void waitUntilCompletion() {
-        if(isSingleTask) {
+    void waitUntilCompletion()
+    {
+        if(isSingleTask)
+        {
             singleTaskThread.join();
-        } else {
+        }
+        else
+        {
             waiterCondition.wait();
         }
     }
 
-    void notifyWaiters() {
+    void notifyWaiters()
+    {
         if(!isSingleTask) waiterCondition.notifyAll();
     }
 
     // Private constructor for creating dummy pools that only have one thread,
     // only execute one Task, and then terminate.  This is used for
     // Task.executeInNewThread().
-    this(AbstractTask* task, int priority = int.max) {
+    this(AbstractTask* task, int priority = int.max)
+    {
         assert(task);
 
         // Dummy value, not used.
@@ -1155,7 +1368,8 @@ private:
         this.head = task;
         singleTaskThread = new Thread(&doSingleTask);
 
-        if(priority != int.max) {
+        if(priority != int.max)
+        {
             singleTaskThread.priority = priority;
         }
 
@@ -1165,34 +1379,39 @@ private:
 public:
     // This is used in parallel_algorithm but is too unstable to document
     // as public API.
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe {
-        if(this.size == 0) {
-            return rangeLen;
-        }
+    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe
+    {
+        if(this.size == 0)
+{
+    return rangeLen;
+}
 
-        immutable size_t eightSize = 4 * (this.size + 1);
-        auto ret = (rangeLen / eightSize) +
-            ((rangeLen % eightSize == 0) ? 0 : 1);
-        return max(ret, 1);
-    }
+immutable size_t eightSize = 4 * (this.size + 1);
+auto ret = (rangeLen / eightSize) +
+           ((rangeLen % eightSize == 0) ? 0 : 1);
+return max(ret, 1);
+}
 
-    /**
-    Default constructor that initializes a $(D TaskPool) with
-    $(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
-    main thread will also be available to do work.
+/**
+Default constructor that initializes a $(D TaskPool) with
+$(D totalCPUs) - 1 worker threads.  The minus 1 is included because the
+main thread will also be available to do work.
 
-    Note:  On single-core machines, the primitives provided by $(D TaskPool)
-           operate transparently in single-threaded mode.
-     */
-    this() @trusted {
+Note:  On single-core machines, the primitives provided by $(D TaskPool)
+       operate transparently in single-threaded mode.
+ */
+this() @trusted
+    {
         this(totalCPUs - 1);
     }
 
     /**
     Allows for custom number of worker threads.
     */
-    this(size_t nWorkers) @trusted {
-        synchronized(TaskPool.classinfo) {
+    this(size_t nWorkers) @trusted
+    {
+        synchronized(TaskPool.classinfo)
+        {
             instanceStartIndex = nextInstanceIndex;
 
             // The first worker thread to be initialized will have this index,
@@ -1208,7 +1427,8 @@ public:
         waiterCondition = new Condition(waiterMutex);
 
         pool = new ParallelismThread[nWorkers];
-        foreach(ref poolThread; pool) {
+        foreach(ref poolThread; pool)
+        {
             poolThread = new ParallelismThread(&workLoop);
             poolThread.pool = this;
             poolThread.start();
@@ -1232,14 +1452,17 @@ public:
 
     Examples:
     ---
-    // Find the logarithm of every number from 1 to 10_000_000 in parallel.
+    // Find the logarithm of every number from 1 to 
+    // 10_000_000 in parallel.
     auto logs = new double[10_000_000];
 
-    // Parallel foreach works with or without an index variable.  It can be
-    // iterate by ref if range.front returns by ref.
+    // Parallel foreach works with or without an index 
+    // variable.  It can be iterate by ref if range.front 
+    // returns by ref.
 
     // Iterate over logs using work units of size 100.
-    foreach(i, ref elem; taskPool.parallel(logs, 100)) {
+    foreach(i, ref elem; taskPool.parallel(logs, 100)) 
+    {
         elem = log(i + 1.0);
     }
 
@@ -1249,7 +1472,8 @@ public:
     //
     // Parallel foreach:  388 milliseconds
     // Regular foreach:   619 milliseconds
-    foreach(i, ref elem; taskPool.parallel(logs)) {
+    foreach(i, ref elem; taskPool.parallel(logs)) 
+    {
         elem = log(i + 1.0);
     }
     ---
@@ -1282,7 +1506,8 @@ public:
     were thrown by any work unit are chained using $(D Throwable.next) and
     rethrown.  The order of the exception chaining is non-deterministic.
     */
-    ParallelForeach!R parallel(R)(R range, size_t workUnitSize) {
+    ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
+    {
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
         alias ParallelForeach!R RetType;
         return RetType(this, range, workUnitSize);
@@ -1290,13 +1515,17 @@ public:
 
 
     /// Ditto
-    ParallelForeach!R parallel(R)(R range) {
-        static if(hasLength!R) {
+    ParallelForeach!R parallel(R)(R range)
+    {
+        static if(hasLength!R)
+        {
             // Default work unit size is such that we would use 4x as many
             // slots as are in this thread pool.
             size_t workUnitSize = defaultWorkUnitSize(range.length);
             return parallel(range, workUnitSize);
-        } else {
+        }
+        else
+        {
             // Just use a really, really dumb guess if the user is too lazy to
             // specify.
             return parallel(range, 512);
@@ -1342,13 +1571,16 @@ public:
     different threads must be safe.
 
     ---
-    // Same thing, but explicitly allocate an array to return the results in.
-    // The element type of the array may be either the exact type returned by
-    // functions or an implicit conversion target.
+    // Same thing, but explicitly allocate an array 
+    // to return the results in.  The element type 
+    // of the array may be either the exact type 
+    // returned by functions or an implicit conversion 
+    // target.
     auto squareRoots = new float[numbers.length];
     taskPool.amap!sqrt(numbers, squareRoots);
 
-    // Multiple functions, explicit output range, and explicit work unit size.
+    // Multiple functions, explicit output range, and
+    // explicit work unit size.
     auto results = new Tuple!(float, real)[numbers.length];
     taskPool.amap!(sqrt, log)(numbers, 100, results);
     ---
@@ -1377,13 +1609,18 @@ public:
     were thrown from any work unit are chained using $(D Throwable.next) and
     rethrown.  The order of the exception chaining is non-deterministic.
      */
-    template amap(functions...) {
+    template amap(functions...)
+    {
         ///
         auto amap(Args...)(Args args)
-        if(isRandomAccessRange!(Args[0])) {
-            static if(functions.length == 1) {
+        if(isRandomAccessRange!(Args[0]))
+        {
+            static if(functions.length == 1)
+            {
                 alias unaryFun!(functions[0]) fun;
-            } else {
+            }
+            else
+            {
                 alias adjoin!(staticMap!(unaryFun, functions)) fun;
             }
 
@@ -1394,42 +1631,53 @@ public:
                 Args.length > 1 &&
                 randAssignable!(Args[$ - 1]) &&
                 is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))
-            ) {
+                )
+            {
                 alias args[$ - 1] buf;
                 alias args[0..$ - 1] args2;
                 alias Args[0..$ - 1] Args2;
                 enforce(buf.length == len,
-                    text("Can't use a user supplied buffer that's the wrong "
-                        "size.  (Expected  :", len, " Got:  ", buf.length));
-            } else static if(randAssignable!(Args[$ - 1]) && Args.length > 1) {
+                        text("Can't use a user supplied buffer that's the wrong "
+                             "size.  (Expected  :", len, " Got:  ", buf.length));
+            }
+            else static if(randAssignable!(Args[$ - 1]) && Args.length > 1)
+            {
                 static assert(0, "Wrong buffer type.");
-            } else {
+            }
+            else
+            {
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])
-                    (len);
+                           (len);
                 alias args args2;
                 alias Args Args2;
             }
 
             if(!len) return buf;
 
-            static if(isIntegral!(Args2[$ - 1])) {
+            static if(isIntegral!(Args2[$ - 1]))
+            {
                 static assert(args2.length == 2);
                 auto workUnitSize = cast(size_t) args2[1];
-            } else {
+            }
+            else
+            {
                 static assert(args2.length == 1, Args);
                 auto workUnitSize = defaultWorkUnitSize(range.length);
             }
 
             alias typeof(range) R;
 
-            if(workUnitSize > len) {
+            if(workUnitSize > len)
+            {
                 workUnitSize = len;
             }
 
             // Handle as a special case:
-            if(size == 0) {
+            if(size == 0)
+            {
                 size_t index = 0;
-                foreach(elem; range) {
+                foreach(elem; range)
+                {
                     buf[index++] = fun(elem);
                 }
                 return buf;
@@ -1437,26 +1685,30 @@ public:
 
             // Effectively -1:  chunkIndex + 1 == 0:
             shared size_t workUnitIndex = size_t.max;
-
             shared bool shouldContinue = true;
 
-            void doIt() {
-                scope(failure) {
+            void doIt()
+            {
+                scope(failure)
+                {
                     // If an exception is thrown, all threads should bail.
                     atomicStore(shouldContinue, false);
                 }
 
-                while(atomicLoad(shouldContinue)) {
+                while(atomicLoad(shouldContinue))
+                {
                     immutable myUnitIndex = atomicOp!"+="(workUnitIndex, 1);
                     immutable start = workUnitSize * myUnitIndex;
-                    if(start >= len) {
+                    if(start >= len)
+                    {
                         atomicStore(shouldContinue, false);
                         break;
                     }
 
                     immutable end = min(len, start + workUnitSize);
 
-                    foreach(i; start..end) {
+                    foreach(i; start..end)
+                    {
                         buf[i] = fun(range[i]);
                     }
                 }
@@ -1521,7 +1773,8 @@ public:
     auto logs = taskPool.map!log10(nums);
 
     double sum = 0;
-    foreach(elem; logs) {
+    foreach(elem; logs) 
+    {
         sum += elem;
     }
     ---
@@ -1534,29 +1787,34 @@ public:
     caller.  In the case of exceptions thrown while computing the map function,
     the exceptions are chained as in $(D TaskPool.amap).
     */
-    template map(functions...) {
-
+    template map(functions...)
+    {
         ///
         auto
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
-        if(isInputRange!S) {
+        if(isInputRange!S)
+        {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
-                "Work unit size must be smaller than buffer size.");
-            static if(functions.length == 1) {
+                    "Work unit size must be smaller than buffer size.");
+            static if(functions.length == 1)
+            {
                 alias unaryFun!(functions[0]) fun;
-            } else {
-                 alias adjoin!(staticMap!(unaryFun, functions)) fun;
+            }
+            else
+            {
+                alias adjoin!(staticMap!(unaryFun, functions)) fun;
             }
 
-            static final class Map {
-                // This is a class because the task needs to be located on the heap
-                // and in the non-random access case source needs to be on the
-                // heap, too.
+            static final class Map
+            {
+                // This is a class because the task needs to be located on the 
+                // heap and in the non-random access case source needs to be on 
+                // the heap, too.
 
             private:
                 enum bufferTrick = is(typeof(source.buf1)) &&
-                                   is(typeof(source.bufPos)) &&
-                                   is(typeof(source.doBufSwap()));
+                is(typeof(source.bufPos)) &&
+                is(typeof(source.doBufSwap()));
 
                 alias MapType!(S, functions) E;
                 E[] buf1, buf2;
@@ -1567,197 +1825,241 @@ public:
                 size_t bufPos;
                 bool lastTaskWaited;
 
-                static if(isRandomAccessRange!S) {
-                    alias S FromType;
+                static if(isRandomAccessRange!S)
+        {
+            alias S FromType;
 
-                    void popSource() {
-                        static if(__traits(compiles, source[0..source.length])) {
-                            source = source[min(buf1.length, source.length)..source.length];
-                        } else static if(__traits(compiles, source[0..$])) {
-                            source = source[min(buf1.length, source.length)..$];
-                        } else {
-                            static assert(0, "S must have slicing for Map."
-                                ~ "  " ~ R.stringof ~ " doesn't.");
-                        }
+            void popSource()
+                {
+                    static if(__traits(compiles, source[0..source.length]))
+                    {
+                        source = source[min(buf1.length, source.length)..source.length];
                     }
-
-                } else static if(bufferTrick) {
-
-                    // Make sure we don't have the buffer recycling overload of
-                    // asyncBuf.
-                    static if(
-                        is(typeof(source.source)) &&
-                        isRoundRobin!(typeof(source.source))
-                    ) {
-                        static assert(0, "Cannot execute a parallel map on " ~
-                            "the buffer recycling overload of asyncBuf."
-                        );
+                    else static if(__traits(compiles, source[0..$]))
+                    {
+                        source = source[min(buf1.length, source.length)..$];
                     }
-
-                    alias typeof(source.buf1) FromType;
-                    FromType from;
-
-                    // Just swap our input buffer with source's output buffer.
-                    // No need to copy element by element.
-                    FromType dumpToFrom() {
-                        assert(source.buf1.length <= from.length);
-                        from.length = source.buf1.length;
-                        swap(source.buf1, from);
-
-                        // Just in case this source has been popped before
-                        // being sent to map:
-                        from = from[source.bufPos..$];
-
-                        static if(is(typeof(source._length))) {
-                            source._length -= (from.length - source.bufPos);
-                        }
-
-                        source.doBufSwap();
-
-                        return from;
-                    }
-
-                } else {
-                    alias ElementType!(S)[] FromType;
-
-                    // The temporary array that data is copied to before being
-                    // mapped.
-                    FromType from;
-
-                    FromType dumpToFrom() {
-                        assert(from !is null);
-
-                        size_t i;
-                        for(; !source.empty && i < from.length; source.popFront()) {
-                            from[i++] = source.front;
-                        }
-
-                        from = from[0..i];
-                        return from;
+                    else
+                    {
+                        static assert(0, "S must have slicing for Map."
+                                      ~ "  " ~ R.stringof ~ " doesn't.");
                     }
                 }
 
-                static if(hasLength!S) {
-                    size_t _length;
+            }
+            else static if(bufferTrick)
+        {
 
-                    public @property size_t length() const pure nothrow @safe {
-                        return _length;
-                    }
+            // Make sure we don't have the buffer recycling overload of
+            // asyncBuf.
+            static if(
+                    is(typeof(source.source)) &&
+                    isRoundRobin!(typeof(source.source))
+                )
+                {
+                    static assert(0, "Cannot execute a parallel map on " ~
+                                  "the buffer recycling overload of asyncBuf."
+                                 );
                 }
 
-                this(S source, size_t bufSize, size_t workUnitSize, TaskPool pool) {
-                    static if(bufferTrick) {
-                        bufSize = source.buf1.length;
+                alias typeof(source.buf1) FromType;
+                FromType from;
+
+                // Just swap our input buffer with source's output buffer.
+                // No need to copy element by element.
+                FromType dumpToFrom()
+                {
+                    assert(source.buf1.length <= from.length);
+                    from.length = source.buf1.length;
+                    swap(source.buf1, from);
+
+                    // Just in case this source has been popped before
+                    // being sent to map:
+                    from = from[source.bufPos..$];
+
+                    static if(is(typeof(source._length)))
+                    {
+                        source._length -= (from.length - source.bufPos);
                     }
 
-                    buf1.length = bufSize;
-                    buf2.length = bufSize;
+                    source.doBufSwap();
 
-                    static if(!isRandomAccessRange!S) {
-                        from.length = bufSize;
-                    }
-
-                    this.workUnitSize = (workUnitSize == size_t.max) ?
-                            pool.defaultWorkUnitSize(bufSize) : workUnitSize;
-                    this.source = source;
-                    this.pool = pool;
-
-                    static if(hasLength!S) {
-                        _length = source.length;
-                    }
-
-                    buf1 = fillBuf(buf1);
-                    submitBuf2();
+                    return from;
                 }
 
-                // The from parameter is a dummy and ignored in the random access
-                // case.
-                E[] fillBuf(E[] buf) {
-                    static if(isRandomAccessRange!S) {
-                        auto toMap = take(source, buf.length);
-                        scope(success) popSource();
-                    } else {
-                        auto toMap = dumpToFrom();
+            }
+            else
+            {
+                alias ElementType!(S)[] FromType;
+
+                // The temporary array that data is copied to before being
+                // mapped.
+                FromType from;
+
+                FromType dumpToFrom()
+                {
+                    assert(from !is null);
+
+                    size_t i;
+                    for(; !source.empty && i < from.length; source.popFront())
+                    {
+                        from[i++] = source.front;
                     }
 
-                    buf = buf[0..min(buf.length, toMap.length)];
+                    from = from[0..i];
+                    return from;
+                }
+            }
 
-                    // Handle as a special case:
-                    if(pool.size == 0) {
-                        size_t index = 0;
-                        foreach(elem; toMap) {
-                            buf[index++] = fun(elem);
-                        }
-                        return buf;
+            static if(hasLength!S)
+        {
+            size_t _length;
+
+            public @property size_t length() const pure nothrow @safe
+                {
+                    return _length;
+                }
+            }
+
+            this(S source, size_t bufSize, size_t workUnitSize, TaskPool pool)
+            {
+                static if(bufferTrick)
+                {
+                    bufSize = source.buf1.length;
+                }
+
+                buf1.length = bufSize;
+                buf2.length = bufSize;
+
+                static if(!isRandomAccessRange!S)
+                {
+                    from.length = bufSize;
+                }
+
+                this.workUnitSize = (workUnitSize == size_t.max) ?
+                pool.defaultWorkUnitSize(bufSize) : workUnitSize;
+                this.source = source;
+                this.pool = pool;
+
+                static if(hasLength!S)
+                {
+                    _length = source.length;
+                }
+
+                buf1 = fillBuf(buf1);
+                submitBuf2();
+            }
+
+            // The from parameter is a dummy and ignored in the random access
+            // case.
+            E[] fillBuf(E[] buf)
+            {
+                static if(isRandomAccessRange!S)
+                {
+                    auto toMap = take(source, buf.length);
+                    scope(success) popSource();
+                }
+                else
+                {
+                    auto toMap = dumpToFrom();
+                }
+
+                buf = buf[0..min(buf.length, toMap.length)];
+
+                // Handle as a special case:
+                if(pool.size == 0)
+                {
+                    size_t index = 0;
+                    foreach(elem; toMap)
+                    {
+                        buf[index++] = fun(elem);
                     }
-
-                    pool.amap!(functions)(toMap, workUnitSize, buf);
-
                     return buf;
                 }
 
-                void submitBuf2()
-                in {
-                    assert(nextBufTask.prev is null);
-                    assert(nextBufTask.next is null);
-                } body {
-                    // Hack to reuse the task object.
+                pool.amap!(functions)(toMap, workUnitSize, buf);
 
-                    nextBufTask = typeof(nextBufTask).init;
-                    nextBufTask._args[0] = &fillBuf;
-                    nextBufTask._args[1] = buf2;
-                    pool.put(nextBufTask);
-                }
+                return buf;
+            }
 
-                void doBufSwap() {
-                    if(lastTaskWaited) {
-                        // Then the source is empty.  Signal it here.
-                        buf1 = null;
-                        buf2 = null;
+            void submitBuf2()
+            in
+            {
+                assert(nextBufTask.prev is null);
+                assert(nextBufTask.next is null);
+            } body
+            {
+                // Hack to reuse the task object.
 
-                        static if(!isRandomAccessRange!S) {
-                            from = null;
-                        }
+                nextBufTask = typeof(nextBufTask).init;
+                nextBufTask._args[0] = &fillBuf;
+                nextBufTask._args[1] = buf2;
+                pool.put(nextBufTask);
+            }
 
-                        return;
+            void doBufSwap()
+            {
+                if(lastTaskWaited)
+                {
+                    // Then the source is empty.  Signal it here.
+                    buf1 = null;
+                    buf2 = null;
+
+                    static if(!isRandomAccessRange!S)
+                    {
+                        from = null;
                     }
 
-                    buf2 = buf1;
-                    buf1 = nextBufTask.yieldForce();
-                    bufPos = 0;
-
-                    if(source.empty) {
-                        lastTaskWaited = true;
-                    } else {
-                        submitBuf2();
-                    }
+                    return;
                 }
 
-            public:
-                @property auto front() {
-                    return buf1[bufPos];
+                buf2 = buf1;
+                buf1 = nextBufTask.yieldForce();
+                bufPos = 0;
+
+                if(source.empty)
+                {
+                    lastTaskWaited = true;
+                }
+                else
+                {
+                    submitBuf2();
+                }
+            }
+
+public:
+            @property auto front()
+            {
+                return buf1[bufPos];
+            }
+
+            void popFront()
+            {
+                static if(hasLength!S)
+                {
+                    _length--;
                 }
 
-                void popFront() {
-                    static if(hasLength!S) {
-                        _length--;
-                    }
-
-                    bufPos++;
-                    if(bufPos >= buf1.length) {
-                        doBufSwap();
-                    }
+                bufPos++;
+                if(bufPos >= buf1.length)
+                {
+                    doBufSwap();
                 }
+            }
 
-                static if(std.range.isInfinite!S) {
-                    enum bool empty = false;
-                } else {
+            static if(std.range.isInfinite!S)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
 
-                    bool empty() @property {
-                        // popFront() sets this when source is empty
-                        return buf1.length == 0;
-                    }
+            bool empty() @property
+                {
+                    // popFront() sets this when source is empty
+                    return buf1.length == 0;
                 }
+            }
             }
             return new Map(source, bufSize, workUnitSize, this);
         }
@@ -1777,19 +2079,23 @@ public:
     ---
     import std.conv, std.stdio;
 
-    void main() {
-        // Fetch lines of a file in a background thread while processing
-        // prevously fetched lines, dealing with byLine's buffer recycling by
+    void main() 
+    {
+        // Fetch lines of a file in a background thread 
+        // while processing prevously fetched lines, 
+        // dealing with byLine's buffer recycling by
         // eagerly duplicating every line.
         auto lines = File("foo.txt").byLine();
         auto duped = std.algorithm.map!"a.idup"(lines);
 
-        // Fetch more lines in the background while we process the lines already
-        // read into memory into a matrix of doubles.
+        // Fetch more lines in the background while we 
+        // process the lines already read into memory 
+        // into a matrix of doubles.
         double[][] matrix;
         auto asyncReader = taskPool.asyncBuf(duped);
 
-        foreach(line; asyncReader) {
+        foreach(line; asyncReader) 
+        {
             auto ls = line.split("\t");
             matrix ~= to!(double[])(ls);
         }
@@ -1802,8 +2108,10 @@ public:
     call to $(D popFront) or, if thrown during construction, simply
     allowed to propagate to the caller.
     */
-    auto asyncBuf(S)(S source, size_t bufSize = 100) if(isInputRange!S) {
-        static final class AsyncBuf {
+    auto asyncBuf(S)(S source, size_t bufSize = 100) if(isInputRange!S)
+    {
+        static final class AsyncBuf
+        {
             // This is a class because the task and source both need to be on
             // the heap.
 
@@ -1818,23 +2126,27 @@ public:
             size_t bufPos;
             bool lastTaskWaited;
 
-            static if(hasLength!S) {
-                size_t _length;
+            static if(hasLength!S)
+            {
+            size_t _length;
 
-                // Available if hasLength!(S).
-                public @property size_t length() const pure nothrow @safe {
+            // Available if hasLength!(S).
+            public @property size_t length() const pure nothrow @safe
+                {
                     return _length;
                 }
             }
 
-            this(S source, size_t bufSize, TaskPool pool) {
+            this(S source, size_t bufSize, TaskPool pool)
+            {
                 buf1.length = bufSize;
                 buf2.length = bufSize;
 
                 this.source = source;
                 this.pool = pool;
 
-                static if(hasLength!S) {
+                static if(hasLength!S)
+                {
                     _length = source.length;
                 }
 
@@ -1842,11 +2154,13 @@ public:
                 submitBuf2();
             }
 
-            E[] fillBuf(E[] buf) {
+            E[] fillBuf(E[] buf)
+            {
                 assert(buf !is null);
 
                 size_t i;
-                for(; !source.empty && i < buf.length; source.popFront()) {
+                for(; !source.empty && i < buf.length; source.popFront())
+                {
                     buf[i++] = source.front;
                 }
 
@@ -1855,10 +2169,12 @@ public:
             }
 
             void submitBuf2()
-            in {
+            in
+            {
                 assert(nextBufTask.prev is null);
                 assert(nextBufTask.next is null);
-            } body {
+            } body
+            {
                 // Hack to reuse the task object.
 
                 nextBufTask = typeof(nextBufTask).init;
@@ -1867,8 +2183,10 @@ public:
                 pool.put(nextBufTask);
             }
 
-            void doBufSwap() {
-                if(lastTaskWaited) {
+            void doBufSwap()
+            {
+                if(lastTaskWaited)
+                {
                     // Then source is empty.  Signal it here.
                     buf1 = null;
                     buf2 = null;
@@ -1879,36 +2197,46 @@ public:
                 buf1 = nextBufTask.yieldForce();
                 bufPos = 0;
 
-                if(source.empty) {
+                if(source.empty)
+                {
                     lastTaskWaited = true;
-                } else {
+                }
+                else
+                {
                     submitBuf2();
                 }
             }
 
         public:
-
-            E front() @property {
+            E front() @property
+            {
                 return buf1[bufPos];
             }
 
-            void popFront() {
-                static if(hasLength!S) {
+            void popFront()
+            {
+                static if(hasLength!S)
+                {
                     _length--;
                 }
 
                 bufPos++;
-                if(bufPos >= buf1.length) {
+                if(bufPos >= buf1.length)
+                {
                     doBufSwap();
                 }
             }
 
-            static if(std.range.isInfinite!S) {
+            static if(std.range.isInfinite!S)
+            {
                 enum bool empty = false;
-            } else {
-
+            }
+            
+            else
+            {
                 ///
-                bool empty() @property {
+                bool empty() @property
+                {
                     // popFront() sets this when source is empty:
                     return buf1.length == 0;
                 }
@@ -1949,7 +2277,8 @@ public:
     // fetched lines, without duplicating any lines.
     auto file = File("foo.txt");
 
-    void next(ref char[] buf) {
+    void next(ref char[] buf) 
+    {
         file.readln(buf);
     }
 
@@ -1958,7 +2287,8 @@ public:
     double[][] matrix;
     auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
 
-    foreach(line; asyncReader) {
+    foreach(line; asyncReader) 
+    {
         auto ls = line.split("\t");
         matrix ~= to!(double[])(ls);
     }
@@ -1979,12 +2309,12 @@ public:
     auto asyncBuf(C1, C2)
     (C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
-       ParameterTypeTuple!(C1).length == 1 &&
-       ParameterTypeTuple!(C2).length == 0 &&
-       isArray!(ParameterTypeTuple!(C1)[0])
+        ParameterTypeTuple!(C1).length == 1 &&
+        ParameterTypeTuple!(C2).length == 0 &&
+        isArray!(ParameterTypeTuple!(C1)[0])
     ) {
         auto roundRobin = RoundRobinBuffer!(C1, C2)
-            (next, empty, initialBufSize, nBuffers);
+        (next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
     }
 
@@ -2069,31 +2399,41 @@ public:
     are chained together via $(D Throwable.next) and rethrown.  The chaining
     order is non-deterministic.
      */
-    template reduce(functions...) {
+    template reduce(functions...)
+    {
 
         ///
-        auto reduce(Args...)(Args args) {
+        auto reduce(Args...)(Args args)
+        {
             alias reduceAdjoin!(functions) fun;
             alias reduceFinish!(functions) finishFun;
 
-            static if(isIntegral!(Args[$ - 1])) {
+            static if(isIntegral!(Args[$ - 1]))
+            {
                 size_t workUnitSize = cast(size_t) args[$ - 1];
                 alias args[0..$ - 1] args2;
                 alias Args[0..$ - 1] Args2;
-            } else {
+            }
+            else
+            {
                 alias args args2;
                 alias Args Args2;
             }
 
-            auto makeStartValue(Type)(Type e) {
-                static if(functions.length == 1) {
+            auto makeStartValue(Type)(Type e)
+            {
+                static if(functions.length == 1)
+                {
                     return e;
-                } else {
+                }
+                else
+                {
                     typeof(adjoin!(staticMap!(binaryFun, functions))(e, e))
-                        seed = void;
-                    foreach (i, T; seed.Types) {
+                    seed = void;
+                    foreach (i, T; seed.Types)
+                    {
                         auto p = (cast(void*) &seed.expand[i])
-                            [0 .. seed.expand[i].sizeof];
+                        [0 .. seed.expand[i].sizeof];
                         emplace!T(p, e);
                     }
 
@@ -2101,20 +2441,25 @@ public:
                 }
             }
 
-            static if(args2.length == 2) {
+            static if(args2.length == 2)
+            {
                 static assert(isInputRange!(Args2[1]));
                 alias args2[1] range;
                 alias args2[0] seed;
                 enum explicitSeed = true;
 
-                static if(!is(typeof(workUnitSize))) {
+                static if(!is(typeof(workUnitSize)))
+                {
                     size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
-            } else {
+            }
+            else
+            {
                 static assert(args2.length == 1);
                 alias args2[0] range;
 
-                static if(!is(typeof(workUnitSize))) {
+                static if(!is(typeof(workUnitSize)))
+                {
                     size_t workUnitSize = defaultWorkUnitSize(range.length);
                 }
 
@@ -2130,7 +2475,8 @@ public:
             alias typeof(range) R;
 
             E reduceOnRange
-            (R range, size_t lowerBound, size_t upperBound) {
+            (R range, size_t lowerBound, size_t upperBound)
+            {
                 // This is for exploiting instruction level parallelism by
                 // using multiple accumulator variables within each thread,
                 // since we're assuming functions are associative anyhow.
@@ -2140,16 +2486,21 @@ public:
                 enum nILP = ilpTuple.length;
                 immutable subSize = (upperBound - lowerBound) / nILP;
 
-                if(subSize <= 1) {
+                if(subSize <= 1)
+                {
                     // Handle as a special case.
-                    static if(explicitSeed) {
+                    static if(explicitSeed)
+                    {
                         E result = seed;
-                    } else {
+                    }
+                    else
+                    {
                         E result = makeStartValue(range[lowerBound]);
                         lowerBound++;
                     }
 
-                    foreach(i; lowerBound..upperBound) {
+                    foreach(i; lowerBound..upperBound)
+                    {
                         result = fun(result, range[i]);
                     }
 
@@ -2160,31 +2511,39 @@ public:
                 E[nILP] results;
                 size_t[nILP] offsets;
 
-                foreach(i; ilpTuple) {
+                foreach(i; ilpTuple)
+                {
                     offsets[i] = lowerBound + subSize * i;
 
-                    static if(explicitSeed) {
+                    static if(explicitSeed)
+                    {
                         results[i] = seed;
-                    } else {
+                    }
+                    else
+                    {
                         results[i] = makeStartValue(range[offsets[i]]);
                         offsets[i]++;
                     }
                 }
 
                 immutable nLoop = subSize - (!explicitSeed);
-                foreach(i; 0..nLoop) {
-                    foreach(j; ilpTuple) {
+                foreach(i; 0..nLoop)
+                {
+                    foreach(j; ilpTuple)
+                    {
                         results[j] = fun(results[j], range[offsets[j]]);
                         offsets[j]++;
                     }
                 }
 
                 // Finish the remainder.
-                foreach(i; nILP * subSize + lowerBound..upperBound) {
+                foreach(i; nILP * subSize + lowerBound..upperBound)
+                {
                     results[$ - 1] = fun(results[$ - 1], range[i]);
                 }
 
-                foreach(i; ilpTuple[1..$]) {
+                foreach(i; ilpTuple[1..$])
+                {
                     results[0] = finishFun(results[0], results[i]);
                 }
 
@@ -2192,11 +2551,13 @@ public:
             }
 
             immutable len = range.length;
-            if(len == 0) {
+            if(len == 0)
+            {
                 return seed;
             }
 
-            if(this.size == 0) {
+            if(this.size == 0)
+            {
                 return finishFun(seed, reduceOnRange(range, 0, len));
             }
 
@@ -2206,12 +2567,13 @@ public:
             // be applied on the results of these to get a final result, but
             // it can't be evaluated out of order.
 
-            if(workUnitSize > len) {
+            if(workUnitSize > len)
+            {
                 workUnitSize = len;
             }
 
             immutable size_t nWorkUnits = (len / workUnitSize) +
-                ((len % workUnitSize == 0) ? 0 : 1);
+                                          ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
             alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
@@ -2224,11 +2586,15 @@ public:
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
             import core.stdc.stdlib;
-            if(nBytesNeeded < maxStack) {
+            if(nBytesNeeded < maxStack)
+            {
                 tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
-            } else {
+            }
+            else
+            {
                 auto ptr = cast(RTask*) malloc(nBytesNeeded);
-                if(!ptr) {
+                if(!ptr)
+                {
                     throw new OutOfMemoryError(
                         "Out of memory in std.parallelism."
                     );
@@ -2237,8 +2603,10 @@ public:
                 tasks = ptr[0..nWorkUnits];
             }
 
-            scope(exit) {
-                if(nBytesNeeded > maxStack) {
+            scope(exit)
+            {
+                if(nBytesNeeded > maxStack)
+                {
                     free(tasks.ptr);
                 }
             }
@@ -2247,10 +2615,14 @@ public:
 
             // Hack to take the address of a nested function w/o
             // making a closure.
-            static auto scopedAddress(D)(scope D del) { return del; }
+            static auto scopedAddress(D)(scope D del)
+            {
+                return del;
+            }
 
             size_t curPos = 0;
-            void useTask(ref RTask task) {
+            void useTask(ref RTask task)
+            {
                 task.pool = this;
                 task._args[0] = scopedAddress(&reduceOnRange);
                 task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
@@ -2260,16 +2632,19 @@ public:
                 curPos += workUnitSize;
             }
 
-            foreach(ref task; tasks) {
+            foreach(ref task; tasks)
+            {
                 useTask(task);
             }
 
-            foreach(i; 1..tasks.length - 1) {
+            foreach(i; 1..tasks.length - 1)
+            {
                 tasks[i].next = tasks[i + 1].basePtr;
                 tasks[i + 1].prev = tasks[i].basePtr;
             }
 
-            if(tasks.length > 1) {
+            if(tasks.length > 1)
+            {
                 queueLock();
                 scope(exit) queueUnlock();
 
@@ -2279,16 +2654,21 @@ public:
                 );
             }
 
-            if(tasks.length > 0) {
-                try {
+            if(tasks.length > 0)
+            {
+                try
+                {
                     tasks[0].job();
-                } catch(Throwable e) {
+                }
+                catch(Throwable e)
+                {
                     tasks[0].exception = e;
                 }
                 tasks[0].taskStatus = TaskStatus.done;
 
                 // Try to execute each of these in the current thread
-                foreach(ref task; tasks[1..$]) {
+                foreach(ref task; tasks[1..$])
+                {
                     tryDeleteExecute(task.basePtr);
                 }
             }
@@ -2299,10 +2679,14 @@ public:
 
             Throwable firstException, lastException;
 
-            foreach(ref task; tasks) {
-                try {
+            foreach(ref task; tasks)
+            {
+                try
+                {
                     task.yieldForce();
-                } catch(Throwable e) {
+                }
+                catch(Throwable e)
+                {
                     addToChain(e, firstException, lastException);
                     continue;
                 }
@@ -2332,7 +2716,8 @@ public:
 
     import std.stdio, std.conv, std.range, std.numeric;
 
-    void main() {
+    void main() 
+    {
         auto filesHandles = new File[taskPool.size + 1];
         scope(exit) {
             foreach(ref handle; fileHandles) {
@@ -2340,22 +2725,25 @@ public:
             }
         }
 
-        foreach(i, ref handle; fileHandles) {
+        foreach(i, ref handle; fileHandles) 
+        {
             handle = File("workerResults" ~ to!string(i) ~ ".txt");
         }
 
-        foreach(num; parallel(iota(1_000))) {
+        foreach(num; parallel(iota(1_000))) 
+        {
             auto outHandle = fileHandles[taskPool.workerIndex];
             outHandle.writeln(num, '\t', gcd(num, 42));
         }
     }
     ---
     */
-    size_t workerIndex() @property @safe const nothrow {
+    size_t workerIndex() @property @safe const nothrow
+    {
         immutable rawInd = threadIndex;
         return (rawInd >= instanceStartIndex &&
-                rawInd < instanceStartIndex + size) ?
-                (rawInd - instanceStartIndex + 1) : 0;
+        rawInd < instanceStartIndex + size) ?
+        (rawInd - instanceStartIndex + 1) : 0;
     }
 
     /**
@@ -2382,13 +2770,14 @@ public:
 
     Examples:
     ---
-    // Calculate pi as in our synopsis example, but use an imperative instead
-    // of a functional style.
+    // Calculate pi as in our synopsis example, but 
+    // use an imperative instead of a functional style.
     immutable n = 1_000_000_000;
     immutable delta = 1.0L / n;
 
     auto sums = taskPool.workerLocalStorage(0.0L);
-    foreach(i; parallel(iota(n))) {
+    foreach(i; parallel(iota(n))) 
+    {
         immutable x = ( i - 0.5L ) * delta;
         immutable toAdd = delta / ( 1.0 + x * x );
         sums.get += toAdd;
@@ -2396,12 +2785,14 @@ public:
 
     // Add up the results from each worker thread.
     real pi = 0;
-    foreach(threadResult; sums.toRange) {
+    foreach(threadResult; sums.toRange) 
+    {
         pi += 4.0L * threadResult;
     }
     ---
      */
-    static struct WorkerLocalStorage(T) {
+    static struct WorkerLocalStorage(T)
+    {
     private:
         TaskPool pool;
         size_t size;
@@ -2410,10 +2801,13 @@ public:
         size_t elemSize;
         bool* stillThreadLocal;
 
-        shared static this() {
+        shared static this()
+        {
             size_t lineSize = 0;
-            foreach(cachelevel; datacache) {
-                if(cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max) {
+            foreach(cachelevel; datacache)
+            {
+                if(cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
+                {
                     lineSize = cachelevel.lineSize;
                 }
             }
@@ -2421,17 +2815,21 @@ public:
             cacheLineSize = lineSize;
         }
 
-        static size_t roundToLine(size_t num) pure nothrow {
-            if(num % cacheLineSize == 0) {
+        static size_t roundToLine(size_t num) pure nothrow
+        {
+            if(num % cacheLineSize == 0)
+            {
                 return num;
-            } else {
+            }
+            else {
                 return ((num / cacheLineSize) + 1) * cacheLineSize;
             }
         }
 
         void* data;
 
-        void initialize(TaskPool pool) {
+        void initialize(TaskPool pool)
+        {
             this.pool = pool;
             size = pool.size + 1;
             stillThreadLocal = new bool;
@@ -2454,17 +2852,20 @@ public:
             // Cache line align data ptr.
             data = cast(void*) roundToLine(cast(size_t) data);
 
-            foreach(i; 0..nElem) {
+            foreach(i; 0..nElem)
+            {
                 this.opIndex(i) = T.init;
             }
         }
 
-        ref T opIndex(size_t index) {
+        ref T opIndex(size_t index)
+        {
             assert(index < size, text(index, '\t', uint.max));
             return *(cast(T*) (data + elemSize * index));
         }
 
-        void opIndexAssign(T val, size_t index) {
+        void opIndexAssign(T val, size_t index)
+        {
             assert(index < size);
             *(cast(T*) (data + elemSize * index)) = val;
         }
@@ -2483,7 +2884,8 @@ public:
         failure will result when calling this method.  This is not checked
         when assertions are disabled for performance reasons.
          */
-        ref T get() @property {
+        ref T get() @property
+        {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
                 "because it is no longer worker-local."
@@ -2495,7 +2897,8 @@ public:
         Assign a value to the current thread's instance.  This function has
         the same caveats as its overload.
         */
-        void get(T val) @property {
+        void get(T val) @property
+        {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
                 "because it is no longer worker-local."
@@ -2514,8 +2917,10 @@ public:
         longer worker-local, and attempting to use the $(D get) method again
         will result in an assertion failure if assertions are enabled.
          */
-        WorkerLocalStorageRange!T toRange() @property {
-            if(*stillThreadLocal) {
+        WorkerLocalStorageRange!T toRange() @property
+        {
+            if(*stillThreadLocal)
+            {
                 *stillThreadLocal = false;
 
                 // Make absolutely sure results are visible to all threads.
@@ -2528,7 +2933,7 @@ public:
                 atomicSetUbyte(barrierDummy, 1);
             }
 
-           return WorkerLocalStorageRange!(T)(this);
+            return WorkerLocalStorageRange!(T)(this);
         }
     }
 
@@ -2544,55 +2949,67 @@ public:
     a length equal to the number of worker threads in the $(D TaskPool) that
     created it plus 1.
      */
-    static struct WorkerLocalStorageRange(T) {
+    static struct WorkerLocalStorageRange(T)
+    {
     private:
         WorkerLocalStorage!T workerLocalStorage;
 
         size_t _length;
         size_t beginOffset;
 
-        this(WorkerLocalStorage!(T) wl) {
+        this(WorkerLocalStorage!(T) wl)
+        {
             this.workerLocalStorage = wl;
             _length = wl.size;
         }
 
     public:
-        ref T front() @property {
+        ref T front() @property
+        {
             return this[0];
         }
 
-        ref T back() @property {
+        ref T back() @property
+        {
             return this[_length - 1];
         }
 
-        void popFront() {
-            if(_length > 0) {
+        void popFront()
+        {
+            if(_length > 0)
+            {
                 beginOffset++;
                 _length--;
             }
         }
 
-        void popBack() {
-            if(_length > 0) {
+        void popBack()
+        {
+            if(_length > 0)
+            {
                 _length--;
             }
         }
 
-        typeof(this) save() @property {
+        typeof(this) save() @property
+        {
             return this;
         }
 
-        ref T opIndex(size_t index) {
+        ref T opIndex(size_t index)
+        {
             assert(index < _length);
             return workerLocalStorage[index + beginOffset];
         }
 
-        void opIndexAssign(T val, size_t index) {
+        void opIndexAssign(T val, size_t index)
+        {
             assert(index < _length);
             workerLocalStorage[index] = val;
         }
 
-        typeof(this) opSlice(size_t lower, size_t upper) {
+        typeof(this) opSlice(size_t lower, size_t upper)
+        {
             assert(upper <= _length);
             auto newWl = this.workerLocalStorage;
             newWl.data += lower * newWl.elemSize;
@@ -2600,11 +3017,13 @@ public:
             return typeof(this)(newWl);
         }
 
-        bool empty() @property {
+        bool empty() @property
+        {
             return length == 0;
         }
 
-        size_t length() @property {
+        size_t length() @property
+        {
             return _length;
         }
     }
@@ -2615,10 +3034,12 @@ public:
     create one instance of a class for each worker.  For usage example,
     see the $(D WorkerLocalStorage) struct.
      */
-    WorkerLocalStorage!(T) workerLocalStorage(T)(lazy T initialVal = T.init) {
+    WorkerLocalStorage!(T) workerLocalStorage(T)(lazy T initialVal = T.init)
+    {
         WorkerLocalStorage!(T) ret;
         ret.initialize(this);
-        foreach(i; 0..size + 1) {
+        foreach(i; 0..size + 1)
+        {
             ret[i] = initialVal;
         }
 
@@ -2641,7 +3062,8 @@ public:
     queue is empty, or if you speculatively executed some tasks and no longer
     need the results.
      */
-    void stop() @trusted {
+    void stop() @trusted
+    {
         queueLock();
         scope(exit) queueUnlock();
         atomicSetUbyte(status, PoolState.stopNow);
@@ -2676,10 +3098,13 @@ public:
     auto result3 = task3.spinForce();
     ---
     */
-    version(none) {
-        void join() @trusted {
+    version(none)
+    {
+        void join() @trusted
+        {
             finish();
-            foreach(t; pool) {
+            foreach(t; pool)
+            {
                 t.join();
             }
         }
@@ -2689,7 +3114,8 @@ public:
     Signals worker threads to terminate when the queue becomes empty.  Does
     not block.
      */
-    void finish() @trusted {
+    void finish() @trusted
+    {
         queueLock();
         scope(exit) queueUnlock();
         atomicCasUbyte(status, PoolState.running, PoolState.finishing);
@@ -2697,7 +3123,8 @@ public:
     }
 
     /// Returns the number of worker threads in the pool.
-    @property size_t size() @safe const pure nothrow {
+    @property size_t size() @safe const pure nothrow
+    {
         return pool.length;
     }
 
@@ -2734,26 +3161,30 @@ public:
     complete and no longer referenced by a $(D TaskPool).
     */
     void put(alias fun, Args...)(ref Task!(fun, Args) task)
-    if(!isSafeReturn!(typeof(task))) {
+    if(!isSafeReturn!(typeof(task)))
+    {
         task.pool = this;
         abstractPut(task.basePtr);
     }
 
     /// Ditto
     void put(alias fun, Args...)(Task!(fun, Args)* task)
-    if(!isSafeReturn!(typeof(*task))) {
+    if(!isSafeReturn!(typeof(*task)))
+    {
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
 
     @trusted void put(alias fun, Args...)(ref Task!(fun, Args) task)
-    if(isSafeReturn!(typeof(task))) {
+    if(isSafeReturn!(typeof(task)))
+    {
         task.pool = this;
         abstractPut(task.basePtr);
     }
 
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
-    if(isSafeReturn!(typeof(*task))) {
+    if(isSafeReturn!(typeof(*task)))
+    {
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -2774,17 +3205,20 @@ public:
     Note:  For a size zero pool, the getter arbitrarily returns true and the
            setter has no effect.
     */
-    bool isDaemon() @property @trusted {
+    bool isDaemon() @property @trusted
+    {
         queueLock();
         scope(exit) queueUnlock();
         return (size == 0) ? true : pool[0].isDaemon();
     }
 
     /// Ditto
-    void isDaemon(bool newVal) @property @trusted {
+    void isDaemon(bool newVal) @property @trusted
+    {
         queueLock();
         scope(exit) queueUnlock();
-        foreach(thread; pool) {
+        foreach(thread; pool)
+        {
             thread.isDaemon = newVal;
         }
     }
@@ -2798,15 +3232,19 @@ public:
     Note:  For a size zero pool, the getter arbitrarily returns
            $(D core.thread.Thread.PRIORITY_MIN) and the setter has no effect.
     */
-    int priority() @property @trusted {
+    int priority() @property @trusted
+    {
         return (size == 0) ? core.thread.Thread.PRIORITY_MIN :
-                             pool[0].priority();
+        pool[0].priority();
     }
 
     /// Ditto
-    void priority(int newPriority) @property @trusted {
-        if(size > 0) {
-            foreach(t; pool) {
+    void priority(int newPriority) @property @trusted
+    {
+        if(size > 0)
+        {
+            foreach(t; pool)
+            {
                 t.priority(newPriority);
             }
         }
@@ -2820,13 +3258,17 @@ threads.  The worker threads in this pool are daemon threads, meaning that it
 is not necessary to call $(D TaskPool.stop) or $(D TaskPool.finish) before
 terminating the main thread.
 */
- @property TaskPool taskPool() @trusted {
+@property TaskPool taskPool() @trusted
+{
     static bool initialized;
     __gshared static TaskPool pool;
 
-    if(!initialized) {
-        synchronized(TaskPool.classinfo) {
-            if(!pool) {
+    if(!initialized)
+    {
+        synchronized(TaskPool.classinfo)
+        {
+            if(!pool)
+            {
                 pool = new TaskPool(defaultPoolThreads);
                 pool.isDaemon = true;
             }
@@ -2839,7 +3281,8 @@ terminating the main thread.
 }
 
 private shared uint _defaultPoolThreads;
-shared static this() {
+shared static this()
+{
     atomicStore(_defaultPoolThreads, totalCPUs - 1);
 }
 
@@ -2849,12 +3292,14 @@ instance returned by $(D taskPool).  The default value is $(D totalCPUs) - 1.
 Calling the setter after the first call to $(D taskPool) does not changes
 number of worker threads in the instance returned by $(D taskPool).
 */
-@property uint defaultPoolThreads() @trusted {
+@property uint defaultPoolThreads() @trusted
+{
     return atomicLoad(_defaultPoolThreads);
 }
 
 /// Ditto
-@property void defaultPoolThreads(uint newVal) @trusted {
+@property void defaultPoolThreads(uint newVal) @trusted
+{
     atomicStore(_defaultPoolThreads, newVal);
 }
 
@@ -2875,32 +3320,38 @@ foreach(i, ref elem; parallel(logs)) {
 ---
 
 */
-ParallelForeach!R parallel(R)(R range) {
+ParallelForeach!R parallel(R)(R range)
+{
     return taskPool.parallel(range);
 }
 
 /// Ditto
-ParallelForeach!R parallel(R)(R range, size_t workUnitSize) {
+ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
+{
     return taskPool.parallel(range, workUnitSize);
 }
 
 // Thrown when a parallel foreach loop is broken from.
-class ParallelForeachError : Error {
-    this() {
+class ParallelForeachError : Error
+{
+    this()
+    {
         super("Cannot break from a parallel foreach loop using break, return, "
               ~ "labeled break/continue or goto statements.");
     }
 }
 
 /*------Structs that implement opApply for parallel foreach.------------------*/
-private template randLen(R) {
+private template randLen(R)
+{
     enum randLen = isRandomAccessRange!R && hasLength!R;
 }
 
 private void submitAndExecute(
     TaskPool pool,
     scope void delegate() doIt
-) {
+)
+{
     immutable nThreads = pool.size + 1;
 
     alias typeof(scopedTask(doIt)) PTask;
@@ -2917,21 +3368,27 @@ private void submitAndExecute(
     enum nBuf = 64;
     byte[nBuf * PTask.sizeof] buf = void;
     PTask[] tasks;
-    if(nThreads <= nBuf) {
+    if(nThreads <= nBuf)
+    {
         tasks = (cast(PTask*) buf.ptr)[0..nThreads];
-    } else {
+    }
+    else
+    {
         auto ptr = cast(PTask*) malloc(nThreads * PTask.sizeof);
         if(!ptr) throw new OutOfMemoryError("Out of memory in std.parallelism.");
         tasks = ptr[0..nThreads];
     }
 
-    scope(exit) {
-        if(nThreads > nBuf) {
+    scope(exit)
+    {
+        if(nThreads > nBuf)
+        {
             free(tasks.ptr);
         }
     }
 
-    foreach(ref t; tasks) {
+    foreach(ref t; tasks)
+    {
         // This silly looking code is necessary to prevent d'tors from being
         // called on uninitialized objects.
         auto temp = scopedTask(doIt);
@@ -2943,12 +3400,14 @@ private void submitAndExecute(
         t.pool = pool;
     }
 
-    foreach(i; 1..tasks.length - 1) {
+    foreach(i; 1..tasks.length - 1)
+    {
         tasks[i].next = tasks[i + 1].basePtr;
         tasks[i + 1].prev = tasks[i].basePtr;
     }
 
-    if(tasks.length > 1) {
+    if(tasks.length > 1)
+    {
         pool.queueLock();
         scope(exit) pool.queueUnlock();
 
@@ -2958,26 +3417,35 @@ private void submitAndExecute(
         );
     }
 
-    if(tasks.length > 0) {
-        try {
+    if(tasks.length > 0)
+    {
+        try
+        {
             tasks[0].job();
-        } catch(Throwable e) {
+        }
+        catch(Throwable e)
+        {
             tasks[0].exception = e;
         }
         tasks[0].taskStatus = TaskStatus.done;
 
         // Try to execute each of these in the current thread
-        foreach(ref task; tasks[1..$]) {
+        foreach(ref task; tasks[1..$])
+        {
             pool.tryDeleteExecute(task.basePtr);
         }
     }
 
     Throwable firstException, lastException;
 
-    foreach(i, ref task; tasks) {
-        try {
+    foreach(i, ref task; tasks)
+    {
+        try
+        {
             task.yieldForce();
-        } catch(Throwable e) {
+        }
+        catch(Throwable e)
+        {
             addToChain(e, firstException, lastException);
             continue;
         }
@@ -2986,30 +3454,46 @@ private void submitAndExecute(
     if(firstException) throw firstException;
 }
 
-void foreachErr() { throw new ParallelForeachError(); }
+void foreachErr()
+{
+    throw new ParallelForeachError();
+}
 
-int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg) {
-    with(p) {
+int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
+{
+    with(p)
+    {
         int res = 0;
         size_t index = 0;
 
         // The explicit ElementType!R in the foreach loops is necessary for
         // correct behavior when iterating over strings.
-        static if(hasLvalueElements!(R)) {
-            foreach(ref ElementType!R elem; range) {
-                static if(ParameterTypeTuple!(dg).length == 2) {
+        static if(hasLvalueElements!(R))
+        {
+            foreach(ref ElementType!R elem; range)
+            {
+                static if(ParameterTypeTuple!(dg).length == 2)
+                {
                     res = dg(index, elem);
-                } else {
+                }
+                else
+                {
                     res = dg(elem);
                 }
                 if(res) foreachErr();
                 index++;
             }
-        } else {
-            foreach(ElementType!R elem; range) {
-                static if(ParameterTypeTuple!(dg).length == 2) {
+        }
+        else
+        {
+            foreach(ElementType!R elem; range)
+            {
+                static if(ParameterTypeTuple!(dg).length == 2)
+                {
                     res = dg(index, elem);
-                } else {
+                }
+                else
+                {
                     res = dg(elem);
                 }
                 if(res) foreachErr();
@@ -3022,7 +3506,8 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg) {
 
 private enum string parallelApplyMixinRandomAccess = q{
     // Handle empty thread pool as special case.
-    if(pool.size == 0) {
+    if(pool.size == 0)
+    {
         return doSizeZeroCase(this, dg);
     }
 
@@ -3035,36 +3520,35 @@ private enum string parallelApplyMixinRandomAccess = q{
 
     shared bool shouldContinue = true;
 
-    void doIt() {
-        scope(failure) {
+    void doIt()
+    {
+        scope(failure)
+        {
             // If an exception is thrown, all threads should bail.
             atomicStore(shouldContinue, false);
         }
 
-        while(atomicLoad(shouldContinue)) {
+        while(atomicLoad(shouldContinue))
+        {
             immutable myUnitIndex = atomicOp!"+="(workUnitIndex, 1);
             immutable start = workUnitSize * myUnitIndex;
-            if(start >= len) {
+            if(start >= len)
+            {
                 atomicStore(shouldContinue, false);
                 break;
             }
 
             immutable end = min(len, start + workUnitSize);
 
-            foreach(i; start..end) {
-                static if(hasLvalueElements!R) {
-                    static if(withIndex) {
-                        if(dg(i, range[i])) foreachErr();
-                    } else {
-                        if(dg(range[i])) foreachErr();
-                    }
-                } else {
-                    auto valToPass = range[i];
-                    static if(withIndex) {
-                        if(dg(i, valToPass)) foreachErr();
-                    } else {
-                        if(dg(valToPass)) foreachErr();
-                    }
+            foreach(i; start..end)
+            {
+                static if(withIndex)
+                {
+                    if(dg(i, range[i])) foreachErr();
+                }
+                else
+                {
+                    if(dg(range[i])) foreachErr();
                 }
             }
         }
@@ -3077,7 +3561,8 @@ private enum string parallelApplyMixinRandomAccess = q{
 
 enum string parallelApplyMixinInputRange = q{
     // Handle empty thread pool as special case.
-    if(pool.size == 0) {
+    if(pool.size == 0)
+    {
         return doSizeZeroCase(this, dg);
     }
 
@@ -3097,35 +3582,43 @@ enum string parallelApplyMixinInputRange = q{
         is(typeof(range.buf1)) &&
         is(typeof(range.bufPos)) &&
         is(typeof(range.doBufSwap()))
-    ) {
+    )
+    {
         // Make sure we don't have the buffer recycling overload of
         // asyncBuf.
         static if(
             is(typeof(range.source)) &&
             isRoundRobin!(typeof(range.source))
-        ) {
+        )
+        {
             static assert(0, "Cannot execute a parallel foreach loop on " ~
-                "the buffer recycling overload of asyncBuf.");
+            "the buffer recycling overload of asyncBuf.");
         }
 
         enum bool bufferTrick = true;
-    } else {
+    }
+    else {
         enum bool bufferTrick = false;
     }
 
-    void doIt() {
-        scope(failure) {
+    void doIt()
+    {
+        scope(failure)
+        {
             // If an exception is thrown, all threads should bail.
             atomicStore(shouldContinue, false);
         }
 
-        static if(hasLvalueElements!R) {
+        static if(hasLvalueElements!R)
+        {
             alias ElementType!(R)*[] Temp;
             Temp temp;
 
             // Returns:  The previous value of nPopped.
-            size_t makeTemp() {
-                if(temp is null) {
+            size_t makeTemp()
+            {
+                if(temp is null)
+                {
                     temp = uninitializedArray!(Temp)(workUnitSize);
                 }
 
@@ -3133,7 +3626,8 @@ enum string parallelApplyMixinInputRange = q{
                 scope(exit) rangeMutex.unlock();
 
                 size_t i = 0;
-                for(; i < workUnitSize && !range.empty; range.popFront(), i++) {
+                for(; i < workUnitSize && !range.empty; range.popFront(), i++)
+                {
                     temp[i] = addressOf(range.front);
                 }
 
@@ -3143,14 +3637,18 @@ enum string parallelApplyMixinInputRange = q{
                 return ret;
             }
 
-        } else {
+        }
+        else
+        {
 
             alias ElementType!(R)[] Temp;
             Temp temp;
 
             // Returns:  The previous value of nPopped.
-            static if(!bufferTrick) size_t makeTemp() {
-                if(temp is null) {
+            static if(!bufferTrick) size_t makeTemp()
+            {
+                if(temp is null)
+                {
                     temp = uninitializedArray!(Temp)(workUnitSize);
                 }
 
@@ -3158,7 +3656,8 @@ enum string parallelApplyMixinInputRange = q{
                 scope(exit) rangeMutex.unlock();
 
                 size_t i = 0;
-                for(; i < workUnitSize && !range.empty; range.popFront(), i++) {
+                for(; i < workUnitSize && !range.empty; range.popFront(), i++)
+                {
                     temp[i] = range.front;
                 }
 
@@ -3168,7 +3667,8 @@ enum string parallelApplyMixinInputRange = q{
                 return ret;
             }
 
-            static if(bufferTrick) size_t makeTemp() {
+            static if(bufferTrick) size_t makeTemp()
+            {
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
 
@@ -3180,7 +3680,8 @@ enum string parallelApplyMixinInputRange = q{
                 // range before entering the parallel foreach loop.
                 temp = temp[range.bufPos..$];
 
-                static if(is(typeof(range._length))) {
+                static if(is(typeof(range._length)))
+                {
                     range._length -= (temp.length - range.bufPos);
                 }
 
@@ -3191,26 +3692,38 @@ enum string parallelApplyMixinInputRange = q{
             }
         }
 
-        while(atomicLoad(shouldContinue)) {
+        while(atomicLoad(shouldContinue))
+        {
             auto overallIndex = makeTemp();
-            if(temp.empty) {
+            if(temp.empty)
+            {
                 atomicStore(shouldContinue, false);
                 break;
             }
 
-            foreach(i; 0..temp.length) {
+            foreach(i; 0..temp.length)
+            {
                 scope(success) overallIndex++;
 
-                static if(hasLvalueElements!R) {
-                    static if(withIndex) {
+                static if(hasLvalueElements!R)
+                {
+                    static if(withIndex)
+                    {
                         if(dg(overallIndex, *temp[i])) foreachErr();
-                    } else {
+                    }
+                    else
+                    {
                         if(dg(*temp[i])) foreachErr();
                     }
-                } else {
-                    static if(withIndex) {
+                }
+                else
+                {
+                    static if(withIndex)
+                    {
                         if(dg(overallIndex, temp[i])) foreachErr();
-                    } else {
+                    }
+                    else
+                    {
                         if(dg(temp[i])) foreachErr();
                     }
                 }
@@ -3224,10 +3737,12 @@ enum string parallelApplyMixinInputRange = q{
 };
 
 // Calls e.next until the end of the chain is found.
-private Throwable findLastException(Throwable e) pure nothrow {
+private Throwable findLastException(Throwable e) pure nothrow
+{
     if(e is null) return null;
 
-    while(e.next) {
+    while(e.next)
+    {
         e = e.next;
     }
 
@@ -3239,35 +3754,58 @@ private void addToChain(
     Throwable e,
     ref Throwable firstException,
     ref Throwable lastException
-) pure nothrow {
-    if(firstException) {
+) pure nothrow
+{
+    if(firstException)
+    {
         assert(lastException);
         lastException.next = e;
         lastException = findLastException(e);
-    } else {
+    }
+    else {
         firstException = e;
         lastException = findLastException(e);
     }
 }
 
-private struct ParallelForeach(R) {
+private struct ParallelForeach(R)
+{
     TaskPool pool;
     R range;
     size_t workUnitSize;
     alias ElementType!R E;
 
-    int opApply(scope int delegate(ref E) dg) {
-        static if(randLen!R) {
+    static if(hasLvalueElements!R)
+    {
+        alias int delegate(ref E) NoIndexDg;
+        alias int delegate(size_t, ref E) IndexDg;
+    }
+    else
+    {
+        alias int delegate(E) NoIndexDg;
+        alias int delegate(size_t, E) IndexDg; 
+    }
+        
+    int opApply(scope NoIndexDg dg)
+    {
+        static if(randLen!R)
+        {
             mixin(parallelApplyMixinRandomAccess);
-        } else {
+        }
+        else
+        {
             mixin(parallelApplyMixinInputRange);
         }
     }
 
-    int opApply(scope int delegate(ref size_t, ref E) dg) {
-        static if(randLen!R) {
+    int opApply(scope IndexDg dg)
+    {
+        static if(randLen!R)
+        {
             mixin(parallelApplyMixinRandomAccess);
-        } else {
+        }
+        else
+        {
             mixin(parallelApplyMixinInputRange);
         }
     }
@@ -3280,7 +3818,8 @@ buffers to be accessed with an input range interface.  This is used internally
 in the buffer-recycling overload of TaskPool.asyncBuf, which creates an
 instance and forwards it to the input range overload of asyncBuf.
 */
-private struct RoundRobinBuffer(C1, C2) {
+private struct RoundRobinBuffer(C1, C2)
+{
     // No need for constraints because they're already checked for in asyncBuf.
 
     alias ParameterTypeTuple!(C1.init)[0] Array;
@@ -3303,30 +3842,39 @@ private struct RoundRobinBuffer(C1, C2) {
         this.emptyDel = emptyDel;
         bufs.length = nBuffers;
 
-        foreach(ref buf; bufs) {
+        foreach(ref buf; bufs)
+        {
             buf.length = initialBufSize;
         }
     }
 
     void prime()
-    in {
+    in
+    {
         assert(!empty);
-    } body {
+    } 
+    body
+    {
         scope(success) primed = true;
         nextDel(bufs[index]);
     }
 
 
     T[] front() @property
-    in {
+    in
+    {
         assert(!empty);
-    } body {
+    } 
+    body
+    {
         if(!primed) prime();
         return bufs[index];
     }
 
-    void popFront() {
-        if(empty || emptyDel()) {
+    void popFront()
+    {
+        if(empty || emptyDel())
+        {
             _empty = true;
             return;
         }
@@ -3335,19 +3883,24 @@ private struct RoundRobinBuffer(C1, C2) {
         primed = false;
     }
 
-    bool empty() @property const pure nothrow @safe {
+    bool empty() @property const pure nothrow @safe
+    {
         return _empty;
     }
 }
 
-version(unittest) {
+version(unittest)
+{
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
+    
+    import std.stdio;
 }
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-unittest {
+unittest
+{
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
 
@@ -3364,7 +3917,8 @@ unittest {
     poolInstance.priority = oldPriority;
     assert(poolInstance.priority == oldPriority);
 
-    static void refFun(ref uint num) {
+    static void refFun(ref uint num)
+    {
         num++;
     }
 
@@ -3400,7 +3954,8 @@ unittest {
 
     // Test ref return.
     uint toInc = 0;
-    static ref T makeRef(T)(ref T num) {
+    static ref T makeRef(T)(ref T num)
+    {
         return num;
     }
 
@@ -3411,7 +3966,8 @@ unittest {
     assert(t3.args[0] == 1);
 
     static void testSafe() @safe {
-        static int bump(int num) {
+        static int bump(int num)
+        {
             return num + 1;
         }
 
@@ -3430,7 +3986,8 @@ unittest {
     auto nums = new uint[5];
     auto nums2 = new uint[5];
 
-    foreach(i, ref elem; poolInstance.parallel(arr)) {
+    foreach(i, ref elem; poolInstance.parallel(arr))
+    {
         elem++;
         nums[i] = cast(uint) i + 2;
         nums2[i] = elem;
@@ -3441,7 +3998,10 @@ unittest {
     assert(arr == nums, text(arr));
 
     // Test const/immutable arguments.
-    static int add(int lhs, int rhs) { return lhs + rhs; }
+    static int add(int lhs, int rhs)
+    {
+        return lhs + rhs;
+    }
     immutable addLhs = 1;
     immutable addRhs = 2;
     auto addTask = task(&add, addLhs, addRhs);
@@ -3454,25 +4014,28 @@ unittest {
     // Test parallel foreach with non-random access range.
     auto range = filter!"a != 666"([0, 1, 2, 3, 4]);
 
-    foreach(i, elem; poolInstance.parallel(range)) {
+    foreach(i, elem; poolInstance.parallel(range))
+    {
         nums[i] = cast(uint) i;
     }
 
     assert(nums == [0,1,2,3,4]);
 
     auto logs = new double[1_000_000];
-    foreach(i, ref elem; poolInstance.parallel(logs)) {
+    foreach(i, ref elem; poolInstance.parallel(logs))
+    {
         elem = log(i + 1.0);
     }
 
-    foreach(i, elem; logs) {
+    foreach(i, elem; logs)
+    {
         assert(approxEqual(elem, cast(double) log(i + 1)));
     }
 
     assert(poolInstance.amap!"a * a"([1,2,3,4,5]) == [1,4,9,16,25]);
     assert(poolInstance.amap!"a * a"([1,2,3,4,5], new long[5]) == [1,4,9,16,25]);
     assert(poolInstance.amap!("a * a", "-a")([1,2,3]) ==
-        [tuple(1, -1), tuple(4, -2), tuple(9, -3)]);
+           [tuple(1, -1), tuple(4, -2), tuple(9, -3)]);
 
     auto tupleBuf = new Tuple!(int, int)[3];
     poolInstance.amap!("a * a", "-a")([1,2,3], tupleBuf);
@@ -3502,7 +4065,7 @@ unittest {
     assert(poolInstance.reduce!"a + b"(0.0, [1,2,3,4], 1) == 10);
     assert(poolInstance.reduce!(min, max)([1,2,3,4]) == tuple(1, 4));
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
-        tuple(10, 24));
+           tuple(10, 24));
 
     immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
@@ -3510,7 +4073,8 @@ unittest {
 
     // Test worker-local storage.
     auto wl = poolInstance.workerLocalStorage(0);
-    foreach(i; poolInstance.parallel(iota(1000), 1)) {
+    foreach(i; poolInstance.parallel(iota(1000), 1))
+    {
         wl.get = wl.get + i;
     }
 
@@ -3524,55 +4088,59 @@ unittest {
     assert(taskPool.size == totalCPUs - 1);
 
     nums = new uint[1000];
-    foreach(i; parallel(iota(1000))) {
+    foreach(i; parallel(iota(1000)))
+    {
         nums[i] = cast(uint) i;
     }
     assert(equal(nums, iota(1000)));
 
     assert(equal(
-        poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-        std.algorithm.map!"a * a"(iota(30_000_001))
-    ));
+               poolInstance.map!"a * a"(iota(30_000_001), 10_000),
+               std.algorithm.map!"a * a"(iota(30_000_001))
+           ));
 
     // The filter is to kill random access and test the non-random access
     // branch.
     assert(equal(
-        poolInstance.map!"a * a"(
-            filter!"a == a"(iota(30_000_001)
-        ), 10_000, 1000),
-        std.algorithm.map!"a * a"(iota(30_000_001))
-    ));
+               poolInstance.map!"a * a"(
+                   filter!"a == a"(iota(30_000_001)
+                                  ), 10_000, 1000),
+               std.algorithm.map!"a * a"(iota(30_000_001))
+           ));
 
     assert(
         reduce!"a + b"(0UL,
-            poolInstance.map!"a * a"(iota(3_000_001), 10_000)
-        ) ==
+                       poolInstance.map!"a * a"(iota(3_000_001), 10_000)
+                      ) ==
         reduce!"a + b"(0UL,
-            std.algorithm.map!"a * a"(iota(3_000_001))
-        )
+                       std.algorithm.map!"a * a"(iota(3_000_001))
+                      )
     );
 
     assert(equal(
-        iota(1_000_002),
-        poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
-    ));
+               iota(1_000_002),
+               poolInstance.asyncBuf(filter!"a == a"(iota(1_000_002)))
+           ));
 
     {
         auto file = File("tempDelMe.txt", "wb");
-        scope(exit) {
+        scope(exit)
+        {
             file.close();
             import std.file;
             remove("tempDelMe.txt");
         }
 
         auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
-        foreach(row; written) {
+        foreach(row; written)
+        {
             file.writeln(join(to!(string[])(row), "\t"));
         }
 
         file = File("tempDelMe.txt");
 
-        void next(ref char[] buf) {
+        void next(ref char[] buf)
+        {
             file.readln(buf);
             import std.string;
             buf = chomp(buf);
@@ -3581,7 +4149,8 @@ unittest {
         double[][] read;
         auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
 
-        foreach(line; asyncReader) {
+        foreach(line; asyncReader)
+        {
             if(line.length == 0) continue;
             auto ls = line.split("\t");
             read ~= to!(double[])(ls);
@@ -3595,14 +4164,16 @@ unittest {
 
     auto abuf = poolInstance.asyncBuf(iota(-1, 3_000_000), 100);
     auto temp = poolInstance.map!sqrt(
-            abuf, 100, 5
-        );
+                    abuf, 100, 5
+                );
     auto lmchain = poolInstance.map!"a * a"(temp, 100, 5);
     lmchain.popFront();
 
     int ii;
-    foreach( elem; (lmchain)) {
-        if(!approxEqual(elem, ii)) {
+    foreach( elem; (lmchain))
+    {
+        if(!approxEqual(elem, ii))
+        {
             stderr.writeln(ii, '\t', elem);
         }
         ii++;
@@ -3612,7 +4183,8 @@ unittest {
     abuf = poolInstance.asyncBuf(iota(-1, 1_000_000), 100);
     abuf.popFront();
     auto bufTrickTest = new size_t[abuf.length];
-    foreach(i, elem; parallel(abuf)) {
+    foreach(i, elem; parallel(abuf))
+    {
         bufTrickTest[i] = i;
     }
 
@@ -3625,24 +4197,29 @@ unittest {
     // Test that worker local storage from one pool receives an index of 0
     // when the index is queried w.r.t. another pool.  The only way to do this
     // is non-deterministically.
-    foreach(i; parallel(iota(1000), 1)) {
+    foreach(i; parallel(iota(1000), 1))
+    {
         assert(poolInstance.workerIndex == 0);
     }
 
-    foreach(i; poolInstance.parallel(iota(1000), 1)) {
+    foreach(i; poolInstance.parallel(iota(1000), 1))
+    {
         assert(taskPool.workerIndex == 0);
     }
 
     // Test exception handling.
-    static void parallelForeachThrow() {
-        foreach(elem; parallel(iota(10))) {
+    static void parallelForeachThrow()
+    {
+        foreach(elem; parallel(iota(10)))
+        {
             throw new Exception("");
         }
     }
 
     assertThrown!Exception(parallelForeachThrow());
 
-    static int reduceException(int a, int b) {
+    static int reduceException(int a, int b)
+    {
         throw new Exception("");
     }
 
@@ -3650,7 +4227,8 @@ unittest {
         poolInstance.reduce!reduceException(iota(3))
     );
 
-    static int mapException(int a) {
+    static int mapException(int a)
+    {
         throw new Exception("");
     }
 
@@ -3658,7 +4236,8 @@ unittest {
         poolInstance.amap!mapException(iota(3))
     );
 
-    static void mapThrow() {
+    static void mapThrow()
+    {
         auto m = poolInstance.map!mapException(iota(3));
         m.popFront();
     }
@@ -3666,8 +4245,14 @@ unittest {
     assertThrown!Exception(mapThrow());
 
     struct ThrowingRange {
-        @property int front() { return 1; }
-        void popFront() { throw new Exception(""); }
+        @property int front()
+        {
+            return 1;
+        }
+        void popFront()
+        {
+            throw new Exception("");
+        }
         enum bool empty = false;
     }
 
@@ -3678,22 +4263,27 @@ unittest {
 
 // These are more like stress tests than real unit tests.  They print out
 // tons of stuff and should not be run every time make unittest is run.
-version(parallelismStressTest) {
-    unittest {
+version(parallelismStressTest)
+{
+    unittest
+    {
         size_t attempt;
         for(; attempt < 10; attempt++)
-        foreach(poolSize; [0, 4]) {
+            foreach(poolSize; [0, 4])
+        {
 
             poolInstance = new TaskPool(poolSize);
 
             uint[] numbers = new uint[1_000];
 
-            foreach(i; poolInstance.parallel( iota(0, numbers.length)) ) {
+            foreach(i; poolInstance.parallel( iota(0, numbers.length)) )
+            {
                 numbers[i] = cast(uint) i;
             }
 
             // Make sure it works.
-            foreach(i; 0..numbers.length) {
+            foreach(i; 0..numbers.length)
+            {
                 assert(numbers[i] == i);
             }
 
@@ -3701,14 +4291,16 @@ version(parallelismStressTest) {
 
 
             auto myNumbers = filter!"a % 7 > 0"( iota(0, 1000));
-            foreach(num; poolInstance.parallel(myNumbers)) {
+            foreach(num; poolInstance.parallel(myNumbers))
+            {
                 assert(num % 7 > 0 && num < 1000);
             }
             stderr.writeln("Done modulus test.");
 
             uint[] squares = poolInstance.amap!"a * a"(numbers, 100);
             assert(squares.length == numbers.length);
-            foreach(i, number; numbers) {
+            foreach(i, number; numbers)
+            {
                 assert(squares[i] == number * number);
             }
             stderr.writeln("Done squares.");
@@ -3717,7 +4309,8 @@ version(parallelismStressTest) {
             poolInstance.put(sumFuture);
 
             ulong sumSquares = 0;
-            foreach(elem; numbers) {
+            foreach(elem; numbers)
+            {
                 sumSquares += elem * elem;
             }
 
@@ -3728,7 +4321,8 @@ version(parallelismStressTest) {
             assert(mySum == mySumParallel);
             stderr.writeln("Done sums.");
 
-            auto myTask = task({
+            auto myTask = task(
+            {
                 synchronized writeln("Our lives are parallel...Our lives are parallel.");
             });
             poolInstance.put(myTask);
@@ -3736,10 +4330,12 @@ version(parallelismStressTest) {
             auto nestedOuter = "abcd";
             auto nestedInner =  iota(0, 10, 2);
 
-            foreach(i, letter; poolInstance.parallel(nestedOuter, 1)) {
-                foreach(j, number; poolInstance.parallel(nestedInner, 1)) {
+            foreach(i, letter; poolInstance.parallel(nestedOuter, 1))
+            {
+                foreach(j, number; poolInstance.parallel(nestedInner, 1))
+                {
                     synchronized writeln
-                        (i, ": ", letter, "  ", j, ": ", number);
+                    (i, ": ", letter, "  ", j, ": ", number);
                 }
             }
 
@@ -3753,9 +4349,11 @@ version(parallelismStressTest) {
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    unittest {
+    unittest
+    {
         foreach(attempt; 0..10)
-        foreach(poolSize; [0, 4]) {
+        foreach(poolSize; [0, 4])
+        {
             poolInstance = new TaskPool(poolSize);
 
             // Test indexing.
@@ -3764,60 +4362,71 @@ version(parallelismStressTest) {
 
             // Test worker-local storage.
             auto workerLocalStorage = poolInstance.workerLocalStorage!(uint)(1);
-            foreach(i; poolInstance.parallel(iota(0U, 1_000_000))) {
+            foreach(i; poolInstance.parallel(iota(0U, 1_000_000)))
+            {
                 workerLocalStorage.get++;
             }
             assert(reduce!"a + b"(workerLocalStorage.toRange) ==
-                1_000_000 + poolInstance.size + 1);
+            1_000_000 + poolInstance.size + 1);
 
             // Make sure work is reasonably balanced among threads.  This test is
             // non-deterministic and is more of a sanity check than something that
             // has an absolute pass/fail.
-            uint[void*] nJobsByThread;
-            foreach(thread; poolInstance.pool) {
+            shared(uint)[void*] nJobsByThread;
+            foreach(thread; poolInstance.pool)
+            {
                 nJobsByThread[cast(void*) thread] = 0;
             }
-            nJobsByThread[ cast(void*) Thread.getThis] = 0;
+            nJobsByThread[ cast(void*) Thread.getThis()] = 0;
 
-            foreach(i; poolInstance.parallel( iota(0, 1_000_000), 100 )) {
+            foreach(i; poolInstance.parallel( iota(0, 1_000_000), 100 ))
+            {
                 atomicOp!"+="( nJobsByThread[ cast(void*) Thread.getThis() ], 1);
             }
 
             stderr.writeln("\nCurrent thread is:  ",
-                cast(void*) Thread.getThis());
+            cast(void*) Thread.getThis());
             stderr.writeln("Workload distribution:  ");
-            foreach(k, v; nJobsByThread) {
+            foreach(k, v; nJobsByThread)
+            {
                 stderr.writeln(k, '\t', v);
             }
 
             // Test whether amap can be nested.
             real[][] matrix = new real[][](1000, 1000);
-            foreach(i; poolInstance.parallel( iota(0, matrix.length) )) {
-                foreach(j; poolInstance.parallel( iota(0, matrix[0].length) )) {
+            foreach(i; poolInstance.parallel( iota(0, matrix.length) ))
+            {
+                foreach(j; poolInstance.parallel( iota(0, matrix[0].length) ))
+                {
                     matrix[i][j] = i * j;
                 }
             }
 
             // Get around weird bugs having to do w/ sqrt being an intrinsic:
-            static real mySqrt(real num) {
+            static real mySqrt(real num)
+            {
                 return sqrt(num);
             }
 
-            static real[] parallelSqrt(real[] nums) {
+            static real[] parallelSqrt(real[] nums)
+            {
                 return poolInstance.amap!mySqrt(nums);
             }
 
             real[][] sqrtMatrix = poolInstance.amap!parallelSqrt(matrix);
 
-            foreach(i, row; sqrtMatrix) {
-                foreach(j, elem; row) {
+            foreach(i, row; sqrtMatrix)
+            {
+                foreach(j, elem; row)
+                {
                     real shouldBe = sqrt( cast(real) i * j);
                     assert(approxEqual(shouldBe, elem));
                     sqrtMatrix[i][j] = shouldBe;
                 }
             }
 
-            auto saySuccess = task({
+            auto saySuccess = task(
+            {
                 stderr.writeln(
                     "Success doing matrix stuff that involves nested pool use.");
             });
@@ -3827,15 +4436,16 @@ version(parallelismStressTest) {
             // A more thorough test of amap, reduce:  Find the sum of the square roots of
             // matrix.
 
-            static real parallelSum(real[] input) {
+            static real parallelSum(real[] input)
+            {
                 return poolInstance.reduce!"a + b"(input);
             }
 
             auto sumSqrt = poolInstance.reduce!"a + b"(
-                poolInstance.amap!parallelSum(
-                    sqrtMatrix
-                )
-            );
+                               poolInstance.amap!parallelSum(
+                                   sqrtMatrix
+                               )
+                           );
 
             assert(approxEqual(sumSqrt, 4.437e8));
             stderr.writeln("Done sum of square roots.");
@@ -3845,39 +4455,55 @@ version(parallelismStressTest) {
             poolInstance.put(nanTask);
             assert(nanTask.spinForce == false);
 
-            if(poolInstance.size > 0) {
+            if(poolInstance.size > 0)
+            {
                 // Test work waiting.
-                static void uselessFun() {
+                static void uselessFun()
+                {
                     foreach(i; 0..1_000_000) {}
                 }
 
                 auto uselessTasks = new typeof(task(&uselessFun))[1000];
-                foreach(ref uselessTask; uselessTasks) {
+                foreach(ref uselessTask; uselessTasks)
+                {
                     uselessTask = task(&uselessFun);
                 }
-                foreach(ref uselessTask; uselessTasks) {
+                foreach(ref uselessTask; uselessTasks)
+                {
                     poolInstance.put(uselessTask);
                 }
-                foreach(ref uselessTask; uselessTasks) {
+                foreach(ref uselessTask; uselessTasks)
+                {
                     uselessTask.workForce();
                 }
             }
 
             // Test the case of non-random access + ref returns.
             int[] nums = [1,2,3,4,5];
-            static struct RemoveRandom {
+            static struct RemoveRandom
+            {
                 int[] arr;
 
-                ref int front() { return arr.front; }
-                void popFront() { arr.popFront(); }
-                bool empty() { return arr.empty; }
+                ref int front()
+                {
+                    return arr.front;
+                }
+                void popFront()
+                {
+                    arr.popFront();
+                }
+                bool empty()
+                {
+                    return arr.empty;
+                }
             }
 
             auto refRange = RemoveRandom(nums);
-            foreach(ref elem; poolInstance.parallel(refRange)) {
+            foreach(ref elem; poolInstance.parallel(refRange))
+            {
                 elem++;
             }
-            assert(nums == [2,3,4,5,6]);
+            assert(nums == [2,3,4,5,6], text(nums));
             stderr.writeln("Nums:  ", nums);
 
             poolInstance.stop();
