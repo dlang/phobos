@@ -755,8 +755,8 @@ unittest
         auto diffm = modificationTime1 - currTime;
         scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime1, modificationTime1, currTime, diffa, diffm);
 
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(std.datetime.abs(diffa) <= leeway);
+        assert(std.datetime.abs(diffm) <= leeway);
     }
 
     version(fullFileTests)
@@ -778,8 +778,8 @@ unittest
             scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
 
             //There is no guarantee that the access time will be updated.
-            assert(abs(diffa) <= leeway + sleepTime);
-            assert(abs(diffm) <= leeway);
+            assert(std.datetime.abs(diffa) <= leeway + sleepTime);
+            assert(std.datetime.abs(diffm) <= leeway);
         }
 
         assert(accessTime1 <= accessTime2);
@@ -868,9 +868,9 @@ version(Windows) unittest
                      creationTime1, accessTime1, modificationTime1, currTime, diffc, diffa, diffm);
         }
 
-        assert(abs(diffc) <= leeway);
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(std.datetime.abs(diffc) <= leeway);
+        assert(std.datetime.abs(diffa) <= leeway);
+        assert(std.datetime.abs(diffm) <= leeway);
     }
 
     version(fullFileTests)
@@ -895,8 +895,8 @@ version(Windows) unittest
                          accessTime2, modificationTime2, currTime, diffa, diffm);
             }
 
-            assert(abs(diffa) <= leeway);
-            assert(abs(diffm) <= leeway);
+            assert(std.datetime.abs(diffa) <= leeway);
+            assert(std.datetime.abs(diffm) <= leeway);
         }
 
         assert(creationTime1 == creationTime2);
