@@ -3994,7 +3994,7 @@ version (OldStdPathUnittest) unittest
 {
     debug(path) printf("path.fnmatch.unittest\n");
 
-    version (Win32)
+    version (Windows)
         assert(fnmatch("foo", "Foo"));
     version (linux)
         assert(!fnmatch("foo", "Foo"));
