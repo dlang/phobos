@@ -1951,7 +1951,7 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target)
 in
 {
@@ -1962,14 +1962,16 @@ body
     if (radix == 10)
         return parse!Target(s);
 
-    immutable length = s.length;
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
-    size_t i = 0;
-    for (; i < length; ++i)
+    
+    if (s.empty)
+        goto Lerr;
+    
+    for (; !s.empty; s.popFront())
     {
-        uint c = s[i];
+        uint c = s.front;
         if (c < '0')
             break;
         if (radix < 10)
@@ -1992,10 +1994,6 @@ body
             goto Loverflow;
         v = blah;
     }
-    if (!i)
-        goto Lerr;
-    assert(i <= s.length);
-    s = s[i .. $];
     return v;
 
 Loverflow:
