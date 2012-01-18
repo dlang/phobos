@@ -103,56 +103,56 @@ class StringException : Exception
 /* ************* Constants *************** */
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, hexDigits) instead.)
 
     0..9A..F
   +/
-immutable char[16] hexdigits = "0123456789ABCDEF";
+deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _digits) instead.)
 
     0..9
   +/
-alias std.ascii.digits digits;
+deprecated immutable digits = "0123456789";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, octDigits) instead.)
 
     0..7
   +/
-immutable char[8]  octdigits = "01234567";
+deprecated immutable char[8]  octdigits = "01234567";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _lowercase) instead.)
 
     a..z
   +/
-immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
+deprecated immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _letters) instead.)
 
     A..Za..z
   +/
-immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _uppercase) instead.)
 
     A..Z
   +/
-immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _whitespace) instead.)
 
     ASCII whitespace.
@@ -160,37 +160,39 @@ immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 alias std.ascii.whitespace whitespace;
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF uni, lineSep) instead.)
 
     UTF line separator.
   +/
-enum dchar LS = '\u2028';
+deprecated enum dchar LS = '\u2028';
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF uni, paraSep) instead.)
 
     UTF paragraph separator.
   +/
-enum dchar PS = '\u2029';
+deprecated enum dchar PS = '\u2029';
 
 /++
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(XREF ascii, _newline) instead.)
 
     Newline sequence for this system.
   +/
-alias std.ascii.newline newline;
+version(Windows) deprecated immutable newline = "\r\n";
+else version(Posix) deprecated immutable newline = "\n";
+else static assert(0, "Unsupported OS");
 
 /**********************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
  */
-version(StdDdoc) bool iswhite(dchar c);
-else bool iswhite(C)(C c)
+version(StdDdoc) deprecated bool iswhite(dchar c);
+else deprecated bool iswhite(C)(C c)
     if(is(Unqual!C : dchar))
 {
     return c <= 0x7F
@@ -871,12 +873,12 @@ unittest
 
 
 /************************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(D toLower) instead.)
  *
  * Convert string s[] to lower case.
  */
-S tolower(S)(S s) if (isSomeString!S)
+deprecated S tolower(S)(S s) if (isSomeString!S)
 {
     return toLower!S(s);
 }
@@ -929,12 +931,12 @@ unittest
 }
 
 /**
-   $(RED Scheduled for deprecation in January 2012.
+   $(RED Deprecated. It will be removed in July 2012.
          Please use $(D toLowerInPlace) instead.)
 
    Converts $(D s) to lowercase in place.
  */
-void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated void tolowerInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toLowerInPlace!C(s);
 }
@@ -1044,12 +1046,12 @@ unittest
 }
 
 /************************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(D toUpper) instead.)
  *
  * Convert string s[] to upper case.
  */
-S toupper(S)(S s) if (isSomeString!S)
+deprecated S toupper(S)(S s) if (isSomeString!S)
 {
     return toUpper!S(s);
 }
@@ -1102,12 +1104,12 @@ unittest
 }
 
 /**
-    $(RED Scheduled for deprecation in January 2012.
+    $(RED Deprecated. It will be removed in July 2012.
           Please use $(D toUpperInPlace) instead.)
 
    Converts $(D s) to uppercase in place.
  */
-void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
+deprecated void toupperInPlace(C)(ref C[] s) if (isSomeChar!C)
 {
     toUpperInPlace!C(s);
 }
@@ -1281,20 +1283,13 @@ unittest
 
 
 /********************************************
- *  $(RED Scheduled for deprecation in January 2012.)
+ *  $(RED Deprecated. It will be removed in July 2012.)
  *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
  * Replace all sequences of whitespace with a single space.
  */
-S capwords(S)(S s) if (isSomeString!S)
-{
-    return _capWords!S(s);
-}
-
-// This is purely so that capwords can be unit tested without spitting
-// out the deprecation message.
-private S _capWords(S)(S s) if (isSomeString!S)
+deprecated S capwords(S)(S s) if (isSomeString!S)
 {
     alias typeof(s[0]) C;
     auto retval = appender!(C[])();
@@ -1336,12 +1331,12 @@ unittest
         auto s1 = to!S("\tfoo abc(aD)*  \t  (q PTT  ");
         S s2;
 
-        s2 = _capWords(s1);
+        s2 = capwords(s1);
         assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
 
         s1 = to!S("\u0430\u0411\u0544 \uFF48elLO\u00A0\u0131\u0053\u0049\u017F " ~
                   "\u017F\u0053\u0131\u0130");
-        s2 = _capWords(s1);
+        s2 = capwords(s1);
         assert(cmp(s2, "\u0410\u0431\u0574 \uFF28ello\u00A0\u0049\u0073\u0069\u017F " ~
                        "\u0053\u0053\u0131\u0069"));
     }
@@ -1362,14 +1357,14 @@ deprecated S repeat(S)(S s, size_t n)
 
 
 /**************************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(LREF splitLines) instead.)
  *
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
  * The delimiter is not included in the line.
  */
-S[] splitlines(S)(S s)
+deprecated S[] splitlines(S)(S s)
 {
     return splitLines!S(s);
 }
@@ -1465,12 +1460,12 @@ unittest
 
 
 /*****************************************
- *  $(RED Scheduled for deprecation in January 2012.
+ *  $(RED Deprecated. It will be removed in July 2012.
  *        Please use $(D stripLeft) instead.)
  *
  * Strips leading whitespace.
  */
-String stripl(String)(String s)
+deprecated String stripl(String)(String s)
 {
     return stripLeft!String(s);
 }
@@ -1500,12 +1495,12 @@ S stripLeft(S)(S s) @safe pure
 }
 
 /*****************************************
- *  $(RED Scheduled for deprecation in January 2012.
+ *  $(RED Deprecated. It will be removed in July 2012.
  *        Please use $(D stripRight) instead.)
  *
  * Strips trailing whitespace.
  */
-String stripr(String)(String s)
+deprecated String stripr(String)(String s)
 {
     return stripRight!String(s);
 }
@@ -1694,12 +1689,12 @@ unittest
 
 
 /*******************************************
- *  $(RED Scheduled for deprecation in January 2012.
+ *  $(RED Deprecated. It will be removed in July 2012.
  *        Please use $(D leftJustify) instead.)
  *
  * Left justify string s[] in field width chars wide.
  */
-S ljustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated S ljustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return leftJustify!S(s, width);
 }
@@ -1740,12 +1735,12 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 
 /*******************************************
- *  $(RED Scheduled for deprecation in January 2012.
+ *  $(RED Deprecated. It will be removed in July 2012.
  *        Please use $(D rightJustify) instead.)
  *
  * Left right string s[] in field width chars wide.
  */
-S rjustify(S)(S s, size_t width) if (isSomeString!S)
+deprecated S rjustify(S)(S s, size_t width) if (isSomeString!S)
 {
     return rightJustify!S(s, width);
 }
@@ -1851,13 +1846,13 @@ unittest
 
 
 /*****************************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(D rightJustify) with a fill character of '0' instead.)
  *
  * Same as rjustify(), but fill with '0's.
  *
  */
-S zfill(S)(S s, int width) if (isSomeString!S)
+deprecated S zfill(S)(S s, int width) if (isSomeString!S)
 {
     return rightJustify!S(s, width, '0');
 }
@@ -1882,13 +1877,13 @@ body
 
 
 /************************************************
- * $(RED Scheduled for deprecation in January 2012.
+ * $(RED Deprecated. It will be removed in July 2012.
  *       Please use $(D detab) instead.)
  *
  * Replace tabs with the appropriate number of spaces.
  * tabsize is the distance between tab stops.
  */
-S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
+deprecated S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
 {
     return detab!S(str, tabsize);
 }
@@ -3281,21 +3276,21 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 }
 
 /++
-    $(RED Scheduled for deprecation in January 2012.)
+    $(RED Deprecated. It will be removed in July 2012.)
 
     Allow any object as a parameter
   +/
-bool isNumeric(...)
+deprecated bool isNumeric(...)
 {
     return isNumeric(_arguments, _argptr);
 }
 
 /++
-    $(RED Scheduled for deprecation in January 2012.)
+    $(RED Deprecated. It will be removed in July 2012.)
 
     Check only the first parameter, all others will be ignored.
   +/
-bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
+deprecated bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     auto  s = ""c;
     auto ws = ""w;
@@ -3492,7 +3487,6 @@ body
             c -= 'a' - 'A';
         else if (c >= 'A' && c <= 'Z')
         {
-            ;
         }
         else
         {   lastc = lastc.init;
@@ -3758,7 +3752,6 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
         {
         if (first)
         {
-            ;
         }
         else if (col + 1 + (i - wordstart) > columns)
         {
@@ -3825,9 +3818,9 @@ unittest
  *
  * A StringException will be thrown if inconsistent indentation prevents
  * the input from being outdented.
- * 
+ *
  * Works at compile-time.
- * 
+ *
  * Example:
  * ---
  * writeln(q{
@@ -3837,17 +3830,17 @@ unittest
  *     }
  * }.outdent());
  * ---
- * 
+ *
  * Output:
  * ---
- * 
+ *
  * import std.stdio;
  * void main() {
  *     writeln("Hello");
  * }
- * 
+ *
  * ---
- * 
+ *
  */
 
 S outdent(S)(S str) if(isSomeString!S)

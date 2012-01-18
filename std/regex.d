@@ -1403,8 +1403,8 @@ struct Parser(R, bool CTFE=false)
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
-        enum State{ Start, Char, Escape, Dash, DashEscape };
-        Operator op = Operator.None;;
+        enum State{ Start, Char, Escape, Dash, DashEscape }
+        Operator op = Operator.None;
         dchar last;
         CodepointSet set;
         State state = State.Start;
@@ -6590,7 +6590,7 @@ public @trusted void replaceFmt(R, Capt, OutR)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    enum State { Normal, Escape, Dollar };
+    enum State { Normal, Escape, Dollar }
     auto state = State.Normal;
     size_t offset;
 L_Replace_Loop:
@@ -6830,7 +6830,7 @@ unittest
         string format;
         string replace;
         string flags;
-    };
+    }
 
     enum TestVectors tv[] = [
         TestVectors(  "(a)b\\1",   "abaab","y",    "$&",    "aba" ),

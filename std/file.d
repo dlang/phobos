@@ -31,7 +31,8 @@ import std.metastrings; //For generating deprecation messages only. Remove once
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit : useWfuncs;
+        std.windows.syserror;
+    public import std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code
@@ -1855,10 +1856,10 @@ else version(Posix) string readLink(C)(const(C)[] link)
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
     auto linkPtr = toUTFz!(const char*)(link);
-    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                        buffer.ptr,
-                                                        buffer.length),
-                         link);
+    auto size = core.sys.posix.unistd.readlink(linkPtr,
+                                               buffer.ptr,
+                                               buffer.length);
+    cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1867,10 +1868,11 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                       dynamicBuffer.ptr,
-                                                       dynamicBuffer.length),
-                        link);
+        size = core.sys.posix.unistd.readlink(linkPtr,
+                                              dynamicBuffer.ptr,
+                                              dynamicBuffer.length);
+        cenforce(size != -1, link);
+
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
@@ -1896,6 +1898,8 @@ version(Posix) unittest
             assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
+
+    assertThrown!FileException(readLink("/doesnotexist"));
 }
 
 
