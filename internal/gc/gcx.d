@@ -1053,7 +1053,10 @@ class GC
 
     void minimize()     // minimize physical memory usage
     {
-        // Not implemented, ignore
+        synchronized (gcLock)
+        {
+            gcx.minimize();
+        }
     }
 
     void setFinalizer(void *p, GC_FINALIZER pFn)
@@ -1565,6 +1568,42 @@ struct Gcx
     }
 
 
+
+    /**
+     * Minimizes physical memory usage by returning free pools to the OS.
+     */
+    void minimize()
+    {
+        size_t n;
+        size_t pn;
+        Pool*  pool;
+        size_t ncommitted;
+
+        for (n = 0; n < npools; n++)
+        {
+            pool = pooltable[n];
+            ncommitted = pool.ncommitted;
+            for (pn = 0; pn < ncommitted; pn++)
+            {
+                if (cast(Bins)pool.pagetable[pn] != B_FREE)
+                    break;
+            }
+            if (pn < ncommitted)
+            {
+                n++;
+                continue;
+            }
+            //printf("freeing pool %p\n", pool);
+            pool.Dtor();
+            cstdlib.free(pool);
+            memmove(pooltable + n,
+                    pooltable + n + 1,
+                    (--npools - n) * (Pool*).sizeof);
+            minAddr = pooltable[0].baseAddr;
+            maxAddr = pooltable[npools - 1].topAddr;
+        }
+    }
+
     /**
      * Allocate a chunk of memory that is larger than a page.
      * Return null if out of memory.
@@ -1993,42 +2032,42 @@ struct Gcx
                     }
                     else version (OSX)
                     {
-			version (X86_64)
-			{
-			    x86_thread_state64_t   state = void;
-			    mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
+                        version (X86_64)
+                        {
+                            x86_thread_state64_t   state = void;
+                            mach_msg_type_number_t count = x86_THREAD_STATE64_COUNT;
 
-			    if (thread_get_state(t.machid,
-						 x86_THREAD_STATE64,
-						 &state,
-						 &count) != KERN_SUCCESS)
-			    {
-				assert(0);
-			    }
-			    debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.rsp, t.stackBottom);
+                            if (thread_get_state(t.machid,
+                                                 x86_THREAD_STATE64,
+                                                 &state,
+                                                 &count) != KERN_SUCCESS)
+                            {
+                                assert(0);
+                            }
+                            debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.rsp, t.stackBottom);
 
-			    mark(cast(void *)state.rsp, t.stackBottom);
-			    mark(&state.rax, &state.r15);
-			}
-			else version (X86)
-			{
-			    x86_thread_state32_t   state = void;
-			    mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
+                            mark(cast(void *)state.rsp, t.stackBottom);
+                            mark(&state.rax, &state.r15);
+                        }
+                        else version (X86)
+                        {
+                            x86_thread_state32_t   state = void;
+                            mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
 
-			    if (thread_get_state(t.machid,
-						 x86_THREAD_STATE32,
-						 &state,
-						 &count) != KERN_SUCCESS)
-			    {
-				assert(0);
-			    }
-			    debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.esp, t.stackBottom);
+                            if (thread_get_state(t.machid,
+                                                 x86_THREAD_STATE32,
+                                                 &state,
+                                                 &count) != KERN_SUCCESS)
+                            {
+                                assert(0);
+                            }
+                            debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.esp, t.stackBottom);
 
-			    mark(cast(void *)state.esp, t.stackBottom);
-			    mark(&state.eax, &state.esp);
-			}
-			else
-			    static assert(0, "architecture not supported");
+                            mark(cast(void *)state.esp, t.stackBottom);
+                            mark(&state.eax, &state.esp);
+                        }
+                        else
+                            static assert(0, "architecture not supported");
                     }
                     else version (Posix) // Don't do this on OSX
                     {
@@ -2042,8 +2081,8 @@ struct Gcx
                         else
                             mark(t.stackBottom, t.stackTop);
                     }
-		    else
-			static assert(0, "architecture not supported");
+                    else
+                        static assert(0, "architecture not supported");
                 }
             }
         }
