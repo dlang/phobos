@@ -2976,6 +2976,70 @@ unittest {
     static assert(is(pointerTarget!(long*) == long));
 }
 
+
+
+/**
+Returns the target type of an array.
+*/
+template arrayTarget( T: T[]            )      
+{   
+    alias T arrayTarget; 
+}
+template arrayTarget( T: T[N], size_t N )      
+{   
+    alias T arrayTarget; 
+}
+unittest
+{
+    static assert( is( arrayTarget!(int[])       : int    ) );
+    static assert( is( arrayTarget!(int[][])     : int[]  ) );
+    static assert( is( arrayTarget!(int[3][])    : int[3] ) );
+    static assert( is( arrayTarget!(int[][3])    : int[]  ) );
+    static assert( !__traits(compiles, arrayTarget!(int)) );
+}
+
+/**
+Returns the number of dimensions in a single or multidimensional array type, or zero for a non-array.
+*/
+template arrayDims( T )    if(  !isArray!(T) )      
+{   
+    enum arrayDims = 0;     
+}
+template arrayDims( T )    if(   isArray!(T) )      
+{   
+    enum arrayDims = arrayDims!(arrayTarget!(T)) + 1; 
+}
+unittest
+{
+    static assert( arrayDims!(double)        == 0 );
+    static assert( arrayDims!(double[])      == 1 );
+    static assert( arrayDims!(double[3])     == 1 );
+    static assert( arrayDims!(double[][])    == 2 );
+    static assert( arrayDims!(double[][3])   == 2 );
+    static assert( arrayDims!(double[3][][]) == 3 );
+}
+
+/**
+Strips a (multidimensional) array back to its underlying non-array type.
+*/
+template StripArray(T)       if( !isArray!(T) )
+{
+    alias T StripArray;
+}
+template StripArray(T)       if(  isArray!(T) )
+{
+    alias StripArray!( arrayTarget!(T) ) StripArray;
+}
+unittest
+{
+    static assert( is( StripArray!(int)         : int ) );
+    static assert( is( StripArray!(int[])       : int ) );
+    static assert( is( StripArray!(int[][])     : int ) );
+    static assert( is( StripArray!(int[][][])   : int ) );
+    static assert( is( StripArray!(int[][3][1])   : int ) );
+}
+
+
 /**
  * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
  * a single loop variable of automatically inferred type, regardless of how
