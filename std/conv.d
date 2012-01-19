@@ -1965,11 +1965,12 @@ body
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
+    size_t i = 0;
     
     if (s.empty)
         goto Lerr;
     
-    for (; !s.empty; s.popFront())
+    for (; !s.empty; s.popFront(), ++i)
     {
         uint c = s.front;
         if (c < '0')
@@ -1994,6 +1995,8 @@ body
             goto Loverflow;
         v = blah;
     }
+    if (!i)
+        goto Lerr;
     return v;
 
 Loverflow:
