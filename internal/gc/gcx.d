@@ -1955,6 +1955,7 @@ struct Gcx
         {
             static assert( false, "Architecture not supported." );
         }
+        minimize();
         return result;
     }
 
