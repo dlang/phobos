@@ -136,7 +136,7 @@ Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
 License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors: Jonas Drewsen. SMTP part contributed by Jimmy Cao.
+Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
 Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
          LibCurl is licensed under an MIT/X derivate license.
@@ -172,10 +172,10 @@ version(unittest)
     import std.stdio;
     import std.c.stdlib;
     import std.range;
-    enum testUrl1 = "http://d-programming-language.appspot.com/testUrl1";
-    enum testUrl2 = "http://d-programming-language.appspot.com/testUrl2";
+    enum testUrl1 = "http://d-lang.appspot.com/testUrl1";
+    enum testUrl2 = "http://d-lang.appspot.com/testUrl2";
     enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
-    enum testUrl4 = "d-programming-language.appspot.com/testUrl1";
+    enum testUrl4 = "d-lang.appspot.com/testUrl1";
 }
 version(StdDdoc) import std.stdio;
 
@@ -211,12 +211,14 @@ extern (C) void exit(int);
   */
 struct AutoProtocol { }
 
+// Returns true if the url points to an FTP resource
 private bool isFTPUrl(const(char)[] url)
 {
     return startsWith(url.toLower(), "ftp://", "ftps://", "ftp.") != 0;
 }
 
-template isCurlConn(Conn)
+// Is true if the Conn type is a valid Curl Connection type.
+private template isCurlConn(Conn)
 {
     enum auto isCurlConn = is(Conn : HTTP) ||
         is(Conn : FTP) || is(Conn : AutoProtocol);
@@ -234,7 +236,7 @@ template isCurlConn(Conn)
  * ----
  * import std.net.curl;
  * download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
- * download("d-programming-language.appspot.com/testUrl2", "/tmp/downloaded-http-file");
+ * download("d-lang.appspot.com/testUrl2", "/tmp/downloaded-http-file");
  * ----
  */
 void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn conn = Conn())
@@ -243,6 +245,10 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
         conn.url = url;
+        auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
+        scope (exit) f.close();
+        conn.onReceive = (ubyte[] data) { return f.write(data); };
+        conn.perform();
     }
     else
     {
@@ -251,21 +257,13 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
         else
             return download!HTTP(url, saveToPath, HTTP());
     }
-
-    static if (is(Conn : HTTP) || is(Conn : FTP))
-    {
-        auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
-        scope (exit) f.close();
-        conn.onReceive = (ubyte[] data) { return f.write(data); };
-        conn.perform();
-    }
 }
 
 unittest
 {
     if (!netAllowed()) return;
     download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
-    download("d-programming-language.appspot.com/testUrl1", "/tmp/downloaded-http-file");
+    download("d-lang.appspot.com/testUrl1", "/tmp/downloaded-http-file");
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -280,7 +278,7 @@ unittest
  * ----
  * import std.net.curl;
  * upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
- * upload("/tmp/downloaded-http-file", "d-programming-language.appspot.com/testUrl2");
+ * upload("/tmp/downloaded-http-file", "d-lang.appspot.com/testUrl2");
  * ----
  */
 void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn conn = Conn())
@@ -320,7 +318,7 @@ unittest
 {
     if (!netAllowed()) return;
     //    upload("/tmp/downloaded-ftp-file", "ftp.digitalmars.com/sieve.ds");
-    upload("/tmp/downloaded-http-file", "d-programming-language.appspot.com/testUrl2");
+    upload("/tmp/downloaded-http-file", "d-lang.appspot.com/testUrl2");
 }
 
 /** HTTP/FTP get content.
@@ -336,7 +334,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = get("d-programming-language.appspot.com/testUrl2");
+ * string content = get("d-lang.appspot.com/testUrl2");
  * ----
  *
  * Returns:
@@ -385,7 +383,9 @@ unittest
  *
  * Params:
  * url = resource to post to
- * postData = data to post
+ * putData = data to send as the body of the request. An array
+ *           of an arbitrary type is accepted and will be cast to ubyte[]
+ *           before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
@@ -395,7 +395,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = post("d-programming-language.appspot.com/testUrl2", [1,2,3,4]);
+ * string content = post("d-lang.appspot.com/testUrl2", [1,2,3,4]);
  * ----
  *
  * Returns:
@@ -423,7 +423,9 @@ unittest
  *
  * Params:
  * url = resource to put
- * putData = data to put
+ * putData = data to send as the body of the request. An array
+ *           of an arbitrary type is accepted and will be cast to ubyte[]
+ *           before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
@@ -433,7 +435,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * string content = put("d-programming-language.appspot.com/testUrl2",
+ * string content = put("d-lang.appspot.com/testUrl2",
  *                      "Putting this data");
  * ----
  *
@@ -488,7 +490,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * del("d-programming-language.appspot.com/testUrl2");
+ * del("d-lang.appspot.com/testUrl2");
  * ----
  *
  * See_Also: $(LREF HTTP.Method)
@@ -503,10 +505,10 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
     else static if (is(Conn : FTP))
     {
-        // auto trimmed = url.findSplitAfter("ftp://")[1];
-        auto trimmed = url.findSplitAfter("ftp://");
-        auto trimmed2 = trimmed[1]; // work around bug #5790
-        auto t = trimmed2.findSplitAfter("/");
+        auto trimmed = url.findSplitAfter("ftp://")[1];
+        //auto trimmed = url.findSplitAfter("ftp://");
+        //auto trimmed2 = trimmed[1]; // work around bug #5790
+        auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
         enforceEx!CurlException(t[0].length > minDomainNameLength,
                                 text("Invalid FTP URL for delete ", url));
@@ -537,18 +539,22 @@ unittest
  *
  * Params:
  * url = resource make a option call to
- * optionsData = options data to send
+ * optionsData = options data to send as the body of the request. An array
+ *               of an arbitrary type is accepted and will be cast to ubyte[]
+ *               before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
  * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * Currently the HTTP RFC does not specify any usage of the optionsData and
+ * for this reason the example below does not send optionsData to the server.
  *
  * Example:
  * ----
  * import std.net.curl;
  * auto http = HTTP();
- * options("d-programming-language.appspot.com/testUrl2", null, http);
+ * options("d-lang.appspot.com/testUrl2", null, http);
  * writeln("Allow set to " ~ http.responseHeaders["Allow"]);
  * ----
  *
@@ -596,7 +602,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * trace("d-programming-language.appspot.com/testUrl1");
+ * trace("d-lang.appspot.com/testUrl1");
  * ----
  *
  * Returns:
@@ -633,7 +639,7 @@ unittest
  * Example:
  * ----
  * import std.net.curl;
- * connect("d-programming-language.appspot.com/testUrl1");
+ * connect("d-lang.appspot.com/testUrl1");
  * ----
  *
  * Returns:
@@ -658,6 +664,12 @@ unittest
 }
 
 
+/*
+ * Helper function for the high level interface.
+ *
+ * It performs an HTTP request using the client which must have
+ * been setup correctly before calling this function.
+ */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
     scope (exit)
@@ -693,9 +705,11 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveHeader = (in char[] key,
                               in char[] value)
     {
-        auto v = key in headers;
-        if (v)
-            (*v) ~= ", " ~ value;
+        if (auto v = key in headers)
+        {
+            *v ~= ", ";
+            *v ~= value;
+        }
         else
             headers[key] = value.idup;
     };
@@ -705,10 +719,9 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
                             format("HTTP request returned status code %s",
                                    statusLine.code));
 
-    auto v = "content-type" in headers;
     // Default charset defined in HTTP RFC
     auto charset = "ISO-8859-1";
-    if (v)
+    if (auto v = "content-type" in headers)
     {
         auto m = match(cast(char[]) (*v), regex("charset=([^;,]*)"));
         if (!m.empty && m.captures.length > 1)
@@ -717,30 +730,15 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         }
     }
 
-    static if (is(T == ubyte))
-    {
-        return content;
-    }
-    else
-    {
-        // Optimally just return the utf8 encoded content
-        if (charset == "UTF-8")
-            return cast(char[])(content);
-
-        // The content has to be re-encoded to utf8
-        auto scheme = EncodingScheme.create(charset);
-        enforceEx!CurlException(scheme !is null,
-                                format("Unknown charset '%s'", charset));
-
-        auto strInfo = decodeString(content, scheme);
-        enforceEx!CurlException(strInfo[0] != size_t.max,
-                                format("Invalid encoding sequence for header charset '%s'",
-                                       charset));
-
-        return strInfo[1];
-    }
+    return _decodeContent!T(content, charset);
 }
 
+/*
+ * Helper function for the high level interface.
+ *
+ * It performs an FTP request using the client which must have
+ * been setup correctly before calling this function.
+ */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
     scope (exit) client.onReceive = null;
@@ -757,7 +755,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
         return data.length;
     };
 
-    if (sendData !is null && sendData.length != 0)
+    if (!sendData.empty)
     {
         client.onSend = delegate size_t(void[] buf)
         {
@@ -771,6 +769,14 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 
     client.perform();
 
+    return _decodeContent!T(content, client.encoding);
+}
+
+/* Used by _basicHTTP() and _basicFTP() to decode ubyte[] to
+ * correct string format
+ */
+private auto _decodeContent(T)(ubyte[] content, string encoding)
+{
     static if (is(T == ubyte))
     {
         return content;
@@ -778,19 +784,19 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
     else
     {
         // Optimally just return the utf8 encoded content
-        if (client.encoding == "UTF-8")
+        if (encoding == "UTF-8")
             return cast(char[])(content);
 
         // The content has to be re-encoded to utf8
-        auto scheme = EncodingScheme.create(client.encoding);
-        auto encoding = client.encoding;
+        auto scheme = EncodingScheme.create(encoding);
         enforceEx!CurlException(scheme !is null,
-                                format("Unknown charset '%s'", encoding));
+                                format("Unknown encoding '%s'", encoding));
 
         auto strInfo = decodeString(content, scheme);
         enforceEx!CurlException(strInfo[0] != size_t.max,
-                                format("Invalid encoding sequence for charset '%s'",
+                                format("Invalid encoding sequence for enconding '%s'",
                                        encoding));
+
         return strInfo[1];
     }
 }
@@ -856,8 +862,6 @@ auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
             Terminator terminator = '\n', Conn conn = Conn())
 if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
-    // This range is using algorithm splitter and could be
-    // optimized by not using that.
     static struct SyncLineInputRange
     {
 
@@ -976,35 +980,32 @@ auto byChunk(Conn = AutoProtocol)
 {
     static struct SyncChunkInputRange
     {
-        alias ubyte[] ChunkType;
         private size_t chunkSize;
-        private ChunkType _bytes;
-        private size_t len;
+        private ubyte[] _bytes;
         private size_t offset;
 
         this(ubyte[] bytes, size_t chunkSize)
         {
             this._bytes = bytes;
-            this.len = _bytes.length;
             this.chunkSize = chunkSize;
         }
 
         @property @safe auto empty()
         {
-            return offset == len;
+            return offset == _bytes.length;
         }
 
-        @property ChunkType front()
+        @property ubyte[] front()
         {
             size_t nextOffset = offset + chunkSize;
-            if (nextOffset > len) nextOffset = len;
+            if (nextOffset > _bytes.length) nextOffset = _bytes.length;
             return _bytes[offset..nextOffset];
         }
 
         @safe void popFront()
         {
             offset += chunkSize;
-            if (offset > len) offset = len;
+            if (offset > _bytes.length) offset = _bytes.length;
         }
     }
 
@@ -1045,7 +1046,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     {
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s", 
+               format("Expected %s but got $s",
                       State.gotUnits, state));
         return units;
     }
@@ -1054,7 +1055,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     {
         tryEnsureUnits();
         assert(state == State.gotUnits,
-               format("Expected %s but got $s", 
+               format("Expected %s but got $s",
                       State.gotUnits, state));
         state = State.needUnits;
         // Send to worker thread for buffer reuse
@@ -1070,7 +1071,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
         if (state == State.gotUnits)
             return true;
 
-        auto noDur = dur!"hnsecs"(0);
+        enum noDur = dur!"hnsecs"(0);
         StopWatch sw;
         sw.start();
         while (state != State.gotUnits && d > noDur)
@@ -1151,7 +1152,11 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 // It should really be defined inside the byLineAsync method.
 // Range that reads one line at a time asynchronously.
 
-/// Range returned by byLineAsync
+/** Range returned by byLineAsync.
+ *
+ * Do not declare a variable of this type directly since
+ * it will be hidden as soon as bug #2458 has been fixed.
+ */
 static struct AsyncLineInputRange(Char)
 {
     private Char[] line;
@@ -1176,7 +1181,7 @@ static struct AsyncLineInputRange(Char)
     private Tid workerTid;
     private State running;
 
-    this(Tid tid, size_t transmitBuffers, size_t bufferSize)
+    private this(Tid tid, size_t transmitBuffers, size_t bufferSize)
     {
         workerTid = tid;
         state = State.needUnits;
@@ -1186,7 +1191,7 @@ static struct AsyncLineInputRange(Char)
         // back to non-shared in the receiving end.
         foreach (i ; 0..transmitBuffers)
         {
-            Char[] arr = new Char[](bufferSize);
+            auto arr = new Char[](bufferSize);
             workerTid.send(cast(immutable(Char[]))arr);
         }
     }
@@ -1204,11 +1209,11 @@ static struct AsyncLineInputRange(Char)
  * requests.
  *
  * The background thread will buffer up to transmitBuffers number of lines
- * before is stops receiving data from network. When the main thread reads the
+ * before it stops receiving data from network. When the main thread reads the
  * lines from the range it frees up buffers and allows for the background thread
  * to receive more data from the network.
  *
- * If no data is available and the main thread access the range it will block
+ * If no data is available and the main thread accesses the range it will block
  * until data becomes available. An exception to this is the $(D wait(Duration)) method on
  * the $(LREF AsyncLineInputRange). This method will wait at maximum for the
  * specified duration and return true if data is available.
@@ -1276,43 +1281,8 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
         tid.send(terminator);
         tid.send(keepTerminator == KeepTerminator.yes);
 
-        // no move semantic available in std.concurrency ie. must use casting.
-        auto connDup = conn.dup();
-        connDup.url = url;
+        _asyncDuplicateConnection(url, conn, postData, tid);
 
-        static if ( is(Conn : HTTP) )
-        {
-            connDup.p.headersOut = null;
-            connDup.method = conn.method == HTTP.Method.undefined ?
-                HTTP.Method.get : conn.method;
-            if (postData !is null)
-            {
-                if (connDup.method == HTTP.Method.put)
-                {
-                    connDup.handle.set(CurlOption.infilesize_large,
-                                       postData.length);
-                }
-                else
-                {
-                    // post
-                    connDup.method = HTTP.Method.post;
-                    connDup.handle.set(CurlOption.postfieldsize_large,
-                                       postData.length);
-                }
-                connDup.handle.set(CurlOption.copypostfields,
-                                   cast(void*) postData.ptr);
-            }
-            tid.send(cast(ulong)connDup.handle.handle);
-            tid.send(connDup.method);
-        }
-        else
-        {
-            enforceEx!CurlException(postData is null,
-                                    "Cannot put ftp data using byLineAsync()");
-            tid.send(cast(ulong)connDup.handle.handle);
-            tid.send(HTTP.Method.undefined);
-        }
-        connDup.p.curl.handle = null; // make sure handle is not freed
         return AsyncLineInputRange!Char(tid, transmitBuffers,
                                         Conn.defaultAsyncStringBufferSize);
     }
@@ -1358,7 +1328,11 @@ unittest
 // It should really be defined inside the byLineAsync method.
 // Range that reads one chunk at a time asynchronously.
 
-/// Range returned by byChunkAsync
+/** Range returned by byChunkAsync.
+ *
+ * Do not declare a variable of this type directly since
+ * it will be hidden as soon as bug #2458 has been fixed.
+ */
 static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
@@ -1384,7 +1358,7 @@ static struct AsyncChunkInputRange
     private Tid workerTid;
     private State running;
 
-    this(Tid tid, size_t transmitBuffers, size_t chunkSize)
+    private this(Tid tid, size_t transmitBuffers, size_t chunkSize)
     {
         workerTid = tid;
         state = State.needUnits;
@@ -1479,43 +1453,8 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
         auto tid = spawn(&(_spawnAsync!(Conn, ubyte)));
         tid.send(thisTid);
 
-        // no move semantic available in std.concurrency ie. must use casting.
-        auto connDup = conn.dup();
-        connDup.url = url;
+        _asyncDuplicateConnection(url, conn, postData, tid);
 
-        static if ( is(Conn : HTTP) )
-        {
-            connDup.p.headersOut = null;
-            connDup.method = conn.method == HTTP.Method.undefined ?
-                HTTP.Method.get : conn.method;
-            if (postData !is null)
-            {
-                if (connDup.method == HTTP.Method.put)
-                {
-                    connDup.handle.set(CurlOption.infilesize_large,
-                                       postData.length);
-                }
-                else
-                {
-                    // post
-                    connDup.method = HTTP.Method.post;
-                    connDup.handle.set(CurlOption.postfieldsize_large,
-                                       postData.length);
-                }
-                connDup.handle.set(CurlOption.copypostfields,
-                                   cast(void*) postData.ptr);
-            }
-            tid.send(cast(ulong)connDup.handle.handle);
-            tid.send(connDup.method);
-        }
-        else
-        {
-            enforceEx!CurlException(postData is null,
-                                    "Cannot put ftp data using byLineAsync()");
-            tid.send(cast(ulong)connDup.handle.handle);
-            tid.send(HTTP.Method.undefined);
-        }
-        connDup.p.curl.handle = null; // make sure handle is not freed
         return AsyncChunkInputRange(tid, transmitBuffers, chunkSize);
     }
 }
@@ -1557,6 +1496,51 @@ unittest
 }
 
 
+/* Used by byLineAsync/byChunkAsync to duplicate an existing connection
+ * that can be used exclusively in a spawned thread.
+ */
+private void _asyncDuplicateConnection(Conn, PostData)
+    (const(char)[] url, Conn conn, PostData postData, Tid tid)
+{
+    // no move semantic available in std.concurrency ie. must use casting.
+    auto connDup = conn.dup();
+    connDup.url = url;
+
+    static if ( is(Conn : HTTP) )
+    {
+        connDup.p.headersOut = null;
+        connDup.method = conn.method == HTTP.Method.undefined ?
+            HTTP.Method.get : conn.method;
+        if (postData !is null)
+        {
+            if (connDup.method == HTTP.Method.put)
+            {
+                connDup.handle.set(CurlOption.infilesize_large,
+                                   postData.length);
+            }
+            else
+            {
+                // post
+                connDup.method = HTTP.Method.post;
+                connDup.handle.set(CurlOption.postfieldsize_large,
+                                   postData.length);
+            }
+            connDup.handle.set(CurlOption.copypostfields,
+                               cast(void*) postData.ptr);
+        }
+        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(connDup.method);
+    }
+    else
+    {
+        enforceEx!CurlException(postData is null,
+                                "Cannot put ftp data using byLineAsync()");
+        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(HTTP.Method.undefined);
+    }
+    connDup.p.curl.handle = null; // make sure handle is not freed
+}
+
 /*
   Mixin template for all supported curl protocols. This is the commom
   functionallity such as timeouts and network interface settings. This should
@@ -1585,11 +1569,11 @@ private mixin template Protocol()
     }
 
     /**
-       False if the instance is stopped and invalid.
+       True if the instance is stopped. A stopped instance is not usable.
     */
-    @property bool isValid()
+    @property bool isStopped()
     {
-        return !p.curl.stopped;
+        return p.curl.stopped;
     }
 
     /// Stop and invalidate this instance.
@@ -1894,13 +1878,12 @@ decodeString(Char = char)(const(ubyte)[] data,
            Not all ubytes are guaranteed to be read in case of decoding error.
            any decoded chars will be inserted into dst.
 */
-private bool decodeLineInto(Terminator, Char = char)(ref ubyte[] basesrc,
-                                                     ref ubyte[] src,
+private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
+                                                     ref const(ubyte)[] src,
                                                      ref Char[] dst,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
-    Char[] res;
     auto startLen = src.length;
     size_t charsDecoded = 0;
     // if there is anything in the basesrc then try to decode that
@@ -1912,6 +1895,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref ubyte[] basesrc,
         size_t len = (basesrc.length + src.length) >= 4 ?
                      4 : basesrc.length + src.length;
         basesrc.length = len;
+
         dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
@@ -1925,7 +1909,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref ubyte[] basesrc,
 
     while (src.length)
     {
-        typeof(src) lsrc = src[];
+        typeof(src) lsrc = src;
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE)
         {
@@ -2138,9 +2122,9 @@ struct HTTP
         alias CurlReadFunc.abort requestAbort;
 
         /**
-           True if the instance is stopped and invalid.
+           True if the instance is stopped. A stopped instance is not usable.
         */
-        @property bool isValid();
+        @property bool isStopped();
 
         /// Stop and invalidate this instance.
         void shutdown();
@@ -2509,7 +2493,7 @@ struct HTTP
         // status lines. The last one is the one recorded.
         auto dg = (in char[] header)
         {
-            if (header.length == 0)
+            if (header.empty)
             {
                 // header delimiter
                 return;
@@ -2773,9 +2757,9 @@ struct FTP
         alias CurlReadFunc.abort requestAbort;
 
         /**
-           True if the instance is stopped and invalid.
+           True if the instance is stopped. A stopped instance is not usable.
         */
-        @property bool isValid();
+        @property bool isStopped();
 
         /// Stop and invalidate this instance.
         void shutdown();
@@ -3054,9 +3038,9 @@ struct SMTP
         alias CurlReadFunc.abort requestAbort;
 
         /**
-           True if the instance is stopped and invalid.
+           True if the instance is stopped. A stopped instance is not usable.
         */
-        @property bool isValid();
+        @property bool isStopped();
 
         /// Stop and invalidate this instance.
         void shutdown();
@@ -3360,7 +3344,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = _TypeTuple!(file, writefunction, writeheader, 
+            auto tt = _TypeTuple!(file, writefunction, writeheader,
                                   headerfunction, infile,
                                   readfunction, ioctldata, ioctlfunction,
                                   seekdata, seekfunction, sockoptdata,
@@ -3923,7 +3907,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
 private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
                                          Tid fromTid)
 {
-    if (outdata.length != 0)
+    if (!outdata.empty)
     {
         // Resize the last buffer
         buffer.length = buffer.length - outdata.length;
@@ -3935,9 +3919,9 @@ private static void _finalizeAsyncChunks(ubyte[] outdata, ref ubyte[] buffer,
 // Shared function for reading incoming lines of data and sending the to a
 // parent thread
 private static size_t _receiveAsyncLines(Terminator, Unit)
-    (ubyte[] data, ref EncodingScheme encodingScheme,
+    (const(ubyte)[] data, ref EncodingScheme encodingScheme,
      bool keepTerminator, Terminator terminator,
-     ref ubyte[] leftOverBytes, ref bool bufferValid,
+     ref const(ubyte)[] leftOverBytes, ref bool bufferValid,
      ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
      Tid fromTid, ref bool aborted)
 {
@@ -4008,7 +3992,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                 // onReceive. Can be up to a max of 4 bytes.
                 enforceEx!CurlException(data.length <= 4,
                                         format(
-                                        "Too many bytes left not decoded %s" 
+                                        "Too many bytes left not decoded %s"
                                         " > 4. Maybe the charset specified in"
                                         " headers does not match "
                                         "the actual content downloaded?",
@@ -4060,7 +4044,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
         // decode a code point in the supported encodings.
-        auto leftOverBytes =  new ubyte[4];
+        auto leftOverBytes =  new const(ubyte)[4];
         leftOverBytes.length = 0;
         auto bufferValid = false;
     }
