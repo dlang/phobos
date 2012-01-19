@@ -124,6 +124,57 @@ version (Posix)
 }
 
 /**
+ * Test if RNG is a random-number generator. The overload
+ * taking a ElementType also makes sure that the RNG generates
+ * values of that type.
+ *
+ * A random-number generator has at least the following features:
+ * $(UL
+ *   $(LI it's an InputRange)
+ *   $(LI it has a 'seed(ElementType)' function)
+ *   $(LI it has a 'max' field/property of type ElementType)
+ *   $(LI it has a 'min' field/property of type ElementType)
+ * )
+ */
+template isRandomNumberGenerator(RNG, ElementType)
+{
+    enum bool isRandomNumberGenerator = isInputRange!RNG &&
+        is(typeof(RNG.front) == ElementType)  &&
+        is(typeof(
+        {
+            RNG r = void;       // can define a RNG object
+            r.seed(ElementType.init);     // can seed a RNG
+            ElementType max = r.max; // can get the max
+            ElementType min = r.min; // can get the min
+        }));
+}
+
+/**
+ * ditto
+ */
+template isRandomNumberGenerator(RNG)
+{
+    enum bool isRandomNumberGenerator = isInputRange!RNG &&
+        is(typeof(
+        {
+            RNG r = void;       // can define a RNG object
+            r.seed(typeof(r.front).init);     // can seed a RNG
+            typeof(r.front) max = r.max; // can get the max
+            typeof(r.front) min = r.min; // can get the min
+        }));
+}
+
+unittest
+{
+    assert(isRandomNumberGenerator!(Mt19937, uint));
+    assert(isRandomNumberGenerator!(Mt19937));
+    assert(isRandomNumberGenerator!(MinstdRand0, uint));
+    assert(isRandomNumberGenerator!(MinstdRand0));
+    assert(!isRandomNumberGenerator!(uint[]));
+    assert(!isRandomNumberGenerator!(uint[], uint));
+}
+
+/**
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
@@ -329,6 +380,10 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 unittest
 {
     static assert(isForwardRange!MinstdRand);
+    static assert(isRandomNumberGenerator!MinstdRand);
+    static assert(isRandomNumberGenerator!MinstdRand0);
+    static assert(isRandomNumberGenerator!(MinstdRand, uint));
+    static assert(isRandomNumberGenerator!(MinstdRand0, uint));
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
@@ -547,6 +602,8 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
+    static assert(isRandomNumberGenerator!Mt19937);
+    static assert(isRandomNumberGenerator!(Mt19937, uint));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
@@ -778,6 +835,8 @@ alias Xorshift128 Xorshift;                                /// ditto
 unittest
 {
     static assert(isForwardRange!Xorshift);
+    static assert(isRandomNumberGenerator!Xorshift);
+    static assert(isRandomNumberGenerator!(Xorshift, uint));
 
     // Result from reference implementation.
     auto checking = [
