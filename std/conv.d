@@ -42,18 +42,25 @@ class ConvException : Exception
 
 deprecated alias ConvException ConvError;   /// ditto
 
+private string convError_unexpected(S)(S source) {
+    return source.empty ? "end of input" : text("'", source.front, "'");
+}
+
 private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
     throw new ConvException(
-        text("Can't convert value `", source,
-             "' of type "~S.stringof~" to type "~T.stringof), fn, ln);
+        text("Unexpected ", convError_unexpected(source),
+             " when converting from type "~S.stringof~" to type "~T.stringof),
+        fn, ln);
 }
 
 private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
     throw new ConvException(
-        text("Can't convert value `", source,
-             "' of type "~S.stringof~" base ", radix, " to type "~T.stringof), fn, ln);
+        text("Unexpected ", convError_unexpected(source),
+             " when converting from type "~S.stringof~" base ", radix,
+             " to type "~T.stringof),
+        fn, ln);
 }
 
 private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
@@ -1662,11 +1669,11 @@ unittest
 
 /***************************************************************
  * The $(D_PARAM parse) family of functions works quite like the
- * $(D_PARAM to) family, except that (1) it only works with strings as
- * input, (2) takes the input string by reference and advances it to
+ * $(D_PARAM to) family, except that (1) it only works with character ranges
+ * as input, (2) takes the input by reference and advances it to
  * the position following the conversion, and (3) does not throw if it
- * could not convert the entire string. It still throws if an overflow
- * occurred during conversion or if no character of the input string
+ * could not convert the entire input. It still throws if an overflow
+ * occurred during conversion or if no character of the input
  * was meaningfully converted.
  *
  * Example:
@@ -1951,7 +1958,7 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target)
 in
 {
@@ -1962,14 +1969,14 @@ body
     if (radix == 10)
         return parse!Target(s);
 
-    immutable length = s.length;
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
 
     Target v = 0;
     size_t i = 0;
-    for (; i < length; ++i)
+    
+    for (; !s.empty; s.popFront(), ++i)
     {
-        uint c = s[i];
+        uint c = s.front;
         if (c < '0')
             break;
         if (radix < 10)
@@ -1994,8 +2001,6 @@ body
     }
     if (!i)
         goto Lerr;
-    assert(i <= s.length);
-    s = s[i .. $];
     return v;
 
 Loverflow:
@@ -2038,6 +2043,14 @@ unittest
     // 6609
     s = "-42";
     assert(parse!int(s, 10) == -42);
+}
+
+unittest // bugzilla 7302
+{
+    auto r = cycle("2A!");
+    auto u = parse!uint(r, 16);
+    assert(u == 42);
+    assert(r.front == '!');
 }
 
 Target parse(Target, Source)(ref Source s)
