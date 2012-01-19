@@ -1974,9 +1974,6 @@ body
     Target v = 0;
     size_t i = 0;
     
-    if (s.empty)
-        goto Lerr;
-    
     for (; !s.empty; s.popFront(), ++i)
     {
         uint c = s.front;
@@ -2051,7 +2048,7 @@ unittest
 unittest // bugzilla 7302
 {
     auto r = cycle("2A!");
-    auto u = std.conv.parse!uint(r, 16);
+    auto u = parse!uint(r, 16);
     assert(u == 42);
     assert(r.front == '!');
 }
