@@ -75,7 +75,7 @@ MAKEFILE:=$(lastword $(MAKEFILE_LIST))
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime.a
+	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
