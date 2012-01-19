@@ -42,18 +42,25 @@ class ConvException : Exception
 
 deprecated alias ConvException ConvError;   /// ditto
 
+private string convError_unexpected(S)(S source) {
+    return source.empty ? "end of input" : text("'", source.front, "'");
+}
+
 private void convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
     throw new ConvException(
-        text("Can't convert value `", source,
-             "' of type "~S.stringof~" to type "~T.stringof), fn, ln);
+        text("Unexpected ", convError_unexpected(source),
+             " when converting from type "~S.stringof~" to type "~T.stringof),
+        fn, ln);
 }
 
 private void convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
     throw new ConvException(
-        text("Can't convert value `", source,
-             "' of type "~S.stringof~" base ", radix, " to type "~T.stringof), fn, ln);
+        text("Unexpected ", convError_unexpected(source),
+             " when converting from type "~S.stringof~" base ", radix,
+             " to type "~T.stringof),
+        fn, ln);
 }
 
 private void parseError(lazy string msg, string fn = __FILE__, size_t ln = __LINE__)
