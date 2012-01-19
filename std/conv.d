@@ -1669,11 +1669,11 @@ unittest
 
 /***************************************************************
  * The $(D_PARAM parse) family of functions works quite like the
- * $(D_PARAM to) family, except that (1) it only works with strings as
- * input, (2) takes the input string by reference and advances it to
+ * $(D_PARAM to) family, except that (1) it only works with character ranges
+ * as input, (2) takes the input by reference and advances it to
  * the position following the conversion, and (3) does not throw if it
- * could not convert the entire string. It still throws if an overflow
- * occurred during conversion or if no character of the input string
+ * could not convert the entire input. It still throws if an overflow
+ * occurred during conversion or if no character of the input
  * was meaningfully converted.
  *
  * Example:
