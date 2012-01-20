@@ -827,7 +827,7 @@ extern(C) void std_date_static_this()
     localTZA = getLocalTZA();
 }
 
-version (Win32)
+version (Windows)
 {
     private import std.c.windows.windows;
     //import c.time;
