@@ -5,8 +5,7 @@
  */
 
 /**
- * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities
- * that are like a checksum or crc, but are more robust.
+ * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust.
  *
  * There are two ways to do this. The first does it all in one function call to
  * sum(). The second is for when the data is buffered.
@@ -21,7 +20,7 @@
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Md5, Wikipedia on MD5)
  *
- * Source: $(PHOBOSSRC std/digest/_md5.d)
+ * Source: $(PHOBOSSRC std/crypt/_md5.d)
  *
  * Macros:
  *      WIKI = Phobos/StdMd5
@@ -36,27 +35,26 @@
 
 import std.crypt.md5;
 
+private import std.exception;
 private import std.stdio;
 private import std.string;
-private import std.c.stdio;
-private import std.c.string;
 
 void main(string[] args)
 {
-    foreach (char[] arg; args)
-         MDFile(arg);
+    foreach (arg; args[1 .. $])
+        MDFile(arg);
 }
 
-/* Digests a file and prints the result. */
+/// Digests a file and prints the result.
 void MDFile(string filename)
 {
-    FILE* file = enforce(fopen(filename), "Could not open file `"~filename~"'");
-    scope(exit) fclose(file);
+    File file = File(filename);
+    scope(exit) file.close();
     ubyte digest[16];
 
     MD5_CTX context;
     context.start();
-    foreach (ubyte buffer; chunks(file, 4096 * 1024))
+    foreach (buffer; file.byChunk(4096 * 1024))
         context.update(buffer);
     context.finish(digest);
     writefln("MD5 (%s) = %s", filename, digestToString(digest));
@@ -150,7 +148,7 @@ string d = getDigestString(a, b, c);
 string getDigestString(in void[][] data...)
 {
     MD5_CTX ctx;
-    ctx.start;
+    ctx.start();
     foreach (datum; data) {
         ctx.update(datum);
     }
