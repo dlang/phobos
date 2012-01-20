@@ -439,7 +439,8 @@ public:
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void opAssign(R)(R rhs) if (isTuple!R)
+    void opAssign(R)(R rhs)
+        if (isTuple!R && allSatisfy!(isIdentityAssignable, Types))
     {
         static assert(field.length == rhs.field.length,
                       "Length mismatch in attempting to assign a "
@@ -524,6 +525,11 @@ private template Identity(alias T)
     alias T Identity;
 }
 
+template isIdentityAssignable(T)
+{
+    enum isIdentityAssignable = isAssignable!(T, T);
+}
+
 unittest
 {
     {
@@ -550,7 +556,7 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
+        assert(nosh.toString() == "Tuple!(int,real)(5, 0)", nosh.toString());
         Tuple!(int, int) yessh;
         nosh = yessh;
     }
@@ -559,7 +565,7 @@ unittest
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
+        assert(t.toString() == `Tuple!(int,string)(10, "str")`, t.toString());
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -973,7 +979,10 @@ Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
 unittest
 {
     interface CI { const int foo(); }
-    class C : CI { int foo() const { return 42; } }
+    class C : CI {
+      int foo() const { return 42; }
+      @property int bar() const { return 23; }
+    }
     Rebindable!(C) obj0;
     static assert(is(typeof(obj0) == C));
 
@@ -992,7 +1001,8 @@ unittest
     assert(obj1.get !is null);
 
     // test opDot
-    assert(obj2.foo == 42);
+    assert(obj2.foo() == 42);
+    assert(obj2.bar == 23);
 
     interface I { final int foo() const { return 42; } }
     Rebindable!(I) obj3;
@@ -1017,16 +1027,16 @@ unittest
 
     auto obj6 = rebindable(new immutable(C));
     static assert(is(typeof(obj6) == Rebindable!(immutable C)));
-    assert(obj6.foo == 42);
+    assert(obj6.foo() == 42);
 
     auto obj7 = rebindable(new C);
     CI interface1 = obj7;
     auto interfaceRebind1 = rebindable(interface1);
-    assert(interfaceRebind1.foo == 42);
+    assert(interfaceRebind1.foo() == 42);
 
     const interface2 = interface1;
     auto interfaceRebind2 = rebindable(interface2);
-    assert(interfaceRebind2.foo == 42);
+    assert(interfaceRebind2.foo() == 42);
 
     auto arr = [1,2,3,4,5];
     const arrConst = arr;
@@ -1108,7 +1118,7 @@ struct Ref(T)
     this(ref T value) { _p = &value; }
     ref T opDot() { return *_p; }
     /*ref*/ T opImplicitCastTo() { return *_p; }
-    ref T value() { return *_p; }
+    @property ref T value() { return *_p; }
 
     void opAssign(T value)
     {
@@ -2753,7 +2763,7 @@ unittest
     class A { static bool dead; ~this() { dead = true; } }
     class B : A { static bool dead; ~this() { dead = true; } }
     {
-        auto b = scoped!B;
+        auto b = scoped!B();
     }
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
@@ -2770,7 +2780,7 @@ unittest
         bool check() { return this is a; }
     }
 
-    auto a1 = scoped!A;
+    auto a1 = scoped!A();
     assert(a1.check());
 
     auto a2 = scoped!A(1);
@@ -2879,16 +2889,20 @@ Flag!"encryption".no).
 */
 struct Yes
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.yes; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.yes;
+    }
 }
 //template yes(string name) { enum Flag!name yes = Flag!name.yes; }
 
 /// Ditto
 struct No
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.no; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.no;
+    }
 }
 //template no(string name) { enum Flag!name no = Flag!name.no; }
 

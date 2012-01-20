@@ -1,3 +1,48 @@
+$(VERSION 057, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI Major overhaul of std.regex module's implementation.
+        $(RED Breaking change) in std.regex.replace with delegate,
+        use Captures!string instead of RegexMatch!string as delegate parameter.)
+      $(LI As typedef has been deprecated, overloads of std.conv.to which use
+           typedef have now been deprecated.)
+      $(LI std.array.insert has been deprecated. Please use std.array.insertInPlace instead.)
+      $(LI The overload of std.array.replace which replaces in place has been deprecated.
+           Please use std.array.replaceInPlace instead.)
+      $(LI The toISOExtendedString and fromISOExtendedString functions on SysTime, Date,
+           TimeOfDay, and DateTime in std.datetime have been deprecated. Please use
+           toISOExtString and fromISOExtString instead.)
+      $(LI std.file.getTimesPosix has been deprecated. Please use std.file.getTimes instead.)
+      $(LI The overloads for isDir, isFile, and isSymlink in std.file which take a uint
+           have been deprecated. Please use attrIsDir, attrIsFile, and attrIsSymlink instead.)
+     )
+
+    $(LIBBUGSFIXED
+        $(LI Unlisted bug: std.conv: Fix to!float("-0"))
+        $(LI Unlisted bug: std.file broken on OS X x86_64 due to wrong stat64 declaration.)
+        $(LI $(BUGZILLA 2936): std.regex.match() short string optimization)
+        $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
+        $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
+        $(LI $(BUGZILLA 5620): Implicit conversion of RegexMatch to bool.)
+        $(LI $(BUGZILLA 5712): [patch] std.regex.replace disallows w/dstring)
+        $(LI $(BUGZILLA 6204): emplace() for classes accepts larger chunk but fails in array assignment)
+        $(LI $(BUGZILLA 6887): Regression of getopt)
+        $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
+        $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
+        $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
+        $(LI $(BUGZILLA 6976): GetLastError called as property)
+        $(LI $(BUGZILLA 6977): getErrno called as property in std.stdio)
+        $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
+        $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
+        $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
+        $(LI $(BUGZILLA 7039): Posix 2.057 Makefile error breaking 64bit build)
+        $(LI $(BUGZILLA 7040): Phobos must use "version/else version" blocks for proper
+                               documentation generation.)
+        $(LI $(BUGZILLA 7045): AssertError in std.regex on line 1573)
+        $(LI $(BUGZILLA 7055): to!float("INF2") == 2)
+     )
+ )
+
 $(VERSION 056, ddd mm, 2011, =================================================,
 
     $(WHATSNEW

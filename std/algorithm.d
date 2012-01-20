@@ -355,8 +355,8 @@ foreach (e; map!("a + a", "a * a")(arr1))
 }
 ----
 
-You may alias $(D map) with some function(s) to a symbol and use it
-separately:
+You may alias $(D map) with some function(s) to a symbol and use
+it separately:
 
 ----
 alias map!(to!string) stringize;
@@ -492,9 +492,9 @@ unittest
     assert(squares2.back == 16);
 
     assert(squares2.front == 1);
-    squares2.popFront;
+    squares2.popFront();
     assert(squares2.front == 4);
-    squares2.popBack;
+    squares2.popBack();
     assert(squares2.front == 4);
     assert(squares2.back == 9);
 
@@ -527,10 +527,10 @@ unittest
     // stuff is disabled.
     auto fibsSquares = map!"a * a"(recurrence!("a[n-1] + a[n-2]")(1, 1));
     assert(fibsSquares.front == 1);
-    fibsSquares.popFront;
-    fibsSquares.popFront;
+    fibsSquares.popFront();
+    fibsSquares.popFront();
     assert(fibsSquares.front == 4);
-    fibsSquares.popFront;
+    fibsSquares.popFront();
     assert(fibsSquares.front == 9);
 
     auto repeatMap = map!"a"(repeat(1));
@@ -641,7 +641,7 @@ template reduce(fun...) if (fun.length >= 1)
                 alias args[0] seed;
                 alias args[1] r;
                 Unqual!(Args[0]) result = seed;
-                for (; !r.empty; r.popFront)
+                for (; !r.empty; r.popFront())
                 {
                     static if (fun.length == 1)
                     {
@@ -784,7 +784,7 @@ unittest
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
 
     // Test the opApply case.
-    struct OpApply
+    static struct OpApply
     {
         bool actEmpty;
 
@@ -849,7 +849,7 @@ if (isForwardRange!Range && is(typeof(range.front = filler)))
     alias ElementType!Range T;
     static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
     {
-        for (; !range.empty; range.popFront)
+        for (; !range.empty; range.popFront())
         {
             range.front = filler;
         }
@@ -912,7 +912,7 @@ if (isForwardRange!Range1 && isForwardRange!Range2
 {
     enforce(!filler.empty);
     auto t = filler.save;
-    for (; !range.empty; range.popFront, t.popFront)
+    for (; !range.empty; range.popFront(), t.popFront())
     {
         if (t.empty) t = filler;
         range.front = t.front;
@@ -950,7 +950,7 @@ if (isForwardRange!Range && is(typeof(range.front = filler)))
     static if (hasElaborateCopyConstructor!T)
     {
         // Must construct stuff by the book
-        for (; !range.empty; range.popFront)
+        for (; !range.empty; range.popFront())
         {
             emplace(&range.front, filler);
         }
@@ -1006,7 +1006,7 @@ if (isForwardRange!Range && is(typeof(range.front = range.front)))
         static if (is(typeof(&(range.front()))))
         {
             // Range exposes references
-            for (; !range.empty; range.popFront)
+            for (; !range.empty; range.popFront())
             {
                 memcpy(&(range.front()), &T.init, T.sizeof);
             }
@@ -1014,7 +1014,7 @@ if (isForwardRange!Range && is(typeof(range.front = range.front)))
         else
         {
             // Go the slow route
-            for (; !range.empty; range.popFront)
+            for (; !range.empty; range.popFront())
             {
                 range.front = filler;
             }
@@ -1104,7 +1104,7 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
             {
                 do
                 {
-                    _input.popFront;
+                    _input.popFront();
                 } while (!_input.empty && !unaryFun!pred(_input.front));
             }
 
@@ -1239,7 +1239,7 @@ template filterBidirectional(alias pred)
 {
     auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range))
     {
-        static struct Result
+        struct Result
         {
             alias Unqual!Range R;
             alias unaryFun!pred predFun;
@@ -1258,7 +1258,7 @@ template filterBidirectional(alias pred)
             {
                 do
                 {
-                    _input.popFront;
+                    _input.popFront();
                 } while (!_input.empty && !predFun(_input.front));
             }
 
@@ -1271,7 +1271,7 @@ template filterBidirectional(alias pred)
             {
                 do
                 {
-                    _input.popBack;
+                    _input.popBack();
                 } while (!_input.empty && !predFun(_input.back));
             }
 
@@ -1360,13 +1360,13 @@ unittest
     move(obj2, obj3);
     assert(obj3 is obj1);
 
-    struct S1 { int a = 1, b = 2; }
+    static struct S1 { int a = 1, b = 2; }
     S1 s11 = { 10, 11 };
     S1 s12;
     move(s11, s12);
     assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
 
-    struct S2 { int a = 1; int * b; }
+    static struct S2 { int a = 1; int * b; }
     S2 s21 = { 10, null };
     s21.b = new int;
     S2 s22;
@@ -1374,9 +1374,9 @@ unittest
     assert(s21 == s22);
 
     // Issue 5661 test(1)
-    struct S3
+    static struct S3
     {
-        struct X { int n = 0; ~this(){n = 0;} }
+        static struct X { int n = 0; ~this(){n = 0;} }
         X x;
     }
     static assert(hasElaborateDestructor!S3);
@@ -1387,9 +1387,9 @@ unittest
     assert(s32.x.n == 1);
 
     // Issue 5661 test(2)
-    struct S4
+    static struct S4
     {
-        struct X { int n = 0; this(this){n = 0;} }
+        static struct X { int n = 0; this(this){n = 0;} }
         X x;
     }
     static assert(hasElaborateCopyConstructor!S4);
@@ -1422,7 +1422,7 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
-    for (; !src.empty; src.popFront, tgt.popFront)
+    for (; !src.empty; src.popFront(), tgt.popFront())
     {
         enforce(!tgt.empty);
         move(src.front, tgt.front);
@@ -1452,7 +1452,7 @@ Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
-    for (; !src.empty && !tgt.empty; src.popFront, tgt.popFront)
+    for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
     {
         enforce(!tgt.empty);
         move(src.front, tgt.front);
@@ -1530,7 +1530,7 @@ unittest
     swap(a, b);
     assert(a == 34 && b == 42);
 
-    struct S { int x; char c; int[] y; }
+    static struct S { int x; char c; int[] y; }
     S s1 = { 0, 'z', [ 1, 2 ] };
     S s2 = { 42, 'a', [ 4, 6 ] };
     //writeln(s2.tupleof.stringof);
@@ -1549,7 +1549,7 @@ unittest
 
 unittest
 {
-    struct NoCopy
+    static struct NoCopy
     {
         this(this) { assert(0); }
         int n;
@@ -1566,7 +1566,7 @@ unittest
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
 
-    struct NoCopyHolder
+    static struct NoCopyHolder
     {
         NoCopy noCopy;
     }
@@ -1630,7 +1630,7 @@ auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
         && (hasSlicing!Range || isNarrowString!Range))
 {
-    struct Result
+    static struct Result
     {
     private:
         Range _input;
@@ -1848,7 +1848,7 @@ with any range type, but is most popular with string types.
 auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(Range.init.front == Separator.init.front) : bool))
 {
-    struct Result
+    static struct Result
     {
     private:
         Range _input;
@@ -1859,7 +1859,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         static if (isBidirectionalRange!Range)
             RIndexType _backLength = RIndexType.max;
 
-        auto separatorLength() { return _separator.length; }
+        @property auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
@@ -1913,7 +1913,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         void popFront()
         {
             assert(!empty);
-            ensureFrontLength;
+            ensureFrontLength();
             if (_frontLength == _input.length)
             {
                 // done, there's no separator in sight
@@ -1955,13 +1955,13 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool))
         {
             @property Range back()
             {
-                ensureBackLength;
+                ensureBackLength();
                 return _input[_input.length - _backLength .. _input.length];
             }
 
             void popBack()
             {
-                ensureBackLength;
+                ensureBackLength();
                 if (_backLength == _input.length)
                 {
                     // done
@@ -2482,7 +2482,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
             auto last = _input.front;
             do
             {
-                _input.popFront;
+                _input.popFront();
             }
             while (!_input.empty && binaryFun!(pred)(last, _input.front));
         }
@@ -2496,7 +2496,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
                 auto last = _input.back;
                 do
                 {
-                    _input.popBack;
+                    _input.popBack();
                 }
                 while (!_input.empty && binaryFun!pred(last, _input.back));
             }
@@ -2575,7 +2575,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     this(R input)
     {
         _input = input;
-        if (!_input.empty) popFront;
+        if (!_input.empty) popFront();
     }
 
     void popFront()
@@ -2587,11 +2587,11 @@ struct Group(alias pred, R) if (isInputRange!R)
         else
         {
             _current = tuple(_input.front, 1u);
-            _input.popFront;
+            _input.popFront();
             while (!_input.empty && comp(_current[0], _input.front))
             {
                 ++_current[1];
-                _input.popFront;
+                _input.popFront();
             }
         }
     }
@@ -2680,12 +2680,12 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 //     //auto target = begin(r), e = end(r);
 //     auto target = r;
 //     auto source = r;
-//     source.popFront;
+//     source.popFront();
 //     while (!source.empty)
 //     {
 //         if (!pred(target.front, source.front))
 //         {
-//             target.popFront;
+//             target.popFront();
 //             continue;
 //         }
 //         // found an equal *source and *target
@@ -2694,9 +2694,9 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 //             //@@@
 //             //move(source.front, target.front);
 //             target[0] = source[0];
-//             source.popFront;
+//             source.popFront();
 //             if (source.empty) break;
-//             if (!pred(target.front, source.front)) target.popFront;
+//             if (!pred(target.front, source.front)) target.popFront();
 //         }
 //         break;
 //     }
@@ -3093,7 +3093,7 @@ Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
 (Range haystack, Ranges needles)
 if (Ranges.length > 1 && allSatisfy!(isForwardRange, Ranges))
 {
-    for (;; haystack.popFront)
+    for (;; haystack.popFront())
     {
         size_t r = startsWith!pred(haystack, needles);
         if (r || haystack.empty)
@@ -3324,7 +3324,7 @@ assert(find!(pred)(arr) == arr);
 Range find(alias pred, Range)(Range haystack) if (isInputRange!(Range))
 {
     alias unaryFun!(pred) predFun;
-    for (; !haystack.empty && !predFun(haystack.front); haystack.popFront)
+    for (; !haystack.empty && !predFun(haystack.front); haystack.popFront())
     {
     }
     return haystack;
@@ -3701,6 +3701,9 @@ unittest
 }
 
 /**
+ *  $(RED Scheduled for deprecation. Please use $(XREF algorithm, countUntil)
+ *        instead.)
+ *
  * Same as $(D countUntil). This symbol has been scheduled for
  * deprecation because it is easily confused with the homonym function
  * in $(D std.string).
@@ -3708,8 +3711,6 @@ unittest
 sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
-    pragma(msg, "std.algorithm.indexOf has been scheduled for deprecation."
-            " You may want to use std.algorithm.countUntil instead.");
     return countUntil!pred(haystack, needle);
 }
 
@@ -3775,7 +3776,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         return _input.front;
     }
 
-    bool predSatisfied()
+    private bool predSatisfied()
     {
         static if (is(Sentinel == void))
             return unaryFun!pred(_input.front);
@@ -3793,13 +3794,13 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
                 _done = true;
                 return;
             }
-            _input.popFront;
+            _input.popFront();
             _done = _input.empty;
         }
         else
         {
-            _input.popFront;
-            _done = _input.empty || predSatisfied;
+            _input.popFront();
+            _done = _input.empty || predSatisfied();
         }
     }
 
@@ -4314,7 +4315,7 @@ unittest
     auto static wrap(R)(R r)
     if (isBidirectionalRange!R)
     {
-        struct Result
+        static struct Result
         {
             @property auto ref front() {return _range.front;}
             @property auto ref back() {return _range.back;}
@@ -4401,7 +4402,7 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
     auto ahead = r;
     if (!ahead.empty)
     {
-        for (ahead.popFront; !ahead.empty; r.popFront, ahead.popFront)
+        for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
         {
             if (binaryFun!(pred)(r.front, ahead.front)) return r;
         }
@@ -4448,7 +4449,7 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     Range1 seq, Range2 choices)
     if (isInputRange!Range1 && isForwardRange!Range2)
 {
-    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront)
+    for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
     {
     }
     return seq;
@@ -4967,7 +4968,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (range.empty) return typeof(return)();
     auto p = &(range.front());
     size_t occurrences = 1;
-    for (range.popFront; !range.empty; range.popFront)
+    for (range.popFront(); !range.empty; range.popFront())
     {
         if (binaryFun!(pred)(*p, range.front)) continue;
         if (binaryFun!(pred)(range.front, *p))
@@ -5017,7 +5018,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
 {
     if (range.empty) return range;
     auto result = range;
-    for (range.popFront; !range.empty; range.popFront)
+    for (range.popFront(); !range.empty; range.popFront())
     {
         if (binaryFun!(pred)(result.front, range.front)
                 || !binaryFun!(pred)(range.front, result.front)) continue;
@@ -5293,7 +5294,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 {
     Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distance(s, t);
-    return tuple(d, lev.path);
+    return tuple(d, lev.path());
 }
 
 unittest
@@ -5428,7 +5429,7 @@ swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
             && hasSwappableElements!(Range1) && hasSwappableElements!(Range2)
             && is(ElementType!(Range1) == ElementType!(Range2)))
 {
-    for (; !r1.empty && !r2.empty; r1.popFront, r2.popFront)
+    for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
         swap(r1.front, r2.front);
     }
@@ -5465,9 +5466,9 @@ if (isBidirectionalRange!(Range) && hasSwappableElements!(Range))
     while (!r.empty)
     {
         swap(r.front, r.back);
-        r.popFront;
+        r.popFront();
         if (r.empty) break;
-        r.popBack;
+        r.popBack();
     }
 }
 
@@ -5486,6 +5487,57 @@ unittest
     range = [1, 2, 3];
     reverse(range);
     assert(range == [3, 2, 1]);
+}
+
+/**
+Reverses $(D r) in-place, where $(D r) is a narrow string (having
+elements of type $(D char) or $(D wchar)). UTF sequences consisting of
+multiple code units are preserved properly.
+
+Example:
+----
+char[] arr = "hello\U00010143\u0100\U00010143".dup;
+reverse(arr);
+assert(arr == "\U00010143\u0100\U00010143olleh");
+----
+*/
+void reverse(Char)(Char[] s)
+if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
+{
+    auto r = representation(s);
+    for (size_t i = 0; i < s.length; )
+    {
+        immutable step = std.utf.stride(s, i);
+        if (step > 1)
+        {
+            .reverse(r[i .. i + step]);
+            i += step;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+    reverse(r);
+}
+
+unittest
+{
+    void test(string a, string b)
+    {
+        auto c = a.dup;
+        reverse(c);
+        assert(c == b, c ~ " != " ~ b);
+    }
+
+    test("a", "a");
+    test(" ", " ");
+    test("\u2029", "\u2029");
+    test("\u0100", "\u0100");
+    test("\u0430", "\u0430");
+    test("\U00010143", "\U00010143");
+    test("abcdefcdef", "fedcfedcba");
+    test("hello\U00010143\u0100\U00010143", "\U00010143\u0100\U00010143olleh");
 }
 
 // bringToFront
@@ -5873,8 +5925,8 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable
     foreach (i; 0 .. rid)
     {
         move(range.back, t.front);
-        range.popBack;
-        t.popFront;
+        range.popBack();
+        t.popFront();
     }
     if (rEnd - rStart == lEnd - lStart)
     {
@@ -5946,14 +5998,14 @@ if ((isForwardRange!Range && !isBidirectionalRange!Range
             enum delta = 1;
         }
         assert(pos <= from);
-        for (; pos < from; ++pos, src.popFront, tgt.popFront)
+        for (; pos < from; ++pos, src.popFront(), tgt.popFront())
         {
             move(src.front, tgt.front);
         }
         // now skip source to the "to" position
         src.popFrontN(delta);
         pos += delta;
-        foreach (j; 0 .. delta) result.popBack;
+        foreach (j; 0 .. delta) result.popBack();
     }
     // leftover move
     moveAll(src, tgt);
@@ -6022,28 +6074,28 @@ if (isBidirectionalRange!Range)
         {
             if (!unaryFun!(pred)(range.front))
             {
-                range.popFront;
+                range.popFront();
                 continue;
             }
             move(range.back, range.front);
-            range.popBack;
-            result.popBack;
+            range.popBack();
+            result.popBack();
         }
     }
     else
     {
         auto tgt = range;
-        for (; !range.empty; range.popFront)
+        for (; !range.empty; range.popFront())
         {
             if (unaryFun!(pred)(range.front))
             {
                 // yank this guy
-                result.popBack;
+                result.popBack();
                 continue;
             }
             // keep this guy
             move(range.front, tgt.front);
-            tgt.popFront;
+            tgt.popFront();
         }
     }
     return result;
@@ -6202,7 +6254,7 @@ Range partition(alias predicate,
     {
         if (r.length == 1)
         {
-            if (pred(r.front)) r.popFront;
+            if (pred(r.front)) r.popFront();
             return r;
         }
         const middle = r.length / 2;
@@ -6214,17 +6266,17 @@ Range partition(alias predicate,
     }
     else static if (ss == SwapStrategy.semistable)
     {
-        for (; !r.empty; r.popFront)
+        for (; !r.empty; r.popFront())
         {
             // skip the initial portion of "correct" elements
             if (pred(r.front)) continue;
             // hit the first "bad" element
             auto result = r;
-            for (r.popFront; !r.empty; r.popFront)
+            for (r.popFront(); !r.empty; r.popFront())
             {
                 if (!pred(r.front)) continue;
                 swap(result.front, r.front);
-                result.popFront;
+                result.popFront();
             }
             return result;
         }
@@ -6241,15 +6293,15 @@ Range partition(alias predicate,
             {
                 if (r.empty) return result;
                 if (!pred(r.front)) break;
-                r.popFront;
-                result.popFront;
+                r.popFront();
+                result.popFront();
             }
             // found the left bound
             assert(!r.empty);
             for (;;)
             {
                 if (pred(r.back)) break;
-                r.popBack;
+                r.popBack();
                 if (r.empty) return result;
             }
             // found the right bound, swap & make progress
@@ -6263,9 +6315,9 @@ Range partition(alias predicate,
                 r.front = t2;
                 r.back = t1;
             }
-            r.popFront;
-            result.popFront;
-            r.popBack;
+            r.popFront();
+            result.popFront();
+            r.popBack();
         }
     }
 }
@@ -6306,7 +6358,7 @@ unittest // partition
     auto a = rndstuff!(int)();
     partition!(even)(a);
     assert(isPartitioned!(even)(a));
-    auto b = rndstuff!(string);
+    auto b = rndstuff!(string)();
     partition!(`a.length < 5`)(b);
     assert(isPartitioned!(`a.length < 5`)(b));
 }
@@ -6324,10 +6376,10 @@ assert(isPartitioned!("a & 1")(r));
 bool isPartitioned(alias pred, Range)(Range r)
     if (isForwardRange!(Range))
 {
-    for (; !r.empty; r.popFront)
+    for (; !r.empty; r.popFront())
     {
         if (unaryFun!(pred)(r.front)) continue;
-        for (r.popFront; !r.empty; r.popFront)
+        for (r.popFront(); !r.empty; r.popFront())
         {
             if (unaryFun!(pred)(r.front)) return false;
         }
@@ -6601,7 +6653,7 @@ void topN(alias less = "a < b",
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
     auto heap = BinaryHeap!Range1(r1);
-    for (; !r2.empty; r2.popFront)
+    for (; !r2.empty; r2.popFront())
     {
         heap.conditionalInsert(r2.front);
     }
@@ -6713,10 +6765,10 @@ unittest
     //sort!("b - a")(a);
     //assert(isSorted!(less)(a));
 
-    a = rndstuff!(int);
+    a = rndstuff!(int)();
     sort(a);
     assert(isSorted(a));
-    auto b = rndstuff!(string);
+    auto b = rndstuff!(string)();
     sort!("toLower(a) < toLower(b)")(b);
     assert(isSorted!("toUpper(a) < toUpper(b)")(b));
 }
@@ -6807,9 +6859,7 @@ unittest
     assert(equal(pts3, pts2));
 }
 
-// @@@BUG1904
-/*private*/
-size_t getPivot(alias less, Range)(Range r)
+private size_t getPivot(alias less, Range)(Range r)
 {
     // This algorithm sorts the first, middle and last elements of r,
     // then returns the index of the middle element.  In effect, it uses the
@@ -6849,9 +6899,7 @@ size_t getPivot(alias less, Range)(Range r)
     return mid;
 }
 
-// @@@BUG1904
-/*private*/
-void optimisticInsertionSort(alias less, Range)(Range r)
+private void optimisticInsertionSort(alias less, Range)(Range r)
 {
     alias binaryFun!(less) pred;
     if(r.length < 2) {
@@ -6902,9 +6950,7 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     }
 }
 
-// @@@BUG1904
-/*private*/
-void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
+private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
     enum size_t optimisticInsertionSortGetsBetter = 25;
@@ -7256,7 +7302,7 @@ void makeIndex(
 {
     // assume collection already ordered
     size_t i;
-    for (; !r.empty; r.popFront, ++i)
+    for (; !r.empty; r.popFront(), ++i)
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
@@ -7275,19 +7321,30 @@ void makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isRandomAccessRange!(Range) && isRandomAccessRange!(RangeIndex)
-            && isIntegral!(ElementType!(RangeIndex)))
+    if (isRandomAccessRange!(Range) && !isInfinite!(Range) &&
+        isRandomAccessRange!(RangeIndex) && !isInfinite!(RangeIndex) &&
+        isIntegral!(ElementType!(RangeIndex)))
 {
-    // assume collection already ordered
-    size_t i;
-    auto r1 = r;
-    for (; !r1.empty; r1.popFront, ++i)
-        index[i] = i;
-    enforce(index.length == i);
+    alias Unqual!(ElementType!RangeIndex) I;
+    enforce(r.length == index.length,
+        "r and index must be same length for makeIndex.");
+    static if(I.sizeof < size_t.sizeof)
+    {
+        enforce(r.length <= I.max, "Cannot create an index with " ~
+            "element type " ~ I.stringof ~ " with length " ~
+            to!string(r.length) ~ "."
+        );
+    }
+
+    for(I i = 0; i < r.length; ++i)
+    {
+        index[cast(size_t) i] = i;
+    }
+
     // sort the index
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
-        return binaryFun!(less)(r[a], r[b]);
+        return binaryFun!(less)(r[cast(size_t) a], r[cast(size_t) b]);
     }
     sort!(indirectLess, ss)(index);
 }
@@ -7309,18 +7366,19 @@ unittest
     assert(isSorted!("*a < *b")(index1));
 
     // index using offsets
-    auto index2 = new size_t[arr.length];
+    auto index2 = new long[arr.length];
     makeIndex(arr, index2);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr[a] < arr[b];})
-            (index2));
+            ((long a, long b){
+                return arr[cast(size_t) a] < arr[cast(size_t) b];
+            })(index2));
 
     // index strings using offsets
     string[] arr1 = ["I", "have", "no", "chocolate"];
-    auto index3 = new size_t[arr1.length];
+    auto index3 = new byte[arr1.length];
     makeIndex(arr1, index3);
     assert(isSorted!
-            ((size_t a, size_t b){ return arr1[a] < arr1[b];})
+            ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
 }
 
@@ -7586,7 +7644,7 @@ unittest
     }
 
     // random data
-    auto b = rndstuff!(string);
+    auto b = rndstuff!(string)();
     auto index = new string*[b.length];
     partialIndex!("std.uni.toUpper(a) < std.uni.toUpper(b)")(b, index);
     assert(isSorted!("std.uni.toUpper(*a) < std.uni.toUpper(*b)")(index));
@@ -7665,7 +7723,7 @@ unittest
 //            && *index[2] == "c" && *index[3] == "C");
 
 //     // random data
-//     auto b = rndstuff!(string);
+//     auto b = rndstuff!(string)();
 //     auto index1 = schwartzMakeIndex!(toUpper)(b);
 //     assert(isSorted!("toUpper(*a) < toUpper(*b)")(index1));
 // }
@@ -7687,7 +7745,7 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    auto a = rndstuff!(int);
+    auto a = rndstuff!(int)();
     if (a.length)
     {
         auto b = a[a.length / 2];
@@ -7876,7 +7934,7 @@ public:
             if (i < _crt) continue;
             // found _crt
             assert(!_r[i].empty);
-            _r[i].popFront;
+            _r[i].popFront();
             adjustPosition();
             return;
         }
@@ -7978,11 +8036,11 @@ private:
         {
             if (comp(_input[0].front, _input[1].front))
             {
-                _input[0].popFront;
+                _input[0].popFront();
             }
             else if (comp(_input[1].front, _input[0].front))
             {
-                _input[1].popFront;
+                _input[1].popFront();
             }
             else
             {
@@ -7996,7 +8054,7 @@ public:
     {
         this._input = input;
         // position to the first element
-        adjustPosition;
+        adjustPosition();
     }
 
     @property bool empty()
@@ -8013,9 +8071,9 @@ public:
         assert(!empty);
         assert(!comp(_input[0].front, _input[1].front)
                 && !comp(_input[1].front, _input[0].front));
-        _input[0].popFront;
-        _input[1].popFront;
-        adjustPosition;
+        _input[0].popFront();
+        _input[1].popFront();
+        adjustPosition();
     }
 
     @property ElementType front()
@@ -8095,13 +8153,13 @@ private:
             if (r2.empty || comp(r1.front, r2.front)) break;
             if (comp(r2.front, r1.front))
             {
-                r2.popFront;
+                r2.popFront();
             }
             else
             {
                 // both are equal
-                r1.popFront;
-                r2.popFront;
+                r1.popFront();
+                r2.popFront();
             }
         }
     }
@@ -8112,13 +8170,13 @@ public:
         this.r1 = r1;
         this.r2 = r2;
         // position to the first element
-        adjustPosition;
+        adjustPosition();
     }
 
     void popFront()
     {
-        r1.popFront;
-        adjustPosition;
+        r1.popFront();
+        adjustPosition();
     }
 
     @property ElementType!(R1) front()
@@ -8138,7 +8196,7 @@ public:
         }
     }
 
-    bool empty() { return r1.empty; }
+    @property bool empty() { return r1.empty; }
 }
 
 /// Ditto
@@ -8191,8 +8249,8 @@ private:
                 break;
             }
             // equal, pop both
-            r1.popFront;
-            r2.popFront;
+            r1.popFront();
+            r2.popFront();
         }
     }
 
@@ -8202,28 +8260,28 @@ public:
         this.r1 = r1;
         this.r2 = r2;
         // position to the first element
-        adjustPosition;
+        adjustPosition();
     }
 
     void popFront()
     {
         assert(!empty);
-        if (r1.empty) r2.popFront;
-        else if (r2.empty) r1.popFront;
+        if (r1.empty) r2.popFront();
+        else if (r2.empty) r1.popFront();
         else
         {
             // neither is empty
             if (comp(r1.front, r2.front))
             {
-                r1.popFront;
+                r1.popFront();
             }
             else
             {
                 assert(comp(r2.front, r1.front));
-                r2.popFront;
+                r2.popFront();
             }
         }
-        adjustPosition;
+        adjustPosition();
     }
 
     @property ElementType!(R1) front()
@@ -8402,10 +8460,10 @@ struct NWayUnion(alias less, RangeOfRanges)
     {
         _heap.removeFront();
         // let's look at the guy just popped
-        _ror.back.popFront;
+        _ror.back.popFront();
         if (_ror.back.empty)
         {
-            _ror.popBack;
+            _ror.popBack();
             // nothing else to do: the empty range is not in the
             // heap and not in _ror
             return;

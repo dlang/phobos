@@ -18,7 +18,7 @@
 #		Build documentation
 # Notes:
 #	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
-#`	or just use the supplied minit.obj
+#	or just use the supplied minit.obj
 
 ## Copy command
 
@@ -35,13 +35,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -nofloat -w -d
+DFLAGS=-O -release -nofloat -w -d -property
 #DFLAGS=-unittest -g -d
 #DFLAGS=-unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -nofloat -w -d
+UDFLAGS=-O -nofloat -w -d -property
 
 ## C compiler
 
@@ -59,7 +59,7 @@ SVN=\svnproj\phobos\phobos
 
 ## Location of where to write the html documentation files
 
-DOCSRC = ../docsrc
+DOCSRC = .
 STDDOC = $(DOCSRC)/std.ddoc
 
 DOC=..\..\html\d\phobos
@@ -108,7 +108,7 @@ SRCS_11 = std\stdio.d std\stdiobase.d \
 SRCS_12 = std\array.d std\functional.d std\range.d \
 	std\path.d std\outbuffer.d std\utf.d
 
-SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
+SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\dateparse.d std\date.d std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
@@ -119,6 +119,7 @@ SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\contracts.d std\exception.d \
     std\compiler.d std\cpuid.d \
     std\process.d std\internal\processinit.d \
+    std\internal\uni.d std\internal\uni_tab.d \
     std\system.d std\concurrency.d \
     std\crypt\md5.d std\crypt\sha1.d std\internal\crypt\sha1_SSSE3.d
 
@@ -194,6 +195,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
+	$(DOC)\std_csv.html \
 	$(DOC)\std_date.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -254,13 +256,16 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
 	$(DOC)\std_net_isemail.html \
+	$(DOC)\etc_c_curl.html \
+	$(DOC)\etc_c_sqlite3.html \
+	$(DOC)\etc_c_zlib.html \
 	$(DOC)\phobos.html
 
 SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
-	std\ctype.d std\file.d std\compiler.d std\system.d \
+	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\dateparse.d std\mmfile.d \
 	std\syserror.d \
@@ -297,7 +302,7 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
@@ -425,6 +430,9 @@ cstream.obj : std\cstream.d
 
 ctype.obj : std\ctype.d
 	$(DMD) -c $(DFLAGS) std\ctype.d
+
+csv.obj : std\csv.d
+	$(DMD) -c $(DFLAGS) std\csv.d
 
 date.obj : std\dateparse.d std\date.d
 	$(DMD) -c $(DFLAGS) std\date.d
@@ -736,6 +744,9 @@ $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 $(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_ctype.html $(STDDOC) std\ctype.d
 
+$(DOC)\std_csv.html : $(STDDOC) std\csv.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
+
 $(DOC)\std_date.html : $(STDDOC) std\date.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
 
@@ -916,13 +927,23 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
 
+$(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
+
+$(DOC)\etc_c_sqlite3.html : $(STDDOC) etc\c\sqlite3.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_sqlite3.html $(STDDOC) etc\c\sqlite3.d
+
+$(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_zlib.html $(STDDOC) etc\c\zlib.d
+
 
 ######################################################
 
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) \
+	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -954,42 +975,42 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\windows\lib
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
-	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos
-	$(CP) $(SRC) $(DIR)\src\phobos
-	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
-	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net
-	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
-	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
-	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows
-	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
-	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
-	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
-	$(CP) $(DOCS) $(DIR)\html\d\phobos
+	$(CP) phobos.lib $(DIR)\windows\lib\
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\
+	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\
+	$(CP) $(SRC) $(DIR)\src\phobos\
+	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\
+	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\
+	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\
+	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\
+	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\
+	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux\
+	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\
+	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\
+	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\
+	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\
+	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\
+	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib\
+	$(CP) $(DOCS) $(DIR)\html\d\phobos\
 
 svn:
 	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\
 	$(CP) $(SRC) $(SVN)\
-	$(CP) $(SRC_STD) $(SVN)\std
-	$(CP) $(SRC_STD_NET) $(SVN)\std\net
-	$(CP) $(SRC_STD_C) $(SVN)\std\c
-	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows
-	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux
-	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
-	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd
-	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
-	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows
-	#$(CP) $(SRC_ETC) $(SVN)\etc
-	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
-	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
+	$(CP) $(SRC_STD) $(SVN)\std\
+	$(CP) $(SRC_STD_NET) $(SVN)\std\net\
+	$(CP) $(SRC_STD_C) $(SVN)\std\c\
+	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows\
+	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows\
+	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux\
+	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\
+	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\
+	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\
+	#$(CP) $(SRC_ETC) $(SVN)\etc\
+	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\
+	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\
 
 

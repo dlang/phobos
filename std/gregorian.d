@@ -295,7 +295,7 @@ struct Date
                     return 29;
                 } else {
                     return 28;
-                };
+                }
             case 4:
             case 6:
             case 9:
