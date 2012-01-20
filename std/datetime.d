@@ -31208,34 +31208,6 @@ version(testStdDateTime) unittest
 
 
 /++
-    Returns the absolute value of a duration.
- +/
-D abs(D)(D duration)
-    if(is(Unqual!D == Duration) ||
-       is(Unqual!D == TickDuration))
-{
-    static if(is(Unqual!D == Duration))
-        return dur!"hnsecs"(std.math.abs(duration.total!"hnsecs"()));
-    else static if(is(Unqual!D == TickDuration))
-        return TickDuration(std.math.abs(duration.length));
-    else
-        static assert(0);
-}
-
-unittest
-{
-    version(testStdDateTime)
-    {
-        _assertPred!"=="(abs(dur!"msecs"(5)), dur!"msecs"(5));
-        _assertPred!"=="(abs(dur!"msecs"(-5)), dur!"msecs"(5));
-
-        _assertPred!"=="(abs(TickDuration(17)), TickDuration(17));
-        _assertPred!"=="(abs(TickDuration(-17)), TickDuration(17));
-    }
-}
-
-
-/++
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
   +/
