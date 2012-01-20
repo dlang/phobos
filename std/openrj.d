@@ -231,7 +231,7 @@ public char[] toString(ORJ_PARSE_ERROR f)
  *
  */
 class OpenRJException
-    : public Exception
+    : Exception
 {
 /* \name Construction */
 
@@ -247,7 +247,7 @@ protected:
  *
  */
 class DatabaseException
-    : public OpenRJException
+    : OpenRJException
 {
 /* \name Construction */
 private:
@@ -353,7 +353,7 @@ private:
  *
  */
 class InvalidKeyException
-    : public OpenRJException
+    : OpenRJException
 {
 /* \name Construction */
 private:
@@ -367,7 +367,7 @@ private:
  *
  */
 class InvalidTypeException
-    : public OpenRJException
+    : OpenRJException
 {
 /* \name Construction */
 private:
