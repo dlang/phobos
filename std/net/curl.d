@@ -182,6 +182,9 @@ version(StdDdoc) import std.stdio;
 pragma(lib, "curl");
 extern (C) void exit(int);
 
+// Default data timeout for Protcools
+private enum _defaultDataTimeout = dur!"minutes"(2);
+
 /** Connection type used when the URL should be used to auto detect the protocol.
   *
   * This struct is used as placeholder for the connection parameter when calling
@@ -506,8 +509,6 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     else static if (is(Conn : FTP))
     {
         auto trimmed = url.findSplitAfter("ftp://")[1];
-        //auto trimmed = url.findSplitAfter("ftp://");
-        //auto trimmed2 = trimmed[1]; // work around bug #5790
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
         enforceEx!CurlException(t[0].length > minDomainNameLength,
@@ -923,24 +924,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
         }
     }
 
-    static if (is(Conn : HTTP))
-    {
-        conn.method = conn.method == HTTP.Method.undefined ? HTTP.Method.get : conn.method;
-        auto result = _basicHTTP!Char(url, null, conn);
-    }
-    else static if (is(Conn : FTP))
-    {
-        auto result = _basicFTP!Char(url, null, conn);
-    }
-    else
-    {
-        Char[]  result;
-        if (isFTPUrl(url))
-            result = get(url, FTP());
-        else
-            result = get(url, HTTP());
-    }
-
+    auto result = _getForRange!Char(url, conn);
     return SyncLineInputRange(result, keepTerminator == KeepTerminator.yes, terminator);
 }
 
@@ -1009,25 +993,28 @@ auto byChunk(Conn = AutoProtocol)
         }
     }
 
+    auto result = _getForRange!ubyte(url, conn);
+    return SyncChunkInputRange(result, chunkSize);
+}
+
+private T[] _getForRange(T,Conn)(const(char)[] url, Conn conn)
+{
     static if (is(Conn : HTTP))
     {
         conn.method = conn.method == Method.undefined ? HTTP.Method.get : conn.method;
-        auto result = _basicHTTP!(ubyte)(url, null, conn);
+        return _basicHTTP!(T)(url, null, conn);
     }
     else static if (is(Conn : FTP))
     {
-        auto result = _basicFTP!(ubyte)(url, null, conn);
+        return _basicFTP!(T)(url, null, conn);
     }
     else
     {
-        ubyte[] result;
         if (isFTPUrl(url))
-            result = get!(FTP,ubyte)(url, FTP());
+            return get!(FTP,T)(url, FTP());
         else
-            result = get!(HTTP,ubyte)(url, HTTP());
+            return get!(HTTP,T)(url, HTTP());
     }
-
-    return SyncChunkInputRange(result, chunkSize);
 }
 
 /*
@@ -1909,7 +1896,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
     while (src.length)
     {
-        typeof(src) lsrc = src;
+        auto lsrc = src;
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE)
         {
@@ -2019,21 +2006,21 @@ struct HTTP
     */
     this(const(char)[] url)
     {
-        init();
+        initialize();
         p.curl.set(CurlOption.url, url);
     }
 
     static HTTP opCall()
     {
         HTTP http;
-        http.init();
+        http.initialize();
         return http;
     }
 
     HTTP dup()
     {
         HTTP copy;
-        copy.init();
+        copy.initialize();
         copy.p.method = p.method;
         curl_slist* cur = p.headersOut;
         curl_slist* newlist = null;
@@ -2045,19 +2032,19 @@ struct HTTP
         copy.p.headersOut = newlist;
         copy.p.curl.set(CurlOption.httpheader, copy.p.headersOut);
         copy.p.curl = p.curl.dup();
-        copy.dataTimeout = dur!"minutes"(2);
+        copy.dataTimeout = _defaultDataTimeout;
         copy.onReceiveHeader(null);
         return copy;
     }
 
-    private void init()
+    private void initialize()
     {
         p.RefCounted.initialize();
         p.curl.initialize();
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
-        dataTimeout = dur!"minutes"(2);
+        dataTimeout = _defaultDataTimeout;
         onReceiveHeader(null);
         version (unittest) verbose(true);
     }
@@ -2436,13 +2423,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        // cannot use callback when specifying data directly so is is disabled
-        // here.
-        p.curl.clear(CurlOption.readfunction);
-        addRequestHeader("Content-Type", "application/octet-stream");
-        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
-        if (method == Method.undefined)
-            method = Method.post;
+        _postData(cast(void*)data.ptr, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2461,11 +2442,17 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
+        _postData(cast(void*)data.ptr, "text/plain");
+    }
+
+    // Helper for postData property
+    private void _postData(void* data, string contentType)
+    {
         // cannot use callback when specifying data directly so it is disabled here.
         // here.
         p.curl.clear(CurlOption.readfunction);
-        addRequestHeader("Content-Type", "text/plain");
-        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        addRequestHeader("Content-Type", contentType);
+        p.curl.set(CurlOption.postfields, data);
         if (method == Method.undefined)
             method = Method.post;
     }
@@ -2523,7 +2510,7 @@ struct HTTP
             // Normal http header
             auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
 
-            auto fieldName = m.captures[1].toLower.idup;
+            auto fieldName = m.captures[1].toLower().idup;
             if (fieldName == "content-type")
             {
                 auto mct = match(cast(char[]) m.captures[2],
@@ -2689,23 +2676,41 @@ struct FTP
     */
     this(const(char)[] url)
     {
-        init();
+        initialize();
         p.curl.set(CurlOption.url, url);
     }
 
     static FTP opCall()
     {
         FTP ftp;
-        ftp.init();
+        ftp.initialize();
         return ftp;
     }
 
-    private void init()
+    FTP dup()
+    {
+        FTP copy = FTP();
+        copy.p.encoding = p.encoding;
+        copy.p.curl = p.curl.dup();
+        curl_slist* cur = p.commands;
+        curl_slist* newlist = null;
+        while (cur)
+        {
+            newlist = curl_slist_append(newlist, cur.data);
+            cur = cur.next;
+        }
+        copy.p.commands = newlist;
+        copy.p.curl.set(CurlOption.postquote, copy.p.commands);
+        copy.dataTimeout = _defaultDataTimeout;
+        return copy;
+    }
+
+    private void initialize()
     {
         p.RefCounted.initialize();
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
-        dataTimeout(dur!"minutes"(2));
+        dataTimeout = _defaultDataTimeout;
         version (unittest) verbose(true);
     }
 
@@ -2724,25 +2729,6 @@ struct FTP
     private CurlCode _perform(bool throwOnError = true)
     {
         return p.curl.perform(throwOnError);
-    }
-
-
-    FTP dup()
-    {
-        FTP copy = FTP();
-        copy.p.encoding = p.encoding;
-        copy.p.curl = p.curl.dup();
-        curl_slist* cur = p.commands;
-        curl_slist* newlist = null;
-        while (cur)
-        {
-            newlist = curl_slist_append(newlist, cur.data);
-            cur = cur.next;
-        }
-        copy.p.commands = newlist;
-        copy.p.curl.set(CurlOption.postquote, copy.p.commands);
-        copy.dataTimeout(dur!"minutes"(2));
-        return copy;
     }
 
     // This is a workaround for mixed in content not having its
@@ -3015,7 +3001,7 @@ struct SMTP
         }
 
         p.curl.set(CurlOption.url, url);
-        dataTimeout(dur!"minutes"(2));
+        dataTimeout = _defaultDataTimeout;
     }
 
     /**
@@ -3190,7 +3176,7 @@ struct SMTP
     /**
         Setter for the sender's email address.
     */
-    @property void mailFrom(string sender)
+    @property void mailFrom()(const(char)[] sender)
     {
         assert(!sender.empty, "Sender must not be empty");
         p.curl.set(CurlOption.mail_from, sender);
@@ -3199,7 +3185,7 @@ struct SMTP
     /**
         Setter for the recipient email addresses.
     */
-    void mailTo(string[] recipients...)
+    void mailTo()(const(char)[][] recipients...)
     {
         assert(!recipients.empty, "Recipient must not be empty");
         curl_slist* recipients_list = null;
@@ -3441,12 +3427,6 @@ struct Curl
         _check(curl_easy_setopt(this.handle, option, toStringz(value)));
     }
 
-    // Make ddoc happy - it complaints about conflicting overloads
-    void set(CurlOption option, char[] value)
-    {
-        set(option, cast(const(char)[])value);
-    }
-
     /**
        Set a long curl option.
        Params:
@@ -3479,7 +3459,7 @@ struct Curl
     void clear(CurlOption option)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, cast(void*)0));
+        _check(curl_easy_setopt(this.handle, option, null));
     }
 
     /**
@@ -3860,7 +3840,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
                                           ref ubyte[] buffer, Tid fromTid,
                                           ref bool aborted)
 {
-    auto datalen = data.length;
+    immutable datalen = data.length;
 
     // Copy data to fill active buffer
     while (!data.empty)
@@ -3926,7 +3906,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
      Tid fromTid, ref bool aborted)
 {
 
-    auto datalen = data.length;
+    immutable datalen = data.length;
 
     // Terminator is specified and buffers should be resized as determined by
     // the terminator
@@ -4126,10 +4106,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     fromTid.send(thisTid(), curlMessage(true)); // signal done
 }
 
-version (unittest)
+version (unittest) private auto netAllowed()
 {
-  private auto netAllowed()
-  {
       return getenv("PHOBOS_TEST_ALLOW_NET") != null;
-  }
 }
