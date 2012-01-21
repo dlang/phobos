@@ -635,7 +635,7 @@ unittest
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
-    enum Color { no, yes };
+    enum Color { no, yes }
     Color color;
     args = (["program.name", "--color=yes",]).dup;
     getopt(args, "color", &color);

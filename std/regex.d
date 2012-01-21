@@ -1404,8 +1404,8 @@ struct Parser(R, bool CTFE=false)
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
         enum State{ Start, Char, Escape, Dash, DashEscape,
-            PotentialTwinSymbolOperator, PotentialTwinSymbolOperatorAtStart };
-        Operator op = Operator.None;;
+            PotentialTwinSymbolOperator, PotentialTwinSymbolOperatorAtStart }
+        Operator op = Operator.None;
         dchar last;
         dchar twinSymbol;
         CodepointSet set;
@@ -6615,7 +6615,7 @@ public @trusted void replaceFmt(R, Capt, OutR)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    enum State { Normal, Escape, Dollar };
+    enum State { Normal, Escape, Dollar }
     auto state = State.Normal;
     size_t offset;
 L_Replace_Loop:
@@ -6855,7 +6855,7 @@ unittest
         string format;
         string replace;
         string flags;
-    };
+    }
 
     enum TestVectors tv[] = [
         TestVectors(  "(a)b\\1",   "abaab","y",    "$&",    "aba" ),

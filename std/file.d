@@ -28,17 +28,18 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
 
-version (Win32)
+version (Windows)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit : useWfuncs;
+        std.windows.syserror;
+    public import std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code
  * page.
  * (Thanks to yaneurao for this)
  */
-    version(Windows) alias std.windows.charset.toMBSz toMBSz;
+    alias std.windows.charset.toMBSz toMBSz;
 }
 else version (Posix)
 {
@@ -747,7 +748,7 @@ unittest
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(2);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffa = accessTime1 - currTime;
@@ -758,29 +759,32 @@ unittest
         assert(abs(diffm) <= leeway);
     }
 
-    enum sleepTime = dur!"seconds"(2);
-    Thread.sleep(sleepTime);
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimes(deleteme, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+        enum sleepTime = dur!"seconds"(2);
+        Thread.sleep(sleepTime);
 
-        //There is no guarantee that the access time will be updated.
-        assert(abs(diffa) <= leeway + sleepTime);
-        assert(abs(diffm) <= leeway);
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimes(deleteme, accessTime2, modificationTime2);
+
+        {
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+
+            //There is no guarantee that the access time will be updated.
+            assert(abs(diffa) <= leeway + sleepTime);
+            assert(abs(diffm) <= leeway);
+        }
+
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 
@@ -852,7 +856,7 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(3);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffc = creationTime1 - currTime;
@@ -869,33 +873,36 @@ version(Windows) unittest
         assert(abs(diffm) <= leeway);
     }
 
-    Thread.sleep(dur!"seconds"(2));
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime creationTime2 = void;
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure)
+        Thread.sleep(dur!"seconds"(2));
+
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime creationTime2 = void;
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
+
         {
-            writefln("[%s] [%s] [%s] [%s] [%s]",
-                     accessTime2, modificationTime2, currTime, diffa, diffm);
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure)
+            {
+                writefln("[%s] [%s] [%s] [%s] [%s]",
+                         accessTime2, modificationTime2, currTime, diffa, diffm);
+            }
+
+            assert(abs(diffa) <= leeway);
+            assert(abs(diffm) <= leeway);
         }
 
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(creationTime1 == creationTime2);
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(creationTime1 == creationTime2);
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 /++
@@ -1849,10 +1856,10 @@ else version(Posix) string readLink(C)(const(C)[] link)
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
     auto linkPtr = toUTFz!(const char*)(link);
-    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                        buffer.ptr,
-                                                        buffer.length),
-                         link);
+    auto size = core.sys.posix.unistd.readlink(linkPtr,
+                                               buffer.ptr,
+                                               buffer.length);
+    cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1861,10 +1868,11 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                       dynamicBuffer.ptr,
-                                                       dynamicBuffer.length),
-                        link);
+        size = core.sys.posix.unistd.readlink(linkPtr,
+                                              dynamicBuffer.ptr,
+                                              dynamicBuffer.length);
+        cenforce(size != -1, link);
+
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
@@ -1890,6 +1898,8 @@ version(Posix) unittest
             assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
+
+    assertThrown!FileException(readLink("/doesnotexist"));
 }
 
 

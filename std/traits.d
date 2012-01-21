@@ -12,7 +12,8 @@
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
- *            Shin Fujishiro
+ *            Shin Fujishiro,
+ *            $(WEB octarineparrot.com, Robert Clipsham)
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -21,6 +22,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.traits;
+import std.algorithm;
 import std.typetuple;
 import std.typecons;
 import core.vararg;
@@ -98,6 +100,120 @@ private
         }
         return Demangle!uint(atts, mstr);
     }
+}
+
+/**
+ * Get the full package name for the given symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(packageName!(packageName) == "std");
+ * ---
+ */
+template packageName(alias T)
+{
+    static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+    {
+        static if (is(typeof(__traits(parent, T))))
+        {
+            enum packageName = packageName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+        }
+        else
+        {
+            enum packageName = T.stringof[8..$];
+        }
+    }
+    else static if (is(typeof(__traits(parent, T))))
+        alias packageName!(__traits(parent, T)) packageName;
+    else
+        static assert(false, T.stringof ~ " has no parent");
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(packageName!(packageName) == "std");
+    static assert(packageName!(curl_httppost) == "etc.c");
+}
+
+/**
+ * Get the module name (including package) for the given symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(moduleName!(moduleName) == "std.traits");
+ * ---
+ */
+template moduleName(alias T)
+{
+    static if (T.stringof.length >= 9)
+        static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
+
+    static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+    else
+        alias moduleName!(__traits(parent, T)) moduleName;
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(moduleName!(moduleName) == "std.traits");
+    static assert(moduleName!(curl_httppost) == "etc.c.curl");
+}
+
+
+/**
+ * Get the fully qualified name of a symbol.
+ * Example:
+ * ---
+ * import std.traits;
+ * static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
+ * ---
+ */
+template fullyQualifiedName(alias T)
+{
+    static if (is(typeof(__traits(parent, T))))
+    {
+        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+        {
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[8..$];
+        }
+        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        {
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[7..$];
+        }
+        else static if (T.stringof.countUntil('(') == -1)
+        {
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof;
+        }
+        else
+            enum fullyQualifiedName = fullyQualifiedName!(__traits(parent, T)) ~ '.' ~ T.stringof[0..T.stringof.countUntil('(')];
+    }
+    else
+    {
+        static if (T.stringof.length >= 9 && T.stringof[0..8] == "package ")
+        {
+            enum fullyQualifiedName = T.stringof[8..$];
+        }
+        else static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
+        {
+            enum fullyQualifiedName = T.stringof[7..$];
+        }
+        else static if (T.stringof.countUntil('(') == -1)
+        {
+            enum fullyQualifiedName = T.stringof;
+        }
+        else
+            enum fullyQualifiedName = T.stringof[0..T.stringof.countUntil('(')];
+    }
+}
+
+unittest
+{
+    import etc.c.curl;
+    static assert(fullyQualifiedName!(fullyQualifiedName) == "std.traits.fullyQualifiedName");
+    static assert(fullyQualifiedName!(curl_httppost) == "etc.c.curl.curl_httppost");
 }
 
 /***
@@ -636,10 +752,10 @@ private Variadic determineVariadicity(Func)()
 
 unittest
 {
-    extern(D) void novar() {};
-    extern(C) void cstyle(int, ...) {};
-    extern(D) void dstyle(...) {};
-    extern(D) void typesafe(int[]...) {};
+    extern(D) void novar() {}
+    extern(C) void cstyle(int, ...) {}
+    extern(D) void dstyle(...) {}
+    extern(D) void typesafe(int[]...) {}
 
     static assert(variadicFunctionStyle!(novar) == Variadic.no);
     static assert(variadicFunctionStyle!(cstyle) == Variadic.c);
@@ -890,7 +1006,11 @@ private template RepresentationTypeTupleImpl(T...)
     }
     else
     {
-        static if (is(T[0] == struct) || is(T[0] == union))
+        static if (is(T[0] R: Rebindable!R))
+            alias .RepresentationTypeTupleImpl!(RepresentationTypeTupleImpl!R,
+                                            T[1 .. $])
+                RepresentationTypeTupleImpl;
+        else  static if (is(T[0] == struct) || is(T[0] == union))
 // @@@BUG@@@ this should work
 //             alias .RepresentationTypes!(T[0].tupleof)
 //                 RepresentationTypes;
@@ -933,6 +1053,11 @@ unittest
     class C { int a; float b; }
     alias RepresentationTypeTuple!C R1;
     static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
+
+    /* Issue 6642 */
+    struct S5 { int a; Rebindable!(immutable Object) b; }
+    alias RepresentationTypeTuple!S5 R2;
+    static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
 }
 
 /*
@@ -1092,7 +1217,7 @@ unittest
     static assert(hasRawAliasing!(S7));
     //typedef int* S8;
     //static assert(hasRawAliasing!(S8));
-    enum S9 { a };
+    enum S9 { a }
     static assert(!hasRawAliasing!(S9));
     // indirect members
     struct S10 { S7 a; int b; }
@@ -1178,7 +1303,7 @@ unittest
     //static assert(hasRawUnsharedAliasing!(S11));
     //typedef shared int* S12;
     //static assert(hasRawUnsharedAliasing!(S12));
-    enum S13 { a };
+    enum S13 { a }
     static assert(!hasRawUnsharedAliasing!(S13));
     // indirect members
     struct S14 { S9 a; int b; }
@@ -1367,22 +1492,18 @@ template hasUnsharedAliasing(T...)
     {
         enum hasUnsharedAliasing = false;
     }
-    else static if (T.length == 1)
+    else static if (is(T[0] R: Rebindable!R))
     {
-        enum hasUnsharedAliasing = hasRawUnsharedAliasing!(T[0]) ||
-            anySatisfy!(unsharedDelegate, T[0]) || hasUnsharedObjects!(T[0]);
+        enum hasUnsharedAliasing = hasUnsharedAliasing!R;
     }
     else
     {
-        enum hasUnsharedAliasing = hasUnsharedAliasing!(T[0]) ||
+        enum hasUnsharedAliasing =
+            hasRawUnsharedAliasing!(T[0]) ||
+            anySatisfy!(unsharedDelegate, T[0]) ||
+            hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
-}
-
-// Specialization to special-case std.typecons.Rebindable.
-template hasUnsharedAliasing(R : Rebindable!R)
-{
-    enum hasUnsharedAliasing = hasUnsharedAliasing!R;
 }
 
 private template unsharedDelegate(T)
@@ -1407,6 +1528,10 @@ unittest
     static assert(!hasUnsharedAliasing!(S6));
     struct S7 { float[3] vals; }
     static assert(!hasUnsharedAliasing!(S7));
+
+    /* Issue 6642 */
+    struct S8 { int a; Rebindable!(immutable Object) b; }
+    static assert(!hasUnsharedAliasing!(S8));
 
     static assert(hasUnsharedAliasing!(uint[uint]));
     static assert(hasUnsharedAliasing!(void delegate()));
@@ -3003,7 +3128,7 @@ unittest
     static assert(! isFunctionPointer!(foo));
     static assert(! isFunctionPointer!(bar));
 
-    static assert(!isFunctionPointer!((int a) {}));
+    static assert(isFunctionPointer!((int a) {}));
 }
 
 /**
@@ -3520,39 +3645,6 @@ unittest
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
     static assert(mangledName!((int a) { return a+x; })[$ - 9 .. $] == "MFNbNfiZi");    // nothrow safe
-}
-
-
-/*
-workaround for @@@BUG2997@@@ "allMembers does not return interface members"
- */
-package template traits_allMembers(Agg)
-{
-    static if (is(Agg == class) || is(Agg == interface))
-        alias NoDuplicates!( __traits(allMembers, Agg),
-                    traits_allMembers_ifaces!(InterfacesTuple!(Agg)) )
-                traits_allMembers;
-    else
-        alias TypeTuple!(__traits(allMembers, Agg)) traits_allMembers;
-}
-private template traits_allMembers_ifaces(I...)
-{
-    static if (I.length > 0)
-        alias TypeTuple!( __traits(allMembers, I[0]),
-                    traits_allMembers_ifaces!(I[1 .. $]) )
-                traits_allMembers_ifaces;
-    else
-        alias TypeTuple!() traits_allMembers_ifaces;
-}
-
-unittest
-{
-    interface I { void test(); }
-    interface J : I { }
-    interface K : J { }
-    alias traits_allMembers!(K) names;
-    static assert(names.length == 1);
-    static assert(names[0] == "test");
 }
 
 

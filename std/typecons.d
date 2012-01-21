@@ -439,7 +439,8 @@ public:
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void opAssign(R)(R rhs) if (isTuple!R)
+    void opAssign(R)(R rhs)
+        if (isTuple!R && allSatisfy!(isIdentityAssignable, Types))
     {
         static assert(field.length == rhs.field.length,
                       "Length mismatch in attempting to assign a "
@@ -522,6 +523,11 @@ assert(s[0] == "abc" && s[1] == 4.5);
 private template Identity(alias T)
 {
     alias T Identity;
+}
+
+template isIdentityAssignable(T)
+{
+    enum isIdentityAssignable = isAssignable!(T, T);
 }
 
 unittest
@@ -1760,7 +1766,7 @@ private static:
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        alias enumerateOverloadsImpl!(C, pred, traits_allMembers!(C)).result
+        alias enumerateOverloadsImpl!(C, pred, __traits(allMembers, C)).result
                 enumerateOverloads;
     }
     template enumerateOverloadsImpl(C, alias pred, names...)
