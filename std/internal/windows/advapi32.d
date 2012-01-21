@@ -10,7 +10,7 @@
  */
 module std.internal.windows.advapi32;
 
-version(Win32):
+version(Windows):
 
 private import core.sys.windows.windows;
 

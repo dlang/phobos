@@ -17,7 +17,7 @@
  */
 module std.__fileinit;
 
-version (Win32)
+version (Windows)
 {
 
 private import std.c.windows.windows;

@@ -44,7 +44,7 @@ struct DateParse
     {
         this = DateParse.init;
 
-        //version (Win32)
+        //version (Windows)
             buffer = (cast(char *)alloca(s.length))[0 .. s.length];
         //else
             //buffer = new char[s.length];
