@@ -21,7 +21,7 @@ immutable
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
-            on different OSes, then please use $(D version(Win32)),
+            on different OSes, then please use $(D version(Windows)),
             $(D version(linux)), etc.
 
         See_Also:
