@@ -724,7 +724,7 @@ $(UL
   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
   $(LI Unsigned or signed integers to strings.
        $(DL $(DT [special case])
-            $(DD Convert inttegral value to string in $(D_PARAM radix) radix.
+            $(DD Convert integral value to string in $(D_PARAM radix) radix.
             radix must be a value from 2 to 36.
             value is treated as a signed value only if radix is 10.
             The characters A through Z are used to represent values 10 through 36.)))
