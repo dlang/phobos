@@ -1137,13 +1137,9 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
+// Do not create instances of this struct since it will be 
+// moved when the bug has been fixed.
 // Range that reads one line at a time asynchronously.
-
-/** Range returned by byLineAsync.
- *
- * Do not declare a variable of this type directly since
- * it will be hidden as soon as bug #2458 has been fixed.
- */
 static struct AsyncLineInputRange(Char)
 {
     private Char[] line;
@@ -1313,13 +1309,9 @@ unittest
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
+// Do not create instances of this struct since it will be 
+// moved when the bug has been fixed.
 // Range that reads one chunk at a time asynchronously.
-
-/** Range returned by byChunkAsync.
- *
- * Do not declare a variable of this type directly since
- * it will be hidden as soon as bug #2458 has been fixed.
- */
 static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
