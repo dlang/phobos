@@ -22,7 +22,7 @@ version (Windows)
     version (Win32)
     {
         private import std.c.windows.windows;
-        shared bool useWfuncs = true;
+        immutable bool useWfuncs;
 
         shared static this()
         {
