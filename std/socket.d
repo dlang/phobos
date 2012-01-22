@@ -3075,6 +3075,17 @@ class TcpSocket: Socket
         this(connectTo.addressFamily());
         connect(connectTo);
     }
+
+    //create new socket for reconnect, used for server high performance
+    void createsocket()
+    {
+        close();
+        
+        auto handle = cast(socket_t) socket(_family, SocketType.STREAM, ProtocolType.TCP);
+        if(handle == socket_t.init)
+            throw new SocketOSException("Unable to create socket");
+        setSock(handle);
+    }
 }
 
 
