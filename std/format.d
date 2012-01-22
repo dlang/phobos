@@ -62,9 +62,9 @@ class FormatException : Exception
         super("format error");
     }
 
-    this(string msg, string fn = __FILE__, size_t ln = __LINE__)
+    this(string msg, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
-        super(msg, fn, ln);
+        super(msg, fn, ln, next);
     }
 }
 
@@ -330,8 +330,9 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         if (currentArg == funs.length && !spec.indexStart)
         {
             // leftover spec?
-            enforce(fmt.length == 0, new FormatException(
-                    cast(string) ("Orphan format specifier: %" ~ fmt)));
+            enforceEx!FormatException(
+                    fmt.length == 0,
+                    text("Orphan format specifier: %", fmt));
             break;
         }
         if (spec.width == spec.DYNAMIC)
@@ -695,8 +696,7 @@ struct FormatSpec(Char)
                 {
                     enforce(
                         condition,
-                        text("Incorrect format specifier: %",
-                                trailing[i .. $]));
+                        text("Incorrect format specifier: %", trailing[i .. $]));
                 }
                 // Get the matching balanced paren
                 for (uint innerParens;;)
@@ -762,8 +762,9 @@ struct FormatSpec(Char)
                     trailing = trailing[1 .. $];
                     width = -.parse!(typeof(width))(trailing);
                     i = 0;
-                    enforce(trailing[i++] == '$',
-                            new FormatException("$ expected"));
+                    enforceEx!FormatException(
+                            trailing[i++] == '$',
+                            "$ expected");
                 }
                 else
                 {
@@ -774,9 +775,9 @@ struct FormatSpec(Char)
             case '1': .. case '9':
                 auto tmp = trailing[i .. $];
                 const widthOrArgIndex = .parse!(uint)(tmp);
-                enforce(tmp.length,
-                        new FormatException(text("Incorrect format specifier %",
-                                        trailing[i .. $])));
+                enforceEx!FormatException(
+                        tmp.length,
+                        text("Incorrect format specifier %", trailing[i .. $]));
                 i = tmp.ptr - trailing.ptr;
                 if (tmp.startsWith('$'))
                 {
@@ -798,8 +799,9 @@ struct FormatSpec(Char)
                         indexEnd = .parse!(typeof(indexEnd))(tmp);
                     }
                     i = tmp.ptr - trailing.ptr;
-                    enforce(trailing[i++] == '$',
-                            new FormatException("$ expected"));
+                    enforceEx!FormatException(
+                            trailing[i++] == '$',
+                            "$ expected");
                 }
                 else
                 {
@@ -818,8 +820,9 @@ struct FormatSpec(Char)
                         trailing = trailing[i .. $];
                         i = 0;
                         precision = -.parse!int(trailing);
-                        enforce(trailing[i++] == '$',
-                                new FormatException("$ expected"));
+                        enforceEx!FormatException(
+                                trailing[i++] == '$',
+                                "$ expected");
                     }
                     else
                     {
@@ -1047,8 +1050,9 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         fs.spec == 'b' ? 2 :
         fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
         0;
-    enforce(base > 0,
-            new FormatException("integral"));
+    enforceEx!FormatException(
+            base > 0,
+            "integral");
 
     bool negative = (base == 10 && arg < 0);
     if (negative)
@@ -1187,8 +1191,9 @@ if (isFloatingPoint!D)
         }
         return;
     }
-    enforce(std.algorithm.find("fgFGaAeEs", fs.spec).length,
-            new FormatException("floating"));
+    enforceEx!FormatException(
+            std.algorithm.find("fgFGaAeEs", fs.spec).length,
+            "floating");
     if (fs.spec == 's') fs.spec = 'g';
     char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] = void;
@@ -1212,8 +1217,9 @@ if (isFloatingPoint!D)
             // negative precision is same as no precision specified
             fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
             obj);
-    enforce(n >= 0,
-            new FormatException("floating point formatting failure"));
+    enforceEx!FormatException(
+            n >= 0,
+            "floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
@@ -1713,8 +1719,9 @@ if (!isSomeString!T && !isSomeChar!T)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isAssociativeArray!T && !is(T == enum))
 {
-    enforce(f.spec == 's' || f.spec == '(',
-            new FormatException("associative"));
+    enforceEx!FormatException(
+            f.spec == 's' || f.spec == '(',
+            "associative");
 
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
