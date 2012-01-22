@@ -857,7 +857,7 @@ struct FormatSpec(Char)
                 return;
             } // end switch
         } // end for
-        enforce(false, text("Incorrect format specifier: ", trailing));
+        throw new Exception(text("Incorrect format specifier: ", trailing));
     }
 
     //--------------------------------------------------------------------------
@@ -1602,7 +1602,7 @@ if (isInputRange!T)
         }
     }
     else
-        enforce(false, text("Incorrect format specifier for range: %", f.spec));
+        throw new Exception(text("Incorrect format specifier for range: %", f.spec));
 }
 
 // character formatting with ecaping
