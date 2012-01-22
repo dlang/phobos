@@ -104,14 +104,16 @@ class CSVException : Exception
     ///
     size_t row, col;
 
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+         Throwable next = null)
     {
         super(msg, file, line);
     }
 
-    this(string msg, size_t row, size_t col, Exception e, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, size_t row, size_t col, string file = __FILE__,
+         size_t line = __LINE__, Throwable next = null)
     {
-        super(msg, e, file, line);
+        super(msg, next, file, line);
         this.row = row;
         this.col = col;
     }
@@ -136,7 +138,7 @@ class IncompleteCellException : CSVException
     /// already been fed to the output range.
     dstring partialData;
 
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
         super(msg, file, line);
     }
@@ -164,7 +166,7 @@ class IncompleteCellException : CSVException
  */
 class HeaderMismatchException : CSVException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
         super(msg, file, line);
     }
@@ -344,7 +346,9 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *       the input. Read the exception documentation for specific details of
  *       when the exception is thrown for different types of $(D Contents).
  */
-auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Header, Separator = char)
+auto csvReader(Contents = string,
+               Malformed ErrorLevel = Malformed.throwException,
+               Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && is(ElementType!Range == dchar)
@@ -357,7 +361,9 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
         (input, header, delimiter, quote);
 }
 
-auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Header, Separator = char)
+auto csvReader(Contents = string,
+               Malformed ErrorLevel = Malformed.throwException,
+               Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
                if(isInputRange!Range && is(ElementType!Range == dchar)
@@ -440,13 +446,8 @@ unittest
 
     foreach(str; strs)
     {
-        auto records = csvReader!(A)(str);
-        try
-        {
-            foreach(record; records) { }
-            assert(0);
-        }
-        catch(CSVException e) { }
+        auto records = csvReader!A(str);
+        assertThrown!CSVException((){foreach(record; records) { }}());
     }
 }
 
@@ -885,7 +886,8 @@ public:
      *      If $(D Contents) is a associative array, will be filled
      *      with record data.
      *
-     *      If $(D Contents) is non-struct, a $(LREF CsvRecord) will be returned.
+     *      If $(D Contents) is non-struct, a $(LREF CsvRecord) will be
+     *      returned.
      */
     @property auto front()
     {
@@ -982,7 +984,8 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, _input.col, e);
+                throw new CSVException(e.msg, _input.row, _input.col,
+                                       __FILE__, __LINE__, e);
             }
 
             recordContent = aa;
@@ -1023,7 +1026,8 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, colIndex, e);
+                throw new CSVException(e.msg, _input.row, colIndex,
+                                       __FILE__, __LINE__, e);
             }
         }
     }
@@ -1201,7 +1205,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, _input.col, e);
+                throw new CSVException(e.msg, _input.row, _input.col, __FILE__, __LINE__, e);
             }
         }
     }
@@ -1239,7 +1243,7 @@ public:
         try curContentsoken = to!Contents(_front.data);
         catch(ConvException e)
         {
-            throw new CSVException(e.msg, _input.row, _input.col, e);
+            throw new CSVException(e.msg, _input.row, _input.col, __FILE__, __LINE__, e);
         }
     }
 }
