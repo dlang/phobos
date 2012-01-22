@@ -907,9 +907,6 @@ struct FormatSpec(Char)
                     if (r.front != trailing.front) break;
                     r.popFront();
                 }
-              if (!__ctfe)  // workaround for strange CTFE error
-                trailing.popFront();
-              else
                 trailing = trailing[std.utf.stride(trailing, 0) .. $];
             }
         }
