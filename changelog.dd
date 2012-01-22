@@ -1,3 +1,14 @@
+$(VERSION 058, ddd mm, 2012, =================================================,
+
+    $(WHATSNEW
+       $(LI Added std.csv for reading CSV files.)
+     )
+
+    $(LIBBUGSFIXED
+       $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
+     )
+ )
+
 $(VERSION 057, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
