@@ -3350,6 +3350,28 @@ unittest
 }
 
 /**
+Returns the actual element type of an array. For example, this means that
+$(D ArrayElementType!string) will be $(D immutable char).
+*/
+template ArrayElementType(T : T[])
+{
+    alias T ArrayElementType;
+}
+
+unittest
+{
+    static assert(is(ArrayElementType!string == immutable char));
+    static assert(is(ArrayElementType!wstring == immutable wchar));
+    static assert(is(ArrayElementType!dstring == immutable dchar));
+}
+
+unittest
+{
+    static assert(is(ArrayElementType!(int[]) == int));
+    static assert(is(ArrayElementType!(Object[]) == Object));
+}
+
+/**
 Returns the inferred type of the loop variable when a variable of type T
 is iterated over using a $(D foreach) loop with a single loop variable and
 automatically inferred return type.  Note that this may not be the same as
