@@ -120,9 +120,9 @@ in
 }
 body
 {
-    auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
+    auto destlen = to!c_ulong(srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12);
     auto destbuf = new ubyte[destlen];
-    auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf.ptr, srcbuf.length, level);
+    auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf.ptr, to!c_ulong(srcbuf.length), level);
     if (err)
     {   delete destbuf;
         throw new ZlibException(err);
