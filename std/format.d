@@ -2107,7 +2107,8 @@ if (is(T == enum))
 {
     foreach (i, e; EnumMembers!T)
     {
-        if (val == e) {
+        if (val == e)
+        {
             put(w, __traits(allMembers, T)[i]);
             return;
         }
