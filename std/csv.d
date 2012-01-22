@@ -18,7 +18,7 @@
  *     $(LI A field containing new lines, commas, or double quotes
  *          should be enclosed in double quotes (customizable))
  *     $(LI Double quotes in a field are escaped with a double quote)
- *     $(LI Each record should contain the same number of fields (not enforced))
+ *     $(LI Each record should contain the same number of fields)
  *   )
  *
  * Example:
@@ -256,7 +256,8 @@ enum Malformed
  * Throws:
  *       $(LREF CSVException) When a quote is found in an unquoted field,
  *       data continues after a closing quote, the quoted field was not
- *       closed before data was empty, or a conversion failed.
+ *       closed before data was empty, a conversion failed, or when the row's
+ *       length does not match the previous length.
  *
  *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
@@ -339,7 +340,8 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  * Throws:
  *       $(LREF CSVException) When a quote is found in an unquoted field,
  *       data continues after a closing quote, the quoted field was not
- *       closed before data was empty, or a conversion failed.
+ *       closed before data was empty, a conversion failed, or when the row's
+ *       length does not match the previous length.
  *
  *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
@@ -920,7 +922,8 @@ public:
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
      *       data continues after a closing quote, the quoted field was not
-     *       closed before data was empty, or a conversion failed.
+     *       closed before data was empty, a conversion failed, or when the
+     *       row's length does not match the previous length.
      */
     void popFront()
     {
@@ -1138,7 +1141,8 @@ public:
      * Throws:
      *       $(LREF CSVException) When a quote is found in an unquoted field,
      *       data continues after a closing quote, the quoted field was not
-     *       closed before data was empty, or a conversion failed.
+     *       closed before data was empty, a conversion failed, or when the
+     *       row's length does not match the previous length.
      */
     void popFront()
     {
