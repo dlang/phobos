@@ -1310,13 +1310,13 @@ unittest
 
 unittest
 {
-    // 5371 for class
+    // Test for bug 5371 for classes
     class C1 { const string var = "c1"; alias var this; }
     class C2 {       string var = "c2"; alias var this; }
     formatTest( new C1(), "c1" );
     formatTest( new C2(), "c2" );
 
-    // 5371 for struct
+    // Test for bug 5371 for structs
     struct S1 { const string var = "s1"; alias var this; }
     struct S2 {       string var = "s2"; alias var this; }
     formatTest( S1(), "s1" );
