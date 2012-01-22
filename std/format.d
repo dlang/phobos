@@ -591,25 +591,25 @@ struct FormatSpec(Char)
        This string is inserted before each sequence (e.g. array)
        formatted (by default $(D "[")).
      */
-    enum const(Char)[] seqBefore = "[";
+    enum immutable(Char)[] seqBefore = "[";
 
     /*
        This string is inserted after each sequence formatted (by
        default $(D "]")).
      */
-    enum const(Char)[] seqAfter = "]";
+    enum immutable(Char)[] seqAfter = "]";
 
     /*
        This string is inserted after each element keys of a sequence (by
        default $(D ":")).
      */
-    enum const(Char)[] keySeparator = ":";
+    enum immutable(Char)[] keySeparator = ":";
 
     /*
        This string is inserted in between elements of a sequence (by
        default $(D ", ")).
      */
-    enum const(Char)[] seqSeparator = ", ";
+    enum immutable(Char)[] seqSeparator = ", ";
 
     /**
        Given a string format specification fmt, parses a format
