@@ -349,7 +349,7 @@ unittest
 --------------------
 auto f = enforce(fopen("data.txt"));
 auto line = readln(f);
-enforce(line.length, "Expected a non-empty line."));
+enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
 T enforce(T, string file = __FILE__, size_t line = __LINE__)
