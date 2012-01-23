@@ -22,7 +22,10 @@ version (Windows)
     version (Win32)
     {
         private import std.c.windows.windows;
-        immutable bool useWfuncs;
+
+        //This really should be immutable, but std.windows.registry messes with
+        //it in its unit tests.
+        shared bool useWfuncs = true;
 
         shared static this()
         {
