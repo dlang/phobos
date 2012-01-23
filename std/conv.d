@@ -1588,43 +1588,31 @@ $(UL
 */
 T toImpl(T, S)(S value)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
+        !isSomeString!T && is(typeof(parse!T(value))))
 {
-    alias ElementEncodingType!S[] SV;
-    static if (is(SV == S))
-        alias value v;
-    else
-        SV v = value;   // e.g. convert const(char[]) to const(char)[]
-
     scope(exit)
     {
-        if (v.length)
+        if (value.length)
         {
-            convError!(SV, T)(v);
+            convError!(S, T)(value);
         }
     }
-    return parse!T(v);
+    return parse!T(value);
 }
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
     if (isDynamicArray!S && isSomeString!S &&
-        !isSomeString!T && is(typeof({ ElementEncodingType!S[] v = value; parse!T(v); })))
+        !isSomeString!T && is(typeof(parse!T(value, radix))))
 {
-    alias ElementEncodingType!S[] SV;
-    static if (is(SV == S))
-        alias value v;
-    else
-        SV v = value;   // e.g. convert const(char[]) to const(char)[]
-
     scope(exit)
     {
-        if (v.length)
+        if (value.length)
         {
-            convError!(SV, T)(v);
+            convError!(S, T)(value);
         }
     }
-    return parse!T(v, radix);
+    return parse!T(value, radix);
 }
 
 unittest
