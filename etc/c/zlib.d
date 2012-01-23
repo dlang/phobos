@@ -3,8 +3,6 @@
 
 module etc.c.zlib;
 
-public import core.stdc.config; // c_ulong
-
 /* zlib.h -- interface of the 'zlib' general purpose compression library
    version 1.2.3, July 18th, 2005
 
@@ -79,13 +77,13 @@ alias void  function (void* opaque, void* address) free_func;
 
 struct z_stream
 {
-    ubyte      *next_in;  /* next input byte */
-    uint       avail_in;  /* number of bytes available at next_in */
-    c_ulong    total_in;  /* total nb of input bytes read so far */
+    ubyte    *next_in;  /* next input byte */
+    uint     avail_in;  /* number of bytes available at next_in */
+    size_t   total_in;  /* total nb of input bytes read so far */
 
-    ubyte      *next_out; /* next output byte should be put there */
-    uint       avail_out; /* remaining free space at next_out */
-    c_ulong    total_out; /* total nb of bytes output so far */
+    ubyte    *next_out; /* next output byte should be put there */
+    uint     avail_out; /* remaining free space at next_out */
+    size_t   total_out; /* total nb of bytes output so far */
 
     char     *msg;      /* last error message, NULL if no error */
     void*    state;     /* not visible by applications */
@@ -94,9 +92,9 @@ struct z_stream
     free_func  zfree;   /* used to free the internal state */
     void*      opaque;  /* private data object passed to zalloc and zfree */
 
-    int      data_type;  /* best guess about the data type: binary or text */
-    c_ulong  adler;      /* adler32 value of the uncompressed data */
-    c_ulong  reserved;   /* reserved for future use */
+    int    data_type;  /* best guess about the data type: binary or text */
+    size_t adler;      /* adler32 value of the uncompressed data */
+    size_t reserved;   /* reserved for future use */
 }
 
 alias z_stream* z_streamp;
@@ -106,20 +104,20 @@ alias z_stream* z_streamp;
   for more details on the meanings of these fields.
 */
 struct gz_header {
-    int       text;       /* true if compressed data believed to be text */
-    c_ulong   time;       /* modification time */
-    int       xflags;     /* extra flags (not used when writing a gzip file) */
-    int       os;         /* operating system */
-    byte      *extra;     /* pointer to extra field or Z_NULL if none */
-    uint      extra_len;  /* extra field length (valid if extra != Z_NULL) */
-    uint      extra_max;  /* space at extra (only when reading header) */
-    byte      *name;      /* pointer to zero-terminated file name or Z_NULL */
-    uint      name_max;   /* space at name (only when reading header) */
-    byte      *comment;   /* pointer to zero-terminated comment or Z_NULL */
-    uint      comm_max;   /* space at comment (only when reading header) */
-    int       hcrc;       /* true if there was or will be a header crc */
-    int       done;       /* true when done reading gzip header (not used
-                             when writing a gzip file) */
+    int     text;       /* true if compressed data believed to be text */
+    ulong   time;       /* modification time */
+    int     xflags;     /* extra flags (not used when writing a gzip file) */
+    int     os;         /* operating system */
+    byte    *extra;     /* pointer to extra field or Z_NULL if none */
+    uint    extra_len;  /* extra field length (valid if extra != Z_NULL) */
+    uint    extra_max;  /* space at extra (only when reading header) */
+    byte    *name;      /* pointer to zero-terminated file name or Z_NULL */
+    uint    name_max;   /* space at name (only when reading header) */
+    byte    *comment;   /* pointer to zero-terminated comment or Z_NULL */
+    uint    comm_max;   /* space at comment (only when reading header) */
+    int     hcrc;       /* true if there was or will be a header crc */
+    int     done;       /* true when done reading gzip header (not used
+                           when writing a gzip file) */
 }
 
 alias gz_header* gz_headerp;
@@ -709,7 +707,7 @@ int deflateTune(z_streamp strm, int good_length, int max_lazy, int nice_length,
    returns Z_OK on success, or Z_STREAM_ERROR for an invalid deflate stream.
  */
 
-c_ulong deflateBound(z_streamp strm, c_ulong sourceLen);
+int deflateBound(z_streamp strm, size_t sourceLen);
 /*
      deflateBound() returns an upper bound on the compressed size after
    deflation of sourceLen bytes.  It must be called after deflateInit()
@@ -964,7 +962,7 @@ int inflateBackEnd(z_stream* strm);
    state was inconsistent.
 */
 
-c_ulong zlibCompileFlags();
+uint zlibCompileFlags();
 /* Return flags indicating compile-time options.
 
     Type sizes, two bits each, 00 = 16 bits, 01 = 32, 10 = 64, 11 = other:
@@ -1016,9 +1014,9 @@ c_ulong zlibCompileFlags();
 */
 
 int compress(ubyte* dest,
-             c_ulong* destLen,
+             size_t* destLen,
              ubyte* source,
-             c_ulong sourceLen);
+             size_t sourceLen);
 /*
      Compresses the source buffer into the destination buffer.  sourceLen is
    the byte length of the source buffer. Upon entry, destLen is the total
@@ -1033,9 +1031,9 @@ int compress(ubyte* dest,
 */
 
 int compress2(ubyte* dest,
-              c_ulong* destLen,
+              size_t* destLen,
               ubyte* source,
-              c_ulong  sourceLen,
+              size_t sourceLen,
               int level);
 /*
      Compresses the source buffer into the destination buffer. The level
@@ -1050,7 +1048,7 @@ int compress2(ubyte* dest,
    Z_STREAM_ERROR if the level parameter is invalid.
 */
 
-c_ulong compressBound(c_ulong sourceLen);
+size_t compressBound(size_t sourceLen);
 /*
      compressBound() returns an upper bound on the compressed size after
    compress() or compress2() on sourceLen bytes.  It would be used before
@@ -1058,9 +1056,9 @@ c_ulong compressBound(c_ulong sourceLen);
 */
 
 int uncompress(ubyte* dest,
-               c_ulong* destLen,
+               size_t* destLen,
                ubyte* source,
-               c_ulong  sourceLen);
+               size_t sourceLen);
 /*
      Decompresses the source buffer into the destination buffer.  sourceLen is
    the byte length of the source buffer. Upon entry, destLen is the total
@@ -1271,7 +1269,7 @@ void gzclearerr (gzFile file);
    compression library.
 */
 
- c_ulong adler32  (c_ulong adler, ubyte *buf, uint len);
+ uint adler32  (uint adler, ubyte *buf, uint len);
 
 /*
      Update a running Adler-32 checksum with the bytes buf[0..len-1] and
@@ -1296,7 +1294,7 @@ uint adler32_combine(uint adler1, uint adler2, z_off_t len2);
    seq1 and seq2 concatenated, requiring only adler1, adler2, and len2.
 */
 
-c_ulong crc32(c_ulong crc, ubyte *buf, uint len);
+uint crc32(uint crc, ubyte *buf, uint len);
 /*
      Update a running CRC-32 with the bytes buf[0..len-1] and return the
    updated CRC-32. If buf is NULL, this function returns the required initial
