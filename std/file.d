@@ -28,7 +28,7 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
 
-version (Win32)
+version (Windows)
 {
     import core.sys.windows.windows, std.windows.charset,
         std.windows.syserror;
@@ -39,7 +39,7 @@ version (Win32)
  * page.
  * (Thanks to yaneurao for this)
  */
-    version(Windows) alias std.windows.charset.toMBSz toMBSz;
+    alias std.windows.charset.toMBSz toMBSz;
 }
 else version (Posix)
 {

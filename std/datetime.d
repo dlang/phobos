@@ -7408,10 +7408,13 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const nothrow
+    {
+        return Date(dayOfGregorianCal).daysInMonth;
+    }
 
     unittest
     {
@@ -12437,10 +12440,13 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return maxDay(_year, _month);
+    }
 
     unittest
     {
@@ -17365,10 +17371,13 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Scheduled for deprecation in January 2012.
+        $(RED Deprecated. It will be removed in July 2012.
               Please use daysInMonth instead.)
       +/
-    alias daysInMonth endofMonthDay;
+    deprecated @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return _date.daysInMonth;
+    }
 
     unittest
     {
@@ -31195,34 +31204,6 @@ version(testStdDateTime) unittest
                     SysTime(DateTime(1970, 1, 2), UTC()));
     _assertPred!"=="(dTimeToSysTime(-86_400_000),
                     SysTime(DateTime(1969, 12, 31), UTC()));
-}
-
-
-/++
-    Returns the absolute value of a duration.
- +/
-D abs(D)(D duration)
-    if(is(Unqual!D == Duration) ||
-       is(Unqual!D == TickDuration))
-{
-    static if(is(Unqual!D == Duration))
-        return dur!"hnsecs"(std.math.abs(duration.total!"hnsecs"()));
-    else static if(is(Unqual!D == TickDuration))
-        return TickDuration(std.math.abs(duration.length));
-    else
-        static assert(0);
-}
-
-unittest
-{
-    version(testStdDateTime)
-    {
-        _assertPred!"=="(abs(dur!"msecs"(5)), dur!"msecs"(5));
-        _assertPred!"=="(abs(dur!"msecs"(-5)), dur!"msecs"(5));
-
-        _assertPred!"=="(abs(TickDuration(17)), TickDuration(17));
-        _assertPred!"=="(abs(TickDuration(-17)), TickDuration(17));
-    }
 }
 
 
