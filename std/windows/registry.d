@@ -499,7 +499,7 @@ body
     LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
     if (res == ERROR_MORE_DATA)
     {
-        data = (new wchar[cbData]).ptr;
+        data = (new ubyte[cbData]).ptr;
         res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
     }
 
@@ -556,7 +556,7 @@ body
 
     auto keyname = toUTF16z(name);
     wchar[] data = new wchar[256];
-    DWORD cbData = to!DWORD(data.length / wchar.sizeof);
+    DWORD cbData = to!DWORD(data.length * wchar.sizeof);
     LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
     if (res == ERROR_MORE_DATA)
     {
