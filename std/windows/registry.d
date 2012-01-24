@@ -42,7 +42,6 @@ import std.system : Endian, endian;
 import std.exception;
 import std.c.windows.windows;
 import std.windows.syserror;
-import std.windows.charset: toMBSz, fromMBSz;
 import std.conv;
 import std.utf : toUTFz, toUTF16z, toUTF8, toUTF16;
 private import std.internal.windows.advapi32;
@@ -232,26 +231,6 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
     }
 }
-
-/+
-private string expand_environment_strings(in string value)
-in
-{
-    assert(value !is null);
-}
-body
-{
-    LPCSTR lpSrc       = toMBSz(value);
-    DWORD  cchRequired = ExpandEnvironmentStringsA(lpSrc, null, 0);
-    char[] newValue    = new char[cchRequired];
-
-    if (!ExpandEnvironmentStringsA(lpSrc, newValue, newValue.length))
-        throw new Win32Exception("Failed to expand environment variables");
-
-    return newValue;
-}
-+/
-
 
 private LONG regCloseKey(in HKEY hkey)
 in
@@ -1200,19 +1179,17 @@ public:
     {
         string  value   =   value_SZ;
 
-        // value = expand_environment_strings(value);
-        // return value;
-
         // ExpandEnvironemntStrings():
         //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
-        LPCSTR  lpSrc       =   toMBSz(value);
-        DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
-        char[]  newValue    =   new char[cchRequired];
+        LPCWSTR  lpSrc      =   toUTF16z(value);
+        DWORD   cchRequired =   ExpandEnvironmentStringsW(lpSrc, null, 0);
+        wchar[]  newValue   =   new wchar[cchRequired];
 
-        if (!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, to!DWORD(newValue.length)))
-            throw new Win32Exception("Failed to expand environment variables");
+        immutable DWORD count = enforceEx!Win32Exception(
+            ExpandEnvironmentStringsW(lpSrc, newValue.ptr, to!DWORD(newValue.length)),
+            "Failed to expand environment variables");
 
-        return fromMBSz(cast(immutable(char)*) newValue.ptr); // remove trailing 0
+        return toUTF8(newValue[0 .. count-1]); // remove trailing 0
     }
 
     /**
