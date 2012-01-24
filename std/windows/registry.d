@@ -52,23 +52,6 @@ debug(winreg) import std.stdio;
 
 private
 {
-    template SelUni(alias Asym, alias Wsym)
-    {
-        template SelUni(Char)
-        {
-            static if (is(Char == char))
-            {
-                alias Asym SelUni;
-            }
-            else
-            {
-                static assert (is(Char == wchar));
-                alias Wsym SelUni;
-            }
-        }
-    }
-
-    extern (Windows) int lstrlenA(LPCSTR lpString);
     extern (Windows) int lstrlenW(LPCWSTR lpString);
 
     void enforceSucc(LONG res, lazy string message, string fn = __FILE__, size_t ln = __LINE__)
@@ -412,7 +395,7 @@ body
     return (res == ERROR_SUCCESS) ? hkeyDup : null;
 }
 
-private LONG regEnumKeyName(Char)(in HKEY hkey, in DWORD index, ref Char[] name, out DWORD cchName)
+private LONG regEnumKeyName(in HKEY hkey, in DWORD index, ref wchar[] name, out DWORD cchName)
 in
 {
     assert(hkey !is null);
@@ -425,15 +408,13 @@ out(res)
 }
 body
 {
-    alias SelUni!(RegEnumKeyExA, RegEnumKeyExW) RegEnumKeyEx;
-
     // The Registry API lies about the lengths of a very few sub-key lengths
     // so we have to test to see if it whinges about more data, and provide
     // more if it does.
     for (;;)
     {
         cchName = to!DWORD(name.length);
-        immutable res = RegEnumKeyEx!Char(hkey, index, name.ptr, &cchName, null, null, null, null);
+        immutable res = RegEnumKeyExW(hkey, index, name.ptr, &cchName, null, null, null, null);
         if (res != ERROR_MORE_DATA)
             return res;
 
@@ -445,19 +426,17 @@ body
 }
 
 
-private LONG regEnumValueName(Char)(in HKEY hkey, in DWORD dwIndex, ref Char[] name, out DWORD cchName)
+private LONG regEnumValueName(in HKEY hkey, in DWORD dwIndex, ref wchar[] name, out DWORD cchName)
 in
 {
     assert(hkey !is null);
 }
 body
 {
-    alias SelUni!(RegEnumValueA, RegEnumValueW) RegEnumValue;
-
     for (;;)
     {
         cchName = to!DWORD(name.length);
-        immutable res = RegEnumValue!Char(hkey, dwIndex, name.ptr, &cchName, null, null, null, null);
+        immutable res = RegEnumValueW(hkey, dwIndex, name.ptr, &cchName, null, null, null, null);
         if (res != ERROR_MORE_DATA)
             return res;
 
@@ -467,42 +446,26 @@ body
     assert(0);
 }
 
-private LONG regGetNumSubKeys(Char)(in HKEY hkey, out DWORD cSubKeys, out DWORD cchSubKeyMaxLen)
+private LONG regGetNumSubKeys(in HKEY hkey, out DWORD cSubKeys, out DWORD cchSubKeyMaxLen)
 in
 {
     assert(hkey !is null);
 }
 body
 {
-    static if (is(Char == wchar))
-    {
-        return RegQueryInfoKeyW(hkey, null, null, null, &cSubKeys,
-                                &cchSubKeyMaxLen, null, null, null, null, null, null);
-    }
-    else
-    {
-        return RegQueryInfoKeyA(hkey, null, null, null, &cSubKeys,
-                                &cchSubKeyMaxLen, null, null, null, null, null, null);
-    }
+    return RegQueryInfoKeyW(hkey, null, null, null, &cSubKeys,
+                            &cchSubKeyMaxLen, null, null, null, null, null, null);
 }
 
-private LONG regGetNumValues(Char)(in HKEY hkey, out DWORD cValues, out DWORD cchValueMaxLen)
+private LONG regGetNumValues(in HKEY hkey, out DWORD cValues, out DWORD cchValueMaxLen)
 in
 {
     assert(hkey !is null);
 }
 body
 {
-    static if (is(Char == wchar))
-    {
-        return RegQueryInfoKeyW(hkey, null, null, null, null, null, null,
-                                &cValues, &cchValueMaxLen, null, null, null);
-    }
-    else
-    {
-        return RegQueryInfoKeyA(hkey, null, null, null, null, null, null,
-                                &cValues, &cchValueMaxLen, null, null, null);
-    }
+    return RegQueryInfoKeyW(hkey, null, null, null, null, null, null,
+                            &cValues, &cchValueMaxLen, null, null, null);
 }
 
 private REG_VALUE_TYPE regGetValueType(in HKEY hkey, in string name)
@@ -553,22 +516,15 @@ body
     void* data = &u.qw;
     DWORD cbData = u.qw.sizeof;
 
-    LONG queryValue(Char)()
+    auto keyname = toUTF16z(name);
+    LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
+    if (res == ERROR_MORE_DATA)
     {
-        alias SelUni!(RegQueryValueExA, RegQueryValueExW) RegQueryValueEx;
-        alias SelUni!(toMBSz, toUTF16z) toSTRz;
-
-        auto keyname = toSTRz!Char(name);
-        LONG res = RegQueryValueEx!Char(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
-        if (res == ERROR_MORE_DATA)
-        {
-            data = (new Char[cbData]).ptr;
-            res = RegQueryValueEx!Char(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
-        }
-        return res;
+        data = (new wchar[cbData]).ptr;
+        res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
     }
 
-    enforceSucc(queryValue!wchar(),
+    enforceSucc(res,
         "Cannot read the requested value");
     enforce(type == reqType,
             new RegistryException("Value type has been changed since the value was acquired"));
@@ -619,48 +575,37 @@ body
 {
     REG_VALUE_TYPE type;
 
-    void queryValue(Char)()
+    auto keyname = toUTF16z(name);
+    wchar[] data = new wchar[256];
+    DWORD cbData = to!DWORD(data.length / wchar.sizeof);
+    LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
+    if (res == ERROR_MORE_DATA)
     {
-        alias SelUni!(RegQueryValueExA, RegQueryValueExW) RegQueryValueEx;
-        alias SelUni!(toMBSz, toUTF16z) toSTRz;
-
-        auto keyname = toSTRz!Char(name);
-        Char[] data = new Char[256];
-        DWORD cbData = to!DWORD(data.length / Char.sizeof);
-        LONG res = RegQueryValueEx!Char(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
-        if (res == ERROR_MORE_DATA)
-        {
-            data.length = cbData / Char.sizeof;
-            res = RegQueryValueEx!Char(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
-        }
-        else if (res == ERROR_SUCCESS)
-        {
-            data.length = cbData / Char.sizeof;
-        }
-        enforceSucc(res, "Cannot read the requested value");
-        enforce(type == REG_VALUE_TYPE.REG_MULTI_SZ,
-                new RegistryException("Cannot read the given value as a string"));
-        enforce(type == reqType,
-                new RegistryException("Value type has been changed since the value was acquired"));
-
-        // Remove last two (or one) null terminator
-        assert(data.length > 0 && data[$-1] == '\0');
-        data.length = data.length - 1;
-        if (data.length > 0 && data[$-1] == '\0')
-            data.length = data.length - 1;
-
-        auto list = std.array.split(data[], "\0");
-        value.length = list.length;
-        foreach (i, ref v; value)
-        {
-            static if (is(Char == wchar))
-                v = toUTF8(list[i]);
-            else
-                v = fromMBSz(cast(immutable(char)*)list[i].ptr); // assume unique
-        }
+        data.length = cbData / wchar.sizeof;
+        res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
     }
+    else if (res == ERROR_SUCCESS)
+    {
+        data.length = cbData / wchar.sizeof;
+    }
+    enforceSucc(res, "Cannot read the requested value");
+    enforce(type == REG_VALUE_TYPE.REG_MULTI_SZ,
+            new RegistryException("Cannot read the given value as a string"));
+    enforce(type == reqType,
+            new RegistryException("Value type has been changed since the value was acquired"));
 
-    queryValue!wchar();
+    // Remove last two (or one) null terminator
+    assert(data.length > 0 && data[$-1] == '\0');
+    data.length = data.length - 1;
+    if (data.length > 0 && data[$-1] == '\0')
+        data.length = data.length - 1;
+
+    auto list = std.array.split(data[], "\0");
+    value.length = list.length;
+    foreach (i, ref v; value)
+    {
+        v = toUTF8(list[i]);
+    }
 }
 
 private void regQueryValue(in HKEY hkey, in string name, out uint value, REG_VALUE_TYPE reqType)
@@ -772,62 +717,46 @@ body
 
 private void regProcessNthKey(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
-    void impl(Char)()
+    DWORD cSubKeys;
+    DWORD cchSubKeyMaxLen;
+
+    immutable res = regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
+    assert(res == ERROR_SUCCESS);
+
+    wchar[] sName = new wchar[cchSubKeyMaxLen + 1];
+
+    dg((DWORD index, out string name)
     {
-        DWORD cSubKeys;
-        DWORD cchSubKeyMaxLen;
-
-        immutable res = regGetNumSubKeys!Char(hkey, cSubKeys, cchSubKeyMaxLen);
-        assert(res == ERROR_SUCCESS);
-
-        Char[] sName = new Char[cchSubKeyMaxLen + 1];
-
-        dg((DWORD index, out string name)
+        DWORD cchName;
+        immutable res = regEnumKeyName(hkey, index, sName, cchName);
+        if (res == ERROR_SUCCESS)
         {
-            DWORD cchName;
-            immutable res = regEnumKeyName!Char(hkey, index, sName, cchName);
-            if (res == ERROR_SUCCESS)
-            {
-                static if (is(Char == wchar))
-                    name = toUTF8(sName[0 .. cchName]);
-                else
-                    name = fromMBSz(cast(immutable(char)*) sName.ptr);
-            }
-            return res;
-        });
-    }
-
-    impl!wchar();
+            name = toUTF8(sName[0 .. cchName]);
+        }
+        return res;
+    });
 }
 
 private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
-    void impl(Char)()
+    DWORD cValues;
+    DWORD cchValueMaxLen;
+
+    immutable res = regGetNumValues(hkey, cValues, cchValueMaxLen);
+    assert(res == ERROR_SUCCESS);
+
+    wchar[] sName = new wchar[cchValueMaxLen + 1];
+
+    dg((DWORD index, out string name)
     {
-        DWORD cValues;
-        DWORD cchValueMaxLen;
-
-        immutable res = regGetNumValues!Char(hkey, cValues, cchValueMaxLen);
-        assert(res == ERROR_SUCCESS);
-
-        Char[] sName = new Char[cchValueMaxLen + 1];
-
-        dg((DWORD index, out string name)
+        DWORD cchName;
+        immutable res = regEnumValueName(hkey, index, sName, cchName);
+        if (res == ERROR_SUCCESS)
         {
-            DWORD cchName;
-            immutable res = regEnumValueName!Char(hkey, index, sName, cchName);
-            if (res == ERROR_SUCCESS)
-            {
-                static if (is(Char == wchar))
-                    name = toUTF8(sName[0 .. cchName]);
-                else
-                    name = fromMBSz(cast(immutable(char)*) sName.ptr);
-            }
-            return res;
-        });
-    }
-
-    impl!wchar();
+            name = toUTF8(sName[0 .. cchName]);
+        }
+        return res;
+    });
 }
 
 /* ************* public classes *************** */
@@ -877,7 +806,7 @@ public:
     {
         uint cSubKeys;
         uint cchSubKeyMaxLen;
-        enforceSucc(regGetNumSubKeys!wchar(m_hkey, cSubKeys, cchSubKeyMaxLen),
+        enforceSucc(regGetNumSubKeys(m_hkey, cSubKeys, cchSubKeyMaxLen),
             "Number of sub-keys cannot be determined");
 
         return cSubKeys;
@@ -906,7 +835,7 @@ public:
     {
         uint cValues;
         uint cchValueMaxLen;
-        enforceSucc(regGetNumValues!wchar(m_hkey, cValues, cchValueMaxLen),
+        enforceSucc(regGetNumValues(m_hkey, cValues, cchValueMaxLen),
             "Number of values cannot be determined");
 
         return cValues;
