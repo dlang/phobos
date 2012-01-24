@@ -349,7 +349,7 @@ unittest
 --------------------
 auto f = enforce(fopen("data.txt"));
 auto line = readln(f);
-enforce(line.length, "Expected a non-empty line."));
+enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
 T enforce(T, string file = __FILE__, size_t line = __LINE__)
@@ -484,11 +484,14 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
-    if (is(typeof(new E(msg, file, line))))
+template enforceEx(E)
+    if (is(typeof(new E("", __FILE__, __LINE__))))
 {
-    if (!value) throw new E(msg, file, line);
-    return value;
+    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+    {
+        if (!value) throw new E(msg, file, line);
+        return value;
+    }
 }
 
 /++
@@ -499,11 +502,14 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
-    if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
+template enforceEx(E)
+    if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
-    if (!value) throw new E(msg);
-    return value;
+    T enforceEx(T)(T value, lazy string msg = "") @safe pure
+    {
+        if (!value) throw new E(msg);
+        return value;
+    }
 }
 
 unittest
@@ -526,6 +532,13 @@ unittest
         assert(e.file == "file");
         assert(e.line == 42);
     }
+}
+
+unittest
+{
+    alias enforceEx!Exception enf;
+    assertNotThrown(enf(true));
+    assertThrown(enf(false, "blah"));
 }
 
 
