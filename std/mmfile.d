@@ -240,28 +240,14 @@ class MmFile
 
             if (filename)
             {
-                if (useWfuncs)
-                {
-                    auto namez = std.utf.toUTF16z(filename);
-                    hFile = CreateFileW(namez,
-                            dwDesiredAccess2,
-                            dwShareMode,
-                            null,
-                            dwCreationDisposition,
-                            FILE_ATTRIBUTE_NORMAL,
-                            cast(HANDLE)null);
-                }
-                else
-                {
-                    auto namez = std.file.toMBSz(filename);
-                    hFile = CreateFileA(namez,
-                            dwDesiredAccess2,
-                            dwShareMode,
-                            null,
-                            dwCreationDisposition,
-                            FILE_ATTRIBUTE_NORMAL,
-                            cast(HANDLE)null);
-                }
+                auto namez = std.utf.toUTF16z(filename);
+                hFile = CreateFileW(namez,
+                        dwDesiredAccess2,
+                        dwShareMode,
+                        null,
+                        dwCreationDisposition,
+                        FILE_ATTRIBUTE_NORMAL,
+                        cast(HANDLE)null);
                 if (hFile == INVALID_HANDLE_VALUE)
                     goto err1;
             }
