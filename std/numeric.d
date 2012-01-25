@@ -367,7 +367,9 @@ struct CustomFloat(
 
     /// Returns: number of decimal digits of precision
     static @property size_t dig(){
-        return cast(size_t) log10( 1uL << precision - ((flags&Flags.storeNormalized) != 0));
+        auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
+        auto x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
+        return cast(size_t) log10(x);
     }
 
     /// Returns: smallest increment to the value 1

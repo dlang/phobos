@@ -1,3 +1,39 @@
+$(VERSION 058, ddd mm, 2012, =================================================,
+
+    $(WHATSNEW
+       $(LI Added std.csv for reading CSV files.)
+       $(LI The overload of std.concurrency.receiveTimeout which takes a long has
+            been deprecated. Please use the overload which takes a core.time.Duration.)
+       $(LI The overload of std.conv.to which used a member function named to on the
+            type being converted has been deprecated. Please define opCast on the type
+            instead, and std.conv.to will use that.)
+       $(LI std.datetime's endOfMonthDay functions have been deprecated. Please use
+            daysInMonth instead.)
+       $(LI std.ctype has been deprecated. Please use std.ascii instead.)
+       $(LI std.string's hexdigits, digits, octdigits, lowercase, letters, uppercase,
+            whitespace, and newline have been deprecated. Please use the
+            corresponding symbols in std.ascii instead.)
+       $(LI std.string's LS and PS have been deprecated. Please use the corresponding
+            symbols in std.uni instead.)
+       $(LI std.string's iswhite has been deprecated. Please use either
+            std.ascii.isWhite or std.uni.isWhite instead.)
+       $(LI std.string's tolower, tolowerInPlace, toupper, toupperInPlace, splitlines,
+            stripl, stripr, ljustify, rjustify, and expandtabs have been deprecated.
+            Please use the new versions of these functions with properly camelcased names.)
+       $(LI std.string's zfill has been deprecated. Please use rightJustify instead.)
+       $(LI std.string's capwords has been deprecated.)
+       $(LI The overloads of std.string's isNumeric which takes anything and
+            which takes a va_list have been deprecated. The other overloads remain.)
+       $(LI std.uni's isUniLower, isUniUpper, toUniLower, toUniUpper, and isUniAlpha
+            have been deprecated. Please use the versions of these functions which do
+            not have Uni in their name.)
+     )
+
+    $(LIBBUGSFIXED
+       $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
+     )
+ )
+
 $(VERSION 057, ddd mm, 2011, =================================================,
 
     $(WHATSNEW

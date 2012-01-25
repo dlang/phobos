@@ -724,7 +724,7 @@ $(UL
   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
   $(LI Unsigned or signed integers to strings.
        $(DL $(DT [special case])
-            $(DD Convert inttegral value to string in $(D_PARAM radix) radix.
+            $(DD Convert integral value to string in $(D_PARAM radix) radix.
             radix must be a value from 2 to 36.
             value is treated as a signed value only if radix is 10.
             The characters A through Z are used to represent values 10 through 36.)))
@@ -1706,23 +1706,18 @@ Target parse(Target, Source)(ref Source s)
     else
     {
         // Larger than int types
-        // immutable length = s.length;
-        // if (!length)
-        //     goto Lerr;
         if (s.empty)
             goto Lerr;
 
         static if (Target.min < 0)
             int sign = 0;
         else
-            static const int sign = 0;
+            enum int sign = 0;
         Target v = 0;
         size_t i = 0;
         enum char maxLastDigit = Target.min < 0 ? '7' : '5';
-        //for (; i < length; i++)
         for (; !s.empty; ++i)
         {
-            //immutable c = s[i];
             immutable c = s.front;
             if (c >= '0' && c <= '9')
             {
@@ -1755,7 +1750,6 @@ Target parse(Target, Source)(ref Source s)
         }
         if (i == 0)
             goto Lerr;
-        //s = s[i .. $];
         static if (Target.min < 0)
         {
             if (sign == -1)
