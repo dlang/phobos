@@ -1145,22 +1145,6 @@ static struct AsyncLineInputRange(Char)
     private Char[] line;
     mixin WorkerThreadProtocol!(Char, line);
 
-    version (StdDdoc)
-    {
-        ///
-        @property bool empty();
-
-        ///
-        @property Char[] front();
-
-        ///
-        void popFront();
-
-        /** Wait for duration $(D dur) or until data is available and return
-            true if data is available
-        */
-        bool wait(Duration dur);
-    }
     private Tid workerTid;
     private State running;
 
@@ -1316,23 +1300,6 @@ static struct AsyncChunkInputRange
 {
     private ubyte[] chunk;
     mixin WorkerThreadProtocol!(ubyte, chunk);
-
-    version (StdDdoc)
-    {
-        ///
-        @property bool empty();
-
-        ///
-        @property ubyte[] front();
-
-        ///
-        void popFront();
-
-        /** Wait for duration $(D dur) or until data is available and return
-            true if data is available
-        */
-        bool wait(Duration dur);
-    }
 
     private Tid workerTid;
     private State running;
