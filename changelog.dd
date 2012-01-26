@@ -31,6 +31,7 @@ $(VERSION 058, ddd mm, 2012, =================================================,
 
     $(LIBBUGSFIXED
        $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
+       $(LI $(BUGZILLA 6255): Add support for different base conversions in std.conv)
      )
  )
 
