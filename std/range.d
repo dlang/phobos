@@ -5650,37 +5650,33 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 /**Returns the interface type that best matches $(D R).*/
 template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
-    alias MostDerivedInputRangeImpl!(Unqual!R).ret MostDerivedInputRange;
-}
-
-private template MostDerivedInputRangeImpl(R) {
     private alias ElementType!R E;
 
     static if (isRandomAccessRange!R) {
         static if (isInfinite!R) {
-            alias RandomAccessInfinite!E ret;
+            alias RandomAccessInfinite!E MostDerivedInputRange;
         } else static if (hasAssignableElements!R) {
-            alias RandomFiniteAssignable!E ret;
+            alias RandomFiniteAssignable!E MostDerivedInputRange;
         } else {
-            alias RandomAccessFinite!E ret;
+            alias RandomAccessFinite!E MostDerivedInputRange;
         }
     } else static if (isBidirectionalRange!R) {
         static if (hasAssignableElements!R) {
-            alias BidirectionalAssignable!E ret;
+            alias BidirectionalAssignable!E MostDerivedInputRange;
         } else {
-            alias BidirectionalRange!E ret;
+            alias BidirectionalRange!E MostDerivedInputRange;
         }
     } else static if (isForwardRange!R) {
         static if (hasAssignableElements!R) {
-            alias ForwardAssignable!E ret;
+            alias ForwardAssignable!E MostDerivedInputRange;
         } else {
-            alias ForwardRange!E ret;
+            alias ForwardRange!E MostDerivedInputRange;
         }
     } else {
         static if (hasAssignableElements!R) {
-            alias InputAssignable!E ret;
+            alias InputAssignable!E MostDerivedInputRange;
         } else {
-            alias InputRange!E ret;
+            alias InputRange!E MostDerivedInputRange;
         }
     }
 }

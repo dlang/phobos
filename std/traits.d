@@ -357,43 +357,42 @@ enum ParameterStorageClass : uint
 template ParameterStorageClassTuple(func...)
     if (func.length == 1 && isCallable!(func))
 {
+    private template ParameterStorageClassTupleImpl(Func)
+    {
+        /*
+         * TypeFuncion:
+         *     CallConvention FuncAttrs Arguments ArgClose Type
+         */
+        alias ParameterTypeTuple!(Func) Params;
+
+        // chop off CallConvention and FuncAttrs
+        enum margs = demangleFunctionAttributes(mangledName!(Func)[1 .. $]).rest;
+
+        // demangle Arguments and store parameter storage classes in a tuple
+        template demangleNextParameter(string margs, size_t i = 0)
+        {
+            static if (i < Params.length)
+            {
+                enum demang = demangleParameterStorageClass(margs);
+                enum skip = mangledName!(Params[i]).length; // for bypassing Type
+                enum rest = demang.rest;
+
+                alias TypeTuple!(
+                        demang.value + 0, // workaround: "not evaluatable at ..."
+                        demangleNextParameter!(rest[skip .. $], i + 1).Result
+                    ) Result;
+            }
+            else // went thru all the parameters
+            {
+                alias TypeTuple!() Result;
+            }
+        }
+        alias demangleNextParameter!(margs).Result Result;
+    }
+
     alias ParameterStorageClassTupleImpl!(Unqual!(FunctionTypeOf!(func))).Result
             ParameterStorageClassTuple;
 }
-
-private template ParameterStorageClassTupleImpl(Func)
-{
-    /*
-     * TypeFuncion:
-     *     CallConvention FuncAttrs Arguments ArgClose Type
-     */
-    alias ParameterTypeTuple!(Func) Params;
-
-    // chop off CallConvention and FuncAttrs
-    enum margs = demangleFunctionAttributes(mangledName!(Func)[1 .. $]).rest;
-
-    // demangle Arguments and store parameter storage classes in a tuple
-    template demangleNextParameter(string margs, size_t i = 0)
-    {
-        static if (i < Params.length)
-        {
-            enum demang = demangleParameterStorageClass(margs);
-            enum skip = mangledName!(Params[i]).length; // for bypassing Type
-            enum rest = demang.rest;
-
-            alias TypeTuple!(
-                    demang.value + 0, // workaround: "not evaluatable at ..."
-                    demangleNextParameter!(rest[skip .. $], i + 1).Result
-                ) Result;
-        }
-        else // went thru all the parameters
-        {
-            alias TypeTuple!() Result;
-        }
-    }
-    alias demangleNextParameter!(margs).Result Result;
-}
-
 unittest
 {
     alias ParameterStorageClass STC;
@@ -726,25 +725,25 @@ enum Variadic
 template variadicFunctionStyle(func...)
     if (func.length == 1 && isCallable!(func))
 {
+    private Variadic determineVariadicity(Func)()
+    {
+        // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
+        immutable callconv = functionLinkage!(Func);
+        immutable mfunc = mangledName!(Func);
+        immutable mtype = mangledName!(ReturnType!(Func));
+        debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
+
+        immutable argclose = mfunc[$ - mtype.length - 1];
+        final switch (argclose)
+        {
+            case 'X': return Variadic.typesafe;
+            case 'Y': return (callconv == "C") ? Variadic.c : Variadic.d;
+            case 'Z': return Variadic.no;
+        }
+    }
+
     enum Variadic variadicFunctionStyle =
         determineVariadicity!( Unqual!(FunctionTypeOf!(func)) )();
-}
-
-private Variadic determineVariadicity(Func)()
-{
-    // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
-    immutable callconv = functionLinkage!(Func);
-    immutable mfunc = mangledName!(Func);
-    immutable mtype = mangledName!(ReturnType!(Func));
-    debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
-
-    immutable argclose = mfunc[$ - mtype.length - 1];
-    final switch (argclose)
-    {
-        case 'X': return Variadic.typesafe;
-        case 'Y': return (callconv == "C") ? Variadic.c : Variadic.d;
-        case 'Z': return Variadic.no;
-    }
 }
 
 unittest
@@ -979,6 +978,39 @@ assert(R.length == 4
 
 template RepresentationTypeTuple(T)
 {
+    private template RepresentationTypeTupleImpl(T...)
+    {
+        static if (T.length == 0)
+        {
+            alias TypeTuple!() RepresentationTypeTupleImpl;
+        }
+        else
+        {
+            static if (is(T[0] R: Rebindable!R))
+                alias RepresentationTypeTupleImpl!(RepresentationTypeTupleImpl!R,
+                                                T[1 .. $])
+                    RepresentationTypeTupleImpl;
+            else  static if (is(T[0] == struct) || is(T[0] == union))
+    // @@@BUG@@@ this should work
+    //             alias .RepresentationTypes!(T[0].tupleof)
+    //                 RepresentationTypes;
+                alias RepresentationTypeTupleImpl!(FieldTypeTuple!(T[0]),
+                                                T[1 .. $])
+                    RepresentationTypeTupleImpl;
+            else static if (is(T[0] U == typedef))
+            {
+                alias RepresentationTypeTupleImpl!(FieldTypeTuple!(U),
+                                                T[1 .. $])
+                    RepresentationTypeTupleImpl;
+            }
+            else
+            {
+                alias TypeTuple!(T[0], RepresentationTypeTupleImpl!(T[1 .. $]))
+                    RepresentationTypeTupleImpl;
+            }
+        }
+    }
+
     static if (is(T == struct) || is(T == union) || is(T == class))
     {
         alias RepresentationTypeTupleImpl!(FieldTypeTuple!T)
@@ -992,39 +1024,6 @@ template RepresentationTypeTuple(T)
     {
         alias RepresentationTypeTupleImpl!T
             RepresentationTypeTuple;
-    }
-}
-
-private template RepresentationTypeTupleImpl(T...)
-{
-    static if (T.length == 0)
-    {
-        alias TypeTuple!() RepresentationTypeTupleImpl;
-    }
-    else
-    {
-        static if (is(T[0] R: Rebindable!R))
-            alias .RepresentationTypeTupleImpl!(RepresentationTypeTupleImpl!R,
-                                            T[1 .. $])
-                RepresentationTypeTupleImpl;
-        else  static if (is(T[0] == struct) || is(T[0] == union))
-// @@@BUG@@@ this should work
-//             alias .RepresentationTypes!(T[0].tupleof)
-//                 RepresentationTypes;
-            alias .RepresentationTypeTupleImpl!(FieldTypeTuple!(T[0]),
-                                            T[1 .. $])
-                RepresentationTypeTupleImpl;
-        else static if (is(T[0] U == typedef))
-        {
-            alias .RepresentationTypeTupleImpl!(FieldTypeTuple!(U),
-                                            T[1 .. $])
-                RepresentationTypeTupleImpl;
-        }
-        else
-        {
-            alias TypeTuple!(T[0], RepresentationTypeTupleImpl!(T[1 .. $]))
-                RepresentationTypeTupleImpl;
-        }
     }
 }
 
@@ -1113,48 +1112,6 @@ RepresentationOffsets
 //     static assert(Offsets[1] == 4);
 // }
 
-// hasRawAliasing
-
-private template hasRawPointerImpl(T...)
-{
-    static if (T.length == 0)
-    {
-        enum result = false;
-    }
-    else
-    {
-        static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
-            enum hasRawAliasing = !is(U == immutable);
-        else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
-            enum hasRawAliasing = !is(U == immutable);
-        else static if (isAssociativeArray!(T[0]))
-            enum hasRawAliasing = !is(T[0] == immutable);
-        else
-            enum hasRawAliasing = false;
-        enum result = hasRawAliasing || hasRawPointerImpl!(T[1 .. $]).result;
-    }
-}
-
-private template HasRawLocalPointerImpl(T...)
-{
-    static if (T.length == 0)
-    {
-        enum result = false;
-    }
-    else
-    {
-        static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
-            enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
-        else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
-            enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
-        else static if (isAssociativeArray!(T[0]))
-            enum hasRawLocalAliasing = !is(T[0] == immutable) && !is(T[0] == shared);
-        else
-            enum hasRawLocalAliasing = false;
-        enum result = hasRawLocalAliasing || HasRawLocalPointerImpl!(T[1 .. $]).result;
-    }
-}
-
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
 representation contains at least one field of pointer or array type.
@@ -1186,6 +1143,26 @@ static assert(hasRawAliasing!(S4));
 */
 private template hasRawAliasing(T...)
 {
+    private template hasRawPointerImpl(T...)
+    {
+        static if (T.length == 0)
+        {
+            enum result = false;
+        }
+        else
+        {
+            static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
+                enum hasRawAliasing = !is(U == immutable);
+            else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
+                enum hasRawAliasing = !is(U == immutable);
+            else static if (isAssociativeArray!(T[0]))
+                enum hasRawAliasing = !is(T[0] == immutable);
+            else
+                enum hasRawAliasing = false;
+            enum result = hasRawAliasing || hasRawPointerImpl!(T[1 .. $]).result;
+        }
+    }
+
     enum hasRawAliasing
         = hasRawPointerImpl!(RepresentationTypeTuple!T).result;
 }
@@ -1263,6 +1240,26 @@ static assert(!hasRawLocalAliasing!(S6));
 
 private template hasRawUnsharedAliasing(T...)
 {
+    private template HasRawLocalPointerImpl(T...)
+    {
+        static if (T.length == 0)
+        {
+            enum result = false;
+        }
+        else
+        {
+            static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
+                enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
+            else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
+                enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
+            else static if (isAssociativeArray!(T[0]))
+                enum hasRawLocalAliasing = !is(T[0] == immutable) && !is(T[0] == shared);
+            else
+                enum hasRawLocalAliasing = false;
+            enum result = hasRawLocalAliasing || HasRawLocalPointerImpl!(T[1 .. $]).result;
+        }
+    }
+
     enum hasRawUnsharedAliasing
         = HasRawLocalPointerImpl!(RepresentationTypeTuple!(T)).result;
 }
@@ -1423,31 +1420,31 @@ $(LI an associative array.) $(LI a delegate.))
 
 template hasIndirections(T)
 {
-    enum hasIndirections = hasIndirectionsImpl!(RepresentationTypeTuple!T);
-}
+    private template hasIndirectionsImpl(T...)
+    {
+        static if (!T.length)
+        {
+            enum hasIndirectionsImpl = false;
+        }
+        else static if(isFunctionPointer!(T[0]))
+        {
+            enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]);
+        }
+        else static if(isStaticArray!(T[0]))
+        {
+            enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]) ||
+            hasIndirectionsImpl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
+        }
+        else
+        {
+            enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
+                is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
+                isDelegate!(T[0]) || is(T[0] == interface)
+                || hasIndirectionsImpl!(T[1 .. $]);
+        }
+    }
 
-template hasIndirectionsImpl(T...)
-{
-    static if (!T.length)
-    {
-        enum hasIndirectionsImpl = false;
-    }
-    else static if(isFunctionPointer!(T[0]))
-    {
-        enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]);
-    }
-    else static if(isStaticArray!(T[0]))
-    {
-        enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]) ||
-        hasIndirectionsImpl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
-    }
-    else
-    {
-        enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
-            is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
-            isDelegate!(T[0]) || is(T[0] == interface)
-            || hasIndirectionsImpl!(T[1 .. $]);
-    }
+    enum hasIndirections = hasIndirectionsImpl!(RepresentationTypeTuple!T);
 }
 
 unittest
@@ -1495,17 +1492,17 @@ template hasUnsharedAliasing(T...)
     }
     else
     {
+        private template unsharedDelegate(T)
+        {
+            enum bool unsharedDelegate = isDelegate!T && !is(T == shared);
+        }
+
         enum hasUnsharedAliasing =
             hasRawUnsharedAliasing!(T[0]) ||
             anySatisfy!(unsharedDelegate, T[0]) ||
             hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
-}
-
-private template unsharedDelegate(T)
-{
-    enum bool unsharedDelegate = isDelegate!T && !is(T == shared);
 }
 
 unittest
@@ -1766,23 +1763,42 @@ assert(rank(Mode.map  ) == 2);
 template EnumMembers(E)
     if (is(E == enum))
 {
-    alias EnumSpecificMembers!(E, __traits(allMembers, E)) EnumMembers;
-}
+    private template EnumSpecificMembers(Enum, names...)
+    {
+        static if (names.length > 0)
+        {
+            // Supply the specified identifier to an constant value.
+            private template WithIdentifier(string ident)
+            {
+                static if (ident == "Symbolize")
+                {
+                    template Symbolize(alias value)
+                    {
+                        enum Symbolize = value;
+                    }
+                }
+                else
+                {
+                    mixin("template Symbolize(alias "~ ident ~")"
+                         ~"{"
+                             ~"alias "~ ident ~" Symbolize;"
+                         ~"}");
+                }
+            }
 
-private template EnumSpecificMembers(Enum, names...)
-{
-    static if (names.length > 0)
-    {
-        alias TypeTuple!(
-                WithIdentifier!(names[0])
-                    .Symbolize!(__traits(getMember, Enum, names[0])),
-                EnumSpecificMembers!(Enum, names[1 .. $])
-            ) EnumSpecificMembers;
+            alias TypeTuple!(
+                    WithIdentifier!(names[0])
+                        .Symbolize!(__traits(getMember, Enum, names[0])),
+                    EnumSpecificMembers!(Enum, names[1 .. $])
+                ) EnumSpecificMembers;
+        }
+        else
+        {
+            alias TypeTuple!() EnumSpecificMembers;
+        }
     }
-    else
-    {
-        alias TypeTuple!() EnumSpecificMembers;
-    }
+
+    alias EnumSpecificMembers!(E, __traits(allMembers, E)) EnumMembers;
 }
 
 unittest
@@ -1815,25 +1831,6 @@ unittest    // duplicated values
         c = 1, d = 1, e
     }
     static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
-}
-
-// Supply the specified identifier to an constant value.
-private template WithIdentifier(string ident)
-{
-    static if (ident == "Symbolize")
-    {
-        template Symbolize(alias value)
-        {
-            enum Symbolize = value;
-        }
-    }
-    else
-    {
-        mixin("template Symbolize(alias "~ ident ~")"
-             ~"{"
-                 ~"alias "~ ident ~" Symbolize;"
-             ~"}");
-    }
 }
 
 unittest
@@ -1968,31 +1965,30 @@ template BaseClassesTuple(T)
 
 template InterfacesTuple(T)
 {
+    private template InterfacesTuple_Flatten(H, T...)
+    {
+        static if (T.length)
+        {
+            alias TypeTuple!(
+                    InterfacesTuple_Flatten!(H),
+                    InterfacesTuple_Flatten!(T))
+                InterfacesTuple_Flatten;
+        }
+        else
+        {
+            static if (is(H == interface))
+                alias TypeTuple!(H, InterfacesTuple!(H))
+                    InterfacesTuple_Flatten;
+            else
+                alias InterfacesTuple!(H) InterfacesTuple_Flatten;
+        }
+    }
+
     static if (is(T S == super) && S.length)
         alias NoDuplicates!(InterfacesTuple_Flatten!(S))
             InterfacesTuple;
     else
         alias TypeTuple!() InterfacesTuple;
-}
-
-// internal
-private template InterfacesTuple_Flatten(H, T...)
-{
-    static if (T.length)
-    {
-        alias TypeTuple!(
-                InterfacesTuple_Flatten!(H),
-                InterfacesTuple_Flatten!(T))
-            InterfacesTuple_Flatten;
-    }
-    else
-    {
-        static if (is(H == interface))
-            alias TypeTuple!(H, InterfacesTuple!(H))
-                InterfacesTuple_Flatten;
-        else
-            alias InterfacesTuple!(H) InterfacesTuple_Flatten;
-    }
 }
 
 unittest
@@ -2102,93 +2098,90 @@ template MemberFunctionsTuple(C, string name)
     if (is(C == class) || is(C == interface))
 {
     static if (__traits(hasMember, C, name))
-        alias MemberFunctionTupleImpl!(C, name).result MemberFunctionsTuple;
+    {
+        /*
+         * First, collect all overloads in the class hierarchy.
+         */
+        private template CollectOverloads(Node)
+        {
+            static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
+            {
+                // Get all overloads in sight (not hidden).
+                alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+
+                // And collect all overloads in ancestor classes to reveal hidden
+                // methods.  The result may contain duplicates.
+                template walkThru(Parents...)
+                {
+                    static if (Parents.length > 0)
+                        alias TypeTuple!(
+                                    CollectOverloads!(Parents[0]).result,
+                                    walkThru!(Parents[1 .. $])
+                                ) walkThru;
+                    else
+                        alias TypeTuple!() walkThru;
+                }
+
+                static if (is(Node Parents == super))
+                    alias TypeTuple!(inSight, walkThru!(Parents)) result;
+                else
+                    alias TypeTuple!(inSight) result;
+            }
+            else
+                alias TypeTuple!() result; // no overloads in this hierarchy
+        }
+
+        // duplicates in this tuple will be removed by shrink()
+        private alias CollectOverloads!(C).result overloads;
+
+        /*
+         * Now shrink covariant overloads into one.
+         */
+        private template shrink(overloads...)
+        {
+            static if (overloads.length > 0)
+            {
+                alias shrinkOne!(overloads).result temp;
+                alias TypeTuple!(temp[0], shrink!(temp[1 .. $]).result) result;
+            }
+            else
+                alias TypeTuple!() result; // done
+        }
+
+        // .result[0]    = the most derived one in the covariant siblings of target
+        // .result[1..$] = non-covariant others
+        private template shrinkOne(/+ alias target, rest... +/ args...)
+        {
+            alias args[0 .. 1] target; // prevent property functions from being evaluated
+            alias args[1 .. $] rest;
+
+            static if (rest.length > 0)
+            {
+                alias FunctionTypeOf!(target) Target;
+                alias FunctionTypeOf!(rest[0]) Rest0;
+
+                static if (isCovariantWith!(Target, Rest0))
+                    // target overrides rest[0] -- erase rest[0].
+                    alias shrinkOne!(target, rest[1 .. $]).result result;
+                else static if (isCovariantWith!(Rest0, Target))
+                    // rest[0] overrides target -- erase target.
+                    alias shrinkOne!(rest[0], rest[1 .. $]).result result;
+                else
+                    // target and rest[0] are distinct.
+                    alias TypeTuple!(
+                                shrinkOne!(target, rest[1 .. $]).result,
+                                rest[0] // keep
+                            ) result;
+            }
+            else
+                alias TypeTuple!(target) result; // done
+        }
+
+        // done.
+        alias shrink!(overloads).result MemberFunctionsTuple;
+    }
     else
         alias TypeTuple!() MemberFunctionsTuple;
-}
-
-private template MemberFunctionTupleImpl(C, string name)
-{
-    /*
-     * First, collect all overloads in the class hierarchy.
-     */
-    template CollectOverloads(Node)
-    {
-        static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
-        {
-            // Get all overloads in sight (not hidden).
-            alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
-
-            // And collect all overloads in ancestor classes to reveal hidden
-            // methods.  The result may contain duplicates.
-            template walkThru(Parents...)
-            {
-                static if (Parents.length > 0)
-                    alias TypeTuple!(
-                                CollectOverloads!(Parents[0]).result,
-                                walkThru!(Parents[1 .. $])
-                            ) walkThru;
-                else
-                    alias TypeTuple!() walkThru;
-            }
-
-            static if (is(Node Parents == super))
-                alias TypeTuple!(inSight, walkThru!(Parents)) result;
-            else
-                alias TypeTuple!(inSight) result;
-        }
-        else
-            alias TypeTuple!() result; // no overloads in this hierarchy
-    }
-
-    // duplicates in this tuple will be removed by shrink()
-    alias CollectOverloads!(C).result overloads;
-
-    /*
-     * Now shrink covariant overloads into one.
-     */
-    template shrink(overloads...)
-    {
-        static if (overloads.length > 0)
-        {
-            alias shrinkOne!(overloads).result temp;
-            alias TypeTuple!(temp[0], shrink!(temp[1 .. $]).result) result;
-        }
-        else
-            alias TypeTuple!() result; // done
-    }
-
-    // .result[0]    = the most derived one in the covariant siblings of target
-    // .result[1..$] = non-covariant others
-    template shrinkOne(/+ alias target, rest... +/ args...)
-    {
-        alias args[0 .. 1] target; // prevent property functions from being evaluated
-        alias args[1 .. $] rest;
-
-        static if (rest.length > 0)
-        {
-            alias FunctionTypeOf!(target) Target;
-            alias FunctionTypeOf!(rest[0]) Rest0;
-
-            static if (isCovariantWith!(Target, Rest0))
-                // target overrides rest[0] -- erase rest[0].
-                alias shrinkOne!(target, rest[1 .. $]).result result;
-            else static if (isCovariantWith!(Rest0, Target))
-                // rest[0] overrides target -- erase target.
-                alias shrinkOne!(rest[0], rest[1 .. $]).result result;
-            else
-                // target and rest[0] are distinct.
-                alias TypeTuple!(
-                            shrinkOne!(target, rest[1 .. $]).result,
-                            rest[0] // keep
-                        ) result;
-        }
-        else
-            alias TypeTuple!(target) result; // done
-    }
-
-    // done.
-    alias shrink!(overloads).result result;
 }
 
 unittest
@@ -2483,106 +2476,106 @@ template isCovariantWith(F, G)
     static if (is(F : G))
         enum isCovariantWith = true;
     else
-        enum isCovariantWith = isCovariantWithImpl!(F, G).yes;
-}
+    {
+        alias F Upr;
+        alias G Lwr;
 
-private template isCovariantWithImpl(Upr, Lwr)
-{
-    /*
-     * Check for calling convention: require exact match.
-     */
-    template checkLinkage()
-    {
-        enum ok = functionLinkage!(Upr) == functionLinkage!(Lwr);
-    }
-    /*
-     * Check for variadic parameter: require exact match.
-     */
-    template checkVariadicity()
-    {
-        enum ok = variadicFunctionStyle!(Upr) == variadicFunctionStyle!(Lwr);
-    }
-    /*
-     * Check for function storage class:
-     *  - overrider can have narrower storage class than base
-     */
-    template checkSTC()
-    {
-        // Note the order of arguments.  The convertion order Lwr -> Upr is
-        // correct since Upr should be semantically 'narrower' than Lwr.
-        enum ok = isStorageClassImplicitlyConvertible!(Lwr, Upr);
-    }
-    /*
-     * Check for function attributes:
-     *  - require exact match for ref and @property
-     *  - overrider can add pure and nothrow, but can't remove them
-     *  - @safe and @trusted are covariant with each other, unremovable
-     */
-    template checkAttributes()
-    {
-        alias FunctionAttribute FA;
-        enum uprAtts = functionAttributes!(Upr);
-        enum lwrAtts = functionAttributes!(Lwr);
-        //
-        enum wantExact = FA.ref_ | FA.property;
-        enum safety = FA.safe | FA.trusted;
-        enum ok =
-            (  (uprAtts & wantExact)   == (lwrAtts & wantExact)) &&
-            (  (uprAtts & FA.pure_   ) >= (lwrAtts & FA.pure_   )) &&
-            (  (uprAtts & FA.nothrow_) >= (lwrAtts & FA.nothrow_)) &&
-            (!!(uprAtts & safety    )  >= !!(lwrAtts & safety    )) ;
-    }
-    /*
-     * Check for return type: usual implicit convertion.
-     */
-    template checkReturnType()
-    {
-        enum ok = is(ReturnType!(Upr) : ReturnType!(Lwr));
-    }
-    /*
-     * Check for parameters:
-     *  - require exact match for types (cf. bugzilla 3075)
-     *  - require exact match for in, out, ref and lazy
-     *  - overrider can add scope, but can't remove
-     */
-    template checkParameters()
-    {
-        alias ParameterStorageClass STC;
-        alias ParameterTypeTuple!(Upr) UprParams;
-        alias ParameterTypeTuple!(Lwr) LwrParams;
-        alias ParameterStorageClassTuple!(Upr) UprPSTCs;
-        alias ParameterStorageClassTuple!(Lwr) LwrPSTCs;
-        //
-        template checkNext(size_t i)
+        /*
+         * Check for calling convention: require exact match.
+         */
+        template checkLinkage()
         {
-            static if (i < UprParams.length)
-            {
-                enum uprStc = UprPSTCs[i];
-                enum lwrStc = LwrPSTCs[i];
-                //
-                enum wantExact = STC.out_ | STC.ref_ | STC.lazy_;
-                enum ok =
-                    ((uprStc & wantExact )  == (lwrStc & wantExact )) &&
-                    ((uprStc & STC.scope_)  >= (lwrStc & STC.scope_)) &&
-                    checkNext!(i + 1).ok;
-            }
-            else
-                enum ok = true; // done
+            enum ok = functionLinkage!(Upr) == functionLinkage!(Lwr);
         }
-        static if (UprParams.length == LwrParams.length)
-            enum ok = is(UprParams == LwrParams) && checkNext!(0).ok;
-        else
-            enum ok = false;
-    }
+        /*
+         * Check for variadic parameter: require exact match.
+         */
+        template checkVariadicity()
+        {
+            enum ok = variadicFunctionStyle!(Upr) == variadicFunctionStyle!(Lwr);
+        }
+        /*
+         * Check for function storage class:
+         *  - overrider can have narrower storage class than base
+         */
+        template checkSTC()
+        {
+            // Note the order of arguments.  The convertion order Lwr -> Upr is
+            // correct since Upr should be semantically 'narrower' than Lwr.
+            enum ok = isStorageClassImplicitlyConvertible!(Lwr, Upr);
+        }
+        /*
+         * Check for function attributes:
+         *  - require exact match for ref and @property
+         *  - overrider can add pure and nothrow, but can't remove them
+         *  - @safe and @trusted are covariant with each other, unremovable
+         */
+        template checkAttributes()
+        {
+            alias FunctionAttribute FA;
+            enum uprAtts = functionAttributes!(Upr);
+            enum lwrAtts = functionAttributes!(Lwr);
+            //
+            enum wantExact = FA.ref_ | FA.property;
+            enum safety = FA.safe | FA.trusted;
+            enum ok =
+                (  (uprAtts & wantExact)   == (lwrAtts & wantExact)) &&
+                (  (uprAtts & FA.pure_   ) >= (lwrAtts & FA.pure_   )) &&
+                (  (uprAtts & FA.nothrow_) >= (lwrAtts & FA.nothrow_)) &&
+                (!!(uprAtts & safety    )  >= !!(lwrAtts & safety    )) ;
+        }
+        /*
+         * Check for return type: usual implicit convertion.
+         */
+        template checkReturnType()
+        {
+            enum ok = is(ReturnType!(Upr) : ReturnType!(Lwr));
+        }
+        /*
+         * Check for parameters:
+         *  - require exact match for types (cf. bugzilla 3075)
+         *  - require exact match for in, out, ref and lazy
+         *  - overrider can add scope, but can't remove
+         */
+        template checkParameters()
+        {
+            alias ParameterStorageClass STC;
+            alias ParameterTypeTuple!(Upr) UprParams;
+            alias ParameterTypeTuple!(Lwr) LwrParams;
+            alias ParameterStorageClassTuple!(Upr) UprPSTCs;
+            alias ParameterStorageClassTuple!(Lwr) LwrPSTCs;
+            //
+            template checkNext(size_t i)
+            {
+                static if (i < UprParams.length)
+                {
+                    enum uprStc = UprPSTCs[i];
+                    enum lwrStc = LwrPSTCs[i];
+                    //
+                    enum wantExact = STC.out_ | STC.ref_ | STC.lazy_;
+                    enum ok =
+                        ((uprStc & wantExact )  == (lwrStc & wantExact )) &&
+                        ((uprStc & STC.scope_)  >= (lwrStc & STC.scope_)) &&
+                        checkNext!(i + 1).ok;
+                }
+                else
+                    enum ok = true; // done
+            }
+            static if (UprParams.length == LwrParams.length)
+                enum ok = is(UprParams == LwrParams) && checkNext!(0).ok;
+            else
+                enum ok = false;
+        }
 
-    /* run all the checks */
-    enum bool yes =
-        checkLinkage    !().ok &&
-        checkVariadicity!().ok &&
-        checkSTC        !().ok &&
-        checkAttributes !().ok &&
-        checkReturnType !().ok &&
-        checkParameters !().ok ;
+        /* run all the checks */
+        enum isCovariantWith =
+            checkLinkage    !().ok &&
+            checkVariadicity!().ok &&
+            checkSTC        !().ok &&
+            checkAttributes !().ok &&
+            checkReturnType !().ok &&
+            checkParameters !().ok ;
+    }
 }
 
 version (unittest) private template isCovariantWith(alias f, alias g)
@@ -3385,14 +3378,14 @@ static assert(is(OriginalType!G == const int));
  */
 template OriginalType(T)
 {
-    alias ModifyTypePreservingSTC!(OriginalTypeImpl, T) OriginalType;
-}
+    private template OriginalTypeImpl(T)
+    {
+             static if (is(T U == typedef)) alias OriginalType!U OriginalTypeImpl;
+        else static if (is(T U ==    enum)) alias OriginalType!U OriginalTypeImpl;
+        else                                alias              T OriginalTypeImpl;
+    }
 
-private template OriginalTypeImpl(T)
-{
-         static if (is(T U == typedef)) alias OriginalType!U OriginalTypeImpl;
-    else static if (is(T U ==    enum)) alias OriginalType!U OriginalTypeImpl;
-    else                                alias              T OriginalTypeImpl;
+    alias ModifyTypePreservingSTC!(OriginalTypeImpl, T) OriginalType;
 }
 
 unittest
@@ -3419,18 +3412,18 @@ unittest
 
 template Unsigned(T)
 {
-    alias ModifyTypePreservingSTC!(UnsignedImpl, OriginalType!T) Unsigned;
-}
+    private template UnsignedImpl(T)
+    {
+        static if (isUnsigned!(T)) alias T UnsignedImpl;
+        else static if (is(T == byte)) alias ubyte UnsignedImpl;
+        else static if (is(T == short)) alias ushort UnsignedImpl;
+        else static if (is(T == int)) alias uint UnsignedImpl;
+        else static if (is(T == long)) alias ulong UnsignedImpl;
+        else static assert(false, "Type " ~ T.stringof
+                           ~ " does not have an Unsigned counterpart");
+    }
 
-private template UnsignedImpl(T)
-{
-    static if (isUnsigned!(T)) alias T UnsignedImpl;
-    else static if (is(T == byte)) alias ubyte UnsignedImpl;
-    else static if (is(T == short)) alias ushort UnsignedImpl;
-    else static if (is(T == int)) alias uint UnsignedImpl;
-    else static if (is(T == long)) alias ulong UnsignedImpl;
-    else static assert(false, "Type " ~ T.stringof
-                       ~ " does not have an Unsigned counterpart");
+    alias ModifyTypePreservingSTC!(UnsignedImpl, OriginalType!T) Unsigned;
 }
 
 unittest
@@ -3478,18 +3471,18 @@ otherwise a compile-time error occurs.
  */
 template Signed(T)
 {
-    alias ModifyTypePreservingSTC!(SignedImpl, OriginalType!T) Signed;
-}
+    private template SignedImpl(T)
+    {
+        static if (isSigned!(T)) alias T SignedImpl;
+        else static if (is(T == ubyte)) alias byte SignedImpl;
+        else static if (is(T == ushort)) alias short SignedImpl;
+        else static if (is(T == uint)) alias int SignedImpl;
+        else static if (is(T == ulong)) alias long SignedImpl;
+        else static assert(false, "Type " ~ T.stringof
+                           ~ " does not have an Signed counterpart");
+    }
 
-private template SignedImpl(T)
-{
-    static if (isSigned!(T)) alias T SignedImpl;
-    else static if (is(T == ubyte)) alias byte SignedImpl;
-    else static if (is(T == ushort)) alias short SignedImpl;
-    else static if (is(T == uint)) alias int SignedImpl;
-    else static if (is(T == ulong)) alias long SignedImpl;
-    else static assert(false, "Type " ~ T.stringof
-                       ~ " does not have an Signed counterpart");
+    alias ModifyTypePreservingSTC!(SignedImpl, OriginalType!T) Signed;
 }
 
 unittest

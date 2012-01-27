@@ -52,7 +52,7 @@ void main() {
     immutable n = 1_000_000_000;
     immutable delta = 1.0 / n;
 
-    real getTerm(int i) 
+    real getTerm(int i)
     {
         immutable x = ( i - 0.5 ) * delta;
         return delta / ( 1.0 + x * x ) ;
@@ -297,13 +297,7 @@ private enum TaskStatus : ubyte
 
 private template AliasReturn(alias fun, T...)
 {
-    alias AliasReturnImpl!(fun, T).ret AliasReturn;
-}
-
-private template AliasReturnImpl(alias fun, T...)
-{
-    private T args;
-    alias typeof(fun(args)) ret;
+    alias typeof({ T args; return fun(args); }) AliasReturn;
 }
 
 // Should be private, but std.algorithm.reduce is used in the zero-thread case
@@ -793,7 +787,7 @@ Examples:
 // Read two files into memory at the same time.
 import std.file;
 
-void main() 
+void main()
 {
     // Create and execute a Task for reading foo.txt.
     auto file1Task = task!read("foo.txt");
@@ -817,10 +811,10 @@ void main()
 //
 // This implementation:               176 milliseconds.
 // Equivalent serial implementation:  280 milliseconds
-void parallelSort(T)(T[] data) 
+void parallelSort(T)(T[] data)
 {
     // Sort small subarrays serially.
-    if(data.length < 100) 
+    if(data.length < 100)
     {
          std.algorithm.sort(data);
          return;
@@ -860,7 +854,7 @@ Examples:
 // pointer instead of an alias to represent std.file.read.
 import std.file;
 
-void main() 
+void main()
 {
     // Create and execute a Task for reading foo.txt.
     auto file1Task = task(&read, "foo.txt");
@@ -1153,7 +1147,7 @@ private:
             assert(returned.next is null);
             assert(returned.prev is null);
         }
-    } 
+    }
     body
     {
         if(isSingleTask) return null;
@@ -1186,7 +1180,7 @@ private:
     in
     {
         assert(task);
-    } 
+    }
     out
     {
         assert(tail.prev !is tail);
@@ -1195,7 +1189,7 @@ private:
         {
             assert(tail.prev.next is tail, text(tail.prev, '\t', tail.next));
         }
-    } 
+    }
     body
     {
         task.next = null;
@@ -1452,16 +1446,16 @@ this() @trusted
 
     Examples:
     ---
-    // Find the logarithm of every number from 1 to 
+    // Find the logarithm of every number from 1 to
     // 10_000_000 in parallel.
     auto logs = new double[10_000_000];
 
-    // Parallel foreach works with or without an index 
-    // variable.  It can be iterate by ref if range.front 
+    // Parallel foreach works with or without an index
+    // variable.  It can be iterate by ref if range.front
     // returns by ref.
 
     // Iterate over logs using work units of size 100.
-    foreach(i, ref elem; taskPool.parallel(logs, 100)) 
+    foreach(i, ref elem; taskPool.parallel(logs, 100))
     {
         elem = log(i + 1.0);
     }
@@ -1472,7 +1466,7 @@ this() @trusted
     //
     // Parallel foreach:  388 milliseconds
     // Regular foreach:   619 milliseconds
-    foreach(i, ref elem; taskPool.parallel(logs)) 
+    foreach(i, ref elem; taskPool.parallel(logs))
     {
         elem = log(i + 1.0);
     }
@@ -1571,10 +1565,10 @@ this() @trusted
     different threads must be safe.
 
     ---
-    // Same thing, but explicitly allocate an array 
-    // to return the results in.  The element type 
-    // of the array may be either the exact type 
-    // returned by functions or an implicit conversion 
+    // Same thing, but explicitly allocate an array
+    // to return the results in.  The element type
+    // of the array may be either the exact type
+    // returned by functions or an implicit conversion
     // target.
     auto squareRoots = new float[numbers.length];
     taskPool.amap!sqrt(numbers, squareRoots);
@@ -1773,7 +1767,7 @@ this() @trusted
     auto logs = taskPool.map!log10(nums);
 
     double sum = 0;
-    foreach(elem; logs) 
+    foreach(elem; logs)
     {
         sum += elem;
     }
@@ -1807,8 +1801,8 @@ this() @trusted
 
             static final class Map
             {
-                // This is a class because the task needs to be located on the 
-                // heap and in the non-random access case source needs to be on 
+                // This is a class because the task needs to be located on the
+                // heap and in the non-random access case source needs to be on
                 // the heap, too.
 
             private:
@@ -2079,22 +2073,22 @@ public:
     ---
     import std.conv, std.stdio;
 
-    void main() 
+    void main()
     {
-        // Fetch lines of a file in a background thread 
-        // while processing prevously fetched lines, 
+        // Fetch lines of a file in a background thread
+        // while processing prevously fetched lines,
         // dealing with byLine's buffer recycling by
         // eagerly duplicating every line.
         auto lines = File("foo.txt").byLine();
         auto duped = std.algorithm.map!"a.idup"(lines);
 
-        // Fetch more lines in the background while we 
-        // process the lines already read into memory 
+        // Fetch more lines in the background while we
+        // process the lines already read into memory
         // into a matrix of doubles.
         double[][] matrix;
         auto asyncReader = taskPool.asyncBuf(duped);
 
-        foreach(line; asyncReader) 
+        foreach(line; asyncReader)
         {
             auto ls = line.split("\t");
             matrix ~= to!(double[])(ls);
@@ -2231,7 +2225,7 @@ public:
             {
                 enum bool empty = false;
             }
-            
+
             else
             {
                 ///
@@ -2277,7 +2271,7 @@ public:
     // fetched lines, without duplicating any lines.
     auto file = File("foo.txt");
 
-    void next(ref char[] buf) 
+    void next(ref char[] buf)
     {
         file.readln(buf);
     }
@@ -2287,7 +2281,7 @@ public:
     double[][] matrix;
     auto asyncReader = taskPool.asyncBuf(&next, &file.eof);
 
-    foreach(line; asyncReader) 
+    foreach(line; asyncReader)
     {
         auto ls = line.split("\t");
         matrix ~= to!(double[])(ls);
@@ -2716,7 +2710,7 @@ public:
 
     import std.stdio, std.conv, std.range, std.numeric;
 
-    void main() 
+    void main()
     {
         auto filesHandles = new File[taskPool.size + 1];
         scope(exit) {
@@ -2725,12 +2719,12 @@ public:
             }
         }
 
-        foreach(i, ref handle; fileHandles) 
+        foreach(i, ref handle; fileHandles)
         {
             handle = File("workerResults" ~ to!string(i) ~ ".txt");
         }
 
-        foreach(num; parallel(iota(1_000))) 
+        foreach(num; parallel(iota(1_000)))
         {
             auto outHandle = fileHandles[taskPool.workerIndex];
             outHandle.writeln(num, '\t', gcd(num, 42));
@@ -2770,13 +2764,13 @@ public:
 
     Examples:
     ---
-    // Calculate pi as in our synopsis example, but 
+    // Calculate pi as in our synopsis example, but
     // use an imperative instead of a functional style.
     immutable n = 1_000_000_000;
     immutable delta = 1.0L / n;
 
     auto sums = taskPool.workerLocalStorage(0.0L);
-    foreach(i; parallel(iota(n))) 
+    foreach(i; parallel(iota(n)))
     {
         immutable x = ( i - 0.5L ) * delta;
         immutable toAdd = delta / ( 1.0 + x * x );
@@ -2785,7 +2779,7 @@ public:
 
     // Add up the results from each worker thread.
     real pi = 0;
-    foreach(threadResult; sums.toRange) 
+    foreach(threadResult; sums.toRange)
     {
         pi += 4.0L * threadResult;
     }
@@ -3783,9 +3777,9 @@ private struct ParallelForeach(R)
     else
     {
         alias int delegate(E) NoIndexDg;
-        alias int delegate(size_t, E) IndexDg; 
+        alias int delegate(size_t, E) IndexDg;
     }
-        
+
     int opApply(scope NoIndexDg dg)
     {
         static if(randLen!R)
@@ -3852,7 +3846,7 @@ private struct RoundRobinBuffer(C1, C2)
     in
     {
         assert(!empty);
-    } 
+    }
     body
     {
         scope(success) primed = true;
@@ -3864,7 +3858,7 @@ private struct RoundRobinBuffer(C1, C2)
     in
     {
         assert(!empty);
-    } 
+    }
     body
     {
         if(!primed) prime();
@@ -3893,7 +3887,7 @@ version(unittest)
 {
     // This was the only way I could get nested maps to work.
     __gshared TaskPool poolInstance;
-    
+
     import std.stdio;
 }
 
