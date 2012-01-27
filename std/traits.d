@@ -1689,9 +1689,9 @@ unittest
     //pragma(msg, __traits(allMembers, void delegate()));
     static assert(!hasMember!(int, "blah"));
     struct S1 { int blah; }
-    struct S2 { int blah(); }
-    struct C1 { int blah; }
-    struct C2 { int blah(); }
+    struct S2 { int blah(){ return 0; } }
+    class C1 { int blah; }
+    class C2 { int blah(){ return 0; } }
     static assert(hasMember!(S1, "blah"));
     static assert(hasMember!(S2, "blah"));
     static assert(hasMember!(C1, "blah"));
