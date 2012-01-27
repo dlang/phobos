@@ -760,7 +760,7 @@ deprecated template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
     {
-        private template enumValuesImpl(string name, BaseType, long index, T...)
+        template enumValuesImpl(string name, BaseType, long index, T...)
         {
             static if (name.length)
             {
@@ -790,7 +790,7 @@ deprecated template defineEnum(string name, T...)
             }
         }
 
-        private template enumParserImpl(string name, bool first, T...)
+        template enumParserImpl(string name, bool first, T...)
         {
             static if (first)
             {
@@ -810,7 +810,7 @@ deprecated template defineEnum(string name, T...)
             }
         }
 
-        private template enumPrinterImpl(string name, bool first, T...)
+        template enumPrinterImpl(string name, bool first, T...)
         {
             static if (first)
             {
@@ -828,9 +828,9 @@ deprecated template defineEnum(string name, T...)
             }
         }
 
-        private template StringsOnly(T...)
+        template StringsOnly(T...)
         {
-            private template ValueTuple(T...)
+            template ValueTuple(T...)
             {
                 alias T ValueTuple;
             }
@@ -1748,45 +1748,39 @@ private static:
     // this would be deprecated by std.typelist.Filter
     template staticFilter(alias pred, lst...)
     {
-        template staticFilterImpl(alias pred, lst...)
+        static if (lst.length > 0)
         {
-            static if (lst.length > 0)
-            {
-                alias staticFilterImpl!(pred, lst[1 .. $]).result tail;
-                //
-                static if (true && pred!(lst[0]))
-                    alias TypeTuple!(lst[0], tail) result;
-                else
-                    alias tail result;
-            }
+            alias staticFilter!(pred, lst[1 .. $]) tail;
+            //
+            static if (pred!(lst[0]))
+                alias TypeTuple!(lst[0], tail) staticFilter;
             else
-                alias TypeTuple!() result;
+                alias tail staticFilter;
         }
-
-        alias staticFilterImpl!(pred, lst).result staticFilter;
+        else
+            alias TypeTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        template enumerateOverloadsImpl(C, alias pred, names...)
+        template Impl(names...)
         {
             static if (names.length > 0)
             {
-                alias staticFilter!(pred, MemberFunctionsTuple!(C, ""~names[0])) methods;
-                alias enumerateOverloadsImpl!(C, pred, names[1 .. $]).result next;
+                alias staticFilter!(pred, MemberFunctionsTuple!(C, names[0])) methods;
+                alias Impl!(names[1 .. $]) next;
 
                 static if (methods.length > 0)
-                    alias TypeTuple!(OverloadSet!(""~names[0], methods), next) result;
+                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
                 else
-                    alias next result;
+                    alias next Impl;
             }
             else
-                alias TypeTuple!() result;
+                alias TypeTuple!() Impl;
         }
 
-        alias enumerateOverloadsImpl!(C, pred, __traits(allMembers, C)).result
-                enumerateOverloads;
+        alias Impl!(__traits(allMembers, C)) enumerateOverloads;
     }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -2224,7 +2218,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    ""~generateParameters!(myFuncInfo, func),
+                    generateParameters!(myFuncInfo, func)(),
                     postAtts, storageClass );
         }
 

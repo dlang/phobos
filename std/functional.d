@@ -553,22 +553,14 @@ template compose(fun...)
 {
     static if (fun.length == 1)
     {
-        static if (is(typeof(fun[0]) : string))
-            alias unaryFun!(fun[0]) compose;
-        else
-            alias fun[0] compose;
+        alias unaryFun!(fun[0]) compose;
     }
     else static if (fun.length == 2)
     {
         // starch
-        static if (is(typeof(fun[0]) : string))
-            alias unaryFun!(fun[0]) fun0;
-        else
-            alias fun[0] fun0;
-        static if (is(typeof(fun[1]) : string))
-            alias unaryFun!(fun[1]) fun1;
-        else
-            alias fun[1] fun1;
+        alias unaryFun!(fun[0]) fun0;
+        alias unaryFun!(fun[1]) fun1;
+
         // protein: the core composition operation
         typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
         {
