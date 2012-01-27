@@ -300,14 +300,14 @@ template ParameterTypeTuple(func...)
 unittest
 {
     int foo(int i, bool b) { return 0; }
-    static assert (is(ParameterTypeTuple!(foo) == TypeTuple!(int, bool)));
-    static assert (is(ParameterTypeTuple!(typeof(&foo))
-        == TypeTuple!(int, bool)));
+    static assert(is(ParameterTypeTuple!(foo) == TypeTuple!(int, bool)));
+    static assert(is(ParameterTypeTuple!(typeof(&foo)) == TypeTuple!(int, bool)));
+
     struct S { real opCall(real r, int i) { return 0.0; } }
     S s;
-    static assert (is(ParameterTypeTuple!(S) == TypeTuple!(real, int)));
-    static assert (is(ParameterTypeTuple!(S*) == TypeTuple!(real, int)));
-    static assert (is(ParameterTypeTuple!(s) == TypeTuple!(real, int)));
+    static assert(is(ParameterTypeTuple!(S) == TypeTuple!(real, int)));
+    static assert(is(ParameterTypeTuple!(S*) == TypeTuple!(real, int)));
+    static assert(is(ParameterTypeTuple!(s) == TypeTuple!(real, int)));
 
     class Test
     {
@@ -489,12 +489,12 @@ unittest
     static assert(!(functionAttributes!(Set.safeF) & FA.trusted));
 
     int pure_nothrow() pure nothrow { return 0; }
-    static assert(functionAttributes!(pure_nothrow) == (FA.pure_ | FA.nothrow_));
     static ref int  static_ref_property() @property { return *(new int); }
-    static assert(functionAttributes!(static_ref_property) == (FA.ref_ | FA.property));
     ref int ref_property() @property { return *(new int); }
-    static assert(functionAttributes!(ref_property) == (FA.ref_ | FA.property));
     void safe_nothrow() @safe nothrow { }
+    static assert(functionAttributes!(pure_nothrow) == (FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!(static_ref_property) == (FA.ref_ | FA.property));
+    static assert(functionAttributes!(ref_property) == (FA.ref_ | FA.property));
     static assert(functionAttributes!(safe_nothrow) == (FA.safe | FA.nothrow_));
 
     interface Test2
@@ -518,12 +518,9 @@ Example:
 @safe int sub(int a, int b) {return a-b;}
 @trusted int mul(int a, int b) {return a*b;}
 
-bool a = isSafe!(add);
-assert(a == false);
-bool b = isSafe!(sub);
-assert(b == true);
-bool c = isSafe!(mul);
-assert(c == true);
+static assert(!isSafe!(add));
+static assert( isSafe!(sub));
+static assert( isSafe!(mul));
 --------------------
  */
 template isSafe(alias func)
@@ -563,9 +560,9 @@ unittest
         int trustedF() @trusted;
         int safeF() @safe;
     }
-    static assert(isSafe!((int a){}));
-    static assert(isSafe!(Set.safeF));
-    static assert(isSafe!(Set.trustedF));
+    static assert( isSafe!((int a){}));
+    static assert( isSafe!(Set.safeF));
+    static assert( isSafe!(Set.trustedF));
     static assert(!isSafe!(Set.systemF));
 }
 
@@ -579,10 +576,8 @@ Example:
 @safe int sub(int a, int b) {return a-b;}
 @trusted int mul(int a, int b) {return a*b;}
 
-bool a = areAllSafe!(add, sub);
-assert(a == false);
-bool b = areAllSafe!(sub, mul);
-assert(b == true);
+static assert(!areAllSafe!(add, sub));
+static assert( areAllSafe!(sub, mul));
 --------------------
  */
 template areAllSafe(funcs...)
@@ -612,7 +607,7 @@ unittest
         int trustedF() @trusted;
         int safeF() @safe;
     }
-    static assert(areAllSafe!((int a){}, Set.safeF));
+    static assert( areAllSafe!((int a){}, Set.safeF));
     static assert(!areAllSafe!(Set.trustedF, Set.systemF));
 }
 
@@ -625,12 +620,9 @@ Example:
 @safe int sub(int a, int b) {return a-b;}
 @trusted int mul(int a, int b) {return a*b;}
 
-bool a = isUnsafe!(add);
-assert(a == true);
-bool b = isUnsafe!(sub);
-assert(b == false);
-bool c = isUnsafe!(mul);
-assert(c == false);
+static assert( isUnsafe!(add));
+static assert(!isUnsafe!(sub));
+static assert(!isUnsafe!(mul));
 --------------------
  */
 template isUnsafe(alias func)
@@ -650,7 +642,7 @@ unittest
     static assert(!isUnsafe!((int a){}));
     static assert(!isUnsafe!(Set.safeF));
     static assert(!isUnsafe!(Set.trustedF));
-    static assert(isUnsafe!(Set.systemF));
+    static assert( isUnsafe!(Set.systemF));
 }
 
 /**
@@ -685,8 +677,8 @@ unittest
 {
     extern(D) void Dfunc() {}
     extern(C) void Cfunc() {}
-    static assert(functionLinkage!(Dfunc) == "D");
-    static assert(functionLinkage!(Cfunc) == "C");
+    static assert(functionLinkage!Dfunc == "D");
+    static assert(functionLinkage!Cfunc == "C");
 
     interface Test
     {
@@ -1027,19 +1019,19 @@ template RepresentationTypeTuple(T)
 
 unittest
 {
-    alias RepresentationTypeTuple!(int) S1;
+    alias RepresentationTypeTuple!int S1;
     static assert(is(S1 == TypeTuple!(int)));
+
     struct S2 { int a; }
-    static assert(is(RepresentationTypeTuple!(S2) == TypeTuple!(int)));
     struct S3 { int a; char b; }
-    static assert(is(RepresentationTypeTuple!(S3) == TypeTuple!(int, char)));
     struct S4 { S1 a; int b; S3 c; }
-    static assert(is(RepresentationTypeTuple!(S4) ==
-                     TypeTuple!(int, int, int, char)));
+    static assert(is(RepresentationTypeTuple!S2 == TypeTuple!(int)));
+    static assert(is(RepresentationTypeTuple!S3 == TypeTuple!(int, char)));
+    static assert(is(RepresentationTypeTuple!S4 == TypeTuple!(int, int, int, char)));
 
     struct S11 { int a; float b; }
     struct S21 { char[] a; union { S11 b; S11 * c; } }
-    alias RepresentationTypeTuple!(S21) R;
+    alias RepresentationTypeTuple!S21 R;
     assert(R.length == 4
            && is(R[0] == char[]) && is(R[1] == int)
            && is(R[2] == float) && is(R[3] == S11*));
@@ -1120,11 +1112,11 @@ Example:
 ---
 // simple types
 static assert(!hasRawAliasing!(int));
-static assert(hasRawAliasing!(char*));
+static assert( hasRawAliasing!(char*));
 // references aren't raw pointers
 static assert(!hasRawAliasing!(Object));
 // built-in arrays do contain raw pointers
-static assert(hasRawAliasing!(int[]));
+static assert( hasRawAliasing!(int[]));
 // aggregate of simple types
 struct S1 { int a; double b; }
 static assert(!hasRawAliasing!(S1));
@@ -1133,10 +1125,10 @@ struct S2 { S1 a; double b; }
 static assert(!hasRawAliasing!(S2));
 // struct with a pointer member
 struct S3 { int a; double * b; }
-static assert(hasRawAliasing!(S3));
+static assert( hasRawAliasing!(S3));
 // struct with an indirect pointer member
 struct S4 { S3 a; double b; }
-static assert(hasRawAliasing!(S4));
+static assert( hasRawAliasing!(S4));
 ----
 */
 private template hasRawAliasing(T...)
@@ -1167,36 +1159,44 @@ private template hasRawAliasing(T...)
 
 unittest
 {
-// simple types
+    // simple types
     static assert(!hasRawAliasing!(int));
-    static assert(hasRawAliasing!(char*));
-// references aren't raw pointers
+    static assert( hasRawAliasing!(char*));
+
+    // references aren't raw pointers
     static assert(!hasRawAliasing!(Object));
     static assert(!hasRawAliasing!(int));
-    struct S1 { int z; }
-    static assert(!hasRawAliasing!(S1));
+
+    struct S1 { int  z; }
     struct S2 { int* z; }
-    static assert(hasRawAliasing!(S2));
-    struct S3 { int a; int* z; int c; }
-    static assert(hasRawAliasing!(S3));
-    struct S4 { int a; int z; int c; }
-    static assert(!hasRawAliasing!(S4));
+    static assert(!hasRawAliasing!S1);
+    static assert( hasRawAliasing!S2);
+
+    struct S3 { int a; int*   z; int c; }
+    struct S4 { int a; int    z; int c; }
     struct S5 { int a; Object z; int c; }
-    static assert(!hasRawAliasing!(S5));
+    static assert( hasRawAliasing!S3);
+    static assert(!hasRawAliasing!S4);
+    static assert(!hasRawAliasing!S5);
+
     union S6 { int a; int b; }
-    static assert(!hasRawAliasing!(S6));
     union S7 { int a; int * b; }
-    static assert(hasRawAliasing!(S7));
+    static assert(!hasRawAliasing!S6);
+    static assert( hasRawAliasing!S7);
+
     //typedef int* S8;
-    //static assert(hasRawAliasing!(S8));
+    //static assert(hasRawAliasing!S8);
+
     enum S9 { a }
-    static assert(!hasRawAliasing!(S9));
+    static assert(!hasRawAliasing!S9);
+
     // indirect members
     struct S10 { S7 a; int b; }
-    static assert(hasRawAliasing!(S10));
     struct S11 { S6 a; int b; }
-    static assert(!hasRawAliasing!(S11));
-    static assert(hasRawAliasing!(int[string]));
+    static assert( hasRawAliasing!S10);
+    static assert(!hasRawAliasing!S11);
+
+    static assert( hasRawAliasing!(int[string]));
     static assert(!hasRawAliasing!(immutable(int[string])));
 }
 
@@ -1210,12 +1210,12 @@ Example:
 ---
 // simple types
 static assert(!hasRawLocalAliasing!(int));
-static assert(hasRawLocalAliasing!(char*));
+static assert( hasRawLocalAliasing!(char*));
 static assert(!hasRawLocalAliasing!(shared char*));
 // references aren't raw pointers
 static assert(!hasRawLocalAliasing!(Object));
 // built-in arrays do contain raw pointers
-static assert(hasRawLocalAliasing!(int[]));
+static assert( hasRawLocalAliasing!(int[]));
 static assert(!hasRawLocalAliasing!(shared int[]));
 // aggregate of simple types
 struct S1 { int a; double b; }
@@ -1225,12 +1225,12 @@ struct S2 { S1 a; double b; }
 static assert(!hasRawLocalAliasing!(S2));
 // struct with a pointer member
 struct S3 { int a; double * b; }
-static assert(hasRawLocalAliasing!(S3));
+static assert( hasRawLocalAliasing!(S3));
 struct S4 { int a; shared double * b; }
-static assert(hasRawLocalAliasing!(S4));
+static assert( hasRawLocalAliasing!(S4));
 // struct with an indirect pointer member
 struct S5 { S3 a; double b; }
-static assert(hasRawLocalAliasing!(S5));
+static assert( hasRawLocalAliasing!(S5));
 struct S6 { S4 a; double b; }
 static assert(!hasRawLocalAliasing!(S6));
 ----
@@ -1264,47 +1264,56 @@ private template hasRawUnsharedAliasing(T...)
 
 unittest
 {
-// simple types
+    // simple types
     static assert(!hasRawUnsharedAliasing!(int));
-    static assert(hasRawUnsharedAliasing!(char*));
+    static assert( hasRawUnsharedAliasing!(char*));
     static assert(!hasRawUnsharedAliasing!(shared char*));
-// references aren't raw pointers
+
+    // references aren't raw pointers
     static assert(!hasRawUnsharedAliasing!(Object));
     static assert(!hasRawUnsharedAliasing!(int));
+
     struct S1 { int z; }
-    static assert(!hasRawUnsharedAliasing!(S1));
     struct S2 { int* z; }
-    static assert(hasRawUnsharedAliasing!(S2));
+    static assert(!hasRawUnsharedAliasing!S1);
+    static assert( hasRawUnsharedAliasing!S2);
+
     struct S3 { shared int* z; }
-    static assert(!hasRawUnsharedAliasing!(S3));
     struct S4 { int a; int* z; int c; }
-    static assert(hasRawUnsharedAliasing!(S4));
+    static assert(!hasRawUnsharedAliasing!S3);
+    static assert( hasRawUnsharedAliasing!S4);
+
     struct S5 { int a; shared int* z; int c; }
-    static assert(!hasRawUnsharedAliasing!(S5));
-    struct S6 { int a; int z; int c; }
-    static assert(!hasRawUnsharedAliasing!(S6));
-    struct S7 { int a; Object z; int c; }
-    static assert(!hasRawUnsharedAliasing!(S7));
-    union S8 { int a; int b; }
-    static assert(!hasRawUnsharedAliasing!(S8));
-    union S9 { int a; int * b; }
-    static assert(hasRawUnsharedAliasing!(S9));
-    union S10 { int a; shared int * b; }
-    static assert(!hasRawUnsharedAliasing!(S10));
+    struct S6 { int a; int z;         int c; }
+    struct S7 { int a; Object z;      int c; }
+    static assert(!hasRawUnsharedAliasing!S5);
+    static assert(!hasRawUnsharedAliasing!S6);
+    static assert(!hasRawUnsharedAliasing!S7);
+
+    union S8  { int a; int b; }
+    union S9  { int a; int* b; }
+    union S10 { int a; shared int* b; }
+    static assert(!hasRawUnsharedAliasing!S8);
+    static assert( hasRawUnsharedAliasing!S9);
+    static assert(!hasRawUnsharedAliasing!S10);
+
     //typedef int* S11;
-    //static assert(hasRawUnsharedAliasing!(S11));
     //typedef shared int* S12;
-    //static assert(hasRawUnsharedAliasing!(S12));
+    //static assert( hasRawUnsharedAliasing!S11);
+    //static assert( hasRawUnsharedAliasing!S12);
+
     enum S13 { a }
-    static assert(!hasRawUnsharedAliasing!(S13));
+    static assert(!hasRawUnsharedAliasing!S13);
+
     // indirect members
-    struct S14 { S9 a; int b; }
-    static assert(hasRawUnsharedAliasing!(S14));
+    struct S14 { S9  a; int b; }
     struct S15 { S10 a; int b; }
-    static assert(!hasRawUnsharedAliasing!(S15));
-    struct S16 { S6 a; int b; }
-    static assert(!hasRawUnsharedAliasing!(S16));
-    static assert(hasRawUnsharedAliasing!(int[string]));
+    struct S16 { S6  a; int b; }
+    static assert( hasRawUnsharedAliasing!S14);
+    static assert(!hasRawUnsharedAliasing!S15);
+    static assert(!hasRawUnsharedAliasing!S16);
+
+    static assert( hasRawUnsharedAliasing!(int[string]));
     static assert(!hasRawUnsharedAliasing!(shared(int[string])));
     static assert(!hasRawUnsharedAliasing!(immutable(int[string])));
 }
@@ -1389,25 +1398,26 @@ template hasAliasing(R : Rebindable!R)
 unittest
 {
     struct S1 { int a; Object b; }
-    static assert(hasAliasing!(S1));
     struct S2 { string a; }
-    static assert(!hasAliasing!(S2));
     struct S3 { int a; immutable Object b; }
-    static assert(!hasAliasing!(S3));
-    struct X { float[3] vals; }
-    static assert(!hasAliasing!X);
-    static assert(hasAliasing!(uint[uint]));
+    struct S4 { float[3] vals; }
+    static assert( hasAliasing!S1);
+    static assert(!hasAliasing!S2);
+    static assert(!hasAliasing!S3);
+    static assert(!hasAliasing!S4);
+
+    static assert( hasAliasing!(uint[uint]));
     static assert(!hasAliasing!(immutable(uint[uint])));
-    static assert(hasAliasing!(void delegate()));
+    static assert( hasAliasing!(void delegate()));
     static assert(!hasAliasing!(void function()));
 
     interface I;
-    static assert(hasAliasing!I);
+    static assert( hasAliasing!I);
 
-    static assert(hasAliasing!(Rebindable!(const Object)));
+    static assert( hasAliasing!(Rebindable!(const Object)));
     static assert(!hasAliasing!(Rebindable!(immutable Object)));
-    static assert(hasAliasing!(Rebindable!(shared Object)));
-    static assert(hasAliasing!(Rebindable!(Object)));
+    static assert( hasAliasing!(Rebindable!(shared Object)));
+    static assert( hasAliasing!(Rebindable!(Object)));
 }
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
@@ -1448,18 +1458,20 @@ template hasIndirections(T)
 unittest
 {
     struct S1 { int a; Object b; }
-    static assert(hasIndirections!(S1));
     struct S2 { string a; }
-    static assert(hasIndirections!(S2));
     struct S3 { int a; immutable Object b; }
-    static assert(hasIndirections!(S3));
-    static assert(hasIndirections!(int[string]));
-    static assert(hasIndirections!(void delegate()));
+    static assert( hasIndirections!S1);
+    static assert( hasIndirections!S2);
+    static assert( hasIndirections!S3);
+
+    static assert( hasIndirections!(int[string]));
+    static assert( hasIndirections!(void delegate()));
 
     interface I;
-    static assert(hasIndirections!I);
+    static assert( hasIndirections!I);
+
     static assert(!hasIndirections!(void function()));
-    static assert(hasIndirections!(void*[1]));
+    static assert( hasIndirections!(void*[1]));
     static assert(!hasIndirections!(byte[1]));
 }
 
@@ -1506,43 +1518,43 @@ template hasUnsharedAliasing(T...)
 unittest
 {
     struct S1 { int a; Object b; }
-    static assert(hasUnsharedAliasing!(S1));
     struct S2 { string a; }
-    static assert(!hasUnsharedAliasing!(S2));
     struct S3 { int a; immutable Object b; }
-    static assert(!hasUnsharedAliasing!(S3));
+    static assert( hasUnsharedAliasing!S1);
+    static assert(!hasUnsharedAliasing!S2);
+    static assert(!hasUnsharedAliasing!S3);
 
     struct S4 { int a; shared Object b; }
-    static assert(!hasUnsharedAliasing!(S4));
     struct S5 { char[] a; }
-    static assert(hasUnsharedAliasing!(S5));
     struct S6 { shared char[] b; }
-    static assert(!hasUnsharedAliasing!(S6));
     struct S7 { float[3] vals; }
-    static assert(!hasUnsharedAliasing!(S7));
+    static assert(!hasUnsharedAliasing!S4);
+    static assert( hasUnsharedAliasing!S5);
+    static assert(!hasUnsharedAliasing!S6);
+    static assert(!hasUnsharedAliasing!S7);
 
     /* Issue 6642 */
     struct S8 { int a; Rebindable!(immutable Object) b; }
-    static assert(!hasUnsharedAliasing!(S8));
+    static assert(!hasUnsharedAliasing!S8);
 
-    static assert(hasUnsharedAliasing!(uint[uint]));
-    static assert(hasUnsharedAliasing!(void delegate()));
+    static assert( hasUnsharedAliasing!(uint[uint]));
+    static assert( hasUnsharedAliasing!(void delegate()));
     static assert(!hasUnsharedAliasing!(shared(void delegate())));
     static assert(!hasUnsharedAliasing!(void function()));
 
     interface I {}
     static assert(hasUnsharedAliasing!I);
 
-    static assert(hasUnsharedAliasing!(Rebindable!(const Object)));
+    static assert( hasUnsharedAliasing!(Rebindable!(const Object)));
     static assert(!hasUnsharedAliasing!(Rebindable!(immutable Object)));
     static assert(!hasUnsharedAliasing!(Rebindable!(shared Object)));
-    static assert(hasUnsharedAliasing!(Rebindable!(Object)));
+    static assert( hasUnsharedAliasing!(Rebindable!(Object)));
 
     /* Issue 6979 */
     static assert(!hasUnsharedAliasing!(int, shared(int)*));
-    static assert(hasUnsharedAliasing!(int, int*));
-    static assert(hasUnsharedAliasing!(int, const(int)[]));
-    static assert(hasUnsharedAliasing!(int, shared(int)*, Rebindable!(Object)));
+    static assert( hasUnsharedAliasing!(int, int*));
+    static assert( hasUnsharedAliasing!(int, const(int)[]));
+    static assert( hasUnsharedAliasing!(int, shared(int)*, Rebindable!(Object)));
     static assert(!hasUnsharedAliasing!(shared(int)*, Rebindable!(shared Object)));
     static assert(!hasUnsharedAliasing!());
 }
@@ -1571,25 +1583,14 @@ template hasElaborateCopyConstructor(S)
 unittest
 {
     static assert(!hasElaborateCopyConstructor!int);
-    struct S
-    {
-        this(this) {}
-    }
-    static assert(hasElaborateCopyConstructor!S);
 
-    struct S2
-    {
-        uint num;
-    }
+    struct S1 { this(this) {} }
+    static assert( hasElaborateCopyConstructor!S1);
 
-    struct S3
-    {
-        uint num;
-        S s;
-    }
-
+    struct S2 { uint num; }
+    struct S3 { uint num; S1 s; }
     static assert(!hasElaborateCopyConstructor!S2);
-    static assert(hasElaborateCopyConstructor!S3);
+    static assert( hasElaborateCopyConstructor!S3);
 }
 
 /**
@@ -1615,21 +1616,23 @@ template hasElaborateAssign(S)
 unittest
 {
     static assert(!hasElaborateAssign!int);
-    struct S { void opAssign(S) {} }
-    static assert(hasElaborateAssign!S);
+
+    struct S  { void opAssign(S) {} }
+    static assert( hasElaborateAssign!S);
+
     struct S1 { void opAssign(ref S1) {} }
-    static assert(hasElaborateAssign!S1);
     struct S2 { void opAssign(S1) {} }
-    static assert(!hasElaborateAssign!S2);
     struct S3 { S s; }
-    static assert(hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!S1);
+    static assert(!hasElaborateAssign!S2);
+    static assert( hasElaborateAssign!S3);
 
     struct S4 {
         void opAssign(U)(auto ref U u)
             if (!__traits(isRef, u))
         {}
     }
-    static assert(hasElaborateAssign!S4);
+    static assert( hasElaborateAssign!S4);
 }
 
 /**
@@ -1655,12 +1658,13 @@ template hasElaborateDestructor(S)
 unittest
 {
     static assert(!hasElaborateDestructor!int);
+
     static struct S1 { }
-    static assert(!hasElaborateDestructor!S1);
     static struct S2 { ~this() {} }
-    static assert(hasElaborateDestructor!S2);
     static struct S3 { S2 field; }
-    static assert(hasElaborateDestructor!S3);
+    static assert(!hasElaborateDestructor!S1);
+    static assert( hasElaborateDestructor!S2);
+    static assert( hasElaborateDestructor!S3);
 }
 
 /**
@@ -1685,12 +1689,12 @@ unittest
     //pragma(msg, __traits(allMembers, void delegate()));
     static assert(!hasMember!(int, "blah"));
     struct S1 { int blah; }
-    static assert(hasMember!(S1, "blah"));
     struct S2 { int blah(); }
-    static assert(hasMember!(S2, "blah"));
     struct C1 { int blah; }
-    static assert(hasMember!(C1, "blah"));
     struct C2 { int blah(); }
+    static assert(hasMember!(S1, "blah"));
+    static assert(hasMember!(S2, "blah"));
+    static assert(hasMember!(C1, "blah"));
     static assert(hasMember!(C2, "blah"));
 
     // 6973
@@ -1878,6 +1882,7 @@ unittest
     interface I2 { }
     interface I12 : I1, I2 { }
     static assert(is(BaseTypeTuple!I12 == TypeTuple!(I1, I2)));
+
     interface I3 : I1 { }
     interface I123 : I1, I2, I3 { }
     static assert(is(BaseTypeTuple!I123 == TypeTuple!(I1, I2, I3)));
@@ -2376,9 +2381,10 @@ template isImplicitlyConvertible(From, To)
 
 unittest
 {
-    static assert(isImplicitlyConvertible!(immutable(char), char));
-    static assert(isImplicitlyConvertible!(const(char), char));
-    static assert(isImplicitlyConvertible!(char, wchar));
+    static assert( isImplicitlyConvertible!(immutable(char), char));
+    static assert( isImplicitlyConvertible!(const(char), char));
+    static assert( isImplicitlyConvertible!(char, wchar));
+
     static assert(!isImplicitlyConvertible!(wchar, char));
 
     // bug6197
@@ -2388,7 +2394,7 @@ unittest
 
     // from std.conv.implicitlyConverts
     assert(!isImplicitlyConvertible!(const(char)[], string));
-    assert(isImplicitlyConvertible!(string, const(char)[]));
+    assert( isImplicitlyConvertible!(string, const(char)[]));
 }
 
 /**
@@ -2399,7 +2405,7 @@ Examples:
 ---
 static assert(isAssignable!(long, int));
 static assert(!isAssignable!(int, long));
-static assert(isAssignable!(const(char)[], string));
+static assert( isAssignable!(const(char)[], string));
 static assert(!isAssignable!(string, char[]));
 ---
 */
@@ -2415,9 +2421,10 @@ template isAssignable(Lhs, Rhs)
 
 unittest
 {
-    static assert(isAssignable!(long, int));
+    static assert( isAssignable!(long, int));
+    static assert( isAssignable!(const(char)[], string));
+
     static assert(!isAssignable!(int, long));
-    static assert(isAssignable!(const(char)[], string));
     static assert(!isAssignable!(string, char[]));
 }
 
@@ -2436,12 +2443,13 @@ private template Pointify(T) { alias void* Pointify; }
 
 unittest
 {
-    static assert(isStorageClassImplicitlyConvertible!(          int, const int));
-    static assert(isStorageClassImplicitlyConvertible!(immutable int, const int));
-    static assert(! isStorageClassImplicitlyConvertible!(const int,           int));
-    static assert(! isStorageClassImplicitlyConvertible!(const int, immutable int));
-    static assert(! isStorageClassImplicitlyConvertible!(int, shared int));
-    static assert(! isStorageClassImplicitlyConvertible!(shared int, int));
+    static assert( isStorageClassImplicitlyConvertible!(          int, const int));
+    static assert( isStorageClassImplicitlyConvertible!(immutable int, const int));
+
+    static assert(!isStorageClassImplicitlyConvertible!(const int,           int));
+    static assert(!isStorageClassImplicitlyConvertible!(const int, immutable int));
+    static assert(!isStorageClassImplicitlyConvertible!(int, shared int));
+    static assert(!isStorageClassImplicitlyConvertible!(shared int, int));
 }
 
 
@@ -2589,10 +2597,10 @@ unittest
     interface BaseA            {          const(I) test(int); }
     interface DerivA_1 : BaseA { override const(J) test(int); }
     interface DerivA_2 : BaseA { override       J  test(int); }
-    static assert(isCovariantWith!(DerivA_1.test, BaseA.test));
-    static assert(isCovariantWith!(DerivA_2.test, BaseA.test));
-    static assert(! isCovariantWith!(BaseA.test, DerivA_1.test));
-    static assert(! isCovariantWith!(BaseA.test, DerivA_2.test));
+    static assert( isCovariantWith!(DerivA_1.test, BaseA.test));
+    static assert( isCovariantWith!(DerivA_2.test, BaseA.test));
+    static assert(!isCovariantWith!(BaseA.test, DerivA_1.test));
+    static assert(!isCovariantWith!(BaseA.test, DerivA_2.test));
     static assert(isCovariantWith!(BaseA.test, BaseA.test));
     static assert(isCovariantWith!(DerivA_1.test, DerivA_1.test));
     static assert(isCovariantWith!(DerivA_2.test, DerivA_2.test));
@@ -2602,27 +2610,27 @@ unittest
     interface DerivB_1 : BaseB { override void test(scope int,       int); }
     interface DerivB_2 : BaseB { override void test(      int, scope int); }
     interface DerivB_3 : BaseB { override void test(scope int, scope int); }
-    static assert(isCovariantWith!(DerivB_1.test, BaseB.test));
-    static assert(isCovariantWith!(DerivB_2.test, BaseB.test));
-    static assert(isCovariantWith!(DerivB_3.test, BaseB.test));
-    static assert(! isCovariantWith!(BaseB.test, DerivB_1.test));
-    static assert(! isCovariantWith!(BaseB.test, DerivB_2.test));
-    static assert(! isCovariantWith!(BaseB.test, DerivB_3.test));
+    static assert( isCovariantWith!(DerivB_1.test, BaseB.test));
+    static assert( isCovariantWith!(DerivB_2.test, BaseB.test));
+    static assert( isCovariantWith!(DerivB_3.test, BaseB.test));
+    static assert(!isCovariantWith!(BaseB.test, DerivB_1.test));
+    static assert(!isCovariantWith!(BaseB.test, DerivB_2.test));
+    static assert(!isCovariantWith!(BaseB.test, DerivB_3.test));
 
     // function storage class
     interface BaseC            {          void test()      ; }
     interface DerivC_1 : BaseC { override void test() const; }
-    static assert(isCovariantWith!(DerivC_1.test, BaseC.test));
-    static assert(! isCovariantWith!(BaseC.test, DerivC_1.test));
+    static assert( isCovariantWith!(DerivC_1.test, BaseC.test));
+    static assert(!isCovariantWith!(BaseC.test, DerivC_1.test));
 
     // increasing safety
     interface BaseE            {          void test()         ; }
     interface DerivE_1 : BaseE { override void test() @safe   ; }
     interface DerivE_2 : BaseE { override void test() @trusted; }
-    static assert(isCovariantWith!(DerivE_1.test, BaseE.test));
-    static assert(isCovariantWith!(DerivE_2.test, BaseE.test));
-    static assert(! isCovariantWith!(BaseE.test, DerivE_1.test));
-    static assert(! isCovariantWith!(BaseE.test, DerivE_2.test));
+    static assert( isCovariantWith!(DerivE_1.test, BaseE.test));
+    static assert( isCovariantWith!(DerivE_2.test, BaseE.test));
+    static assert(!isCovariantWith!(BaseE.test, DerivE_1.test));
+    static assert(!isCovariantWith!(BaseE.test, DerivE_2.test));
 
     // @safe and @trusted
     interface BaseF
@@ -2635,8 +2643,8 @@ unittest
         override void test1() @trusted;
         override void test2() @safe;
     }
-    static assert(isCovariantWith!(DerivF.test1, BaseF.test1));
-    static assert(isCovariantWith!(DerivF.test2, BaseF.test2));
+    static assert( isCovariantWith!(DerivF.test1, BaseF.test1));
+    static assert( isCovariantWith!(DerivF.test2, BaseF.test2));
 }
 
 
@@ -2722,19 +2730,19 @@ unittest
     foreach (F; TypeTuple!(float, double, real))
     {
         F a = 5.5;
-        static assert(isFloatingPoint!(typeof(a)));
         const F b = 5.5;
-        static assert(isFloatingPoint!(typeof(b)));
         immutable F c = 5.5;
+        static assert(isFloatingPoint!(typeof(a)));
+        static assert(isFloatingPoint!(typeof(b)));
         static assert(isFloatingPoint!(typeof(c)));
     }
     foreach (T; TypeTuple!(int, long, char))
     {
         T a;
-        static assert(!isFloatingPoint!(typeof(a)));
         const T b = 0;
-        static assert(!isFloatingPoint!(typeof(b)));
         immutable T c = 0;
+        static assert(!isFloatingPoint!(typeof(a)));
+        static assert(!isFloatingPoint!(typeof(b)));
         static assert(!isFloatingPoint!(typeof(c)));
     }
 }
@@ -2776,16 +2784,17 @@ template isSomeChar(T)
 
 unittest
 {
+    static assert( isSomeChar!(char));
+    static assert( isSomeChar!(dchar));
+    static assert( isSomeChar!(immutable(char)));
+
     static assert(!isSomeChar!(int));
     static assert(!isSomeChar!(int));
     static assert(!isSomeChar!(byte));
-    static assert(isSomeChar!(char));
-    static assert(isSomeChar!(dchar));
     static assert(!isSomeChar!(string));
     static assert(!isSomeChar!(wstring));
     static assert(!isSomeChar!(dstring));
     static assert(!isSomeChar!(char[4]));
-    static assert(isSomeChar!(immutable(char)));
 }
 
 /**
@@ -2799,15 +2808,16 @@ template isSomeString(T)
 
 unittest
 {
+    static assert( isSomeString!(char[]));
+    static assert( isSomeString!(dchar[]));
+    static assert( isSomeString!(string));
+    static assert( isSomeString!(wstring));
+    static assert( isSomeString!(dstring));
+    static assert( isSomeString!(char[4]));
+
     static assert(!isSomeString!(int));
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
-    static assert(isSomeString!(char[]));
-    static assert(isSomeString!(dchar[]));
-    static assert(isSomeString!(string));
-    static assert(isSomeString!(wstring));
-    static assert(isSomeString!(dstring));
-    static assert(isSomeString!(char[4]));
 }
 
 template isNarrowString(T)
@@ -2817,15 +2827,16 @@ template isNarrowString(T)
 
 unittest
 {
+    static assert( isNarrowString!(char[]));
+    static assert( isNarrowString!(string));
+    static assert( isNarrowString!(wstring));
+    static assert( isNarrowString!(char[4]));
+
     static assert(!isNarrowString!(int));
     static assert(!isNarrowString!(int[]));
     static assert(!isNarrowString!(byte[]));
-    static assert(isNarrowString!(char[]));
     static assert(!isNarrowString!(dchar[]));
-    static assert(isNarrowString!(string));
-    static assert(isNarrowString!(wstring));
     static assert(!isNarrowString!(dstring));
-    static assert(isNarrowString!(char[4]));
 }
 
 /**
@@ -2838,22 +2849,19 @@ template isAssociativeArray(T)
 
 unittest
 {
-    struct Foo {
-        @property uint[] keys() {
-            return null;
-        }
-
-        @property uint[] values() {
-            return null;
-        }
+    struct Foo
+    {
+        @property uint[] keys()   { return null; }
+        @property uint[] values() { return null; }
     }
+
+    static assert( isAssociativeArray!(int[int]));
+    static assert( isAssociativeArray!(int[string]));
+    static assert( isAssociativeArray!(immutable(char[5])[int]));
 
     static assert(!isAssociativeArray!(Foo));
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
-    static assert(isAssociativeArray!(int[int]));
-    static assert(isAssociativeArray!(int[string]));
-    static assert(isAssociativeArray!(immutable(char[5])[int]));
 }
 
 /**
@@ -2871,21 +2879,22 @@ template isStaticArray(T)
 
 unittest
 {
-    static assert (isStaticArray!(int[51]));
-    static assert (isStaticArray!(int[][2]));
-    static assert (isStaticArray!(char[][int][11]));
-    static assert (!isStaticArray!(const(int)[]));
-    static assert (!isStaticArray!(immutable(int)[]));
-    static assert (!isStaticArray!(const(int)[4][]));
-    static assert (!isStaticArray!(int[]));
-    static assert (!isStaticArray!(int[char]));
-    static assert (!isStaticArray!(int[1][]));
-    static assert (isStaticArray!(immutable char[13u]));
-    static assert (isStaticArray!(const(real)[1]));
-    static assert (isStaticArray!(const(real)[1][1]));
-    static assert (isStaticArray!(void[0]));
-    static assert (!isStaticArray!(int[int]));
-    static assert (!isStaticArray!(int));
+    static assert( isStaticArray!(int[51]));
+    static assert( isStaticArray!(int[][2]));
+    static assert( isStaticArray!(char[][int][11]));
+    static assert( isStaticArray!(immutable char[13u]));
+    static assert( isStaticArray!(const(real)[1]));
+    static assert( isStaticArray!(const(real)[1][1]));
+    static assert( isStaticArray!(void[0]));
+
+    static assert(!isStaticArray!(const(int)[]));
+    static assert(!isStaticArray!(immutable(int)[]));
+    static assert(!isStaticArray!(const(int)[4][]));
+    static assert(!isStaticArray!(int[]));
+    static assert(!isStaticArray!(int[char]));
+    static assert(!isStaticArray!(int[1][]));
+    static assert(!isStaticArray!(int[int]));
+    static assert(!isStaticArray!(int));
 }
 
 /**
@@ -2903,7 +2912,7 @@ template isDynamicArray(T : U[], U)
 
 unittest
 {
-    static assert(isDynamicArray!(int[]));
+    static assert( isDynamicArray!(int[]));
     static assert(!isDynamicArray!(int[5]));
 }
 
@@ -2917,11 +2926,12 @@ template isArray(T)
 
 unittest
 {
-    static assert(isArray!(int[]));
-    static assert(isArray!(int[5]));
+    static assert( isArray!(int[]));
+    static assert( isArray!(int[5]));
+    static assert( isArray!(void[]));
+
     static assert(!isArray!(uint));
     static assert(!isArray!(uint[uint]));
-    static assert(isArray!(void[]));
 }
 
 /**
@@ -2941,11 +2951,12 @@ template isPointer(T)
 
 unittest
 {
-    static assert(isPointer!(int*));
+    static assert( isPointer!(int*));
+    static assert( isPointer!(void*));
+
     static assert(!isPointer!(uint));
     static assert(!isPointer!(uint[uint]));
     static assert(!isPointer!(char[]));
-    static assert(isPointer!(void*));
 }
 
 /**
@@ -2958,9 +2969,10 @@ template pointerTarget(T : T*)
 
 unittest
 {
-    static assert(is(pointerTarget!(int*) == int));
+    static assert( is(pointerTarget!(int*) == int));
+    static assert( is(pointerTarget!(long*) == long));
+
     static assert(!is(pointerTarget!int));
-    static assert(is(pointerTarget!(long*) == long));
 }
 
 /**
@@ -2996,11 +3008,12 @@ unittest
         enum bool empty = false;
     }
 
-    static assert(isIterable!(uint[]));
+    static assert( isIterable!(uint[]));
+    static assert( isIterable!(OpApply));
+    static assert( isIterable!(uint[string]));
+    static assert( isIterable!(Range));
+
     static assert(!isIterable!(uint));
-    static assert(isIterable!(OpApply));
-    static assert(isIterable!(uint[string]));
-    static assert(isIterable!(Range));
 }
 
 /*
@@ -3014,10 +3027,10 @@ template isMutable(T)
 
 unittest
 {
-    static assert(isMutable!int);
-    static assert(isMutable!string);
-    static assert(isMutable!(shared int));
-    static assert(isMutable!(shared const(int)[]));
+    static assert( isMutable!int);
+    static assert( isMutable!string);
+    static assert( isMutable!(shared int));
+    static assert( isMutable!(shared const(int)[]));
 
     static assert(!isMutable!(const int));
     static assert(!isMutable!(shared(const int)));
@@ -3044,16 +3057,16 @@ unittest
     enum aa = [ 1: -1 ];
     alias int myint;
 
-    static assert(isExpressionTuple!(42));
-    static assert(isExpressionTuple!(aa));
-    static assert(isExpressionTuple!("cattywampus", 2.7, aa));
-    static assert(isExpressionTuple!(bar()));
+    static assert( isExpressionTuple!(42));
+    static assert( isExpressionTuple!(aa));
+    static assert( isExpressionTuple!("cattywampus", 2.7, aa));
+    static assert( isExpressionTuple!(bar()));
 
-    static assert(! isExpressionTuple!(isExpressionTuple));
-    static assert(! isExpressionTuple!(foo));
-    static assert(! isExpressionTuple!( (a) { } ));
-    static assert(! isExpressionTuple!(int));
-    static assert(! isExpressionTuple!(myint));
+    static assert(!isExpressionTuple!(isExpressionTuple));
+    static assert(!isExpressionTuple!(foo));
+    static assert(!isExpressionTuple!( (a) { } ));
+    static assert(!isExpressionTuple!(int));
+    static assert(!isExpressionTuple!(myint));
 }
 
 
@@ -3075,15 +3088,15 @@ unittest
     auto c = new C;
     enum CONST = 42;
 
-    static assert(isTypeTuple!(int));
-    static assert(isTypeTuple!(string));
-    static assert(isTypeTuple!(C));
-    static assert(isTypeTuple!(typeof(func)));
-    static assert(isTypeTuple!(int, char, double));
+    static assert( isTypeTuple!(int));
+    static assert( isTypeTuple!(string));
+    static assert( isTypeTuple!(C));
+    static assert( isTypeTuple!(typeof(func)));
+    static assert( isTypeTuple!(int, char, double));
 
-    static assert(! isTypeTuple!(c));
-    static assert(! isTypeTuple!(isTypeTuple));
-    static assert(! isTypeTuple!(CONST));
+    static assert(!isTypeTuple!(c));
+    static assert(!isTypeTuple!(isTypeTuple));
+    static assert(!isTypeTuple!(CONST));
 }
 
 
@@ -3110,16 +3123,16 @@ unittest
     void bar() {}
 
     auto fpfoo = &foo;
-    static assert(isFunctionPointer!(fpfoo));
-    static assert(isFunctionPointer!(void function()));
+    static assert( isFunctionPointer!(fpfoo));
+    static assert( isFunctionPointer!(void function()));
 
     auto dgbar = &bar;
-    static assert(! isFunctionPointer!(dgbar));
-    static assert(! isFunctionPointer!(void delegate()));
-    static assert(! isFunctionPointer!(foo));
-    static assert(! isFunctionPointer!(bar));
+    static assert(!isFunctionPointer!(dgbar));
+    static assert(!isFunctionPointer!(void delegate()));
+    static assert(!isFunctionPointer!(foo));
+    static assert(!isFunctionPointer!(bar));
 
-    static assert(isFunctionPointer!((int a) {}));
+    static assert( isFunctionPointer!((int a) {}));
 }
 
 /**
@@ -3133,9 +3146,10 @@ template isDelegate(T...)
 
 unittest
 {
-    static assert(isDelegate!(void delegate()));
-    static assert(isDelegate!(uint delegate(uint)));
-    static assert(isDelegate!(shared uint delegate(uint)));
+    static assert( isDelegate!(void delegate()));
+    static assert( isDelegate!(uint delegate(uint)));
+    static assert( isDelegate!(shared uint delegate(uint)));
+
     static assert(!isDelegate!(uint));
     static assert(!isDelegate!(void function()));
 }
@@ -3180,25 +3194,24 @@ unittest
     auto dg = &c.method;
     real val;
 
-    static assert(isSomeFunction!(func));
-    static assert(isSomeFunction!(prop));
-    static assert(isSomeFunction!(nestedFunc));
-    static assert(isSomeFunction!(nestedProp));
-    static assert(isSomeFunction!(C.method));
-    static assert(isSomeFunction!(C.prop));
-    static assert(isSomeFunction!(c.prop));
-    static assert(isSomeFunction!(c.prop));
-    static assert(isSomeFunction!(fp));
-    static assert(isSomeFunction!(dg));
-    static assert(isSomeFunction!(typeof(func)));
-    static assert(isSomeFunction!(real function(ref int)));
-    static assert(isSomeFunction!(real delegate(ref int)));
+    static assert( isSomeFunction!(func));
+    static assert( isSomeFunction!(prop));
+    static assert( isSomeFunction!(nestedFunc));
+    static assert( isSomeFunction!(nestedProp));
+    static assert( isSomeFunction!(C.method));
+    static assert( isSomeFunction!(C.prop));
+    static assert( isSomeFunction!(c.prop));
+    static assert( isSomeFunction!(c.prop));
+    static assert( isSomeFunction!(fp));
+    static assert( isSomeFunction!(dg));
+    static assert( isSomeFunction!(typeof(func)));
+    static assert( isSomeFunction!(real function(ref int)));
+    static assert( isSomeFunction!(real delegate(ref int)));
+    static assert( isSomeFunction!((int a) { return a; }));
 
-    static assert(! isSomeFunction!(int));
-    static assert(! isSomeFunction!(val));
-    static assert(! isSomeFunction!(isSomeFunction));
-
-    static assert(isSomeFunction!((int a) { return a; }));
+    static assert(!isSomeFunction!(int));
+    static assert(!isSomeFunction!(val));
+    static assert(!isSomeFunction!(isSomeFunction));
 }
 
 
@@ -3230,9 +3243,9 @@ unittest
     static assert( isCallable!(S));
     static assert( isCallable!(c.opCall));
     static assert( isCallable!(I.value));
-    static assert(!isCallable!(I));
+    static assert( isCallable!((int a) { return a; }));
 
-    static assert(isCallable!((int a) { return a; }));
+    static assert(!isCallable!(I));
 }
 
 
@@ -3430,12 +3443,12 @@ template Unsigned(T)
 
 unittest
 {
-    alias Unsigned!(int) U;
-    assert(is(U == uint));
-    alias Unsigned!(const(int)) U1;
-    assert(is(U1 == const(uint)), U1.stringof);
-    alias Unsigned!(immutable(int)) U2;
-    assert(is(U2 == immutable(uint)), U2.stringof);
+    alias Unsigned!(int) U1;
+    alias Unsigned!(const(int)) U2;
+    alias Unsigned!(immutable(int)) U3;
+    static assert(is(U1 == uint));
+    static assert(is(U2 == const(uint)));
+    static assert(is(U3 == immutable(uint)));
     //struct S {}
     //alias Unsigned!(S) U2;
     //alias Unsigned!(double) U3;
@@ -3499,12 +3512,12 @@ template Signed(T)
 
 unittest
 {
-    alias Signed!(uint) S;
-    assert(is(S == int));
-    alias Signed!(const(uint)) S1;
-    assert(is(S1 == const(int)), S1.stringof);
-    alias Signed!(immutable(uint)) S2;
-    assert(is(S2 == immutable(int)), S2.stringof);
+    alias Signed!(uint) S1;
+    alias Signed!(const(uint)) S2;
+    alias Signed!(immutable(uint)) S3;
+    static assert(is(S1 == int));
+    static assert(is(S2 == const(int)));
+    static assert(is(S3 == immutable(int)));
 }
 
 /**
@@ -3639,11 +3652,12 @@ unittest
 {
     //typedef int MyInt;
     //MyInt test() { return 0; }
+    //static assert(mangledName!(MyInt)[$ - 7 .. $] == "T5MyInt"); // XXX depends on bug 4237
+    //static assert(mangledName!(test)[$ - 7 .. $] == "T5MyInt");
+
     class C { int value() @property { return 0; } }
     static assert(mangledName!(int) == int.mangleof);
     static assert(mangledName!(C) == C.mangleof);
-    //static assert(mangledName!(MyInt)[$ - 7 .. $] == "T5MyInt"); // XXX depends on bug 4237
-    //static assert(mangledName!(test)[$ - 7 .. $] == "T5MyInt");
     static assert(mangledName!(C.value)[$ - 12 .. $] == "5valueMFNdZi");
     static assert(mangledName!(mangledName) == "3std6traits11mangledName");
     static assert(mangledName!(removeDummyEnvelope) ==
