@@ -33484,9 +33484,9 @@ version(unittest)
         immutable ot = otherTZ.utcToTZ(0);
 
         auto diffs = [0, lt, ot];
-        auto diffAA = [0 : UTC(),
-                       lt : LocalTime(),
-                       ot : otherTZ];
+        auto diffAA = [0 : Rebindable!(immutable TimeZone)(UTC()),
+                       lt : Rebindable!(immutable TimeZone)(LocalTime()),
+                       ot : Rebindable!(immutable TimeZone)(otherTZ)];
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 
