@@ -49,16 +49,14 @@ structures.  The default value is optimized for a high cost for compares. */
 
 extern (C) void[] _adSort(Array a, TypeInfo ti)
 {
-  byte* base;
-  byte*[40] stack;              // stack
-  byte** sp;                    // stack pointer
-  byte* i, j, limit;            // scan and limit pointers
-  auto width = ti.tsize();
+  byte*[40] stackbuf = void;    // initial stack buffer
+  auto stack = stackbuf[0..length];    // stack
+  auto sp = stack.ptr;                 // stack pointer
 
-  base = cast(byte *)a.ptr;
+  auto width = ti.tsize();
+  auto base = cast(byte *)a.ptr;
   auto thresh = _maxspan * width;        // size of _maxspan elements in bytes
-  sp = stack.ptr;                        // init stack pointer
-  limit = base + a.length * width;       // pointer past end of array
+  auto limit = base + a.length * width;       // pointer past end of array
   while (1)                              // repeat until done then return
   {
     while (limit - base > thresh)        // if more than _maxspan elements
@@ -67,8 +65,8 @@ extern (C) void[] _adSort(Array a, TypeInfo ti)
       ti.swap((cast(uint)(limit - base) >> 1) -
            (((cast(uint)(limit - base) >> 1)) % width) + base, base);
 
-      i = base + width;                 // i scans from left to right
-      j = limit - width;                // j scans from right to left
+      auto i = base + width;            // i scans from left to right
+      auto j = limit - width;           // j scans from right to left
 
       if (ti.compare(i, j) > 0)         // Sedgewick's
         ti.swap(i, j);                  //    three-element sort
@@ -103,14 +101,21 @@ extern (C) void[] _adSort(Array a, TypeInfo ti)
         limit = j;                      // sort the left subarray
       }
       sp += 2;                          // increment stack pointer
-      assert(sp < cast(byte**)stack + stack.length);
+      if (sp == stack.ptr + stack.length)
+      {
+        // Double the size of stack[]
+        auto newstack = cast(byte**)alloca(stack.length * 2 * (*sp).sizeof);
+        newstack[0..stack.length] = stack[];
+        sp = &newstack[stack.length];
+        stack = newstack[0..stack.length * 2];
+      }
     }
 
     // Insertion sort on remaining subarray
-    i = base + width;
+    auto i = base + width;
     while (i < limit)
     {
-      j = i;
+      auto j = i;
       while (j > base && ti.compare(j - width, j) > 0)
       {
         ti.swap(j - width, j);
@@ -157,5 +162,8 @@ unittest
         //printf(" %d %d\n", a[i], a[i + 1]);
         assert(a[i] <= a[i + 1]);
     }
+
+    auto b = new uint[0xFF_FFFF];
+    b.sort;
 }
 
