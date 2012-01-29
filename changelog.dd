@@ -2,6 +2,7 @@ $(VERSION 058, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
        $(LI Added std.csv for reading CSV files.)
+       $(LI Added std.net.curl as D-ified wrapper over etc.c.curl and libcurl.)
        $(LI The overload of std.concurrency.receiveTimeout which takes a long has
             been deprecated. Please use the overload which takes a core.time.Duration.)
        $(LI The overload of std.conv.to which used a member function named to on the
