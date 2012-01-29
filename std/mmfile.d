@@ -445,7 +445,7 @@ class MmFile
     /**
      * Gives size in bytes of the memory mapped file.
      */
-    @property ulong length()
+    @property ulong length() const
     {
         debug (MMFILE) printf("MmFile.length()\n");
         return size;

@@ -1954,9 +1954,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Windows) {
-	  auto dwSize = to!DWORD(size);
+          auto dwSize = to!DWORD(size);
       ReadFile(hFile, buffer, dwSize, &dwSize, null);
-	  size = dwSize;
+          size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1969,9 +1969,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Windows) {
-	  auto dwSize = to!DWORD(size);
+          auto dwSize = to!DWORD(size);
       WriteFile(hFile, buffer, dwSize, &dwSize, null);
-	  size = dwSize;
+          size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -2814,7 +2814,8 @@ class SliceStream : FilterStream {
     if (bounded)
       assert (pos <= high - low);
     else
-      assert (pos <= s.size - low);
+      // size() does not appear to be const, though it should be
+      assert (pos <= (cast()s).size - low);
   }
 
   override size_t readBlock (void *buffer, size_t size) {
