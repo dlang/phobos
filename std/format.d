@@ -3230,11 +3230,20 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     enforce(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-    auto app = appender!T();
+    static if (isStaticArray!T)
+    {
+        T result;
+        auto app = result[];
+    }
+    else
+        auto app = appender!T();
     if (spec.trailing.empty)
     {
         for (; !input.empty; input.popFront())
         {
+            static if (isStaticArray!T)
+                if (app.empty)
+                    break;
             app.put(input.front);
         }
     }
@@ -3243,10 +3252,19 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         auto end = spec.trailing.front;
         for (; !input.empty && input.front != end; input.popFront())
         {
+            static if (isStaticArray!T)
+                if (app.empty)
+                    break;
             app.put(input.front);
         }
     }
-    return app.data;
+    static if (isStaticArray!T)
+    {
+        enforce(app.empty, "need more input");
+        return result;
+    }
+    else
+        return app.data;
 }
 
 unittest
@@ -3356,6 +3374,16 @@ unittest
     int[4] sa2;
     input = `[1,2,3]`;
     assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
+}
+
+unittest
+{
+    // 7241
+    string input = "a";
+    auto spec = FormatSpec!char("%s");
+    spec.readUpToNextSpec(input);
+    auto result = unformatValue!(dchar[1])(input, spec);
+    assert(result[0] == 'a');
 }
 
 /**
