@@ -899,7 +899,7 @@ unittest
     }
     ---
 */
-immutable(C)[] buildPath(C)(const(C)[][] paths...)
+immutable(C)[] buildPath(C)(const(C[])[] paths...)
     //TODO: @safe pure nothrow (because of reduce() and to())
     if (isSomeChar!C)
 {
@@ -954,6 +954,12 @@ unittest
     }
 }
 
+unittest
+{
+    // Test for issue 7397
+    string[] ary = ["a", "b"];
+    buildPath(ary);
+}
 
 
 
