@@ -110,8 +110,14 @@ class CSVException : Exception
         super(msg, file, line);
     }
 
-    this(string msg, size_t row, size_t col, string file = __FILE__,
-         size_t line = __LINE__, Throwable next = null)
+    this(string msg, Throwable next, string file = __FILE__,
+         size_t line = __LINE__)
+    {
+        super(msg, file, line, next);
+    }
+
+    this(string msg, size_t row, size_t col, Throwable next = null,
+         string file = __FILE__, size_t line = __LINE__)
     {
         super(msg, next, file, line);
         this.row = row;
@@ -142,6 +148,11 @@ class IncompleteCellException : CSVException
     {
         super(msg, file, line);
     }
+
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line, next);
+    }
 }
 
 /**
@@ -162,13 +173,18 @@ class IncompleteCellException : CSVException
  * Since a row and column is not meaningful when a column specified by the
  * header is not found in the data, both row and col will be zero. Otherwise
  * row is always one and col is the first instance found in header that
- * occurred before the previous starting an one.
+ * occurred before the previous starting at one.
  */
 class HeaderMismatchException : CSVException
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
     {
         super(msg, file, line);
+    }
+
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line, next);
     }
 }
 
@@ -987,8 +1003,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, _input.col,
-                                       __FILE__, __LINE__, e);
+                throw new CSVException(e.msg, _input.row, _input.col, e);
             }
 
             recordContent = aa;
@@ -1029,8 +1044,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, colIndex,
-                                       __FILE__, __LINE__, e);
+                throw new CSVException(e.msg, _input.row, colIndex, e);
             }
         }
     }
@@ -1209,7 +1223,7 @@ public:
             }
             catch(ConvException e)
             {
-                throw new CSVException(e.msg, _input.row, _input.col, __FILE__, __LINE__, e);
+                throw new CSVException(e.msg, _input.row, _input.col, e);
             }
         }
     }
@@ -1247,7 +1261,7 @@ public:
         try curContentsoken = to!Contents(_front.data);
         catch(ConvException e)
         {
-            throw new CSVException(e.msg, _input.row, _input.col, __FILE__, __LINE__, e);
+            throw new CSVException(e.msg, _input.row, _input.col, e);
         }
     }
 }
