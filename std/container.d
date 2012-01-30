@@ -1628,7 +1628,7 @@ struct Array(T) if (!is(T : const(bool)))
             emplace(p + i, e);
             assert(p[i] == e);
         }
-        _data.RefCounted.initialize(p[0 .. values.length]);
+        _data = Data(p[0 .. values.length]);
     }
 
 /**
@@ -1814,7 +1814,7 @@ Complexity: $(BIGOH 1)
             {
                 GC.addRange(p, sz);
             }
-            _data.RefCounted.initialize(cast(T[]) p[0 .. 0]);
+            _data = Data(cast(T[]) p[0 .. 0]);
             _data._capacity = elements;
         }
         else

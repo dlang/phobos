@@ -1998,7 +1998,6 @@ struct HTTP
 
     private void initialize()
     {
-        p.RefCounted.initialize();
         p.curl.initialize();
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
@@ -2666,7 +2665,6 @@ struct FTP
 
     private void initialize()
     {
-        p.RefCounted.initialize();
         p.curl.initialize();
         p.encoding = "ISO-8859-1";
         dataTimeout = _defaultDataTimeout;
@@ -2943,7 +2941,6 @@ struct SMTP
     */
     this(string url)
     {
-        p.RefCounted.initialize();
         p.curl.initialize();
         auto lowered = url.toLower();
 
