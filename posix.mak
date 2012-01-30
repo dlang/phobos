@@ -196,7 +196,7 @@ ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
 $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
 	std/stdarg.d std/bind.d std/internal/windows/advapi32.d std/__fileinit.d \
 	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-	std/c/linux/tipc.d std/net/isemail.d
+	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
