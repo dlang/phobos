@@ -2625,6 +2625,12 @@ unittest
     }
 }
 
+unittest
+{
+    RefCounted!int p1, p2;
+    swap(p1, p2);
+}
+
 // 6606
 unittest
 {
