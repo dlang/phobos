@@ -3575,7 +3575,15 @@ pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
 template mangledName(sth...)
     if (sth.length == 1)
 {
-    enum string mangledName = removeDummyEnvelope(Dummy!(sth).Hook.mangleof);
+    static if (is(typeof(sth[0]) X) && is(X == void))
+    {
+        // sth[0] is a template symbol
+        enum string mangledName = removeDummyEnvelope(Dummy!(sth).Hook.mangleof);
+    }
+    else
+    {
+        enum string mangledName = sth[0].mangleof;
+    }
 }
 
 private template Dummy(T...) { struct Hook {} }
@@ -3641,7 +3649,18 @@ unittest
     static assert(mangledName!(removeDummyEnvelope) ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
-    static assert(mangledName!((int a) { return a+x; })[$ - 9 .. $] == "MFNbNfiZi");    // nothrow safe
+    static assert(mangledName!((int a) { return a+x; }) == "DFNbNfiZi");    // nothrow safe
+}
+
+unittest
+{
+    // Test for bug 5718
+    import std.demangle;
+    int foo;
+    assert(demangle(mangledName!foo)[$-7 .. $] == "int foo");
+
+    void bar(){}
+    assert(demangle(mangledName!bar)[$-10 .. $] == "void bar()");
 }
 
 
