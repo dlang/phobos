@@ -57,8 +57,8 @@ version(X86_OR_X64)
 		SSE41,
 		SSE42,
 		SSE5,	// AMD's competition to SSE4
-		AVX,	// 256 bit, 3 operand opcodes
-		AVX2	// 256 bit, 3 operand opcodes
+		AVX,	// 128x2/256bit, 3 operand opcodes
+		AVX2
 	}
 
 	// we source this from the compiler flags, ie. -msse2 for instance
@@ -97,12 +97,10 @@ else
 
 private
 {
-/* this doesn't seem to work yet...
-	immutable ulong2 signMask2 = 0x8000_0000_0000_0000;
-	immutable uint4 signMask4 = 0x8000_0000;
-	immutable ushort8 signMask8 = 0x8000;
-	immutable ubyte16 signMask16 = 0x80;
-*/
+	enum ulong2 signMask2 = 0x8000_0000_0000_0000;
+	enum uint4 signMask4 = 0x8000_0000;
+	enum ushort8 signMask8 = 0x8000;
+	enum ubyte16 signMask16 = 0x80;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,16 +146,29 @@ private
 		else
 			static assert(0, "Incorrect type");
 	}
+	template NumElements(T)
+	{
+		static if(is(T == double2) || is(T == long2) || is(T == ulong2))
+			enum size_t NumElements = 2;
+		else static if(is(T == float4) || is(T == int4) || is(T == uint4))
+			enum size_t NumElements = 4;
+		else static if(is(T == short8) || is(T == ushort8))
+			enum size_t NumElements = 8;
+		else static if(is(T == byte16) || is(T == ubyte16))
+			enum size_t NumElements = 16;
+		else
+			static assert(0, "Incorrect type");
+	}
 	/**** </WORK AROUNDS> ****/
 
 
 	// a template to test if a type is a vector type
-//	template isVector(T : __vector(U[N]), U, size_t N) { enum bool isVector = true; }
-//	template isVector(T) { enum bool isVector = false; }
+	//	template isVector(T : __vector(U[N]), U, size_t N) { enum bool isVector = true; }
+	//	template isVector(T) { enum bool isVector = false; }
 
 	// pull the base type from a vector, array, or primitive type
 	template ArrayType(T : T[]) { alias T ArrayType; }
-//	template VectorType(T : Vector!T) { alias T VectorType; }
+	//	template VectorType(T : Vector!T) { alias T VectorType; }
 	template BaseType(T)
 	{
 		static if(isVector!T)
@@ -306,10 +317,8 @@ T getX(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is(T == double2))
-			return __builtin_ia32_shufpd(v, v, 0x00);
-		else static if(is64bitElement!(T))
-			return __builtin_ia32_pshufd(v, 0x44);
+		static if(is64bitElement!(T))
+			return swizzle!("XX", Ver)(v);
 		else static if(is32bitElement!(T))
 			return swizzle!("XXXX", Ver)(v);
 		else static if(is16bitElement!(T))
@@ -355,10 +364,8 @@ T getY(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is(T == double2))
-			return __builtin_ia32_shufpd(v, v, 0x03);
-		else static if(is64bitElement!(T))
-			return __builtin_ia32_pshufd(v, 0xEE);
+		static if(is64bitElement!(T))
+			return swizzle!("YY", Ver)(v);
 		else static if(is32bitElement!(T))
 			return swizzle!("YYYY", Ver)(v);
 		else static if(is16bitElement!(T))
@@ -509,42 +516,26 @@ T setW(SIMDVer Ver = sseVer, T)(T v, T w)
 	return v;
 }
 
-// rotate elements left
-T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
-{
-	return v;
-}
-
-// rotate elements right
-T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
-{
-	return v;
-}
-
-
 // swizzle a vector: r = swizzle!"ZZWX"(v); // r = v.zzwx
 T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 {
-	static assert(is32bitElement!(T), "TODO: Support <>4D vectors...");
-	static assert(swiz.length > 0 && swiz.length <= 4, "Invalid number of components in swizzle string");
-
 	// parse the string into elements
-	int[4] parseElements(string swiz)
+	int[N] parseElements(string swiz, size_t N)(string[] elements)
 	{
 		import std.string;
-		swiz = toLower(swiz);
+		auto swizzleKey = toLower(swiz);
 
-		enum elements = ["xyzw", "rgba", "01234567"];
+		int[N] r;
+		foreach(i; 0..N)
+			r[i] = i;
 
-		// TODO: this is crap! rewrite this work less 'shit'...
-		int[4] r = [0,1,2,3];
-		for(int i=0; i<swiz.length; ++i)
+		foreach(i; 0..swizzleKey.length)
 		{
 			foreach(s; elements)
 			{
 				foreach(j, c; s)
 				{
-					if(swiz[i] == c)
+					if(swizzleKey[i] == c)
 					{
 						r[i] = j;
 						break;
@@ -555,17 +546,45 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 		return r;
 	}
 
-	uint shufMask(int[4] elements)
+	bool isIdentity(size_t N)(int[N] elements)
 	{
-		return ((elements[0] & 3) << 0) | ((elements[1] & 3) << 2) | ((elements[2] & 3) << 4) | ((elements[3] & 3) << 6);
+		foreach(i, e; elements)
+		{
+			if(e != i)
+				return false;
+		}
+		return true;
 	}
 
-	// parse the swizzle string
-	enum int[4] elements = parseElements(swiz);
-
-	static if(elements == [0,1,2,3])
+	int sseShufMask(size_t N)(int[N] elements)
 	{
-		// early out if no swizzle was performed
+		static if(N == 2)
+			return ((elements[0] & 1) << 0) | ((elements[1] & 1) << 1);
+		else static if(N == 4)
+			return ((elements[0] & 3) << 0) | ((elements[1] & 3) << 2) | ((elements[2] & 3) << 4) | ((elements[3] & 3) << 6);
+	}
+
+	enum size_t Elements = NumElements!T;
+
+	static assert(swiz.length > 0 && swiz.length <= Elements, "Invalid number of components in swizzle string");
+
+	// TODO: incomplete swizzle strings should follow some rules...
+
+	static if(Elements == 2)
+		enum elementNames = ["xy", "ab", "01"];
+	else static if(Elements == 4)
+		enum elementNames = ["xyzw", "rgba", "0123"];
+	else static if(Elements == 8)
+		enum elementNames = ["01234567"];
+	else static if(Elements == 16)
+		enum elementNames = ["0123456789ABCDEF"];
+
+	// parse the swizzle string
+	enum int[Elements] elements = parseElements!(swiz, Elements)(elementNames);
+
+	// early out if no actual swizzle
+	static if(isIdentity!Elements(elements))
+	{
 		return v;
 	}
 	else
@@ -576,12 +595,44 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 		}
 		else version(GNU)
 		{
-			static if(is(T == float4))
-				return __builtin_ia32_shufps(v, v, shufMask(elements));
+			static if(is(T == double2))
+			{
+				static if(elements[0] == elements[1]) // swizzle: XX or YY
+				{
+					// unpacks are more efficient than shuffd
+					static if(elements[0] == 0)
+						return __builtin_ia32_unpcklpd(v, v); // swizzle: XX
+					else
+						return __builtin_ia32_unpckhpd(v, v); // swizzle: YY
+				}
+				else
+					return __builtin_ia32_shufpd(v, v, sseShufMask!Elements(elements)); // swizzle: YX
+			}
+			else static if(is64bitElement!(T)) // (u)long2
+			{
+				static if(elements[0] == elements[1]) // swizzle: XX or YY
+				{
+					// unpacks are more efficient than shuffd
+					static if(elements[0] == 0)
+						return __builtin_ia32_punpcklqdq128(v, v); // swizzle: XX
+					else
+						return __builtin_ia32_punpckhqdq128(v, v); // swizzle: YY
+				}
+				else
+				{
+					// use a 32bit integer shuffle for swizzle: YZ
+					return __builtin_ia32_pshufd(v, sseShufMask!4([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
+				}
+			}
+			else static if(is(T == float4)) // TODO: use unpack to improve ZZWW, and YYXX
+				return __builtin_ia32_shufps(v, v, sseShufMask!Elements(elements));
 			else static if(is32bitElement!(T))
-				return __builtin_ia32_pshufd(v, shufMask(elements));
+				return __builtin_ia32_pshufd(v, sseShufMask!Elements(elements));
 			else
+			{
+				// TODO: 16 and 8bit swizzles...
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
+			}
 		}
 		else
 		{
@@ -620,10 +671,10 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 /* eg.
 short8,short8 unpackBytes(byte16)
 {
-	short8 low,high;
-	low = bytes[0..4];
-	high = bytes[4..8];
-	return low,high;
+short8 low,high;
+low = bytes[0..4];
+high = bytes[4..8];
+return low,high;
 }
 */
 
@@ -712,14 +763,14 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 {
 	static assert(!isUnsigned!(T), "Can not take absolute of unsigned value");
 
-/*
+	/*
 	// integer abs with no branches
 	int v;           // we want to find the absolute value of v
 	unsigned int r;  // the result goes here 
 	int const mask = v >> sizeof(int) * CHAR_BIT - 1;
 
 	r = (v + mask) ^ mask;
-*/
+	*/
 
 	version(DigitalMars)
 	{
@@ -728,17 +779,9 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 	else version(GNU)
 	{
 		static if(is(T == double2))
-		{
-			// TODO: constants don't work yet!
-			immutable double2 signMask2 = __builtin_ia32_xorpd(v, v); // 64bit sign mask
 			return __builtin_ia32_andnpd(cast(double2)signMask2, v);
-		}
 		else static if(is(T == float4))
-		{
-			// TODO: constants don't work yet!
-			immutable float4 signMask4 = __builtin_ia32_xorps(v, v); // 32bit sign mask
 			return __builtin_ia32_andnps(cast(float4)signMask4, v);
-		}
 		else
 		{
 			static if(Ver < SIMDVer.SSSE3)
@@ -1206,16 +1249,66 @@ T rsqrtEst(SIMDVer Ver = sseVer, T)(T v)
 ///////////////////////////////////////////////////////////////////////////////
 // Vector maths operations
 
+// 2d dot product
+T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
+{
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(is(T == double2))
+		{
+			float4 t = v1 * v2;
+			t = __builtin_ia32_haddpd(t, t);
+			return getX!Ver(t);
+		}
+		else static if(is(T == float4))
+		{
+			float4 t = v1 * v2;
+			t = __builtin_ia32_haddps(t, t);
+			return getX!Ver(t);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
 // 3d dot product
 T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
+
 	return null;
 }
 
 // 4d dot product
 T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
-	return null;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(is(T == float4))
+		{
+			float4 t = v1 * v2;
+			t = __builtin_ia32_haddps(t, t); // x+y, z+w
+			t = __builtin_ia32_haddps(t, t); // xy + zw
+			return getX!Ver(t);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // homogeneous dot product: v1.xyzw dot v2.xyz1
@@ -1369,6 +1462,356 @@ T xor(SIMDVer Ver = sseVer, T)(T v1, T v2)
 T nand(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
 	return ~and!Ver(v1, v2);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Bit shifts and rotates
+
+// binary shift left
+T shiftLeft(SIMDVer Ver = sseVer, T)(T v1, T v2)
+{
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(is(T == long2) || is(T == ulong2))
+			return __builtin_ia32_psllq128(v1, v2);
+		else static if(is(T == int4) || is(T == uint4))
+			return __builtin_ia32_psrld128(v1, v2);
+		else static if(is(T == short8) || is(T == ushort8))
+			return __builtin_ia32_psrlw128(v1, v2);
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+// binary shift left by immediate
+T shiftLeftImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
+{
+	static if(bits == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			static if(is(T == long2) || is(T == ulong2))
+				return __builtin_ia32_psllqi128(v, bits);
+			else static if(is(T == int4) || is(T == uint4))
+				return __builtin_ia32_psrldi128(v, bits);
+			else static if(is(T == short8) || is(T == ushort8))
+				return __builtin_ia32_psrlwi128(v, bits);
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// binary shift right (signed types perform arithmatic shift right)
+T shiftRight(SIMDVer Ver = sseVer, T)(T v1, T v2)
+{
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(is(T == ulong2))
+			return __builtin_ia32_psrlq128(v1, v2);
+		else static if(is(T == int4))
+			return __builtin_ia32_psrad128(v1, v2);
+		else static if(is(T == uint4))
+			return __builtin_ia32_psrld128(v1, v2);
+		else static if(is(T == short8))
+			return __builtin_ia32_psraw128(v1, v2);
+		else static if(is(T == ushort8))
+			return __builtin_ia32_psrlw128(v1, v2);
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+// binary shift right by immediate (signed types perform arithmatic shift right)
+T shiftRightImmediate(size_t bits, SIMDVer Ver = sseVer, T)(T v)
+{
+	static if(bits == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			static if(is(T == ulong2))
+				return __builtin_ia32_psrlqi128(v, bits);
+			else static if(is(T == int4))
+				return __builtin_ia32_psradi128(v, bits);
+			else static if(is(T == uint4))
+				return __builtin_ia32_psrldi128(v, bits);
+			else static if(is(T == short8))
+				return __builtin_ia32_psrawi128(v, bits);
+			else static if(is(T == ushort8))
+				return __builtin_ia32_psrlwi128(v, bits);
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// shift bytes left by immediate ('left' as they appear in memory)
+T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+{
+	static assert(bytes >= 0 && bytes < 16, "Invalid shift amount");
+	static if(bytes == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			// little endian reads the bytes into the register in reverse, so we need to flip the operations
+			return __builtin_ia32_psrldqi128(v, bytes);
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// shift bytes right by immediate ('right' as they appear in memory)
+T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+{
+	static assert(bytes >= 0 && bytes < 16, "Invalid shift amount");
+	static if(bytes == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			// little endian reads the bytes into the register in reverse, so we need to flip the operations
+			return __builtin_ia32_pslldqi128(v, bytes);
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// shift bytes left by immediate
+T rotateBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+{
+	enum b = bytes & 15;
+
+	static if(b == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		static assert(b >= 0 && b < 16, "Invalid shift amount");
+
+		version(X86_OR_X64)
+		{
+			return or!Ver(shiftBytesLeftImmediate!(b, Ver)(v), shiftBytesRightImmediate!(16 - b, Ver)(v));
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// shift bytes right by immediate
+T rotateBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
+{
+	enum b = bytes & 15;
+
+	static if(b == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		static assert(b >= 0 && b < 16, "Invalid shift amount");
+
+		version(X86_OR_X64)
+		{
+			return or!Ver(shiftBytesRightImmediate!(b, Ver)(v), shiftBytesLeftImmediate!(16 - b, Ver)(v));
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// shift elements left
+T shiftElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
+{
+	static if(n == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		//...
+		return v;
+	}
+}
+
+// shift elements right
+T shiftElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
+{
+	static if(n == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		//...
+		return v;
+	}
+}
+
+// shift elements left
+T shiftElementsLeftPair(size_t n, SIMDVer Ver = sseVer, T)(T v1, T v2)
+{
+	static if(n == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		//...
+		return v;
+	}
+}
+
+// shift elements right
+T shiftElementsRightPair(size_t n, SIMDVer Ver = sseVer, T)(T v1, T v2)
+{
+	static if(n == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		//...
+		return v;
+	}
+}
+
+// rotate elements left
+T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
+{
+	enum e = n & (NumElements!T - 1); // large rotations should wrap
+
+	static if(e == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		version(X86_OR_X64)
+		{
+			static if(is64bitElement!T)
+			{
+				return swizzle!("YX",Ver)(v);
+			}
+			else static if(is32bitElement!T)
+			{
+				// we can do this with shuffles more efficiently than rotating bytes
+				static if(e == 1)
+					return swizzle!("YZWX",Ver)(v); // X, Y, Z, [W, X, Y, Z], W
+				static if(e == 2)
+					return swizzle!("ZWXY",Ver)(v); // X, Y, [Z, W, X, Y], Z, W
+				static if(e == 3)
+					return swizzle!("WXYZ",Ver)(v); // X, [Y, Z, W, X], Y, Z, W
+			}
+			else
+			{
+				// perform the operation as bytes
+				static if(is16bitElement!T)
+					enum bytes = e * 2;
+				else
+					enum bytes = e;
+
+				// we can use a shuf for multiples of 4 bytes
+				static if((bytes & 3) == 0)
+					return rotateElementsLeft!(bytes >> 2, Ver)(cast(uint4)v);
+				else
+					return rotateBytesLeftImmediate!(bytes, Ver)(v);
+			}
+		}
+		else
+		{
+			static assert(0, "Unsupported on this architecture");
+		}
+	}
+}
+
+// rotate elements right
+T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
+{
+	enum size_t e = n & (NumElements!T - 1); // large rotations should wrap
+
+	static if(e == 0) // shift by 0 is a no-op
+	{
+		return v;
+	}
+	else
+	{
+		// just invert the rotation
+		static if(is64bitElement!T)
+			return rotateElementsLeft!(2 - e, Ver)(v);
+		else static if(is32bitElement!T)
+			return rotateElementsLeft!(4 - e, Ver)(v);
+		else static if(is16bitElement!T)
+			return rotateElementsLeft!(8 - e, Ver)(v);
+		else static if(is8bitElement!T)
+			return rotateElementsLeft!(16 - e, Ver)(v);
+	}
 }
 
 
