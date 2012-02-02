@@ -128,6 +128,8 @@ class MmFile
             assert(0);
         }
 
+        fd = fildes;
+
         // Adjust size
         struct_stat64 statbuf = void;
         errnoEnforce(fstat64(fd, &statbuf) == 0);
