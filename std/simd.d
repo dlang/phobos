@@ -51,13 +51,13 @@ version(X86_OR_X64)
 	{
 		SSE,
 		SSE2,
-		SSE3,
-		SSSE3,
-		SSE4,	// Intel only :(
-		SSE41,
-		SSE42,
-		SSE5,	// AMD's competition to SSE4
+		SSE3,	// Later Pentium4 + Athlon64
+		SSSE3,	// Introduced in Intel 'Core' series, AMD 'Bobcat'
+		SSE41,	// (Intel) Introduced in 45nm 'Core' series
+		SSE42,	// (Intel) Introduced in i7
+		SSE4a,	// (AMD) Introduced to 'Bobcat' (includes SSSE3 and below)
 		AVX,	// 128x2/256bit, 3 operand opcodes
+		SSE5,	// (AMD) XOP, FMA4 and CVT16. Introduced to 'Bulldozer' (includes ALL prior architectures)
 		AVX2
 	}
 
@@ -159,6 +159,19 @@ private
 		else
 			static assert(0, "Incorrect type");
 	}
+	template Unsigned(T)
+	{
+		static if(is(T == long2) || is(T == ulong2))
+			alias ulong2 Unsigned;
+		else static if(is(T == int4) || is(T == uint4))
+			alias uint4 Unsigned;
+		else static if(is(T == short8) || is(T == ushort8))
+			alias ushort8 Unsigned;
+		else static if(is(T == byte16) || is(T == ubyte16))
+			alias ubyte16 Unsigned;
+		else
+			static assert(0, "Incorrect type");
+	}
 	/**** </WORK AROUNDS> ****/
 
 
@@ -219,6 +232,11 @@ private
 	template isIntVector(T)
 	{
 		enum bool isIntVector = isVector!T && isScalarInt(BaseType!T);
+	}
+
+	template isSigned(T)
+	{
+		enum bool isSigned = !isScalarUnsigned!(BaseType!T);
 	}
 
 	template isUnsigned(T)
@@ -283,13 +301,39 @@ Vector!T loadUnaligned3(SIMDVer Ver = sseVer, T)(T* pV)
 // return the X element in a scalar register
 T getScalar(SIMDVer Ver = sseVer, T)(Vector!T v)
 {
-	return null;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(Ver >= SIMDVer.SSE41 && !is16bitElement!T)
+		{
+			static if(is(T == float4))
+				return __builtin_ia32_vec_ext_v4sf(v, 0);
+			else static if(is64bitElement!T)
+				return __builtin_ia32_vec_ext_v2di(v, 0);
+			else static if(is32bitElement!T)
+				return __builtin_ia32_vec_ext_v4si(v, 0);
+			//			else static if(is16bitElement!T)
+			//				return __builtin_ia32_vec_ext_v4sf(v, 0); // does this opcode exist??
+			else static if(is8bitElement!T)
+				return __builtin_ia32_vec_ext_v16qi(v, 0);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // store the X element to the address provided
 void storeScalar(SIMDVer Ver = sseVer, T)(Vector!T v, T* pS)
 {
-	return null;
+	// TODO: check this optimises correctly!! (opcode writes directly to memory)
+	*pS = getScalar(v);
 }
 
 // store the vector to an unaligned address
@@ -317,37 +361,8 @@ T getX(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is64bitElement!(T))
-			return swizzle!("XX", Ver)(v);
-		else static if(is32bitElement!(T))
-			return swizzle!("XXXX", Ver)(v);
-		else static if(is16bitElement!(T))
-		{
-			// TODO: we should use permute to perform this operation when immediates work >_<
-			static if(false)// Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0];
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-			{
-				T t = __builtin_ia32_pshufd(v, 0x00);
-				t = __builtin_ia32_pshuflw(t, 0x00);
-				return __builtin_ia32_pshufhw(t, 0x00);
-			}
-		}
-		else static if(is8bitElement!(T))
-		{
-			static if(Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = __builtin_ia32_xorps(v, v); // generate a zero register
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-				static assert(0, "Only supported in SSSE3 and above");
-		}
-		else
-			static assert(0, "Unsupported vector type: " ~ T.stringof);
+		// broadcast the 1st component
+		return swizzle!("0", Ver)(v);
 	}
 	else
 	{
@@ -364,35 +379,9 @@ T getY(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is64bitElement!(T))
-			return swizzle!("YY", Ver)(v);
-		else static if(is32bitElement!(T))
-			return swizzle!("YYYY", Ver)(v);
-		else static if(is16bitElement!(T))
-		{
-			// TODO: we should use permute to perform this operation when immediates work >_<
-			static if(false)// Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = [3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2];
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-			{
-				T t = __builtin_ia32_pshufd(v, 0x00);
-				t = __builtin_ia32_pshuflw(t, 0x55);
-				return __builtin_ia32_pshufhw(t, 0x55);
-			}
-		}
-		else static if(is8bitElement!(T))
-		{
-			static if(Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = __builtin_ia32_xorps(v, v); // generate a ones register
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-				static assert(0, "Only supported in SSSE3 and above");
-		}
+		// broadcast the second component
+		static if(NumElements!T >= 2)
+			return swizzle!("1", Ver)(v);
 		else
 			static assert(0, "Unsupported vector type: " ~ T.stringof);
 	}
@@ -411,33 +400,8 @@ T getZ(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is32bitElement!(T))
-			return swizzle!("ZZZZ", Ver)(v);
-		else static if(is16bitElement!(T))
-		{
-			// TODO: we should use permute to perform this operation when immediates work >_<
-			static if(false)// Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = [5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4];
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-			{
-				T t = __builtin_ia32_pshufd(v, 0x55);
-				t = __builtin_ia32_pshuflw(t, 0x00);
-				return __builtin_ia32_pshufhw(t, 0x00);
-			}
-		}
-		else static if(is8bitElement!(T))
-		{
-			static if(Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = __builtin_ia32_xorps(v, v); // generate a twos register
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-				static assert(0, "Only supported in SSSE3 and above");
-		}
+		static if(NumElements!T >= 3)
+			return swizzle!("2", Ver)(v); // broadcast the 3nd component
 		else
 			static assert(0, "Unsupported vector type: " ~ T.stringof);
 	}
@@ -456,33 +420,8 @@ T getW(SIMDVer Ver = sseVer, T)(T v)
 	}
 	else version(GNU)
 	{
-		static if(is32bitElement!(T))
-			return swizzle!("WWWW", Ver)(v);
-		else static if(is16bitElement!(T))
-		{
-			// TODO: we should use permute to perform this operation when immediates work >_<
-			static if(false)// Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = [7,6,7,6,7,6,7,6,7,6,7,6,7,6,7,6];
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-			{
-				T t = __builtin_ia32_pshufd(v, 0x55);
-				t = __builtin_ia32_pshuflw(t, 0x55);
-				return __builtin_ia32_pshufhw(t, 0x55);
-			}
-		}
-		else static if(is8bitElement!(T))
-		{
-			static if(Ver >= SIMDVer.SSSE3)
-			{
-				immutable ubyte16 permuteControl = __builtin_ia32_xorps(v, v); // generate a threes register
-				return __builtin_ia32_pshufb128(v, permuteControl);
-			}
-			else
-				static assert(0, "Only supported in SSSE3 and above");
-		}
+		static if(NumElements!T >= 4)
+			return swizzle!("3", Ver)(v); // broadcast the 4th component
 		else
 			static assert(0, "Unsupported vector type: " ~ T.stringof);
 	}
@@ -495,25 +434,121 @@ T getW(SIMDVer Ver = sseVer, T)(T v)
 // set the X element
 T setX(SIMDVer Ver = sseVer, T)(T v, T x)
 {
-	return v;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		{
+			static if(is(T == double2))
+				return __builtin_ia32_blendpd(v, x, 1);
+			else static if(is(T == float4))
+				return __builtin_ia32_blendps(v, x, 1);
+			else static if(is64bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x0F);
+			else static if(is32bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x03);
+			else static if(is16bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x01);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // set the Y element
 T setY(SIMDVer Ver = sseVer, T)(T v, T y)
 {
-	return v;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		{
+			static if(is(T == double2))
+				return __builtin_ia32_blendpd(v, x, 2);
+			else static if(is(T == float4))
+				return __builtin_ia32_blendps(v, x, 2);
+			else static if(is64bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0xF0);
+			else static if(is32bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x0C);
+			else static if(is16bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x02);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // set the Z element
 T setZ(SIMDVer Ver = sseVer, T)(T v, T z)
 {
-	return v;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		{
+			static if(is(T == float4))
+				return __builtin_ia32_blendps(v, x, 4);
+			else static if(is32bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x30);
+			else static if(is16bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x04);
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // set the W element
 T setW(SIMDVer Ver = sseVer, T)(T v, T w)
 {
-	return v;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		{
+			static if(is(T == float4))
+				return __builtin_ia32_blendps(v, x, 8);
+			else static if(is32bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0xC0);
+			else static if(is16bitElement!T)
+				return __builtin_ia32_pblendw128(v, x, 0x08);
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // swizzle a vector: r = swizzle!"ZZWX"(v); // r = v.zzwx
@@ -523,24 +558,49 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 	int[N] parseElements(string swiz, size_t N)(string[] elements)
 	{
 		import std.string;
+		import std.algorithm;
 		auto swizzleKey = toLower(swiz);
 
+		// initialise the element list to 'identity'
 		int[N] r;
 		foreach(i; 0..N)
 			r[i] = i;
 
-		foreach(i; 0..swizzleKey.length)
+		if(swizzleKey.length == 1)
 		{
+			// broadcast
 			foreach(s; elements)
 			{
-				foreach(j, c; s)
+				int i = countUntil(s, swizzleKey[0]);
+				if(i != -1)
 				{
-					if(swizzleKey[i] == c)
+					// set all elements to 'i'
+					r[] = i;
+					break;
+				}
+			}
+		}
+		else
+		{
+			// regular swizzle
+			bool bFound = false;
+			foreach(s; elements) // foreach swizzle naming convention
+			{
+				foreach(i; 0..swizzleKey.length) // foreach char in swizzle string
+				{
+					foreach(j, c; s) // find the offset of the 
 					{
-						r[i] = j;
-						break;
+						if(swizzleKey[i] == c)
+						{
+							bFound = true;
+							r[i] = j;
+							break;
+						}
 					}
 				}
+
+				if(bFound)
+					break;
 			}
 		}
 		return r;
@@ -551,6 +611,16 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 		foreach(i, e; elements)
 		{
 			if(e != i)
+				return false;
+		}
+		return true;
+	}
+
+	bool isBroadcast(size_t N)(int[N] elements)
+	{
+		foreach(i; 1..N)
+		{
+			if(elements[i] != elements[i-1])
 				return false;
 		}
 		return true;
@@ -568,10 +638,8 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 
 	static assert(swiz.length > 0 && swiz.length <= Elements, "Invalid number of components in swizzle string");
 
-	// TODO: incomplete swizzle strings should follow some rules...
-
 	static if(Elements == 2)
-		enum elementNames = ["xy", "ab", "01"];
+		enum elementNames = ["xy", "01"];
 	else static if(Elements == 4)
 		enum elementNames = ["xyzw", "rgba", "0123"];
 	else static if(Elements == 8)
@@ -595,43 +663,86 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 		}
 		else version(GNU)
 		{
-			static if(is(T == double2))
+			// broadcasts can usually be implemented more efficiently...
+			static if(isBroadcast!Elements(elements) && !is32bitElement!T)
 			{
-				static if(elements[0] == elements[1]) // swizzle: XX or YY
+				static if(is(T == double2))
 				{
 					// unpacks are more efficient than shuffd
 					static if(elements[0] == 0)
-						return __builtin_ia32_unpcklpd(v, v); // swizzle: XX
+					{
+						static if(0)//Ver >= SIMDVer.SSE3)
+							return __builtin_ia32_movddup(v);
+						else
+							return __builtin_ia32_unpcklpd(v, v);
+					}
 					else
-						return __builtin_ia32_unpckhpd(v, v); // swizzle: YY
+						return __builtin_ia32_unpckhpd(v, v);
 				}
-				else
-					return __builtin_ia32_shufpd(v, v, sseShufMask!Elements(elements)); // swizzle: YX
-			}
-			else static if(is64bitElement!(T)) // (u)long2
-			{
-				static if(elements[0] == elements[1]) // swizzle: XX or YY
+				else static if(is64bitElement!(T)) // (u)long2
 				{
 					// unpacks are more efficient than shuffd
 					static if(elements[0] == 0)
-						return __builtin_ia32_punpcklqdq128(v, v); // swizzle: XX
+						return __builtin_ia32_punpcklqdq128(v, v);
 					else
-						return __builtin_ia32_punpckhqdq128(v, v); // swizzle: YY
+						return __builtin_ia32_punpckhqdq128(v, v);
+				}
+				else static if(is16bitElement!T)
+				{
+					// TODO: we should use permute to perform this operation when immediates work >_<
+					static if(false)// Ver >= SIMDVer.SSSE3)
+					{
+						//						immutable ubyte16 permuteControl = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0];
+						//						return __builtin_ia32_pshufb128(v, permuteControl);
+					}
+					else
+					{
+						// TODO: is this most efficient?
+						enum int[] shufValues = [0x00, 0x55, 0xAA, 0xFF];
+						T t = __builtin_ia32_pshufd(v, shufValues[elements[0] >> 1]);
+						t = __builtin_ia32_pshuflw(t, (elements[0] & 1) ? 0x55 : 0x00);
+						return __builtin_ia32_pshufhw(t, (elements[0] & 1) ? 0x55 : 0x00);
+					}
+				}
+				else static if(is8bitElement!T)
+				{
+					static if(Ver >= SIMDVer.SSSE3)
+					{
+						static if(elements[0] == 0)
+							immutable ubyte16 permuteControl = __builtin_ia32_xorps(v, v); // generate a zero register
+						else
+							immutable ubyte16 permuteControl = cast(ubyte)elements[0]; // load a permute constant
+						return __builtin_ia32_pshufb128(v, permuteControl);
+					}
+					else
+						static assert(0, "Only supported in SSSE3 and above");
 				}
 				else
-				{
-					// use a 32bit integer shuffle for swizzle: YZ
-					return __builtin_ia32_pshufd(v, sseShufMask!4([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
-				}
+					static assert(0, "Unsupported vector type: " ~ T.stringof);
 			}
-			else static if(is(T == float4)) // TODO: use unpack to improve ZZWW, and YYXX
-				return __builtin_ia32_shufps(v, v, sseShufMask!Elements(elements));
-			else static if(is32bitElement!(T))
-				return __builtin_ia32_pshufd(v, sseShufMask!Elements(elements));
 			else
 			{
-				// TODO: 16 and 8bit swizzles...
-				static assert(0, "Unsupported vector type: " ~ T.stringof);
+				static if(is(T == double2))
+					return __builtin_ia32_shufpd(v, v, sseShufMask!Elements(elements)); // swizzle: YX
+				else static if(is64bitElement!(T)) // (u)long2
+					// use a 32bit integer shuffle for swizzle: YZ
+					return __builtin_ia32_pshufd(v, sseShufMask!4([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
+				else static if(is(T == float4))
+				{
+					static if(elements == [0,0,2,2] && Ver >= SIMDVer.SSE3)
+						return __builtin_ia32_movsldup(v);
+					else static if(elements == [1,1,3,3] && Ver >= SIMDVer.SSE3)
+						return __builtin_ia32_movshdup(v);
+					else
+						return __builtin_ia32_shufps(v, v, sseShufMask!Elements(elements));
+				}
+				else static if(is32bitElement!(T))
+					return __builtin_ia32_pshufd(v, sseShufMask!Elements(elements));
+				else
+				{
+					// TODO: 16 and 8bit swizzles...
+					static assert(0, "Unsupported vector type: " ~ T.stringof);
+				}
 			}
 		}
 		else
@@ -661,7 +772,7 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 	}
 }
 
-//... there are more useful permutation ops
+//... there are many more useful permutation ops
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -671,10 +782,10 @@ T permute(SIMDVer Ver = sseVer, T)(T v, ubyte16 control)
 /* eg.
 short8,short8 unpackBytes(byte16)
 {
-short8 low,high;
-low = bytes[0..4];
-high = bytes[4..8];
-return low,high;
+	short8 low,high;
+	low = bytes[0..4];
+	high = bytes[4..8];
+	return low,high;
 }
 */
 
@@ -763,14 +874,14 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 {
 	static assert(!isUnsigned!(T), "Can not take absolute of unsigned value");
 
-	/*
+/*
 	// integer abs with no branches
 	int v;           // we want to find the absolute value of v
 	unsigned int r;  // the result goes here 
 	int const mask = v >> sizeof(int) * CHAR_BIT - 1;
 
 	r = (v + mask) ^ mask;
-	*/
+*/
 
 	version(DigitalMars)
 	{
@@ -784,14 +895,8 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 			return __builtin_ia32_andnps(cast(float4)signMask4, v);
 		else
 		{
-			static if(Ver < SIMDVer.SSSE3)
+			static if(Ver >= SIMDVer.SSSE3)
 			{
-				// do something...
-				static assert(0, "Only supported in SSSE3 and above");
-			}
-			else
-			{
-				// SSSE3 added opcodes for these operations
 				static if(is64bitElement!(T))
 					static assert(0, "Unsupported: abs(" ~ T.stringof ~ "). Should we emulate?");
 				else static if(is32bitElement!(T))
@@ -801,6 +906,8 @@ T abs(SIMDVer Ver = sseVer, T)(T v)
 				else static if(is8bitElement!(T))
 					return __builtin_ia32_pabsb128(v);
 			}
+			else
+				static assert(0, "Only supported in SSSE3 and above");
 		}
 	}
 	else
@@ -814,11 +921,7 @@ T neg(SIMDVer Ver = sseVer, T)(T v)
 {
 	static assert(!isUnsigned!(T), "Can not negate unsigned value");
 
-	version(DigitalMars)
-	{
-		return -v;
-	}
-	else version(GNU)
+	version(X86_OR_X64)
 	{
 		return -v;
 	}
@@ -831,11 +934,7 @@ T neg(SIMDVer Ver = sseVer, T)(T v)
 // binary add
 T add(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
-	version(DigitalMars)
-	{
-		return v1 + v2;
-	}
-	else version(GNU)
+	version(X86_OR_X64)
 	{
 		return v1 + v2;
 	}
@@ -848,11 +947,7 @@ T add(SIMDVer Ver = sseVer, T)(T v1, T v2)
 // binary subtract
 T sub(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
-	version(DigitalMars)
-	{
-		return v1 - v2;
-	}
-	else version(GNU)
+	version(X86_OR_X64)
 	{
 		return v1 - v2;
 	}
@@ -865,11 +960,7 @@ T sub(SIMDVer Ver = sseVer, T)(T v1, T v2)
 // binary multiply
 T mul(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
-	version(DigitalMars)
-	{
-		return v1 * v2;
-	}
-	else version(GNU)
+	version(X86_OR_X64)
 	{
 		return v1 * v2;
 	}
@@ -879,7 +970,7 @@ T mul(SIMDVer Ver = sseVer, T)(T v1, T v2)
 	}
 }
 
-// ternary multiply and add
+// fused multiply and add
 T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 {
 	version(DigitalMars)
@@ -888,7 +979,78 @@ T madd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
 	}
 	else version(GNU)
 	{
-		return v1*v2 + v3;
+		static if(is(T == double2) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fmaddpd(v1, v2, v3);
+		else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fmaddps(v1, v2, v3);
+		else
+			return v1*v2 + v3;
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+// fused multiply and subtract
+T msub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+{
+	version(DigitalMars)
+	{
+		return v1*v2 - v3;
+	}
+	else version(GNU)
+	{
+		static if(is(T == double2) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fmsubpd(v1, v2, v3);
+		else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fmsubps(v1, v2, v3);
+		else
+			return v1*v2 - v3;
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+// fused negate multiply and add
+T nmadd(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+{
+	version(DigitalMars)
+	{
+		return -(v1*v2) + v3;
+	}
+	else version(GNU)
+	{
+		static if(is(T == double2) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fnmaddpd(v1, v2, v3);
+		else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fnmaddps(v1, v2, v3);
+		else
+			return -(v1*v2) + v3;
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+// fused negate multiply and subtract
+T nmsub(SIMDVer Ver = sseVer, T)(T v1, T v2, T v3)
+{
+	version(DigitalMars)
+	{
+		return -(v1*v2) - v3;
+	}
+	else version(GNU)
+	{
+		static if(is(T == double2) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fnmsubpd(v1, v2, v3);
+		else static if(is(T == float4) && Ver == SIMDVer.SSE5)
+			return __builtin_ia32_fnmsubps(v1, v2, v3);
+		else
+			return -(v1*v2) - v3;
 	}
 	else
 	{
@@ -1110,8 +1272,8 @@ T round(SIMDVer Ver = sseVer, T)(T v)
 	}
 }
 
-// round towards zero
-T roundZero(SIMDVer Ver = sseVer, T)(T v)
+// truncate fraction (round towards zero)
+T trunc(SIMDVer Ver = sseVer, T)(T v)
 {
 	version(DigitalMars)
 	{
@@ -1161,7 +1323,7 @@ T rcp(SIMDVer Ver = sseVer, T)(T v)
 	else version(GNU)
 	{
 		static if(is(T == double2))
-			return div!Ver([1,1,1,1], v);
+			return div!Ver(1.0, v);
 		else static if(is(T == float4))
 			return __builtin_ia32_rcpps(v);
 		else
@@ -1260,15 +1422,34 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
 	{
 		static if(is(T == double2))
 		{
-			float4 t = v1 * v2;
-			t = __builtin_ia32_haddpd(t, t);
-			return getX!Ver(t);
+			static if(Ver >= SIMDVer.SSE41) // 1 op
+				return __builtin_ia32_dppd(v1, v2, 0x0F);
+			else static if(Ver >= SIMDVer.SSE3) // 2 ops
+			{
+				double2 t = v1 * v2;
+				return __builtin_ia32_haddpd(t, t);
+			}
+			else // 5 ops
+			{
+				double2 t = v1 * v2;
+				return getX!Ver(t) + getY!Ver(t);
+			}
 		}
 		else static if(is(T == float4))
 		{
-			float4 t = v1 * v2;
-			t = __builtin_ia32_haddps(t, t);
-			return getX!Ver(t);
+			static if(Ver >= SIMDVer.SSE41) // 1 op
+				return __builtin_ia32_dpps(v1, v2, 0x3F);
+			else static if(Ver >= SIMDVer.SSE3) // 3 ops
+			{
+				float4 t = v1 * v2;
+				t = __builtin_ia32_haddps(t, t);
+				return swizzle!("XXZZ", Ver)(t);
+			}
+			else // 5 ops
+			{
+				float4 t = v1 * v2;
+				return getX!Ver(t) + getY!Ver(t);
+			}
 		}
 		else
 			static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1282,8 +1463,36 @@ T dot2(SIMDVer Ver = sseVer, T)(T v1, T v2)
 // 3d dot product
 T dot3(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
-
-	return null;
+	version(DigitalMars)
+	{
+		static assert(0, "TODO");
+	}
+	else version(GNU)
+	{
+		static if(is(T == float4))
+		{
+			static if(Ver >= SIMDVer.SSE41) // 1 op
+				return __builtin_ia32_dpps(v1, v2, 0x7F);
+			else static if(Ver >= SIMDVer.SSE3) // 4 ops
+			{
+				float4 t = shiftElementsRight!(1, Ver)(v1 * v2);
+				t = __builtin_ia32_haddps(t, t);
+				return __builtin_ia32_haddps(t, t);
+			}
+			else // 8 ops!... surely we can do better than this?
+			{
+				float4 t = shiftElementsRight!(1, Ver)(v1 * v2);
+				t = t + swizzle!("yxwz", Ver)(t);
+				return t + swizzle!("zzxx", Ver)(t);
+			}
+		}
+		else
+			static assert(0, "Unsupported vector type: " ~ T.stringof);
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 // 4d dot product
@@ -1297,10 +1506,20 @@ T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
 	{
 		static if(is(T == float4))
 		{
-			float4 t = v1 * v2;
-			t = __builtin_ia32_haddps(t, t); // x+y, z+w
-			t = __builtin_ia32_haddps(t, t); // xy + zw
-			return getX!Ver(t);
+			static if(Ver >= SIMDVer.SSE41) // 1 op
+				return __builtin_ia32_dpps(v1, v2, 0xFF);
+			else static if(Ver >= SIMDVer.SSE3) // 3 ops
+			{
+				float4 t = v1 * v2;
+				t = __builtin_ia32_haddps(t, t);
+				return __builtin_ia32_haddps(t, t);
+			}
+			else // 7 ops!... surely we can do better than this?
+			{
+				float4 t = v1 * v2;
+				t = t + swizzle!("yxwz", Ver)(t);
+				return t + swizzle!("zzxx", Ver)(t);
+			}
 		}
 		else
 			static assert(0, "Unsupported vector type: " ~ T.stringof);
@@ -1311,7 +1530,7 @@ T dot4(SIMDVer Ver = sseVer, T)(T v1, T v2)
 	}
 }
 
-// homogeneous dot product: v1.xyzw dot v2.xyz1
+// homogeneous dot product: v1.xyz1 dot v2.xyzw
 T dotH(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
 	return null;
@@ -1335,6 +1554,18 @@ T magnitude3(SIMDVer Ver = sseVer, T)(T v)
 T magnitude4(SIMDVer Ver = sseVer, T)(T v)
 {
 	return sqrt!Ver(magSq4!Ver(v));
+}
+
+// 3d normalise
+T normalise3(SIMDVer Ver = sseVer, T)(T v)
+{
+	return v * rsqrt!Ver(magSq3!Ver(v));
+}
+
+// 4d normalise
+T normalise4(SIMDVer Ver = sseVer, T)(T v)
+{
+	return v * rsqrt!Ver(magSq4!Ver(v));
 }
 
 // 3d magnitude squared
@@ -1695,8 +1926,7 @@ T shiftElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
 	}
 	else
 	{
-		//...
-		return v;
+		return shiftBytesLeftImmediate!(n * BaseType!(T).sizeof, Ver)(v);
 	}
 }
 
@@ -1709,8 +1939,7 @@ T shiftElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 	}
 	else
 	{
-		//...
-		return v;
+		return shiftBytesRightImmediate!(n * BaseType!(T).sizeof, Ver)(v);
 	}
 }
 
@@ -1966,10 +2195,10 @@ void16 maskGreater(SIMDVer Ver = sseVer, T)(T a, T b)
 			return __builtin_ia32_cmpgtps(a, b);
 		else static if(is(T == long2))
 		{
-			static if(Ver >= SIMDVer.SSE41)
+			static if(Ver >= SIMDVer.SSE42)
 				return __builtin_ia32_pcmpgtq(a, b);
 			else
-				static assert(0, "Only supported in SSE4.1 and above");
+				static assert(0, "Only supported in SSE4.2 and above");
 		}
 		else static if(is(T == int4))
 			return __builtin_ia32_pcmpgtd128(a, b);
@@ -2056,12 +2285,22 @@ void16 maskLessEqual(SIMDVer Ver = sseVer, T)(T a, T b)
 ///////////////////////////////////////////////////////////////////////////////
 // Branchless selection
 
-// select elements according to bit mask
+// select elements according to: mask == true ? x : y
 T select(SIMDVer Ver = sseVer, T)(void16 mask, T x, T y)
 {
-	version(PowerPC)
+	version(X86_OR_X64)
 	{
-		static assert(0, "Better implementations");
+		static if(Ver >= SIMDVer.SSE41)
+		{
+			static if(is(T == double2))
+				return __builtin_ia32_blendvpd(y, x, cast(double2)mask);
+			else static if(is(T == float4))
+				return __builtin_ia32_blendvps(y, x, cast(float4)mask);
+			else
+				return cast(T)__builtin_ia32_pblendvb128(cast(ubyte16)y, cast(ubyte16)x, cast(ubyte16)mask);
+		}
+		else
+			return xor!Ver(x, and!Ver(cast(T)mask, xor!Ver(y, x)));
 	}
 	else
 	{
