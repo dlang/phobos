@@ -440,7 +440,7 @@ T setX(SIMDVer Ver = sseVer, T)(T v, T x)
 	}
 	else version(GNU)
 	{
-		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
 		{
 			static if(is(T == double2))
 				return __builtin_ia32_blendpd(v, x, 1);
@@ -471,7 +471,7 @@ T setY(SIMDVer Ver = sseVer, T)(T v, T y)
 	}
 	else version(GNU)
 	{
-		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
 		{
 			static if(is(T == double2))
 				return __builtin_ia32_blendpd(v, x, 2);
@@ -502,7 +502,7 @@ T setZ(SIMDVer Ver = sseVer, T)(T v, T z)
 	}
 	else version(GNU)
 	{
-		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
 		{
 			static if(is(T == float4))
 				return __builtin_ia32_blendps(v, x, 4);
@@ -531,7 +531,7 @@ T setW(SIMDVer Ver = sseVer, T)(T v, T w)
 	}
 	else version(GNU)
 	{
-		static if(Ver >= SIMDVer.SSE41 && is8bitElement!T)
+		static if(Ver >= SIMDVer.SSE41 && !is8bitElement!T)
 		{
 			static if(is(T == float4))
 				return __builtin_ia32_blendps(v, x, 8);
@@ -671,7 +671,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 					// unpacks are more efficient than shuffd
 					static if(elements[0] == 0)
 					{
-						static if(0)//Ver >= SIMDVer.SSE3)
+						static if(0)//Ver >= SIMDVer.SSE3) // TODO: *** WHY DOESN'T THIS WORK?!
 							return __builtin_ia32_movddup(v);
 						else
 							return __builtin_ia32_unpcklpd(v, v);
@@ -692,8 +692,8 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 					// TODO: we should use permute to perform this operation when immediates work >_<
 					static if(false)// Ver >= SIMDVer.SSSE3)
 					{
-						//						immutable ubyte16 permuteControl = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0];
-						//						return __builtin_ia32_pshufb128(v, permuteControl);
+//						immutable ubyte16 permuteControl = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0];
+//						return __builtin_ia32_pshufb128(v, permuteControl);
 					}
 					else
 					{
@@ -1164,6 +1164,12 @@ T max(SIMDVer Ver = sseVer, T)(T v1, T v2)
 	{
 		static assert(0, "Unsupported on this architecture");
 	}
+}
+
+// clamp values such that a <= v <= b
+T clamp(SIMDVer Ver = sseVer, T)(T a, T v, T b)
+{
+	return max!Ver(a, min!Ver(v, b));
 }
 
 // lerp
@@ -1834,7 +1840,7 @@ T shiftBytesLeftImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 		else version(GNU)
 		{
 			// little endian reads the bytes into the register in reverse, so we need to flip the operations
-			return __builtin_ia32_psrldqi128(v, bytes);
+			return __builtin_ia32_psrldqi128(v, bytes * 8); // TODO: *8? WAT?
 		}
 		else
 		{
@@ -1860,7 +1866,7 @@ T shiftBytesRightImmediate(size_t bytes, SIMDVer Ver = sseVer, T)(T v)
 		else version(GNU)
 		{
 			// little endian reads the bytes into the register in reverse, so we need to flip the operations
-			return __builtin_ia32_pslldqi128(v, bytes);
+			return __builtin_ia32_pslldqi128(v, bytes * 8); // TODO: *8? WAT?
 		}
 		else
 		{
@@ -1992,11 +1998,11 @@ T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
 			{
 				// we can do this with shuffles more efficiently than rotating bytes
 				static if(e == 1)
-					return swizzle!("YZWX",Ver)(v); // X, Y, Z, [W, X, Y, Z], W
+					return swizzle!("YZWX",Ver)(v); // X, [Y, Z, W, X], Y, Z, W
 				static if(e == 2)
 					return swizzle!("ZWXY",Ver)(v); // X, Y, [Z, W, X, Y], Z, W
 				static if(e == 3)
-					return swizzle!("WXYZ",Ver)(v); // X, [Y, Z, W, X], Y, Z, W
+					return swizzle!("WXYZ",Ver)(v); // X, Y, Z, [W, X, Y, Z], W
 			}
 			else
 			{
@@ -2008,7 +2014,7 @@ T rotateElementsLeft(size_t n, SIMDVer Ver = sseVer, T)(T v)
 
 				// we can use a shuf for multiples of 4 bytes
 				static if((bytes & 3) == 0)
-					return rotateElementsLeft!(bytes >> 2, Ver)(cast(uint4)v);
+					return cast(T)rotateElementsLeft!(bytes >> 2, Ver)(cast(uint4)v);
 				else
 					return rotateBytesLeftImmediate!(bytes, Ver)(v);
 			}
@@ -2032,14 +2038,7 @@ T rotateElementsRight(size_t n, SIMDVer Ver = sseVer, T)(T v)
 	else
 	{
 		// just invert the rotation
-		static if(is64bitElement!T)
-			return rotateElementsLeft!(2 - e, Ver)(v);
-		else static if(is32bitElement!T)
-			return rotateElementsLeft!(4 - e, Ver)(v);
-		else static if(is16bitElement!T)
-			return rotateElementsLeft!(8 - e, Ver)(v);
-		else static if(is8bitElement!T)
-			return rotateElementsLeft!(16 - e, Ver)(v);
+		return rotateElementsLeft!(NumElements!T - e, Ver)(v);
 	}
 }
 
