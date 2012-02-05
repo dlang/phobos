@@ -127,6 +127,7 @@ D language compiler. Also, check out the
 	<dt><a href="std_bigint.html"><b>std.bigint</b></a>
 	<dd>Arbitrary-precision ('bignum') arithmetic
 
+$(V1
 	<dt><a href="std_bind.html"><b>std.bind</b></a>
 	<dd>Bind function arguments.
 
@@ -135,7 +136,7 @@ D language compiler. Also, check out the
 
 	<dt><a href="std_boxer.html"><b>std.boxer</b></a>
 	<dd>Box/unbox types.
-
+)
 	<dt><a href="std_compiler.html"><b>std.compiler</b></a>
 	<dd>Information about the D compiler implementation.
 
@@ -157,9 +158,10 @@ D language compiler. Also, check out the
 	<dt><a href="std_format.html"><b>std.format</b></a>
 	<dd>Formatted conversions of values to strings.
 
+$(V1
 	<dt><a href="std_gc.html"><b>std.gc</b></a>
 	<dd>Control the garbage collector.
-
+)
 	<dt><a href="std_math.html"><b>std.math</b></a>
 	<dd>Include all the usual math functions like sin, cos, atan, etc.
 
@@ -184,10 +186,11 @@ D language compiler. Also, check out the
 	<dt><a href="std_random.html"><b>std.random</b></a>
 	<dd>Random number generation.
 
+$(V1
 	<dt><a href="std_recls.html"><b>std.recls</b></a>
 	<dd>Recursively search file system and (currently Windows
 	only) FTP sites.
-
+)
 	<dt><a href="std_regexp.html"><b>std.regexp</b></a>
 	<dd>The usual regular expression functions.
 
