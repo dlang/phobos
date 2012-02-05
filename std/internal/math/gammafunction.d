@@ -246,7 +246,7 @@ unittest {
     assert(gamma(real.infinity) == real.infinity);
     assert(gamma(real.max) == real.infinity);
     assert(isNaN(gamma(-real.infinity)));
-    assert(gamma(real.min*real.epsilon) == real.infinity);
+    assert(gamma(real.min_normal*real.epsilon) == real.infinity);
     assert(gamma(MAXGAMMA)< real.infinity);
     assert(gamma(MAXGAMMA*2) == real.infinity);
 
@@ -376,8 +376,8 @@ unittest {
     assert(logGamma(-50.0) == real.infinity);
     assert(isIdentical(0.0L, logGamma(1.0L)));
     assert(isIdentical(0.0L, logGamma(2.0L)));
-    assert(logGamma(real.min*real.epsilon) == real.infinity);
-    assert(logGamma(-real.min*real.epsilon) == real.infinity);
+    assert(logGamma(real.min_normal*real.epsilon) == real.infinity);
+    assert(logGamma(-real.min_normal*real.epsilon) == real.infinity);
 
     // x, correct loggamma(x), correct d/dx loggamma(x).
     static real[] testpoints = [
@@ -690,7 +690,7 @@ ihalve:
     if( x <= 0.0L ) {
 under:
         // underflow has occurred
-        x = real.min * real.min;
+        x = real.min_normal * real.min_normal;
         goto done;
     }
 
