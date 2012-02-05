@@ -958,7 +958,14 @@ unittest
 {
     // Test for issue 7397
     string[] ary = ["a", "b"];
-    buildPath(ary);
+    version (Posix)
+    {
+        assert (buildPath(ary) == "a/b");
+    }
+    else version (Windows)
+    {
+        assert (buildPath(ary) == `a\b`);
+    }
 }
 
 
@@ -1376,7 +1383,14 @@ unittest
 {
     // 7397
     string[] ary = ["a", "b"];
-    buildNormalizedPath(ary);
+    version (Posix)
+    {
+        assert (buildNormalizedPath(ary) == "a/b");
+    }
+    else version (Windows)
+    {
+        assert (buildNormalizedPath(ary) == `a\b`);
+    }
 }
 
 
@@ -3791,7 +3805,14 @@ unittest
 {
     // 7397
     string[] ary = ["a", "b"];
-    join("x", "y", ary);
+    version (Posix)
+    {
+        assert (join("x", "y", ary) == "x/y/a/b");
+    }
+    else version (Windows)
+    {
+        assert (join("x", "y", ary) == `x\y\a\b`);
+    }
 }
 
 /**********************************
