@@ -94,7 +94,7 @@ class UTFException : Exception
 
 
 /++
-    $(RED Scheduled for deprecation in December 2012.
+    $(RED Scheduled for deprecation in June 2012.
           Please use $(LREF UTFException) instead.)
   +/
 alias UTFException UtfException;
@@ -1494,15 +1494,13 @@ unittest
 //This does the same thing as std.utf.encode, so it's being deprecated, and
 //since it was never documented, it's being deprecated directly without being
 //scheduled for deprecation.
-deprecated char[] toUTF8()(out char[4] buf, dchar c)
+deprecated char[] toUTF8(out char[4] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
 }
 body
 {
-    pragma(msg, hardDeprec!("2.056", "April 2012", "toUTF8", "encode"));
-
     if (c <= 0x7F)
     {
         buf[0] = cast(char)c;
@@ -1535,28 +1533,20 @@ body
 
 
 /*******************
- *  $(RED Scheduled for deprecation in April 2012.
+ *  $(RED Scheduled for deprecation in August 2012.
  *        Please use $(LREF toUTF) instead.)
  *
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
  */
-version(StdDdoc) string toUTF8(in char[] s);
-else string toUTF8(C)(in C[] s)
-    if(is(Unqual!C == char))
+string toUTF8(in char[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
-
     validate(s);
     return s.idup;
 }
 
 /// ditto
-version(StdDdoc) string toUTF8(in wchar[] s);
-else string toUTF8(C)(in C[] s)
-    if(is(Unqual!C == wchar))
+string toUTF8(in wchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -1582,12 +1572,8 @@ else string toUTF8(C)(in C[] s)
 
 /// ditto
 /// ditto
-version(StdDdoc) pure string toUTF8(in dchar[] s);
-else pure string toUTF8(C)(in C[] s)
-    if(is(Unqual!C == dchar))
+pure string toUTF8(in dchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF8", "toUTF"));
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -1619,7 +1605,7 @@ else pure string toUTF8(C)(in C[] s)
 //This does the same thing as std.utf.encode, so it's being deprecated, and
 //since it was never documented, it's being deprecated directly without being
 //scheduled for deprecation.
-deprecated pure wchar[] toUTF16()(ref wchar[2] buf, dchar c)
+deprecated pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -1640,17 +1626,13 @@ body
 }
 
 /****************
- *  $(RED Scheduled for deprecation in April 2012.
+ *  $(RED Scheduled for deprecation in August 2012.
  *        Please use $(LREF toUTF) instead.)
  *
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-version(StdDdoc) wstring toUTF16(in char[] s);
-else wstring toUTF16(C)(in C[] s)
-    if(is(Unqual!C == char))
+wstring toUTF16(in char[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -1675,23 +1657,15 @@ else wstring toUTF16(C)(in C[] s)
 }
 
 /// ditto
-version(StdDdoc) wstring toUTF16(in wchar[] s);
-else wstring toUTF16(C)(in C[] s)
-    if(is(Unqual!C == wchar))
+wstring toUTF16(in wchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
-
     validate(s);
     return s.idup;
 }
 
 /// ditto
-version(StdDdoc) pure wstring toUTF16(in dchar[] s);
-else pure wstring toUTF16(C)(in C[] s)
-    if(is(Unqual!C == dchar))
+pure wstring toUTF16(in dchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF16", "toUTF"));
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -1709,17 +1683,13 @@ else pure wstring toUTF16(C)(in C[] s)
 /* =================== Conversion to UTF32 ======================= */
 
 /*****
- *  $(RED ScheduLed for deprecation in April 2012.
+ *  $(RED Scheduled for deprecation in August 2012.
  *        Please use $(LREF toUTF) instead.)
  *
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-version(StdDdoc) dstring toUTF32(in char[] s);
-else dstring toUTF32(C)(in C[] s)
-    if(is(Unqual!C == char))
+dstring toUTF32(in char[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -1739,12 +1709,8 @@ else dstring toUTF32(C)(in C[] s)
 }
 
 /// ditto
-version(StdDdoc) dstring toUTF32(in wchar[] s);
-else dstring toUTF32(C)(in C[] s)
-    if(is(Unqual!C == wchar))
+dstring toUTF32(in wchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -1764,12 +1730,8 @@ else dstring toUTF32(C)(in C[] s)
 }
 
 /// ditto
-version(StdDdoc) dstring toUTF32(in dchar[] s);
-else dstring toUTF32(C)(in C[] s)
-    if(is(Unqual!C == dchar))
+dstring toUTF32(in dchar[] s)
 {
-    pragma(msg, softDeprec!("2.056", "April 2012", "toUTF32", "toUTF"));
-
     validate(s);
     return s.idup;
 }
@@ -2055,12 +2017,4 @@ unittest
     assert(count("a") == 1);
     assert(count("abc") == 3);
     assert(count("\u20AC100") == 4);
-}
-
-
-template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, std.utf.%s has been deprecated. " ~
-                              "It will be removed in %s. Please use std.utf.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }
