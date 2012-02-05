@@ -6122,7 +6122,7 @@ enum OneShot { Fwd, Bwd };
     }
     ----
 +/
-@trusted struct Captures(R,DIndex)
+@trusted public struct Captures(R,DIndex)
     if(isSomeString!R)
 {//@trusted because of union inside
     alias DIndex DataIndex;
