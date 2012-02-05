@@ -106,7 +106,7 @@ version (Posix) alias std.string.cmp fcmp;
  * version(Posix)
  * {
  *     getExt(r"/home/user.name/bar.")  // ""
- *     getExt(r"d:\\path.two\\bar")     // "two\\bar"
+ *     getExt(r"d:\path.two\bar")     // "two\\bar"
  *     getExt(r"/home/user/.resource")  // "resource"
  * }
  * -----
@@ -197,7 +197,7 @@ unittest
  * version(Posix)
  * {
  *     getName("/home/user.name/bar.")  => "/home/user.name/bar"
- *     getName(r"d:\path.two\bar") => "d:\path"
+ *     getName(r"d:\path.two\bar") => r"d:\path"
  *     getName("/home/user/.resource") => "/home/user/"
  * }
  * -----
@@ -335,7 +335,7 @@ unittest
  * -----
  * version(Win32)
  * {
- *     getDirName(r"d:\path\foo.bat") => "d:\path"
+ *     getDirName(r"d:\path\foo.bat") => r"d:\path"
  *     getDirName(getDirName(r"d:\path\foo.bat")) => r"d:\"
  * }
  * version(Posix)
@@ -575,8 +575,8 @@ unittest
  * -----
  * version(Win32)
  * {
- *     join(r"c:\foo", "bar") => "c:\foo\bar"
- *     join("foo", r"d:\bar") => "d:\bar"
+ *     join(r"c:\foo", "bar") => r"c:\foo\bar"
+ *     join("foo", r"d:\bar") => r"d:\bar"
  * }
  * version(Posix)
  * {
