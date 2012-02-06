@@ -5450,7 +5450,7 @@ unittest
 
 // reverse
 /**
-Reverses $(D r) in-place.  Performs $(D r.length) evaluations of $(D
+Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap). See also $(WEB sgi.com/tech/stl/_reverse.html, STL's _reverse).
 
 Example:
