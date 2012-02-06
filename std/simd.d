@@ -563,7 +563,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 
 		// initialise the element list to 'identity'
 		int[N] r;
-		foreach(i; 0..N)
+		foreach(int i; 0..N)
 			r[i] = i;
 
 		if(swizzleKey.length == 1)
@@ -571,7 +571,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 			// broadcast
 			foreach(s; elements)
 			{
-				int i = countUntil(s, swizzleKey[0]);
+				int i = cast(int) countUntil(s, swizzleKey[0]);
 				if(i != -1)
 				{
 					// set all elements to 'i'
@@ -588,7 +588,7 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 			{
 				foreach(i; 0..swizzleKey.length) // foreach char in swizzle string
 				{
-					foreach(j, c; s) // find the offset of the 
+					foreach(int j, c; s) // find the offset of the 
 					{
 						if(swizzleKey[i] == c)
 						{
