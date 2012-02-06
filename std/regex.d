@@ -1403,9 +1403,11 @@ struct Parser(R, bool CTFE=false)
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
-        enum State{ Start, Char, Escape, Dash, DashEscape }
+        enum State{ Start, Char, Escape, Dash, DashEscape,
+            PotentialTwinSymbolOperator, PotentialTwinSymbolOperatorAtStart }
         Operator op = Operator.None;
         dchar last;
+        dchar twinSymbol;
         CodepointSet set;
         State state = State.Start;
 
@@ -1421,6 +1423,21 @@ struct Parser(R, bool CTFE=false)
             else
                 set.add(ch);
         }
+        
+        static Operator twinSymbolOperator(dchar symbol)
+        {
+            switch(symbol) {
+            case '|':
+                return Operator.Union;
+            case '-':
+                return Operator.Difference;
+            case '~':
+                return Operator.SymDifference;
+            case '&':
+                return Operator.Intersection;
+            default: assert(false);
+            }
+        }
 
         L_CharTermLoop:
         for(;;)
@@ -1430,6 +1447,13 @@ struct Parser(R, bool CTFE=false)
             case State.Start:
                 switch(current)
                 {
+                case '|':
+                case '-':
+                case '~':
+                case '&':
+                    state = State.PotentialTwinSymbolOperatorAtStart;
+                    twinSymbol = current;
+                    break;
                 case '[':
                     op = Operator.Union;
                     goto case;
@@ -1447,38 +1471,12 @@ struct Parser(R, bool CTFE=false)
                 switch(current)
                 {
                 case '|':
-                    if(last == '|')
-                    {
-                        op = Operator.Union;
-                        next();
-                        break L_CharTermLoop;
-                    }
-                    goto default;
                 case '-':
-                    if(last == '-')
-                    {
-                        op = Operator.Difference;
-                        next();
-                        break L_CharTermLoop;
-                    }
-                    state = State.Dash;
-                    break;
                 case '~':
-                    if(last == '~')
-                    {
-                        op = Operator.SymDifference;
-                        next();
-                        break L_CharTermLoop;
-                    }
-                    goto default;
                 case '&':
-                    if(last == '&')
-                    {
-                        op = Operator.Intersection;
-                        next();
-                        break L_CharTermLoop;
-                    }
-                    goto default;
+                    state = State.PotentialTwinSymbolOperator;
+                    twinSymbol = current;
+                    break;
                 case '\\':
                     set.add(last);
                     state = State.Escape;
@@ -1523,7 +1521,7 @@ struct Parser(R, bool CTFE=false)
                     break;
                 case '[',']','\\','^','$','.','|','?',',','-',';',':'
                 ,'#','&','%','/','<','>','`'
-                ,'*','+','(',')','{','}':
+                ,'*','+','(',')','{','}', '~':
                     last = current;
                     state = State.Char;
                     break;
@@ -1575,6 +1573,38 @@ struct Parser(R, bool CTFE=false)
                     enforce(false, "invalid escape sequence");
                 }
                 break;
+            case State.PotentialTwinSymbolOperatorAtStart:
+                if(current == twinSymbol)
+                {
+                    op = twinSymbolOperator(twinSymbol);
+                    next();//skip second twin
+                    break L_CharTermLoop;
+                }
+                else
+                {
+                    set.add(twinSymbol);
+                    last = current;
+                    state = State.Char;
+                }
+                break;
+            case State.PotentialTwinSymbolOperator:
+                if(current == twinSymbol)
+                {
+                    addWithFlags(set, last, re_flags);
+                    op = twinSymbolOperator(twinSymbol);
+                    next();//skip second twin
+                    break L_CharTermLoop;
+                }
+                else if(twinSymbol == '-')
+                    goto case State.Dash;
+                else
+                {
+                    addWithFlags(set, last, re_flags);
+                    set.add(twinSymbol);
+                    last = current;
+                    state = State.Char;
+                }
+                break;
             case State.Dash:
                 switch(current)
                 {
@@ -1585,11 +1615,6 @@ struct Parser(R, bool CTFE=false)
                     //means dash is a single char not an interval specifier
                     addWithFlags(set, last, re_flags);
                     set.add('-');
-                    break L_CharTermLoop;
-                 case '-'://set Difference again
-                    addWithFlags(set, last, re_flags);
-                    op = Operator.Difference;
-                    next();//skip '-'
                     break L_CharTermLoop;
                 case '\\':
                     state = State.DashEscape;
@@ -1627,7 +1652,7 @@ struct Parser(R, bool CTFE=false)
                     break;
                 case '[',']','\\','^','$','.','|','?',',','-',';',':'
                 ,'#','&','%','/','<','>','`'
-                ,'*','+','(',')','{','}':
+                ,'*','+','(',')','{','}', '~':
                     end = current;
                     break;
                 case 'c':
@@ -6122,7 +6147,7 @@ enum OneShot { Fwd, Bwd };
     }
     ----
 +/
-@trusted struct Captures(R,DIndex)
+@trusted public struct Captures(R,DIndex)
     if(isSomeString!R)
 {//@trusted because of union inside
     alias DIndex DataIndex;
@@ -7471,4 +7496,9 @@ else
     }
 }
 
+    unittest { // bugzilla 7141
+        string pattern = `[a\--b]`;
+        assert(match("-", pattern));
+        assert(match("b", pattern));
+    }
 }

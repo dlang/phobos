@@ -164,6 +164,7 @@ import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
+import std.typetuple;
 
 version(unittest)
 {
@@ -3286,19 +3287,19 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = _TypeTuple!(file, writefunction, writeheader,
-                                  headerfunction, infile,
-                                  readfunction, ioctldata, ioctlfunction,
-                                  seekdata, seekfunction, sockoptdata,
-                                  sockoptfunction, opensocketdata,
-                                  opensocketfunction, noprogress,
-                                  progressdata, progressfunction,
-                                  debugdata, debugfunction,
-                                  ssl_ctx_function, interleavedata,
-                                  interleavefunction, chunk_data,
-                                  chunk_bgn_function, chunk_end_function,
-                                  fnmatch_data, fnmatch_function,
-                                  ssh_keydata, cookiejar, postfields);
+            auto tt = TypeTuple!(file, writefunction, writeheader,
+                                 headerfunction, infile,
+                                 readfunction, ioctldata, ioctlfunction,
+                                 seekdata, seekfunction, sockoptdata,
+                                 sockoptfunction, opensocketdata,
+                                 opensocketfunction, noprogress,
+                                 progressdata, progressfunction,
+                                 debugdata, debugfunction,
+                                 ssl_ctx_function, interleavedata,
+                                 interleavefunction, chunk_data,
+                                 chunk_bgn_function, chunk_end_function,
+                                 fnmatch_data, fnmatch_function,
+                                 ssh_keydata, cookiejar, postfields);
             foreach(option; tt)
                 copy.clear(option);
         }
