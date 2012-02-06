@@ -2359,13 +2359,55 @@ struct float4x4
 	float4 wRow;
 }
 
+struct double2x2
+{
+	double2 xRow;
+	double2 yRow;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Matrix functions
 
 T transpose(SIMDVer Ver = sseVer, T)(T m)
 {
-	return null;
+    version(DigitalMars)
+    {
+        static assert(0, "TODO");
+    }
+    else version(GNU)
+    {       
+        static if(is(T == float4x4))
+        {
+            int shufMask(int a3, int a2, int a1, int a0)
+            { 
+                return a0 | (a1<<2) | (a2<<4) | (a3<<6); 
+            }
+            
+            float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask(1,0,1,0));
+            float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask(1,0,1,0));
+            float4 b2 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask(3,2,3,2));
+            float4 b3 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask(3,2,3,2));
+            float4 a0 = __builtin_ia32_shufps(b0, b1, shufMask(2,0,2,0));
+            float4 a1 = __builtin_ia32_shufps(b2, b3, shufMask(2,0,2,0));
+            float4 a2 = __builtin_ia32_shufps(b0, b1, shufMask(3,1,3,1));
+            float4 a3 = __builtin_ia32_shufps(b2, b3, shufMask(3,1,3,1));
+            
+            return float4x4(a0, a2, a1, a3);
+        }
+        else static if (is(T == double2x2))
+        {
+            static if(Ver >= SIMDVer.SSE2)
+            {
+                return double2x2(
+                    __builtin_ia32_unpcklpd(m.xRow, m.yRow),
+                    __builtin_ia32_unpckhpd(m.xRow, m.yRow));
+            }
+            else
+                static assert(0, "TODO");
+        }
+    }
 }
+
 
 // determinant, etc...
 
