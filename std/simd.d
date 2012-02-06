@@ -274,7 +274,7 @@ private
 	/**** And some helpers for various architectures ****/
 	version(X86_OR_X64)
 	{
-		int sseShufMask(size_t N)(int[N] elements)
+		int shufMask(size_t N)(int[N] elements)
 		{
 			static if(N == 2)
 				return ((elements[0] & 1) << 0) | ((elements[1] & 1) << 1);
@@ -787,10 +787,10 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 				else
 				{
 					static if(is(T == double2))
-						return __builtin_ia32_shufpd(v, v, sseShufMask!Elements(elements)); // swizzle: YX
+						return __builtin_ia32_shufpd(v, v, shufMask!Elements(elements)); // swizzle: YX
 					else static if(is64bitElement!(T)) // (u)long2
 						// use a 32bit integer shuffle for swizzle: YZ
-						return __builtin_ia32_pshufd(v, sseShufMask!4([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
+						return __builtin_ia32_pshufd(v, shufMask!4([elements[0]*2, elements[0]*2 + 1, elements[1]*2, elements[1]*2 + 1]));
 					else static if(is(T == float4))
 					{
 						static if(elements == [0,0,2,2] && Ver >= SIMDVer.SSE3)
@@ -798,10 +798,10 @@ T swizzle(string swiz, SIMDVer Ver = sseVer, T)(T v)
 						else static if(elements == [1,1,3,3] && Ver >= SIMDVer.SSE3)
 							return __builtin_ia32_movshdup(v);
 						else
-							return __builtin_ia32_shufps(v, v, sseShufMask!Elements(elements));
+							return __builtin_ia32_shufps(v, v, shufMask!Elements(elements));
 					}
 					else static if(is32bitElement!(T))
-						return __builtin_ia32_pshufd(v, sseShufMask!Elements(elements));
+						return __builtin_ia32_pshufd(v, shufMask!Elements(elements));
 					else
 					{
 						// TODO: 16 and 8bit swizzles...
@@ -2914,42 +2914,45 @@ struct double2x2
 
 T transpose(SIMDVer Ver = sseVer, T)(T m)
 {
-    version(DigitalMars)
-    {
-        static assert(0, "TODO");
-    }
-    else version(GNU)
-    {       
-        static if(is(T == float4x4))
-        {
-            int shufMask(int a3, int a2, int a1, int a0)
-            { 
-                return a0 | (a1<<2) | (a2<<4) | (a3<<6); 
-            }
-            
-            float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask(1,0,1,0));
-            float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask(1,0,1,0));
-            float4 b2 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask(3,2,3,2));
-            float4 b3 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask(3,2,3,2));
-            float4 a0 = __builtin_ia32_shufps(b0, b1, shufMask(2,0,2,0));
-            float4 a1 = __builtin_ia32_shufps(b2, b3, shufMask(2,0,2,0));
-            float4 a2 = __builtin_ia32_shufps(b0, b1, shufMask(3,1,3,1));
-            float4 a3 = __builtin_ia32_shufps(b2, b3, shufMask(3,1,3,1));
-            
-            return float4x4(a0, a2, a1, a3);
-        }
-        else static if (is(T == double2x2))
-        {
-            static if(Ver >= SIMDVer.SSE2)
-            {
-                return double2x2(
-                    __builtin_ia32_unpcklpd(m.xRow, m.yRow),
-                    __builtin_ia32_unpckhpd(m.xRow, m.yRow));
-            }
-            else
-                static assert(0, "TODO");
-        }
-    }
+	version(X86_OR_X64)
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			static if(is(T == float4x4))
+			{
+				float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([1,0,1,0]));
+				float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([1,0,1,0]));
+				float4 b2 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([3,2,3,2]));
+				float4 b3 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([3,2,3,2]));
+				float4 a0 = __builtin_ia32_shufps(b0, b1, shufMask!4([2,0,2,0]));
+				float4 a1 = __builtin_ia32_shufps(b2, b3, shufMask!4([2,0,2,0]));
+				float4 a2 = __builtin_ia32_shufps(b0, b1, shufMask!4([3,1,3,1]));
+				float4 a3 = __builtin_ia32_shufps(b2, b3, shufMask!4([3,1,3,1]));
+
+				return float4x4(a0, a2, a1, a3);
+			}
+			else static if (is(T == double2x2))
+			{
+				static if(Ver >= SIMDVer.SSE2)
+				{
+					return double2x2(	__builtin_ia32_unpcklpd(m.xRow, m.yRow),
+										__builtin_ia32_unpckhpd(m.xRow, m.yRow));
+				}
+				else
+					static assert(0, "TODO");
+			}
+			else
+				static assert(0, "Unsupported matrix type: " ~ T.stringof);
+		}
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
 }
 
 
