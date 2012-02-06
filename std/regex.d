@@ -1582,11 +1582,11 @@ struct Parser(R, bool CTFE=false)
                 }
                 else
                 {
-                    set.add(twinSymbol);
-                    last = current;
+                    last = twinSymbol;
                     state = State.Char;
+                    goto case State.Char;
                 }
-                break;
+                assert(0);
             case State.PotentialTwinSymbolOperator:
                 if(current == twinSymbol)
                 {
@@ -1600,11 +1600,11 @@ struct Parser(R, bool CTFE=false)
                 else
                 {
                     addWithFlags(set, last, re_flags);
-                    set.add(twinSymbol);
-                    last = current;
+                    last = twinSymbol;
                     state = State.Char;
+                    goto case State.Char;
                 }
-                break;
+                assert(0);
             case State.Dash:
                 switch(current)
                 {
@@ -7499,6 +7499,9 @@ else
     unittest { // bugzilla 7141
         string pattern = `[a\--b]`;
         assert(match("-", pattern));
+        assert(match("b", pattern));
+        
+        pattern = `[&-z]`;
         assert(match("b", pattern));
     }
 }
