@@ -899,7 +899,7 @@ unittest
     }
     ---
 */
-immutable(C)[] buildPath(C)(const(C)[][] paths...)
+immutable(C)[] buildPath(C)(const(C[])[] paths...)
     //TODO: @safe pure nothrow (because of reduce() and to())
     if (isSomeChar!C)
 {
@@ -954,6 +954,19 @@ unittest
     }
 }
 
+unittest
+{
+    // Test for issue 7397
+    string[] ary = ["a", "b"];
+    version (Posix)
+    {
+        assert (buildPath(ary) == "a/b");
+    }
+    else version (Windows)
+    {
+        assert (buildPath(ary) == `a\b`);
+    }
+}
 
 
 
@@ -987,13 +1000,17 @@ unittest
     }
     ---
 */
-immutable(C)[] buildNormalizedPath(C)(const(C)[][] paths...)
+immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
+    import std.c.stdlib;
+    auto paths2 = new const(C)[][](paths.length);
+        //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
+
     // Check whether the resulting path will be absolute or rooted,
     // calculate its maximum length, and discard segments we won't use.
-    typeof(paths[0]) rootElement;
+    typeof(paths[0][0])[] rootElement;
     int numPaths = 0;
     bool seenAbsolute;
     size_t segmentLengthSum = 0;
@@ -1008,31 +1025,31 @@ immutable(C)[] buildNormalizedPath(C)(const(C)[][] paths...)
             {
                 if (thisIsAbsolute) seenAbsolute = true;
                 rootElement = rootName(p);
-                paths[0] = p[rootElement.length .. $];
+                paths2[0] = p[rootElement.length .. $];
                 numPaths = 1;
-                segmentLengthSum = paths[0].length;
+                segmentLengthSum = paths2[0].length;
             }
             else
             {
-                paths[0] = p;
+                paths2[0] = p;
                 numPaths = 1;
                 segmentLengthSum = p.length;
             }
         }
         else
         {
-            paths[numPaths++] = p;
+            paths2[numPaths++] = p;
             segmentLengthSum += p.length;
         }
     }
     if (rootElement.length + segmentLengthSum == 0) return null;
-    paths = paths[0 .. numPaths];
+    paths2 = paths2[0 .. numPaths];
     immutable rooted = !rootElement.empty;
     assert (rooted || !seenAbsolute); // absolute => rooted
 
     // Allocate memory for the resulting path, including room for
     // extra dir separators
-    auto fullPath = new C[rootElement.length + segmentLengthSum + paths.length];
+    auto fullPath = new C[rootElement.length + segmentLengthSum + paths2.length];
 
     // Copy the root element into fullPath, and let relPart be
     // the remaining slice.
@@ -1078,7 +1095,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C)[][] paths...)
     // root we found earlier.
     bool hasParents = rooted;
     sizediff_t i;
-    foreach (path; paths)
+    foreach (path; paths2)
     {
         path = trimDirSeparators(path);
 
@@ -1360,6 +1377,20 @@ unittest
         static assert (buildNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
     }
     else static assert (false);
+}
+
+unittest
+{
+    // 7397
+    string[] ary = ["a", "b"];
+    version (Posix)
+    {
+        assert (buildNormalizedPath(ary) == "a/b");
+    }
+    else version (Windows)
+    {
+        assert (buildNormalizedPath(ary) == `a\b`);
+    }
 }
 
 
@@ -2135,7 +2166,7 @@ in
 }
 body
 {
-	size_t ni; // current character in path
+    size_t ni; // current character in path
 
     foreach (ref pi; 0 .. pattern.length)
     {
@@ -2236,10 +2267,10 @@ body
                     return false;
                 ni++;
                 break;
-	    }
-	}
+        }
+    }
     assert(ni <= path.length);
-	return ni == path.length;
+    return ni == path.length;
 }
 
 unittest
@@ -3620,7 +3651,7 @@ version (OldStdPathUnittest) unittest
  * -----
  */
 
-string join()(const(char)[] p1, const(char)[] p2, const(char)[][] more...)
+string join()(const(char)[] p1, const(char)[] p2, const(char[])[] more...)
 {
     if (more.length)
     {
@@ -3770,6 +3801,19 @@ version (OldStdPathUnittest) unittest
     assert (join("foo", "") == "foo");
 }
 
+unittest
+{
+    // 7397
+    string[] ary = ["a", "b"];
+    version (Posix)
+    {
+        assert (join("x", "y", ary) == "x/y/a/b");
+    }
+    else version (Windows)
+    {
+        assert (join("x", "y", ary) == `x\y\a\b`);
+    }
+}
 
 /**********************************
  * $(RED Scheduled for deprecation in February 2012. Please use
