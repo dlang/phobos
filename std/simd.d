@@ -2924,14 +2924,14 @@ T transpose(SIMDVer Ver = sseVer, T)(T m)
 		{
 			static if(is(T == float4x4))
 			{
-				float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([1,0,1,0]));
-				float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([1,0,1,0]));
-				float4 b2 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([3,2,3,2]));
-				float4 b3 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([3,2,3,2]));
-				float4 a0 = __builtin_ia32_shufps(b0, b1, shufMask!4([2,0,2,0]));
-				float4 a1 = __builtin_ia32_shufps(b2, b3, shufMask!4([2,0,2,0]));
-				float4 a2 = __builtin_ia32_shufps(b0, b1, shufMask!4([3,1,3,1]));
-				float4 a3 = __builtin_ia32_shufps(b2, b3, shufMask!4([3,1,3,1]));
+				float4 b0 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([0,1,0,1]));
+				float4 b1 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([0,1,0,1]));
+				float4 b2 = __builtin_ia32_shufps(m.xRow, m.yRow, shufMask!4([2,3,2,3]));
+				float4 b3 = __builtin_ia32_shufps(m.zRow, m.wRow, shufMask!4([2,3,2,3]));
+				float4 a0 = __builtin_ia32_shufps(b0, b1, shufMask!4([0,2,0,2]));
+				float4 a1 = __builtin_ia32_shufps(b2, b3, shufMask!4([0,2,0,2]));
+				float4 a2 = __builtin_ia32_shufps(b0, b1, shufMask!4([1,3,1,3]));
+				float4 a3 = __builtin_ia32_shufps(b2, b3, shufMask!4([1,3,1,3]));
 
 				return float4x4(a0, a2, a1, a3);
 			}
