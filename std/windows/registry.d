@@ -400,7 +400,7 @@ body
             useWfuncs ? RegDeleteKeyW(hkey, toUTF16z(subKey))
                       : RegDeleteKeyA(hkey, toMBSz(subKey));
     }
-    enforceSucc(res, "Value cannot be deleted: \"" ~ subKey ~ "\"");
+    enforceSucc(res, "Key cannot be deleted: \"" ~ subKey ~ "\"");
 }
 
 private void regDeleteValue(in HKEY hkey, in string valueName)
