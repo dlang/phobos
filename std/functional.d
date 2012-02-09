@@ -36,12 +36,7 @@ assert(isEven(2) && !isEven(1));
 ----
 */
 
-template unaryFun(alias funbody, bool byRef = false, string parmName = "a")
-{
-    alias unaryFunImpl!(funbody, byRef, parmName).result unaryFun;
-}
-
-template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
+template unaryFun(alias fun, bool byRef = false, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
@@ -76,9 +71,10 @@ template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
                         " for type " ~ ElementType.stringof);
             }
         }
+
         static if (byRef)
         {
-            Body!(ElementType).ReturnType result(ElementType)(ref ElementType __a)
+            Body!(ElementType).ReturnType unaryFun(ElementType)(ref ElementType __a)
             {
                 mixin("alias __a "~parmName~";");
                 mixin(Body!(ElementType).code);
@@ -86,20 +82,20 @@ template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
         }
         else
         {
-            Body!(ElementType).ReturnType result(ElementType)(ElementType __a)
+            Body!(ElementType).ReturnType unaryFun(ElementType)(ElementType __a)
             {
                 mixin("alias __a "~parmName~";");
                 mixin(Body!(ElementType).code);
             }
             // string mixme = "Body!(ElementType).ReturnType"
-            //     " result(ElementType)(ElementType a)
+            //     " unaryFun(ElementType)(ElementType a)
             // { " ~ Body!(ElementType).code ~ " }";
             // mixin(mixme);
         }
     }
     else
     {
-        alias fun result;
+        alias fun unaryFun;
     }
 }
 
@@ -133,14 +129,8 @@ assert(!greater("1", "2") && greater("2", "1"));
 ----
 */
 
-template binaryFun(alias funbody, string parm1Name = "a",
+template binaryFun(alias fun, string parm1Name = "a",
         string parm2Name = "b")
-{
-    alias binaryFunImpl!(funbody, parm1Name, parm2Name).result binaryFun;
-}
-
-template binaryFunImpl(alias fun,
-        string parm1Name, string parm2Name)
 {
     static if (is(typeof(fun) : string))
     {
@@ -182,8 +172,9 @@ template binaryFunImpl(alias fun,
                 static assert(false, msg);
             }
         }
+
         Body!(ElementType1, ElementType2).ReturnType
-            result(ElementType1, ElementType2)
+            binaryFun(ElementType1, ElementType2)
             (ElementType1 __a, ElementType2 __b)
         {
             mixin("alias __a "~parm1Name~";");
@@ -193,7 +184,7 @@ template binaryFunImpl(alias fun,
     }
     else
     {
-        alias fun result;
+        alias fun binaryFun;
     }
     // static if (is(typeof(comp) : string))
     // {
@@ -558,31 +549,20 @@ assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
 ----
 */
 
-template compose(fun...) { alias composeImpl!(fun).doIt compose; }
-
-// Implementation of compose
-template composeImpl(fun...)
+template compose(fun...)
 {
-        static if (fun.length == 1)
-        {
-        static if (is(typeof(fun[0]) : string))
-            alias unaryFun!(fun[0]) doIt;
-        else
-            alias fun[0] doIt;
-        }
+    static if (fun.length == 1)
+    {
+        alias unaryFun!(fun[0]) compose;
+    }
     else static if (fun.length == 2)
     {
         // starch
-        static if (is(typeof(fun[0]) : string))
-            alias unaryFun!(fun[0]) fun0;
-        else
-            alias fun[0] fun0;
-        static if (is(typeof(fun[1]) : string))
-            alias unaryFun!(fun[1]) fun1;
-        else
-            alias fun[1] fun1;
+        alias unaryFun!(fun[0]) fun0;
+        alias unaryFun!(fun[1]) fun1;
+
         // protein: the core composition operation
-        typeof({ E a; return fun0(fun1(a)); }()) doIt(E)(E a)
+        typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
         {
             return fun0(fun1(a));
         }
@@ -590,7 +570,7 @@ template composeImpl(fun...)
     else
     {
         // protein: assembling operations
-        alias composeImpl!(fun[0], composeImpl!(fun[1 .. $]).doIt).doIt doIt;
+        alias compose!(fun[0], compose!(fun[1 .. $])) compose;
     }
 }
 
@@ -764,8 +744,7 @@ private struct DelegateFaker(F) {
     {
         return cast(F) x;
     }
-    
-    
+
     /*
      * What all the stuff below does is this:
      *--------------------
