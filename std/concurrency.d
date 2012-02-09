@@ -988,7 +988,7 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final bool get(T...)( T vals )
+        final bool get(T...)( scope T vals )
         {
             static assert( T.length );
 
