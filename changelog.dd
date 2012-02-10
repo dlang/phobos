@@ -3,8 +3,10 @@ $(VERSION 058, ddd mm, 2012, =================================================,
     $(WHATSNEW
        $(LI Added std.csv for reading CSV files.)
        $(LI Added std.net.curl as D-ified wrapper over etc.c.curl and libcurl.)
+       $(LI Added templates PackageName, ModuleName and FullyQualifiedName into std.traits.)
        $(LI The overload of std.concurrency.receiveTimeout which takes a long has
             been deprecated. Please use the overload which takes a core.time.Duration.)
+       $(LI Moved std.datetime.abs to core.time.)
        $(LI The overload of std.conv.to which used a member function named to on the
             type being converted has been deprecated. Please define opCast on the type
             instead, and std.conv.to will use that.)
@@ -31,8 +33,20 @@ $(VERSION 058, ddd mm, 2012, =================================================,
      )
 
     $(LIBBUGSFIXED
+       $(LI $(BUGZILLA 4295): IID_IUnknown symbol undefined in phobos.lib)
        $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
+       $(LI $(BUGZILLA 5718): Can't demangle symbol defined inside unittest block)
        $(LI $(BUGZILLA 6255): Add support for different base conversions in std.conv)
+       $(LI $(BUGZILLA 6472): RedBlackTree.removeKey)
+       $(LI $(BUGZILLA 6642): SysTime should not be hasUnsharedAliasing)
+       $(LI $(BUGZILLA 6874): heap corruption caused by std.array.insertInPlaceImpl or gc.gcx)
+       $(LI $(BUGZILLA 6944): stdio.File.byLine can't handle an empty file)
+       $(LI $(BUGZILLA 7092): std.concurrency.receive does not accept free functions)
+       $(LI $(BUGZILLA 7141): std.regex - escaped characters can form operators in character classes)
+       $(LI $(BUGZILLA 7230): Crash during printing anonymous union with writeln family functions.)
+       $(LI $(BUGZILLA 7241): std.format can't read into array of dchar)
+       $(LI $(BUGZILLA 7302): std.conv.parse with radix doesn't work on ranges)
+       $(LI $(BUGZILLA 7397): [Regression] std.path.buildPath can't be used with string[])
      )
  )
 
