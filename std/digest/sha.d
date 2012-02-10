@@ -482,7 +482,7 @@ struct SHA1
 
             /* Store state in digest */
             for (auto i = 0; i < 5; i++)
-                data[i*4..(i+1)*4] = nativeToBigEndian(state[i]);
+                data[i*4..(i+1)*4] = nativeToBigEndian(state[i])[];
 
             /* Zeroize sensitive information. */
             start();

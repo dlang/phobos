@@ -233,9 +233,9 @@ class ZipArchive
             putUshort(i + 28, cast(ushort)de.extra.length);
             i += 30;
 
-            data[i .. i + de.name.length] = cast(ubyte[])de.name[];
+            data[i .. i + de.name.length] = (cast(ubyte[])de.name)[];
             i += de.name.length;
-            data[i .. i + de.extra.length] = cast(ubyte[])de.extra[];
+            data[i .. i + de.extra.length] = (cast(ubyte[])de.extra)[];
             i += de.extra.length;
             data[i .. i + de.compressedSize] = de.compressedData[];
             i += de.compressedSize;
@@ -264,11 +264,11 @@ class ZipArchive
             putUint  (i + 42, de.offset);
             i += 46;
 
-            data[i .. i + de.name.length] = cast(ubyte[])de.name[];
+            data[i .. i + de.name.length] = (cast(ubyte[])de.name)[];
             i += de.name.length;
-            data[i .. i + de.extra.length] = cast(ubyte[])de.extra[];
+            data[i .. i + de.extra.length] = (cast(ubyte[])de.extra)[];
             i += de.extra.length;
-            data[i .. i + de.comment.length] = cast(ubyte[])de.comment[];
+            data[i .. i + de.comment.length] = (cast(ubyte[])de.comment)[];
             i += de.comment.length;
             numEntries++;
         }
@@ -288,7 +288,7 @@ class ZipArchive
 
         // Write archive comment
         assert(i + comment.length == data.length);
-        data[i .. data.length] = cast(ubyte[])comment[];
+        data[i .. data.length] = (cast(ubyte[])comment)[];
 
         return cast(void[])data;
     }

@@ -1103,7 +1103,7 @@ UUID randomUUID(RNG)(ref RNG randomGen) if(isUniformRNG!(RNG) &&
     {
         randomGen.popFront();
         immutable randomValue = randomGen.front;
-        u.data[i .. i + elemSize] = *cast(ubyte[elemSize]*)&randomValue;
+        u.data[i .. i + elemSize] = (*cast(ubyte[elemSize]*)&randomValue)[];
     }
 
     //set variant

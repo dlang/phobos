@@ -440,8 +440,8 @@ struct MD5
             uint index, padLen;
 
             //Save number of bits
-            bits[0 .. 4] = nativeToLittleEndian((cast(uint*)&_count)[0]);
-            bits[4 .. 8] = nativeToLittleEndian((cast(uint*)&_count)[1]);
+            bits[0 .. 4] = nativeToLittleEndian((cast(uint*)&_count)[0])[];
+            bits[4 .. 8] = nativeToLittleEndian((cast(uint*)&_count)[1])[];
 
             //Pad out to 56 mod 64
             index = (cast(uint)_count >> 3) & (64 - 1);
@@ -452,10 +452,10 @@ struct MD5
             put(bits);
 
             //Store state in digest
-            data[0 .. 4]   = nativeToLittleEndian(_state[0]);
-            data[4 .. 8]   = nativeToLittleEndian(_state[1]);
-            data[8 .. 12]  = nativeToLittleEndian(_state[2]);
-            data[12 .. 16] = nativeToLittleEndian(_state[3]);
+            data[0 .. 4]   = nativeToLittleEndian(_state[0])[];
+            data[4 .. 8]   = nativeToLittleEndian(_state[1])[];
+            data[8 .. 12]  = nativeToLittleEndian(_state[2])[];
+            data[12 .. 16] = nativeToLittleEndian(_state[3])[];
 
             /* Zeroize sensitive information. */
             start();
