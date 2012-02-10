@@ -290,6 +290,10 @@ void put(R, E)(ref R r, E e)
         {
             r.put((&e)[0..1]);
         }
+        else static if (isInputRange!E && is(typeof(put(r, e.front))))
+        {
+            for (; !e.empty; e.popFront()) put(r, e.front);
+        }
         else
         {
             static assert(false,
@@ -394,6 +398,25 @@ unittest
     // char[] is NOT output range.
     static assert(!__traits(compiles, put(a, 'a')));
     static assert(!__traits(compiles, put(a, "ABC")));
+}
+
+unittest
+{
+    // Test fix for bug 7476.
+    struct LockingTextWriter
+    {
+        void put(dchar c){}
+    }
+    struct RetroResult
+    {
+        bool end = false;
+        @property bool empty() const { return end; }
+        @property dchar front(){ return 'a'; }
+        void popFront(){ end = true; }
+    }
+    LockingTextWriter w;
+    RetroResult r;
+    put(w, r);
 }
 
 /**
