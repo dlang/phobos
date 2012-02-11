@@ -31152,7 +31152,7 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Deprecated. It will be removed in February 2012. This is only here to
+    $(RED Deprecated. It will be removed in March 2012. This is only here to
           help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
@@ -31179,7 +31179,7 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Deprecated. It will be removed in February 2012. This is only here to
+    $(RED Deprecated. It will be removed in March 2012. This is only here to
           help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).

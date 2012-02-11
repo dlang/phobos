@@ -1342,14 +1342,14 @@ unittest
 
 
 /********************************************
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *        Please use $(XREF array, replicate) instead.)
  *
  * Repeat $(D s) for $(D n) times.
  */
 deprecated S repeat(S)(S s, size_t n)
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "repeat", "std.array.replicate"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
@@ -1857,7 +1857,7 @@ deprecated S zfill(S)(S s, int width) if (isSomeString!S)
 
 
 /**********************************************
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use $(XREF array, insertInPlace) instead.)
  *
  * Insert sub[] into s[] at location index.
@@ -2292,7 +2292,7 @@ private auto translateImpl(C1, T, C2)(C1[] str,
 
 
 /************************************
- * $(RED Scheduled for deprecation in February 2012.)
+ * $(RED Scheduled for deprecation in March 2012.)
  *
  * Construct translation table for translate().
  * BUGS: only works with ASCII
@@ -2321,7 +2321,7 @@ body
 }
 
 /******************************************
- * $(RED Scheduled for deprecation in February 2012.
+ * $(RED Scheduled for deprecation in March 2012.
  *   Please use the version of $(D translate) which takes an AA instead.)
  *
  * Translate characters in s[] using table created by maketrans().

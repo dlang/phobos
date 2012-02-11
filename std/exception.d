@@ -495,7 +495,7 @@ template enforceEx(E)
 }
 
 /++
-    $(RED Scheduled for deprecation in February 2012. Please use the version of
+    $(RED Scheduled for deprecation in March 2012. Please use the version of
           $(D enforceEx) which takes an exception that constructs with
           $(D new E(msg, file, line)).)
 

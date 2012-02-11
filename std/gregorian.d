@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use std.datetime instead.)
 
 Macros:
@@ -21,7 +21,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.gregorian;
 
 pragma(msg, "Notice: As of Phobos 2.055, std.gregorian has been deprecated. " ~
-            "It will be removed in February 2012. Please use std.datetime instead.");
+            "It will be removed in March 2012. Please use std.datetime instead.");
 
 version(posix) import core.sys.posix.time;
 import std.typecons;
