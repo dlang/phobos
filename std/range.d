@@ -3542,7 +3542,6 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
         ret ~= "index, ";
     }
 
-
     foreach(ti, Range; Ranges)
     {
         ret ~= "ranges[" ~ to!string(ti) ~ "].front, ";
