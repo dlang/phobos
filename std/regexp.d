@@ -2,7 +2,7 @@
 // Regular Expressions.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use $(LINK2 std_regex.html, std.regex) instead.)
  *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
@@ -125,7 +125,7 @@
 module std.regexp;
 
 pragma(msg, "Notice: As of Phobos 2.055, std.regexp has been deprecated. " ~
-            "It will be removed in February 2012. Please use std.regex instead.");
+            "It will be removed in March 2012. Please use std.regex instead.");
 
 //debug = regexp;       // uncomment to turn on debugging printf's
 
@@ -790,7 +790,7 @@ class RegExp
     /*******************
      * Return the slice of the input that precedes the matched substring.
      */
-    public string pre()
+    public @property string pre()
     {
         return input[0 .. pmatch[0].rm_so];
     }
@@ -798,7 +798,7 @@ class RegExp
     /*******************
      * Return the slice of the input that follows the matched substring.
      */
-    public string post()
+    public @property string post()
     {
         return input[pmatch[0].rm_eo .. $];
     }
@@ -2572,7 +2572,7 @@ private:
             break;
         }
 
-        enum RS { start, rliteral, dash };
+        enum RS { start, rliteral, dash }
         RS rs;
 
         rs = RS.start;
@@ -3361,12 +3361,12 @@ struct Splitter(Range)
         return this;
     }
 
-    Range front()
+    @property Range front()
     {
         return _input[0 .. _chunkLength];
     }
 
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
@@ -3378,7 +3378,7 @@ struct Splitter(Range)
             _input = _input[_chunkLength .. _input.length];
             return;
         }
-        advance;
+        advance();
         _input = _input[_chunkLength .. _input.length];
         _chunkLength = _input.length - search().length;
     }

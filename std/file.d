@@ -28,17 +28,18 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
 import std.metastrings; //For generating deprecation messages only. Remove once
                         //deprecation path complete.
 
-version (Win32)
+version (Windows)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit : useWfuncs;
+        std.windows.syserror;
+    public import std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code
  * page.
  * (Thanks to yaneurao for this)
  */
-    version(Windows) alias std.windows.charset.toMBSz toMBSz;
+    alias std.windows.charset.toMBSz toMBSz;
 }
 else version (Posix)
 {
@@ -52,7 +53,7 @@ version (unittest)
 {
     import core.thread;
 
-    private string deleteme()
+    private @property string deleteme()
     {
         static _deleteme = "deleteme.dmd.unittest";
         static _first = true;
@@ -128,7 +129,32 @@ else version (Posix)
     }
     else
     {
-        version(X86)
+        version(D_LP64)
+        {
+            struct struct_stat64
+            {
+                ulong st_dev;
+                ulong st_ino;
+                ulong st_nlink;
+                uint  st_mode;
+                uint  st_uid;
+                uint  st_gid;
+                int   __pad0;
+                ulong st_rdev;
+                long  st_size;
+                long  st_blksize;
+                long  st_blocks;
+                long  st_atime;
+                ulong st_atimensec;
+                long  st_mtime;
+                ulong st_mtimensec;
+                long  st_ctime;
+                ulong st_ctimensec;
+                long[3]  __unused;
+            }
+            static assert(struct_stat64.sizeof == 144);
+        }
+        else
         {
             struct struct_stat64        // distinguish it from the stat() function
             {
@@ -154,31 +180,6 @@ else version (Posix)
                 ulong st_ino64;
             }
             //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
-        }
-        else version (X86_64)
-        {
-            struct struct_stat64
-            {
-                ulong st_dev;
-                ulong st_ino;
-                ulong st_nlink;
-                uint  st_mode;
-                uint  st_uid;
-                uint  st_gid;
-                int   __pad0;
-                ulong st_rdev;
-                long  st_size;
-                long  st_blksize;
-                long  st_blocks;
-                long  st_atime;
-                ulong st_atimensec;
-                long  st_mtime;
-                ulong st_mtimensec;
-                long  st_ctime;
-                ulong st_ctimensec;
-                long[3]  __unused;
-            }
-            static assert(struct_stat64.sizeof == 144);
         }
 
         extern(C) int fstat64(int, struct_stat64*);
@@ -229,7 +230,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Windows) this(in char[] name,
-                          uint errno = GetLastError,
+                          uint errno = .GetLastError(),
                           string file = __FILE__,
                           size_t line = __LINE__)
     {
@@ -248,7 +249,7 @@ class FileException : Exception
             line = The line where the error occurred.
      +/
     version(Posix) this(in char[] name,
-                        uint errno = .getErrno,
+                        uint errno = .getErrno(),
                         string file = __FILE__,
                         size_t line = __LINE__)
     {
@@ -615,7 +616,7 @@ unittest
 }
 
 /*************************
- * $(RED Deprecated. It will be removed in February 2012. Please use either the
+ * $(RED Deprecated. It will be removed in March 2012. Please use either the
  *       version of $(D getTimes) which takes two arguments or $(D getTimesWin)
  *       (Windows-Only) instead.)
  */
@@ -630,7 +631,7 @@ else version(Windows) deprecated void getTimes(C)(in C[] name,
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
                 "with 3 arguments has been deprecated. It will be removed in " ~
-                "February 2012. Please use either the version of getTimes with " ~
+                "March 2012. Please use either the version of getTimes with " ~
                 "two arguments or getTimesWin (Windows-Only) instead.");
 
     HANDLE findhndl = void;
@@ -667,7 +668,7 @@ else version(Posix) deprecated void getTimes(C)(in C[] name,
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
                 "with 3 arguments has been deprecated. It will be removed in " ~
-                "February 2012. Please use either the version of getTimes with " ~
+                "March 2012. Please use either the version of getTimes with " ~
                 "two arguments or getTimesWin (Windows-Only) instead.");
 
     struct_stat64 statbuf = void;
@@ -747,7 +748,7 @@ unittest
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(2);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffa = accessTime1 - currTime;
@@ -758,29 +759,32 @@ unittest
         assert(abs(diffm) <= leeway);
     }
 
-    enum sleepTime = dur!"seconds"(2);
-    Thread.sleep(sleepTime);
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimes(deleteme, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+        enum sleepTime = dur!"seconds"(2);
+        Thread.sleep(sleepTime);
 
-        //There is no guarantee that the access time will be updated.
-        assert(abs(diffa) <= leeway + sleepTime);
-        assert(abs(diffm) <= leeway);
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimes(deleteme, accessTime2, modificationTime2);
+
+        {
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure) writefln("[%s] [%s] [%s] [%s] [%s]", accessTime2, modificationTime2, currTime, diffa, diffm);
+
+            //There is no guarantee that the access time will be updated.
+            assert(abs(diffa) <= leeway + sleepTime);
+            assert(abs(diffm) <= leeway);
+        }
+
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 
@@ -852,7 +856,7 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(3);
+    enum leeway = dur!"seconds"(5);
 
     {
         auto diffc = creationTime1 - currTime;
@@ -869,38 +873,41 @@ version(Windows) unittest
         assert(abs(diffm) <= leeway);
     }
 
-    Thread.sleep(dur!"seconds"(2));
-
-    currTime = Clock.currTime();
-    write(deleteme, "b");
-
-    SysTime creationTime2 = void;
-    SysTime accessTime2 = void;
-    SysTime modificationTime2 = void;
-
-    getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
-
+    version(fullFileTests)
     {
-        auto diffa = accessTime2 - currTime;
-        auto diffm = modificationTime2 - currTime;
-        scope(failure)
+        Thread.sleep(dur!"seconds"(2));
+
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime creationTime2 = void;
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimesWin(deleteme, creationTime2, accessTime2, modificationTime2);
+
         {
-            writefln("[%s] [%s] [%s] [%s] [%s]",
-                     accessTime2, modificationTime2, currTime, diffa, diffm);
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+            scope(failure)
+            {
+                writefln("[%s] [%s] [%s] [%s] [%s]",
+                         accessTime2, modificationTime2, currTime, diffa, diffm);
+            }
+
+            assert(abs(diffa) <= leeway);
+            assert(abs(diffm) <= leeway);
         }
 
-        assert(abs(diffa) <= leeway);
-        assert(abs(diffm) <= leeway);
+        assert(creationTime1 == creationTime2);
+        assert(accessTime1 <= accessTime2);
+        assert(modificationTime1 <= modificationTime2);
     }
-
-    assert(creationTime1 == creationTime2);
-    assert(accessTime1 <= accessTime2);
-    assert(modificationTime1 <= modificationTime2);
 }
 
 /++
-    $(RED Scheduled for deprecation in November 2011. Please use the
-          $(D getTimes) with two arguments instead.)
+    $(RED Deprecated. It will be removed in May 2012.
+          Please use the $(D getTimes) with two arguments instead.)
 
     $(BLUE This function is Posix-Only.)
 
@@ -929,14 +936,14 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesPosix(in char[] name,
-                                    out SysTime fileStatusChangeTime,
-                                    out SysTime fileAccessTime,
-                                    out SysTime fileModificationTime);
-else version(Posix) void getTimesPosix(C)(in C[] name,
-                                          out SysTime fileStatusChangeTime,
-                                          out SysTime fileAccessTime,
-                                          out SysTime fileModificationTime)
+version(StdDdoc) deprecated void getTimesPosix(in char[] name,
+                                               out SysTime fileStatusChangeTime,
+                                               out SysTime fileAccessTime,
+                                               out SysTime fileModificationTime);
+else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
+                                                     out SysTime fileStatusChangeTime,
+                                                     out SysTime fileAccessTime,
+                                                     out SysTime fileModificationTime)
     if(is(Unqual!C == char))
 {
     struct_stat64 statbuf = void;
@@ -950,14 +957,14 @@ else version(Posix) void getTimesPosix(C)(in C[] name,
 
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D timeLastModified) instead.)
  +/
 version(StdDdoc) deprecated d_time lastModified(in char[] name);
 else deprecated d_time lastModified(C)(in C[] name)
     if(is(Unqual!C == char))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -975,14 +982,14 @@ else deprecated d_time lastModified(C)(in C[] name)
 
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D timeLastModified) instead.)
  +/
 version(StdDdoc) deprecated d_time lastModified(in char[] name, d_time returnIfMissing);
 else deprecated d_time lastModified(C)(in C[] name, d_time returnIfMissing)
     if(is(Unqual!C == char))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -1263,14 +1270,17 @@ unittest
 }
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isDir isdir;
+deprecated @property bool isdir(in char[] name)
+{
+    return name.isDir;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsDir) instead.)
 
     Returns whether the given file attributes are for a directory.
@@ -1278,7 +1288,7 @@ deprecated alias isDir isdir;
     Params:
         attributes = The file attributes.
   +/
-@property bool isDir(uint attributes) nothrow
+deprecated @property bool isDir(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1404,14 +1414,17 @@ unittest
 }
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D isDir) instead.)
  +/
-deprecated alias isFile isfile;
+deprecated @property bool isfile(in char[] name)
+{
+    return name.isFile;
+}
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsFile) instead.)
 
     Returns whether the given file attributes are for a file.
@@ -1429,7 +1442,7 @@ deprecated alias isFile isfile;
     Params:
         attributes = The file attributes.
   +/
-@property bool isFile(uint attributes) nothrow
+deprecated @property bool isFile(uint attributes) nothrow
 {
     version(Windows)
     {
@@ -1549,10 +1562,10 @@ unittest
             assert(!attrIsSymlink(getAttributes(fakeSymFile)));
             assert(!attrIsSymlink(getLinkAttributes(fakeSymFile)));
 
-            assert(isFile(getAttributes(fakeSymFile)));
-            assert(isFile(getLinkAttributes(fakeSymFile)));
-            assert(!isDir(getAttributes(fakeSymFile)));
-            assert(!isDir(getLinkAttributes(fakeSymFile)));
+            assert(attrIsFile(getAttributes(fakeSymFile)));
+            assert(attrIsFile(getLinkAttributes(fakeSymFile)));
+            assert(!attrIsDir(getAttributes(fakeSymFile)));
+            assert(!attrIsDir(getLinkAttributes(fakeSymFile)));
 
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
@@ -1572,11 +1585,11 @@ unittest
             assert(!attrIsSymlink(getAttributes(symfile)));
             assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-            assert(isDir(getAttributes(symfile)));
-            assert(!isDir(getLinkAttributes(symfile)));
+            assert(attrIsDir(getAttributes(symfile)));
+            assert(!attrIsDir(getLinkAttributes(symfile)));
 
-            assert(!isFile(getAttributes(symfile)));
-            assert(!isFile(getLinkAttributes(symfile)));
+            assert(!attrIsFile(getAttributes(symfile)));
+            assert(!attrIsFile(getLinkAttributes(symfile)));
         }
 
         if("/usr/include/assert.h".exists)
@@ -1592,18 +1605,18 @@ unittest
             assert(!attrIsSymlink(getAttributes(symfile)));
             assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-            assert(!isDir(getAttributes(symfile)));
-            assert(!isDir(getLinkAttributes(symfile)));
+            assert(!attrIsDir(getAttributes(symfile)));
+            assert(!attrIsDir(getLinkAttributes(symfile)));
 
-            assert(isFile(getAttributes(symfile)));
-            assert(!isFile(getLinkAttributes(symfile)));
+            assert(attrIsFile(getAttributes(symfile)));
+            assert(!attrIsFile(getLinkAttributes(symfile)));
         }
     }
 }
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Deprecated. It will be removed in May 2012.
           Please use $(D attrIsSymlink) instead.)
 
     Returns whether the given file attributes are for a symbolic link.
@@ -1614,7 +1627,7 @@ unittest
     Params:
         attributes = The file attributes.
   +/
-@property bool isSymLink(uint attributes) nothrow
+deprecated @property bool isSymLink(uint attributes) nothrow
 {
     version(Windows)
         return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1795,11 +1808,11 @@ version(Posix) unittest
         assert(!attrIsSymlink(getAttributes(symfile)));
         assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-        assert(isDir(getAttributes(symfile)));
-        assert(!isDir(getLinkAttributes(symfile)));
+        assert(attrIsDir(getAttributes(symfile)));
+        assert(!attrIsDir(getLinkAttributes(symfile)));
 
-        assert(!isFile(getAttributes(symfile)));
-        assert(!isFile(getLinkAttributes(symfile)));
+        assert(!attrIsFile(getAttributes(symfile)));
+        assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 
     if("/usr/include/assert.h".exists)
@@ -1816,11 +1829,11 @@ version(Posix) unittest
         assert(!attrIsSymlink(getAttributes(symfile)));
         assert(attrIsSymlink(getLinkAttributes(symfile)));
 
-        assert(!isDir(getAttributes(symfile)));
-        assert(!isDir(getLinkAttributes(symfile)));
+        assert(!attrIsDir(getAttributes(symfile)));
+        assert(!attrIsDir(getLinkAttributes(symfile)));
 
-        assert(isFile(getAttributes(symfile)));
-        assert(!isFile(getLinkAttributes(symfile)));
+        assert(attrIsFile(getAttributes(symfile)));
+        assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 }
 
@@ -1843,10 +1856,10 @@ else version(Posix) string readLink(C)(const(C)[] link)
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
     auto linkPtr = toUTFz!(const char*)(link);
-    auto size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                        buffer.ptr,
-                                                        buffer.length),
-                         link);
+    auto size = core.sys.posix.unistd.readlink(linkPtr,
+                                               buffer.ptr,
+                                               buffer.length);
+    cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1855,10 +1868,11 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = cenforce(core.sys.posix.unistd.readlink(linkPtr,
-                                                       dynamicBuffer.ptr,
-                                                       dynamicBuffer.length),
-                        link);
+        size = core.sys.posix.unistd.readlink(linkPtr,
+                                              dynamicBuffer.ptr,
+                                              dynamicBuffer.length);
+        cenforce(size != -1, link);
+
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
@@ -1884,6 +1898,8 @@ version(Posix) unittest
             assert(readLink(symfile) == file, format("Failed file: %s", file));
         }
     }
+
+    assertThrown!FileException(readLink("/doesnotexist"));
 }
 
 
@@ -2004,7 +2020,7 @@ assert(de2.isDir);
         @property bool isDir();
 
         /++
-         $(RED Deprecated. It will be removed in February 2012. Please use
+         $(RED Deprecated. It will be removed in March 2012. Please use
                $(D isDir) instead.)
          +/
         deprecated alias isDir isdir;
@@ -2036,7 +2052,7 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-         $(RED Deprecated. It will be removed in February 2012. Please use
+         $(RED Deprecated. It will be removed in March 2012. Please use
                $(D isFile) instead.)
          +/
         deprecated alias isFile isfile;
@@ -2057,7 +2073,7 @@ assert(!de2.isFile);
         @property ulong size();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                    $(D timeCreated) instead.)
 
             Returns the creation time of the file represented by this
@@ -2084,7 +2100,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(RED Scheduled for deprecation in November 2011. It will not be
+            $(RED Deprecated. It will be removed in May 2012. It will not be
                   replaced. You can use $(D attributes) to get at this
                   information if you need it.)
 
@@ -2093,10 +2109,10 @@ assert(!de2.isFile);
             Returns the last time that the status of file represented by this
             $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
           +/
-        @property SysTime timeStatusChanged();
+        deprecated @property SysTime timeStatusChanged();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                   $(D timeLastAccessed) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
@@ -2120,7 +2136,7 @@ assert(!de2.isFile);
         @property SysTime timeLastAccessed();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                   $(D timeLastModified) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
@@ -2375,7 +2391,7 @@ else version(Posix)
         // worthless, since the odds are high that it will be DT_UNKNOWN,
         // so it continues to be left undocumented.
         //
-        // Will be removed in February 2012.
+        // Will be removed in March 2012.
         deprecated @property ubyte d_type()
         {
             return _dType;
@@ -2596,7 +2612,7 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
@@ -2695,7 +2711,7 @@ void copy(in char[] from, in char[] to)
 }
 
     /++
-       $(RED Deprecated. It will be removed in February 2012. Please use the
+       $(RED Deprecated. It will be removed in March 2012. Please use the
              version which takes a $(XREF datetime, SysTime) instead.)
 
         Set access/modified times of file $(D name).
@@ -2709,7 +2725,7 @@ else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.setTimes " ~
                 "which takes std.date.d_time has been deprecated. It will be " ~
-                "removed in February 2012. Please use the version which takes " ~
+                "removed in March 2012. Please use the version which takes " ~
                 "std.datetime.SysTime instead.");
 
     version(Windows)
@@ -2846,7 +2862,7 @@ void rmdirRecurse(ref DirEntry de)
         // all children, recursively depth-first
         foreach(DirEntry e; dirEntries(de.name, SpanMode.depth, false))
         {
-            isDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
+            attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
         }
 
         // the dir itself
@@ -3123,7 +3139,7 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : isDir(_cur.linkAttributes);
+            return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
         }
     }
 
@@ -3394,10 +3410,10 @@ unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(isDir(de.attributes));
-    assert(isDir(de.linkAttributes));
-    assert(!isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(attrIsDir(de.attributes));
+    assert(attrIsDir(de.linkAttributes));
+    assert(!attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(!attrIsSymlink(de.linkAttributes));
 
@@ -3444,12 +3460,12 @@ unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(!isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(isFile(de.attributes));
-    assert(isFile(de.linkAttributes));
-    assert(!isSymLink(de.attributes));
-    assert(!isSymLink(de.linkAttributes));
+    assert(!attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(attrIsFile(de.attributes));
+    assert(attrIsFile(de.linkAttributes));
+    assert(!attrIsSymlink(de.attributes));
+    assert(!attrIsSymlink(de.linkAttributes));
 
     version(Windows)
     {
@@ -3497,10 +3513,10 @@ version(linux) unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(!isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(!attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
@@ -3542,10 +3558,10 @@ version(linux) unittest
     assert(de.timeLastModified > before);
     assert(de.timeLastModified < now);
 
-    assert(!isDir(de.attributes));
-    assert(!isDir(de.linkAttributes));
-    assert(isFile(de.attributes));
-    assert(!isFile(de.linkAttributes));
+    assert(!attrIsDir(de.attributes));
+    assert(!attrIsDir(de.linkAttributes));
+    assert(attrIsFile(de.attributes));
+    assert(!attrIsFile(de.linkAttributes));
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
@@ -3572,7 +3588,7 @@ slurp(Types...)(string filename, in char[] format)
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
-    scope(exit) f.close;
+    scope(exit) f.close();
     foreach (line; f.byLine())
     {
         formattedRead(line, format, &toAdd);
@@ -3598,7 +3614,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns the contents of the given directory.
@@ -3646,7 +3662,7 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation in November 2011.
+    $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
@@ -3701,7 +3717,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     auto result = appender!(string[])();
     bool callback(DirEntry* de)
     {
-        if(followSymlink ? de.isDir : isDir(de.linkAttributes))
+        if(followSymlink ? de.isDir : attrIsDir(de.linkAttributes))
         {
             _listDir(de.name, &callback);
         }
@@ -3730,7 +3746,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 }
 
 /******************************************************
- * $(RED Scheduled for deprecation in November 2011.
+ * $(RED Scheduled for deprecation.
  *       Please use $(D dirEntries) instead.)
  *
  * For each file and directory name in pathname[],

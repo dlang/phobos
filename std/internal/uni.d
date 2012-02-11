@@ -94,7 +94,7 @@ struct Interval
     ///
     @trusted string toString()const
     {
-        auto s = appender!string;
+        auto s = appender!string();
         formattedWrite(s,"%s..%s", begin, end);
         return s.data;
     }
@@ -442,7 +442,7 @@ struct CodepointSet
                     j = ivals[0];
             }
         }
-        auto ref save() const { return this; }
+        @property auto ref save() const { return this; }
     }
     static assert(isForwardRange!ByCodepoint);
 
@@ -534,7 +534,7 @@ public:
     {
         if(s.empty)
             return;
-        const(CodepointSet) set = s.chars > 500_000 ? (negative=true, s.dup.negate) : s;
+        const(CodepointSet) set = s.chars > 500_000 ? (negative=true, s.dup.negate()) : s;
         uint bound = 0;//set up on first iteration
         ushort emptyBlock = ushort.max;
         auto ivals  = set.ivals;
@@ -622,30 +622,31 @@ public:
 }
 
 
-version(fred_trie_test)
-unittest//a very sloow test
+@system unittest//a very sloow test
 {
+    import std.conv;
     uint max_char, max_data;
+    alias CodepointTrie!8 Trie;
     Trie t;
-    t = wordTrie;
+    auto wordSet =
+        CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
+        .add(unicodeMe).add(unicodeNd).add(unicodePc);
+    t = Trie(wordSet);
     assert(t['a']);
     assert(!t[' ']);
     CodepointSet set;
     set.add(unicodeAlphabetic);
     for(size_t i=1;i<set.ivals.length; i++)
         assert(set.ivals[i-1] < set.ivals[i],text(set.ivals[i-1], "  ",set.ivals[i]));
-    t = wordTrie;
-    assert(t['a']);
-    assert(!t[' ']);
     foreach(up; unicodeProperties)
     {
         t = Trie(up.set);
         foreach(uint ch; up.set[])
             assert(t[ch], text("on ch ==", ch));
-        auto s = up.set.dup.negate.negate;
+        auto s = up.set.dup.negate().negate();
         assert(equal(cast(immutable(Interval)[])s.ivals
                      , cast(immutable(Interval)[])up.set.ivals));
-        foreach(ch; up.set.dup.negate[])
+        foreach(ch; up.set.dup.negate()[])
         {
             assert(!t[ch], text("negative on ch ==", ch));
         }

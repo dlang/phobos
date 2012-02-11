@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use std.datetime instead.)
  *
  * dateparse module.
@@ -44,7 +44,7 @@ struct DateParse
     {
         this = DateParse.init;
 
-        //version (Win32)
+        //version (Windows)
             buffer = (cast(char *)alloca(s.length))[0 .. s.length];
         //else
             //buffer = new char[s.length];

@@ -566,7 +566,7 @@ body
     {
         uint    dw;
         ulong   qw;
-    };
+    }
     U u;
     void* data = &u.qw;
     DWORD cbData = u.qw.sizeof;
@@ -657,7 +657,7 @@ body
 
         auto keyname = toSTRz!Char(name);
         Char[] data = new Char[256];
-        DWORD cbData = data.length / Char.sizeof;
+        DWORD cbData = to!DWORD(data.length / Char.sizeof);
         LONG res = RegQueryValueEx!Char(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
         if (res == ERROR_MORE_DATA)
         {
@@ -769,7 +769,7 @@ body
     REG_VALUE_TYPE type;
 
     byte[] data = new byte[100];
-    DWORD cbData = data.length;
+    DWORD cbData = to!DWORD(data.length);
     LONG res;
     if (useWfuncs)
     {
@@ -1180,7 +1180,7 @@ public:
         {
             auto psz = toUTF16z(value);
             data = psz;
-            len = lstrlenW(psz) * wchar.sizeof;
+            len = to!DWORD(lstrlenW(psz) * wchar.sizeof);
         }
         else
         {
@@ -1218,21 +1218,21 @@ public:
 
         if (useWfuncs)
         {
-            regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, ws.ptr, ws.length * wchar.sizeof);
+            regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, ws.ptr, to!uint(ws.length * wchar.sizeof));
         }
         else
         {
             char[] cs;
             int readLen;
-            cs.length = WideCharToMultiByte(/*CP_ACP*/ 0, 0, ws.ptr, ws.length, null, 0, null, null);
+            cs.length = WideCharToMultiByte(/*CP_ACP*/ 0, 0, ws.ptr, to!uint(ws.length), null, 0, null, null);
             if (cs.length)
             {
-                readLen = WideCharToMultiByte(/*CP_ACP*/ 0, 0, ws.ptr, ws.length, cs.ptr, cs.length, null, null);
+                readLen = WideCharToMultiByte(/*CP_ACP*/ 0, 0, ws.ptr, to!uint(ws.length), cs.ptr, to!int(cs.length), null, null);
             }
             enforce(readLen && readLen == cs.length,
                 new Win32Exception("Couldn't convert string: " ~ sysErrorString(GetLastError())));
 
-            regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
+            regSetValue(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, to!uint(cs.length));
         }
     }
 

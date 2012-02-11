@@ -299,9 +299,9 @@ unittest
 
     class Foo
     {
-        int value() { return _value; }
+        @property int value() { return _value; }
 
-        int value(int v)
+        @property int value(int v)
         {
             if (v != _value)
             {   _value = v;

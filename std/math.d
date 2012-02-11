@@ -872,31 +872,6 @@ float sqrt(float x) @safe pure nothrow;    /* intrinsic */
 double sqrt(double x) @safe pure nothrow;  /* intrinsic */ /// ditto
 real sqrt(real x) @safe pure nothrow;      /* intrinsic */ /// ditto
 
-@trusted pure nothrow {  // Should be @safe.  See bugs 4628, 4630.
-    // Create explicit overloads for integer sqrts.  No ddoc for these because
-    // hopefully a more elegant solution will eventually be found, so we don't
-    // want people relying too heavily on the minutiae of this, for example,
-    // by taking the address of sqrt(int) or something.
-    real sqrt(byte x) { return sqrt(cast(real) x); }
-    real sqrt(ubyte x) { return sqrt(cast(real) x); }
-    real sqrt(short x) { return sqrt(cast(real) x); }
-    real sqrt(ushort x) { return sqrt(cast(real) x); }
-    real sqrt(int x) { return sqrt(cast(real) x); }
-    real sqrt(uint x) { return sqrt(cast(real) x); }
-    real sqrt(long x) { return sqrt(cast(real) x); }
-    real sqrt(ulong x) { return sqrt(cast(real) x); }
-}
-
-unittest {
-    alias TypeTuple!(byte, ubyte, short, ushort,
-                     int, uint, long, ulong, float, double, real) Numerics;
-    foreach(T; Numerics) {
-        immutable T two = 2;
-        assert(approxEqual(sqrt(two), SQRT2),
-            "sqrt unittest failed on type " ~ T.stringof);
-    }
-}
-
 creal sqrt(creal z) @safe pure nothrow
 {
     creal c;
@@ -1739,14 +1714,27 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  * be completely subtracted from x. The result has the same sign as x.
  *
  * $(TABLE_SV
- *  $(TR $(TH x)              $(TH y)             $(TH modf(x, y))   $(TH invalid?))
+ *  $(TR $(TH x)              $(TH y)             $(TH fmod(x, y))   $(TH invalid?))
  *  $(TR $(TD $(PLUSMN)0.0)   $(TD not 0.0)       $(TD $(PLUSMN)0.0) $(TD no))
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(NAN))       $(TD yes))
  *  $(TR $(TD anything)       $(TD $(PLUSMN)0.0)  $(TD $(NAN))       $(TD yes))
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real modf(real x, ref real y) @trusted nothrow { return core.stdc.math.modfl(x,&y); }
+real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+
+/************************************
+ * Breaks x into an integral part and a fractional part, each of which has
+ * the same sign as x. The integral part is stored in i.
+ * Returns:
+ * The fractional part of x.
+ *
+ * $(TABLE_SV
+ *  $(TR $(TH x)              $(TH i (on input))  $(TH modf(x, i))   $(TH i (on return)))
+ *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
+ * )
+ */
+real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -2172,7 +2160,7 @@ public:
 
 
 /// Set all of the floating-point status flags to false.
-void resetIeeeFlags() { IeeeFlags.resetIeeeFlags; }
+void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 
 /// Return a snapshot of the current state of the floating-point status flags.
 @property IeeeFlags ieeeFlags()
@@ -3174,9 +3162,18 @@ unittest
     assert(pow(x,eight) == (x * x) * (x * x) * (x * x) * (x * x));
 
     assert(pow(x, neg1) == 1 / x);
-    assert(pow(xd, neg2) == 1 / (x * x));
+
+    version(X86_64)
+    {
+        pragma(msg, "test disabled on x86_64, see bug 5628");
+    }
+    else
+    {
+        assert(pow(xd, neg2) == 1 / (x * x));
+        assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
+    }
+
     assert(pow(x, neg3) == 1 / (x * x * x));
-    assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
 }
 
 /** Compute the value of an integer x, raised to the power of a positive
@@ -3574,7 +3571,14 @@ unittest
    assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
 
-   assert(feqrel(real.min_normal/8,real.min_normal/17)==3);;
+   version(X86_64)
+   {
+       pragma(msg, "test disabled, see bug 5628");
+   }
+   else
+   {
+       assert(feqrel(real.min_normal/8,real.min_normal/17)==3);
+   }
 
    // Numbers that are close
    assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
@@ -3895,7 +3899,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         static if (isInputRange!U)
         {
             // Two ranges
-            for (;; lhs.popFront, rhs.popFront)
+            for (;; lhs.popFront(), rhs.popFront())
             {
                 if (lhs.empty) return rhs.empty;
                 if (rhs.empty) return lhs.empty;
@@ -3906,7 +3910,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         else
         {
             // lhs is range, rhs is number
-            for (; !lhs.empty; lhs.popFront)
+            for (; !lhs.empty; lhs.popFront())
             {
                 if (!approxEqual(lhs.front, rhs, maxRelDiff, maxAbsDiff))
                     return false;
