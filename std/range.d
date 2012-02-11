@@ -3525,20 +3525,6 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
         ret ~= "\tsize_t index = 0;\n";
     }
 
-<<<<<<< HEAD
-    // For every range not offering ref return, declare a variable to statically
-    // copy to so we have lvalue access.
-    foreach(ti, Range; Ranges)
-    {
-        static if (!hasLvalueElements!Range) {
-            // Don't have lvalue access.
-            ret ~= "\tUnqual!(ElementType!(R[" ~ to!string(ti) ~ "])) front" ~
-                to!string(ti) ~ ";\n";
-        }
-    }
-
-=======
->>>>>>> 88faac2475024412831022859cdba6a3cbcf04a0
     // Check for emptiness.
     ret ~= "\twhile(";                 //someEmpty) {\n";
     foreach(ti, Unused; Ranges) 
@@ -3555,7 +3541,6 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
     {
         ret ~= "index, ";
     }
-
 
     foreach(ti, Range; Ranges)
     {
