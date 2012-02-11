@@ -157,7 +157,7 @@ deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     ASCII whitespace.
   +/
-alias std.ascii.whitespace whitespace;
+deprecated alias std.ascii.whitespace whitespace;
 
 /++
     $(RED Deprecated. It will be removed in July 2012.
@@ -181,9 +181,7 @@ deprecated enum dchar PS = '\u2029';
 
     Newline sequence for this system.
   +/
-version(Windows) deprecated immutable newline = "\r\n";
-else version(Posix) deprecated immutable newline = "\n";
-else static assert(0, "Unsupported OS");
+deprecated alias std.ascii.newline newline;
 
 /**********************************
  * $(RED Deprecated. It will be removed in July 2012.
