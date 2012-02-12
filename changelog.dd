@@ -47,6 +47,7 @@ $(VERSION 058, ddd mm, 2012, =================================================,
        $(LI $(BUGZILLA 7241): std.format can't read into array of dchar)
        $(LI $(BUGZILLA 7302): std.conv.parse with radix doesn't work on ranges)
        $(LI $(BUGZILLA 7397): [Regression] std.path.buildPath can't be used with string[])
+       $(LI $(BUGZILLA 7480): Unhelpful formatting specifier mismatch exception message for pointers)
        $(LI $(BUGZILLA 7484): std.algorithm.copy overlapping array copy)
      )
  )
