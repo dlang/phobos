@@ -7408,7 +7408,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in July 2012.
+        $(RED Deprecated. It will be removed in August 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const nothrow
@@ -12440,7 +12440,7 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in July 2012.
+        $(RED Deprecated. It will be removed in August 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const pure nothrow
@@ -17371,7 +17371,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
     /++
-        $(RED Deprecated. It will be removed in July 2012.
+        $(RED Deprecated. It will be removed in August 2012.
               Please use daysInMonth instead.)
       +/
     deprecated @property ubyte endOfMonthDay() const pure nothrow
@@ -31152,7 +31152,7 @@ version(testStdDateTime) unittest
 //==============================================================================
 
 /++
-    $(RED Deprecated. It will be removed in February 2012. This is only here to
+    $(RED Deprecated. It will be removed in March 2012. This is only here to
           help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D d_time) for the given $(D SysTime).
@@ -31179,7 +31179,7 @@ version(testStdDateTime) unittest
 
 
 /++
-    $(RED Deprecated. It will be removed in February 2012. This is only here to
+    $(RED Deprecated. It will be removed in March 2012. This is only here to
           help transition code which uses std.date to using std.datetime.)
 
     Returns a $(D SysTime) for the given $(D d_time).

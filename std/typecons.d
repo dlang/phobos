@@ -724,93 +724,6 @@ unittest
 }
 
 
-private template enumValuesImpl(string name, BaseType, long index, T...)
-{
-    static if (name.length)
-    {
-        enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
-            ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
-    }
-    else
-    {
-        static if (!T.length)
-        {
-            enum string enumValuesImpl = "";
-        }
-        else
-        {
-            static if (T.length == 1
-                       || T.length > 1 && is(typeof(T[1]) : string))
-            {
-                enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
-                    ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
-            }
-            else
-            {
-                enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
-                    ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
-            }
-        }
-    }
-}
-
-private template enumParserImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumParserImpl = "bool enumFromString(string s, ref "
-            ~name~" v) {\n"
-            ~enumParserImpl!(name, false, T)
-            ~"return false;\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumParserImpl =
-                "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
-                ~enumParserImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumParserImpl = "";
-    }
-}
-
-private template enumPrinterImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
-            ~enumPrinterImpl!(name, false, T)~"\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumPrinterImpl =
-                "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
-                ~enumPrinterImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumPrinterImpl = "return null;";
-    }
-}
-
-private template ValueTuple(T...)
-{
-    alias T ValueTuple;
-}
-
-private template StringsOnly(T...)
-{
-    static if (T.length == 1)
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0]) StringsOnly;
-        else
-            alias ValueTuple!() StringsOnly;
-    else
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
-        else
-            alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
-}
-
 /**
 Defines truly named enumerated values with parsing and stringizing
 primitives.
@@ -846,10 +759,99 @@ representation.  */
 deprecated template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
+    {
+        template enumValuesImpl(string name, BaseType, long index, T...)
+        {
+            static if (name.length)
+            {
+                enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
+                    ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
+            }
+            else
+            {
+                static if (!T.length)
+                {
+                    enum string enumValuesImpl = "";
+                }
+                else
+                {
+                    static if (T.length == 1
+                               || T.length > 1 && is(typeof(T[1]) : string))
+                    {
+                        enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
+                            ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
+                    }
+                    else
+                    {
+                        enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
+                            ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
+                    }
+                }
+            }
+        }
+
+        template enumParserImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumParserImpl = "bool enumFromString(string s, ref "
+                    ~name~" v) {\n"
+                    ~enumParserImpl!(name, false, T)
+                    ~"return false;\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumParserImpl =
+                        "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
+                        ~enumParserImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumParserImpl = "";
+            }
+        }
+
+        template enumPrinterImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
+                    ~enumPrinterImpl!(name, false, T)~"\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumPrinterImpl =
+                        "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
+                        ~enumPrinterImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumPrinterImpl = "return null;";
+            }
+        }
+
+        template StringsOnly(T...)
+        {
+            template ValueTuple(T...)
+            {
+                alias T ValueTuple;
+            }
+
+            static if (T.length == 1)
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0]) StringsOnly;
+                else
+                    alias ValueTuple!() StringsOnly;
+            else
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
+                else
+                    alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
+        }
+
         enum string defineEnum =
             enumValuesImpl!(name, T[0], 0, T[1 .. $])
             ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))
             ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]));
+    }
     else
         alias defineEnum!(name, int, T) defineEnum;
 }
@@ -1746,45 +1748,40 @@ private static:
     // this would be deprecated by std.typelist.Filter
     template staticFilter(alias pred, lst...)
     {
-        alias staticFilterImpl!(pred, lst).result staticFilter;
-    }
-    template staticFilterImpl(alias pred, lst...)
-    {
         static if (lst.length > 0)
         {
-            alias staticFilterImpl!(pred, lst[1 .. $]).result tail;
+            alias staticFilter!(pred, lst[1 .. $]) tail;
             //
-            static if (true && pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) result;
+            static if (pred!(lst[0]))
+                alias TypeTuple!(lst[0], tail) staticFilter;
             else
-                alias tail result;
+                alias tail staticFilter;
         }
         else
-            alias TypeTuple!() result;
+            alias TypeTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        alias enumerateOverloadsImpl!(C, pred, __traits(allMembers, C)).result
-                enumerateOverloads;
-    }
-    template enumerateOverloadsImpl(C, alias pred, names...)
-    {
-        static if (names.length > 0)
+        template Impl(names...)
         {
-            alias staticFilter!(pred, MemberFunctionsTuple!(C, ""~names[0])) methods;
-            alias enumerateOverloadsImpl!(C, pred, names[1 .. $]).result next;
+            static if (names.length > 0)
+            {
+                alias staticFilter!(pred, MemberFunctionsTuple!(C, names[0])) methods;
+                alias Impl!(names[1 .. $]) next;
 
-            static if (methods.length > 0)
-                alias TypeTuple!(OverloadSet!(""~names[0], methods), next) result;
+                static if (methods.length > 0)
+                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                else
+                    alias next Impl;
+            }
             else
-                alias next result;
+                alias TypeTuple!() Impl;
         }
-        else
-            alias TypeTuple!() result;
-    }
 
+        alias Impl!(__traits(allMembers, C)) enumerateOverloads;
+    }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Target functions
@@ -2221,7 +2218,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    ""~generateParameters!(myFuncInfo, func),
+                    generateParameters!(myFuncInfo, func)(),
                     postAtts, storageClass );
         }
 

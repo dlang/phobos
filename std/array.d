@@ -426,9 +426,9 @@ unittest
         assert(s3 == "");
 
         S str = "\U00010143\u0100\U00010143hello";
-        foreach(dchar c; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
+        foreach(dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
         {
-            assert(str.back == c);
+            assert(str.back == ch);
             str.popBack();
         }
         assert(str.empty);

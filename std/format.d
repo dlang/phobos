@@ -2160,7 +2160,8 @@ if (isPointer!T)
             }
             else
             {
-                enforce(f.spec == 'X' || f.spec == 'x');
+                enforceEx!FormatException(f.spec == 'X' || f.spec == 'x',
+                   "Expected one of %s, %x or %X for pointer type.");
                 formatValue(w, cast(ulong) p, f);
             }
         }

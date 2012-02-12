@@ -631,7 +631,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- * $(RED Deprecated. It will be removed in July 2012. Please use the version
+ * $(RED Deprecated. It will be removed in August 2012. Please use the version
  *       which takes a $(CXREF time, Duration) instead.)
  */
 deprecated bool receiveTimeout(T...)( long ms, T ops )
@@ -988,7 +988,7 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final bool get(T...)( T vals )
+        final bool get(T...)( scope T vals )
         {
             static assert( T.length );
 
