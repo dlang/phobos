@@ -6,7 +6,7 @@ Implements an application level logging mechanism.
 
 The std.log module defines a set of functions useful for many common logging
 tasks. Five logging severity levels are defined. In the order of severity they
-are: $(D info), $(D warning), $(D error), $(D critical) and $(D fatal). Verbose
+are $(D info), $(D warning), $(D error), $(D critical) and $(D fatal). Verbose
 messages are logged using the $(D vlog) template.
 
 By default std.log will configure itself using the command line arguments
@@ -1953,7 +1953,7 @@ void name(string[] args) {
 }
 ---
          The example above will log every log message to one file with the
-         name: $(I [program].log.[datetime].[pid].
+          name $(I [program].log.[datetime].[pid].
        +/
       @property string[] fileNamePrefixes(string[] prefixes)
       {
