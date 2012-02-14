@@ -1,24 +1,17 @@
 // Written in the D programming language.
-// XXX make sure that the examples are correct.
+// XXX TODO make sure that the examples are correct.
 
 /++
 Implements an application level logging mechanism.
 
-This module defines a set of functions useful for many common logging tasks.
-The module allows for the logging of messages at different severity levels and
-at different verbose level. The module provides the functionality to disabled
-and enabled log messaging both at compile time and at run time. The module can
-also _log depending on user defined boolean conditions. The module includes
-some commonly use conditions like $(D every) number of times and $(D first)
-number of times.
-
-Five logging severity levels are defined. In the other of severity they are:
-$(D info), $(D warning), $(D error), $(D critical) and $(D fatal). Verbose
+The std.log module defines a set of functions useful for many common logging
+tasks. Five logging severity levels are defined. In the order of severity they
+are: $(D info), $(D warning), $(D error), $(D critical) and $(D fatal). Verbose
 messages are logged using the $(D vlog) template.
 
-By default the module will configure itself using the command line arguments
-passed to the process and using the process's enviroment variables. For a list
-of the default command line options and enviroment variables, and their meaning
+By default std.log will configure itself using the command line arguments
+passed to the process and using the process's environment variables. For a list
+of the default command line options, environment variables and their meaning,
 see $(D Configuration) and $(D FileLogger.Configuration).
 
 Example:
@@ -27,36 +20,37 @@ import std.log;
 
 void main(string[] args)
 {
-   log!info.format("You passed %s argument(s)", args.length - 1);
-   log!info.when(args.length > 1)("Arguments: ", args[1 .. $]);
+   info("You passed %s argument(s)", args.length - 1);
+   info.when(args.length > 1).write("Arguments: ", args[1 .. $]);
 
-   log!warning("This is a warning message.");
-   log!error("This is an error message!");
-   log!dfatal("This is a debug fatal message");
+   warning("This is a warning message.");
+   error("This is an error message!");
+   dfatal("This is a debug fatal message");
 
    vlog(1)("Verbosity 1 message");
    vlog(2)("Verbosity 2 message");
 
    foreach (i; 0 .. 10)
    {
-      log!info.when(every(9))("Every nine");
+      info.when(every(9))("Every nine");
 
-      if(log!info.willLog)
+      if(info.willLog)
       {
          auto message = "Cool message";
          // perform some complex operation
          // ...
-         log!info(message);
+         info(message);
       }
    }
 
-   try log!critical("Critical message");
+   try critical("Critical message");
    catch(CriticalException e)
    {
       // shutdown application...
    }
 
-   log!fatal("This is a fatal message!!!");
+   fatal("This is a fatal message!!!");
+   assert(false, "Never reached");
 }
 ---
 
@@ -113,20 +107,20 @@ Maps to the $(D LogFilter) for the specified severity.
 
 Example:
 ---
-log!info("Info severity message");
-log!warning("Warning severity message");
-log!error("Error severity message");
-log!critical("Critical severity message");
-log!dfatal("Fatal message in debug mode and critical message in release mode");
-log!fatal("Fatal severity message");
+info("Info severity message");
+warning("Warning severity message");
+error("Error severity message");
+critical("Critical severity message");
+dfatal("Fatal message in debug mode and critical message in release mode");
+fatal("Fatal severity message");
 ---
 
-$(BOOKTABLE Descripton of the supported severities.,
+$(BOOKTABLE Description of supported severities.,
    $(TR $(TH Severity) $(TH Description))
    $(TR $(TD $(D fatal))
         $(TD Logs a fatal severity message. Fatal _log messages terminate the
              application after the message is persisted. Fatal _log message
-             cannot be disabled at compile time or at run time.))
+             cannot be disable at compile time or at run time.))
    $(TR $(TD $(D dfatal))
         $(TD Logs a debug fatal message. Debug fatal _log messages _log at
              fatal severity in debug mode and _log at critical severity in
@@ -135,27 +129,27 @@ $(BOOKTABLE Descripton of the supported severities.,
    $(TR $(TD $(D critical))
         $(TD Logs a critical severity message. Critical _log messages throw an
              exception after the message is persisted. Critical _log messages
-             cannot be disabled at compile time or at run time.))
+             cannot be disable at compile time or at run time.))
    $(TR $(TD $(D error))
-        $(TD Logs an error severity message. Error _log messages are disabled
+        $(TD Logs an error severity message. Error _log messages are disable
              at compiled time by setting the version to $(I strip_log_error).
-             Error _log messages are disabled at run time by setting the
+             Error _log messages are disable at run time by setting the
              minimun severity to $(D Level.fatal) or $(D Level.critical) in
              $(D Configuration). Disabling _error _log messages at compile time
              or at run time also disables lower severity messages, e.g. warning
              and info.))
    $(TR $(TD $(D warning))
         $(TD Logs a warning severity message. Warning _log messages are
-             disabled at compiled time by setting the version to
-             $(I strip_log_warning). Warning _log messages are disabled at run
+             disable at compiled time by setting the version to
+             $(I strip_log_warning). Warning _log messages are disable at run
              time by setting the minimum severity to $(D Level.error) in
              $(D Configuration). Disabling _warning _log messages at compile
              time or at run time also disables lower severity messages, e.g.
              info.))
    $(TR $(TD $(D info))
-        $(TD Logs a info severity message. Info _log messages are disabled at
+        $(TD Logs a info severity message. Info _log messages are disable at
              compiled time by setting the version to $(I strip_log_info). Info
-             _log messages are disabled at run time by setting the minimum
+             _log messages are disable at run time by setting the minimum
              severity to $(D Level.warning) in $(D Configuration). Disabling
              _info _log messages at compile time or at run time also disables
              verbose _log messages.)))
@@ -164,6 +158,14 @@ template log(Severity severity)
 {
    alias logImpl!(severity).filter log;
 }
+alias log!(Severity.fatal) fatal; /// ditto
+debug alias log!(Severity.fatal) dfatal; /// ditto
+else alias log!(Severity.critical) dfatal; /// ditto
+alias log!(Severity.critical) critical; /// ditto
+alias log!(Severity.error) error; /// ditto
+alias log!(Severity.warning) warning; /// ditto
+alias log!(Severity.info) info; /// ditto
+
 
 private template logImpl(Severity severity)
 {
@@ -199,7 +201,7 @@ auto vlog(string file = __FILE__)(int level)
 {
    static if(Severity.info > logImpl!(Severity.info).minSeverity)
    {
-      return _noopLogFilter;
+      return NoopLogFilter._singleton;
    }
    else
    {
@@ -281,40 +283,42 @@ unittest
 }
 
 /++
-Conditionally records a log message by checking the severity level and any user
-defined condition.
+Conditionally records a log message by checking the severity level and any
+user defined condition. This is the type alised by the $(D log) and $(D vlog)
+template and the type of the aliases $(D fata), $(D dfata), $(D critical),
+$(D error), $(D warning) and $(D info).
 
 Examples:
 ---
-log!error("Log an ", to!string(Severity.error), " message!");
-log!error.write("Log an ", to!string(Severity.error), " message!");
-log!error.format("Also logs an %s message!", to!string(Severity.error));
+error("Log an %s message!", Severity.error);
+error.write("Log an ", Severity.error, " message!");
+error.format("Also logs an %s message!", Severity.error);
 ---
-Logs a message if the specified severity level is enabled.
+Logs a message if the specified severity level is enable.
 
 ---
 void coolFunction(Object object)
 {
-   log!fatal.when(object is null)("I don't like null objects!");
+   fatal.when(object is null)("I don't like null objects!");
    // ...
 }
 
 foreach(i; 0 .. 10)
 {
-   log!info.when(first())("Only log this the first time in the loop");
+   info.when(first())("Only log this one time per thread run");
 }
 ---
-Logs a message if the specified severity level is enabled and all the user
+Logs a message if the specified severity level is enable and all the user
 defined condition are true.
 
 ---
 void removeDirectory(string dir = "/tmp/log")
 {
-   log!info.when(rich!"!="(dir, "/tmp/log"))("Trying to remove dir");
+   info.when(rich!"!="(dir, "/tmp/log"))("Trying to remove dir");
    // ...
 }
 ---
-Logs a rich message if the specified severity level is enabled and all the user
+Logs a rich message if the specified severity level is enable and all the user
 defined condition are true.
 +/
 final class LogFilter
@@ -336,16 +340,16 @@ final class LogFilter
    this() {}
 
    /++
-      Returns true when a message can be logged.
+      Returns true if a message to this logger will be recorded.
 
       Example:
 ---
-if(log!error.willLog)
+if(error.willLog)
 {
    string message;
-   // Perform some compuration
+   // Perform some computation
    // ...
-   log!error(message);
+   error(message);
 }
 ---
     +/
@@ -355,15 +359,15 @@ if(log!error.willLog)
    }
 
    /++
-      Returns this object if the parameter now evaluates to true and if a
-      message can be logged. Note: The now parameter is only evaluated if
-      a message can be logged with this object.
+      Returns this object if the parameter now evaluates to true and
+      $(D willLog) returns true. Note: The now parameter is only evaluated if
+      $(D willLog) returns true.
 
       Example:
 ---
 foreach(i; 0 .. 10)
 {
-   log!warning.when(i == 9)("Executed loop when i = 9");
+   warning.when(i == 9)("Executed loop when i = 9");
    // ...
 }
 ---
@@ -388,16 +392,16 @@ foreach(i; 0 .. 10)
    }
 
    /++
-      Returns this object if the parameter now evaluates to true and if a
-      message can be logged. It also appends the log message with a reason why
-      it is true. Note: The now parameter is only evaluated if a message
-      can be logged with this object.
+      Returns this object if the parameter now evaluates to true and
+      $(D willLog) returns true. It also appends the log message with a reason
+      as to why it is true. Note: The now parameter is only evaluated if
+      $(D willLog) return true.
 
       Example:
 ---
 foreach(i; 0 .. 10)
 {
-   log!warning.when(richEqual(i, 9))("Executed loop when i = 9");
+   warning.when(rich!"=="(i, 9))("Executed loop when i = 9");
    // ...
 }
 ---
@@ -427,24 +431,20 @@ foreach(i; 0 .. 10)
    }
 
    /++
-      Concatenates all the arguements and logs them. Note: The parameters are
-      only evaluated if a message can be logged.
+      Concatenates all the arguments and logs them. Note: The parameters are
+      only evaluated if $(D willLog) returns true.
 
       Example:
 ---
 auto pi = 3.14159265;
 
-log!info.write("The value of pi is ", pi);
-
-// The same as above...
-log!info("The value of pi is ", pi);
+info.write("The value of pi is ", pi);
 ---
     +/
    void write(string file = __FILE__, int line = __LINE__, T...)(lazy T args)
    {
      format!(file, line)("%1:$s", args);
    }
-   alias write opCall; /// ditto
 
    /++
       Formats the parameters args given the _format string fmt and
@@ -457,6 +457,9 @@ log!info("The value of pi is ", pi);
 auto goldenRatio = 1.61803399;
 
 vlog(1).format("The number %s is the golden ratio", goldenRatio);
+
+// The same as above...
+vlog(1)("The number %s is the golden ration", goldenRatio);
 ---
     +/
    void format(string file = __FILE__, int line = __LINE__, T...)
@@ -481,6 +484,7 @@ vlog(1).format("The number %s is the golden ratio", goldenRatio);
          _config.logger.log(_message);
       }
    }
+   alias format opCall; /// ditto
 
    private void handleSeverity()
    {
@@ -603,7 +607,7 @@ unittest
       if(filter.willLog) {}
 
       filter.write("hello ", 1, " world");
-      filter(1, " hello world");
+      filter("format string", true, 4, 5.0, "hello world");
       filter.format("format string", true, 4, 5.0);
       filter.when(true).write("message");
       filter.when(rich!"=="(0, 0)).write("better message");
@@ -611,8 +615,8 @@ unittest
       filter.vlog(0);
    }
 
-   assert(__traits(compiles, publicInterface!LogFilter));
-   assert(__traits(compiles, publicInterface!NoopLogFilter));
+   static assert(__traits(compiles, publicInterface!LogFilter));
+   static assert(__traits(compiles, publicInterface!NoopLogFilter));
 }
 
 // Used by the module to disable logging at compile time.
@@ -626,8 +630,8 @@ final class NoopLogFilter
    { return this; }
 
    nothrow const void write(T...)(lazy T args) {}
-   alias write opCall;
    nothrow const void format(T...)(lazy string fmt, lazy T args) {}
+   alias format opCall;
 
    pure nothrow const ref const(NoopLogFilter) vlog(int level,
                                                     string file = null)
@@ -640,7 +644,11 @@ final class NoopLogFilter
    shared static this() { _singleton = new immutable(NoopLogFilter); }
 }
 
-/// Defines the severity levels supported by the logging library.
+/++
+  Defines the severity levels supported by the logging library. Should be used
+  in conjuntion with the log template. See $(D log)
++/
+
 enum Severity
 {
    fatal = 0, ///
@@ -649,14 +657,6 @@ enum Severity
    warning, /// ditto
    info /// ditto
 }
-
-alias Severity.fatal fatal;
-debug alias Severity.fatal dfatal;
-else alias Severity.critical dfatal;
-alias Severity.critical critical;
-alias Severity.error error;
-alias Severity.warning warning;
-alias Severity.info info;
 
 unittest
 {
@@ -763,14 +763,14 @@ not wanted.
 final class Configuration
 {
    /++
-      Initialize the configuration object based on the passed parameter.
+      Modifies the configuration object based on the passed parameter.
 
       The function processes every entry in commandLine looking for valid
       command line options. All of the valid options are enumerated in the
       fields of this structure that end in 'Flag', e.g. minSeverityFlag.
       When a valid command line option is found its value is stored in the
       mapping object's property and it is removed from commandLine. For any
-      property not set explictly its default value is used. Here is a list of
+      property not set explicitly its default value is used. Here is a list of
       all the flags and how they map to the object's property:
 
       $(UL
@@ -818,7 +818,7 @@ final class Configuration
    }
 
    /++
-      Command line flag for setting the per module verbose fileter
+      Command line flag for setting the per module verbose filter
       configuration. The default value is $(D "vmodule") which at the command
       line is $(I --vmodule).
     +/
@@ -1427,15 +1427,15 @@ class FileLogger : Logger
    public struct Configuration
    {
       /++
-         Create a configuration object based on the passed parameter.
+         Modifies the configuration object based on the passed parameter.
 
          The function processes every entry in commandLine looking for valid
          command line options. All of the valid options are enumerated in the
          fields of this structure that end in 'Flag', e.g. logToStderrFlag.
-	 When a valid command line option is found its value is stored in the
-	 mapping object's property and it is removed from commandLine. For any
-	 property not set explictly its default value is used. Here is a list
-	 of all the flags and how they map to the object's property:
+         When a valid command line option is found its value is stored in the
+         mapping object's property and it is removed from commandLine. For any
+         property not set explicitly its default value is used. Here is a list
+         of all the flags and how they map to the object's property:
 
          $(UL
             $(LI $(D logToStderrFlag) maps to $(D logToStderr))
@@ -1445,6 +1445,19 @@ class FileLogger : Logger
 
          The $(D name) property is set to the program name, i.e. the first
          element of commandLine.
+
+         Example:
+---
+void main(string[] args) {
+  auto loggerConfig = FileLogger.Configuration.create();
+
+  // overwrite some default values
+  loggerConfig.logDirectory = "/tmp/" ~ args[0];
+  loggerConfig.parseCommandLine(args);
+
+  config.logger = new shared(FileLogger(loggerConfig));
+}
+---
        +/
       void parseCommandLine(ref string[] commandLine)
       {
@@ -1584,7 +1597,7 @@ class FileLogger : Logger
       /++
          Specifies the directory where log files are created.
 
-         The default value for this property is the value in the enviroment
+         The default value for this property is the value in the environment
          variable $(I LOGDIR). If $(I LOGDIR) is not set, then $(I TEST_TMPDIR)
          is used. If $(I TEST_TMPDIR) is not set, then it logs to the current
          directory.
@@ -1646,6 +1659,7 @@ class FileLogger : Logger
                         1, "", 1, "", "", 1, 1, 1, 1, 1, 1);
       }
 
+//XXX TODO: log the thread name.
       /++
          Specifies the _format for every log line.
 
@@ -1666,14 +1680,14 @@ class FileLogger : Logger
             $(TR $(TD %f)
                  $(TD The name of the file which generated the log line.))
             $(TR $(TD %l)
-                 $(TD The line number which genereated the log line.))
+                 $(TD The line number which generated the log line.))
             $(TR $(TD %m)
                  $(TD The log message.)))
 
          The directive $(I %t) is the same as $(I %{%m%d %H:%M:%S}t) as
          described below.
 
-         $(BOOKTABLE  Directives inside the curly brakets in $(I %{...}t) are
+         $(BOOKTABLE  Directives inside the curly brackets in $(I %{...}t) are
                       mapped as follows.,
             $(TR $(TH Directive)
                  $(TH Semantics))
@@ -1908,7 +1922,7 @@ assert(loggerConfig.severitySymbols[Severity.fatal] == '1');
       /++
          Specifies the prefix for the name of the log files.
 
-         The paramater should either by $(D null) or be a length of
+         The parameter should either by $(D null) or be a length of
          $(D Severity.max + 1).
         
          If the value is not null the value stored in $(I prefixes[i]) will be
@@ -1926,6 +1940,20 @@ assert(loggerConfig.severitySymbols[Severity.fatal] == '1');
          $(I hello.example.com.guest.INFO.log.20110609T050018Z.743).
 
          The default value is $(D null).
+
+         Example:
+---
+import std.log;
+
+void name(string[] args) {
+  auto loggerConfig = FileLogger.Configuration.create();
+  loggerConfig.fileNamePrefixes = ["", "", "", "", args[0]];
+
+  config.logger = new shared(FileLogger(loggerConfig));
+}
+---
+         The example above will log every log message to one file with the
+         name: $(I [program].log.[datetime].[pid].
        +/
       @property string[] fileNamePrefixes(string[] prefixes)
       {
@@ -2189,14 +2217,15 @@ assert(loggerConfig.severitySymbols[Severity.fatal] == '1');
       else version(Posix)
       {
          import core.sys.posix.sys.stat;
-	 import std.file: struct_stat64, lstat64;
+         import std.file: struct_stat64, lstat64;
 
          struct_stat64 lstatbuf = void;
          if (lstat64(toStringz(linkName), &lstatbuf) == 0 &&
-	     lstatbuf.st_mode & S_IFMT) remove(linkName);
+             lstatbuf.st_mode & S_IFMT) remove(linkName);
          .symlink(toStringz(target), toStringz(linkName));
       }
-      // TODO: Need Windows Vista to test this implementation
+      // TODO: Need Windows Vista to test this implementation; Vista is suppose
+      // to support symlinks.
    }
 
    private size_t _bufferSize;
@@ -2305,12 +2334,18 @@ auto secondCounter = 0;
 
 foreach(i; 0 .. 10)
 {
-   if(every(2)) ++firstCounter;
+   if(every(2)) firstCounter += i;
 
-   if(every(3)) ++secondCounter;
+   if(every(3)) secondCounter += i;
 }
-assert(firstCounter == 5);
-assert(secondCounter == 4);
+assert(firstCounter == 20); // 0 + 2 + 4 + 6 + 8
+assert(secondCounter == 18); // 0 + 3 + 6 + 9
+
+foreach(i; 0 .. 3)
+{
+   if(every(dur!"msecs"(40))) assert(i == 0 || i == 2);
+   Thread.sleep(dur!"msecs"(21));
+}
 ---
 The code above executes without asserting.
 +/
@@ -2373,6 +2408,12 @@ foreach(i; 0 .. 10)
 }
 assert(firstCounter == 1); // 0 + 1
 assert(secondCounter == 3); // 0 + 1 + 2
+
+foreach(i; 0 .. 3)
+{
+  if(first(dur!"msecs"(40))) assert(i == 0 || i == 1);
+  Thread.sleep(dur!"msecs"(21));
+}
 ---
 The code above executes without asserting.
 +/
@@ -2441,6 +2482,12 @@ foreach(i; 0 .. 10)
 }
 assert(firstCounter == 17); // 8 + 9
 assert(secondCounter == 24); // 7 + 8 + 9
+
+foreach(i; 0 .. 3)
+{
+   if(after(dur!"msecs"(40))) assert(i == 2);
+   Thread.sleep(dur!"msecs"(21));
+}
 ---
 The code above executes without asserting.
 +/
@@ -2513,7 +2560,7 @@ $(D >=), $(D <), $(D <=), $(D &&), $(D ||) and $(D !).
 Example:
 ---
 auto value = rich!"=="(1, 1);
-assert(value == true);
+assert(value);
 assert(value.reason == "true = (1 == 1)");
 ---
 +/
