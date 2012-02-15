@@ -3339,7 +3339,7 @@ struct Curl
 
     private string errorString(CurlCode code)
     {
-        return format("%s on handle %s", curl_easy_strerror(code), handle);
+        return format("%s on handle %s", to!string(curl_easy_strerror(code)), handle);
     }
 
     private void throwOnStopped(string message = null)
