@@ -1363,614 +1363,628 @@ and info but not to the log files for fatal and error.
 +/
 class FileLogger : Logger
 {
-   unittest
-   {
-      auto name = "program_name";
-      // assert default values
-      auto loggerConfig = Configuration.create();
-      loggerConfig.name = name;
-      assert(loggerConfig.name == name);
-      assert(loggerConfig.logToStderr == false);
-      assert(loggerConfig.alsoLogToStderr == false);
-      assert(loggerConfig.stderrThreshold == Severity.error);
-      // can't test logDirectory as it is env dependent
+    unittest
+    {
+        auto name = "program_name";
+        // assert default values
+        auto loggerConfig = Configuration.create();
+        loggerConfig.name = name;
+        assert(loggerConfig.name == name);
+        assert(loggerConfig.logToStderr == false);
+        assert(loggerConfig.alsoLogToStderr == false);
+        assert(loggerConfig.stderrThreshold == Severity.error);
+        // can't test logDirectory as it is env dependent
 
-      auto args = [name,
-                   "--" ~ loggerConfig.logToStderrFlag,
-                   "--" ~ loggerConfig.stderrThresholdFlag, "fatal",
-                   "--" ~ loggerConfig.logDirectoryFlag, "tmp",
-                   "--ignoredOption"];
+        auto args = [name,
+                     "--" ~ loggerConfig.logToStderrFlag,
+                     "--" ~ loggerConfig.stderrThresholdFlag, "fatal",
+                     "--" ~ loggerConfig.logDirectoryFlag, "tmp",
+                     "--ignoredOption"];
 
-      loggerConfig.parseCommandLine(args);
-      assert(args.length == 2);
-      assert(args[0] == name);
+        loggerConfig.parseCommandLine(args);
+        assert(args.length == 2);
+        assert(args[0] == name);
 
-      assert(loggerConfig.name == name);
-      assert(loggerConfig.logToStderr);
-      assert(!loggerConfig.alsoLogToStderr);
-      assert(loggerConfig.stderrThreshold == Severity.fatal);
-      assert(loggerConfig.logDirectory == "tmp");
+        assert(loggerConfig.name == name);
+        assert(loggerConfig.logToStderr);
+        assert(!loggerConfig.alsoLogToStderr);
+        assert(loggerConfig.stderrThreshold == Severity.fatal);
+        assert(loggerConfig.logDirectory == "tmp");
 
-      // test alsoLogToStderr
-      args = [name, "--" ~ loggerConfig.alsoLogToStderrFlag];
+        // test alsoLogToStderr
+        args = [name, "--" ~ loggerConfig.alsoLogToStderrFlag];
 
-      loggerConfig = Configuration.create();
-      loggerConfig.parseCommandLine(args);
-      assert(loggerConfig.alsoLogToStderr);
+        loggerConfig = Configuration.create();
+        loggerConfig.parseCommandLine(args);
+        assert(loggerConfig.alsoLogToStderr);
 
-      // === test changing the command line flags ===
-      // change the default
-      loggerConfig = Configuration.create();
-      loggerConfig.logToStderrFlag = "stderr";
-      loggerConfig.alsoLogToStderrFlag = "alsoStderr";
-      loggerConfig.stderrThresholdFlag = "threshold";
-      loggerConfig.logDirectoryFlag = "dir";
+        // === test changing the command line flags ===
+        // change the default
+        loggerConfig = Configuration.create();
+        loggerConfig.logToStderrFlag = "stderr";
+        loggerConfig.alsoLogToStderrFlag = "alsoStderr";
+        loggerConfig.stderrThresholdFlag = "threshold";
+        loggerConfig.logDirectoryFlag = "dir";
 
-      args = [name,
-              "--" ~ loggerConfig.logToStderrFlag,
-              "--" ~ loggerConfig.alsoLogToStderrFlag,
-              "--" ~ loggerConfig.stderrThresholdFlag,
-              "warning",
-              "--" ~ loggerConfig.logDirectoryFlag,
-              "logdir",
-              "--ignoreFlag",
-              "--ignoreAnotherFlag"];
+        args = [name,
+                "--" ~ loggerConfig.logToStderrFlag,
+                "--" ~ loggerConfig.alsoLogToStderrFlag,
+                "--" ~ loggerConfig.stderrThresholdFlag,
+                "warning",
+                "--" ~ loggerConfig.logDirectoryFlag,
+                "logdir",
+                "--ignoreFlag",
+                "--ignoreAnotherFlag"];
 
-      loggerConfig.parseCommandLine(args);
+        loggerConfig.parseCommandLine(args);
 
-      // assert that all expected options where removed
-      assert(args.length == 3);
-      assert(args[0] == name);
+        // assert that all expected options where removed
+        assert(args.length == 3);
+        assert(args[0] == name);
 
-      assert(loggerConfig.logToStderr == true);
-      assert(loggerConfig.alsoLogToStderr == true);
-      assert(loggerConfig.stderrThreshold == Severity.warning);
-      assert(loggerConfig.logDirectory == "logdir");
+        assert(loggerConfig.logToStderr == true);
+        assert(loggerConfig.alsoLogToStderr == true);
+        assert(loggerConfig.stderrThreshold == Severity.warning);
+        assert(loggerConfig.logDirectory == "logdir");
 
-      // === test an error parsing the command line doesn't invalidated object
-      loggerConfig = Configuration.create();
-      args = [name,
-              "--" ~ loggerConfig.logToStderrFlag,
-              "--" ~ loggerConfig.alsoLogToStderrFlag,
-              "--" ~ loggerConfig.stderrThresholdFlag,
-              "parsingError",
-              "--" ~ loggerConfig.logDirectoryFlag,
-              "logdir"];
+        // === test an error parsing the command line doesn't invalidated object
+        loggerConfig = Configuration.create();
+        args = [name,
+                "--" ~ loggerConfig.logToStderrFlag,
+                "--" ~ loggerConfig.alsoLogToStderrFlag,
+                "--" ~ loggerConfig.stderrThresholdFlag,
+                "parsingError",
+                "--" ~ loggerConfig.logDirectoryFlag,
+                "logdir"];
 
-      loggerConfig.logToStderr = false;
-      loggerConfig.alsoLogToStderr = false;
-      loggerConfig.stderrThreshold = Severity.info;
-      loggerConfig.logDirectory = "tmp";
+        loggerConfig.logToStderr = false;
+        loggerConfig.alsoLogToStderr = false;
+        loggerConfig.stderrThreshold = Severity.info;
+        loggerConfig.logDirectory = "tmp";
 
-      assertThrown(loggerConfig.parseCommandLine(args));
+        assertThrown(loggerConfig.parseCommandLine(args));
 
-      assert(loggerConfig.logToStderr == false);
-      assert(loggerConfig.alsoLogToStderr == false);
-      assert(loggerConfig.stderrThreshold == Severity.info);
-      assert(loggerConfig.logDirectory = "tmp");
-   }
+        assert(loggerConfig.logToStderr == false);
+        assert(loggerConfig.alsoLogToStderr == false);
+        assert(loggerConfig.stderrThreshold == Severity.info);
+        assert(loggerConfig.logDirectory = "tmp");
+    }
 
-   /++
-      Structure for configuring the default backend logger.
-    +/
-   public struct Configuration
-   {
-      /++
-         Modifies the configuration object based on the passed parameter.
+    /++
+       Structure for configuring the default backend logger.
+     +/
+    public struct Configuration
+    {
+        /++
+           Modifies the configuration object based on the passed parameter.
 
-         The function processes every entry in commandLine looking for valid
-         command line options. All of the valid options are enumerated in the
-         fields of this structure that end in 'Flag', e.g. logToStderrFlag.
-         When a valid command line option is found its value is stored in the
-         mapping object's property and it is removed from commandLine. For any
-         property not set explicitly its default value is used. Here is a list
-         of all the flags and how they map to the object's property:
+           The function processes every entry in commandLine looking for valid
+           command line options. All of the valid options are enumerated in the
+           fields of this structure that end in 'Flag', e.g. logToStderrFlag.
+           When a valid command line option is found its value is stored in the
+           mapping object's property and it is removed from commandLine. For any
+           property not set explicitly its default value is used. Here is a list
+           of all the flags and how they map to the object's property:
 
-         $(UL
-            $(LI $(D logToStderrFlag) maps to $(D logToStderr))
-            $(LI $(D alsoLogToStderrFlag) maps to $(D alsoLogToStderr))
-            $(LI $(D stderrThresholdFlag) maps to $(D stderrThreshold))
-            $(LI $(D logDirectoryFlag) maps to $(D logDirectory)))
+           $(UL
+              $(LI $(D logToStderrFlag) maps to $(D logToStderr))
+              $(LI $(D alsoLogToStderrFlag) maps to $(D alsoLogToStderr))
+              $(LI $(D stderrThresholdFlag) maps to $(D stderrThreshold))
+              $(LI $(D logDirectoryFlag) maps to $(D logDirectory)))
 
-         The $(D name) property is set to the program name, i.e. the first
-         element of commandLine.
+           The $(D name) property is set to the program name, for example the
+           first element of commandLine.
 
-         Example:
+           Example:
 ---
-void main(string[] args) {
-  auto loggerConfig = FileLogger.Configuration.create();
+void main(string[] args)
+{
+    auto loggerConfig = FileLogger.Configuration.create();
 
-  // overwrite some default values
-  loggerConfig.logDirectory = "/tmp/" ~ args[0];
-  loggerConfig.parseCommandLine(args);
+    // overwrite some default values
+    loggerConfig.logDirectory = "/tmp/" ~ args[0];
 
-  config.logger = new shared(FileLogger(loggerConfig));
+    // Parse the command line
+    loggerConfig.parseCommandLine(args);
+
+    config.logger = new shared(FileLogger(loggerConfig));
 }
 ---
-       +/
-      void parseCommandLine(ref string[] commandLine)
-      {
-         enforce(commandLine.length > 0);
+           This example overwrites the default log directory and later
+           configures the file logger to any configuration option passed
+           through the command line.
+         +/
+        void parseCommandLine(ref string[] commandLine)
+        {
+            enforce(commandLine.length > 0);
 
-         bool logToStderr = _logToStderr;
-         bool alsoLogToStderr = _alsoLogToStderr;
-         Severity stderrThreshold = _stderrThreshold;
-         string logDirectory = _logDirectory;
+            bool logToStderr = _logToStderr;
+            bool alsoLogToStderr = _alsoLogToStderr;
+            Severity stderrThreshold = _stderrThreshold;
+            string logDirectory = _logDirectory;
 
-         getopt(commandLine,
-                std.getopt.config.passThrough,
-                _logToStderrFlag, &logToStderr,
-                _alsoLogToStderrFlag, &alsoLogToStderr,
-                _stderrThresholdFlag, &stderrThreshold,
-                _logDirectoryFlag, &logDirectory);
+            getopt(commandLine,
+                   std.getopt.config.passThrough,
+                   _logToStderrFlag, &logToStderr,
+                   _alsoLogToStderrFlag, &alsoLogToStderr,
+                   _stderrThresholdFlag, &stderrThreshold,
+                   _logDirectoryFlag, &logDirectory);
 
-         _name = commandLine[0];
-         _logToStderr = logToStderr;
-         _alsoLogToStderr = alsoLogToStderr;
-         _stderrThreshold = stderrThreshold;
-         _logDirectory = logDirectory;
-      }
+            _name = commandLine[0];
+            _logToStderr = logToStderr;
+            _alsoLogToStderr = alsoLogToStderr;
+            _stderrThreshold = stderrThreshold;
+            _logDirectory = logDirectory;
+        }
 
-      /++
-         Command line flag for logging to stderr. The default value is
-         $(D "logtostderr") which at the command line is $(I --logtostderr).
-       +/
-      @property string logToStderrFlag(string logToStderrFlag)
-      {
-        return _logToStderrFlag = logToStderrFlag;
-      }
-      @property const string logToStderrFlag() { return _logToStderrFlag; }
+        /++
+           Command line flag for logging to stderr. The default value is
+           $(D "logtostderr") which at the command line is $(I --logtostderr).
+         +/
+        @property string logToStderrFlag(string logToStderrFlag)
+        {
+            return _logToStderrFlag = logToStderrFlag;
+        }
+        /// ditto
+        @property const string logToStderrFlag() { return _logToStderrFlag; }
 
-      /++
-         Command line flag for logging to stderr and files. The default value
-         is $(D "alsologtostderr") which at the command line is
-         $(I --alsologtostderr).
-       +/
-      @property string alsoLogToStderrFlag(string alsoLogToStderrFlag)
-      {
-        return _alsoLogToStderrFlag = alsoLogToStderrFlag;
-      }
-      @property const string alsoLogToStderrFlag()
-      {
-        return _alsoLogToStderrFlag;
-      }
+        /++
+           Command line flag for logging to stderr and files. The default value
+           is $(D "alsologtostderr") which at the command line is
+           $(I --alsologtostderr).
+         +/
+        @property string alsoLogToStderrFlag(string alsoLogToStderrFlag)
+        {
+            return _alsoLogToStderrFlag = alsoLogToStderrFlag;
+        }
+        /// ditto
+        @property const string alsoLogToStderrFlag()
+        {
+            return _alsoLogToStderrFlag;
+        }
 
-      /++
-         Command line flag for setting the stderr logging threshold. The
-         default value is $(D "stderrthreshold") which at the command line is
-         $(I --stderrthreshold).
-       +/
-      @property string stderrThresholdFlag(string stderrThresholdFlag)
-      {
-        return _stderrThresholdFlag = stderrThresholdFlag;
-      }
-      @property const string stderrThresholdFlag()
-      {
-        return _stderrThresholdFlag;
-      }
+        /++
+           Command line flag for setting the stderr logging threshold. The
+           default value is $(D "stderrthreshold") which at the command line is
+           $(I --stderrthreshold).
+         +/
+        @property string stderrThresholdFlag(string stderrThresholdFlag)
+        {
+            return _stderrThresholdFlag = stderrThresholdFlag;
+        }
+        /// ditto
+        @property const string stderrThresholdFlag()
+        {
+            return _stderrThresholdFlag;
+        }
 
-      /++
-         Command line flag for setting the logging directory. The default
-         value is $(D "logdir") which at the command line is $(I --logdir).
-       +/
-      @property string logDirectoryFlag(string logDirectoryFlag)
-      {
-        return _logDirectoryFlag = logDirectoryFlag;
-      }
-      @property const string logDirectoryFlag() { return _logDirectoryFlag; }
+        /++
+           Command line flag for setting the logging directory. The default
+           value is $(D "logdir") which at the command line is $(I --logdir).
+         +/
+        @property string logDirectoryFlag(string logDirectoryFlag)
+        {
+            return _logDirectoryFlag = logDirectoryFlag;
+        }
+        /// ditto
+        @property const string logDirectoryFlag() { return _logDirectoryFlag; }
 
-      /// Creates a default file logger configuration.
-      static Configuration create()
-      {
-         Configuration loggerConfig;
+        /// Creates a default file logger configuration.
+        static Configuration create()
+        {
+            Configuration loggerConfig;
 
-         loggerConfig._name = Runtime.args[0];
+            loggerConfig._name = Runtime.args[0];
 
-         // get default log dir
-         loggerConfig._logDirectory = getenv("LOGDIR");
-         if(loggerConfig._logDirectory is null)
-         {
-            loggerConfig._logDirectory = getenv("TEST_TMPDIR");
-         }
-
-         return loggerConfig;
-      }
-
-      /++
-         Name to use when generating log file names.
-
-         The default value is the program _name.
-       +/
-      @property string name(string name) { return _name = name; }
-      @property const string name() { return _name; }
-
-      /++
-         Specifies if the logger should write to stderr. If this property is
-         set, then it only logs to stderr and not to files.
-
-         The default value is false.
-       +/
-      @property bool logToStderr(bool logToStderr)
-      {
-         return _logToStderr = logToStderr;
-      }
-      @property const bool logToStderr() { return _logToStderr; } /// ditto
-
-      /++
-         Specifies if the logger should write to stderr. If this property is
-         set, then it logs to stderr and to files.
-
-         The default value is false.
-       +/
-      @property bool alsoLogToStderr(bool alsoLogToStderr)
-      {
-         return _alsoLogToStderr = alsoLogToStderr;
-      }
-      /// ditto
-      @property const bool alsoLogToStderr() { return _alsoLogToStderr; }
-
-      /++
-         Specifies the _threshold at which log messages are logged to stderr.
-         Any message of higher or equal severity to threshold is written to
-         stderr.
-
-         The default value is $(D Severity.error).
-       +/
-      @property Severity stderrThreshold(Severity threshold)
-      {
-         return _stderrThreshold = threshold;
-      }
-      /// ditto
-      @property const Severity stderrThreshold() { return _stderrThreshold; }
-
-      /++
-         Specifies the directory where log files are created.
-
-         The default value for this property is the value in the environment
-         variable $(I LOGDIR). If $(I LOGDIR) is not set, then $(I TEST_TMPDIR)
-         is used. If $(I TEST_TMPDIR) is not set, then it logs to the current
-         directory.
-       +/
-      @property string logDirectory(string logDirectory)
-      {
-         return _logDirectory = logDirectory;
-      }
-      @property const string logDirectory() { return _logDirectory; } /// ditto
-
-      /++
-         Specifies the buffer size for each log file.
-
-         The default value is 4KB.
-       +/
-      @property size_t bufferSize(size_t bufferSize)
-      {
-         return _bufferSize = bufferSize;
-      }
-      @property const size_t bufferSize() { return _bufferSize; } /// ditto
-
-      unittest
-      {
-         auto testConfig = Configuration.create();
-         assert((testConfig.lineFormat = "%%") == "%%");
-         assert((testConfig.lineFormat = "%t") == "%t");
-         assert((testConfig.lineFormat = "%i") == "%i");
-         assert((testConfig.lineFormat = "%f") == "%f");
-         assert((testConfig.lineFormat = "%l") == "%l");
-         assert((testConfig.lineFormat = "%s") == "%s");
-         assert((testConfig.lineFormat = "%m") == "%m");
-         assert((testConfig.lineFormat = "%t%i%f%l%s%m") == "%t%i%f%l%s%m");
-
-         assertThrown(testConfig.lineFormat = "% ");
-         assertThrown(testConfig.lineFormat = "%k");
-
-         assert((testConfig.lineFormat = "string without percent") ==
-                "string without percent");
-         assert((testConfig.lineFormat = "%sseverity%mmessage") ==
-                "%sseverity%mmessage");
-
-         // date formatting tests
-         assert((testConfig.lineFormat = "%{%d}t") == "%{%d}t");
-         assert((testConfig.lineFormat = "%{%Y}t") == "%{%Y}t");
-         assert((testConfig.lineFormat = "%{%H}t") == "%{%H}t");
-         assert((testConfig.lineFormat = "%{%M}t") == "%{%M}t");
-         assert((testConfig.lineFormat = "%{%S}t") == "%{%S}t");
-         assert((testConfig.lineFormat = "%{%m}t") == "%{%m}t");
-         assert((testConfig.lineFormat = "%{%d %Y %H %M %S %m}t") ==
-                "%{%d %Y %H %M %S %m}t");
-         assert((testConfig.lineFormat =
-                  "%{%d}t %{%Y}t %{%H}t %{%M}t %{%S}t %{%m}t") ==
-                "%{%d}t %{%Y}t %{%H}t %{%M}t %{%S}t %{%m}t");
-
-         // the result should be accepted by formattedWrite
-         auto bh = appender!string();
-         testConfig.lineFormat = "%%%t%i%f%l%s%m%{%d %Y %H %M %S %m}t";
-         formattedWrite(bh, testConfig._internalLineFormat,
-                        1, "", 1, "", "", 1, 1, 1, 1, 1, 1);
-      }
-
-//XXX TODO: log the thread name.
-      /++
-         Specifies the _format for every log line.
-
-         The attributes of a log line are logged by placing $(I %) directives
-         in the _format string.
-
-         $(BOOKTABLE Directives are mapped to logging values as follow.,
-            $(TR $(TH Directive)
-                 $(TH Semantics))
-            $(TR $(TD %%)
-                 $(TD The percent sign.))
-            $(TR $(TD %{...}t)
-                 $(TD The time when the log line was generated.))
-            $(TR $(TD %i)
-                 $(TD The id of the thread which generated the log line.))
-            $(TR $(TD %s)
-                 $(TD The severity of the log line.))
-            $(TR $(TD %f)
-                 $(TD The name of the file which generated the log line.))
-            $(TR $(TD %l)
-                 $(TD The line number which generated the log line.))
-            $(TR $(TD %m)
-                 $(TD The log message.)))
-
-         The directive $(I %t) is the same as $(I %{%m%d %H:%M:%S}t) as
-         described below.
-
-         $(BOOKTABLE  Directives inside the curly brackets in $(I %{...}t) are
-                      mapped as follows.,
-            $(TR $(TH Directive)
-                 $(TH Semantics))
-            $(TR $(TD %%)
-                 $(TD The percent sign.))
-            $(TR $(TD %m)
-                 $(TD The month as a decimal number.))
-            $(TR $(TD %d)
-                 $(TD The day of the month as a decimal number.))
-            $(TR $(TD %Y)
-                 $(TD The year as a decimal number including the century.))
-            $(TR $(TD %H)
-                 $(TD The hour as a decimal number using a 24-hour clock.))
-            $(TR $(TD %M)
-                 $(TD The minute as a decimal number.))
-            $(TR $(TD %S)
-                 $(TD The second as a decimal number.)))
-
-         The default value is $(D "%s%t %i %f:%l] %m").
-       +/
-      @property string lineFormat(string format)
-      {
-         static const string threadIdFormat = "%1$x";
-         static const string fileFormat = "%2$s";
-         static const string lineNumberFormat = "%3$d";
-         static const string severityFormat = "%4$s";
-         static const string messageFormat = "%5$s";
-         static const string yearFormat = "%6$.2d";
-         static const string monthFormat = "%7$.2d";
-         static const string dayFormat = "%8$.2d";
-         static const string hourFormat = "%9$.2d";
-         static const string minuteFormat = "%10$.2d";
-         static const string secondFormat = "%11$.2d";
-
-         auto result = appender!string();
-         
-         enum State
-         {
-           start,
-           escaped,
-           dateFormat,
-           dateFormatEscaped,
-           dateFormatFinished
-         }
-
-         State state;
-         foreach(size_t i, f; format)
-         {
-            final switch(state)
+            // get default log dir
+            loggerConfig._logDirectory = getenv("LOGDIR");
+            if(loggerConfig._logDirectory is null)
             {
-               case State.escaped:
-                  switch(f)
-                  {
-                     case '{':
-                        state = State.dateFormat;
-                        break;
-                     case '%':
-                        result.put("%%");
-                        state = State.start;
-                        break;
-                     case 't':
-                        result.put(monthFormat ~ dayFormat ~ " " ~
-                                   hourFormat ~ ":" ~ minuteFormat ~ ":" ~
-                                   secondFormat);
-                        state = State.start;
-                        break;
-                     case 'i':
-                        result.put(threadIdFormat);
-                        state = State.start;
-                        break;
-                     case 'f':
-                        result.put(fileFormat);
-                        state = State.start;
-                        break;
-                     case 'l':
-                        result.put(lineNumberFormat);
-                        state = State.start;
-                        break;
-                     case 's':
-                        result.put(severityFormat);
-                        state = State.start;
-                        break;
-                     case 'm':
-                        result.put(messageFormat);
-                        state = State.start;
-                        break;
-                     default:
-                        throw new Exception("Error parsing '" ~
-                                            format ~
-                                            "' at postion " ~
-                                            to!string(i) ~
-                                            " found invalid character '" ~
-                                            to!string(f) ~
-                                            "'.");
-                  }
-                  break;
-               case State.dateFormat:
-                  switch(f)
-                  {
-                     case '%':
-                        state = State.dateFormatEscaped;
-                        break;
-                     case '}':
-                        state = State.dateFormatFinished;
-                        break;
-                     default:
-                        result.put(f);
-                  }
-                  break;
-               case State.dateFormatEscaped:
-                  switch(f)
-                  {
-                     case '%':
-                        result.put("%%");
-                        state = State.dateFormat;
-                        break;
-                     case 'd':
-                        result.put(dayFormat);
-                        state = State.dateFormat;
-                        break;
-                     case 'Y':
-                        result.put(yearFormat);
-                        state = State.dateFormat;
-                        break;
-                     case 'H':
-                        result.put(hourFormat);
-                        state = State.dateFormat;
-                        break;
-                     case 'M':
-                        result.put(minuteFormat);
-                        state = State.dateFormat;
-                        break;
-                     case 'S':
-                        result.put(secondFormat);
-                        state = State.dateFormat;
-                        break;
-                     case 'm':
-                        result.put(monthFormat);
-                        state = State.dateFormat;
-                        break;
-                     default:
-                        throw new Exception("Error parsing '" ~
-                                            format ~
-                                            "' at postion " ~
-                                            to!string(i) ~
-                                            " found invalid character '" ~
-                                            to!string(f) ~
-                                            "'.");
-                  }
-                  break;
-               case State.dateFormatFinished:
-                  switch(f)
-                  {
-                     case 't':
-                        state = State.start;
-                        break;
-                     default:
-                        throw new Exception("Error parsing '" ~
-                                            format ~
-                                            "' at postion " ~
-                                            to!string(i) ~
-                                            " found invalid character '" ~
-                                            to!string(f) ~
-                                            "'.");
-                  }
-                  break;
-               case State.start:
-                  switch(f)
-                  {
-                     case '%':
-                        state = State.escaped;
-                        break;
-                     default:
-                        result.put(f);
-                  }
-                  break;
+                loggerConfig._logDirectory = getenv("TEST_TMPDIR");
             }
-         }
 
-         result.put(newline[]);
+            return loggerConfig;
+        }
 
-         _internalLineFormat = result.data;
-         return _lineFormat = format;
-      }
-      @property string lineFormat() { return _lineFormat; } /// ditto
+        /++
+           Name to use when generating log file names.
 
-      unittest
-      {
-         auto loggerConfig = FileLogger.Configuration.create();
+           The default value is the program _name.
+         +/
+        @property string name(string name) { return _name = name; }
+        /// ditto
+        @property const string name() { return _name; }
 
-         assert((loggerConfig.severitySymbols = "12345") == "12345");
-         assertThrown(loggerConfig.severitySymbols = "1234");
-         assertThrown(loggerConfig.severitySymbols = "123456");
-      }
+        /++
+           Specifies if the logger should write to stderr. If this property is
+           set, then it only logs to stderr and not to files.
 
-      /++
-         Specifies the _symbols to use for each severities when writing to file.
+           The default value is false.
+         +/
+        @property bool logToStderr(bool logToStderr)
+        {
+            return _logToStderr = logToStderr;
+        }
+        /// ditto
+        @property const bool logToStderr() { return _logToStderr; } /// ditto
 
-         The value of the severities as define in $(D Severity) is used to
-         index into the string. The length of the string must equal
-         $(D Severity.max + 1).
+        /++
+           Specifies if the logger should also write to stderr. If this
+           property is set, then it logs to stderr and to files.
 
-         Example:
+           The default value is false.
+         +/
+        @property bool alsoLogToStderr(bool alsoLogToStderr)
+        {
+            return _alsoLogToStderr = alsoLogToStderr;
+        }
+        /// ditto
+        @property const bool alsoLogToStderr() { return _alsoLogToStderr; }
+
+        /++
+           Specifies the _threshold at which log messages are logged to stderr.
+           Any message with a severity higher or equal to threshold is written
+           to stderr.
+
+           The default value is $(D Severity.error).
+         +/
+        @property Severity stderrThreshold(Severity threshold)
+        {
+            return _stderrThreshold = threshold;
+        }
+        /// ditto
+        @property const Severity stderrThreshold() { return _stderrThreshold; }
+
+        /++
+           Specifies the directory where log files are created.
+
+           The default value for this property is the value in the environment
+           variable $(I LOGDIR). If $(I LOGDIR) is not set, then
+           $(I TEST_TMPDIR) is used. If $(I TEST_TMPDIR) is not set, then it
+           logs to the current directory.
+         +/
+        @property string logDirectory(string logDirectory)
+        {
+            return _logDirectory = logDirectory;
+        }
+        /// ditto
+        @property const string logDirectory() { return _logDirectory; }
+
+        /++
+           Specifies the buffer size for each log file.
+
+           The default value is 4KB.
+         +/
+        @property size_t bufferSize(size_t bufferSize)
+        {
+            return _bufferSize = bufferSize;
+        }
+        @property const size_t bufferSize() { return _bufferSize; } /// ditto
+
+        unittest
+        {
+            auto testConfig = Configuration.create();
+            assert((testConfig.lineFormat = "%%") == "%%");
+            assert((testConfig.lineFormat = "%t") == "%t");
+            assert((testConfig.lineFormat = "%i") == "%i");
+            assert((testConfig.lineFormat = "%f") == "%f");
+            assert((testConfig.lineFormat = "%l") == "%l");
+            assert((testConfig.lineFormat = "%s") == "%s");
+            assert((testConfig.lineFormat = "%m") == "%m");
+            assert((testConfig.lineFormat = "%t%i%f%l%s%m") == "%t%i%f%l%s%m");
+
+            assertThrown(testConfig.lineFormat = "% ");
+            assertThrown(testConfig.lineFormat = "%k");
+
+            assert((testConfig.lineFormat = "string without percent") ==
+                    "string without percent");
+            assert((testConfig.lineFormat = "%sseverity%mmessage") ==
+                    "%sseverity%mmessage");
+
+            // date formatting tests
+            assert((testConfig.lineFormat = "%{%d}t") == "%{%d}t");
+            assert((testConfig.lineFormat = "%{%Y}t") == "%{%Y}t");
+            assert((testConfig.lineFormat = "%{%H}t") == "%{%H}t");
+            assert((testConfig.lineFormat = "%{%M}t") == "%{%M}t");
+            assert((testConfig.lineFormat = "%{%S}t") == "%{%S}t");
+            assert((testConfig.lineFormat = "%{%m}t") == "%{%m}t");
+            assert((testConfig.lineFormat = "%{%d %Y %H %M %S %m}t") ==
+                    "%{%d %Y %H %M %S %m}t");
+            assert((testConfig.lineFormat =
+                        "%{%d}t %{%Y}t %{%H}t %{%M}t %{%S}t %{%m}t") ==
+                    "%{%d}t %{%Y}t %{%H}t %{%M}t %{%S}t %{%m}t");
+
+            // the result should be accepted by formattedWrite
+            auto bh = appender!string();
+            testConfig.lineFormat = "%%%t%i%f%l%s%m%{%d %Y %H %M %S %m}t";
+            formattedWrite(bh, testConfig._internalLineFormat,
+                    1, "", 1, "", "", 1, 1, 1, 1, 1, 1);
+        }
+
+        //XXX TODO: log the thread name.
+        /++
+           Specifies the _format for every log line.
+
+           The attributes of a log line are logged by placing $(I %) directives
+           in the _format string.
+
+           $(BOOKTABLE Directives are mapped to logging values as follow.,
+              $(TR $(TH Directive)
+                   $(TH Semantics))
+              $(TR $(TD %%)
+                   $(TD The percent sign.))
+              $(TR $(TD %{...}t)
+                   $(TD The time when the log line was generated.))
+              $(TR $(TD %i)
+                   $(TD The id of the thread which generated the log line.))
+              $(TR $(TD %s)
+                   $(TD The severity of the log line.))
+              $(TR $(TD %f)
+                   $(TD The name of the file which generated the log line.))
+              $(TR $(TD %l)
+                   $(TD The line number which generated the log line.))
+              $(TR $(TD %m)
+                   $(TD The log message.)))
+
+           The directive $(I %t) is the same as $(I %{%m%d %H:%M:%S}t) as
+           described below.
+
+           $(BOOKTABLE  Directives inside the curly brackets in $(I %{...}t) are
+                        mapped as follows.,
+              $(TR $(TH Directive)
+                   $(TH Semantics))
+              $(TR $(TD %%)
+                   $(TD The percent sign.))
+              $(TR $(TD %m)
+                   $(TD The month as a decimal number.))
+              $(TR $(TD %d)
+                   $(TD The day of the month as a decimal number.))
+              $(TR $(TD %Y)
+                   $(TD The year as a decimal number including the century.))
+              $(TR $(TD %H)
+                   $(TD The hour as a decimal number using a 24-hour clock.))
+              $(TR $(TD %M)
+                   $(TD The minute as a decimal number.))
+              $(TR $(TD %S)
+                   $(TD The second as a decimal number.)))
+
+           The default value is $(D "%s%t %i %f:%l] %m").
+         +/
+        @property string lineFormat(string format)
+        {
+            static const string threadIdFormat = "%1$x";
+            static const string fileFormat = "%2$s";
+            static const string lineNumberFormat = "%3$d";
+            static const string severityFormat = "%4$s";
+            static const string messageFormat = "%5$s";
+            static const string yearFormat = "%6$.2d";
+            static const string monthFormat = "%7$.2d";
+            static const string dayFormat = "%8$.2d";
+            static const string hourFormat = "%9$.2d";
+            static const string minuteFormat = "%10$.2d";
+            static const string secondFormat = "%11$.2d";
+
+            auto result = appender!string();
+         
+            enum State
+            {
+                start,
+                escaped,
+                dateFormat,
+                dateFormatEscaped,
+                dateFormatFinished
+            }
+
+            State state;
+            foreach(size_t i, f; format)
+            {
+                final switch(state)
+                {
+                    case State.escaped:
+                        switch(f)
+                        {
+                            case '{':
+                                state = State.dateFormat;
+                                break;
+                            case '%':
+                                result.put("%%");
+                                state = State.start;
+                                break;
+                            case 't':
+                                result.put(monthFormat ~ dayFormat ~ " " ~
+                                        hourFormat ~ ":" ~ minuteFormat ~ ":" ~
+                                        secondFormat);
+                                state = State.start;
+                                break;
+                            case 'i':
+                                result.put(threadIdFormat);
+                                state = State.start;
+                                break;
+                            case 'f':
+                                result.put(fileFormat);
+                                state = State.start;
+                                break;
+                            case 'l':
+                                result.put(lineNumberFormat);
+                                state = State.start;
+                                break;
+                            case 's':
+                                result.put(severityFormat);
+                                state = State.start;
+                                break;
+                            case 'm':
+                                result.put(messageFormat);
+                                state = State.start;
+                                break;
+                            default:
+                                throw new Exception("Error parsing '" ~
+                                        format ~
+                                        "' at postion " ~
+                                        to!string(i) ~
+                                        " found invalid character '" ~
+                                        to!string(f) ~
+                                        "'.");
+                        }
+                        break;
+                    case State.dateFormat:
+                        switch(f)
+                        {
+                            case '%':
+                                state = State.dateFormatEscaped;
+                                break;
+                            case '}':
+                                state = State.dateFormatFinished;
+                                break;
+                            default:
+                                result.put(f);
+                        }
+                        break;
+                    case State.dateFormatEscaped:
+                        switch(f)
+                        {
+                            case '%':
+                                result.put("%%");
+                                state = State.dateFormat;
+                                break;
+                            case 'd':
+                                result.put(dayFormat);
+                                state = State.dateFormat;
+                                break;
+                            case 'Y':
+                                result.put(yearFormat);
+                                state = State.dateFormat;
+                                break;
+                            case 'H':
+                                result.put(hourFormat);
+                                state = State.dateFormat;
+                                break;
+                            case 'M':
+                                result.put(minuteFormat);
+                                state = State.dateFormat;
+                                break;
+                            case 'S':
+                                result.put(secondFormat);
+                                state = State.dateFormat;
+                                break;
+                            case 'm':
+                                result.put(monthFormat);
+                                state = State.dateFormat;
+                                break;
+                            default:
+                                throw new Exception("Error parsing '" ~
+                                        format ~
+                                        "' at postion " ~
+                                        to!string(i) ~
+                                        " found invalid character '" ~
+                                        to!string(f) ~
+                                        "'.");
+                        }
+                        break;
+                    case State.dateFormatFinished:
+                        switch(f)
+                        {
+                            case 't':
+                                state = State.start;
+                                break;
+                            default:
+                                throw new Exception("Error parsing '" ~
+                                        format ~
+                                        "' at postion " ~
+                                        to!string(i) ~
+                                        " found invalid character '" ~
+                                        to!string(f) ~
+                                        "'.");
+                        }
+                        break;
+                    case State.start:
+                        switch(f)
+                        {
+                            case '%':
+                                state = State.escaped;
+                                break;
+                            default:
+                                result.put(f);
+                        }
+                        break;
+                }
+            }
+
+            result.put(newline[]);
+
+            _internalLineFormat = result.data;
+            return _lineFormat = format;
+        }
+        @property const string lineFormat() { return _lineFormat; } /// ditto
+
+        unittest
+        {
+            auto loggerConfig = FileLogger.Configuration.create();
+
+            assert((loggerConfig.severitySymbols = "12345") == "12345");
+            assertThrown(loggerConfig.severitySymbols = "1234");
+            assertThrown(loggerConfig.severitySymbols = "123456");
+        }
+
+        /++
+           Specifies the _symbols to use for each severities when writing to
+           file.
+
+           The value of the severities as define in $(D Severity) is used to
+           index into the string. The length of the string must equal
+           $(D Severity.max + 1).
+
+           Example:
 ---
 auto loggerConfig = FileLogger.Configuration.create();
 loggerConfig.severitySymbols = "12345";
 assert(loggerConfig.severitySymbols[Severity.fatal] == '1');
 ---
 
-         The default value is $(D "FCEWI").
+           The default value is $(D "FCEWI").
          +/
-      @property dstring severitySymbols(dstring symbols)
-      {
-         enforce(symbols.length == Severity.max + 1);
+        @property dstring severitySymbols(dstring symbols)
+        {
+            enforce(symbols.length == Severity.max + 1);
 
-         return _severitySymbols = symbols;
-      }
-      /// ditto
-      @property dstring severitySymbols() { return _severitySymbols; }
+            return _severitySymbols = symbols;
+        }
+        /// ditto
+        @property const dstring severitySymbols() { return _severitySymbols; }
 
-      unittest
-      {
-         auto testConfig = FileLogger.Configuration.create();
+        unittest
+        {
+            auto testConfig = FileLogger.Configuration.create();
 
-         assert(testConfig.fileNamePrefixes(["F", "C", "E", "", "I"]) ==
-                ["F", "C", "E", "", "I"]);
-         assert(testConfig.fileNamePrefixes(null) == null);
-         assertThrown(testConfig.fileNamePrefixes(["F"]));
-         assertThrown(testConfig.fileNamePrefixes(["", "", "", "", "", ""]));
-      }
+            assert(testConfig.fileNamePrefixes(["F", "C", "E", "", "I"]) ==
+                    ["F", "C", "E", "", "I"]);
+            assert(testConfig.fileNamePrefixes(null) == null);
+            assertThrown(testConfig.fileNamePrefixes(["F"]));
+            assertThrown(testConfig.fileNamePrefixes(["", "", "", "", "", ""]));
+        }
 
-      /++
-         Specifies the prefix for the name of the log files.
+        /++
+           Specifies the prefix for the name of the log files.
 
-         The parameter should either by $(D null) or be a length of
-         $(D Severity.max + 1).
+           The parameter should either by $(D null) or be a length of
+           $(D Severity.max + 1).
         
-         If the value is not null the value stored in $(I prefixes[i]) will be
-         used as the prefix for severity $(I i), where $(I i) is a value
-         defined in $(D Severity). For example the file name for severity error
-         will have the prefix $(D fileNamePrefixes[Severity.error]).  If an
-         entry in the array contains the empty string, then no log file is
-         created for that severity.
+           If the value is not null the value stored in $(I prefixes[i]) will be
+           used as the prefix for severity $(I i), where $(I i) is a value
+           defined in $(D Severity). For example the file name for severity
+           error will have the prefix $(D fileNamePrefixes[Severity.error]). If
+           an entry in the array contains the empty string, then no log file is
+           created for that severity.
         
-         If the value is null then log file names are
-         $(I [program].[hostname].[user].[severity].log.[datetime].[pid]). For
-         example if the program is $(I hello), the host name is
-         $(I example.com) and the user name is $(I guest) then the file name
-         for severity info will be:
-         $(I hello.example.com.guest.INFO.log.20110609T050018Z.743).
+           If the value is null then log file names are
+           $(I [program].[hostname].[user].[severity].log.[datetime].[pid]). For
+           example if the program is $(I hello), the host name is
+           $(I example.com) and the user name is $(I guest) then the file name
+           for severity info will be:
+           $(I hello.example.com.guest.INFO.log.20110609T050018Z.743).
 
-         The default value is $(D null).
+           The default value is $(D null).
 
-         Example:
+           Example:
 ---
 import std.log;
 
@@ -1981,17 +1995,20 @@ void name(string[] args) {
   config.logger = new shared(FileLogger(loggerConfig));
 }
 ---
-         The example above will log every log message to one file with the
-         name $(I [program].log.[datetime].[pid]).
-       +/
-      @property string[] fileNamePrefixes(string[] prefixes)
-      {
-         enforce(prefixes == null || prefixes.length == Severity.max + 1);
+           The example above will log every log message to one file with the
+           name $(I [program].log.[datetime].[pid]).
+         +/
+        @property string[] fileNamePrefixes(string[] prefixes)
+        {
+            enforce(prefixes == null || prefixes.length == Severity.max + 1);
 
-         return _fileNamePrefixes = prefixes;
-      }
-      /// ditto
-      @property string[] fileNamePrefixes() { return _fileNamePrefixes; }
+            return _fileNamePrefixes = prefixes;
+        }
+        /// ditto
+        @property const const(string[]) fileNamePrefixes()
+        {
+            return _fileNamePrefixes;
+        }
 
       /++
          Specifies the extension for the name of log files.
@@ -2003,7 +2020,7 @@ void name(string[] args) {
          return _fileNameExtension = extension;
       }
       /// ditto
-      @property string fileNameExtension() { return _fileNameExtension; }
+      @property const string fileNameExtension() { return _fileNameExtension; }
 
       private @property string internalLineFormat()
       {
