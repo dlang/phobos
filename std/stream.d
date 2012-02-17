@@ -1330,7 +1330,7 @@ class Stream : InputStream, OutputStream {
    * Get a hash of the stream by reading each byte and using it in a CRC-32
    * checksum.
    */
-  override size_t toHash() {
+  override size_t toHash() @trusted {
     if (!readable || !seekable)
       return super.toHash();
     ulong pos = position;
