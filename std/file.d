@@ -616,7 +616,7 @@ unittest
 }
 
 /*************************
- * $(RED Deprecated. It will be removed in February 2012. Please use either the
+ * $(RED Deprecated. It will be removed in March 2012. Please use either the
  *       version of $(D getTimes) which takes two arguments or $(D getTimesWin)
  *       (Windows-Only) instead.)
  */
@@ -631,7 +631,7 @@ else version(Windows) deprecated void getTimes(C)(in C[] name,
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
                 "with 3 arguments has been deprecated. It will be removed in " ~
-                "February 2012. Please use either the version of getTimes with " ~
+                "March 2012. Please use either the version of getTimes with " ~
                 "two arguments or getTimesWin (Windows-Only) instead.");
 
     HANDLE findhndl = void;
@@ -668,7 +668,7 @@ else version(Posix) deprecated void getTimes(C)(in C[] name,
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
                 "with 3 arguments has been deprecated. It will be removed in " ~
-                "February 2012. Please use either the version of getTimes with " ~
+                "March 2012. Please use either the version of getTimes with " ~
                 "two arguments or getTimesWin (Windows-Only) instead.");
 
     struct_stat64 statbuf = void;
@@ -957,14 +957,14 @@ else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
 
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D timeLastModified) instead.)
  +/
 version(StdDdoc) deprecated d_time lastModified(in char[] name);
 else deprecated d_time lastModified(C)(in C[] name)
     if(is(Unqual!C == char))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -982,14 +982,14 @@ else deprecated d_time lastModified(C)(in C[] name)
 
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D timeLastModified) instead.)
  +/
 version(StdDdoc) deprecated d_time lastModified(in char[] name, d_time returnIfMissing);
 else deprecated d_time lastModified(C)(in C[] name, d_time returnIfMissing)
     if(is(Unqual!C == char))
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "lastModified", "timeLastModified"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
 
     version(Windows)
     {
@@ -1270,7 +1270,7 @@ unittest
 }
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D isDir) instead.)
  +/
 deprecated @property bool isdir(in char[] name)
@@ -1414,7 +1414,7 @@ unittest
 }
 
 /++
- $(RED Deprecated. It will be removed in February 2012. Please use
+ $(RED Deprecated. It will be removed in March 2012. Please use
        $(D isDir) instead.)
  +/
 deprecated @property bool isfile(in char[] name)
@@ -2020,7 +2020,7 @@ assert(de2.isDir);
         @property bool isDir();
 
         /++
-         $(RED Deprecated. It will be removed in February 2012. Please use
+         $(RED Deprecated. It will be removed in March 2012. Please use
                $(D isDir) instead.)
          +/
         deprecated alias isDir isdir;
@@ -2052,7 +2052,7 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-         $(RED Deprecated. It will be removed in February 2012. Please use
+         $(RED Deprecated. It will be removed in March 2012. Please use
                $(D isFile) instead.)
          +/
         deprecated alias isFile isfile;
@@ -2073,7 +2073,7 @@ assert(!de2.isFile);
         @property ulong size();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                    $(D timeCreated) instead.)
 
             Returns the creation time of the file represented by this
@@ -2112,7 +2112,7 @@ assert(!de2.isFile);
         deprecated @property SysTime timeStatusChanged();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                   $(D timeLastAccessed) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
@@ -2136,7 +2136,7 @@ assert(!de2.isFile);
         @property SysTime timeLastAccessed();
 
         /++
-            $(RED Deprecated. It will be removed in February 2012. Please use
+            $(RED Deprecated. It will be removed in March 2012. Please use
                   $(D timeLastModified) instead.)
 
             Returns the time that the file represented by this $(D DirEntry) was
@@ -2391,7 +2391,7 @@ else version(Posix)
         // worthless, since the odds are high that it will be DT_UNKNOWN,
         // so it continues to be left undocumented.
         //
-        // Will be removed in February 2012.
+        // Will be removed in March 2012.
         deprecated @property ubyte d_type()
         {
             return _dType;
@@ -2711,7 +2711,7 @@ void copy(in char[] from, in char[] to)
 }
 
     /++
-       $(RED Deprecated. It will be removed in February 2012. Please use the
+       $(RED Deprecated. It will be removed in March 2012. Please use the
              version which takes a $(XREF datetime, SysTime) instead.)
 
         Set access/modified times of file $(D name).
@@ -2725,7 +2725,7 @@ else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
 {
     pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.setTimes " ~
                 "which takes std.date.d_time has been deprecated. It will be " ~
-                "removed in February 2012. Please use the version which takes " ~
+                "removed in March 2012. Please use the version which takes " ~
                 "std.datetime.SysTime instead.");
 
     version(Windows)

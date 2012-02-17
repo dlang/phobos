@@ -5360,27 +5360,45 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    static if(isArray!Range1 && isArray!Range2 &&
-    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
+    
+    static Range2 genericImpl(Range1 source, Range2 target) 
     {
-        // Array specialization.  This uses optimized memory copying routines
-        // under the hood and is about 10-20x faster than the generic
-        // implementation.
-        enforce(target.length >= source.length,
-            "Cannot copy a source array into a smaller target array.");
-        target[0..source.length] = source;
-
-        return target[source.length..$];
-    }
-    else
-    {
-        // Generic implementation.
         for (; !source.empty; source.popFront())
         {
             put(target, source.front);
         }
 
         return target;
+    }
+    
+    static if(isArray!Range1 && isArray!Range2 &&
+    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
+    {
+        immutable overlaps = 
+            (source.ptr >= target.ptr && 
+             source.ptr < target.ptr + target.length) ||
+            (target.ptr >= source.ptr && 
+             target.ptr < source.ptr + source.length);
+            
+        if(overlaps) 
+        {
+            return genericImpl(source, target);
+        }
+        else 
+        {
+            // Array specialization.  This uses optimized memory copying 
+            // routines under the hood and is about 10-20x faster than the 
+            // generic implementation.
+            enforce(target.length >= source.length,
+                "Cannot copy a source array into a smaller target array.");
+            target[0..source.length] = source;
+
+            return target[source.length..$];
+        }
+    }
+    else
+    {
+        return genericImpl(source, target);
     }
 
 }
@@ -5402,6 +5420,12 @@ unittest
         int[] b = [ 9, 8 ];
         auto e = copy(filter!("a > 1")(a), b);
         assert(b[0] == 5 && e.length == 1);
+    }
+    
+    {
+        int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        copy(a[5..10], a[4..9]);
+        assert(a[4..9] == [6, 7, 8, 9, 10]);
     }
 }
 

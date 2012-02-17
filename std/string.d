@@ -103,7 +103,7 @@ class StringException : Exception
 /* ************* Constants *************** */
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, hexDigits) instead.)
 
     0..9A..F
@@ -111,7 +111,7 @@ class StringException : Exception
 deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _digits) instead.)
 
     0..9
@@ -119,7 +119,7 @@ deprecated immutable char[16] hexdigits = "0123456789ABCDEF";
 deprecated immutable digits = "0123456789";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, octDigits) instead.)
 
     0..7
@@ -127,7 +127,7 @@ deprecated immutable digits = "0123456789";
 deprecated immutable char[8]  octdigits = "01234567";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _lowercase) instead.)
 
     a..z
@@ -135,7 +135,7 @@ deprecated immutable char[8]  octdigits = "01234567";
 deprecated immutable char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _letters) instead.)
 
     A..Za..z
@@ -144,7 +144,7 @@ deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _uppercase) instead.)
 
     A..Z
@@ -152,15 +152,15 @@ deprecated immutable char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 deprecated immutable char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _whitespace) instead.)
 
     ASCII whitespace.
   +/
-alias std.ascii.whitespace whitespace;
+deprecated alias std.ascii.whitespace whitespace;
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF uni, lineSep) instead.)
 
     UTF line separator.
@@ -168,7 +168,7 @@ alias std.ascii.whitespace whitespace;
 deprecated enum dchar LS = '\u2028';
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF uni, paraSep) instead.)
 
     UTF paragraph separator.
@@ -176,17 +176,15 @@ deprecated enum dchar LS = '\u2028';
 deprecated enum dchar PS = '\u2029';
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(XREF ascii, _newline) instead.)
 
     Newline sequence for this system.
   +/
-version(Windows) deprecated immutable newline = "\r\n";
-else version(Posix) deprecated immutable newline = "\n";
-else static assert(0, "Unsupported OS");
+deprecated alias std.ascii.newline newline;
 
 /**********************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(XREF ascii, isWhite) or $(XREF uni, isWhite) instead.)
  *
  * Returns true if c is ASCII whitespace or unicode LS or PS.
@@ -873,7 +871,7 @@ unittest
 
 
 /************************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(D toLower) instead.)
  *
  * Convert string s[] to lower case.
@@ -931,7 +929,7 @@ unittest
 }
 
 /**
-   $(RED Deprecated. It will be removed in July 2012.
+   $(RED Deprecated. It will be removed in August 2012.
          Please use $(D toLowerInPlace) instead.)
 
    Converts $(D s) to lowercase in place.
@@ -1046,7 +1044,7 @@ unittest
 }
 
 /************************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(D toUpper) instead.)
  *
  * Convert string s[] to upper case.
@@ -1104,7 +1102,7 @@ unittest
 }
 
 /**
-    $(RED Deprecated. It will be removed in July 2012.
+    $(RED Deprecated. It will be removed in August 2012.
           Please use $(D toUpperInPlace) instead.)
 
    Converts $(D s) to uppercase in place.
@@ -1283,7 +1281,7 @@ unittest
 
 
 /********************************************
- *  $(RED Deprecated. It will be removed in July 2012.)
+ *  $(RED Deprecated. It will be removed in August 2012.)
  *
  * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
@@ -1344,20 +1342,20 @@ unittest
 
 
 /********************************************
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *        Please use $(XREF array, replicate) instead.)
  *
  * Repeat $(D s) for $(D n) times.
  */
 deprecated S repeat(S)(S s, size_t n)
 {
-    pragma(msg, hardDeprec!("2.055", "February 2012", "repeat", "std.array.replicate"));
+    pragma(msg, hardDeprec!("2.055", "March 2012", "repeat", "std.array.replicate"));
     return std.array.replicate(s, n);
 }
 
 
 /**************************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(LREF splitLines) instead.)
  *
  * Split s[] into an array of lines,
@@ -1460,7 +1458,7 @@ unittest
 
 
 /*****************************************
- *  $(RED Deprecated. It will be removed in July 2012.
+ *  $(RED Deprecated. It will be removed in August 2012.
  *        Please use $(D stripLeft) instead.)
  *
  * Strips leading whitespace.
@@ -1495,7 +1493,7 @@ S stripLeft(S)(S s) @safe pure
 }
 
 /*****************************************
- *  $(RED Deprecated. It will be removed in July 2012.
+ *  $(RED Deprecated. It will be removed in August 2012.
  *        Please use $(D stripRight) instead.)
  *
  * Strips trailing whitespace.
@@ -1689,7 +1687,7 @@ unittest
 
 
 /*******************************************
- *  $(RED Deprecated. It will be removed in July 2012.
+ *  $(RED Deprecated. It will be removed in August 2012.
  *        Please use $(D leftJustify) instead.)
  *
  * Left justify string s[] in field width chars wide.
@@ -1735,7 +1733,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
 
 
 /*******************************************
- *  $(RED Deprecated. It will be removed in July 2012.
+ *  $(RED Deprecated. It will be removed in August 2012.
  *        Please use $(D rightJustify) instead.)
  *
  * Left right string s[] in field width chars wide.
@@ -1846,7 +1844,7 @@ unittest
 
 
 /*****************************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(D rightJustify) with a fill character of '0' instead.)
  *
  * Same as rjustify(), but fill with '0's.
@@ -1859,7 +1857,7 @@ deprecated S zfill(S)(S s, int width) if (isSomeString!S)
 
 
 /**********************************************
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use $(XREF array, insertInPlace) instead.)
  *
  * Insert sub[] into s[] at location index.
@@ -1877,7 +1875,7 @@ body
 
 
 /************************************************
- * $(RED Deprecated. It will be removed in July 2012.
+ * $(RED Deprecated. It will be removed in August 2012.
  *       Please use $(D detab) instead.)
  *
  * Replace tabs with the appropriate number of spaces.
@@ -2294,7 +2292,7 @@ private auto translateImpl(C1, T, C2)(C1[] str,
 
 
 /************************************
- * $(RED Scheduled for deprecation in February 2012.)
+ * $(RED Scheduled for deprecation in March 2012.)
  *
  * Construct translation table for translate().
  * BUGS: only works with ASCII
@@ -2323,7 +2321,7 @@ body
 }
 
 /******************************************
- * $(RED Scheduled for deprecation in February 2012.
+ * $(RED Scheduled for deprecation in March 2012.
  *   Please use the version of $(D translate) which takes an AA instead.)
  *
  * Translate characters in s[] using table created by maketrans().
@@ -3276,7 +3274,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false)
 }
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.)
+    $(RED Deprecated. It will be removed in August 2012.)
 
     Allow any object as a parameter
   +/
@@ -3286,7 +3284,7 @@ deprecated bool isNumeric(...)
 }
 
 /++
-    $(RED Deprecated. It will be removed in July 2012.)
+    $(RED Deprecated. It will be removed in August 2012.)
 
     Check only the first parameter, all others will be ignored.
   +/

@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use std.datetime instead.)
  *
  * Dates are represented in several formats. The date implementation
@@ -30,7 +30,7 @@ import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
 
 pragma(msg, "Notice: As of Phobos 2.055, std.date and std.dateparse have been " ~
-            "deprecated. They will be removed in February 2012. " ~
+            "deprecated. They will be removed in March 2012. " ~
             "Please use std.datetime instead.");
 
 deprecated:
