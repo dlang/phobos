@@ -2845,8 +2845,7 @@ private
 
     hash_t hash(string s,hash_t h=0)
     {
-        foreach(dchar c;s) h = h * 11 + c;
-        return h;
+        return typeid(s).getHash(&s) + h;
     }
 
     // Definitions from the XML specification
