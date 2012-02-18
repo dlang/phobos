@@ -30,11 +30,12 @@ module std.uri;
 
 /* ====================== URI Functions ================ */
 
-private import std.ascii;
-private import std.c.stdlib;
-private import std.utf;
-private import std.stdio;
+import std.ascii;
+import std.c.stdlib;
+import std.conv;
 import std.exception;
+import std.utf;
+import std.stdio;
 
 class URIerror : Error
 {
@@ -336,8 +337,7 @@ LthrowURIerror:
 
 string decode(string encodedURI)
 {
-    auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
-    return std.utf.toUTF8(s);
+    return to!string(URI_Decode(encodedURI, URI_Reserved | URI_Hash));
 }
 
 /*******************************
@@ -347,8 +347,7 @@ string decode(string encodedURI)
 
 string decodeComponent(string encodedURIComponent)
 {
-    auto s = URI_Decode(encodedURIComponent, 0);
-    return std.utf.toUTF8(s);
+    return to!string(URI_Decode(encodedURIComponent, 0));
 }
 
 /*****************************
@@ -358,8 +357,7 @@ string decodeComponent(string encodedURIComponent)
 
 string encode(string uri)
 {
-    auto s = std.utf.toUTF32(uri);
-    return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
+    return URI_Encode(to!dstring(uri), URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
 /********************************
@@ -369,8 +367,7 @@ string encode(string uri)
 
 string encodeComponent(string uriComponent)
 {
-    auto s = std.utf.toUTF32(uriComponent);
-    return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
+    return URI_Encode(to!dstring(uriComponent), URI_Alpha | URI_Digit | URI_Mark);
 }
 
 /***************************

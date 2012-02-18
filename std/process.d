@@ -543,7 +543,7 @@ private:
 
             auto buf = new WCHAR[len];
             GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
-            value = toUTF8(buf[0 .. $-1]);
+            value = toUTF!(immutable char)(buf[0 .. $-1]);
             return true;
         }
 
@@ -667,11 +667,11 @@ public:
                     assert (envBlock[i] != '\0');
                     ++i;
                 }
-                immutable name = toUTF8(envBlock[start .. i]);
+                immutable name = toUTF!(immutable char)(envBlock[start .. i]);
 
                 start = i+1;
                 while (envBlock[i] != '\0') ++i;
-                aa[name] = toUTF8(envBlock[start .. i]);
+                aa[name] = toUTF!(immutable char)(envBlock[start .. i]);
             }
         }
 

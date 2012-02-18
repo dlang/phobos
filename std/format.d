@@ -4210,8 +4210,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 else
                 {   if (!isValidDchar(vdchar))
                         throw new UTFException("invalid dchar in format");
-                    char[4] vbuf;
-                    putstr(toUTF8(vbuf, vdchar));
+                    char[4] vbuf = void;
+                    putstr(vbuf[0 .. std.utf.encode(vbuf, vdchar)]);
                 }
                 return;
 
@@ -4352,13 +4352,13 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                         case Mangle.Twchar:
                         LarrayWchar:
                             wchar[] sw = va_arg!(wchar[])(argptr);
-                            s = toUTF8(sw);
+                            s = toUTF!(immutable char)(sw);
                             goto Lputstr;
 
                         case Mangle.Tdchar:
                         LarrayDchar:
                             auto sd = va_arg!(dstring)(argptr);
-                            s = toUTF8(sd);
+                            s = toUTF!(immutable char)(sd);
                         Lputstr:
                             if (fc != 's')
                                 throw new FormatException("string");
@@ -4621,12 +4621,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
             case Mangle.Twchar:
                 wfmt = va_arg!(wstring)(argptr);
-                fmt = toUTF8(wfmt);
+                fmt = toUTF!(immutable char)(wfmt);
                 break;
 
             case Mangle.Tdchar:
                 dfmt = va_arg!(dstring)(argptr);
-                fmt = toUTF8(dfmt);
+                fmt = toUTF!(immutable char)(dfmt);
                 break;
 
             case Mangle.Tconst:

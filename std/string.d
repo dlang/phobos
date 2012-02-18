@@ -2406,21 +2406,22 @@ char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
 
     void putc(dchar c)
     {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
+        if(std.ascii.isASCII(c))
+        {
+            if (i >= s.length)
+                onRangeError("std.string.sformat", 0);
+            s[i] = cast(char)c;
+            ++i;
+        }
+        else
+        {
+            char[4] buf = void;
+            immutable bLen = std.utf.encode(buf, c);
+            if (i + bLen > s.length)
+                onRangeError("std.string.sformat", 0);
+            s[i .. i + bLen] = buf[0 .. bLen];
+            i += bLen;
+        }
     }
 
     std.format.doFormat(&putc, arguments, argptr);
@@ -2463,21 +2464,25 @@ char[] sformat(char[] s, ...)
 
     void putc(dchar c)
     {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
+:       void putc(dchar c)
+        {
+            if(std.ascii.isASCII(c))
+            {
+                if (i >= s.length)
+                    onRangeError("std.string.sformat", 0);
+                s[i] = cast(char)c;
+                ++i;
+            }
+            else
+            {
+                char[4] buf = void;
+                immutable bLen = std.utf.encode(buf, c);
+                if (i + bLen > s.length)
+                    onRangeError("std.string.sformat", 0);
+                s[i .. i + bLen] = buf[0 .. bLen];
+                i += bLen;
+            }
+        }
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
@@ -3301,9 +3306,9 @@ deprecated bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     if (_arguments[0] == typeid(char[]))
         return isNumeric(va_arg!(char[])(_argptr));
     else if (_arguments[0] == typeid(wchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(wchar[])(_argptr)));
+        return isNumeric(to!string(va_arg!(wchar[])(_argptr)));
     else if (_arguments[0] == typeid(dchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(dstring)(_argptr)));
+        return isNumeric(to!string(va_arg!(dstring)(_argptr)));
     else if (_arguments[0] == typeid(real))
         return true;
     else if (_arguments[0] == typeid(double))
@@ -3356,14 +3361,14 @@ deprecated bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     {
     wchar[1] t;
     t[0] = va_arg!(wchar)(_argptr);
-        return isNumeric(std.utf.toUTF8(t));
+        return isNumeric(to!string(t));
     }
     else if (_arguments[0] == typeid(dchar))
     {
     dchar[1] t;
     t[0] = va_arg!(dchar)(_argptr);
         dchar[] t1 = t;
-    return isNumeric(std.utf.toUTF8(cast(dstring) t1));
+    return isNumeric(to!string(cast(dstring) t1));
     }
     //else if (_arguments[0] == typeid(cent))
     //    return true;

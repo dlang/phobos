@@ -94,7 +94,7 @@ class UTFException : Exception
 
 
 /++
-    $(RED Scheduled for deprecation in December 2012.
+    $(RED Scheduled for deprecation in June 2012.
           Please use $(LREF UTFException) instead.)
   +/
 alias UTFException UtfException;
@@ -1181,12 +1181,320 @@ void validate(S)(in S str) @safe pure
 }
 
 
+/* =================== Conversion to UTFx ======================= */
+
+/++
+    Converts $(D str) from its character type to the requested character type.
+    A new string is always allocated, even if both the type of $(D str) the
+    return type are identical (including if they're both $(D immutable)).
+
+    So, $(D toUTF) is for the cases when you want to guarantee that converting
+    to one of the string types will allocate a new string, but in the general
+    case $(XREF conv, to) should be used, since it doesn't allocate a new
+    string unless it has to (e.g. $(D to!string("hello world")) won't do any
+    allocations, whereas $(D toUTF!(immutable char)("hello world")) will
+    allocate an entirely new string).
+
+    Examples:
+--------------------
+auto str = "hello world";
+auto wstr = toUTF!wchar(str);
+auto dstr = toUTF!(immutable dchar)(str);
+assert(equal(str, wstr));
+assert(equal(str, dstr));
+--------------------
+  +/
+C1[] toUTF(C1, C2)(const(C2)[] str) @trusted
+    if(isSomeChar!C1 && isSomeChar!C2)
+{
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        validate(str);
+        return cast(C1[])str.dup;
+    }
+    else static if(is(Unqual!C1 == dchar))
+    {
+        immutable len = str.length;
+        auto retval = new Unqual!C1[](len);
+
+        static if(is(Unqual!C2 == wchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        size_t j = 0;
+        for(size_t i = 0; i < len; ++j)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                retval[j] = c;
+                ++i;
+            }
+            else
+                retval[j] = decode(str, i);
+        }
+        retval.length = j;
+        assumeSafeAppend(retval);
+
+        return cast(C1[]) retval;
+    }
+    else
+    {
+        immutable len = str.length;
+        auto retval = new Unqual!C1[](len);
+        retval.length = 0;
+        assumeSafeAppend(retval);
+
+        static if(is(Unqual!C1 == wchar) && is(Unqual!C2 == dchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                ++i;
+                retval ~= cast(Unqual!C1)c;
+            }
+            else
+            {
+                static if(is(Unqual!C2 == char) || is(Unqual!C2 == wchar))
+                    encode(retval, decode(str, i));
+                else if(is(Unqual!C2 == dchar))
+                {
+                    encode(retval, c);
+                    ++i;
+                }
+            }
+        }
+
+        return cast(C1[]) retval;
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    import std.algorithm;
+    auto str = "hello world";
+    auto wstr = toUTF!wchar(str);
+    auto dstr = toUTF!(immutable dchar)(str);
+    assert(equal(str, wstr));
+    assert(equal(str, dstr));
+}
+
+unittest
+{
+    import std.algorithm;
+    import std.typetuple;
+
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        //We're doing this instead of to!S, because std.conv.to uses toUTF, and
+        //we don't want to use toUTF to test itself.
+        static if(is(immutable Unqual!(ElementEncodingType!S) == ElementEncodingType!S))
+            enum dup = ".idup";
+        else
+            enum dup = ".dup";
+
+        static if(is(Unqual!(ElementEncodingType!S) == char))
+            enum suffix = "" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+            enum suffix = "w" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == dchar))
+            enum suffix = "d" ~ dup;
+
+        S str1 = mixin(`"hello world"` ~ suffix);
+
+        S str2 = mixin(`"\U00068d0c\u0039\u04a0\ubfde\u0c50\u02c6\u0534\U000a92b4\u0051` ~
+                        `\u0074\uf0a4\u002c\U000afd07\u4153\u060c\U0008a651"` ~ suffix);
+
+        S str3 = mixin(`"\u0021\U00071e2f\ufecc\U0008b0bd\u0023\u0495\U000c1010\u000a` ~
+                        `\u011a\u5311\u7513\u024f\u01af\U000c11fa\u0070\u9163"` ~ suffix);
+
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            auto result1 = toUTF!C(str1);
+            auto result2 = toUTF!(const C)(str2);
+            auto result3 = toUTF!(immutable C)(str3);
+
+            assert(equal(str1, result1), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str2, result2), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str3, result3), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+        }
+    }
+}
+
+
+/++
+    Version of $(LREF toUTF) which outputs the result to the given output range
+    rather than returning it.
+
+    Examples:
+--------------------
+auto str = "hello world";
+auto app = appender!wstring();
+toUTF!wchar(app, str);
+assert(equal(str, app.data));
+--------------------
+  +/
+void toUTF(C1, C2, R)(R outRange, const(C2)[] str)
+    if(isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(R, C1))
+{
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        validate(str);
+
+        static if(is(typeof(put(outRange, str))))
+            put(outRange, str);
+        else
+        {
+            foreach(C1 codeUnit; str)
+                put(outRange, codeUnit);
+        }
+    }
+    else static if(is(Unqual!C1 == dchar))
+    {
+        immutable len = str.length;
+
+        static if(is(Unqual!C2 == wchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                put(outRange, c);
+                ++i;
+            }
+            else
+                put(outRange, decode(str, i));
+        }
+    }
+    else
+    {
+        immutable len = str.length;
+
+        static if(is(Unqual!C1 == wchar) && is(Unqual!C2 == dchar))
+            enum limit = 0xD800;
+        else
+            enum limit = 0x7F;
+
+        for(size_t i = 0; i < len;)
+        {
+            immutable c = str[i];
+
+            if(c <= limit)
+            {
+                ++i;
+                put(outRange, cast(Unqual!C1)c);
+            }
+            else
+            {
+                static if(is(Unqual!C1 == char))
+                    char[4] buf;
+                else static if(is(Unqual!C1 == wchar))
+                    wchar[2] buf;
+
+                static if(is(Unqual!C2 == char) || is(Unqual!C2 == wchar))
+                    auto result = buf[0 .. encode(buf, decode(str, i))];
+                else
+                {
+                    auto result = buf[0 .. encode(buf, c)];
+                    ++i;
+                }
+
+                static if(is(typeof(put(outRange, buf[]))))
+                    put(outRange, result);
+                else
+                {
+                    foreach(C1 codeUnit; result)
+                        put(outRange, codeUnit);
+                }
+            }
+        }
+    }
+}
+
+//Verify Examples.
+unittest
+{
+    import std.algorithm;
+    auto str = "hello world";
+    auto app = appender!wstring();
+    toUTF!wchar(app, str);
+    assert(equal(str, app.data));
+}
+
+unittest
+{
+    import std.algorithm;
+    import std.typetuple;
+
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+                          wchar[], const(wchar)[], immutable(wchar)[],
+                          dchar[], const(dchar)[], immutable(dchar)[]))
+    {
+        //We're doing this instead of to!S, because std.conv.to uses toUTF, and
+        //we don't want to use toUTF to test itself.
+        static if(is(immutable Unqual!(ElementEncodingType!S) == ElementEncodingType!S))
+            enum dup = ".idup";
+        else
+            enum dup = ".dup";
+
+        static if(is(Unqual!(ElementEncodingType!S) == char))
+            enum suffix = "" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == wchar))
+            enum suffix = "w" ~ dup;
+        else static if(is(Unqual!(ElementEncodingType!S) == dchar))
+            enum suffix = "d" ~ dup;
+
+        S str1 = mixin(`"hello world"` ~ suffix);
+
+        S str2 = mixin(`"\U00068d0c\u0039\u04a0\ubfde\u0c50\u02c6\u0534\U000a92b4\u0051` ~
+                        `\u0074\uf0a4\u002c\U000afd07\u4153\u060c\U0008a651"` ~ suffix);
+
+        S str3 = mixin(`"\u0021\U00071e2f\ufecc\U0008b0bd\u0023\u0495\U000c1010\u000a` ~
+                        `\u011a\u5311\u7513\u024f\u01af\U000c11fa\u0070\u9163"` ~ suffix);
+
+        foreach(C; TypeTuple!(char, wchar, dchar))
+        {
+            auto result1 = appender!(C[])();
+            auto result2 = appender!(const(C)[])();
+            auto result3 = appender!(immutable(C)[])();
+
+            toUTF!C(result1, str1);
+            toUTF!(const C)(result2, str2);
+            toUTF!(immutable C)(result3, str3);
+
+            assert(equal(str1, result1.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str2, result2.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+            assert(equal(str3, result3.data), "S: " ~ S.stringof ~ ", C: " ~ C.stringof);
+        }
+    }
+}
+
+
 /* =================== Conversion to UTF8 ======================= */
 
 @trusted
 {
 
-char[] toUTF8(out char[4] buf, dchar c)
+//This does the same thing as std.utf.encode, so it's being deprecated, and
+//since it was never documented, it's being deprecated directly without being
+//scheduled for deprecation.
+deprecated char[] toUTF8(out char[4] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -1225,6 +1533,9 @@ body
 
 
 /*******************
+ *  $(RED Scheduled for deprecation in August 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
  */
 string toUTF8(in char[] s)
@@ -1260,6 +1571,7 @@ string toUTF8(in wchar[] s)
 }
 
 /// ditto
+/// ditto
 pure string toUTF8(in dchar[] s)
 {
     char[] r;
@@ -1290,7 +1602,10 @@ pure string toUTF8(in dchar[] s)
 
 /* =================== Conversion to UTF16 ======================= */
 
-pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
+//This does the same thing as std.utf.encode, so it's being deprecated, and
+//since it was never documented, it's being deprecated directly without being
+//scheduled for deprecation.
+deprecated pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -1311,6 +1626,9 @@ body
 }
 
 /****************
+ *  $(RED Scheduled for deprecation in August 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
 wstring toUTF16(in char[] s)
@@ -1361,41 +1679,13 @@ pure wstring toUTF16(in dchar[] s)
     return r.assumeUnique();  // ok because r is unique
 }
 
-/++
-    Encodes string $(D s) into UTF-16 and returns the encoded string.
-    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
-    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
-  +/
-const(wchar)* toUTF16z(in char[] s)
-{
-    wchar[] r;
-    size_t slen = s.length;
-
-    r.length = slen + 1;
-    r.length = 0;
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c <= 0x7F)
-        {
-            i++;
-            r ~= cast(wchar)c;
-        }
-        else
-        {
-            c = decode(s, i);
-            encode(r, c);
-        }
-    }
-    r ~= "\000";
-
-    return r.ptr;
-}
-
 
 /* =================== Conversion to UTF32 ======================= */
 
 /*****
+ *  $(RED Scheduled for deprecation in August 2012.
+ *        Please use $(LREF toUTF) instead.)
+ *
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
 dstring toUTF32(in char[] s)
@@ -1681,66 +1971,27 @@ unittest
 }
 
 
-/* ================================ tests ================================== */
+/++
+    $(D toUTF16z) is a convenience function for $(D toUTFz!(const(wchar)*)).
+
+    Encodes string $(D s) into UTF-16 and returns the encoded string.
+    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
+    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
+  +/
+const(wchar)* toUTF16z(C)(const(C)[] str)
+    if(isSomeChar!C)
+{
+    return toUTFz!(const(wchar)*)(str);
+}
 
 unittest
 {
-    debug(utf) printf("utf.toUTF.unittest\n");
+    import std.typetuple;
 
-    string c;
-    wstring w;
-    dstring d;
-
-    c = "hello";
-    w = toUTF16(c);
-    assert(w == "hello");
-    d = toUTF32(c);
-    assert(d == "hello");
-    c = toUTF8(w);
-    assert(c == "hello");
-    d = toUTF32(w);
-    assert(d == "hello");
-
-    c = toUTF8(d);
-    assert(c == "hello");
-    w = toUTF16(d);
-    assert(w == "hello");
-
-
-    c = "hel\u1234o";
-    w = toUTF16(c);
-    assert(w == "hel\u1234o");
-    d = toUTF32(c);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(w);
-    assert(c == "hel\u1234o");
-    d = toUTF32(w);
-    assert(d == "hel\u1234o");
-
-    c = toUTF8(d);
-    assert(c == "hel\u1234o");
-    w = toUTF16(d);
-    assert(w == "hel\u1234o");
-
-
-    c = "he\U0010AAAAllo";
-    w = toUTF16(c);
-    //foreach (wchar c; w) printf("c = x%x\n", c);
-    //foreach (wchar c; cast(wstring)"he\U0010AAAAllo") printf("c = x%x\n", c);
-    assert(w == "he\U0010AAAAllo");
-    d = toUTF32(c);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(w);
-    assert(c == "he\U0010AAAAllo");
-    d = toUTF32(w);
-    assert(d == "he\U0010AAAAllo");
-
-    c = toUTF8(d);
-    assert(c == "he\U0010AAAAllo");
-    w = toUTF16(d);
-    assert(w == "he\U0010AAAAllo");
+    //toUTFz is already thoroughly tested, so this will just verify that
+    //toUTF16z compile properly for the various string types.
+    foreach(S; TypeTuple!(string, wstring, dstring))
+        static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
 }
 
 

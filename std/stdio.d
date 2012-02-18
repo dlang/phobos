@@ -1242,10 +1242,9 @@ $(D Range) that locks the file and allows fast writing to it.
                     }
                     else
                     {
-                        char[4] buf;
-                        auto b = std.utf.toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
+                        char[4] buf = void;
+                        foreach (i ; 0 .. std.utf.encode(buf, c))
+                            FPUTC(buf[i], handle);
                     }
                 }
                 else
@@ -1264,9 +1263,8 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf = void;
-                        auto b = std.utf.toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
+                        foreach (i ; 0 .. std.utf.encode(buf, c))
+                            FPUTC(buf[i], handle);
                     }
                 }
                 else
@@ -1438,7 +1436,7 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
             else
             {
                 char[4] buf = void;
-                foreach (i; 0 .. std.utf.toUTF8(buf, c).length)
+                foreach (i; 0 .. std.utf.encode(buf, c))
                     FPUTC(buf[i], fp);
             }
         }

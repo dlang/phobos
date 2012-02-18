@@ -1946,7 +1946,7 @@ version(Windows) string getcwd()
         // we can do it because toUTFX always produces a fresh string
         if(n < buffW.length)
         {
-            return toUTF8(buffW[0 .. n]);
+            return toUTF!(immutable char)(buffW[0 .. n]);
         }
         else //staticBuff isn't enough
         {
@@ -1954,7 +1954,7 @@ version(Windows) string getcwd()
             scope(exit) free(ptr);
             immutable n2 = GetCurrentDirectoryW(n, ptr);
             cenforce(n2 && n2 < n, "getcwd");
-            return toUTF8(ptr[0 .. n2]);
+            return toUTF!(immutable char)(ptr[0 .. n2]);
         }
     }
     else
@@ -2339,8 +2339,8 @@ else version(Windows)
             auto wbuf = new wchar[wlength];
             const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
             assert(n == wlength);
-            // toUTF8() returns a new buffer
-            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+            // toUTF returns a new buffer
+            _name = buildPath(path, std.utf.toUTF!(immutable char)(wbuf[0 .. wlength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2351,8 +2351,8 @@ else version(Windows)
         void _init(in char[] path, in WIN32_FIND_DATAW *fd)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
-            _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
-            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+            _name = std.utf.toUTF!(immutable char)(fd.cFileName[0 .. clength]);
+            _name = buildPath(path, std.utf.toUTF!(immutable char)(fd.cFileName[0 .. clength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
