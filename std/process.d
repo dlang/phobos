@@ -1323,7 +1323,7 @@ public:
             for (int i=0; environ[i] != null; ++i)
             {
                 immutable varDef = to!string(environ[i]);
-                immutable eq = varDef.indexOf('=');
+                immutable eq = std.string.indexOf(varDef, '=');
                 assert (eq >= 0);
 
                 immutable name = varDef[0 .. eq];
