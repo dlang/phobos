@@ -89,14 +89,37 @@ class Win32Exception : Exception
 
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
-        super(msg, fn, ln, next);
+        super(message, fn, ln, next);
     }
 
-    this(string msg, int errnum, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
+    this(string message, int errnum, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
-        super(text(msg, " (", error, ")"), fn, ln, next);
+        super(text(message, " (", errnum, ")"), fn, ln, next);
         error = errnum;
     }
+}
+
+unittest {
+    // Test that we can throw and catch one by its own type
+    string message = "Test W1";
+
+    auto e = collectException!Win32Exception(
+        enforce(false, new Win32Exception(message)));
+    assert(e.msg == message);
+}
+
+unittest {
+    // ditto
+    string message = "Test W2";
+    int    code    = 5;
+
+    auto e = collectException!Win32Exception(
+        enforce(false, new Win32Exception(message, code)));
+    assert(e.error == code);
+
+    // CAUTION: this test is to be removed in D1
+    //          because e.msg does not contains the (code) section.
+    assert(e.msg == text(message, " (", code, ")"));
 }
 
 /**
@@ -139,6 +162,20 @@ unittest
     auto e = collectException!RegistryException(
         enforce(false, new RegistryException(message, code)));
     assert(e.error == code);
+
+    // CAUTION: this test is to be removed in D1
+    //          because e.msg does not contains the (code) section.
+    assert(e.msg == text(message, " (", code, ")"));
+}
+
+unittest
+{
+    // ditto
+    string message = "Test 2";
+
+    auto e = collectException!RegistryException(
+        enforce(false, new RegistryException(message)));
+    assert(e.msg == message);
 }
 
 /* ************* public enumerations *************** */
@@ -363,7 +400,7 @@ body
             useWfuncs ? RegDeleteKeyW(hkey, toUTF16z(subKey))
                       : RegDeleteKeyA(hkey, toMBSz(subKey));
     }
-    enforceSucc(res, "Value cannot be deleted: \"" ~ subKey ~ "\"");
+    enforceSucc(res, "Key cannot be deleted: \"" ~ subKey ~ "\"");
 }
 
 private void regDeleteValue(in HKEY hkey, in string valueName)
