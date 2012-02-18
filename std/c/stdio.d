@@ -15,7 +15,7 @@ public import core.stdc.stdio;
 
 extern (C):
 
-version (Win32)
+version (Windows)
 {
     import core.sys.windows.windows;
 

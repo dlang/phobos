@@ -246,7 +246,7 @@ unittest {
     assert(gamma(real.infinity) == real.infinity);
     assert(gamma(real.max) == real.infinity);
     assert(isNaN(gamma(-real.infinity)));
-    assert(gamma(real.min*real.epsilon) == real.infinity);
+    assert(gamma(real.min_normal*real.epsilon) == real.infinity);
     assert(gamma(MAXGAMMA)< real.infinity);
     assert(gamma(MAXGAMMA*2) == real.infinity);
 
@@ -257,7 +257,7 @@ unittest {
     assert(feqrel(gamma(0.5L), SQRT_PI) == real.mant_dig);
     assert(feqrel(gamma(17.25L), 4.224986665692703551570937158682064589938e13L) >= real.mant_dig-4);
 
-    assert(feqrel(gamma(1.0 / 3.L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
+    assert(feqrel(gamma(1.0 / 3.0L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
     assert(feqrel(gamma(0.25L),
         3.62560990822190831193068515586767200299516768288006L) >= real.mant_dig-1);
     assert(feqrel(gamma(1.0 / 5.0L),
@@ -376,8 +376,8 @@ unittest {
     assert(logGamma(-50.0) == real.infinity);
     assert(isIdentical(0.0L, logGamma(1.0L)));
     assert(isIdentical(0.0L, logGamma(2.0L)));
-    assert(logGamma(real.min*real.epsilon) == real.infinity);
-    assert(logGamma(-real.min*real.epsilon) == real.infinity);
+    assert(logGamma(real.min_normal*real.epsilon) == real.infinity);
+    assert(logGamma(-real.min_normal*real.epsilon) == real.infinity);
 
     // x, correct loggamma(x), correct d/dx loggamma(x).
     static real[] testpoints = [
@@ -690,7 +690,7 @@ ihalve:
     if( x <= 0.0L ) {
 under:
         // underflow has occurred
-        x = real.min * real.min;
+        x = real.min_normal * real.min_normal;
         goto done;
     }
 

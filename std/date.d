@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated. It will be removed in March 2012.
  *       Please use std.datetime instead.)
  *
  * Dates are represented in several formats. The date implementation
@@ -30,7 +30,7 @@ import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
 
 pragma(msg, "Notice: As of Phobos 2.055, std.date and std.dateparse have been " ~
-            "deprecated. They will be removed in February 2012. " ~
+            "deprecated. They will be removed in March 2012. " ~
             "Please use std.datetime instead.");
 
 deprecated:
@@ -827,7 +827,7 @@ extern(C) void std_date_static_this()
     localTZA = getLocalTZA();
 }
 
-version (Win32)
+version (Windows)
 {
     private import std.c.windows.windows;
     //import c.time;
@@ -865,7 +865,7 @@ version (Win32)
 
     unittest
     {
-        auto dt = getUTCtime;
+        auto dt = getUTCtime();
         auto ft = d_time2FILETIME(dt);
         auto dt1 = FILETIME2d_time(&ft);
         assert(dt == dt1, text(dt, " != ", dt1));
@@ -1191,12 +1191,12 @@ ulong[] benchmark(fun...)(uint times, ulong[] result = null)
     result.length = 0;
     foreach (i, Unused; fun)
     {
-        immutable t = getUTCtime;
+        immutable t = getUTCtime();
         foreach (j; 0 .. times)
         {
             fun[i]();
         }
-        immutable delta = getUTCtime - t;
+        immutable delta = getUTCtime() - t;
         result ~= cast(uint)delta;
     }
     foreach (ref e; result)

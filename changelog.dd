@@ -1,14 +1,124 @@
-$(VERSION 056, ddd mm, 2011, =================================================,
+$(VERSION 058, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
+       $(LI Added std.csv for reading CSV files.)
+       $(LI Added std.net.curl as D-ified wrapper over etc.c.curl and libcurl.)
+       $(LI Added templates PackageName, ModuleName and FullyQualifiedName into std.traits.)
+       $(LI The overload of std.concurrency.receiveTimeout which takes a long has
+            been deprecated. Please use the overload which takes a core.time.Duration.)
+       $(LI Moved std.datetime.abs to core.time.)
+       $(LI The overload of std.conv.to which used a member function named to on the
+            type being converted has been deprecated. Please define opCast on the type
+            instead, and std.conv.to will use that.)
+       $(LI std.datetime's endOfMonthDay functions have been deprecated. Please use
+            daysInMonth instead.)
+       $(LI std.ctype has been deprecated. Please use std.ascii instead.)
+       $(LI std.string's hexdigits, digits, octdigits, lowercase, letters, uppercase,
+            whitespace, and newline have been deprecated. Please use the
+            corresponding symbols in std.ascii instead.)
+       $(LI std.string's LS and PS have been deprecated. Please use the corresponding
+            symbols in std.uni instead.)
+       $(LI std.string's iswhite has been deprecated. Please use either
+            std.ascii.isWhite or std.uni.isWhite instead.)
+       $(LI std.string's tolower, tolowerInPlace, toupper, toupperInPlace, splitlines,
+            stripl, stripr, ljustify, rjustify, and expandtabs have been deprecated.
+            Please use the new versions of these functions with properly camelcased names.)
+       $(LI std.string's zfill has been deprecated. Please use rightJustify instead.)
+       $(LI std.string's capwords has been deprecated.)
+       $(LI The overloads of std.string's isNumeric which takes anything and
+            which takes a va_list have been deprecated. The other overloads remain.)
+       $(LI std.uni's isUniLower, isUniUpper, toUniLower, toUniUpper, and isUniAlpha
+            have been deprecated. Please use the versions of these functions which do
+            not have Uni in their name.)
      )
 
     $(LIBBUGSFIXED
+       $(LI $(BUGZILLA 4295): IID_IUnknown symbol undefined in phobos.lib)
+       $(LI $(BUGZILLA 5614): version(Win32) vs version(Windows) in Phobos)
+       $(LI $(BUGZILLA 5718): Can't demangle symbol defined inside unittest block)
+       $(LI $(BUGZILLA 6255): Add support for different base conversions in std.conv)
+       $(LI $(BUGZILLA 6472): RedBlackTree.removeKey)
+       $(LI $(BUGZILLA 6642): SysTime should not be hasUnsharedAliasing)
+       $(LI $(BUGZILLA 6874): heap corruption caused by std.array.insertInPlaceImpl or gc.gcx)
+       $(LI $(BUGZILLA 6944): stdio.File.byLine can't handle an empty file)
+       $(LI $(BUGZILLA 7092): std.concurrency.receive does not accept free functions)
+       $(LI $(BUGZILLA 7141): std.regex - escaped characters can form operators in character classes)
+       $(LI $(BUGZILLA 7230): Crash during printing anonymous union with writeln family functions.)
+       $(LI $(BUGZILLA 7241): std.format can't read into array of dchar)
+       $(LI $(BUGZILLA 7302): std.conv.parse with radix doesn't work on ranges)
+       $(LI $(BUGZILLA 7397): [Regression] std.path.buildPath can't be used with string[])
+       $(LI $(BUGZILLA 7480): Unhelpful formatting specifier mismatch exception message for pointers)
+       $(LI $(BUGZILLA 7484): std.algorithm.copy overlapping array copy)
+     )
+ )
+
+$(VERSION 057, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI Major overhaul of std.regex module's implementation.
+        $(RED Breaking change) in std.regex.replace with delegate,
+        use Captures!string instead of RegexMatch!string as delegate parameter.)
+      $(LI As typedef has been deprecated, overloads of std.conv.to which use
+           typedef have now been deprecated.)
+      $(LI std.array.insert has been deprecated. Please use std.array.insertInPlace instead.)
+      $(LI The overload of std.array.replace which replaces in place has been deprecated.
+           Please use std.array.replaceInPlace instead.)
+      $(LI The toISOExtendedString and fromISOExtendedString functions on SysTime, Date,
+           TimeOfDay, and DateTime in std.datetime have been deprecated. Please use
+           toISOExtString and fromISOExtString instead.)
+      $(LI std.file.getTimesPosix has been deprecated. Please use std.file.getTimes instead.)
+      $(LI The overloads for isDir, isFile, and isSymlink in std.file which take a uint
+           have been deprecated. Please use attrIsDir, attrIsFile, and attrIsSymlink instead.)
+     )
+
+    $(LIBBUGSFIXED
+        $(LI Unlisted bug: std.conv: Fix to!float("-0"))
+        $(LI Unlisted bug: std.file broken on OS X x86_64 due to wrong stat64 declaration.)
+        $(LI $(BUGZILLA 2936): std.regex.match() short string optimization)
+        $(LI $(BUGZILLA 4765): std.math.modf always returns 0)
+        $(LI $(BUGZILLA 5193): SList cannot have struct elements that have immutable members.)
+        $(LI $(BUGZILLA 5620): Implicit conversion of RegexMatch to bool.)
+        $(LI $(BUGZILLA 5712): [patch] std.regex.replace disallows w/dstring)
+        $(LI $(BUGZILLA 6204): emplace() for classes accepts larger chunk but fails in array assignment)
+        $(LI $(BUGZILLA 6887): Regression of getopt)
+        $(LI $(BUGZILLA 6888): std.getopt.getopt: one-letter hash option causes range violation)
+        $(LI $(BUGZILLA 6935): struct with @disable this cannot make range)
+        $(LI $(BUGZILLA 6973): static assert(isOutputRange!(OutputRange!int, int)) is false)
+        $(LI $(BUGZILLA 6976): GetLastError called as property)
+        $(LI $(BUGZILLA 6977): getErrno called as property in std.stdio)
+        $(LI $(BUGZILLA 6979): hasUnsharedAliasing cannot accept plural parameters)
+        $(LI $(BUGZILLA 6990): std.string.splitlines deprecation doc missing a word)
+        $(LI $(BUGZILLA 7000): missing import of std.stdio in std.regex?)
+        $(LI $(BUGZILLA 7039): Posix 2.057 Makefile error breaking 64bit build)
+        $(LI $(BUGZILLA 7040): Phobos must use "version/else version" blocks for proper
+                               documentation generation.)
+        $(LI $(BUGZILLA 7045): AssertError in std.regex on line 1573)
+        $(LI $(BUGZILLA 7055): to!float("INF2") == 2)
+     )
+ )
+
+$(VERSION 056, ddd mm, 2011, =================================================,
+
+    $(WHATSNEW
+      $(LI std.exception: enforce/enforceEx now can use in @safe pure function.)
+      $(LI Added optional KeepTerminator param to std.string.splitLines.)
+      $(LI Added std.string.outdent.)
+      $(LI std.utf: More @safe and pure.)
+      $(LI std.windows.registry now use *W functions in order to deal properly with Unicode.)
+     )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 5522): std.range.zip fails on arrays of Object.)
+        $(LI $(BUGZILLA 6009): std/container disabled on freebsd/64)
         $(LI $(BUGZILLA 6160): std.conv.to: Ignore _ to match the rest of D)
         $(LI $(BUGZILLA 6181): assert fails in datetime.d while runining Phobos unittest)
         $(LI $(BUGZILLA 6258): std.conv.to!real("-") fetches the front of an empty array.)
+        $(LI $(BUGZILLA 6275): Const values in tuples)
         $(LI $(BUGZILLA 6288): std.conv.to removes const/immutable when converting a class)
+        $(LI $(BUGZILLA 6609): std.conv.parse!Integer should consider sign when radix == 10)
         $(LI $(BUGZILLA 6634): std.path.globMatch throws wrong assertion)
+        $(LI $(BUGZILLA 6640): More formatting consistency between string and range of char)
+        $(LI $(BUGZILLA 6761): Strange behavior of RedBlackTree causing a dangling pointer)
      )
  )
 

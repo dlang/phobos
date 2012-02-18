@@ -439,7 +439,8 @@ public:
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void opAssign(R)(R rhs) if (isTuple!R)
+    void opAssign(R)(R rhs)
+        if (isTuple!R && allSatisfy!(isIdentityAssignable, Types))
     {
         static assert(field.length == rhs.field.length,
                       "Length mismatch in attempting to assign a "
@@ -524,6 +525,11 @@ private template Identity(alias T)
     alias T Identity;
 }
 
+template isIdentityAssignable(T)
+{
+    enum isIdentityAssignable = isAssignable!(T, T);
+}
+
 unittest
 {
     {
@@ -550,7 +556,7 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
+        assert(nosh.toString() == "Tuple!(int,real)(5, 0)", nosh.toString());
         Tuple!(int, int) yessh;
         nosh = yessh;
     }
@@ -559,7 +565,7 @@ unittest
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
+        assert(t.toString() == `Tuple!(int,string)(10, "str")`, t.toString());
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -718,93 +724,6 @@ unittest
 }
 
 
-private template enumValuesImpl(string name, BaseType, long index, T...)
-{
-    static if (name.length)
-    {
-        enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
-            ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
-    }
-    else
-    {
-        static if (!T.length)
-        {
-            enum string enumValuesImpl = "";
-        }
-        else
-        {
-            static if (T.length == 1
-                       || T.length > 1 && is(typeof(T[1]) : string))
-            {
-                enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
-                    ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
-            }
-            else
-            {
-                enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
-                    ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
-            }
-        }
-    }
-}
-
-private template enumParserImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumParserImpl = "bool enumFromString(string s, ref "
-            ~name~" v) {\n"
-            ~enumParserImpl!(name, false, T)
-            ~"return false;\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumParserImpl =
-                "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
-                ~enumParserImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumParserImpl = "";
-    }
-}
-
-private template enumPrinterImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
-            ~enumPrinterImpl!(name, false, T)~"\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumPrinterImpl =
-                "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
-                ~enumPrinterImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumPrinterImpl = "return null;";
-    }
-}
-
-private template ValueTuple(T...)
-{
-    alias T ValueTuple;
-}
-
-private template StringsOnly(T...)
-{
-    static if (T.length == 1)
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0]) StringsOnly;
-        else
-            alias ValueTuple!() StringsOnly;
-    else
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
-        else
-            alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
-}
-
 /**
 Defines truly named enumerated values with parsing and stringizing
 primitives.
@@ -840,10 +759,99 @@ representation.  */
 deprecated template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
+    {
+        template enumValuesImpl(string name, BaseType, long index, T...)
+        {
+            static if (name.length)
+            {
+                enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
+                    ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
+            }
+            else
+            {
+                static if (!T.length)
+                {
+                    enum string enumValuesImpl = "";
+                }
+                else
+                {
+                    static if (T.length == 1
+                               || T.length > 1 && is(typeof(T[1]) : string))
+                    {
+                        enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
+                            ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
+                    }
+                    else
+                    {
+                        enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
+                            ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
+                    }
+                }
+            }
+        }
+
+        template enumParserImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumParserImpl = "bool enumFromString(string s, ref "
+                    ~name~" v) {\n"
+                    ~enumParserImpl!(name, false, T)
+                    ~"return false;\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumParserImpl =
+                        "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
+                        ~enumParserImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumParserImpl = "";
+            }
+        }
+
+        template enumPrinterImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
+                    ~enumPrinterImpl!(name, false, T)~"\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumPrinterImpl =
+                        "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
+                        ~enumPrinterImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumPrinterImpl = "return null;";
+            }
+        }
+
+        template StringsOnly(T...)
+        {
+            template ValueTuple(T...)
+            {
+                alias T ValueTuple;
+            }
+
+            static if (T.length == 1)
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0]) StringsOnly;
+                else
+                    alias ValueTuple!() StringsOnly;
+            else
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
+                else
+                    alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
+        }
+
         enum string defineEnum =
             enumValuesImpl!(name, T[0], 0, T[1 .. $])
             ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))
             ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]));
+    }
     else
         alias defineEnum!(name, int, T) defineEnum;
 }
@@ -973,7 +981,10 @@ Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
 unittest
 {
     interface CI { const int foo(); }
-    class C : CI { int foo() const { return 42; } }
+    class C : CI {
+      int foo() const { return 42; }
+      @property int bar() const { return 23; }
+    }
     Rebindable!(C) obj0;
     static assert(is(typeof(obj0) == C));
 
@@ -992,7 +1003,8 @@ unittest
     assert(obj1.get !is null);
 
     // test opDot
-    assert(obj2.foo == 42);
+    assert(obj2.foo() == 42);
+    assert(obj2.bar == 23);
 
     interface I { final int foo() const { return 42; } }
     Rebindable!(I) obj3;
@@ -1017,16 +1029,16 @@ unittest
 
     auto obj6 = rebindable(new immutable(C));
     static assert(is(typeof(obj6) == Rebindable!(immutable C)));
-    assert(obj6.foo == 42);
+    assert(obj6.foo() == 42);
 
     auto obj7 = rebindable(new C);
     CI interface1 = obj7;
     auto interfaceRebind1 = rebindable(interface1);
-    assert(interfaceRebind1.foo == 42);
+    assert(interfaceRebind1.foo() == 42);
 
     const interface2 = interface1;
     auto interfaceRebind2 = rebindable(interface2);
-    assert(interfaceRebind2.foo == 42);
+    assert(interfaceRebind2.foo() == 42);
 
     auto arr = [1,2,3,4,5];
     const arrConst = arr;
@@ -1108,7 +1120,7 @@ struct Ref(T)
     this(ref T value) { _p = &value; }
     ref T opDot() { return *_p; }
     /*ref*/ T opImplicitCastTo() { return *_p; }
-    ref T value() { return *_p; }
+    @property ref T value() { return *_p; }
 
     void opAssign(T value)
     {
@@ -1736,45 +1748,40 @@ private static:
     // this would be deprecated by std.typelist.Filter
     template staticFilter(alias pred, lst...)
     {
-        alias staticFilterImpl!(pred, lst).result staticFilter;
-    }
-    template staticFilterImpl(alias pred, lst...)
-    {
         static if (lst.length > 0)
         {
-            alias staticFilterImpl!(pred, lst[1 .. $]).result tail;
+            alias staticFilter!(pred, lst[1 .. $]) tail;
             //
-            static if (true && pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) result;
+            static if (pred!(lst[0]))
+                alias TypeTuple!(lst[0], tail) staticFilter;
             else
-                alias tail result;
+                alias tail staticFilter;
         }
         else
-            alias TypeTuple!() result;
+            alias TypeTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        alias enumerateOverloadsImpl!(C, pred, traits_allMembers!(C)).result
-                enumerateOverloads;
-    }
-    template enumerateOverloadsImpl(C, alias pred, names...)
-    {
-        static if (names.length > 0)
+        template Impl(names...)
         {
-            alias staticFilter!(pred, MemberFunctionsTuple!(C, ""~names[0])) methods;
-            alias enumerateOverloadsImpl!(C, pred, names[1 .. $]).result next;
+            static if (names.length > 0)
+            {
+                alias staticFilter!(pred, MemberFunctionsTuple!(C, names[0])) methods;
+                alias Impl!(names[1 .. $]) next;
 
-            static if (methods.length > 0)
-                alias TypeTuple!(OverloadSet!(""~names[0], methods), next) result;
+                static if (methods.length > 0)
+                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                else
+                    alias next Impl;
+            }
             else
-                alias next result;
+                alias TypeTuple!() Impl;
         }
-        else
-            alias TypeTuple!() result;
-    }
 
+        alias Impl!(__traits(allMembers, C)) enumerateOverloads;
+    }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Target functions
@@ -2211,7 +2218,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    ""~generateParameters!(myFuncInfo, func),
+                    generateParameters!(myFuncInfo, func)(),
                     postAtts, storageClass );
         }
 
@@ -2753,7 +2760,7 @@ unittest
     class A { static bool dead; ~this() { dead = true; } }
     class B : A { static bool dead; ~this() { dead = true; } }
     {
-        auto b = scoped!B;
+        auto b = scoped!B();
     }
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
@@ -2770,7 +2777,7 @@ unittest
         bool check() { return this is a; }
     }
 
-    auto a1 = scoped!A;
+    auto a1 = scoped!A();
     assert(a1.check());
 
     auto a2 = scoped!A(1);
@@ -2879,16 +2886,20 @@ Flag!"encryption".no).
 */
 struct Yes
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.yes; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.yes;
+    }
 }
 //template yes(string name) { enum Flag!name yes = Flag!name.yes; }
 
 /// Ditto
 struct No
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.no; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.no;
+    }
 }
 //template no(string name) { enum Flag!name no = Flag!name.no; }
 

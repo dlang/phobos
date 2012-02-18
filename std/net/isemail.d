@@ -24,7 +24,8 @@
  */
 module std.net.isemail;
 
-import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
+import std.algorithm : equal, uniq, filter, contains = canFind;
+import std.range : ElementType;
 import std.array;
 import std.ascii;
 import std.conv;
@@ -736,7 +737,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     auto finalStatus = returnStatus.max;
 
     if (returnStatus.length != 1)
-        returnStatus.popFront;
+        returnStatus.popFront();
 
     parseData[EmailPart.status] = to!(tstring)(returnStatus);
 
@@ -1277,31 +1278,31 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    bool valid ()
+    @property bool valid ()
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    string localPart ()
+    @property string localPart ()
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    string domainPart ()
+    @property string domainPart ()
     {
         return domainPart_;
     }
 
     /// The email status code
-    EmailStatusCode statusCode ()
+    @property EmailStatusCode statusCode ()
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    string status ()
+    @property string status ()
     {
         return statusCodeDescription(statusCode_);
     }
