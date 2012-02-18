@@ -30,6 +30,8 @@ $(VERSION 058, ddd mm, 2012, =================================================,
        $(LI std.uni's isUniLower, isUniUpper, toUniLower, toUniUpper, and isUniAlpha
             have been deprecated. Please use the versions of these functions which do
             not have Uni in their name.)
+       $(LI Get rid of Windows 3.x and Windows 9x support. Affected modules: std.file,
+            std.mmfile, std.stream, and std.windows.registry.)
      )
 
     $(LIBBUGSFIXED
