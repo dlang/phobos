@@ -7790,6 +7790,34 @@ if (is(typeof(find!pred(range))))
     return !find!pred(range).empty;
 }
 
+/**
+Alias for canFind, for consistency with terminology typically used in 
+functional languages.
+*/
+alias canFind any;
+
+/**
+Returns $(D true) if and only if all values in $(D range) satisfy the 
+predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
+
+Examples:
+---
+assert(all!"a & 1"([1, 3, 5, 7, 9]));
+assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+---
+*/
+bool all(alias pred, R)(R range)
+if(isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+{
+    return find!(not!(unaryFun!pred))(range).empty;
+}
+
+unittest
+{
+    assert(all!"a & 1"([1, 3, 5, 7, 9]));
+    assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
