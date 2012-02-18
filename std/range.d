@@ -245,95 +245,90 @@ unittest
     static assert(!isInputRange!(char[4]));
 }
 
-/**
-Outputs $(D e) to $(D r). The exact effect is dependent upon the two
-types. Several cases are accepted, as described below. The code snippets
-are attempted in order, and the first to compile "wins" and gets
-evaluated.
+/** Outputs $(D e) to $(D r). The exact effect is dependent upon the two types.
+    Several cases are accepted, as described below. The code snippets are
+    attempted in order, and the first to compile "wins" and gets evaluated.
+    Setting $(D asArray) to true will skip code snippets using user defined
+    $(D put) and $(D opCall) methods, allowing templated user defined $(D put)
+    methods to reuse some of $(D put)'s code snippets. Furthermore, $(D ER)
+    allows the caller to set a preferred conversion type, enabling put to
+    perform the correct UTF conversions for character and string inputs.
 
 $(BOOKTABLE ,
-
 $(TR $(TH Code Snippet) $(TH Scenario))
-
-$(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
-$(D put) accepting an $(D E).))
-
-$(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
-method $(D put) accepting an $(D E[]).))
-
-$(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
-range and $(D e) is assignable to $(D r.front).))
-
-$(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
-Copying range $(D E) to range $(D R).))
-
-$(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
-E).))
-
-$(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
-accepting an $(D E[]).))
-
+$(TR $(TD $(D r.put(e);))
+     $(TD $(D R) defines a method $(D put) accepting an $(D E).))
+$(TR $(TD $(D r.put([ e ]);))
+     $(TD $(D R) defines a method $(D put) accepting an $(D E[]).))
+$(TR $(TD $(D r.front = e; r.popFront();))
+     $(TD $(D R) is an input range and $(D e) is assignable to $(D r.front).))
+$(TR $(TD $(D r[0] = e; r = r[1..$];))
+     $(TD $(D R) supports slicing and $(D e) is index assignable to $(D r).))
+$(TR $(TD $(D r[0..e.length] = e[0..$]; r = r[e.length..$];))
+     $(TD $(D R) supports slicing and $(D e) is slice assignable to $(D r).))
+$(TR $(TD $(D foreach(ER v; e) put(r,v)))
+     $(TD String safe copying of a range $(D E) to range $(D R).))
+$(TR $(TD $(D foreach(v; e) put(r,v)))
+     $(TD General copying of a range $(D E) to range $(D R).))
+$(TR $(TD $(D foreach(i;0..e.length) put(r,e[i])))
+     $(TD Copying range $(D E) to range $(D R).))
+$(TR $(TD $(D r ~= e;))
+     $(TD $(D R) supports concatenation with $(D e).))
+$(TR $(TD $(D r(e);))
+     $(TD $(D R) is e.g. a delegate accepting an $(D E).))
+$(TR $(TD $(D r([ e ]);))
+     $(TD $(D R) is e.g. a $(D delegate) accepting an $(D E[]).))
 )
  */
-void put(R, E)(ref R r, E e)
-{
-    static if (hasMember!(R, "put") ||
-    (isPointer!R && is(pointerTarget!R == struct) &&
-     hasMember!(pointerTarget!R, "put")))
-    {
-        // commit to using the "put" method
-        static if (!isArray!R && is(typeof(r.put(e))))
-        {
-            r.put(e);
-        }
-        else static if (!isArray!R && is(typeof(r.put((&e)[0..1]))))
-        {
-            r.put((&e)[0..1]);
-        }
-        else
-        {
-            static assert(false,
-                    "Cannot put a "~E.stringof~" into a "~R.stringof);
-        }
+void put(R, E, bool asArray=isArray!R, ER=ElementEncodingType!R)(ref R r, E e){
+    static if(isSomeChar!ER && isSomeChar!E && ER.sizeof < E.sizeof ) {
+        // Transcoding is required to support r.put(dchar)
+        Unqual!ER[ER.sizeof == 1 ? 4 : 2] encoded;
+        auto len = std.utf.encode(encoded, e);
+        put(r,encoded[0 .. len]);
+    } else static if( !asArray && __traits(compiles,  r.put(  e          ))  ){
+                                                      r.put(  e          );
+    } else static if( !asArray && __traits(compiles,  r.put((&e)[0..1]   ))  ){
+                                                      r.put((&e)[0..1]   );
+    } else static if (isInputRange!R && is(typeof(r.front = e) )) {
+        r.front = e;
+        r.popFront();
+    } else static if(__traits(compiles, {r[0] = e; r = r[1..r.length];}     )){
+        r[0] = e;
+        r    = r[1..r.length];
+    } else static if(__traits(compiles, {r[0..e.length] = e[0..e.length];
+                                                      r = r[1..r.length];  })){
+        r[0..e.length] = e[0..e.length];
+        r              = r[e.length..r.length];
+    } else static if( ((!asArray && __traits(compiles,r~=e)) || isArray!R )  &&
+                      ( is(ER == void) || !(isSomeChar!ER ^ isSomeChar!E) )  ){
+        r ~= e;
+    } else static if( _putCall!(R,E,asArray) && is(typeof( r( e          )) )){
+                                                           r( e          );
+    } else static if( _putCall!(R,E,asArray) && is(typeof( r( (&e)[0..1] )) )){
+                                                           r( (&e)[0..1] );
+    } else static if(__traits(compiles,{foreach(ER v; e  )     put(r,  v );})){
+                                        foreach(ER v; e  )     put(r,  v );
+    } else static if(__traits(compiles,{foreach(   v; e  )     put(r,  v );})){
+                                        foreach(   v; e  )     put(r,  v );
+    } else static if(__traits(compiles,{foreach(ER v; e[])     put(r,  v );})){
+                                        foreach(ER v; e[])     put(r,  v );
+    } else static if(__traits(compiles,{foreach(   v; e[])     put(r,  v );})){
+                                        foreach(   v; e[])     put(r,  v );
+    } else static if(__traits(compiles,{foreach(i;0..e.length) put(r,e[i]);})){
+                                        foreach(i;0..e.length) put(r,e[i]);
+    } else {
+        static assert(false, "Can't put a "~E.stringof~" into a "~R.stringof);
     }
-    else
-    {
-        static if (isInputRange!R)
-        {
-            // Commit to using assignment to front
-            static if (is(typeof(r.front = e, r.popFront())))
-            {
-                r.front = e;
-                r.popFront();
-            }
-            else static if (isInputRange!E && is(typeof(put(r, e.front))))
-            {
-                for (; !e.empty; e.popFront()) put(r, e.front);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
-        else
-        {
-            // Commit to using opCall
-            static if (is(typeof(r(e))))
-            {
-                r(e);
-            }
-            else static if (is(typeof(r((&e)[0..1]))))
-            {
-                r((&e)[0..1]);
-            }
-            else
-            {
-                static assert(false,
-                        "Cannot put a "~E.stringof~" into a "~R.stringof);
-            }
-        }
-    }
+}
+// Helper template for put(): filters out opCall from ctors
+private template _putCall(R, E, bool asArray = false) {
+    static if(asArray)    enum _putCall = false;
+    else static if( is(R==class) || is(R==struct) || is(R==union) )
+         enum _putCall = is(typeof( (R r, E e){r.opCall(   e        );}))||
+                         is(typeof( (R r, E e){r.opCall( (&e)[0..1] );}));
+    else enum _putCall = is(typeof( (R r, E e){r(          e        );}))||
+                         is(typeof( (R r, E e){r(        (&e)[0..1] );}));
 }
 
 unittest
@@ -391,9 +386,9 @@ unittest
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
     static assert(!__traits(compiles, put(a, 1)));
-    // char[] is NOT output range.
-    static assert(!__traits(compiles, put(a, 'a')));
-    static assert(!__traits(compiles, put(a, "ABC")));
+    // char[] is an output range.
+    static assert( __traits(compiles, put(a, 'a')));
+    static assert( __traits(compiles, put(a, "ABC")));
 }
 
 /**
@@ -421,8 +416,8 @@ unittest
     static assert( isOutputRange!(Appender!string, string));
     static assert( isOutputRange!(Appender!string*, string));
     static assert(!isOutputRange!(Appender!string, int));
-    static assert(!isOutputRange!(char[], char));
-    static assert(!isOutputRange!(wchar[], wchar));
+    static assert( isOutputRange!(char[], char));
+    static assert( isOutputRange!(wchar[], wchar));
     static assert( isOutputRange!(dchar[], char));
     static assert( isOutputRange!(dchar[], wchar));
     static assert( isOutputRange!(dchar[], dchar));
