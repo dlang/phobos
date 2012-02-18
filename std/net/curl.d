@@ -3341,7 +3341,7 @@ struct Curl
     {
         auto msgZ = curl_easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
-        return format("%s on handle %s", cast(string) msgZ[0 .. core.stdc.strlen(msgZ)], handle);
+        return format("%s on handle %s", cast(string) msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
     }
 
     private void throwOnStopped(string message = null)
