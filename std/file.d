@@ -1136,7 +1136,28 @@ unittest
     }
     else version(Posix)
     {
-        return access(toStringz(name), 0) == 0;
+        /*
+            The reason why we use stat (and not access) here is
+            the quirky behavior of access for SUID programs: if
+            we used access, a file may not appear to "exist",
+            despite that the program would be able to open it
+            just fine. The behavior in question is described as
+            follows in the access man page:
+
+            > The check is done using the calling process's real
+            > UID and GID, rather than the effective IDs as is
+            > done when actually attempting an operation (e.g.,
+            > open(2)) on the file. This allows set-user-ID
+            > programs to easily determine the invoking user's
+            > authority.
+
+            While various operating systems provide eaccess or
+            euidaccess functions, these are not part of POSIX -
+            so it's safer to use stat instead.
+        */
+
+        struct_stat64 statbuf = void;
+        return stat64(toStringz(name), &statbuf) == 0;
     }
 }
 
