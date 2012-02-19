@@ -935,7 +935,7 @@ template genExceptionClass(string child, string parent="Exception") {
 }
 
 unittest {
-    mixin(Descendant!("TestException"));
+    mixin(genExceptionClass!("TestException"));
     try {
         throw new TestException();
     } catch (TestException te) {
