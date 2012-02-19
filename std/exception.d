@@ -898,9 +898,9 @@ class ErrnoException : Exception
 }
 
 /++
- + The decleration $(D mixin(Descendant!("Base"))) creates a class $(D Base)
- + that extends from $(D Exception) with a constructor that passes its 
- + parameters to super. A second template parameter specifies an alternate
+ + The decleration $(D mixin(genExceptionClass!("MyErr"))) creates a class 
+ + $(D MyErr) that extends from $(D Exception) with a constructor that passes
+ + its parameters to super. A second template parameter specifies an alternate
  + parent.
  +
  + Example:
@@ -908,7 +908,7 @@ class ErrnoException : Exception
  + import std.exception;
  + import std.stdio;
  +
- + mixin(descendant!("SampleException"));
+ + mixin(genExceptionClass!("SampleException"));
  +
  + void main() {
  +     try {
@@ -918,12 +918,17 @@ class ErrnoException : Exception
  +     }
  + ---
  +/
-template Descendant(string child, string parent="Exception") {
-    enum Descendant
+
+template genExceptionClass(string child, string parent="Exception") {
+    enum genExceptionClass
         = "class "~child~" : "~parent~" {"
         ~ "    this(string m = \"\", string f = __FILE__, size_t l = __LINE__, "
         ~ "         Throwable t = null) {"
         ~ "        super(m, f, l, t);"
+        ~ "    }"
+        ~ "    this(string m, Throwable n, string f = __FILE__, "
+        ~ "         size_t l = __LINE__) {"
+        ~ "        super(m, n, f, l);"
         ~ "    }"
         ~ "}"
         ;
