@@ -897,6 +897,47 @@ class ErrnoException : Exception
     }
 }
 
+/++
+ + The decleration $(D mixin(Descendant!("Base"))) creates a class $(D Base)
+ + that extends from $(D Exception) with a constructor that passes its 
+ + parameters to super. A second template parameter specifies an alternate
+ + parent.
+ +
+ + Example:
+ + ---
+ + import std.exception;
+ + import std.stdio;
+ +
+ + mixin(descendant!("SampleException"));
+ +
+ + void main() {
+ +     try {
+ +         throw new SampleException("foobar");
+ +     } catch (SampleException se) {
+ +         writeln(se.msg);
+ +     }
+ + ---
+ +/
+template Descendant(string child, string parent="Exception") {
+    enum Descendant
+        = "class "~child~" : "~parent~" {"
+        ~ "    this(string m = \"\", string f = __FILE__, size_t l = __LINE__, "
+        ~ "         Throwable t = null) {"
+        ~ "        super(m, f, l, t);"
+        ~ "    }"
+        ~ "}"
+        ;
+}
+
+unittest {
+    mixin(Descendant!("TestException"));
+    try {
+        throw new TestException();
+    } catch (TestException te) {
+        assert(te.line == __LINE__ - 2);
+    }
+}
+
 // structuralCast
 // class-to-class structural cast
 Target structuralCast(Target, Source)(Source obj)
