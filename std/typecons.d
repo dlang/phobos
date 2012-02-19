@@ -2687,8 +2687,7 @@ private struct Scoped(T)
 
     @disable this(this)
     {
-        writeln("Illegal call to Scoped this(this)");
-        assert(false);
+        assert(false, "Illegal call to Scoped this(this)");
     }
 
     ~this()
