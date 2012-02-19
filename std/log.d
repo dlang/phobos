@@ -125,9 +125,10 @@ $(BOOKTABLE Description of supported severities.,
               release mode. See fatal and critical severity levels for a
               description of their behavior.))
     $(TR $(TD $(D critical))
-         $(TD Logs a critical severity message. Critical _log messages throw an
-              exception after the message is persisted. Critical _log messages
-              cannot be disable at compile time or at run time.))
+         $(TD Logs a critical severity message. Critical _log messages throw a
+              $(LREF CriticalException) exception after the message is
+              persisted. Critical _log messages cannot be disable at compile
+              time or at run time.))
     $(TR $(TD $(D error))
          $(TD Logs an error severity message. Error _log messages are disable
               at compiled time by setting the version to $(I strip_log_error).
@@ -580,6 +581,9 @@ vlog(1)("The number %s is the golden ration", goldenRatio);
     shared static this() { _noopLogFilter = new LogFilter; }
 }
 
+/++
+Exception thrown when logging a critical message. See $(LREF critical).
++/
 final class CriticalException : Exception
 {
     private this(string message, string file = __FILE__, int line = __LINE__)
@@ -2010,290 +2014,302 @@ void name(string[] args) {
             return _fileNamePrefixes;
         }
 
-      /++
-         Specifies the extension for the name of log files.
+        /++
+           Specifies the extension for the name of log files.
 
-         The default value is $(D ".log").
-       +/
-      @property string fileNameExtension(string extension)
-      {
-         return _fileNameExtension = extension;
-      }
-      /// ditto
-      @property const string fileNameExtension() { return _fileNameExtension; }
+           The default value is $(D ".log").
+         +/
+        @property string fileNameExtension(string extension)
+        {
+            return _fileNameExtension = extension;
+        }
+        /// ditto
+        @property const string fileNameExtension()
+        {
+            return _fileNameExtension;
+        }
 
-      private @property string internalLineFormat()
-      {
-         if(_internalLineFormat is null) lineFormat = _lineFormat;
+        private @property string internalLineFormat()
+        {
+            if(_internalLineFormat is null) lineFormat = _lineFormat;
 
-         return _internalLineFormat;
-      }
+            return _internalLineFormat;
+        }
 
-      private string _name;
-      private bool _logToStderr;
-      private bool _alsoLogToStderr;
-      private Severity _stderrThreshold = Severity.error;
-      private string _logDirectory;
-      private size_t _bufferSize = 4 * 1024;
-      private string _lineFormat = "%s%t %i %f:%l] %m";
-      private string _internalLineFormat;
-      private dstring _severitySymbols = "FCEWI";
-      private string[] _fileNamePrefixes;
-      private string _fileNameExtension = ".log";
+        private string _name;
+        private bool _logToStderr;
+        private bool _alsoLogToStderr;
+        private Severity _stderrThreshold = Severity.error;
+        private string _logDirectory;
+        private size_t _bufferSize = 4 * 1024;
+        private string _lineFormat = "%s%t %i %f:%l] %m";
+        private string _internalLineFormat;
+        private dstring _severitySymbols = "FCEWI";
+        private string[] _fileNamePrefixes;
+        private string _fileNameExtension = ".log";
 
-      // Configuration options
-      private string _logToStderrFlag = "logtostderr";
-      private string _alsoLogToStderrFlag = "alsologtostderr";
-      private string _stderrThresholdFlag = "stderrthreshold";
-      private string _logDirectoryFlag = "logdir";
-   }
+        // Configuration options
+        private string _logToStderrFlag = "logtostderr";
+        private string _alsoLogToStderrFlag = "alsologtostderr";
+        private string _stderrThresholdFlag = "stderrthreshold";
+        private string _logDirectoryFlag = "logdir";
+    }
 
-   /++
-      Constructs a logger with the configuration specified in loggerConfig.
-    +/
-   this(Configuration loggerConfig)
-   {
-      enforce(loggerConfig.name);
+    /++
+       Constructs a logger with the configuration specified in loggerConfig.
+     +/
+    this(Configuration loggerConfig)
+    {
+        enforce(loggerConfig.name);
 
-      _bufferSize = loggerConfig.bufferSize;
-      _lineFormat = loggerConfig.lineFormat;
-      _internalLineFormat = loggerConfig.internalLineFormat;
-      _severitySymbols = loggerConfig.severitySymbols;
-      _mutex = new Mutex;
+        _bufferSize = loggerConfig.bufferSize;
+        _lineFormat = loggerConfig.lineFormat;
+        _internalLineFormat = loggerConfig.internalLineFormat;
+        _severitySymbols = loggerConfig.severitySymbols;
+        _mutex = new Mutex;
 
-      // init hostname
-      _hostname = hostname;
+        // init hostname
+        _hostname = hostname;
 
-      // Create file for every severity; add one more for stderr
-      _writers = new Writer[Severity.max + 2];
-      _writers[$ - 1] = stderr; // add stderr
+        // Create file for every severity; add one more for stderr
+        _writers = new Writer[Severity.max + 2];
+        _writers[$ - 1] = stderr; // add stderr
 
-      // create the indices for all the loggers
-      _indices = new size_t[][Severity.max + 1];
-      foreach(i, ref index; _indices)
-      {
-         if(loggerConfig.logToStderr)
-         {
-            // Only log to stderr
-            if(i <= loggerConfig.stderrThreshold) index ~= _writers.length - 1;
-         }
-         else
-         {
-            // Add the file writers
-            foreach(j; i .. _writers.length - 1) index ~= j;
-
-            // Add stderr if needed
-            if(loggerConfig.alsoLogToStderr &&
-               i <= loggerConfig.stderrThreshold)
+        // create the indices for all the loggers
+        _indices = new size_t[][Severity.max + 1];
+        foreach(i, ref index; _indices)
+        {
+            if(loggerConfig.logToStderr)
             {
-               index ~= _writers.length - 1;
-            }
-         }
-      }
-
-      auto time = Clock.currTime(UTC());
-      // we dont need fracsec for the file name.
-      time.fracSec = FracSec.from!"msecs"(0);
-
-      // create the file name for all the writers
-      auto nameBuffer = appender!(char[])();
-      if(loggerConfig.fileNamePrefixes)
-      {
-         foreach(prefix; loggerConfig.fileNamePrefixes)
-         {
-            if(prefix != null)
-            {
-               nameBuffer.clear();
-               formattedWrite(nameBuffer,
-                              "%s%s.%s.%s",
-                              prefix,
-                              loggerConfig.fileNameExtension,
-                              time.toISOString(),
-                              processId);
-               _filenames ~= buildPath(loggerConfig.logDirectory,
-                                       nameBuffer.data);
-
-               nameBuffer.clear();
-               formattedWrite(nameBuffer,
-                              "%s%s",
-                              prefix,
-                              loggerConfig.fileNameExtension);
-               _symlinks ~= buildPath(loggerConfig.logDirectory,
-                                      nameBuffer.data);
+                // Only log to stderr
+                if(i <= loggerConfig.stderrThreshold)
+                {
+                    index ~= _writers.length - 1;
+                }
             }
             else
             {
-               _filenames ~= null;
-               _symlinks ~= null;
+                // Add the file writers
+                foreach(j; i .. _writers.length - 1) index ~= j;
+
+                // Add stderr if needed
+                if(loggerConfig.alsoLogToStderr &&
+                   i <= loggerConfig.stderrThreshold)
+                {
+                    index ~= _writers.length - 1;
+                }
             }
-         }
-      }
-      else
-      {
-         foreach(severity; 0 .. _writers.length - 1)
-         {
-            nameBuffer.clear();
-            formattedWrite(nameBuffer,
-                           "%s.%s.%s.%s%s.%s.%s",
-                           loggerConfig.name,
-                           _hostname,
-                           username,
-                           toUpper(to!string(cast(Severity)severity)),
-                           loggerConfig.fileNameExtension,
-                           time.toISOString(),
-                           processId);
-            _filenames ~= buildPath(loggerConfig.logDirectory,
-                                    nameBuffer.data);
+        }
 
-            nameBuffer.clear();
-            formattedWrite(nameBuffer,
-                           "%s.%s%s",
-                           loggerConfig.name,
-                           toUpper(to!string(cast(Severity)severity)),
-                           loggerConfig.fileNameExtension);
-            _symlinks ~= buildPath(loggerConfig.logDirectory,
-                                   nameBuffer.data);
-         }
-      }
-   }
+        auto time = Clock.currTime(UTC());
+        // we dont need fracsec for the file name.
+        time.fracSec = FracSec.from!"msecs"(0);
 
-   /// Writes a _log _message to all the _log files of equal or lower severity.
-   shared void log(const ref LogMessage message)
-   {
-      auto time = cast(DateTime) message.time;
-      synchronized(_mutex)
-      {
-         foreach(i; _indices[message.severity])
-         {
-            // don't write if we are suppose to have a name but don't have one.
-            if(i < _filenames.length && _filenames[i] == null) continue;
-
-            // open file if is not opened and we have a name for it
-            if(i < _filenames.length && !_writers[i].isOpen)
+        // create the file name for all the writers
+        auto nameBuffer = appender!(char[])();
+        if(loggerConfig.fileNamePrefixes)
+        {
+            foreach(prefix; loggerConfig.fileNamePrefixes)
             {
-               _writers[i].open(_filenames[i], "w");
-               _writers[i].setvbuf(_bufferSize);
+                if(prefix != null)
+                {
+                    nameBuffer.clear();
+                    formattedWrite(nameBuffer,
+                                   "%s%s.%s.%s",
+                                   prefix,
+                                   loggerConfig.fileNameExtension,
+                                   time.toISOString(),
+                                   processId);
+                    _filenames ~= buildPath(loggerConfig.logDirectory,
+                                            nameBuffer.data);
 
-               _writers[i].writef("Log file created at: %s" ~ newline ~
-                                  "Running on machine: %s" ~ newline ~
-                                  "Log line format: %s" ~ newline,
-                                  time.toISOExtString(),
-                                  _hostname,
-                                  _lineFormat);
-
-               // create symlink
-               symlink(baseName(_filenames[i]), _symlinks[i]);
+                    nameBuffer.clear();
+                    formattedWrite(nameBuffer,
+                                   "%s%s",
+                                   prefix,
+                                   loggerConfig.fileNameExtension);
+                    _symlinks ~= buildPath(loggerConfig.logDirectory,
+                                           nameBuffer.data);
+                }
+                else
+                {
+                    _filenames ~= null;
+                    _symlinks ~= null;
+                }
             }
-            _writers[i].writef(_internalLineFormat,
-                               message.threadId,
-                               message.file,
-                               message.line,
-                               _severitySymbols[message.severity],
-                               message.message,
-                               time.year,
-                               cast(int)time.month,
-                               time.day,
-                               time.hour,
-                               time.minute,
-                               time.second);
-         }
-      }
-   }
+        }
+        else
+        {
+            foreach(severity; 0 .. _writers.length - 1)
+            {
+                nameBuffer.clear();
+                formattedWrite(nameBuffer,
+                               "%s.%s.%s.%s%s.%s.%s",
+                               loggerConfig.name,
+                               _hostname,
+                               username,
+                               toUpper(to!string(cast(Severity)severity)),
+                               loggerConfig.fileNameExtension,
+                               time.toISOString(),
+                               processId);
+                _filenames ~= buildPath(loggerConfig.logDirectory,
+                                        nameBuffer.data);
 
-   /// Flushes the buffer of all the log files.
-   shared void flush()
-   {
-      synchronized(_mutex)
-      {
-         foreach(ref writer; _writers[0 .. $ - 1])
-         {
-            if(writer.isOpen) writer.flush();
-         }
-      }
-   }
+                nameBuffer.clear();
+                formattedWrite(nameBuffer,
+                               "%s.%s%s",
+                               loggerConfig.name,
+                               toUpper(to!string(cast(Severity)severity)),
+                               loggerConfig.fileNameExtension);
+                _symlinks ~= buildPath(loggerConfig.logDirectory,
+                                       nameBuffer.data);
+            }
+        }
+    }
 
-   private @property string hostname()
-   {
-      string name;
-      version(Posix)
-      {
-         utsname buf;
-         if(uname(&buf) == 0)
-         {
-            name = to!string(buf.nodename.ptr);
-         }
-      }
-      else version(Windows)
-      {
-         char[MAX_COMPUTERNAME_LENGTH + 1] buf;
-         auto length = buf.length;
-         if(GetComputerNameA(buf.ptr, &length) != 0)
-         {
-            name = to!string(buf.ptr);
-         }
-      }
+    /// Writes a _log _message to all the _log files of equal or lower severity.
+    shared void log(const ref LogMessage message)
+    {
+        auto time = cast(DateTime) message.time;
+        synchronized(_mutex)
+        {
+            foreach(i; _indices[message.severity])
+            {
+                /*
+                   don't write if we are suppose to have a name but don't have
+                   one.
+                 */
+                if(i < _filenames.length && _filenames[i] == null) continue;
 
-      return name ? name : "unknown";
-   }
+                // open file if is not opened and we have a name for it
+                if(i < _filenames.length && !_writers[i].isOpen)
+                {
+                    _writers[i].open(_filenames[i], "w");
+                    _writers[i].setvbuf(_bufferSize);
 
-   private @property auto processId()
-   {
-     version(Posix)
-     {
-       return getpid();
-     }
-     else version(Windows)
-     {
-       return GetCurrentProcessId();
-     }
-   }
+                    _writers[i].writef("Log file created at: %s" ~ newline ~
+                                       "Running on machine: %s" ~ newline ~
+                                       "Log line format: %s" ~ newline,
+                                       time.toISOExtString(),
+                                       _hostname,
+                                       _lineFormat);
 
-   private @property string username()
-   {
-      string name;
-      version(Posix) name = getenv("LOGNAME");
-      else version(Windows) name = getenv("USERNAME");
+                    // create symlink
+                    symlink(baseName(_filenames[i]), _symlinks[i]);
+                }
 
-      return name ? name : "unknown";
-   }
+                _writers[i].writef(_internalLineFormat,
+                                   message.threadId,
+                                   message.file,
+                                   message.line,
+                                   _severitySymbols[message.severity],
+                                   message.message,
+                                   time.year,
+                                   cast(int)time.month,
+                                   time.day,
+                                   time.hour,
+                                   time.minute,
+                                   time.second);
+            }
+        }
+    }
 
-   private shared void symlink(string target, string linkName)
-   {
-      version(unittest) {} // don't have any side effect in unittest
-      else version(Posix)
-      {
-         import core.sys.posix.sys.stat;
-         import std.file: struct_stat64, lstat64;
+    /// Flushes the buffer of all the log files.
+    shared void flush()
+    {
+        synchronized(_mutex)
+        {
+            foreach(ref writer; _writers[0 .. $ - 1])
+            {
+                if(writer.isOpen) writer.flush();
+            }
+        }
+    }
 
-         struct_stat64 lstatbuf = void;
-         if (lstat64(toStringz(linkName), &lstatbuf) == 0 &&
-             lstatbuf.st_mode & S_IFMT) remove(linkName);
-         .symlink(toStringz(target), toStringz(linkName));
-      }
-      // TODO: Need Windows Vista to test this implementation; Vista is suppose
-      // to support symlinks.
-   }
+    private @property string hostname()
+    {
+        string name;
+        version(Posix)
+        {
+            utsname buf;
+            if(uname(&buf) == 0)
+            {
+                name = to!string(buf.nodename.ptr);
+            }
+        }
+        else version(Windows)
+        {
+            char[MAX_COMPUTERNAME_LENGTH + 1] buf;
+            auto length = buf.length;
+            if(GetComputerNameA(buf.ptr, &length) != 0)
+            {
+                name = to!string(buf.ptr);
+            }
+        }
 
-   private size_t _bufferSize;
-   private string _lineFormat;
-   private string _internalLineFormat;
-   private dstring _severitySymbols;
-   private string _hostname;
+        return name ? name : "unknown";
+    }
 
-   private Monitor _mutex;
-   private string[] _filenames;
-   private string[] _symlinks;
-   private size_t[][] _indices;
-   __gshared Writer[] _writers;
+    private @property auto processId()
+    {
+        version(Posix)
+        {
+            return getpid();
+        }
+        else version(Windows)
+        {
+            return GetCurrentProcessId();
+        }
+    }
 
-   version(unittest) private alias TestWriter Writer;
-   else private alias File Writer;
+    private @property string username()
+    {
+        string name;
+        version(Posix) name = getenv("LOGNAME");
+        else version(Windows) name = getenv("USERNAME");
+
+        return name ? name : "unknown";
+    }
+
+    private shared void symlink(string target, string linkName)
+    {
+        version(unittest) {} // don't have any side effect in unittest
+        else version(Posix)
+        {
+            import core.sys.posix.sys.stat;
+            import std.file: struct_stat64, lstat64;
+
+            struct_stat64 lstatbuf = void;
+            if (lstat64(toStringz(linkName), &lstatbuf) == 0 &&
+                    lstatbuf.st_mode & S_IFMT) remove(linkName);
+            .symlink(toStringz(target), toStringz(linkName));
+        }
+        /*
+          TODO: Need Windows Vista to test this implementation; Vista is
+          suppose to support symlinks.
+         */
+    }
+
+    private size_t _bufferSize;
+    private string _lineFormat;
+    private string _internalLineFormat;
+    private dstring _severitySymbols;
+    private string _hostname;
+
+    private Monitor _mutex;
+    private string[] _filenames;
+    private string[] _symlinks;
+    private size_t[][] _indices;
+    __gshared Writer[] _writers;
+
+    version(unittest) private alias TestWriter Writer;
+    else private alias File Writer;
 }
 
 unittest
 {
-   assert(isWriter!TestWriter);
-   assert(isWriter!File);
+    assert(isWriter!TestWriter);
+    assert(isWriter!File);
 }
 
 
@@ -2302,67 +2318,68 @@ Extension point for the module.
 +/
 interface Logger
 {
-/++
-Logs a _message.
+    /++
+       Logs a _message.
 
-The method is called by $(D std._log) whenever it decides that a _message
-should be logged. It is not required that the implementation of this method do
-any filtering based on severity since at this point all configured filters were
-performed.
+       The method is called by $(D std._log) whenever it decides that a
+       _message should be logged. It is not required that the implementation of
+       this method do any filtering based on severity since at this point all
+       configured filters were performed.
 
-The method is allow to return immediately without persisting the _message.
-+/
-   shared void log(const ref LogMessage message);
+       The method is allow to return immediately without persisting the
+       _message.
+     +/
+    shared void log(const ref LogMessage message);
 
-/++
-Flushes pending log operations.
+    /++
+       Flushes pending log operations.
 
-The method is called by $(D std.log) whenever it requires the persistence of
-all the previous messages. For example the method is called when the client
-logs a fatal message.
+       The method is called by $(D std.log) whenever it requires the persistence
+       of all the previous messages. For example the method is called when the
+       client logs a fatal message.
 
-The method must not return until all pending log operations complete.
-+/
-   shared void flush();
+       The method must not return until all pending log operations complete.
+     +/
+    shared void flush();
 
-   /++
-      Log message constructed by $(D std.log) and passed to the $(D Logger) for
-      recording.
-    +/
-   public static struct LogMessage
-   {
-      /// Name of the source _file that created the log message.
-      string file;
+    /++
+       Log message constructed by $(D std.log) and passed to the $(D Logger) for
+       recording.
+     +/
+    public static struct LogMessage
+    {
+        /// Name of the source _file that created the log message.
+        string file;
 
-      /// Line number in the source file that created the log message.
-      int line;
+        /// Line number in the source file that created the log message.
+        int line;
 
-      /// Severity of the log message.
-      Severity severity;
+        /// Severity of the log message.
+        Severity severity;
 
-      /// Thread that created the log message.
-      ulong threadId;
+        /// Thread that created the log message.
+        ulong threadId;
 
-      /// User defined _message.
-      char[] message;
+        /// User defined _message.
+        char[] message;
 
-      /// Time when the log message was created.
-      SysTime time;
-   }
+        /// Time when the log message was created.
+        SysTime time;
+    }
 }
 
 unittest
 {
-   foreach(i; 0 .. 10) { if(every(5)) assert(i % 5 == 0); }
+    foreach(i; 0 .. 10) { if(every(5)) assert(i % 5 == 0); }
 
-   // different call site; should work again
-   foreach(i; 0 .. 10) { if(every(2)) assert(i % 2 == 0); }
+    // different call site; should work again
+    foreach(i; 0 .. 10) { if(every(2)) assert(i % 2 == 0); }
 
-   foreach(i; 0 .. 3)
-   {
-      if(every(dur!"msecs"(40))) assert(i == 0 || i == 2);
-      Thread.sleep(dur!"msecs"(21));
-   }
+    foreach(i; 0 .. 3)
+    {
+        if(every(dur!"msecs"(40))) assert(i == 0 || i == 2);
+        Thread.sleep(dur!"msecs"(21));
+    }
 }
 
 /++
@@ -2380,58 +2397,57 @@ auto secondCounter = 0;
 
 foreach(i; 0 .. 10)
 {
-   if(every(2)) firstCounter += i;
+    if(every(2)) firstCounter += i;
 
-   if(every(3)) secondCounter += i;
+    if(every(3)) secondCounter += i;
 }
 assert(firstCounter == 20); // 0 + 2 + 4 + 6 + 8
 assert(secondCounter == 18); // 0 + 3 + 6 + 9
 
 foreach(i; 0 .. 3)
 {
-   if(every(dur!"msecs"(40))) assert(i == 0 || i == 2);
-   Thread.sleep(dur!"msecs"(21));
+    if(every(dur!"msecs"(40))) assert(i == 0 || i == 2);
+    Thread.sleep(dur!"msecs"(21));
 }
 ---
-The code above executes without asserting.
 +/
 Rich!bool every(string file = __FILE__, int line = __LINE__)(uint n)
 {
-   static uint counter;
-   if(++counter > n) counter -= n;
+    static uint counter;
+    if(++counter > n) counter -= n;
 
-   Rich!bool result = { counter == 1, "every(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { counter == 1, "every(" ~ to!string(n) ~ ")" };
+    return result;
 }
 /// ditto
 Rich!bool every(string file = __FILE__, int line = __LINE__)(Duration n)
 {
-   static long lastTime;
-   auto currentTime = Clock.currTime().stdTime;
-   auto val = false;
+    static long lastTime;
+    auto currentTime = Clock.currTime().stdTime;
+    auto val = false;
 
-   if(lastTime == 0 || currentTime - lastTime >= n.total!"hnsecs")
-   {
-      lastTime = currentTime;
-      val = true;
-   }
+    if(lastTime == 0 || currentTime - lastTime >= n.total!"hnsecs")
+    {
+        lastTime = currentTime;
+        val = true;
+    }
 
-   Rich!bool result = { val, "every(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { val, "every(" ~ to!string(n) ~ ")" };
+    return result;
 }
 
 unittest
 {
-   foreach(i; 0 .. 10) { assert((first() && i == 0) || i != 0); }
+    foreach(i; 0 .. 10) { assert((first() && i == 0) || i != 0); }
 
-   // different call site; should work again
-   foreach(i; 0 .. 10) { assert((first(3) && i < 3) || i >= 3); }
+    // different call site; should work again
+    foreach(i; 0 .. 10) { assert((first(3) && i < 3) || i >= 3); }
 
-   foreach(i; 0 .. 3)
-   {
-      if(first(dur!"msecs"(40))) assert(i == 0 || i == 1);
-      Thread.sleep(dur!"msecs"(21));
-   }
+    foreach(i; 0 .. 3)
+    {
+        if(first(dur!"msecs"(40))) assert(i == 0 || i == 1);
+        Thread.sleep(dur!"msecs"(21));
+    }
 }
 
 /++
@@ -2448,64 +2464,63 @@ auto secondCounter = 0;
 
 foreach(i; 0 .. 10)
 {
-   if(first(2)) firstCounter += i;
+    if(first(2)) firstCounter += i;
 
-   if(first(3)) secondCounter += i;
+    if(first(3)) secondCounter += i;
 }
 assert(firstCounter == 1); // 0 + 1
 assert(secondCounter == 3); // 0 + 1 + 2
 
 foreach(i; 0 .. 3)
 {
-  if(first(dur!"msecs"(40))) assert(i == 0 || i == 1);
-  Thread.sleep(dur!"msecs"(21));
+    if(first(dur!"msecs"(40))) assert(i == 0 || i == 1);
+    Thread.sleep(dur!"msecs"(21));
 }
 ---
-The code above executes without asserting.
 +/
 Rich!bool first(string file = __FILE__, int line = __LINE__)(uint n = 1)
 {
-   static uint counter;
-   auto val = true;
+    static uint counter;
+    auto val = true;
 
-   if(counter >= n) val = false;
-   else ++counter;
+    if(counter >= n) val = false;
+    else ++counter;
 
-   Rich!bool result = { val, "first(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { val, "first(" ~ to!string(n) ~ ")" };
+    return result;
 }
 /// ditto
 Rich!bool first(string file = __FILE__, int line = __LINE__)(Duration n)
 {
-   static long firstTime;
-   static bool expired;
+    static long firstTime;
+    static bool expired;
 
-   firstTime = firstTime ? firstTime : Clock.currTime().stdTime;
+    firstTime = firstTime ? firstTime : Clock.currTime().stdTime;
 
-   /* we don't support the value of n changing; once false it will always be
-      false */
-   if(!expired)
-   {
-      auto currentTime = Clock.currTime().stdTime;
-      if(currentTime - firstTime >= n.total!"hnsecs") expired = true;
-   }
+    /* we don't support the value of n changing; once false it will always be
+       false */
+    if(!expired)
+    {
+        auto currentTime = Clock.currTime().stdTime;
+        if(currentTime - firstTime >= n.total!"hnsecs") expired = true;
+    }
 
-   Rich!bool result = { !expired, "first(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { !expired, "first(" ~ to!string(n) ~ ")" };
+    return result;
 }
 
 unittest
 {
-   foreach(i; 0 .. 10) { assert((after(9) && i == 9) || i != 9); }
+    foreach(i; 0 .. 10) { assert((after(9) && i == 9) || i != 9); }
 
-   // different call site; should work again
-   foreach(i; 0 .. 10) { assert((after(7) && i >= 7) || i < 7); }
+    // different call site; should work again
+    foreach(i; 0 .. 10) { assert((after(7) && i >= 7) || i < 7); }
 
-   foreach(i; 0 .. 3)
-   {
-      if(after(dur!"msecs"(40))) assert(i == 2);
-      Thread.sleep(dur!"msecs"(21));
-   }
+    foreach(i; 0 .. 3)
+    {
+        if(after(dur!"msecs"(40))) assert(i == 2);
+        Thread.sleep(dur!"msecs"(21));
+    }
 }
 
 /++
@@ -2522,73 +2537,73 @@ auto secondCounter = 0;
 
 foreach(i; 0 .. 10)
 {
-   if(after(8)) firstCounter += i;
+    if(after(8)) firstCounter += i;
 
-   if(after(7)) secondCounter += i;
+    if(after(7)) secondCounter += i;
 }
 assert(firstCounter == 17); // 8 + 9
 assert(secondCounter == 24); // 7 + 8 + 9
 
 foreach(i; 0 .. 3)
 {
-   if(after(dur!"msecs"(40))) assert(i == 2);
-   Thread.sleep(dur!"msecs"(21));
+    if(after(dur!"msecs"(40))) assert(i == 2);
+    Thread.sleep(dur!"msecs"(21));
 }
 ---
-The code above executes without asserting.
 +/
 Rich!bool after(string file = __FILE__, int line = __LINE__)(uint n)
 {
-   static uint counter;
-   auto val = false;
+    static uint counter;
+    auto val = false;
 
-   if(counter >= n) val = true;
-   else ++counter;
+    if(counter >= n) val = true;
+    else ++counter;
 
-   Rich!bool result = { val, "after(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { val, "after(" ~ to!string(n) ~ ")" };
+    return result;
 }
 /// ditto
 Rich!bool after(string file = __FILE__, int line = __LINE__)(Duration n)
 {
-   static long firstTime;
-   static bool expired;
+    static long firstTime;
+    static bool expired;
 
-   firstTime = firstTime ? firstTime : Clock.currTime().stdTime;
+    firstTime = firstTime ? firstTime : Clock.currTime().stdTime;
 
-   // we don't support the value of n changing; once true will always be true
-   if(!expired)
-   {
-      auto currentTime = Clock.currTime().stdTime;
-      if(currentTime - firstTime >= n.total!"hnsecs") expired = true;
-   }
+    // we don't support the value of n changing; once true will always be true
+    if(!expired)
+    {
+        auto currentTime = Clock.currTime().stdTime;
+        if(currentTime - firstTime >= n.total!"hnsecs") expired = true;
+    }
 
-   Rich!bool result = { expired, "after(" ~ to!string(n) ~ ")" };
-   return result;
+    Rich!bool result = { expired, "after(" ~ to!string(n) ~ ")" };
+    return result;
 }
 
 unittest
 {
-   assert(rich!"=="(1, 1));
-   assert(rich!"!="(1, 2));
-   assert(rich!">"(2, 1));
-   assert(rich!">="(2, 2) && rich!">="(2, 1));
-   assert(rich!"<"(1, 2));
-   assert(rich!"<="(1, 2) && rich!"<="(1, 1));
-   assert(rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 2)));
-   assert(rich!"||"(rich!"<"(1, 1), rich!"=="(1, 1)));
+    assert(rich!"=="(1, 1));
+    assert(rich!"!="(1, 2));
+    assert(rich!">"(2, 1));
+    assert(rich!">="(2, 2) && rich!">="(2, 1));
+    assert(rich!"<"(1, 2));
+    assert(rich!"<="(1, 2) && rich!"<="(1, 1));
+    assert(rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 2)));
+    assert(rich!"||"(rich!"<"(1, 1), rich!"=="(1, 1)));
 
-   assert(!rich!"=="(1, 2));
-   assert(!rich!"!="(1, 1));
-   assert(!rich!">"(1, 1));
-   assert(!rich!">="(1, 2));
-   assert(!rich!"<"(2, 2));
-   assert(!rich!"<="(3, 2));
-   assert(!rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 1)));
-   assert(!rich!"||"(rich!"<="(1, 0), rich!"=="(1, 0)));
+    assert(!rich!"=="(1, 2));
+    assert(!rich!"!="(1, 1));
+    assert(!rich!">"(1, 1));
+    assert(!rich!">="(1, 2));
+    assert(!rich!"<"(2, 2));
+    assert(!rich!"<="(3, 2));
+    assert(!rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 1)));
+    assert(!rich!"||"(rich!"<="(1, 0), rich!"=="(1, 0)));
 
-   assert(is(typeof(rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 1))) == Rich!bool));
-   assert(is(typeof(rich!"=="(1, 2)) == Rich!bool));
+    assert(is(typeof(rich!"&&"(rich!"=="(1, 1), rich!"!="(1, 1))) ==
+              Rich!bool));
+    assert(is(typeof(rich!"=="(1, 2)) == Rich!bool));
 }
 
 /++
@@ -2611,118 +2626,117 @@ assert(value.reason == "true = (1 == 1)");
 ---
 +/
 template rich(string exp)
-   if(isBinaryOp(exp))
+    if(isBinaryOp(exp))
 {
-   Rich!(bool) rich(T, R)(T a, R b)
-   if(__traits(compiles, { T a; to!string(a); }) &&
-      __traits(compiles, { R b; to!string(b); }))
-   {
-      auto value = binaryFun!("a" ~ exp ~ "b", "a", "b")(a, b);
-      auto reason = to!string(value) ~ " = (" ~
-                    to!string(a) ~ " " ~
-                    exp ~ " " ~
-                    to!string(b) ~ ")";
+    Rich!(bool) rich(T, R)(T a, R b)
+        if(__traits(compiles, { T a; to!string(a); }) &&
+           __traits(compiles, { R b; to!string(b); }))
+    {
+        auto value = binaryFun!("a" ~ exp ~ "b", "a", "b")(a, b);
+        auto reason = to!string(value) ~ " = (" ~
+            to!string(a) ~ " " ~
+            exp ~ " " ~
+            to!string(b) ~ ")";
 
-      typeof(return) result = { value, reason };
-      return result;
-   }
+        typeof(return) result = { value, reason };
+        return result;
+    }
 }
 
 unittest
 {
-   assert(rich!"!"(false));
-   assert(rich!"!"(rich!"!="(1, 1)));
+    assert(rich!"!"(false));
+    assert(rich!"!"(rich!"!="(1, 1)));
 
-   assert(is(typeof(rich!"!"(false)) == Rich!bool));
-   assert(is(typeof(rich!"!"(rich!"!="(1, 1))) == Rich!bool));
+    assert(is(typeof(rich!"!"(false)) == Rich!bool));
+    assert(is(typeof(rich!"!"(rich!"!="(1, 1))) == Rich!bool));
 }
 
 /// ditto
 template rich(string exp)
-   if(exp == "!")
+    if(exp == "!")
 {
-   Rich!bool rich(T)(T a)
-      if(__traits(compiles, { T a; bool b = !a; to!string(a); }))
-   {
-      auto value = !a;
-      auto reason = to!string(value) ~ " = (!" ~ to!string(a) ~ ")";
+    Rich!bool rich(T)(T a)
+        if(__traits(compiles, { T a; bool b = !a; to!string(a); }))
+    {
+        auto value = !a;
+        auto reason = to!string(value) ~ " = (!" ~ to!string(a) ~ ")";
 
-      typeof(return) result = { value, reason };
-      return result;
-   }
+        typeof(return) result = { value, reason };
+        return result;
+    }
 }
 
 /// ditto
 struct Rich(Type)
-   if(is(Type == bool))
+    if(is(Type == bool))
 {
-   @property const Type value() { return _value; }
-   @property const string reason() { return to!string(_reason); }
+    @property const Type value() { return _value; }
+    @property const string reason() { return to!string(_reason); }
 
-   const string toString() { return reason; }
+    const string toString() { return reason; }
 
-   const T opCast(T)() if(is(T == Type)) { return value; }
-   const T opCast(T)() if(is(T == string)) { return toString(); }
+    const T opCast(T)() if(is(T == Type)) { return value; }
+    const T opCast(T)() if(is(T == string)) { return toString(); }
 
-   const bool opEquals(Type rhs) { return value == rhs; }
-   const bool opEquals(ref const Rich!Type rhs) { return opEquals(rhs.value); }
+    const bool opEquals(Type rhs) { return value == rhs; }
+    const bool opEquals(ref const Rich!Type rhs) { return opEquals(rhs.value); }
 
-   const int opCmp(ref const Rich!Type rhs) { return opCmp(rhs.value); }
-   const int opCmp(Type rhs)
-   {
-      if(value < rhs) return -1;
-      else if(value > rhs) return 1;
-      return 0;
-   }
+    const int opCmp(ref const Rich!Type rhs) { return opCmp(rhs.value); }
+    const int opCmp(Type rhs)
+    {
+        if(value < rhs) return -1;
+        else if(value > rhs) return 1;
+        return 0;
+    }
 
-   private Type _value;
-   private string _reason;
+    private Type _value;
+    private string _reason;
 }
 
 private bool isBinaryOp(string op)
 {
-   switch(op)
-   {
-      case "==":
-      case "!=":
-      case ">":
-      case ">=":
-      case "<":
-      case "<=":
-      case "&&":
-      case "||":
-         return true;
-      default:
-         return false;
-   }
+    switch(op)
+    {
+        case "==":
+        case "!=":
+        case ">":
+        case ">=":
+        case "<":
+        case "<=":
+        case "&&":
+        case "||":
+            return true;
+        default:
+            return false;
+    }
 }
 
 static this()
 {
-   auto currentThreadId = atomicOp!"+="(_threadIdCounter, 1);
+    auto currentThreadId = atomicOp!"+="(_threadIdCounter, 1);
 
-   _fatal = new LogFilter(Severity.fatal, config, currentThreadId);
-   _critical = new LogFilter(Severity.critical, config, currentThreadId);
-   _error = new LogFilter(Severity.error, config, currentThreadId);
-   _warning = new LogFilter(Severity.warning, config, currentThreadId);
-   _info = new LogFilter(Severity.info, config, currentThreadId);
+    _fatal = new LogFilter(Severity.fatal, config, currentThreadId);
+    _critical = new LogFilter(Severity.critical, config, currentThreadId);
+    _error = new LogFilter(Severity.error, config, currentThreadId);
+    _warning = new LogFilter(Severity.warning, config, currentThreadId);
+    _info = new LogFilter(Severity.info, config, currentThreadId);
 }
 
 shared static this()
 {
+    auto args = Runtime.args;
 
-   auto args = Runtime.args;
+    auto loggerConfig = FileLogger.Configuration.create();
 
-   auto loggerConfig = FileLogger.Configuration.create();
+    try loggerConfig.parseCommandLine(args);
+    catch(Exception e) { /+ ignore any error +/ }
 
-   try loggerConfig.parseCommandLine(args);
-   catch(Exception e) { /+ ignore any error +/ }
+    auto logger = new FileLogger(loggerConfig);
+    config = new Configuration(logger);
 
-   auto logger = new FileLogger(loggerConfig);
-   config = new Configuration(logger);
-
-   try config.parseCommandLine(args);
-   catch(Exception e) { /+ ignore any error +/ }
+    try config.parseCommandLine(args);
+    catch(Exception e) { /+ ignore any error +/ }
 }
 
 private LogFilter _fatal;
@@ -2733,98 +2747,99 @@ private LogFilter _info;
 
 version(unittest)
 {
-   private template isWriter(Writer)
-   {
-      enum bool isWriter =
-         __traits(compiles, { Writer w;
-                              if(!w.isOpen) w.open("name", "w");
-                              w.setvbuf(1024);
-                              w.writef("format", 1, true, "", 3.4);
-                              w.flush();
-                              w = stderr; });
+    private template isWriter(Writer)
+    {
+        enum bool isWriter =
+            __traits(compiles, { Writer w;
+                                 if(!w.isOpen) w.open("name", "w");
+                                 w.setvbuf(1024);
+                                 w.writef("format", 1, true, "", 3.4);
+                                 w.flush();
+                                 w = stderr; });
    }
 
-   // Test severity filtering
-   private class TestLogger : Logger
-   {
-      shared void log(const ref LogMessage msg)
-      {
-         called = true;
-         severity = msg.severity;
-         message = msg.message.idup;
-      }
+    // Test severity filtering
+    private class TestLogger : Logger
+    {
+        shared void log(const ref LogMessage msg)
+        {
+            called = true;
+            severity = msg.severity;
+            message = msg.message.idup;
+        }
 
-      shared void flush()
-      {
-         flushCalled = true;
-      }
+        shared void flush()
+        {
+            flushCalled = true;
+        }
 
-      shared void clear()
-      {
-         message = string.init;
-         called = false;
-         flushCalled = false;
-      }
+        shared void clear()
+        {
+            message = string.init;
+            called = false;
+            flushCalled = false;
+        }
 
-      string message;
-      Severity severity;
-      bool called;
-      bool flushCalled;
-   }
+        string message;
+        Severity severity;
+        bool called;
+        bool flushCalled;
+    }
 
-   private struct TestWriter
-   {
-      struct Data
-      {
-         size_t bufferSize;
-         bool flushed;
-         string mode;
+    private struct TestWriter
+    {
+        struct Data
+        {
+            size_t bufferSize;
+            bool flushed;
+            string mode;
 
-         string[] lines;
-      }
+            string[] lines;
+        }
 
-      @property const bool isOpen() { return (name in writers) !is null; }
-      void open(string filename, in char[] mode = "")
-      {
-         assert(name !in writers);
-         assert(filename !in writers);
+        @property const bool isOpen() { return (name in writers) !is null; }
 
-         name = filename;
-         writers[name] = Data.init;
+        void open(string filename, in char[] mode = "")
+        {
+            assert(name !in writers);
+            assert(filename !in writers);
 
-         writers[name].mode = mode.idup;
-      }
+            name = filename;
+            writers[name] = Data.init;
 
-      void setvbuf(size_t size, int mode = 0)
-      {
-         assert(name in writers);
-         writers[name].bufferSize = size;
-      }
+            writers[name].mode = mode.idup;
+        }
 
-      void writef(S...)(S args)
-      {
-         assert(name in writers, name);
-         auto writer = appender!string();
-         formattedWrite(writer, args);
-         writers[name].lines ~= writer.data;
-      }
+        void setvbuf(size_t size, int mode = 0)
+        {
+            assert(name in writers);
+            writers[name].bufferSize = size;
+        }
 
-      void flush()
-      {
-         assert(name in writers);
-         writers[name].flushed = true;
-      }
+        void writef(S...)(S args)
+        {
+            assert(name in writers, name);
+            auto writer = appender!string();
+            formattedWrite(writer, args);
+            writers[name].lines ~= writer.data;
+        }
 
-      void opAssign(File rhs)
-      {
-         // assume it is stderr
-         open("stderr file", "w");
-      }
+        void flush()
+        {
+            assert(name in writers);
+            writers[name].flushed = true;
+        }
 
-      string name;
+        void opAssign(File rhs)
+        {
+            // assume it is stderr
+            open("stderr file", "w");
+        }
 
-      static void clear() { writers = null; }
+        string name;
 
-      static Data[string] writers;
-   }
+        static void clear() { writers = null; }
+
+        static Data[string] writers;
+    }
 }
