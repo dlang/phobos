@@ -237,7 +237,7 @@ unittest
     assert(logger.message == loggedMessage);
 
     logger.clear();
-    logError.format("%s", loggedMessage);
+    logError.writef("%s", loggedMessage);
     assert(logger.called);
     assert(logger.severity == Severity.error);
     assert(logger.message == loggedMessage);
@@ -257,7 +257,7 @@ unittest
     assert(logger.flushCalled);
 
     logger.clear();
-    logWarning.format("%s", loggedMessage);
+    logWarning.writef("%s", loggedMessage);
     assert(logger.called);
     assert(logger.severity == Severity.warning);
     assert(logger.message == loggedMessage);
@@ -282,7 +282,7 @@ Examples:
 ---
 error("Log an %s message!", Severity.error);
 error.write("Log an ", Severity.error, " message!");
-error.format("Also logs an %s message!", Severity.error);
+error.writef("Also logs an %s message!", Severity.error);
 ---
 Logs a message if the specified severity level is enable.
 
@@ -434,7 +434,7 @@ info.write("The value of pi is ", pi);
      +/
     void write(string file = __FILE__, int line = __LINE__, T...)(lazy T args)
     {
-        format!(file, line)("%1:$s", args);
+        writef!(file, line)("%1:$s", args);
     }
 
     /++
@@ -447,13 +447,13 @@ info.write("The value of pi is ", pi);
 ---
 auto goldenRatio = 1.61803399;
 
-vlog(1).format("The number %s is the golden ratio", goldenRatio);
+vlog(1).writef("The number %s is the golden ratio", goldenRatio);
 
 // The same as above...
 vlog(1)("The number %s is the golden ration", goldenRatio);
 ---
      +/
-    void format(string file = __FILE__, int line = __LINE__, T...)
+    void writef(string file = __FILE__, int line = __LINE__, T...)
                (lazy string fmt, lazy T args)
     {
         if(willLog)
@@ -475,7 +475,7 @@ vlog(1)("The number %s is the golden ration", goldenRatio);
             _config.logger.log(_message);
         }
     }
-    alias format opCall; /// ditto
+    alias writef opCall; /// ditto
 
     private void handleSeverity()
     {
@@ -520,7 +520,7 @@ vlog(1)("The number %s is the golden ration", goldenRatio);
 
         // test format
         logger.clear();
-        verboseLog.format("%s", loggedMessage);
+        verboseLog.writef("%s", loggedMessage);
         assert(logger.called);
         assert(logger.severity == Severity.warning);
         assert(logger.message == loggedMessage);
@@ -534,13 +534,13 @@ vlog(1)("The number %s is the golden ration", goldenRatio);
         // test wrong module
         logger.clear();
         verboseLog = logWarning.vlog(4, "not_this");
-        verboseLog.format("%s", loggedMessage);
+        verboseLog.writef("%s", loggedMessage);
         assert(!logger.called);
 
         // test verbose level
         logger.clear();
         verboseLog = logWarning.vlog(3, "not_this");
-        verboseLog.format("%s", loggedMessage);
+        verboseLog.writef("%s", loggedMessage);
         assert(logger.called);
         assert(logger.severity == Severity.warning);
         assert(logger.message == loggedMessage);
@@ -549,7 +549,7 @@ vlog(1)("The number %s is the golden ration", goldenRatio);
         logger.clear();
         auto infoVerboseLog = logInfo.vlog(2);
         assert(!infoVerboseLog.willLog);
-        infoVerboseLog.format("%s", loggedMessage);
+        infoVerboseLog.writef("%s", loggedMessage);
         assert(!logger.called);
     }
 
@@ -602,7 +602,7 @@ unittest
 
         filter.write("hello ", 1, " world");
         filter("format string", true, 4, 5.0, "hello world");
-        filter.format("format string", true, 4, 5.0);
+        filter.writef("format string", true, 4, 5.0);
         filter.when(true).write("message");
         filter.when(rich!"=="(0, 0)).write("better message");
         filter.vlog(0, "file");
@@ -624,8 +624,8 @@ final class NoopLogFilter
     { return this; }
 
     nothrow const void write(T...)(lazy T args) {}
-    nothrow const void format(T...)(lazy string fmt, lazy T args) {}
-    alias format opCall;
+    nothrow const void writef(T...)(lazy string fmt, lazy T args) {}
+    alias writef opCall;
 
     pure nothrow const ref const(NoopLogFilter) vlog(int level,
                                                      string file = null)
