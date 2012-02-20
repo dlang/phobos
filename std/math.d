@@ -1260,7 +1260,7 @@ L_subnormal:
             fld1;
             fscale;
             fstp real ptr [RSP+8]; // scratchreal = 2^scratchint
-            fstp ST(0),ST;         // drop scratchint
+            fstp ST(0);         // drop scratchint
             jmp L_normal;
 
 L_extreme: // Extreme exponent. X is very large positive, very
