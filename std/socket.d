@@ -3076,8 +3076,8 @@ class TcpSocket: Socket
         connect(connectTo);
     }
 
-    //create new socket for reconnect
-    void createSocket()
+    //create new socket Handle for reconnect
+    void createSocketHandle()
     {
         close();
         
@@ -3097,7 +3097,7 @@ unittest
     stTcpSocket.close();
     assert(stTcpSocket.handle == socket_t.init);
     
-    stTcpSocket.createSocket();
+    stTcpSocket.createSocketHandle();
     assert(stTcpSocket.handle != socket_t.init);
 
 }
