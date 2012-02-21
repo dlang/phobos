@@ -496,8 +496,7 @@ private void _send(T...)( Tid tid, T vals )
  */
 private void _send(T...)( MsgType type, Tid tid, T vals )
 {
-    auto msg = Message( type, vals );
-    tid.mbox.put( msg );
+    tid.mbox.put( Message( type, vals ) );
 }
 
 
@@ -1043,8 +1042,7 @@ private
                     if( *depends && tid != owner )
                     {
                         auto e = new LinkTerminated( tid );
-                        auto msg = Message( MsgType.standard, e );
-                        if( onStandardMsg( msg ) )
+                        if( onStandardMsg( Message( MsgType.standard, e ) ) )
                             return true;
                         throw e;
                     }
@@ -1053,8 +1051,7 @@ private
                 {
                     owner = Tid.init;
                     auto e = new OwnerTerminated( tid );
-                    auto msg = Message( MsgType.standard, e );
-                    if( onStandardMsg( msg ) )
+                    if( onStandardMsg( Message( MsgType.standard, e ) ) )
                         return true;
                     throw e;
                 }

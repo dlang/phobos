@@ -799,12 +799,6 @@ public:
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
      +/
-    bool opEquals(const SysTime rhs) const pure nothrow
-    {
-        return opEquals(rhs);
-    }
-
-    /// ditto
     bool opEquals(const ref SysTime rhs) const pure nothrow
     {
         return _stdTime == rhs._stdTime;
@@ -30822,12 +30816,6 @@ public:
 
 
     ///
-    bool opEquals(const StopWatch rhs) const pure nothrow
-    {
-        return opEquals(rhs);
-    }
-
-    /// ditto
     bool opEquals(const ref StopWatch rhs) const pure nothrow
     {
         return _timeStart == rhs._timeStart &&
