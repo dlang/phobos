@@ -3076,7 +3076,8 @@ class TcpSocket: Socket
         connect(connectTo);
     }
 
-    //create new socket Handle for reconnect
+    /// Create new socket Handle for reconnect, it can reuse socket object to prevent GC,
+    /// when process tens of thousands connection for server high concurrency programming.
     void createSocketHandle()
     {
         close();
