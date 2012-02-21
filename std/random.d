@@ -134,9 +134,9 @@ version (Posix)
  *   $(LI it has a 'bool isUniformRandom' field readable in CTFE)
  * )
  */
-template isRandomNumberGenerator(Rng, ElementType)
+template isUniformRNG(Rng, ElementType)
 {
-    enum bool isRandomNumberGenerator = isInputRange!Rng &&
+    enum bool isUniformRNG = isInputRange!Rng &&
         is(typeof(Rng.front) == ElementType) &&
         is(typeof(
         {
@@ -147,9 +147,9 @@ template isRandomNumberGenerator(Rng, ElementType)
 /**
  * ditto
  */
-template isRandomNumberGenerator(Rng)
+template isUniformRNG(Rng)
 {
-    enum bool isRandomNumberGenerator = isInputRange!Rng &&
+    enum bool isUniformRNG = isInputRange!Rng &&
         is(typeof(
         {
             static assert(Rng.isUniformRandom); //tag
@@ -168,7 +168,7 @@ template isRandomNumberGenerator(Rng)
  */
 template isSeedable(Rng, ElementType)
 {
-    enum bool isSeedable = isRandomNumberGenerator!(Rng, ElementType) &&
+    enum bool isSeedable = isUniformRNG!(Rng, ElementType) &&
         is(typeof(
         {
             Rng r = void;                 // can define a Rng object
@@ -179,7 +179,7 @@ template isSeedable(Rng, ElementType)
 ///ditto
 template isSeedable(Rng)
 {
-    enum bool isSeedable = isRandomNumberGenerator!Rng &&
+    enum bool isSeedable = isUniformRNG!Rng &&
         is(typeof(
         {
             Rng r = void;                       // can define a Rng object
@@ -195,8 +195,8 @@ unittest
         @property bool empty() {return false;}
         void popFront() {}
     }
-    assert(!isRandomNumberGenerator!(NoRng, uint));
-    assert(!isRandomNumberGenerator!(NoRng));
+    assert(!isUniformRNG!(NoRng, uint));
+    assert(!isUniformRNG!(NoRng));
     assert(!isSeedable!(NoRng, uint));
     assert(!isSeedable!(NoRng));
     
@@ -208,8 +208,8 @@ unittest
         
         enum isUniformRandom = false;
     }
-    assert(!isRandomNumberGenerator!(NoRng2, uint));
-    assert(!isRandomNumberGenerator!(NoRng2));
+    assert(!isUniformRNG!(NoRng2, uint));
+    assert(!isUniformRNG!(NoRng2));
     assert(!isSeedable!(NoRng2, uint));
     assert(!isSeedable!(NoRng2));
     
@@ -220,8 +220,8 @@ unittest
         
         enum isUniformRandom = true;
     }
-    assert(!isRandomNumberGenerator!(NoRng3, uint));
-    assert(!isRandomNumberGenerator!(NoRng3));
+    assert(!isUniformRNG!(NoRng3, uint));
+    assert(!isUniformRNG!(NoRng3));
     assert(!isSeedable!(NoRng3, uint));
     assert(!isSeedable!(NoRng3));
     
@@ -233,8 +233,8 @@ unittest
         
         enum isUniformRandom = true;
     }
-    assert(isRandomNumberGenerator!(validRng, uint));
-    assert(isRandomNumberGenerator!(validRng));
+    assert(isUniformRNG!(validRng, uint));
+    assert(isUniformRNG!(validRng));
     assert(!isSeedable!(validRng, uint));
     assert(!isSeedable!(validRng));
 
@@ -246,8 +246,8 @@ unittest
         void seed(uint val){}
         enum isUniformRandom = true;
     }
-    assert(isRandomNumberGenerator!(seedRng, uint));
-    assert(isRandomNumberGenerator!(seedRng));
+    assert(isUniformRNG!(seedRng, uint));
+    assert(isUniformRNG!(seedRng));
     assert(isSeedable!(seedRng, uint));
     assert(isSeedable!(seedRng));
 }
@@ -460,10 +460,10 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 unittest
 {
     assert(isForwardRange!MinstdRand);
-    assert(isRandomNumberGenerator!MinstdRand);
-    assert(isRandomNumberGenerator!MinstdRand0);
-    assert(isRandomNumberGenerator!(MinstdRand, uint));
-    assert(isRandomNumberGenerator!(MinstdRand0, uint));
+    assert(isUniformRNG!MinstdRand);
+    assert(isUniformRNG!MinstdRand0);
+    assert(isUniformRNG!(MinstdRand, uint));
+    assert(isUniformRNG!(MinstdRand0, uint));
     assert(isSeedable!MinstdRand);
     assert(isSeedable!MinstdRand0);
     assert(isSeedable!(MinstdRand, uint));
@@ -689,8 +689,8 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
-    assert(isRandomNumberGenerator!Mt19937);
-    assert(isRandomNumberGenerator!(Mt19937, uint));
+    assert(isUniformRNG!Mt19937);
+    assert(isUniformRNG!(Mt19937, uint));
     assert(isSeedable!Mt19937);
     assert(isSeedable!(Mt19937, uint));
     Mt19937 gen;
@@ -926,8 +926,8 @@ alias Xorshift128 Xorshift;                                /// ditto
 unittest
 {
     assert(isForwardRange!Xorshift);
-    assert(isRandomNumberGenerator!Xorshift);
-    assert(isRandomNumberGenerator!(Xorshift, uint));
+    assert(isUniformRNG!Xorshift);
+    assert(isUniformRNG!(Xorshift, uint));
     assert(isSeedable!Xorshift);
     assert(isSeedable!(Xorshift, uint));
 
@@ -998,8 +998,8 @@ alias Mt19937 Random;
 
 unittest
 {
-    assert(isRandomNumberGenerator!Random);
-    assert(isRandomNumberGenerator!(Random, uint));
+    assert(isUniformRNG!Random);
+    assert(isUniformRNG!(Random, uint));
     assert(isSeedable!Random);
     assert(isSeedable!(Random, uint));
 }
@@ -1364,7 +1364,7 @@ foreach (e; randomCover(a, rnd))
 }
 ----
  */
-struct RandomCover(Range, Random) if (isRandomNumberGenerator!Random)
+struct RandomCover(Range, Random) if (isUniformRNG!Random)
 {
     private Range _input;
     private Random _rnd;
@@ -1433,7 +1433,7 @@ struct RandomCover(Range, Random) if (isRandomNumberGenerator!Random)
 
 /// Ditto
 RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
-    if(isRandomNumberGenerator!Random)
+    if(isUniformRNG!Random)
 {
     return typeof(return)(r, rnd);
 }
@@ -1480,7 +1480,7 @@ foreach (e; randomSample(a, 5))
 ----
  */
 struct RandomSample(R, Random = void)
-    if(isRandomNumberGenerator!Random || is(Random == void))
+    if(isUniformRNG!Random || is(Random == void))
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1606,7 +1606,7 @@ auto randomSample(R)(R r, size_t n) if (hasLength!R)
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
-if(isInputRange!R && isRandomNumberGenerator!Random)
+if(isInputRange!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, total);
     ret.gen = gen;
@@ -1615,7 +1615,7 @@ if(isInputRange!R && isRandomNumberGenerator!Random)
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
-if (isInputRange!R && hasLength!R && isRandomNumberGenerator!Random)
+if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, r.length);
     ret.gen = gen;
