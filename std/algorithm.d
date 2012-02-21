@@ -437,6 +437,8 @@ template map(fun...) if (fun.length >= 1)
                 {
                     return _input.length;
                 }
+                
+                alias length opDollar;
             }
 
             static if (hasSlicing!R)
@@ -483,6 +485,7 @@ unittest
     const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
     auto squares = map!("a * a")(arr1Const);
+    assert(squares[$ - 1] == 16);
     assert(equal(squares, [ 1, 4, 9, 16 ][]));
     assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
 
@@ -3264,6 +3267,8 @@ public:
     {
         return needle.length;
     }
+    
+    alias length opDollar;
 }
 
 /// Ditto
@@ -7777,14 +7782,22 @@ unittest
     }
 }
 
-// canFind
+/**
+Forwards to $(D any) for backwards compatibility.
+
+$(RED Scheduled for deprecation in August 2012. Please use $(D any) instead.)
+*/
+bool canFind(alias pred, Range)(Range range)
+{
+    return any!pred(range);
+}
+
 /**
 Returns $(D true) if and only if a value $(D v) satisfying the
 predicate $(D pred) can be found in the forward range $(D
 range). Performs $(BIGOH r.length) evaluations of $(D pred).
  */
-
-bool canFind(alias pred, Range)(Range range)
+bool any(alias pred, Range)(Range range)
 if (is(typeof(find!pred(range))))
 {
     return !find!pred(range).empty;
@@ -7796,6 +7809,29 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = [ 1, 2, 0, 4 ];
     assert(canFind!"a == 2"(a));
+    assert(any!"a == 2"(a));
+}
+
+/**
+Returns $(D true) if and only if all values in $(D range) satisfy the 
+predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
+
+Examples:
+---
+assert(all!"a & 1"([1, 3, 5, 7, 9]));
+assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+---
+*/
+bool all(alias pred, R)(R range)
+if(isInputRange!R && is(typeof(unaryFun!pred(range.front))))
+{
+    return find!(not!(unaryFun!pred))(range).empty;
+}
+
+unittest
+{
+    assert(all!"a & 1"([1, 3, 5, 7, 9]));
+    assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 }
 
 // Scheduled for deprecation.  Use std.range.SortedRange.canFind.
@@ -8003,6 +8039,8 @@ public:
             }
             return result;
         }
+        
+        alias length opDollar;
     }
 }
 

@@ -142,6 +142,8 @@ enum dummyRanges = q{
             @property size_t length() {
                 return arr.length;
             }
+            
+            alias length opDollar;
         }
     }
 
@@ -623,6 +625,7 @@ unittest
         void popBack();
         ref int opIndex(uint);
         @property size_t length();
+        alias length opDollar;
         //int opSlice(uint, uint);
     }
     static assert(isRandomAccessRange!(D));
@@ -649,6 +652,7 @@ unittest
 
         int opIndex(size_t n) const { return 0; }
         @property size_t length() const { return 0; }
+        alias length opDollar;
 
         void put(int e){  }
     }
@@ -1093,6 +1097,8 @@ if (isBidirectionalRange!(Unqual!Range))
                 {
                     return source.length;
                 }
+                
+                alias length opDollar;
             }
         }
 
@@ -1387,10 +1393,14 @@ if (isInputRange!(Unqual!Range))
                 }
 
             static if (hasLength!R)
+            {
                 @property auto length()
                 {
                     return (source.length + _n - 1) / _n;
                 }
+                
+                alias length opDollar;
+            }
         }
         return Result(r, n);
     }
@@ -1733,6 +1743,7 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             }
 
             static if (allSatisfy!(hasLength, R))
+            {
                 @property size_t length()
                 {
                     size_t result;
@@ -1742,6 +1753,9 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                     }
                     return result;
                 }
+                
+                alias length opDollar;
+            }
 
             static if (allSatisfy!(isRandomAccessRange, R))
             {
@@ -2051,6 +2065,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 }
                 return result;
             }
+            
+            alias length opDollar;
         }
     }
 
@@ -2212,6 +2228,8 @@ if (isInputRange!(Unqual!Range)
         {
             return _maxAvailable;
         }
+        
+        alias length opDollar;
     }
     else static if (hasLength!R)
     {
@@ -2219,6 +2237,8 @@ if (isInputRange!(Unqual!Range)
         {
             return min(_maxAvailable, source.length);
         }
+        
+        alias length opDollar;
     }
 
     static if (isRandomAccessRange!R)
@@ -2439,6 +2459,7 @@ if (isInputRange!R && !hasSlicing!R)
             }
             void popFront() { _input.popFront(); --_n; }
             @property size_t length() const { return _n; }
+            alias length opDollar;
 
             static if (isForwardRange!R)
                 auto save() { return this; }
@@ -2532,6 +2553,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
             auto save() { return Result(_source.save, empty); }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
+            alias length opDollar;
             auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
             auto opSlice(size_t m, size_t n)
             {
@@ -3284,6 +3306,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
    $(D length).
 */
     static if (allSatisfy!(hasLength, R))
+    {
         @property auto length()
         {
             CommonType!(staticMap!(lengthType, R)) result = ranges[0].length;
@@ -3303,6 +3326,9 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             }
             return result;
         }
+        
+        alias length opDollar;
+    }
 
 /**
    Returns a slice of the range. Defined only if all range define
@@ -4059,6 +4085,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             return unsigned((pastLast - current) / step);
         }
+        
+        alias length opDollar;
     }
 
     return Result(begin, end, step);
@@ -4123,6 +4151,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             return unsigned(pastLast - current);
         }
+        
+        alias length opDollar;
     }
 
     return Result(begin, end);
@@ -4206,6 +4236,8 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         {
             return count - index;
         }
+        
+        alias length opDollar;
     }
 
     return Result(begin, end, step);
@@ -4215,6 +4247,7 @@ unittest
 {
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
+    assert(r[$ - 1] == 9);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
 
     auto rSlice = r[2..8];
@@ -4809,6 +4842,8 @@ struct Transversal(Ror,
             {
                 return _input.length;
             }
+            
+            alias length opDollar;
         }
 
 /**
@@ -5099,6 +5134,8 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
         {
             return _indices.length;
         }
+        
+        alias length opDollar;
     }
 
     static if(isRandomAccessRange!Indices)
@@ -5293,6 +5330,8 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
         return (_source.length / _chunkSize) +
             (_source.length % _chunkSize > 0);
     }
+    
+    alias length opDollar;
 
     /// Ditto
     @property auto back()
@@ -5585,6 +5624,9 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
 
     ///
     @property size_t length();
+    
+    ///
+    alias length opDollar;
 
     // Can't support slicing until issues with requiring slicing for all
     // finite random access ranges are fully resolved.
@@ -5780,6 +5822,8 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     @property size_t length() {
                         return _range.length;
                     }
+                    
+                    alias length opDollar;
 
                     // Can't support slicing until all the issues with
                     // requiring slicing support for finite random access
@@ -6085,6 +6129,8 @@ if (isRandomAccessRange!Range)
     {
         return _input.length;
     }
+    
+    alias length opDollar;
 
 /**
    Releases the controlled range and returns it.
