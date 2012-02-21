@@ -3075,6 +3075,31 @@ class TcpSocket: Socket
         this(connectTo.addressFamily());
         connect(connectTo);
     }
+
+    //create new socket for reconnect
+    void createSocket()
+    {
+        close();
+        
+        auto handle = cast(socket_t) socket(_family, SocketType.STREAM, ProtocolType.TCP);
+        if(handle == socket_t.init)
+            throw new SocketOSException("Unable to create socket");
+        setSock(handle);
+    }
+
+}
+
+unittest
+{
+    TcpSocket stTcpSocket = new TcpSocket();
+    assert(stTcpSocket.handle != socket_t.init);
+    
+    stTcpSocket.close();
+    assert(stTcpSocket.handle == socket_t.init);
+    
+    stTcpSocket.createSocket();
+    assert(stTcpSocket.handle != socket_t.init);
+
 }
 
 
