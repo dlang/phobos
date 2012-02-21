@@ -759,6 +759,13 @@ unittest
 }
 
 private struct DelegateFaker(F) {
+    // for @safe
+    static F castToF(THIS)(THIS x) @trusted
+    {
+        return cast(F) x;
+    }
+    
+    
     /*
      * What all the stuff below does is this:
      *--------------------
@@ -791,7 +798,7 @@ private struct DelegateFaker(F) {
                 // a function pointer that points to the function to be called.
                 // Cast it to the correct type and call it.
 
-                auto fp = cast(F) &this; // XXX doesn't work with @safe
+                auto fp = castToF(&this);
                 return fp(args);
             };
         }
@@ -923,11 +930,11 @@ unittest {
         auto dg_pure = toDelegate(&func_pure);
         auto dg_nothrow = toDelegate(&func_nothrow);
         auto dg_property = toDelegate(&func_property);
-        //auto dg_safe = toDelegate(&func_safe);
+        auto dg_safe = toDelegate(&func_safe);
         auto dg_trusted = toDelegate(&func_trusted);
         auto dg_system = toDelegate(&func_system);
         auto dg_pure_nothrow = toDelegate(&func_pure_nothrow);
-        //auto dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
+        auto dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
 
         //static assert(is(typeof(dg_ref) == ref int delegate())); // [BUG@DMD]
         static assert(is(typeof(dg_pure) == int delegate() pure));

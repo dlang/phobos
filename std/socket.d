@@ -52,7 +52,7 @@ import core.time : dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce;
 
-version(Win32)
+version(Windows)
 {
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
@@ -259,7 +259,7 @@ class SocketFeatureException: SocketException
 /// was in non-blocking mode and the operation would have blocked.
 bool wouldHaveBlocked()
 {
-    version(Win32)
+    version(Windows)
         return _lasterr() == WSAEWOULDBLOCK;
     else version(Posix)
         return _lasterr() == EAGAIN;
@@ -273,7 +273,7 @@ private __gshared typeof(&freeaddrinfo) freeaddrinfoPointer;
 
 shared static this()
 {
-    version(Win32)
+    version(Windows)
     {
         WSADATA wd;
 
@@ -308,7 +308,7 @@ shared static this()
 
 shared static ~this()
 {
-    version(Win32)
+    version(Windows)
     {
         WSACleanup();
     }
@@ -1917,7 +1917,7 @@ alias TimeVal timeval;
 class SocketSet
 {
 private:
-    version(Win32)
+    version(Windows)
     {
         // the maximum number of sockets the allocated fd_set can hold
         uint fdsetCapacity;
@@ -1947,7 +1947,7 @@ public:
      */
     this(uint max)
     {
-        version(Win32)
+        version(Windows)
         {
             fdsetCapacity = max;
             set = FD_CREATE(max);
@@ -1984,7 +1984,7 @@ public:
     void add(socket_t s)
     {
         // Make sure too many sockets don't get added.
-        version(Win32)
+        version(Windows)
         {
             enforce(count < fdsetCapacity, new SocketParameterException(
                 "SocketSet capacity exceeded"));
@@ -2059,7 +2059,7 @@ public:
     /// return value varies from platform to platform.
     uint max() const
     {
-        version(Win32)
+        version(Windows)
         {
             return fdsetCapacity;
         }
@@ -2078,7 +2078,7 @@ public:
 
     int selectn() const
     {
-        version(Win32)
+        version(Windows)
         {
             return count;
         }
@@ -2180,7 +2180,7 @@ private:
     socket_t sock;
     AddressFamily _family;
 
-    version(Win32)
+    version(Windows)
         bool _blocking = false;         /// Property to get or set whether the socket is blocking or nonblocking.
 
     // The WinSock timeouts seem to be effectively skewed by a constant
@@ -2311,7 +2311,7 @@ public:
      */
     @property bool blocking() const
     {
-        version(Win32)
+        version(Windows)
         {
             return _blocking;
         }
@@ -2324,7 +2324,7 @@ public:
     /// ditto
     @property void blocking(bool byes)
     {
-        version(Win32)
+        version(Windows)
         {
             uint num = !byes;
             if(_SOCKET_ERROR == ioctlsocket(sock, FIONBIO, &num))
@@ -2385,7 +2385,7 @@ public:
 
             if(!blocking)
             {
-                version(Win32)
+                version(Windows)
                 {
                     if(WSAEWOULDBLOCK == err)
                         return;
@@ -2447,7 +2447,7 @@ public:
             assert(newSocket.sock == socket_t.init);
 
             newSocket.setSock(newsock);
-            version(Win32)
+            version(Windows)
                 newSocket._blocking = _blocking;                 //inherits blocking mode
             newSocket._family = _family;             //same family
         }
@@ -2469,7 +2469,7 @@ public:
 
     private static void _close(socket_t sock)
     {
-        version(Win32)
+        version(Windows)
         {
             .closesocket(sock);
         }
@@ -2625,7 +2625,7 @@ public:
     //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags)
     {
-        version(Win32)         // Does not use size_t
+        version(Windows)         // Does not use size_t
         {
             return buf.length
                    ? .recv(sock, buf.ptr, to!int(buf.length), cast(int)flags)
@@ -2657,7 +2657,7 @@ public:
         if (from is null || from.addressFamily != _family)
             from = createAddress();
         socklen_t nameLen = from.nameLen();
-        version(Win32)
+        version(Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, from.name(), &nameLen);
             assert(from.addressFamily() == _family);
@@ -2685,7 +2685,7 @@ public:
     {
         if(!buf.length)         //return 0 and don't think the connection closed
             return 0;
-        version(Win32)
+        version(Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, to!int(buf.length), cast(int)flags, null, null);
             // if(!read) //connection closed
@@ -2739,7 +2739,7 @@ public:
                 new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
         // WinSock returns the timeout values as a milliseconds DWORD,
         // while Linux and BSD return a timeval struct.
-        version (Win32)
+        version (Windows)
         {
             int msecs;
             getOption(level, option, (&msecs)[0 .. 1]);
@@ -2826,7 +2826,7 @@ public:
         enforce(value >= dur!"hnsecs"(0), new SocketParameterException(
                     "Timeout duration must not be negative."));
 
-        version (Win32)
+        version (Windows)
         {
             auto msecs = to!int(value.total!"msecs"());
             if (msecs != 0 && option == SocketOption.RCVTIMEO)
@@ -2930,7 +2930,7 @@ public:
         fd_set* fr, fw, fe;
         int n = 0;
 
-        version(Win32)
+        version(Windows)
         {
             // Windows has a problem with empty fd_set`s that aren't null.
             fr = (checkRead && checkRead.count()) ? checkRead.toFd_set() : null;
@@ -2978,7 +2978,7 @@ public:
 
         int result = .select(n, fr, fw, fe, &tv.ctimeval);
 
-        version(Win32)
+        version(Windows)
         {
             if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
                 return -1;
@@ -3133,7 +3133,7 @@ Socket[2] socketPair()
 
         return [toSocket(0), toSocket(1)];
     }
-    else version(Win32)
+    else version(Windows)
     {
         // We do not have socketpair() on Windows, just manually create a
         // pair of sockets connected over some localhost port.

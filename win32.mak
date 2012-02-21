@@ -168,6 +168,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\core_exception.html \
 	$(DOC)\core_memory.html \
 	$(DOC)\core_runtime.html \
+	$(DOC)\core_simd.html \
 	$(DOC)\core_time.html \
 	$(DOC)\core_thread.html \
 	$(DOC)\core_vararg.html \
@@ -281,7 +282,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\regex.d std\datebase.d \
 	std\__fileinit.d std\gregorian.d std\exception.d std\ascii.d
 
-SRC_STD_NET= std\net\isemail.d
+SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -664,6 +665,9 @@ $(DOC)\core_memory.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\core_runtime.html : $(STDDOC) $(DRUNTIME)\src\core\runtime.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_runtime.html $(STDDOC) $(DRUNTIME)\src\core\runtime.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_simd.html : $(STDDOC) $(DRUNTIME)\src\core\simd.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_simd.html $(STDDOC) $(DRUNTIME)\src\core\simd.d -I$(DRUNTIME)\src\
 
 $(DOC)\core_time.html : $(STDDOC) $(DRUNTIME)\src\core\time.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_time.html $(STDDOC) $(DRUNTIME)\src\core\time.d -I$(DRUNTIME)\src\

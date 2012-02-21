@@ -1628,7 +1628,7 @@ struct Array(T) if (!is(T : const(bool)))
             emplace(p + i, e);
             assert(p[i] == e);
         }
-        _data.RefCounted.initialize(p[0 .. values.length]);
+        _data = Data(p[0 .. values.length]);
     }
 
 /**
@@ -1814,7 +1814,7 @@ Complexity: $(BIGOH 1)
             {
                 GC.addRange(p, sz);
             }
-            _data.RefCounted.initialize(cast(T[]) p[0 .. 0]);
+            _data = Data(cast(T[]) p[0 .. 0]);
             _data._capacity = elements;
         }
         else
@@ -4169,7 +4169,7 @@ struct RBNode(V)
  * ignored on insertion.  If duplicates are allowed, then new elements are
  * inserted after all existing duplicate elements.
  */
-class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
+final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
     alias binaryFun!less _less;
@@ -4817,7 +4817,19 @@ rbt.removeKey(1, 1, 0);
 assert(std.algorithm.equal(rbt[], [5]));
 --------------------
       +/
-    size_t removeKey(U)(U[] elems...)
+    size_t removeKey(U...)(U elems)
+        if(allSatisfy!(isImplicitlyConvertibleToElem, U))
+    {
+        Elem[U.length] toRemove;
+
+        foreach(i, e; elems)
+            toRemove[i] = e;
+
+        return removeKey(toRemove[]);
+    }
+
+    /++ Ditto +/
+    size_t removeKey(U)(U[] elems)
         if(isImplicitlyConvertible!(U, Elem))
     {
         immutable lenBefore = length;
@@ -4839,17 +4851,26 @@ assert(std.algorithm.equal(rbt[], [5]));
     size_t removeKey(Stuff)(Stuff stuff)
         if(isInputRange!Stuff &&
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
-           !is(Stuff == Elem[]))
+           !isDynamicArray!Stuff)
     {
         //We use array in case stuff is a Range from this RedBlackTree - either
         //directly or indirectly.
         return removeKey(array(stuff));
     }
 
+    //Helper for removeKey.
+    private template isImplicitlyConvertibleToElem(U)
+    {
+        enum isImplicitlyConvertibleToElem = isImplicitlyConvertible!(U, Elem);
+    }
+
     static if(doUnittest) unittest
     {
         auto rbt = new RedBlackTree(5, 4, 3, 7, 2, 1, 7, 6, 2, 19, 45);
 
+        //The cast(Elem) is because these tests are instantiated with a variety
+        //of numeric types, and the literals are all int, which is not always
+        //implicitly convertible to Elem (e.g. short).
         static if(allowDuplicates)
         {
             assert(rbt.length == 11);
@@ -5131,6 +5152,36 @@ unittest
     assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
     rbt.removeKey(1, 1, 0);
     assert(std.algorithm.equal(rbt[], [5]));
+}
+
+//Tests for removeKey
+unittest
+{
+    {
+        auto rbt = redBlackTree(["hello", "world", "foo", "bar"]);
+        assert(equal(rbt[], ["bar", "foo", "hello", "world"]));
+        assert(rbt.removeKey("hello") == 1);
+        assert(equal(rbt[], ["bar", "foo", "world"]));
+        assert(rbt.removeKey("hello") == 0);
+        assert(equal(rbt[], ["bar", "foo", "world"]));
+        assert(rbt.removeKey("hello", "foo", "bar") == 2);
+        assert(equal(rbt[], ["world"]));
+        assert(rbt.removeKey(["", "world", "hello"]) == 1);
+        assert(rbt.empty);
+    }
+
+    {
+        auto rbt = redBlackTree([1, 2, 12, 27, 4, 500]);
+        assert(equal(rbt[], [1, 2, 4, 12, 27, 500]));
+        assert(rbt.removeKey(1u) == 1);
+        assert(equal(rbt[], [2, 4, 12, 27, 500]));
+        assert(rbt.removeKey(cast(byte)1) == 0);
+        assert(equal(rbt[], [2, 4, 12, 27, 500]));
+        assert(rbt.removeKey(1, 12u, cast(byte)27) == 2);
+        assert(equal(rbt[], [2, 4, 500]));
+        assert(rbt.removeKey([cast(short)0, cast(short)500, cast(short)1]) == 1);
+        assert(equal(rbt[], [2, 4]));
+    }
 }
 
 unittest

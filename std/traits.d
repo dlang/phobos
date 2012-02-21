@@ -673,17 +673,14 @@ template functionLinkage(func...)
     if (func.length == 1 && isCallable!(func))
 {
     enum string functionLinkage =
-        LOOKUP_LINKAGE[ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
+        [
+            'F': "D",
+            'U': "C",
+            'W': "Windows",
+            'V': "Pascal",
+            'R': "C++"
+        ][ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
 }
-
-private enum LOOKUP_LINKAGE =
-[
-    'F': "D",
-    'U': "C",
-    'W': "Windows",
-    'V': "Pascal",
-    'R': "C++"
-];
 
 unittest
 {
@@ -3578,7 +3575,15 @@ pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
 template mangledName(sth...)
     if (sth.length == 1)
 {
-    enum string mangledName = removeDummyEnvelope(Dummy!(sth).Hook.mangleof);
+    static if (is(typeof(sth[0]) X) && is(X == void))
+    {
+        // sth[0] is a template symbol
+        enum string mangledName = removeDummyEnvelope(Dummy!(sth).Hook.mangleof);
+    }
+    else
+    {
+        enum string mangledName = sth[0].mangleof;
+    }
 }
 
 private template Dummy(T...) { struct Hook {} }
@@ -3644,40 +3649,18 @@ unittest
     static assert(mangledName!(removeDummyEnvelope) ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
-    static assert(mangledName!((int a) { return a+x; })[$ - 9 .. $] == "MFNbNfiZi");    // nothrow safe
-}
-
-
-/*
-workaround for @@@BUG2997@@@ "allMembers does not return interface members"
- */
-package template traits_allMembers(Agg)
-{
-    static if (is(Agg == class) || is(Agg == interface))
-        alias NoDuplicates!( __traits(allMembers, Agg),
-                    traits_allMembers_ifaces!(InterfacesTuple!(Agg)) )
-                traits_allMembers;
-    else
-        alias TypeTuple!(__traits(allMembers, Agg)) traits_allMembers;
-}
-private template traits_allMembers_ifaces(I...)
-{
-    static if (I.length > 0)
-        alias TypeTuple!( __traits(allMembers, I[0]),
-                    traits_allMembers_ifaces!(I[1 .. $]) )
-                traits_allMembers_ifaces;
-    else
-        alias TypeTuple!() traits_allMembers_ifaces;
+    static assert(mangledName!((int a) { return a+x; }) == "DFNbNfiZi");    // nothrow safe
 }
 
 unittest
 {
-    interface I { void test(); }
-    interface J : I { }
-    interface K : J { }
-    alias traits_allMembers!(K) names;
-    static assert(names.length == 1);
-    static assert(names[0] == "test");
+    // Test for bug 5718
+    import std.demangle;
+    int foo;
+    assert(demangle(mangledName!foo)[$-7 .. $] == "int foo");
+
+    void bar(){}
+    assert(demangle(mangledName!bar)[$-10 .. $] == "void bar()");
 }
 
 

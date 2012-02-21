@@ -31208,34 +31208,6 @@ version(testStdDateTime) unittest
 
 
 /++
-    Returns the absolute value of a duration.
- +/
-D abs(D)(D duration)
-    if(is(Unqual!D == Duration) ||
-       is(Unqual!D == TickDuration))
-{
-    static if(is(Unqual!D == Duration))
-        return dur!"hnsecs"(std.math.abs(duration.total!"hnsecs"()));
-    else static if(is(Unqual!D == TickDuration))
-        return TickDuration(std.math.abs(duration.length));
-    else
-        static assert(0);
-}
-
-unittest
-{
-    version(testStdDateTime)
-    {
-        _assertPred!"=="(abs(dur!"msecs"(5)), dur!"msecs"(5));
-        _assertPred!"=="(abs(dur!"msecs"(-5)), dur!"msecs"(5));
-
-        _assertPred!"=="(abs(TickDuration(17)), TickDuration(17));
-        _assertPred!"=="(abs(TickDuration(-17)), TickDuration(17));
-    }
-}
-
-
-/++
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
   +/
@@ -33512,9 +33484,9 @@ version(unittest)
         immutable ot = otherTZ.utcToTZ(0);
 
         auto diffs = [0, lt, ot];
-        auto diffAA = [0 : UTC(),
-                       lt : LocalTime(),
-                       ot : otherTZ];
+        auto diffAA = [0 : Rebindable!(immutable TimeZone)(UTC()),
+                       lt : Rebindable!(immutable TimeZone)(LocalTime()),
+                       ot : Rebindable!(immutable TimeZone)(otherTZ)];
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 

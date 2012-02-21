@@ -113,7 +113,7 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-version (Win32)
+version (Windows)
 {
     extern(Windows) int QueryPerformanceCounter(ulong *count);
 }

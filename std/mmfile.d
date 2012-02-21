@@ -28,7 +28,7 @@ import std.conv, std.exception, std.stdio;
 
 //debug = MMFILE;
 
-version (Win32)
+version (Windows)
 {
     private import std.c.windows.windows;
     private import std.utf;
@@ -128,6 +128,8 @@ class MmFile
             assert(0);
         }
 
+        fd = fildes;
+
         // Adjust size
         struct_stat64 statbuf = void;
         errnoEnforce(fstat64(fd, &statbuf) == 0);
@@ -178,7 +180,7 @@ class MmFile
         this.window = window;
         this.address = address;
 
-        version (Win32)
+        version (Windows)
         {
             void* p;
             uint dwDesiredAccess2;
@@ -396,7 +398,7 @@ class MmFile
     {
         debug (MMFILE) printf("MmFile.~this()\n");
         unmap();
-        version (Win32)
+        version (Windows)
         {
             errnoEnforce(hFileMap == null || CloseHandle(hFileMap) == TRUE,
                     "Could not close file handle");
@@ -426,7 +428,7 @@ class MmFile
     void flush()
     {
         debug (MMFILE) printf("MmFile.flush()\n");
-        version (Win32)
+        version (Windows)
         {
             FlushViewOfFile(data.ptr, data.length);
         }
@@ -445,7 +447,7 @@ class MmFile
     /**
      * Gives size in bytes of the memory mapped file.
      */
-    @property ulong length()
+    @property ulong length() const
     {
         debug (MMFILE) printf("MmFile.length()\n");
         return size;
@@ -595,7 +597,7 @@ private:
     Mode   mMode;
     void*  address;
 
-    version (Win32)
+    version (Windows)
     {
         HANDLE hFile = INVALID_HANDLE_VALUE;
         HANDLE hFileMap = null;
@@ -616,7 +618,7 @@ private:
     // Report error, where errno gives the error number
     // void errNo()
     // {
-    //     version (Win32)
+    //     version (Windows)
     //     {
     //         throw new FileException(filename, GetLastError());
     //     }
@@ -635,7 +637,7 @@ unittest
 {
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
-    version(Win32) {
+    version(Windows) {
         /+ these aren't defined in std.c.windows.windows so let's use default
          SYSTEM_INFO sysinfo;
          GetSystemInfo(&sysinfo);

@@ -1541,7 +1541,7 @@ this() @trusted
     argument must be a random access range.
 
     ---
-    auto numbers = iota(100_000_000);
+    auto numbers = iota(100_000_000.0);
 
     // Find the square roots of numbers.
     //
@@ -4162,7 +4162,7 @@ unittest
 
     // Test Map/AsyncBuf chaining.
 
-    auto abuf = poolInstance.asyncBuf(iota(-1, 3_000_000), 100);
+    auto abuf = poolInstance.asyncBuf(iota(-1.0, 3_000_000), 100);
     auto temp = poolInstance.map!sqrt(
                     abuf, 100, 5
                 );
@@ -4180,7 +4180,7 @@ unittest
     }
 
     // Test buffer trick in parallel foreach.
-    abuf = poolInstance.asyncBuf(iota(-1, 1_000_000), 100);
+    abuf = poolInstance.asyncBuf(iota(-1.0, 1_000_000), 100);
     abuf.popFront();
     auto bufTrickTest = new size_t[abuf.length];
     foreach(i, elem; parallel(abuf))
