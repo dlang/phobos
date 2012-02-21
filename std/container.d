@@ -922,6 +922,12 @@ Comparison for equality.
 Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
 elements in $(D rhs).
      */
+    bool opEquals(const SList rhs) const
+    {
+        return opEquals(rhs);
+    }
+
+    /// ditto
     bool opEquals(ref const SList rhs) const
     {
         const(Node) * n1 = _root, n2 = rhs._root;
@@ -1634,6 +1640,12 @@ struct Array(T) if (!is(T : const(bool)))
 /**
 Comparison for equality.
      */
+    bool opEquals(const Array rhs) const
+    {
+        return opEquals(rhs);
+    }
+
+    /// ditto
     bool opEquals(ref const Array rhs) const
     {
         if (empty) return rhs.empty;
