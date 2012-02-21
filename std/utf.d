@@ -1388,7 +1388,7 @@ const(wchar)* toUTF16z(in char[] s) @trusted
             encode(r, c);
         }
     }
-    r ~= "\000";
+    r ~= '\000';
 
     return r.ptr;
 }
