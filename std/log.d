@@ -2276,12 +2276,15 @@ void name(string[] args) {
         version(unittest) {} // don't have any side effect in unittest
         else version(Posix)
         {
-            import core.sys.posix.sys.stat;
-            import std.file: struct_stat64, lstat64;
+            import core.sys.posix.sys.stat; // : S_IFMT
+            import std.file; //: struct_stat64, lstat64;
 
             struct_stat64 lstatbuf = void;
             if (lstat64(toStringz(linkName), &lstatbuf) == 0 &&
-                    lstatbuf.st_mode & S_IFMT) remove(linkName);
+                lstatbuf.st_mode & S_IFMT) 
+            {
+                remove(linkName);
+            }
             .symlink(toStringz(target), toStringz(linkName));
         }
         /*
