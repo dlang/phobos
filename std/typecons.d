@@ -1425,7 +1425,7 @@ unittest
     static struct S
     {
         int x;
-        bool opEquals(ref const S s) const @system { return s.x == x; }
+        bool opEquals(const S s) const @system { return s.x == x; }
     }
 
     Nullable!(S, S(711)) s;
@@ -1571,7 +1571,7 @@ unittest
     {
         int x;
         this(this) @system {}
-        bool opEquals(ref const S s) const @system { return s.x == x; }
+        bool opEquals(const S s) const @system { return s.x == x; }
     }
 
     auto storage = S(5);
