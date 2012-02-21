@@ -110,6 +110,8 @@ $(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
 
    args = Variadic argument list.
 
+   Returns: Formatted number of arguments.
+
    Throws: Mismatched arguments and formats result in a $(D
    FormatException) being thrown.
 
@@ -386,7 +388,7 @@ void main() {
  [7 8 9]]
 </pre>
  */
-void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
+uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     enum len = args.length;
     void function(Writer, const(void)*, ref FormatSpec!Char) funs[len] = void;
@@ -483,6 +485,7 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             ++currentArg;
         }
     }
+    return currentArg;
 }
 
 /**
