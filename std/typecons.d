@@ -1168,7 +1168,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this(T value)
+    this()(T value)
     {
         _value = value;
         _isNull = false;
@@ -1177,7 +1177,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull() const pure nothrow @safe
     {
         return _isNull;
     }
@@ -1185,17 +1185,24 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify()()
     {
         clear(_value);
         _isNull = true;
     }
 
+    //@@@BUG4424@@@
+    private mixin template _workaround4424()
+    {
+        @disable void opAssign(ref const Nullable);
+    }
+    mixin _workaround4424;
+
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         _value = value;
         _isNull = false;
@@ -1206,14 +1213,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return _value;
-    }
-    //@@@BUG3748@@@: inout does not work properly.
-    //               need to define a separate 'const' version
-    @property ref const(T) get() const
+    @property ref inout(T) get() inout pure @safe
     {
         enforce(!isNull);
         return _value;
@@ -1234,14 +1234,15 @@ unittest
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
-    //@@@BUG5188@@@
-    //assert(a != 3);
+    assert(a != 3);
     assert(a.get != 3);
     a.nullify();
     assert(a.isNull);
     a = 3;
     assert(a == 3);
     a *= 6;
+    assert(a == 18);
+    a = a;
     assert(a == 18);
     a.nullify();
     assertThrown(a += 2);
@@ -1272,13 +1273,43 @@ unittest
     assert(s.isNull);
     s = S(6);
     assert(s == S(6));
-    //@@@BUG5188@@@
-    //assert(s != S(0));
+    assert(s != S(0));
     assert(s.get != S(0));
     s.x = 9190;
     assert(s.x == 9190);
     s.nullify();
     assertThrown(s.x = 9441);
+}
+unittest
+{
+    // Ensure Nullable can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        Nullable!int n;
+        assert(n.isNull);
+        n = 4;
+        assert(!n.isNull);
+        try { assert(n == 4); } catch (Exception) { assert(false); }
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure Nullable can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        this(this) @system {}
+    }
+
+    Nullable!S s;
+    assert(s.isNull);
+    s = S(5);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
 }
 
 /**
@@ -1295,7 +1326,7 @@ struct Nullable(T, T nullValue)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this(T value)
+    this()(T value)
     {
         _value = value;
     }
@@ -1303,7 +1334,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull()() const
     {
         return _value == nullValue;
     }
@@ -1311,7 +1342,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify()()
     {
         _value = nullValue;
     }
@@ -1320,7 +1351,7 @@ Forces $(D this) to the null state.
 Assigns $(D value) to the internally-held state. No null checks are
 made.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         _value = value;
     }
@@ -1330,13 +1361,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return _value;
-    }
-    //@@@BUG3748@@@
-    @property ref const(T) get() const
+    @property ref inout(T) get()() inout
     {
         enforce(!isNull);
         return _value;
@@ -1378,6 +1403,39 @@ unittest
     a.nullify();
     assert(f(a) == 42);
 }
+unittest
+{
+    // Ensure Nullable can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        Nullable!(int, int.min) n;
+        pragma(msg, typeof(&n.get!()));
+
+        assert(n.isNull);
+        n = 4;
+        assert(!n.isNull);
+        try { assert(n == 4); } catch (Exception) { assert(false); }
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure Nullable can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        bool opEquals(ref const S s) const @system { return s.x == x; }
+    }
+
+    Nullable!(S, S(711)) s;
+    assert(s.isNull);
+    s = S(5);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
+}
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1392,7 +1450,7 @@ struct NullableRef(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-    this(T * value)
+    this(T * value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1400,7 +1458,7 @@ Constructor binding $(D this) with $(D value).
 /**
 Binds the internal state to $(D value).
  */
-    void bind(T * value)
+    void bind(T * value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1408,7 +1466,7 @@ Binds the internal state to $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull() const pure nothrow @safe
     {
         return _value is null;
     }
@@ -1416,7 +1474,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify() pure nothrow @safe
     {
         _value = null;
     }
@@ -1424,7 +1482,7 @@ Forces $(D this) to the null state.
 /**
 Assigns $(D value) to the internally-held state.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         enforce(_value);
         *_value = value;
@@ -1435,13 +1493,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return *_value;
-    }
-    //@@@BUG3748@@@
-    @property ref const(T) get() const
+    @property ref inout(T) get()() inout
     {
         enforce(!isNull);
         return *_value;
@@ -1485,6 +1537,52 @@ unittest
     assert(f(a) == 5);
     a.nullify();
     assert(f(a) == 42);
+}
+unittest
+{
+    // Ensure NullableRef can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        auto storage = new int;
+        *storage = 19902;
+        NullableRef!int n;
+        assert(n.isNull);
+        n.bind(storage);
+        assert(!n.isNull);
+        try
+        {
+            assert(n == 19902);
+            n = 2294;
+            assert(n == 2294);
+        }
+        catch (Exception)
+        {
+            assert(false);
+        }
+        assert(*storage == 2294);
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure NullableRef can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        this(this) @system {}
+        bool opEquals(ref const S s) const @system { return s.x == x; }
+    }
+
+    auto storage = S(5);
+
+    NullableRef!S s;
+    assert(s.isNull);
+    s.bind(&storage);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
 }
 
 /**
