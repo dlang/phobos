@@ -58,7 +58,7 @@ module std.string;
 
 //debug=string;                 // uncomment to turn on debugging printf's
 
-import core.exception : onRangeError;
+import core.exception : RangeError, onRangeError;
 import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.algorithm, std.ascii, std.conv, std.exception, std.format, std.functional,
     std.metastrings, std.range, std.regex, std.traits,
@@ -2385,10 +2385,8 @@ unittest
 }
 
 
-private:
-
 // @@@BUG@@@ workaround for bugzilla 2479
-string bug2479format(TypeInfo[] arguments, va_list argptr)
+private string bug2479format(TypeInfo[] arguments, va_list argptr)
 {
     char[] s;
 
@@ -2401,32 +2399,32 @@ string bug2479format(TypeInfo[] arguments, va_list argptr)
 }
 
 // @@@BUG@@@ workaround for bugzilla 2479
-char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
-{   size_t i;
+private char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
+{
+    size_t i;
 
     void putc(dchar c)
     {
-    if(std.ascii.isASCII(c))
-    {
-        if (i >= s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i] = cast(char)c;
-        ++i;
-    }
-    else
-    {   char[4] buf;
-        auto b = std.utf.toUTF8(buf, c);
-        if (i + b.length > s.length)
-            onRangeError("std.string.sformat", 0);
-        s[i..i+b.length] = b[];
-        i += b.length;
-    }
+        if(std.ascii.isASCII(c))
+        {
+            if (i >= s.length)
+                onRangeError("std.string.sformat", 0);
+            s[i] = cast(char)c;
+            ++i;
+        }
+        else
+        {   char[4] buf;
+            auto b = std.utf.toUTF8(buf, c);
+            if (i + b.length > s.length)
+                onRangeError("std.string.sformat", 0);
+            s[i..i+b.length] = b[];
+            i += b.length;
+        }
     }
 
     std.format.doFormat(&putc, arguments, argptr);
     return s[0 .. i];
 }
-public:
 
 
 /*****************************************************
@@ -2524,6 +2522,116 @@ unittest
     r = format("foo %d", 123);
     i = cmp(r, "foo 123");
     assert(i == 0);
+}
+
+
+/*****************************************************
+ * Format arguments into a string.
+ */
+
+string xformat(Char, Args...)(in Char[] fmt, Args args)
+{
+    auto w = appender!string();
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return w.data;
+}
+
+unittest
+{
+    debug(string) printf("std.string.xformat.unittest\n");
+
+//  assert(xformat(null) == "");
+    assert(xformat("foo") == "foo");
+    assert(xformat("foo%%") == "foo%");
+    assert(xformat("foo%s", 'C') == "fooC");
+    assert(xformat("%s foo", "bar") == "bar foo");
+    assert(xformat("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(xformat("foo %d", -123) == "foo -123");
+    assert(xformat("foo %d", 123) == "foo 123");
+
+    assertThrown!FormatError(xformat("foo %s"));
+    assertThrown!FormatError(xformat("foo %s", 123, 456));
+}
+
+
+/*****************************************************
+ * Format arguments into string $(D_PARAM buf) which must be large
+ * enough to hold the result. Throws RangeError if it is not.
+ * Returns: filled slice of $(D_PARAM buf)
+ */
+
+char[] xsformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
+{
+    size_t i;
+
+    struct Sink
+    {
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
+
+            if (buf.length < i + n)
+                onRangeError("std.string.xsformat", 0);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                onRangeError("std.string.xsformat", 0);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto n = formattedWrite(Sink(), fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return buf[0 .. i];
+}
+
+unittest
+{
+    debug(string) printf("std.string.xsformat.unittest\n");
+
+    char[10] buf;
+
+    assert(xsformat(buf[], "foo") == "foo");
+    assert(xsformat(buf[], "foo%%") == "foo%");
+    assert(xsformat(buf[], "foo%s", 'C') == "fooC");
+    assert(xsformat(buf[], "%s foo", "bar") == "bar foo");
+    assertThrown!RangeError(xsformat(buf[], "%s foo %s", "bar", "abc"));
+    assert(xsformat(buf[], "foo %d", -123) == "foo -123");
+    assert(xsformat(buf[], "foo %d", 123) == "foo 123");
+
+    assertThrown!FormatError(xsformat(buf[], "foo %s"));
+    assertThrown!FormatError(xsformat(buf[], "foo %s", 123, 456));
+
+    assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
 }
 
 
