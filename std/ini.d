@@ -1,11 +1,9 @@
 module std.ini;
 
-private import std.stream       : BufferedFile;
-private import std.string       : format, stripLeft, stripRight;
-private import std.array        : split;
-private import std.stdio        : File;
-private import std.stdio        : writeln, writefln, writef;
-private import std.exception    : Exception;
+import std.string;
+import std.array;
+import std.stdio;
+import std.exception;
 
 
 /**
@@ -202,7 +200,8 @@ class Section{
                     content ~= "%s=%s\n".format( key, value );
             }
             foreach(child; _childs){
-                content ~= child.toString();
+                if( child !is null )
+                    content ~= child.toString();
             }
             return content.idup;
         }
@@ -263,10 +262,12 @@ class Section{
 
         void popFront(){
             _childs = _childs[1..$];
+            _numberOfChild--;
         }
 
         void popBack(){
             _childs = _childs[0 .. $ - 1];
+            _numberOfChild--;
         }
 
         ref Section save(){
