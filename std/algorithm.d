@@ -6078,18 +6078,17 @@ unittest
 }
 
 /**
-Reduces the length of the bidirectional range $(D range) by only
-keeping elements that satisfy $(D pred). If $(D s =
-SwapStrategy.unstable), elements are moved from the right end of the
-range over the elements to eliminate. If $(D s = SwapStrategy.stable)
-(the default), elements are moved progressively to front such that
-their relative order is preserved. Returns the tail portion of the
-range that was moved.
+Reduces the length of the bidirectional range $(D range) by removing
+elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
+elements are moved from the right end of the range over the elements
+to eliminate. If $(D s = SwapStrategy.stable) (the default),
+elements are moved progressively to front such that their relative
+order is preserved. Returns the filtered range.
 
 Example:
 ----
 int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-assert(a[0 .. remove!("a == 2")(a).length] == [ 1, 3, 3, 4, 5, 5, 6 ]);
+assert(remove!("a == 2")(a) == [ 1, 3, 3, 4, 5, 5, 6 ]);
 ----
  */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
