@@ -517,13 +517,10 @@ unittest
  * KeyType!Hash str = "string";   // str is declared as string
  * --- 
  */
-template KeyType(AA)
-   if (isAssociativeArray!AA)
+template KeyType(V : V[K], K)
+    if (isAssociativeArray!(V[K]))
 {
-   static if (is(AA V : V[K], K))
-   {
-       alias K KeyType;
-   }
+    alias K KeyType;
 }
 
 /**
@@ -535,13 +532,18 @@ template KeyType(AA)
  * ValueType!Hash num = 1;   // num is declared as int
  * --- 
  */
-template ValueType(AA)
-   if (isAssociativeArray!AA)
+template ValueType(V : V[K], K)
+    if (isAssociativeArray!(V[K]))
 {
-   static if (is(AA V : V[U], U))
-   {
-       alias V ValueType;
-   }
+    alias V ValueType;
+}
+
+unittest
+{
+    alias int[string] AA;
+    
+    static assert(is(KeyType!AA == string));
+    static assert(is(ValueType!AA == int));
 }
 
 unittest
