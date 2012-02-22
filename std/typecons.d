@@ -2764,211 +2764,64 @@ void func(int n) { }
  */
 mixin template ProxyOf(alias a)
 {
-                 auto ref opEquals(B, this Tdummy)(auto ref B b) { return a == b; }
-           const auto ref opEquals(B, this Tdummy)(auto ref B b) { return a == b; }
-       immutable auto ref opEquals(B, this Tdummy)(auto ref B b) { return a == b; }
-          shared auto ref opEquals(B, this Tdummy)(auto ref B b) { return a == b; }
-    const shared auto ref opEquals(B, this Tdummy)(auto ref B b) { return a == b; }
+    auto ref opEquals(this X, B)(auto ref B b) { return a == b; }
 
-    // todo
-    auto ref opCmp(B)(auto ref B b)
+    auto ref opCmp(this X, B)(auto ref B b)
+        if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
     {
-        static assert(!(__traits(compiles, a.opCmp(b)) && __traits(compiles, a.opCmp(b))));
-
-        static if (__traits(compiles, a.opCmp(b)))
+        static if (is(typeof(a.opCmp(b))))
             return a.opCmp(b);
-        else static if (__traits(compiles, b.opCmp(a)))
+        else static if (is(typeof(b.opCmp(a))))
             return -b.opCmp(a);
         else
-        {
             return a < b ? -1 : a > b ? +1 : 0;
-        }
     }
 
-                 auto ref opUnary(string op)() { return mixin(op ~ "a"); }
-           const auto ref opUnary(string op)() { return mixin(op ~ "a"); }
-       immutable auto ref opUnary(string op)() { return mixin(op ~ "a"); }
-          shared auto ref opUnary(string op)() { return mixin(op ~ "a"); }
-    const shared auto ref opUnary(string op)() { return mixin(op ~ "a"); }
+    auto ref opUnary     (string op, this X)() { return mixin(op~"a"); }
+    auto ref opIndexUnary(string op, this X, D...)(auto ref D i) { return mixin(op~"a[i]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
 
-                 auto ref opIndexUnary(string op, I...)(auto ref I i) { return mixin(op ~ "a[i]"); }
-           const auto ref opIndexUnary(string op, I...)(auto ref I i) { return mixin(op ~ "a[i]"); }
-       immutable auto ref opIndexUnary(string op, I...)(auto ref I i) { return mixin(op ~ "a[i]"); }
-          shared auto ref opIndexUnary(string op, I...)(auto ref I i) { return mixin(op ~ "a[i]"); }
-    const shared auto ref opIndexUnary(string op, I...)(auto ref I i) { return mixin(op ~ "a[i]"); }
+    auto ref opCast(T, this X)() { return cast(T)a; }
 
-                 auto ref opSliceUnary(string op, B, E)(auto ref B b, auto ref E e) { return mixin(op ~ "a[b..e]"); }
-           const auto ref opSliceUnary(string op, B, E)(auto ref B b, auto ref E e) { return mixin(op ~ "a[b..e]"); }
-       immutable auto ref opSliceUnary(string op, B, E)(auto ref B b, auto ref E e) { return mixin(op ~ "a[b..e]"); }
-          shared auto ref opSliceUnary(string op, B, E)(auto ref B b, auto ref E e) { return mixin(op ~ "a[b..e]"); }
-    const shared auto ref opSliceUnary(string op, B, E)(auto ref B b, auto ref E e) { return mixin(op ~ "a[b..e]"); }
+    auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
+    auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
 
-  version (all) // @@@BUG5896@@@
-  {
-    template bug5896Cast(T)
-    {
-                     auto ref opCast()() { return cast(T)a; }
-               const auto ref opCast()() { return cast(T)a; }
-           immutable auto ref opCast()() { return cast(T)a; }
-              shared auto ref opCast()() { return cast(T)a; }
-        const shared auto ref opCast()() { return cast(T)a; }
-    }
-    template opCast(T){ alias bug5896Cast!T.opCast opCast; }
-  }
-  else
-  {
-                 auto ref opCast(T)() { return cast(T)a; }
-           const auto ref opCast(T)() { return cast(T)a; }
-       immutable auto ref opCast(T)() { return cast(T)a; }
-          shared auto ref opCast(T)() { return cast(T)a; }
-    const shared auto ref opCast(T)() { return cast(T)a; }
-  }
+    auto ref opCall (this X, Args...)(auto ref Args args)         { return a(args); }
+    auto ref opIndex(this X, D...   )(auto ref D i)               { return a[i]; }
+    auto ref opSlice(this X         )()                           { return a[]; }
+    auto ref opSlice(this X, B, E   )(auto ref B b, auto ref E e) { return a[b..e]; }
 
-                 auto ref opBinary(string op, B)(auto ref B b) { return mixin("a " ~ op ~ " b"); }
-           const auto ref opBinary(string op, B)(auto ref B b) { return mixin("a " ~ op ~ " b"); }
-       immutable auto ref opBinary(string op, B)(auto ref B b) { return mixin("a " ~ op ~ " b"); }
-          shared auto ref opBinary(string op, B)(auto ref B b) { return mixin("a " ~ op ~ " b"); }
-    const shared auto ref opBinary(string op, B)(auto ref B b) { return mixin("a " ~ op ~ " b"); }
+    auto ref opAssign     (this X, V      )(auto ref V v)                             { return a       = v; }
+    auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
+    auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
+    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
 
-                 auto ref opBinaryRight(string op, B)(auto ref B b) { return mixin("b " ~ op ~ " a"); }
-           const auto ref opBinaryRight(string op, B)(auto ref B b) { return mixin("b " ~ op ~ " a"); }
-       immutable auto ref opBinaryRight(string op, B)(auto ref B b) { return mixin("b " ~ op ~ " a"); }
-          shared auto ref opBinaryRight(string op, B)(auto ref B b) { return mixin("b " ~ op ~ " a"); }
-    const shared auto ref opBinaryRight(string op, B)(auto ref B b) { return mixin("b " ~ op ~ " a"); }
+    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
+    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] "~op~"= v"); }
 
-                 auto ref opCall(Args...)(auto ref Args args) { return a(args); }
-           const auto ref opCall(Args...)(auto ref Args args) { return a(args); }
-       immutable auto ref opCall(Args...)(auto ref Args args) { return a(args); }
-          shared auto ref opCall(Args...)(auto ref Args args) { return a(args); }
-    const shared auto ref opCall(Args...)(auto ref Args args) { return a(args); }
-
-                 auto ref opIndex(I...)(auto ref I i) { return a[i]; }
-           const auto ref opIndex(I...)(auto ref I i) { return a[i]; }
-       immutable auto ref opIndex(I...)(auto ref I i) { return a[i]; }
-          shared auto ref opIndex(I...)(auto ref I i) { return a[i]; }
-    const shared auto ref opIndex(I...)(auto ref I i) { return a[i]; }
-
-                 auto ref opSlice()() { return a[]; }
-           const auto ref opSlice()() { return a[]; }
-       immutable auto ref opSlice()() { return a[]; }
-          shared auto ref opSlice()() { return a[]; }
-    const shared auto ref opSlice()() { return a[]; }
-
-                 auto ref opSlice(B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
-           const auto ref opSlice(B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
-       immutable auto ref opSlice(B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
-          shared auto ref opSlice(B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
-    const shared auto ref opSlice(B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
-
-                 auto ref opAssign(V)(auto ref V v) { return a = v; }
-           const auto ref opAssign(V)(auto ref V v) { return a = v; }
-       immutable auto ref opAssign(V)(auto ref V v) { return a = v; }
-          shared auto ref opAssign(V)(auto ref V v) { return a = v; }
-    const shared auto ref opAssign(V)(auto ref V v) { return a = v; }
-
-                 auto ref opIndexAssign(V, I...)(auto ref V v, auto ref I i) { return a[i] = v; }
-           const auto ref opIndexAssign(V, I...)(auto ref V v, auto ref I i) { return a[i] = v; }
-       immutable auto ref opIndexAssign(V, I...)(auto ref V v, auto ref I i) { return a[i] = v; }
-          shared auto ref opIndexAssign(V, I...)(auto ref V v, auto ref I i) { return a[i] = v; }
-    const shared auto ref opIndexAssign(V, I...)(auto ref V v, auto ref I i) { return a[i] = v; }
-
-                 auto ref opSliceAssign(V, R...)(auto ref V v) { return a[] = v; }
-           const auto ref opSliceAssign(V, R...)(auto ref V v) { return a[] = v; }
-       immutable auto ref opSliceAssign(V, R...)(auto ref V v) { return a[] = v; }
-          shared auto ref opSliceAssign(V, R...)(auto ref V v) { return a[] = v; }
-    const shared auto ref opSliceAssign(V, R...)(auto ref V v) { return a[] = v; }
-
-                 auto ref opSliceAssign(V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
-           const auto ref opSliceAssign(V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
-       immutable auto ref opSliceAssign(V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
-          shared auto ref opSliceAssign(V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
-    const shared auto ref opSliceAssign(V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
-
-                 auto ref opOpAssign(string op, V)(auto ref V v) { return mixin("a " ~ op~"= v"); }
-           const auto ref opOpAssign(string op, V)(auto ref V v) { return mixin("a " ~ op~"= v"); }
-       immutable auto ref opOpAssign(string op, V)(auto ref V v) { return mixin("a " ~ op~"= v"); }
-          shared auto ref opOpAssign(string op, V)(auto ref V v) { return mixin("a " ~ op~"= v"); }
-    const shared auto ref opOpAssign(string op, V)(auto ref V v) { return mixin("a " ~ op~"= v"); }
-
-                 auto ref opIndexOpAssign(string op, V, I...)(auto ref V v, auto ref I i) { return mixin("a[i] " ~ op~"= v"); }
-           const auto ref opIndexOpAssign(string op, V, I...)(auto ref V v, auto ref I i) { return mixin("a[i] " ~ op~"= v"); }
-       immutable auto ref opIndexOpAssign(string op, V, I...)(auto ref V v, auto ref I i) { return mixin("a[i] " ~ op~"= v"); }
-          shared auto ref opIndexOpAssign(string op, V, I...)(auto ref V v, auto ref I i) { return mixin("a[i] " ~ op~"= v"); }
-    const shared auto ref opIndexOpAssign(string op, V, I...)(auto ref V v, auto ref I i) { return mixin("a[i] " ~ op~"= v"); }
-
-                 auto ref opSliceOpAssign(string op, V)(auto ref V v) { return mixin("a[] " ~ op~"= v"); }
-           const auto ref opSliceOpAssign(string op, V)(auto ref V v) { return mixin("a[] " ~ op~"= v"); }
-       immutable auto ref opSliceOpAssign(string op, V)(auto ref V v) { return mixin("a[] " ~ op~"= v"); }
-          shared auto ref opSliceOpAssign(string op, V)(auto ref V v) { return mixin("a[] " ~ op~"= v"); }
-    const shared auto ref opSliceOpAssign(string op, V)(auto ref V v) { return mixin("a[] " ~ op~"= v"); }
-
-                 auto ref opSliceOpAssign(string op, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] " ~ op~"= v"); }
-           const auto ref opSliceOpAssign(string op, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] " ~ op~"= v"); }
-       immutable auto ref opSliceOpAssign(string op, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] " ~ op~"= v"); }
-          shared auto ref opSliceOpAssign(string op, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] " ~ op~"= v"); }
-    const shared auto ref opSliceOpAssign(string op, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] " ~ op~"= v"); }
-
-    template ProxyOf_FunctionDispatch(string name)
-    {
-                     auto ref dispatch(Args...)(Args args) { return mixin("a."~name~"(args)"); }
-               const auto ref dispatch(Args...)(Args args) { return mixin("a."~name~"(args)"); }
-           immutable auto ref dispatch(Args...)(Args args) { return mixin("a."~name~"(args)"); }
-              shared auto ref dispatch(Args...)(Args args) { return mixin("a."~name~"(args)"); }
-        const shared auto ref dispatch(Args...)(Args args) { return mixin("a."~name~"(args)"); }
-    }
-    template ProxyOf_PropertyDispatch(string name)
-    {
-        @property              auto ref dispatch()()              { return mixin("a."~name       ); }
-        @property              auto ref dispatch(V)(auto ref V v) { return mixin("a."~name~" = v"); }
-
-        @property        const auto ref dispatch()()              { return mixin("a."~name       ); }
-        @property        const auto ref dispatch(V)(auto ref V v) { return mixin("a."~name~" = v"); }
-
-        @property    immutable auto ref dispatch()()              { return mixin("a."~name       ); }
-        @property    immutable auto ref dispatch(V)(auto ref V v) { return mixin("a."~name~" = v"); }
-
-        @property       shared auto ref dispatch()()              { return mixin("a."~name       ); }
-        @property       shared auto ref dispatch(V)(auto ref V v) { return mixin("a."~name~" = v"); }
-
-        @property const shared auto ref dispatch()()              { return mixin("a."~name       ); }
-        @property const shared auto ref dispatch(V)(auto ref V v) { return mixin("a."~name~" = v"); }
-    }
-    template ProxyOf_TemplateDispatch(string name)
-    {
-        template dispatch(T...)
-        {
-            alias dispatch2!T.dispatch dispatch;
-        }
-        template dispatch2(T...)
-        {
-                         auto ref dispatch(Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
-                   const auto ref dispatch(Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
-               immutable auto ref dispatch(Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
-                  shared auto ref dispatch(Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
-            const shared auto ref dispatch(Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
-        }
-    }
     template opDispatch(string name)
     {
         static if (is(typeof(__traits(getMember, a, name)) == function))
         {
-            //pragma(msg, name, ": function");
-            alias ProxyOf_FunctionDispatch!name.dispatch opDispatch;
+            // non template function
+            auto ref opDispatch(this X, Args...)(Args args) { return mixin("a."~name~"(args)"); }
         }
-        else static if (__traits(getOverloads, a, name).length)
+        else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
-            //pragma(msg, name, ": function property");
-            alias ProxyOf_PropertyDispatch!name.dispatch opDispatch;
-        }
-        else static if (is(typeof(mixin("a."~name))))
-        {
-            //pragma(msg, name, ": field property");
-            alias ProxyOf_PropertyDispatch!name.dispatch opDispatch;
+            // field or property function
+            @property auto ref Impl(this X)()                { return mixin("a."~name);        }
+            @property auto ref Impl(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
+            alias Impl opDispatch;  // bundle overloads as eponymous member, workaround for issue 5525
         }
         else
         {
-            //pragma(msg, name, ": template");
-            alias ProxyOf_TemplateDispatch!name.dispatch opDispatch;
+            // member template
+            template opDispatch(T...)
+            {
+                auto ref opDispatch(this X, Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
+            }
         }
     }
 }
