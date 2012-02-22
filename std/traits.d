@@ -541,14 +541,6 @@ template ValueType(V : V[K], K)
 unittest
 {
     alias int[string] AA;
-    
-    static assert(is(KeyType!AA == string));
-    static assert(is(ValueType!AA == int));
-}
-
-unittest
-{
-    alias int[string] AA;
     static assert(is(KeyType!AA == string));
     static assert(is(ValueType!AA == int));
 }
