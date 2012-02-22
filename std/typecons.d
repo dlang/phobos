@@ -3085,16 +3085,16 @@ template TypeDef(T)
 }
 
 /// ditto
-struct TypeDef(T, alias Init)
+struct TypeDef(T, T init, string cookie=null)
 {
-    private T _store_payload = Init;
+    private T TypeDef_payload = init;
 
     this(T init)
     {
-        _store_payload = init;
+        TypeDef_payload = init;
     }
 
-    mixin ProxyOf!_store_payload;
+    mixin ProxyOf!TypeDef_payload;
 }
 
 unittest
@@ -3108,6 +3108,10 @@ unittest
 
     TypeDef!(float, 1.0) z; // specifies the init
     assert(z == 1.0);
+
+    alias TypeDef!(int, 0, "dollar") Dollar;
+    alias TypeDef!(int, 0, "yen") Yen;
+    static assert(!is(Dollar == Yen));
 }
 
 
