@@ -508,6 +508,48 @@ unittest
     static assert(functionAttributes!((int a) {}) == (FA.safe | FA.pure_ | FA.nothrow_));
 }
 
+/**
+ * Get the Key type of an Associative Array.
+ * Example:
+ * ---
+ * import std.traits;
+ * alias int[string] Hash;
+ * KeyType!Hash str = "string";   // str is declared as string
+ * --- 
+ */
+template KeyType(AA)
+   if (isAssociativeArray!AA)
+{
+   static if (is(AA V : V[K], K))
+   {
+       alias K KeyType;
+   }
+}
+
+/**
+ * Get the Value type of an Associative Array.
+ * Example:
+ * ---
+ * import std.traits;
+ * alias int[string] Hash;
+ * ValueType!Hash num = 1;   // num is declared as int
+ * --- 
+ */
+template ValueType(AA)
+   if (isAssociativeArray!AA)
+{
+   static if (is(AA V : V[U], U))
+   {
+       alias V ValueType;
+   }
+}
+
+unittest
+{
+    alias int[string] AA;
+    static assert(is(KeyType!AA == string));
+    static assert(is(ValueType!AA == int));
+}
 
 /**
 Checks the func that is @safe or @trusted
