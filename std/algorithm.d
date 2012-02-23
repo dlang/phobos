@@ -3389,7 +3389,9 @@ $(D findSplit) returns a tuple $(D result) containing $(I three)
 ranges. $(D result[0]) is the portion of $(D haystack) before $(D
 needle), $(D result[1]) is the portion of $(D haystack) that matches
 $(D needle), and $(D result[2]) is the portion of $(D haystack) after
-the match.
+the match. If $(D needle) was not found, $(D result[0])
+comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2]
+are empty.
 
 $(D findSplitBefore) returns a tuple $(D result) containing two
 ranges. $(D result[0]) is the portion of $(D haystack) before $(D
