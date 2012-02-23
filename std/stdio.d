@@ -936,8 +936,8 @@ Range that reads one line at a time. */
         /// Range primitive implementations.
         @property bool empty() const
         {
-            if (!file.isOpen) return true;
             if (line !is null) return false;
+            if (!file.isOpen) return true;
 
             // First read ever, must make sure stream is not empty. We
             // do so by reading a character and putting it back. Doing
@@ -966,11 +966,13 @@ Range that reads one line at a time. */
         /// Ditto
         void popFront()
         {
-            enforce(file.isOpen);
+            assert(file.isOpen);
+            assumeSafeAppend(line);
             file.readln(line, terminator);
             if (line.empty)
             {
                 file.detach();
+                line = null;
             }
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
@@ -2554,13 +2556,35 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
 
     // Narrow stream
-    buf.length = 0;
+    // First, fill the existing buffer
+    for (size_t bufPos = 0; bufPos < buf.length; )
+    {
+        immutable c = FGETC(fp);
+        if (c == -1)
+        {
+            buf.length = bufPos;
+            goto endGame;
+        }
+        buf.ptr[bufPos++] = cast(char) c;
+        if (c == terminator)
+        {
+            // No need to test for errors in file
+            buf.length = bufPos;
+            return bufPos;
+        }
+    }
+    // Then, append to it
     for (int c; (c = FGETC(fp)) != -1; )
     {
         buf ~= cast(char)c;
         if (c == terminator)
-            break;
+        {
+            // No need to test for errors in file
+            return buf.length;
+        }
     }
+
+  endGame:
     if (ferror(fps))
         StdioException();
     return buf.length;
