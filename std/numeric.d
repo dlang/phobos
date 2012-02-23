@@ -2167,8 +2167,9 @@ private alias float lookup_t;
 
 /**A class for performing fast Fourier transforms of power of two sizes.
  * This class encapsulates a large amount of state that is reusable when
- * performing multiple FFTs of the same size.  This makes performing numerous
- * FFTs of the same size faster than a free function API would allow.  However,
+ * performing multiple FFTs of sizes smaller than or equal to that specified
+ * in the constructor.  This results in substantial speedups when performing
+ * multiple FFTs with a known maximum size.  However,
  * a free function API is provided for convenience if you need to perform a
  * one-off FFT.
  *
@@ -2180,7 +2181,7 @@ private:
     immutable lookup_t[][] negSinLookup;
 
     void enforceSize(R)(R range) const {
-        enforce(range.length == size, text(
+        enforce(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
 
@@ -2189,21 +2190,6 @@ private:
         assert(range.length >= 4);
         assert(isPowerOfTwo(range.length));
     } body {
-        immutable localLookup = negSinLookup[bsf(range.length)];
-        assert(localLookup.length == range.length);
-
-        immutable cosMask = range.length - 1;
-        immutable cosAdd = range.length / 4 * 3;
-
-        lookup_t negSinFromLookup(size_t index) pure nothrow {
-            return localLookup[index];
-        }
-
-        lookup_t cosFromLookup(size_t index) pure nothrow {
-            // cos is just -sin shifted by PI * 3 / 2.
-            return localLookup[(index + cosAdd) & cosMask];
-        }
-
         auto recurseRange = range;
         recurseRange.doubleSteps();
 
@@ -2218,8 +2204,127 @@ private:
             recurseRange.popHalf();
             slowFourier2(recurseRange, buf[$ / 2..$]);
         }
+        
+        butterfly(buf);
+    }
+    
+    // This algorithm works by performing the even and odd parts of our FFT
+    // using the "two for the price of one" method mentioned at
+    // http://www.engineeringproductivitytools.com/stuff/T0001/PT10.HTM#Head521
+    // by making the odd terms into the imaginary components of our new FFT,
+    // and then using symmetry to recombine them.
+    void fftImplPureReal(Ret, R)(R range, Ret buf) const
+    in {
+        assert(range.length >= 4);
+        assert(isPowerOfTwo(range.length));
+    } body {
+        alias ElementType!R E;
+        
+        // Converts odd indices of range to the imaginary components of
+        // a range half the size.  The even indices become the real components.
+        static if(isArray!R && isFloatingPoint!E) {
+            // Then the memory layout of complex numbers provides a dirt
+            // cheap way to convert.  This is a common case, so take advantage.
+            auto oddsImag = cast(Complex!E[]) range;
+        } else {
+            // General case:  Use a higher order range.  We can assume 
+            // source.length is even because it has to be a power of 2.
+            static struct OddToImaginary {
+                R source;
+                alias Complex!(CommonType!(E, typeof(buf[0].re))) C;
+                
+                @property {
+                    C front() {
+                        return C(source[0], source[1]);
+                    }
+                
+                    C back() {
+                        immutable n = source.length;
+                        return C(source[n - 2], source[n - 1]);
+                    }
+                    
+                    typeof(this) save() {
+                        return typeof(this)(source.save);
+                    }
+                    
+                    bool empty() {
+                        return source.empty;
+                    }
+                    
+                    size_t length() {
+                        return source.length / 2;
+                    }
+                }
+                
+                void popFront() {
+                    source.popFront();
+                    source.popFront();
+                }
+                
+                void popBack() {
+                    source.popBack();
+                    source.popBack();
+                }
+                
+                C opIndex(size_t index) {
+                    return C(source[index * 2], source[index * 2 + 1]);
+                }
+                
+                typeof(this) opSlice(size_t lower, size_t upper) {
+                    return typeof(this)(source[lower * 2..upper * 2]);
+                }
+            }
+            
+            auto oddsImag = OddToImaginary(range);
+        }
+        
+        fft(oddsImag, buf[0..$ / 2]);
+        auto evenFft = buf[0..$ / 2];
+        auto oddFft = buf[$ / 2..$];
+        immutable halfN = evenFft.length;
+        oddFft[0].re = buf[0].im;
+        oddFft[0].im = 0;
+        evenFft[0].im = 0;
+        // evenFft[0].re is already right b/c it's aliased with buf[0].re.
+        
+        foreach(k; 1..halfN / 2 + 1) {
+            immutable bufk = buf[k];
+            immutable bufnk = buf[buf.length / 2 - k];
+            evenFft[k].re = 0.5 * (bufk.re + bufnk.re);
+            evenFft[halfN - k].re = evenFft[k].re;
+            evenFft[k].im = 0.5 * (bufk.im - bufnk.im);
+            evenFft[halfN - k].im = -evenFft[k].im;
+            
+            oddFft[k].re = 0.5 * (bufk.im + bufnk.im);
+            oddFft[halfN - k].re = oddFft[k].re;
+            oddFft[k].im = 0.5 * (bufnk.re - bufk.re);
+            oddFft[halfN - k].im = -oddFft[k].im;
+        }
 
-        immutable halfLen = range.length / 2;
+        butterfly(buf);
+    }
+    
+    void butterfly(R)(R buf) const 
+    in {
+        assert(isPowerOfTwo(buf.length));
+    } body {
+        immutable n = buf.length;
+        immutable localLookup = negSinLookup[bsf(n)];
+        assert(localLookup.length == n);
+
+        immutable cosMask = n - 1;
+        immutable cosAdd = n / 4 * 3;
+
+        lookup_t negSinFromLookup(size_t index) pure nothrow {
+            return localLookup[index];
+        }
+
+        lookup_t cosFromLookup(size_t index) pure nothrow {
+            // cos is just -sin shifted by PI * 3 / 2.
+            return localLookup[(index + cosAdd) & cosMask];
+        }
+
+        immutable halfLen = n / 2;
 
         // This loop is unrolled and the two iterations are nterleaved relative
         // to the textbook FFT to increase ILP.  This gives roughly 5% speedups
@@ -2322,8 +2427,9 @@ private:
     }
 
 public:
-    /**Create an $(D Fft) object for computing fast Fourier transforms of the
-     * provided size.  $(D size) must be a power of two.
+    /**Create an $(D Fft) object for computing fast Fourier transforms of 
+     * power of two sizes of $(D size) or smaller.  $(D size) must be a 
+     * power of two.
      */
     this(size_t size) {
         // Allocate all twiddle factor buffers in one contiguous block so that,
@@ -2343,6 +2449,9 @@ public:
      * which will be interpreted as pure real values, or complex types with
      * properties or members $(D .re) and $(D .im) that can be read.
      *
+     * Note:  Pure real FFTs are automatically detected and the relevant
+     *        optimizations are performed.
+     * 
      * Returns:  An array of complex numbers representing the transformed data in
      *           the frequency domain.
      */
@@ -2381,10 +2490,15 @@ public:
             slowFourier2(range, buf);
             return;
         } else {
-            static if(is(R : Stride!R)) {
-                return fftImpl(range, buf);
-            } else {
-                return fftImpl(Stride!R(range, 1), buf);
+            alias ElementType!R E;
+            static if(is(E : real)) {
+                return fftImplPureReal(range, buf);
+            } else {                
+                static if(is(R : Stride!R)) {
+                    return fftImpl(range, buf);
+                } else {
+                    return fftImpl(Stride!R(range, 1), buf);
+                }
             }
         }
     }
@@ -2476,15 +2590,24 @@ void inverseFft(Ret, R)(R range, Ret buf) {
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
-
 unittest {
-    // Test values from R.
+    // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);
     assert(approxEqual(map!"a.re"(fft1),
         [36.0, -4, -4, -4, -4, -4, -4, -4]));
     assert(approxEqual(map!"a.im"(fft1),
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568]));
+    
+    auto fft1Retro = fft(retro(arr));
+    assert(approxEqual(map!"a.re"(fft1Retro),
+        [36.0, 4, 4, 4, 4, 4, 4, 4]));
+    assert(approxEqual(map!"a.im"(fft1Retro),
+        [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568]));  
+        
+    auto fft1Float = fft(to!(float[])(arr));
+    assert(approxEqual(map!"a.re"(fft1), map!"a.re"(fft1Float)));
+    assert(approxEqual(map!"a.im"(fft1), map!"a.im"(fft1Float)));
 
     alias Complex!float C;
     auto arr2 = [C(1,2), C(3,4), C(5,6), C(7,8), C(9,10),

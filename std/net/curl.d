@@ -3339,7 +3339,9 @@ struct Curl
 
     private string errorString(CurlCode code)
     {
-        return format("%s on handle %s", curl_easy_strerror(code), handle);
+        auto msgZ = curl_easy_strerror(code);
+        // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
+        return format("%s on handle %s", msgZ[0 .. core.stdc.string.strlen(msgZ)], handle);
     }
 
     private void throwOnStopped(string message = null)

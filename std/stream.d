@@ -1855,13 +1855,8 @@ class File: Stream {
     readable = cast(bool)(mode & FileMode.In);
     writeable = cast(bool)(mode & FileMode.Out);
     version (Windows) {
-      if (std.file.useWfuncs) {
-        hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
-                            null, createMode, 0, null);
-      } else {
-        hFile = CreateFileA(std.file.toMBSz(filename), access, share,
-                            null, createMode, 0, null);
-      }
+      hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
+                          null, createMode, 0, null);
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
     version (Posix) {
@@ -1954,9 +1949,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Windows) {
-          auto dwSize = to!DWORD(size);
+      auto dwSize = to!DWORD(size);
       ReadFile(hFile, buffer, dwSize, &dwSize, null);
-          size = dwSize;
+      size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1969,9 +1964,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Windows) {
-          auto dwSize = to!DWORD(size);
+      auto dwSize = to!DWORD(size);
       WriteFile(hFile, buffer, dwSize, &dwSize, null);
-          size = dwSize;
+      size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)

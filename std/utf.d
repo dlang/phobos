@@ -74,13 +74,14 @@ class UTFException : Exception
 
     override string toString()
     {
+        import std.string;
         if(len == 0)
             return super.toString();
 
         string result = "Invalid UTF sequence:";
 
         foreach(i; sequence[0 .. len])
-            result ~= " " ~ to!string(i, 16);
+            result ~= format(" %02x", i);
 
         if(super.msg.length > 0)
         {
@@ -1183,10 +1184,10 @@ void validate(S)(in S str) @safe pure
 
 /* =================== Conversion to UTF8 ======================= */
 
-@trusted
+pure
 {
 
-char[] toUTF8(out char[4] buf, dchar c)
+char[] toUTF8(out char[4] buf, dchar c) nothrow @safe
 in
 {
     assert(isValidDchar(c));
@@ -1227,14 +1228,14 @@ body
 /*******************
  * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
  */
-string toUTF8(in char[] s)
+string toUTF8(in char[] s) @safe
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-string toUTF8(in wchar[] s)
+string toUTF8(in wchar[] s) @trusted
 {
     char[] r;
     size_t i;
@@ -1260,7 +1261,7 @@ string toUTF8(in wchar[] s)
 }
 
 /// ditto
-pure string toUTF8(in dchar[] s)
+string toUTF8(in dchar[] s) @trusted
 {
     char[] r;
     size_t i;
@@ -1290,7 +1291,7 @@ pure string toUTF8(in dchar[] s)
 
 /* =================== Conversion to UTF16 ======================= */
 
-pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
+wchar[] toUTF16(ref wchar[2] buf, dchar c) nothrow @safe
 in
 {
     assert(isValidDchar(c));
@@ -1313,7 +1314,7 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(in char[] s)
+wstring toUTF16(in char[] s) @trusted
 {
     wchar[] r;
     size_t slen = s.length;
@@ -1339,14 +1340,14 @@ wstring toUTF16(in char[] s)
 }
 
 /// ditto
-wstring toUTF16(in wchar[] s)
+wstring toUTF16(in wchar[] s) @safe
 {
     validate(s);
     return s.idup;
 }
 
 /// ditto
-pure wstring toUTF16(in dchar[] s)
+pure wstring toUTF16(in dchar[] s) @trusted
 {
     wchar[] r;
     size_t slen = s.length;
@@ -1366,7 +1367,7 @@ pure wstring toUTF16(in dchar[] s)
     $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
-const(wchar)* toUTF16z(in char[] s)
+const(wchar)* toUTF16z(in char[] s) @trusted
 {
     wchar[] r;
     size_t slen = s.length;
@@ -1387,7 +1388,7 @@ const(wchar)* toUTF16z(in char[] s)
             encode(r, c);
         }
     }
-    r ~= "\000";
+    r ~= '\000';
 
     return r.ptr;
 }
@@ -1398,7 +1399,7 @@ const(wchar)* toUTF16z(in char[] s)
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(in char[] s)
+dstring toUTF32(in char[] s) @trusted
 {
     dchar[] r;
     size_t slen = s.length;
@@ -1419,7 +1420,7 @@ dstring toUTF32(in char[] s)
 }
 
 /// ditto
-dstring toUTF32(in wchar[] s)
+dstring toUTF32(in wchar[] s) @trusted
 {
     dchar[] r;
     size_t slen = s.length;
@@ -1440,7 +1441,7 @@ dstring toUTF32(in wchar[] s)
 }
 
 /// ditto
-dstring toUTF32(in dchar[] s)
+dstring toUTF32(in dchar[] s) @safe
 {
     validate(s);
     return s.idup;
@@ -1767,3 +1768,4 @@ unittest
     assert(count("abc") == 3);
     assert(count("\u20AC100") == 4);
 }
+
