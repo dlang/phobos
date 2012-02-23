@@ -1,3 +1,15 @@
+// Written in the D programming language.
+/**
+ * Implements functionality to read ini files from a input range of $(D dchar).
+ *
+ * Copyright: Copyright Jonathan MERCIER  2012-.
+ *
+ * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ *
+ * Authors:   Jonathan MERCIER aka bioinfornatics
+ *
+ * Source: $(PHOBOSSRC std/_ini.d)
+ */
 module std.ini;
 
 import std.string;
