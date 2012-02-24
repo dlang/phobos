@@ -8,7 +8,8 @@ WIKI=Phobos/StdProcess
 Copyright: Copyright Digital Mars 2007 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
+           $(WEB erdani.org, Andrei Alexandrescu),
+           $(WEB thecybershadow.net, Vladimir Panteleev)
 Source:    $(PHOBOSSRC std/_process.d)
 */
 /*
@@ -819,3 +820,218 @@ else
     static assert(0, "os not supported");
 
 
+/* ////////////////////////////////////////////////////////////////////////// */
+
+/**
+    Quote an argument in a manner conforming to the behavior of
+    $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
+    CommandLineToArgvW).
+*/
+
+string escapeWindowsArgument(string arg)
+{
+    // Rationale for leaving this function as public:
+    // this algorithm of escaping paths is also used in other software,
+    // e.g. DMD's response files.
+    //
+    // References:
+    // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
+    // * http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
+
+    auto escapeIt = new bool[arg.length];
+    bool escaping = true;
+    size_t size = 1 + arg.length + 1;
+    foreach_reverse (i, c; arg)
+    {
+        if (c == '"')
+        {
+            escapeIt[i] = escaping = true;
+            size++;
+        }
+        else
+        if (c == '\\')
+        {
+            if (escaping)
+            {
+                escapeIt[i] = true;
+                size++;
+            }
+        }
+        else
+            escaping = false;
+    }
+
+    char[] buf = new char[size];
+    size_t j = size;
+    buf[--j] = '"';
+    foreach_reverse (i, c; arg)
+    {
+        buf[--j] = c;
+        if (escapeIt[i])
+            buf[--j] = '\\';
+    }
+    buf[--j] = '"';
+
+    return assumeUnique(buf);
+}
+
+version(Windows) version(unittest)
+{
+    import core.sys.windows.windows;
+    import core.stdc.stddef;
+
+    extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
+    extern (C) size_t wcslen(in wchar *);
+
+    unittest
+    {
+        string[] testStrings = [
+            `Hello`,
+            `Hello, world`,
+            `Hello, "world"`,
+            `C:\`,
+            `C:\dmd`,
+            `C:\Program Files\`,
+        ];
+
+        foreach (c1; `\" _*`)
+        foreach (c2; `\" _*`)
+        foreach (c3; `\" _*`)
+        foreach (c4; `\" _*`)
+            testStrings ~= [c1, c2, c3, c4].replace("*", "");
+
+        import std.conv;
+
+        foreach (s; testStrings)
+        {
+            auto q = escapeWindowsArgument(s);
+            LPWSTR lpCommandLine = (to!(wchar[])("Dummy.exe " ~ q) ~ "\0"w).ptr;
+            int numArgs;
+            LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
+            scope(exit) LocalFree(args);
+            assert(numArgs==2, s ~ " => " ~ q ~ " #" ~ text(numArgs-1));
+            auto arg = to!string(args[1][0..wcslen(args[1])]);
+            assert(arg == s, s ~ " => " ~ q ~ " => " ~ arg);
+        }
+    }
+}
+
+private string escapeShellArgument(string arg)
+{
+    version (Windows)
+    {
+        return escapeWindowsArgument(arg);
+    }
+    else
+    {
+        // '\'' means: close quoted part of argument, append an escaped
+        // single quote, and reopen quotes
+        return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
+    }
+}
+
+private string escapeShellArguments(string[] args)
+{
+    auto result = args.dup;
+    foreach (ref arg; result)
+        arg = escapeShellArgument(arg);
+    return result.join(" ");
+}
+
+private string escapeShellCommandString(string command)
+{
+    version (Windows)
+    {
+        // Follow CMD's rules for quote parsing (see "cmd /?").
+        command = '"' ~ command ~ '"';
+    }
+    return command;
+}
+
+/**
+    Escape an argv-style argument array to be used with the
+    $(D system) or $(D shell) functions.
+
+    Warning: Do not attempt to use this function with multiple
+    commands or output redirection - use $(D escapeShellCommands)
+    instead.
+
+    Example:
+---
+string url = "http://dlang.org/";
+system(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
+---
+*/
+
+string escapeShellCommand(string[] args...)
+{
+    return escapeShellCommandString(escapeShellArguments(args));
+}
+
+/**
+    Escape a series of commands / file names for use with the
+    $(D system) or $(D shell) functions.
+
+    Params:
+      components = Interleaved array of escaped commands/file names
+                   to be joined, separated by shell operators
+                   (e.g piping / redirection symbols).
+                   Commands/file names are strings or string arrays,
+                   and separating operators are strings.
+
+    Example:
+---
+system(escapeShellCommands(
+    ["curl", "http://dlang.org/download.html"],
+    "|",
+    ["grep", "-o", `http://\S*\.zip`],
+    ">",
+    "D links.txt"));
+---
+*/
+
+string escapeShellCommands(T...)(T components)
+{
+    // This function exists because the redirection/etc. symbols
+    // need to be inside the wrapping double-quotes required by
+    // CMD. A better alternative would be to always add those
+    // quotes in the system() function (then the user could just
+    // concatenate escapeShellCommand output), however we cannot
+    // do this without breaking compatibility.
+
+    string[] result;
+    foreach (i, component; components)
+        static if (i % 2 == 0) // command / filename
+        {
+            static if (is(typeof(component) : string[])) // command
+                result ~= escapeShellArguments(component);
+            else
+            static if (is(typeof(component) : string)) // filename
+                result ~= escapeShellArgument(component);
+            else
+                static assert(0, "Command/filename must be string or string[]");
+        }
+        else // operator
+        {
+            static if (is(typeof(component) : string)) // filename
+                result ~= component;
+            else
+                static assert(0, "Shell operator must be string");
+        }
+
+    return escapeShellCommandString(result.join(" "));
+}
+
+unittest
+{
+    auto result = escapeShellCommands(
+            ["curl", "http://dlang.org/download.html"],
+            "|",
+            ["grep", "-o", `http://\S*\.zip`],
+            ">",
+            "D links.txt");
+    version (Windows)
+        assert(result == `""curl" "http://dlang.org/download.html" | "grep" "-o" "http://\S*\.zip" > "D links.txt""`);
+    else
+        assert(result == `'curl' 'http://dlang.org/download.html' | 'grep' '-o' 'http://\S*\.zip' > 'D links.txt'`);
+}
