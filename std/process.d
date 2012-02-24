@@ -344,7 +344,7 @@ alias core.thread.getpid getpid;
    scope(exit)
    {
        fclose(f) == 0 || assert(false);
-       system("rm " ~ tempFilename);
+       system(escapeShellCommand("rm", tempFilename));
    }
    ... use f ...
    ----
@@ -362,6 +362,10 @@ string shell(string cmd)
         }
         auto filename = a.data;
         scope(exit) if (exists(filename)) remove(filename);
+        // We can't use escapeShellCommands here because we don't know
+        // if cmd is escaped (wrapped in quotes) or not, without relying
+        // on shady heuristics. The current code shouldn't cause much
+        // trouble unless filename contained spaces (it won't).
         errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
         return readText(filename);
     }
