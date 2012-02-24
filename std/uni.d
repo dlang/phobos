@@ -249,7 +249,7 @@ deprecated bool isUniAlpha(dchar c) @safe pure nothrow
 }
 
 /++
-    Returns whether $(D c) is a unicode alpha character (general unicode
+    Returns whether $(D c) is a Unicode alpha character (general unicode
     category: Lu, Ll, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
@@ -648,8 +648,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Mn, Me, Mc)
+/++
+    Returns whether $(D c) is a unicode mark (general unicode category: Mn, Me,
+    Mc).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -998,8 +1000,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Nd, Nl, No)
+/++
+    Returns whether $(D c) is a Unicode numerical character (general unicode
+    category: Nd, Nl, No).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1122,8 +1126,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf)
+/++
+    Returns whether $(D c) is a Unicode punctuation character (general unicode
+    category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1490,11 +1496,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Sm, Sc, Sk, So)
+/++
+    Returns whether $(D c) is a Unicode symbol character (general unicode
+    category: Sm, Sc, Sk, So)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSymbol(dchar c) @safe pure nothrow
 {
     static immutable dchar tableSm[][2] =
@@ -1801,11 +1808,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Zs)
+/++
+    Returns whether $(D c) is a Unicode whitespace character (general unicode
+    category: Zs)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSpace(dchar c) @safe pure nothrow
 {
     return (c == 0x0020 ||
@@ -1820,8 +1828,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: L, M, N, P, S, Zs)
+/++
+    Returns whether $(D c) is a Unicode graphical character (general unicode
+    category: L, M, N, P, S, Zs).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1836,8 +1846,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cc)
+/++
+    Returns whether $(D c) is a Unicode control character (general unicode
+    category: Cc)
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1852,11 +1864,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cf)
+/++
+    Returns whether $(D c) is a Unicode formatting character (general unicode
+    category: Cf)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isFormat(dchar c) @safe pure nothrow
 {
     static immutable dchar tableCf[][2] =
@@ -1887,11 +1900,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Co)
+/++
+    Returns whether $(D c) is a Unicode Private Use character (general unicode
+    category: Co)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isPrivateUse(dchar c) @safe pure nothrow
 {
     return (0x00_E000 <= c && c <= 0x00_F8FF)
@@ -1905,23 +1919,28 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cs)
+/++
+    Returns whether $(D c) is a Unicode surrogate character (general unicode
+    category: Cs)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSurrogate(dchar c) @safe pure nothrow
 {
     return (0xD800 <= c && c <= 0xDFFF);
 }
 
-// ditto
+/++
+    Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
+  +/
 bool isSurrogateHi(dchar c) @safe pure nothrow
 {
     return (0xD800 <= c && c <= 0xDBFF);
 }
 
-// ditto
+/++
+    Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
+  +/
 bool isSurrogateLo(dchar c) @safe pure nothrow
 {
     return (0xDC00 <= c && c <= 0xDFFF);
@@ -1932,11 +1951,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cn)
+/++
+    Returns whether $(D c) is a Unicode non-character (general unicode
+    category: Cn)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isNonCharacter(dchar c) @safe pure nothrow
 {
     static immutable dchar table[][2] =
