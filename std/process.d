@@ -731,6 +731,14 @@ unittest
 }
 
 
+version(StdDdoc)
+{
+    /****************************************
+     * Start up the browser and set it to viewing the page at url.
+     */
+    void browse(string url);
+}
+else
 version (Windows)
 {
     import core.sys.windows.windows;
@@ -741,9 +749,6 @@ version (Windows)
 
     pragma(lib,"shell32.lib");
 
-    /****************************************
-     * Start up the browser and set it to viewing the page at url.
-     */
     void browse(string url)
     {
         ShellExecuteA(null, "open", toStringz(url), null, null, SW_SHOWNORMAL);
