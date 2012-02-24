@@ -518,7 +518,6 @@ unittest
  * --- 
  */
 template KeyType(V : V[K], K)
-    if (isAssociativeArray!(V[K]))
 {
     alias K KeyType;
 }
@@ -533,7 +532,6 @@ template KeyType(V : V[K], K)
  * --- 
  */
 template ValueType(V : V[K], K)
-    if (isAssociativeArray!(V[K]))
 {
     alias V ValueType;
 }
