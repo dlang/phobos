@@ -1187,10 +1187,10 @@ abstract class Address
 {
     /// Returns pointer to underlying $(D sockaddr) structure.
     sockaddr* name();
-    const(sockaddr)* name() const; /// ditto
+    abstract const(sockaddr)* name() const; /// ditto
 
     /// Returns actual size of underlying $(D sockaddr) structure.
-    socklen_t nameLen() const;
+    abstract socklen_t nameLen() const;
 
     /// Family of this address.
     @property AddressFamily addressFamily() const
