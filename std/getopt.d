@@ -79,7 +79,8 @@ void main(string[] args)
  to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D ConvException) exception is thrown.
+ but not present), a $(D ConvException) exception is thrown. On all
+ other errors, a $(D GetOptException) exception is thrown.
 
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
@@ -346,6 +347,18 @@ void getopt(T...)(ref string[] args, T opts) {
 }
 
 /**
+ * Thrown if an error occurs while parsing the command line.
+ */
+
+class GetOptException : Exception
+{
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
+    {
+        super(s, fn, ln);
+    }
+}
+
+/**
  * Configuration options for $(D getopt). You can pass them to $(D
  * getopt) in any position, except in between an option string and its
  * bound pointer.
@@ -408,7 +421,7 @@ private void getoptImpl(T...)(ref string[] args,
             if (endOfOptions.length && a == endOfOptions) break;
             if (!cfg.passThrough)
             {
-                throw new Exception("Unrecognized option "~a);
+                throw new GetOptException("Unrecognized option " ~ a ~ ".");
             }
         }
     }
@@ -464,8 +477,9 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             if (!isDelegateWithLessThanTwoParameters && !(val.length) && !incremental) {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
-                enforce(i < args.length,
-                    "Missing value for argument " ~ a ~ ".");
+                if (i >= args.length)
+                    throw new GetOptException("Missing value for argument " ~ a ~ ".");
+
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
