@@ -452,9 +452,14 @@ file handle and throws on error.
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
-file handle and throws on error.
+file handle and throws on error. The number of items to read and the size of
+each item is inferred from the size and type of the input array, respectively.
 
-$(D rawRead) always read in binary mode on Windows.
+Returns: The slice of $(D buffer) containing the data that was actually read.
+This will be shorter than $(D buffer) if EOF was reached before the buffer
+could be filled.
+
+$(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
@@ -495,10 +500,12 @@ $(D rawRead) always read in binary mode on Windows.
 
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the
-file handle and throws on error.
+cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+handle and throws on error. The number of items to write and the size of each
+item is inferred from the size and type of the input array, respectively. An
+error is thrown if the buffer could not be written in its entirety.
 
-$(D rawWrite) always write in binary mode on Windows.
+$(D rawWrite) always writes in binary mode on Windows.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -743,7 +750,8 @@ resized as necessary.
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D StdioException) on error
+Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
+conversion error.
 
 Example:
 ---
@@ -849,6 +857,11 @@ with every line.  */
         }
     }
 
+    /**
+     * Read data from the file according to the specified
+     * $(LINK2 std_format.html#format-string, format specifier) using
+     * $(XREF format,formattedRead).
+     */
     uint readf(Data...)(in char[] format, Data data)
     {
         assert(isOpen);
@@ -1708,7 +1721,9 @@ unittest
 }
 
 /**
- * Formatted read one line from stdin.
+ * Read data from $(D stdin) according to the specified
+ * $(LINK2 std_format.html#format-string, format specifier) using
+ * $(XREF format,formattedRead).
  */
 uint readf(A...)(in char[] format, A args)
 {
