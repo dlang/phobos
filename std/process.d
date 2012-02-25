@@ -46,6 +46,11 @@ version (Posix)
 {
     import core.sys.posix.stdlib;
 }
+version (unittest)
+{
+    import std.file, std.conv, std.array, std.random;
+    import std.path : rel2abs;
+}
 
 
 // The following is needed for reading/writing environment variables.
@@ -831,6 +836,24 @@ else
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
+/*
+    Command line arguments exist in three forms:
+    1) string or char* array, as received by main.
+       Also used internally on POSIX systems.
+    2) Command line string, as used in Windows'
+       CreateProcess and CommandLineToArgvW functions.
+       A specific quoting and escaping algorithm is used
+       to distinguish individual arguments.
+    3) Shell command string, as written at a shell prompt
+       or passed to cmd /C - this one may contain shell
+       control characters, e.g. > or | for redirection /
+       piping - thus, yet another layer of escaping is
+       used to distinguish them from program arguments.
+
+    The intermediary format (2) is hidden away from the
+    user in this module.
+*/
+
 /**
     Quote an argument in a manner conforming to the behavior of
     $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
@@ -903,13 +926,12 @@ version(Windows) version(unittest)
             `C:\Program Files\`,
         ];
 
-        foreach (c1; `\" _*`)
-        foreach (c2; `\" _*`)
-        foreach (c3; `\" _*`)
-        foreach (c4; `\" _*`)
-            testStrings ~= [c1, c2, c3, c4].replace("*", "");
-
-        import std.conv;
+        enum CHARS = `_x\" *&^`; // _ is placeholder for nothing
+        foreach (c1; CHARS)
+        foreach (c2; CHARS)
+        foreach (c3; CHARS)
+        foreach (c4; CHARS)
+            testStrings ~= [c1, c2, c3, c4].replace("_", "");
 
         foreach (s; testStrings)
         {
@@ -925,18 +947,22 @@ version(Windows) version(unittest)
     }
 }
 
+private string escapePosixArgument(string arg)
+{
+    // '\'' means: close quoted part of argument, append an escaped
+    // single quote, and reopen quotes
+    return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
+}
+
 private string escapeShellArgument(string arg)
 {
+    // The unittest for this function requires special
+    // preparation - see below.
+
     version (Windows)
-    {
         return escapeWindowsArgument(arg);
-    }
     else
-    {
-        // '\'' means: close quoted part of argument, append an escaped
-        // single quote, and reopen quotes
-        return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
-    }
+        return escapePosixArgument(arg);
 }
 
 private string escapeShellArguments(string[] args)
@@ -947,28 +973,64 @@ private string escapeShellArguments(string[] args)
     return result.join(" ");
 }
 
+string escapeWindowsShellCommand(string command)
+{
+    string result;
+    foreach (c; command)
+        switch (c)
+        {
+            case '\0':
+                assert(0, "Cannot put NUL in command line");
+            case '\r':
+            case '\n':
+                assert(0, "CR/LF are not escapable");
+            case '\x01': .. case '\x09':
+            case '\x0B': .. case '\x0C':
+            case '\x0E': .. case '\x1F':
+            case '"':
+            case '^':
+            case '&':
+            case '<':
+            case '>':
+            case '|':
+                result ~= '^';
+                goto default;
+            default:
+                result ~= c;
+        }
+    return result;
+}
+
 private string escapeShellCommandString(string command)
 {
     version (Windows)
-    {
-        // Follow CMD's rules for quote parsing (see "cmd /?").
-        command = '"' ~ command ~ '"';
-    }
-    return command;
+        return escapeWindowsShellCommand(command);
+    else
+        return command;
 }
 
 /**
     Escape an argv-style argument array to be used with the
     $(D system) or $(D shell) functions.
 
-    Warning: Do not attempt to use this function with multiple
-    commands or output redirection - use $(D escapeShellCommands)
-    instead.
-
     Example:
 ---
 string url = "http://dlang.org/";
 system(escapeShellCommand("wget", url, "-O", "dlang-index.html"));
+---
+
+    Concatenate multiple $(D escapeShellCommand) and
+    $(D escapeShellFileName) results to use shell redirection or
+    piping operators.
+
+    Example:
+---
+system(
+    escapeShellCommand("curl", "http://dlang.org/download.html") ~
+    "|" ~
+    escapeShellCommand("grep", "-o", `http://\S*\.zip`) ~
+    ">" ~
+    escapeShellFileName("D download links.txt"));
 ---
 */
 
@@ -978,69 +1040,121 @@ string escapeShellCommand(string[] args...)
 }
 
 /**
-    Escape a series of commands / file names for use with the
-    $(D system) or $(D shell) functions.
-
-    Params:
-      components = Interleaved array of escaped commands/file names
-                   to be joined, separated by shell operators
-                   (e.g piping / redirection symbols).
-                   Commands/file names are strings or string arrays,
-                   and separating operators are strings.
-
-    Example:
----
-system(escapeShellCommands(
-    ["curl", "http://dlang.org/download.html"],
-    "|",
-    ["grep", "-o", `http://\S*\.zip`],
-    ">",
-    "D links.txt"));
----
+    Escape a filename to be used for shell redirection with
+    the $(D system) or $(D shell) functions.
 */
 
-string escapeShellCommands(T...)(T components)
+string escapeShellFileName(string fn)
 {
-    // This function exists because the redirection/etc. symbols
-    // need to be inside the wrapping double-quotes required by
-    // CMD. A better alternative would be to always add those
-    // quotes in the system() function (then the user could just
-    // concatenate escapeShellCommand output), however we cannot
-    // do this without breaking compatibility.
+    // The unittest for this function requires special
+    // preparation - see below.
 
-    string[] result;
-    foreach (i, component; components)
-        static if (i % 2 == 0) // command / filename
-        {
-            static if (is(typeof(component) : string[])) // command
-                result ~= escapeShellArguments(component);
-            else
-            static if (is(typeof(component) : string)) // filename
-                result ~= escapeShellArgument(component);
-            else
-                static assert(0, "Command/filename must be string or string[]");
-        }
-        else // operator
-        {
-            static if (is(typeof(component) : string)) // filename
-                result ~= component;
-            else
-                static assert(0, "Shell operator must be string");
-        }
-
-    return escapeShellCommandString(result.join(" "));
+    version (Windows)
+        return '"' ~ fn ~ '"';
+    else
+        return escapePosixArgument(fn);
 }
 
+// Loop generating strings with random characters
+//version = unittest_burnin;
+
+version(unittest_burnin)
 unittest
 {
-    auto result = escapeShellCommands(
-            ["curl", "http://dlang.org/download.html"],
-            "|",
-            ["grep", "-o", `http://\S*\.zip`],
-            ">",
-            "D links.txt");
-    version (Windows)
-        assert(result == `""curl" "http://dlang.org/download.html" | "grep" "-o" "http://\S*\.zip" > "D links.txt""`);
-    else
-        assert(result == `'curl' 'http://dlang.org/download.html' | 'grep' '-o' 'http://\S*\.zip' > 'D links.txt'`);
+    // There are no readily-available commands on all platforms suitable
+    // for properly testing command escaping. The behavior of CMD's "echo"
+    // built-in differs from the POSIX program, and Windows ports of POSIX
+    // environments (Cygwin, msys, gnuwin32) may interfere with their own
+    // "echo" ports.
+
+    // To run this unit test, create std_process_unittest_helper.d with the
+    // following content and compile it:
+    // import std.stdio, std.array; void main(string[] args) { write(args.join("\0")); }
+    // Then, test this module with:
+    // rdmd --main -unittest -version=unittest_burnin process.d
+
+    auto helper = rel2abs("std_process_unittest_helper");
+    assert(shell(helper ~ " hello").split("\0")[1..$] == ["hello"], "Helper malfunction");
+
+    void test(string[] s, string fn)
+    {
+        string e;
+        string[] g;
+
+        e = escapeShellCommand(helper ~ s);
+        {
+            scope(failure) writefln("shell() failed.\nExpected:\t%s\nEncoded:\t%s", s, [e]);
+            g = shell(e).split("\0")[1..$];
+        }
+        assert(s == g, format("shell() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+
+        e = escapeShellCommand(helper ~ s) ~ ">" ~ escapeShellFileName(fn);
+        {
+            scope(failure) writefln("system() failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
+            system(e);
+            g = readText(fn).split("\0")[1..$];
+        }
+        remove(fn);
+        assert(s == g, format("system() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+    }
+
+    while (true)
+    {
+        string[] args;
+        foreach (n; 0..uniform(1, 4))
+        {
+            string arg;
+            foreach (l; 0..uniform(0, 10))
+            {
+                dchar c;
+                while (true)
+                {
+                    version (Windows)
+                    {
+                        // As long as DMD's system() uses CreateProcessA,
+                        // we can't reliably pass Unicode
+                        c = uniform(0, 128);
+                    }
+                    else
+                        c = uniform!ubyte();
+
+                    if (c == 0)
+                        continue; // argv-strings are zero-terminated
+                    version (Windows)
+                        if (c == '\r' || c == '\n')
+                            continue; // newlines are unescapable on Windows
+                    break;
+                }
+                arg ~= c;
+            }
+            args ~= arg;
+        }
+
+        // generate filename
+        string fn = "test_";
+        foreach (l; 0..uniform(1, 10))
+        {
+            dchar c;
+            while (true)
+            {
+                version (Windows)
+                    c = uniform(0, 128); // as above
+                else
+                    c = uniform!ubyte();
+
+                if (c == 0 || c == '/')
+                    continue; // NUL and / are the only characters
+                              // forbidden in POSIX filenames
+                version (Windows)
+                    if (c < '\x20' || c == '<' || c == '>' || c == ':' || c == '"' ||
+                        c == '\\' || c == '|' || c == '?' || c == '?' || c == '*')
+                        continue; // http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx
+                break;
+            }
+
+            fn ~= c;
+        }
+
+        test(args, fn);
+    }
 }
