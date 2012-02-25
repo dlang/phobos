@@ -849,6 +849,10 @@ with every line.  */
         }
     }
 
+    /**
+     * Read data from the file according to the specified format using
+     * $(XREF format,formattedRead).
+     */
     uint readf(Data...)(in char[] format, Data data)
     {
         assert(isOpen);
@@ -1708,7 +1712,8 @@ unittest
 }
 
 /**
- * Formatted read one line from stdin.
+ * Read data from the file according to the specified format using
+ * $(XREF format,formattedRead).
  */
 uint readf(A...)(in char[] format, A args)
 {
