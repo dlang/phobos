@@ -1,9 +1,9 @@
 // Written in the D programming language.
 
 /++
-    Functions which operate on unicode characters.
+    Functions which operate on Unicode characters.
 
-    For functions which operate on ASCII characters and ignore unicode
+    For functions which operate on ASCII characters and ignore Unicode
     characters, see $(LINK2 std_ascii.html, std.ascii).
 
     References:
@@ -30,8 +30,8 @@ enum dchar lineSep = '\u2028'; /// UTF line separator
 enum dchar paraSep = '\u2029'; /// UTF paragraph separator
 
 /++
-    Whether or not $(D c) is a unicode whitespace character.
-    (general unicode category: Part of C0(tab, vertical tab, form feed,
+    Whether or not $(D c) is a Unicode whitespace character.
+    (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
   +/
 bool isWhite(dchar c) @safe pure nothrow
@@ -48,7 +48,7 @@ bool isWhite(dchar c) @safe pure nothrow
    $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isLower) instead.)
 
-    Return whether $(D c) is a unicode lowercase character.
+    Return whether $(D c) is a Unicode lowercase character.
   +/
 deprecated bool isUniLower(dchar c) @safe pure nothrow
 {
@@ -56,7 +56,7 @@ deprecated bool isUniLower(dchar c) @safe pure nothrow
 }
 
 /++
-    Return whether $(D c) is a unicode lowercase character.
+    Return whether $(D c) is a Unicode lowercase character.
   +/
 bool isLower(dchar c) @safe pure nothrow
 {
@@ -71,7 +71,7 @@ bool isLower(dchar c) @safe pure nothrow
    $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isUpper) instead.)
 
-    Return whether $(D c) is a unicode uppercase character.
+    Return whether $(D c) is a Unicode uppercase character.
   +/
 deprecated bool isUniUpper(dchar c) @safe pure nothrow
 {
@@ -79,7 +79,7 @@ deprecated bool isUniUpper(dchar c) @safe pure nothrow
 }
 
 /++
-    Return whether $(D c) is a unicode uppercase character.
+    Return whether $(D c) is a Unicode uppercase character.
   +/
 bool isUpper(dchar c) @safe pure nothrow
 {
@@ -94,7 +94,7 @@ bool isUpper(dchar c) @safe pure nothrow
    $(RED Deprecated. It will be removed in August 2012. Please use
    $(D toLower) instead.)
 
-    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 deprecated dchar toUniLower(dchar c) @safe pure nothrow
@@ -103,7 +103,7 @@ deprecated dchar toUniLower(dchar c) @safe pure nothrow
 }
 
 /++
-    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 dchar toLower(dchar c) @safe pure nothrow
@@ -166,7 +166,7 @@ dchar toLower(dchar c) @safe pure nothrow
    $(RED Deprecated. It will be removed in August 2012. Please use
    $(D toUpper) instead.)
 
-    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 deprecated dchar toUniUpper(dchar c) @safe pure nothrow
@@ -175,7 +175,7 @@ deprecated dchar toUniUpper(dchar c) @safe pure nothrow
 }
 
 /++
-    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 dchar toUpper(dchar c) @safe pure nothrow
@@ -238,8 +238,8 @@ dchar toUpper(dchar c) @safe pure nothrow
    $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isAlpha) instead.)
 
-    Returns whether $(D c) is a unicode alpha character
-    (general unicode category: Lu, Ll, Lt, Lm, and Lo).
+    Returns whether $(D c) is a Unicode alpha character
+    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
   +/
@@ -250,7 +250,7 @@ deprecated bool isUniAlpha(dchar c) @safe pure nothrow
 
 /++
     Returns whether $(D c) is a Unicode alpha character
-    (general unicode category: Lu, Ll, Lt, Lm, and Lo).
+    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
   +/
@@ -649,8 +649,8 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a unicode mark
-    (general unicode category: Mn, Me, Mc).
+    Returns whether $(D c) is a Unicode mark
+    (general Unicode category: Mn, Me, Mc).
 
     Standards: Unicode 6.0.0.
   +/
@@ -1002,7 +1002,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode numerical character
-    (general unicode category: Nd, Nl, No).
+    (general Unicode category: Nd, Nl, No).
 
     Standards: Unicode 6.0.0.
   +/
@@ -1128,7 +1128,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode punctuation character
-    (general unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
+    (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
 
     Standards: Unicode 6.0.0.
   +/
@@ -1498,7 +1498,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode symbol character
-    (general unicode category: Sm, Sc, Sk, So)
+    (general Unicode category: Sm, Sc, Sk, So)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1810,7 +1810,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode whitespace character
-    (general unicode category: Zs)
+    (general Unicode category: Zs)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1830,7 +1830,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode graphical character
-    (general unicode category: L, M, N, P, S, Zs).
+    (general Unicode category: L, M, N, P, S, Zs).
 
     Standards: Unicode 6.0.0.
   +/
@@ -1848,7 +1848,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode control character
-    (general unicode category: Cc)
+    (general Unicode category: Cc)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1866,7 +1866,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode formatting character
-    (general unicode category: Cf)
+    (general Unicode category: Cf)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1902,7 +1902,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode Private Use character
-    (general unicode category: Co)
+    (general Unicode category: Co)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1921,7 +1921,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode surrogate character
-    (general unicode category: Cs)
+    (general Unicode category: Cs)
 
     Standards: Unicode 6.0.0.
   +/
@@ -1957,7 +1957,7 @@ unittest
 
 /++
     Returns whether $(D c) is a Unicode non-character
-    (general unicode category: Cn)
+    (general Unicode category: Cn)
 
     Standards: Unicode 6.0.0.
   +/
