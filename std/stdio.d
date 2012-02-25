@@ -750,7 +750,8 @@ resized as necessary.
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D StdioException) on error
+Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
+conversion error.
 
 Example:
 ---
