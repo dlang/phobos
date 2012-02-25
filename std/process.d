@@ -109,7 +109,13 @@ int system(string command)
     immutable status = std.c.process.system(commandz);
     if (status == -1) return status;
     version (Posix)
-        return (status & 0x0000ff00) >>> 8;
+    {
+        if (exited(status))
+            return exitstatus(status);
+
+        // Abnormal termination, return -1.
+        return -1;
+    }
     else version (Windows)
         return status;
     else
@@ -219,11 +225,11 @@ Lerror:
 }   // _spawnvp
 private
 {
-bool stopped(int status)    { return cast(bool)((status & 0xff) == 0x7f); }
-bool signaled(int status)   { return cast(bool)((cast(char)((status & 0x7f) + 1) >> 1) > 0); }
-int  termsig(int status)    { return status & 0x7f; }
-bool exited(int status)     { return cast(bool)((status & 0x7f) == 0); }
-int  exitstatus(int status) { return (status & 0xff00) >> 8; }
+    alias WIFSTOPPED stopped;
+    alias WIFSIGNALED signaled;
+    alias WTERMSIG termsig;
+    alias WIFEXITED exited;
+    alias WEXITSTATUS exitstatus;
 }   // private
 }   // version (Posix)
 
