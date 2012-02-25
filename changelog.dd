@@ -4,6 +4,7 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 4604): A stack overflow with writeln)
         $(LI $(BUGZILLA 5674): AssertError in std.regex)
         $(LI $(BUGZILLA 5652): Add \p and \P unicode properties to std.regex)
+        $(LI $(BUGZILLA 5964): std.stdio.readln can throw a UnicodeException)
         $(LI $(BUGZILLA 6403): Upgrade std.regex to Unicode UTS #18 Level 1 support)
         $(LI $(BUGZILLA 7111): New regex engine cannot match beginning of empty string)
         $(LI $(BUGZILLA 7299): std.uni missing doc comments)
