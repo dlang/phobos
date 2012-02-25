@@ -850,7 +850,8 @@ with every line.  */
     }
 
     /**
-     * Read data from the file according to the specified format using
+     * Read data from the file according to the specified
+     * $(LINK2 std_format.html#format-string, format specifier) using
      * $(XREF format,formattedRead).
      */
     uint readf(Data...)(in char[] format, Data data)
@@ -1712,7 +1713,8 @@ unittest
 }
 
 /**
- * Read data from the file according to the specified format using
+ * Read data from $(D stdin) according to the specified
+ * $(LINK2 std_format.html#format-string, format specifier) using
  * $(XREF format,formattedRead).
  */
 uint readf(A...)(in char[] format, A args)
