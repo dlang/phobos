@@ -140,6 +140,8 @@ SRCS_3 = std\variant.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
 	std\internal\windows\advapi32.d \
 	crc32.d \
+	std\net\curl.d \
+	std\net\isemail.d \
 	std\c\process.d \
 	std\c\stdarg.d \
 	std\c\stddef.d \
@@ -255,6 +257,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
+	$(DOC)\std_net_curl.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
@@ -591,6 +594,9 @@ errorfunction.obj : std\internal\math\errorfunction.d
 
 isemail.obj : std\net\isemail.d
 	$(DMD) -c $(DFLAGS) std\net\isemail.d
+
+curl.obj : std\net\curl.d
+	$(DMD) -c $(DFLAGS) std\net\curl.d
 
 ### std\windows
 
@@ -929,6 +935,9 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
+
+$(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
 $(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
