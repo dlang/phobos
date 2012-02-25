@@ -5558,14 +5558,14 @@ enum OneShot { Fwd, Bwd };
             alias evalBack evalFn;
         assert(clist == (ThreadList!DataIndex).init || startPc==RestartPc); // incorrect after a partial match
         assert(nlist == (ThreadList!DataIndex).init || startPc==RestartPc);
+        static if(direction == OneShot.Fwd)
+            startPc = startPc;
+        else
+            startPc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
         if(!atEnd)//if no char
         {
             if (startPc!=RestartPc){
-                auto startT = createStart(index);
-                static if(direction == OneShot.Fwd)
-                    startT.pc = startPc;
-                else
-                    startT.pc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
+                auto startT = createStart(index, startPc);
                 genCounter++;
                 evalFn!true(startT, matches);
             }
@@ -5611,6 +5611,9 @@ enum OneShot { Fwd, Bwd };
         {
             evalFn!false(t, matches);
         }
+        if(!matched)
+            evalFn!false(createStart(index, startPc), matches);
+   
         return (matched?MatchResult.Match:MatchResult.NoMatch);
     }
 
@@ -6097,12 +6100,12 @@ enum OneShot { Fwd, Bwd };
     }
 
     //creates a start thread
-    Thread!DataIndex*  createStart(DataIndex index)
+    Thread!DataIndex* createStart(DataIndex index, uint pc=0)
     {
         auto t = allocate();
         t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
         t.matches[0].begin = index;
-        t.pc = 0;
+        t.pc = pc;
         t.counter = 0;
         t.uopCounter = 0;
         return t;
@@ -6139,7 +6142,7 @@ enum OneShot { Fwd, Bwd };
     }
     ----
 +/
-@trusted public struct Captures(R,DIndex)
+@trusted public struct Captures(R, DIndex=size_t)
     if(isSomeString!R)
 {//@trusted because of union inside
     alias DIndex DataIndex;
@@ -7421,13 +7424,6 @@ else
         test_body!bmatch();
         test_body!match();
     }
-    //@@@BUG@@@ template function doesn't work inside unittest block
-    version(unittest)
-    Cap.String baz(Cap)(Cap m)
-    if (is(Cap==Captures!(Cap.String,Cap.DataIndex)))
-    {
-        return std.string.toUpper(m.hit);
-    }
 
     // tests for replace
     unittest
@@ -7436,6 +7432,11 @@ else
         {
             foreach(i, v; TypeTuple!(string, wstring, dstring))
             {
+                auto baz(Cap)(Cap m)
+                if (is(Cap==Captures!(Cap.String)))
+                {
+                    return std.string.toUpper(m.hit);
+                }
                 alias v String;
                 assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
                        == to!String("ack rapacity"));
@@ -7445,7 +7446,7 @@ else
                        == to!String("[n]oon"));
                 assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
                        == to!String(": test2 test1 :"));
-                auto s = std.regex.replace!(baz!(Captures!(String,size_t)))(to!String("Strap a rocket engine on a chicken."),
+                auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                         regex(to!String("[ar]"), "g"));
                 assert(s == "StRAp A Rocket engine on A chicken.");
             }
@@ -7486,6 +7487,7 @@ else
         auto w1 = ["", "abc", "de", "fg", "hi", ""];
         assert(equal(split(s1, regex(", *")), w1[]));
     }
+
     unittest 
     { // bugzilla 7141
         string pattern = `[a\--b]`;
@@ -7493,6 +7495,10 @@ else
         assert(match("b", pattern));
         string pattern2 = `[&-z]`;
         assert(match("b", pattern2));
+    }
+    unittest
+    {//bugzilla 7111
+        assert(!match("", regex("^")).empty);
     }
 }
 
