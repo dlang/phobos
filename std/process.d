@@ -850,8 +850,8 @@ else
        piping - thus, yet another layer of escaping is
        used to distinguish them from program arguments.
 
-    The intermediary format (2) is hidden away from the
-    user in this module.
+    Except for escapeWindowsArgument, the intermediary
+    format (2) is hidden away from the user in this module.
 */
 
 /**
@@ -870,9 +870,15 @@ string escapeWindowsArgument(string arg)
     // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
     // * http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
 
+    // Calculate the total string size and make note which characters to escape.
+
     auto escapeIt = new bool[arg.length];
+    // Trailing backslashes must be escaped
     bool escaping = true;
+    // Result size = input size + 2 for surrounding quotes + 1 for the
+    // backslash for each escaped character.
     size_t size = 1 + arg.length + 1;
+
     foreach_reverse (i, c; arg)
     {
         if (c == '"')
@@ -892,6 +898,8 @@ string escapeWindowsArgument(string arg)
         else
             escaping = false;
     }
+
+    // Construct result string.
 
     char[] buf = new char[size];
     size_t j = size;
@@ -1146,8 +1154,8 @@ unittest
                     continue; // NUL and / are the only characters
                               // forbidden in POSIX filenames
                 version (Windows)
-                    if (c < '\x20' || c == '<' || c == '>' || c == ':' || c == '"' ||
-                        c == '\\' || c == '|' || c == '?' || c == '?' || c == '*')
+                    if (c < '\x20' || c == '<' || c == '>' || c == ':' ||
+                        c == '"' || c == '\\' || c == '|' || c == '?' || c == '*')
                         continue; // http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx
                 break;
             }
