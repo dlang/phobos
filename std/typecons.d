@@ -2770,9 +2770,9 @@ unittest
 private struct Scoped(T)
 {
     private byte[__traits(classInstanceSize, T)] Scoped_store = void;
-    @property T Scoped_payload()
+    @property inout(T) Scoped_payload() inout
     {
-        return cast(T) (Scoped_store.ptr);
+        return cast(inout(T))(Scoped_store.ptr);
     }
     alias Scoped_payload this;
 
@@ -2904,6 +2904,19 @@ unittest
 {
     static class A { this(int) {} }
     static assert(!__traits(compiles, scoped!A()));
+}
+
+unittest
+{
+    static class A { @property inout(int) foo() inout { return 1; } }
+
+    auto a1 = scoped!A();
+    assert(a1.foo == 1);
+    static assert(is(typeof(a1.foo) == int));
+
+    const c1 = scoped!A();
+    assert(c1.foo == 1);
+    static assert(is(typeof(c1.foo) == const(int)));
 }
 
 /**
