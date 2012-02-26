@@ -774,21 +774,11 @@ auto memoizeExpr(string expr)()
         s.add(Interval(0,0x7f));
     else
     {
-        version(fred_perfect_hashing)
-        {
-            uint key = phash(name);
-            if(key >= PHASHNKEYS || ucmp(name,unicodeProperties[key].name) != 0)
-                enforce(0, "invalid property name");
-            s = cast(CodepointSet)unicodeProperties[key].set;
-        }
-        else
-        {
-            auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
-            //creating empty Codepointset is a workaround
-            auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
-            enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
-            s = range[eq].set.dup;
-        }
+        auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
+        //creating empty Codepointset is a workaround
+        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
+        enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
+        s = range[eq].set.dup;
     }
 
     if(casefold)
@@ -6397,9 +6387,19 @@ public:
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
-public auto regex(S)(S pattern, const(char)[] flags="")
+@trusted public auto regex(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
 {
+    enum cacheSize = 8; //TODO: invent nice interface to control regex caching
+    if(__ctfe)
+        return regexImpl(pattern, flags);
+    return memoize!(regexImpl!S, cacheSize)(pattern, flags);
+}
+
+public auto regexImpl(S)(S pattern, const(char)[] flags="")
+    if(isSomeString!(S))
+{
+    alias Regex!(BasicElementOf!S) Reg;
     if(!__ctfe)
     {
         auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
@@ -7228,8 +7228,9 @@ unittest
         run_tests!match(); //thompson VM
     }
 }
- version(fred_ct)
- {
+
+version(fred_ct)
+{
     unittest
     {
         auto cr = ctRegex!("abc");
@@ -7523,4 +7524,4 @@ else
     }
 }
 
-}
+}//version(unittest)
