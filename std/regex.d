@@ -2743,7 +2743,7 @@ public:
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
-    {
+    {//@BUG: apparently assumes little endian machines
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;
@@ -2756,9 +2756,10 @@ public:
             while(p != end)
             {
                 if(!~state)
-                {
+                {//speed up seeking first matching place
                     for(;;)
                     {
+                        assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
@@ -2773,31 +2774,40 @@ public:
                     {
                         state = (state<<1) | table[p[1]];
                         state = (state<<1) | table[p[2]];
-                        p += 3;
+                        p += 4;
                     }
-                }
-                //first char is already tested, see if that's all
-                if(!(state & limit))//division rounds down for dchar
-                    return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                        -length+1;
-                static if(charSize == 3)
-                {
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
-                    state = (state<<1) | table[p[3]];
-                    p+=4;
+                    else
+                        p++;
+                    //first char is tested, see if that's all
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 else
-                {
-                    state = (state<<1) | table[p[1]];
-                    p++;
+                {//have some bits/states for possible matches,
+                 //use the usual shift-or cycle
+                    static if(charSize == 3)
+                    {
+                        state = (state<<1) | table[p[0]];
+                        state = (state<<1) | table[p[1]];
+                        state = (state<<1) | table[p[2]];
+                        p+=4;
+                    }
+                    else
+                    {
+                        state = (state<<1) | table[p[0]];
+                        p++;
+                    }
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 debug(fred_search) writefln("State: %32b", state);
             }
         }
         else
         {
-            //in this path we have to shift first
+            //normal path, partially unrolled for char/wchar
             static if(charSize == 3)
             {
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
