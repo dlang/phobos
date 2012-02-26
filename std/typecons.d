@@ -2763,20 +2763,7 @@ unittest
 @system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
 {
     Scoped!T result;
-
-    static if (Args.length == 0)
-    {
-        result.Scoped_store[] = typeid(T).init[];
-        static if (is(typeof(T.init.__ctor())))
-        {
-            result.Scoped_payload.__ctor();
-        }
-    }
-    else
-    {
-        emplace!T(cast(void[]) result.Scoped_store, args);
-    }
-
+    emplace!T(cast(void[]) result.Scoped_store, args);
     return result;
 }
 
@@ -2852,7 +2839,7 @@ unittest
     class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
-    auto a2 = scoped!A();
+    auto a2 = scoped!A(42);
     a1.x = 42;
     a2.x = 53;
     assert(a1.x == 42);
@@ -2911,6 +2898,12 @@ unittest
     A.sdtor = 0;
     scope(exit) assert(A.sdtor == 0);
     auto abob = scoped!ABob();
+}
+
+unittest
+{
+    static class A { this(int) {} }
+    static assert(!__traits(compiles, scoped!A()));
 }
 
 /**
