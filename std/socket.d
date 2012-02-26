@@ -2057,7 +2057,7 @@ public:
 
     /// Return the capacity of this $(D SocketSet). The exact meaning of the
     /// return value varies from platform to platform.
-    uint max() const
+    @property uint max() const
     {
         version(Windows)
         {
