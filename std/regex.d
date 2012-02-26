@@ -863,23 +863,19 @@ struct Parser(R, bool CTFE=false)
         if(isSomeString!S)
     {
         pat = origin = pattern;
+        //reserve slightly more then avg as sampled from unittests
         if(!__ctfe)
-            ir.reserve(pat.length);
+            ir.reserve(to!size_t(1.25*pat.length));
         parseFlags(flags);
         _current = ' ';//a safe default for freeform parsing
         next();
-        if(__ctfe)
-            parseRegex();
-        else
+        try
         {
-            try
-            {
-                parseRegex();
-            }
-            catch(Exception e)
-            {
-                error(e.msg);//also adds pattern location
-            }
+            parseRegex();
+        }
+        catch(Exception e)
+        {
+            error(e.msg);//also adds pattern location
         }
         put(Bytecode(IR.End, 0));
     }
@@ -901,10 +897,8 @@ struct Parser(R, bool CTFE=false)
             empty =  true;
             return false;
         }
-        //for CTFEability
-        size_t idx=0;
-        _current = decode(pat, idx);
-        pat = pat[idx..$];
+        _current = pat.front;
+        pat.popFront();
         return true;
     }
 
@@ -1240,7 +1234,7 @@ struct Parser(R, bool CTFE=false)
         default:
             if(replace)
             {
-                moveAllAlt(ir[offset+1..$],ir[offset..$-1]);
+                moveAll(ir[offset+1..$],ir[offset..$-1]);
                 ir.length -= 1;
             }
             return;
@@ -1289,15 +1283,8 @@ struct Parser(R, bool CTFE=false)
             }
             else if(replace)
             {
-                if(__ctfe)//CTFE workaround: no moveAll and length -= x;
-                {
-                    ir = ir[0..offset] ~ ir[offset+1..$];
-                }
-                else
-                {
-                    moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
-                    ir.length -= 1;
-                }
+                moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
             enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
@@ -6266,6 +6253,24 @@ public:
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
+}
+
+unittest//verify example
+{
+    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
+    auto c = m.captures;
+    assert(c.pre == "@");// part of input preceeding match
+    assert(c.post == "#"); // immediately after match
+    assert(c.hit == c[0] && c.hit == "abc");// the whole match
+    assert(c[2] =="b");
+    assert(c.front == "abc");
+    c.popFront();
+    assert(c.front == "a");
+    assert(c.back == "c");
+    c.popBack();
+    assert(c.back == "b");
+    popFrontN(c, 2);
+    assert(c.empty);
 }
 
 /++
