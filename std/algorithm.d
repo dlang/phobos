@@ -1419,7 +1419,7 @@ the leftover portion of $(D tgt). Throws an exeption if there is not
 enough room in $(D tgt) to acommodate all of $(D src).
 
 Preconditions:
-$(D walkLength(src) >= walkLength(tgt))
+$(D walkLength(src) <= walkLength(tgt))
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
