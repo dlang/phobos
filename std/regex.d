@@ -7518,7 +7518,11 @@ else
     }
     unittest
     {//bugzilla 7111
-        assert(!match("", regex("^")).empty);
+        assert(match("", regex("^")));
+    }
+    unittest
+    {//bugzilla 7300
+        assert(!match("a"d, "aa"d));
     }
 
     unittest
