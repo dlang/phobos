@@ -1531,7 +1531,6 @@ unittest
  * Throws: VariantException if $(D_PARAM variant) doesn't hold a value.
  */
 auto applyVisitor(Visitor, size_t maxSize, Types...)(ref VariantN!(maxSize,Types) variant, ref Visitor visitor)
-    if ( !isDelegate!Visitor )
 {
     if (!variant.hasValue())
         throw new VariantException("variant must hold a value before being visited.");
