@@ -2375,8 +2375,8 @@ class EndianStream : FilterStream {
 
   override wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
-    readExact(result.ptr, result.length * wchar.sizeof);
-    fixBlockBO(&result,2,length);
+    readExact(result.ptr, length * wchar.sizeof);
+    fixBlockBO(result.ptr, wchar.sizeof, length);
     return result;
   }
 
