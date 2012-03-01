@@ -854,6 +854,7 @@ else
     format (2) is hidden away from the user in this module.
 */
 
+pure @safe nothrow
 private char[] charAllocator(size_t size) { return new char[size]; }
 
 /**
@@ -862,7 +863,8 @@ private char[] charAllocator(size_t size) { return new char[size]; }
     CommandLineToArgvW).
 */
 
-string escapeWindowsArgument(string arg)
+pure nothrow
+string escapeWindowsArgument(in char[] arg)
 {
     // Rationale for leaving this function as public:
     // this algorithm of escaping paths is also used in other software,
@@ -872,7 +874,8 @@ string escapeWindowsArgument(string arg)
     return assumeUnique(buf);
 }
 
-private char[] escapeWindowsArgumentImpl(alias allocator)(string arg)
+@safe nothrow
+private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // References:
@@ -968,13 +971,15 @@ version(Windows) version(unittest)
     }
 }
 
-private string escapePosixArgument(string arg)
+pure nothrow
+private string escapePosixArgument(in char[] arg)
 {
     auto buf = escapePosixArgumentImpl!charAllocator(arg);
     return assumeUnique(buf);
 }
 
-private char[] escapePosixArgumentImpl(alias allocator)(string arg)
+pure @safe nothrow
+private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // '\'' means: close quoted part of argument, append an escaped
@@ -1002,7 +1007,8 @@ private char[] escapePosixArgumentImpl(alias allocator)(string arg)
     return buf;
 }
 
-private auto escapeShellArgument(alias allocator)(string arg)
+@safe nothrow
+private auto escapeShellArgument(alias allocator)(in char[] arg)
 {
     // The unittest for this function requires special
     // preparation - see below.
@@ -1013,10 +1019,12 @@ private auto escapeShellArgument(alias allocator)(string arg)
         return escapePosixArgumentImpl!allocator(arg);
 }
 
-private string escapeShellArguments(string[] args)
+pure nothrow
+private string escapeShellArguments(in char[][] args)
 {
     char[] buf;
 
+    @safe nothrow
     char[] allocator(size_t size)
     {
         if (buf.length == 0)
@@ -1035,7 +1043,7 @@ private string escapeShellArguments(string[] args)
     return assumeUnique(buf);
 }
 
-string escapeWindowsShellCommand(string command)
+string escapeWindowsShellCommand(in char[] command)
 {
     auto result = appender!string();
     result.reserve(command.length);
@@ -1098,7 +1106,7 @@ system(
 ---
 */
 
-string escapeShellCommand(string[] args...)
+string escapeShellCommand(in char[][] args...)
 {
     return escapeShellCommandString(escapeShellArguments(args));
 }
@@ -1108,13 +1116,14 @@ string escapeShellCommand(string[] args...)
     the $(D system) or $(D shell) functions.
 */
 
-string escapeShellFileName(string fn)
+pure nothrow
+string escapeShellFileName(in char[] fn)
 {
     // The unittest for this function requires special
     // preparation - see below.
 
     version (Windows)
-        return '"' ~ fn ~ '"';
+        return cast(string)('"' ~ fn ~ '"');
     else
         return escapePosixArgument(fn);
 }
