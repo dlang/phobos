@@ -2102,18 +2102,21 @@ unittest
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == enum))
 {
-    foreach (i, e; EnumMembers!T)
+    if (f.spec == 's')
     {
-        if (val == e)
+        foreach (i, e; EnumMembers!T)
         {
-            put(w, __traits(allMembers, T)[i]);
-            return;
+            if (val == e)
+            {
+                formatValue(w, __traits(allMembers, T)[i], f);
+                return;
+            }
         }
-    }
 
-    // val is not a member of T, output cast(T)rawValue instead.
-    put(w, "cast(" ~ T.stringof ~ ")");
-    static assert(!is(OriginalType!T == T));
+        // val is not a member of T, output cast(T)rawValue instead.
+        put(w, "cast(" ~ T.stringof ~ ")");
+        static assert(!is(OriginalType!T == T));
+    }
     formatValue(w, cast(OriginalType!T)val, f);
 }
 unittest
@@ -2133,6 +2136,18 @@ unittest
     enum A : bool { no, yes }
     formatTest( A.yes, "yes" );
     formatTest( A.no, "no" );
+}
+unittest
+{
+    // Test for bug 6892
+    enum Foo { A = 10 }
+    formatTest("%s",    Foo.A, "A");
+    formatTest(">%4s<", Foo.A, ">   A<");
+    formatTest("%04d",  Foo.A, "0010");
+    formatTest("%+2u",  Foo.A, "+10");
+    formatTest("%02x",  Foo.A, "0a");
+    formatTest("%3o",   Foo.A, " 12");
+    formatTest("%b",    Foo.A, "1010");
 }
 
 /**
