@@ -168,15 +168,19 @@ body
     {
         import core.bitop;
         immutable msbs = 7 - bsr(~c);
+        if (msbs >= 2 && msbs <= 6) return msbs;
     }
     else
     {
-        int msbs = 1;
-        for (c <<= 1; c & 0x80; c <<= 1)
-            ++msbs;
+        if (!(c & 0x40)) goto Lerr;
+        if (!(c & 0x20)) return 2;
+        if (!(c & 0x10)) return 3;
+        if (!(c & 0x08)) return 4;
+        if (!(c & 0x04)) return 5;
+        if (!(c & 0x02)) return 6;
     }
-    enforce(msbs >= 2 && msbs <= 6, new UTFException("Invalid UTF-8 sequence", index));
-    return msbs;
+ Lerr:
+    throw new UTFException("Invalid UTF-8 sequence", index);
 }
 
 @trusted unittest
@@ -508,14 +512,8 @@ assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
 size_t toUTFindex(in char[] str, size_t n) @safe pure
 {
     size_t i;
-    for (; n; --n)
-    {
-        char c = str[i];
-        if (c < 0x80)
-            ++i;
-        else
-            i += strideImpl(c, i);
-    }
+    while (n--)
+        i += stride(str, i);
     return i;
 }
 
