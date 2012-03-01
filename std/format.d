@@ -2116,10 +2116,8 @@ if (is(T == enum))
         // val is not a member of T, output cast(T)rawValue instead.
         put(w, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T));
-        formatValue(w, cast(OriginalType!T)val, f);
     }
-    else
-        formatValue(w, cast(OriginalType!T)val, f);
+    formatValue(w, cast(OriginalType!T)val, f);
 }
 unittest
 {
