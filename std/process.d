@@ -854,6 +854,8 @@ else
     format (2) is hidden away from the user in this module.
 */
 
+private char[] charAllocator(size_t size) { return new char[size]; }
+
 /**
     Quote an argument in a manner conforming to the behavior of
     $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx,
@@ -865,35 +867,38 @@ string escapeWindowsArgument(string arg)
     // Rationale for leaving this function as public:
     // this algorithm of escaping paths is also used in other software,
     // e.g. DMD's response files.
-    //
+
+    auto buf = escapeWindowsArgumentImpl!charAllocator(arg);
+    return assumeUnique(buf);
+}
+
+private char[] escapeWindowsArgumentImpl(alias allocator)(string arg)
+    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+{
     // References:
     // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
     // * http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
 
-    // Calculate the total string size and make note which characters to escape.
+    // Calculate the total string size.
 
-    auto escapeIt = new bool[arg.length];
     // Trailing backslashes must be escaped
     bool escaping = true;
     // Result size = input size + 2 for surrounding quotes + 1 for the
     // backslash for each escaped character.
     size_t size = 1 + arg.length + 1;
 
-    foreach_reverse (i, c; arg)
+    foreach_reverse (c; arg)
     {
         if (c == '"')
         {
-            escapeIt[i] = escaping = true;
+            escaping = true;
             size++;
         }
         else
         if (c == '\\')
         {
             if (escaping)
-            {
-                escapeIt[i] = true;
                 size++;
-            }
         }
         else
             escaping = false;
@@ -901,18 +906,26 @@ string escapeWindowsArgument(string arg)
 
     // Construct result string.
 
-    char[] buf = new char[size];
-    size_t j = size;
-    buf[--j] = '"';
-    foreach_reverse (i, c; arg)
+    auto buf = allocator(size);
+    size_t p = size;
+    buf[--p] = '"';
+    escaping = true;
+    foreach_reverse (c; arg)
     {
-        buf[--j] = c;
-        if (escapeIt[i])
-            buf[--j] = '\\';
-    }
-    buf[--j] = '"';
+        if (c == '"')
+            escaping = true;
+        else
+        if (c != '\\')
+            escaping = false;
 
-    return assumeUnique(buf);
+        buf[--p] = c;
+        if (escaping)
+            buf[--p] = '\\';
+    }
+    buf[--p] = '"';
+    assert(p == 0);
+
+    return buf;
 }
 
 version(Windows) version(unittest)
@@ -957,33 +970,76 @@ version(Windows) version(unittest)
 
 private string escapePosixArgument(string arg)
 {
-    // '\'' means: close quoted part of argument, append an escaped
-    // single quote, and reopen quotes
-    return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
+    auto buf = escapePosixArgumentImpl!charAllocator(arg);
+    return assumeUnique(buf);
 }
 
-private string escapeShellArgument(string arg)
+private char[] escapePosixArgumentImpl(alias allocator)(string arg)
+    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+{
+    // '\'' means: close quoted part of argument, append an escaped
+    // single quote, and reopen quotes
+
+    // Below code is equivalent to:
+    // return `'` ~ std.array.replace(arg, `'`, `'\''`) ~ `'`;
+
+    size_t size = 1 + arg.length + 1;
+    foreach (c; arg)
+        if (c == '\'')
+            size += 3;
+
+    auto buf = allocator(size);
+    size_t p = 0;
+    buf[p++] = '\'';
+    foreach (c; arg)
+        if (c == '\'')
+            buf[p..p+4] = `'\''`;
+        else
+            buf[p++] = c;
+    buf[p++] = '\'';
+    assert(p == size);
+
+    return buf;
+}
+
+private auto escapeShellArgument(alias allocator)(string arg)
 {
     // The unittest for this function requires special
     // preparation - see below.
 
     version (Windows)
-        return escapeWindowsArgument(arg);
+        return escapeWindowsArgumentImpl!allocator(arg);
     else
-        return escapePosixArgument(arg);
+        return escapePosixArgumentImpl!allocator(arg);
 }
 
 private string escapeShellArguments(string[] args)
 {
-    auto result = args.dup;
-    foreach (ref arg; result)
-        arg = escapeShellArgument(arg);
-    return result.join(" ");
+    char[] buf;
+
+    char[] allocator(size_t size)
+    {
+        if (buf.length == 0)
+            return buf = new char[size];
+        else
+        {
+            auto p = buf.length;
+            buf.length = buf.length + 1 + size;
+            buf[p++] = ' ';
+            return buf[p..p+size];
+        }
+    }
+
+    foreach (arg; args)
+        escapeShellArgument!allocator(arg);
+    return assumeUnique(buf);
 }
 
 string escapeWindowsShellCommand(string command)
 {
-    string result;
+    auto result = appender!string();
+    result.reserve(command.length);
+
     foreach (c; command)
         switch (c)
         {
@@ -1001,12 +1057,12 @@ string escapeWindowsShellCommand(string command)
             case '<':
             case '>':
             case '|':
-                result ~= '^';
+                result.put('^');
                 goto default;
             default:
-                result ~= c;
+                result.put(c);
         }
-    return result;
+    return result.data();
 }
 
 private string escapeShellCommandString(string command)
