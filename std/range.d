@@ -5582,7 +5582,7 @@ interface InputRange(E) {
     int opApply(int delegate(ref E));
 
     /// Ditto
-    int opApply(int delegate(ref size_t, ref E));
+    int opApply(int delegate(size_t, ref E));
 
 }
 
@@ -5850,13 +5850,11 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 return res;
             }
 
-            int opApply(int delegate(ref size_t, ref E) dg) {
+            int opApply(int delegate(size_t, ref E) dg) {
                 int res;
 
                 size_t i = 0;
-                for(auto r = _range; !r.empty;) {
-                    size_t old_i = i;
-
+                for(auto r = _range; !r.empty; r.popFront()) {
                     static if (hasLvalueElements!R) {
                         res = dg(i, r.front);
                     } else {
@@ -5865,13 +5863,6 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     }
                     if (res) break;
                     i++;
-
-                    // if i has been increased, skip the corresponding elements
-                    enforce(i >= old_i, "index cannot be decreased");
-                    foreach(_; old_i .. i) {
-                        r.popFront();
-                        if (r.empty) break;
-                    }
                 }
 
                 return res;
@@ -5892,12 +5883,13 @@ unittest { // test InputRangeObject.opApply
     foreach(ref int v; ior) {++v;}
     assert(data == [2, 3, 4]); // ref on v => data is altered
 
-    foreach(size_t i, ref int v; ior) {++v; ++i;}
-    assert(data == [3, 4, 5]); // no ref on i => every element is visited
+    foreach(size_t i, ref int v; ior) {++v; ++i;} // no ref on i => ok
+    assert(data == [3, 4, 5]);
 
-    foreach(ref size_t i, ref int v; ior) {++v; ++i;}
-    assert(data == [4, 4, 6]); // ref on i => only every other element is visited
-
+    // no ref access to the index
+    assert(!__traits(compiles, {
+		foreach(ref size_t i, int v; ior) {}
+	}));
 
     // underlying range has rvalue elements
     static struct Rarr {
@@ -5910,12 +5902,10 @@ unittest { // test InputRangeObject.opApply
     auto rior = new InputRangeObject!Rarr(Rarr(data));
 
     foreach(ref int v; rior) {++v;}
-    assert(data == [4, 4, 6]); // no lvalue elements => data is not touched
+    assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
 
-    int visited = 0;
-    foreach(ref size_t i, ref int v; rior) {++v; ++i; ++visited;}
-    assert(data == [4, 4, 6]); // no lvalue elements => data is not touched
-    assert(visited == 2); // skipping works anyway
+    foreach(size_t i, ref int v; rior) {++v;}
+    assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
 }
 
 /**Convenience function for creating a $(D InputRangeObject) of the proper type.*/
