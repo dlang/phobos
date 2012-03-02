@@ -139,27 +139,6 @@ unittest
 }
 
 
-private immutable ubyte[256] utf8Stride =
-[
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-    3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
-    4,4,4,4,4,4,4,4,5,5,5,5,6,6,0xFF,0xFF,
-];
-
-
 /++
     $(D stride) returns the length of the UTF-8 sequence starting at $(D index)
     in $(D str).
@@ -171,11 +150,37 @@ private immutable ubyte[256] utf8Stride =
         $(D UTFException) if $(D str[index]) is not the start of a valid UTF-8
         sequence.
   +/
-uint stride(in char[] str, size_t index) @safe pure
+uint stride(S)(in S str, size_t index) @safe pure
+    if (is(S : const(char[])))
 {
-    immutable result = utf8Stride[str[index]];
-    enforce(result != 0xFF, new UTFException("Not the start of the UTF-8 sequence", index));
-    return result;
+    immutable c = str[index];
+    if (c < 0x80)
+        return 1;
+    else
+        return strideImpl(c, index);
+ }
+
+private uint strideImpl(char c, size_t index) @trusted pure
+in { assert(c & 0x80); }
+body
+{
+    static if (__traits(compiles, {import core.bitop; bsr(1);}))
+    {
+        import core.bitop;
+        immutable msbs = 7 - bsr(~c);
+        if (msbs >= 2 && msbs <= 6) return msbs;
+    }
+    else
+    {
+        if (!(c & 0x40)) goto Lerr;
+        if (!(c & 0x20)) return 2;
+        if (!(c & 0x10)) return 3;
+        if (!(c & 0x08)) return 4;
+        if (!(c & 0x04)) return 5;
+        if (!(c & 0x02)) return 6;
+    }
+ Lerr:
+    throw new UTFException("Invalid UTF-8 sequence", index);
 }
 
 @trusted unittest
@@ -262,7 +267,8 @@ unittest
     Returns:
         The number of bytes in the UTF-16 sequence.
   +/
-uint stride(in wchar[] str, size_t index) @safe pure nothrow
+uint stride(S)(in S str, size_t index) @safe pure nothrow
+    if (is(S : const(wchar[])))
 {
     immutable uint u = str[index];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
@@ -348,7 +354,8 @@ unittest
     Returns:
         The number of bytes in the UTF-32 sequence (always $(D 1)).
   +/
-uint stride(in dchar[] str, size_t index) @safe pure nothrow
+uint stride(S)(in S str, size_t index) @safe pure nothrow
+    if (is(S : const(dchar[])))
 {
     assert(index < str.length);
     return 1;
@@ -505,15 +512,8 @@ assert(toUTFindex(`さいごの果実 / ミツバチと科学者`d, 9) == 9);
 size_t toUTFindex(in char[] str, size_t n) @safe pure
 {
     size_t i;
-
     while (n--)
-    {
-        uint j = utf8Stride[str[i]];
-        if (j == 0xFF)
-            throw (new UTFException("Invalid UTF-8 sequence")).setSequence(str[i]);
-        i += j;
-    }
-
+        i += stride(str, i);
     return i;
 }
 
