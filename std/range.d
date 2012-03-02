@@ -5578,6 +5578,8 @@ interface InputRange(E) {
      *
      * $(D ref) access to the elements is provided if the underlying range has
      * lvalue elements.
+     *
+     * BUGS: $(D ref) access is silently denied when it cannot be provided.
      */
     int opApply(int delegate(ref E));
 
@@ -5904,8 +5906,16 @@ unittest { // test InputRangeObject.opApply
     foreach(ref int v; rior) {++v;}
     assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
 
-    foreach(size_t i, ref int v; rior) {++v;}
-    assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
+    version(none) { // see BUGS of interface InputRange
+        // no ref access to rvalue elements
+        assert(!__traits(compiles, {
+            foreach(ref int v; rior) {++v;}
+        }));
+    } else {
+        // verify the faulty but expected behaviour
+        foreach(ref int v; rior) {++v;}
+        assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
+    }
 }
 
 /**Convenience function for creating a $(D InputRangeObject) of the proper type.*/
