@@ -5546,8 +5546,6 @@ unittest
  *
  * Limitations:
  *
- * These interfaces are not capable of forwarding $(D ref) access to elements.
- *
  * Infiniteness of the wrapped range is not propagated.
  *
  * Length is not propagated in the case of non-random access ranges.
@@ -5578,15 +5576,15 @@ interface InputRange(E) {
     /**$(D foreach) iteration uses opApply, since one delegate call per loop
      * iteration is faster than three virtual function calls.
      *
-     * BUGS:  If a $(D ref) variable is provided as the loop variable,
-     *        changes made to the loop variable will not be propagated to the
-     *        underlying range.  If the address of the loop variable is escaped,
-     *        undefined behavior will result.  This is related to DMD bug 2443.
+     * $(D ref) access to the elements is provided if the underlying range has
+     * lvalue elements.
+     *
+     * BUGS: $(D ref) access is silently denied when it cannot be provided.
      */
     int opApply(int delegate(ref E));
 
     /// Ditto
-    int opApply(int delegate(ref size_t, ref E));
+    int opApply(int delegate(size_t, ref E));
 
 }
 
@@ -5842,25 +5840,29 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 int res;
 
                 for(auto r = _range; !r.empty; r.popFront()) {
-                    // Work around Bug 2443.  This is slightly unsafe, but
-                    // probably not in any way that matters in practice.
-                    auto front = r.front;
-                    res = dg(front);
+                    static if (hasLvalueElements!R) {
+                        res = dg(r.front);
+                    } else {
+                        auto front = r.front;
+                        res = dg(front);
+                    }
                     if (res) break;
                 }
 
                 return res;
             }
 
-            int opApply(int delegate(ref size_t, ref E) dg) {
+            int opApply(int delegate(size_t, ref E) dg) {
                 int res;
 
                 size_t i = 0;
                 for(auto r = _range; !r.empty; r.popFront()) {
-                    // Work around Bug 2443.  This is slightly unsafe, but
-                    // probably not in any way that matters in practice.
-                    auto front = r.front;
-                    res = dg(i, front);
+                    static if (hasLvalueElements!R) {
+                        res = dg(i, r.front);
+                    } else {
+                        auto front = r.front;
+                        res = dg(i, front);
+                    }
                     if (res) break;
                     i++;
                 }
@@ -5868,6 +5870,51 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                 return res;
             }
         }
+    }
+}
+unittest { // test InputRangeObject.opApply
+    int[] data = [1, 2, 3];
+
+    // underlying range has lvalue elements
+    static assert(hasLvalueElements!(int[]));
+    auto ior = new InputRangeObject!(int[])(data);
+
+    foreach(int v; ior) {++v;}
+    assert(data == [1, 2, 3]); // no ref on v => data is not touched
+
+    foreach(ref int v; ior) {++v;}
+    assert(data == [2, 3, 4]); // ref on v => data is altered
+
+    foreach(size_t i, ref int v; ior) {++v; ++i;} // no ref on i => ok
+    assert(data == [3, 4, 5]);
+
+    // no ref access to the index
+    assert(!__traits(compiles, {
+		foreach(ref size_t i, int v; ior) {}
+	}));
+
+    // underlying range has rvalue elements
+    static struct Rarr {
+        int[] arr;
+        @property bool empty() {return arr.empty;}
+        @property int front() {return arr.front;}
+        void popFront() {arr.popFront();}
+    }
+    static assert(!hasLvalueElements!Rarr);
+    auto rior = new InputRangeObject!Rarr(Rarr(data));
+
+    foreach(ref int v; rior) {++v;}
+    assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
+
+    version(none) { // see BUGS of interface InputRange
+        // no ref access to rvalue elements
+        assert(!__traits(compiles, {
+            foreach(ref int v; rior) {++v;}
+        }));
+    } else {
+        // verify the faulty but expected behaviour
+        foreach(ref int v; rior) {++v;}
+        assert(data == [3, 4, 5]); // no lvalue elements => data is not touched
     }
 }
 
