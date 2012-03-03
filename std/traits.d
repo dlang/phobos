@@ -150,7 +150,10 @@ template moduleName(alias T)
         static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
 
     static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+        static if (__traits(compiles, packageName!(T)))
+            enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+        else
+            enum moduleName = T.stringof[7..$];
     else
         alias moduleName!(__traits(parent, T)) moduleName;
 }
