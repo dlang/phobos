@@ -1337,7 +1337,7 @@ if (isStaticArray!T)
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isSomeString!T && isDynamicArray!T)
+if (!(isSomeString!T || is(T == struct) || is(T == union)) && isDynamicArray!T)
 {
     static if (is(const(T) == const(void[])))
     {
