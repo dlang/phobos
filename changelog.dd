@@ -9,6 +9,7 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7111): New regex engine cannot match beginning of empty string)
         $(LI $(BUGZILLA 7299): std.uni missing doc comments)
         $(LI $(BUGZILLA 7374): stdin.byLine() throws AssertError on empty input)
+        $(LI $(BUGZILLA 7628): std.format formatValue incorrect overload)
      )
  )
 
