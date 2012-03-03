@@ -5932,6 +5932,18 @@ unittest {
     assert(equal(app.data, [1,2,3]));
 }
 
+//helper for SortedRange lowerBound etc.
+template isTwoWayCompatible(alias fn, T1, T2)
+{
+    enum isTwoWayCompatible = is(typeof( (){ 
+            T1 e; 
+            T2 v;
+            return fn(v,e) && fn(e,v); 
+        }
+    ));
+}
+
+
 /**
    Policy used with the searching primitives $(D lowerBound), $(D
    upperBound), and $(D equalRange) of $(LREF SortedRange) below.
@@ -6233,10 +6245,9 @@ if (isRandomAccessRange!Range)
    ----
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (is(V : ElementType!Range))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        ElementType!Range v = value;
-        return this[0 .. getTransitionIndex!(sp, geq)(v)];
+        return this[0 .. getTransitionIndex!(sp, geq)(value)];
     }
 
 // upperBound
@@ -6257,10 +6268,9 @@ if (isRandomAccessRange!Range)
    ----
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (is(V : ElementType!Range))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        ElementType!Range v = value;
-        return this[getTransitionIndex!(sp, gt)(v) .. length];
+        return this[getTransitionIndex!(sp, gt)(value) .. length];
     }
 
 // equalRange
@@ -6284,7 +6294,8 @@ if (isRandomAccessRange!Range)
    assert(equal(r, [ 3, 3, 3 ]));
    ----
 */
-    auto equalRange(V)(V value) if (is(V : ElementType!Range))
+    auto equalRange(V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -6339,7 +6350,8 @@ assert(equal(r[1], [ 3, 3, 3 ]));
 assert(equal(r[2], [ 4, 4, 5, 6 ]));
 ----
 */
-    auto trisect(V)(V value) if (is(V : ElementType!Range))
+    auto trisect(V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         size_t first = 0, count = _input.length;
         while (count > 0)

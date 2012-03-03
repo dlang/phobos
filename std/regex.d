@@ -774,7 +774,7 @@ auto memoizeExpr(string expr)()
         s.add(Interval(0,0x7f));
     else
     {
-        auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
+        auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
         //creating empty Codepointset is a workaround
         auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
         enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
@@ -865,7 +865,7 @@ struct Parser(R, bool CTFE=false)
         pat = origin = pattern;
         //reserve slightly more then avg as sampled from unittests
         if(!__ctfe)
-            ir.reserve(to!size_t(1.25*pat.length));
+            ir.reserve((pat.length*5+2)/4);
         parseFlags(flags);
         _current = ' ';//a safe default for freeform parsing
         next();
@@ -2137,15 +2137,10 @@ private:
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict,String name)
+@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    //@@@BUG@@@ assumeSorted kills "-inline"
-    //auto fnd = assumeSorted(map!"a.name"(dict)).lowerBound(name).length;
-    uint fnd;
-    for(fnd = 0; fnd<dict.length; fnd++)
-        if(equal(dict[fnd].name,name))
-            break;
-    enforce(fnd < dict.length, text("no submatch named ", name));
+    auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
+    enforce(equal(dict[fnd].name, name), text("no submatch named ", name));
     return dict[fnd].group;
 }
 
