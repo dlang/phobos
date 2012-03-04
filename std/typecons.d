@@ -2777,19 +2777,21 @@ mixin template ProxyOf(alias a)
             return a < b ? -1 : a > b ? +1 : 0;
     }
 
-    auto ref opUnary     (string op, this X)() { return mixin(op~"a"); }
-    auto ref opIndexUnary(string op, this X, D...)(auto ref D i) { return mixin(op~"a[i]"); }
-    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+    auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
 
     auto ref opCast(T, this X)() { return cast(T)a; }
 
+    auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
+    auto ref opSlice(this X      )()                           { return a[]; }
+    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
+
+    auto ref opUnary     (string op, this X      )()                           { return mixin(op~"a"); }
+    auto ref opIndexUnary(string op, this X, D...)(auto ref D i)               { return mixin(op~"a[i]"); }
+    auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+
     auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
     auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
-
-    auto ref opCall (this X, Args...)(auto ref Args args)         { return a(args); }
-    auto ref opIndex(this X, D...   )(auto ref D i)               { return a[i]; }
-    auto ref opSlice(this X         )()                           { return a[]; }
-    auto ref opSlice(this X, B, E   )(auto ref B b, auto ref E e) { return a[b..e]; }
 
     auto ref opAssign     (this X, V      )(auto ref V v)                             { return a       = v; }
     auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
@@ -2831,19 +2833,17 @@ unittest
     {
         private int value;
         mixin ProxyOf!value;
-
         this(int n){ value = n; }
     }
 
-    void func(int n) { }
-
     MyInt m = 10;
     static assert(!__traits(compiles, { int x = m; }));
-    static assert(!__traits(compiles, { func(m); }));
+    static assert(!__traits(compiles, { void func(int n){} func(m); }));
     assert(m == 10);
+    assert(m != 20);
     assert(m < 20);
-    assert(+m == 10 && -m == -10);
-    assert(+m == 10 && -m == -10);
+    assert(+m == 10);
+    assert(-m == -10);
     assert(++m == 11);
     assert(m++ == 11); assert(m == 12);
     assert(--m == 11);
@@ -2857,7 +2857,36 @@ unittest
     assert(15 - m == 5);
     assert(20 * m == 200);
     assert(50 / m == 5);
+    m = 20; assert(m == 20);
+}
+unittest
+{
+    static struct MyArray
+    {
+        private int[] value;
+        mixin ProxyOf!value;
+        this(int[] arr){ value = arr; }
+    }
 
+    MyArray a = [1,2,3,4];
+    assert(a == [1,2,3,4]);
+    assert(a != [5,6,7,8]);
+    assert(+a[0]    == 1);
+    version (LittleEndian)
+        assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+    else
+        assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+    assert(a ~ [10,11] == [1,2,3,4,10,11]);
+    assert(a[0]    == 1);
+    //assert(a[]     == [1,2,3,4]);
+    //assert(a[2..4] == [3,4]);
+    a = [5,6,7,8];  assert(a == [5,6,7,8]);
+    a[0]     = 0;   assert(a == [0,6,7,8]);
+    a[]      = 1;   assert(a == [1,1,1,1]);
+    a[0..3]  = 2;   assert(a == [2,2,2,1]);
+    a[0]    += 2;   assert(a == [4,2,2,1]);
+    a[]     *= 2;   assert(a == [8,4,4,2]);
+    a[0..2] /= 2;   assert(a == [4,2,4,2]);
 }
 unittest
 {
@@ -2879,8 +2908,8 @@ unittest
     class Hoge
     {
         Foo foo;
-        this(Foo f) { foo = f; }
         mixin ProxyOf!foo;
+        this(Foo f) { foo = f; }
     }
 
     auto h = new Hoge(new Foo());
