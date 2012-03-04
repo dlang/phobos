@@ -181,7 +181,7 @@
   $(B Unicode support)
 
   This library provides full Level 1 support* according to
-    $(WEB http://unicode.org/reports/tr18/, UTS 18). Specifically:
+    $(WEB unicode.org/reports/tr18/, UTS 18). Specifically:
   $(UL
     $(LI 1.1 Hex notation via any of \uxxxx, \U00YYYYYY, \xZZ.)
     $(LI 1.2 Unicode properties.)
