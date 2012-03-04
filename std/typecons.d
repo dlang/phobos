@@ -2742,14 +2742,14 @@ unittest
 }
 
 /**
-Make proxy of $(D a).
+Make proxy for $(D a).
 
 Example:
 ----
 struct MyInt
 {
     private int value;
-    mixin ProxyOf!value;
+    mixin Proxy!value;
 
     this(int n){ value = n; }
 }
@@ -2768,7 +2768,7 @@ void func(int n) { }
 //func(n);
 ----
  */
-mixin template ProxyOf(alias a)
+mixin template Proxy(alias a)
 {
     auto ref opEquals(this X, B)(auto ref B b) { return a == b; }
 
@@ -2837,7 +2837,7 @@ unittest
     static struct MyInt
     {
         private int value;
-        mixin ProxyOf!value;
+        mixin Proxy!value;
         this(int n){ value = n; }
     }
 
@@ -2869,7 +2869,7 @@ unittest
     static struct MyArray
     {
         private int[] value;
-        mixin ProxyOf!value;
+        mixin Proxy!value;
         this(int[] arr){ value = arr; }
     }
 
@@ -2913,7 +2913,7 @@ unittest
     class Hoge
     {
         Foo foo;
-        mixin ProxyOf!foo;
+        mixin Proxy!foo;
         this(Foo f) { foo = f; }
     }
 
@@ -2960,38 +2960,38 @@ unittest
 /**
 Library typedef.
  */
-template TypeDef(T)
+template Typedef(T)
 {
-    alias .TypeDef!(T, T.init) TypeDef;
+    alias .Typedef!(T, T.init) Typedef;
 }
 
 /// ditto
-struct TypeDef(T, T init, string cookie=null)
+struct Typedef(T, T init, string cookie=null)
 {
-    private T TypeDef_payload = init;
+    private T Typedef_payload = init;
 
     this(T init)
     {
-        TypeDef_payload = init;
+        Typedef_payload = init;
     }
 
-    mixin ProxyOf!TypeDef_payload;
+    mixin Proxy!Typedef_payload;
 }
 
 unittest
 {
-    TypeDef!int x = 10;
+    Typedef!int x = 10;
     static assert(!__traits(compiles, { int y = x; }));
     static assert(!__traits(compiles, { long z = x; }));
 
-    TypeDef!int y = 10;
+    Typedef!int y = 10;
     assert(x == y);
 
-    TypeDef!(float, 1.0) z; // specifies the init
+    Typedef!(float, 1.0) z; // specifies the init
     assert(z == 1.0);
 
-    alias TypeDef!(int, 0, "dollar") Dollar;
-    alias TypeDef!(int, 0, "yen") Yen;
+    alias Typedef!(int, 0, "dollar") Dollar;
+    alias Typedef!(int, 0, "yen") Yen;
     static assert(!is(Dollar == Yen));
 }
 
