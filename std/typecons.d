@@ -3018,29 +3018,16 @@ unittest
 @system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
 {
     Scoped!T result;
-
-    static if (Args.length == 0)
-    {
-        result.Scoped_store[] = typeid(T).init[];
-        static if (is(typeof(T.init.__ctor())))
-        {
-            result.Scoped_payload.__ctor();
-        }
-    }
-    else
-    {
-        emplace!T(cast(void[]) result.Scoped_store, args);
-    }
-
+    emplace!(Unqual!T)(cast(void[])result.Scoped_store, args);
     return result;
 }
 
 private struct Scoped(T)
 {
     private byte[__traits(classInstanceSize, T)] Scoped_store = void;
-    @property T Scoped_payload()
+    @property inout(T) Scoped_payload() inout
     {
-        return cast(T) (Scoped_store.ptr);
+        return cast(inout(T))(Scoped_store.ptr);
     }
     alias Scoped_payload this;
 
@@ -3107,7 +3094,7 @@ unittest
     class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
-    auto a2 = scoped!A();
+    auto a2 = scoped!A(42);
     a1.x = 42;
     a2.x = 53;
     assert(a1.x == 42);
@@ -3166,6 +3153,41 @@ unittest
     A.sdtor = 0;
     scope(exit) assert(A.sdtor == 0);
     auto abob = scoped!ABob();
+}
+
+unittest
+{
+    static class A { this(int) {} }
+    static assert(!__traits(compiles, scoped!A()));
+}
+
+unittest
+{
+    static class A { @property inout(int) foo() inout { return 1; } }
+
+    auto a1 = scoped!A();
+    assert(a1.foo == 1);
+    static assert(is(typeof(a1.foo) == int));
+
+    auto a2 = scoped!(const(A))();
+    assert(a2.foo == 1);
+    static assert(is(typeof(a2.foo) == const(int)));
+
+    auto a3 = scoped!(immutable(A))();
+    assert(a3.foo == 1);
+    static assert(is(typeof(a3.foo) == immutable(int)));
+
+    const c1 = scoped!A();
+    assert(c1.foo == 1);
+    static assert(is(typeof(c1.foo) == const(int)));
+
+    const c2 = scoped!(const(A))();
+    assert(c2.foo == 1);
+    static assert(is(typeof(c2.foo) == const(int)));
+
+    const c3 = scoped!(immutable(A))();
+    assert(c3.foo == 1);
+    static assert(is(typeof(c3.foo) == immutable(int)));
 }
 
 /**
