@@ -2819,9 +2819,8 @@ mixin template ProxyOf(alias a)
         else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
         {
             // field or property function
-            @property auto ref Impl(this X)()                { return mixin("a."~name);        }
-            @property auto ref Impl(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
-            alias Impl opDispatch;  // bundle overloads as eponymous member, workaround for issue 5525
+            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
+            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
         }
         else
         {
