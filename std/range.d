@@ -5577,16 +5577,11 @@ interface InputRange(E) {
 
     /**$(D foreach) iteration uses opApply, since one delegate call per loop
      * iteration is faster than three virtual function calls.
-     *
-     * BUGS:  If a $(D ref) variable is provided as the loop variable,
-     *        changes made to the loop variable will not be propagated to the
-     *        underlying range.  If the address of the loop variable is escaped,
-     *        undefined behavior will result.  This is related to DMD bug 2443.
      */
-    int opApply(int delegate(ref E));
+    int opApply(int delegate(E));
 
     /// Ditto
-    int opApply(int delegate(ref size_t, ref E));
+    int opApply(int delegate(size_t, E));
 
 }
 
@@ -5838,29 +5833,23 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
 
             // Optimization:  One delegate call is faster than three virtual
             // function calls.  Use opApply for foreach syntax.
-            int opApply(int delegate(ref E) dg) {
+            int opApply(int delegate(E) dg) {
                 int res;
 
                 for(auto r = _range; !r.empty; r.popFront()) {
-                    // Work around Bug 2443.  This is slightly unsafe, but
-                    // probably not in any way that matters in practice.
-                    auto front = r.front;
-                    res = dg(front);
+                    res = dg(r.front);
                     if (res) break;
                 }
 
                 return res;
             }
 
-            int opApply(int delegate(ref size_t, ref E) dg) {
+            int opApply(int delegate(size_t, E) dg) {
                 int res;
 
                 size_t i = 0;
                 for(auto r = _range; !r.empty; r.popFront()) {
-                    // Work around Bug 2443.  This is slightly unsafe, but
-                    // probably not in any way that matters in practice.
-                    auto front = r.front;
-                    res = dg(i, front);
+                    res = dg(i, r.front);
                     if (res) break;
                     i++;
                 }
