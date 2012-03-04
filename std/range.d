@@ -6459,6 +6459,19 @@ unittest
 
 unittest
 {
+    auto a = [ "A", "AG", "B", "E", "F" ];
+    auto r = assumeSorted!"cmp(a,b) < 0"(a).trisect("B"w);
+    assert(equal(r[0], [ "A", "AG" ]));
+    assert(equal(r[1], [ "B" ]));
+    assert(equal(r[2], [ "E", "F" ]));
+    r = assumeSorted!"cmp(a,b) < 0"(a).trisect("A"d);
+    assert(r[0].empty);
+    assert(equal(r[1], [ "A" ]));
+    assert(equal(r[2], [ "AG", "B", "E", "F" ]));
+}
+
+unittest
+{
     static void test(SearchPolicy pol)()
     {
         auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -6548,6 +6561,8 @@ unittest
     assert(equal(p, [0, 1, 2, 3, 4]));
     p = assumeSorted(a).lowerBound(6);
     assert(equal(p, [ 0, 1, 2, 3, 4, 5]));
+    p = assumeSorted(a).lowerBound(6.9);
+    assert(equal(p, [ 0, 1, 2, 3, 4, 5, 6]));
 }
 
 unittest
@@ -6555,6 +6570,8 @@ unittest
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
     assert(equal(p, [4, 4, 5, 6 ]));
+    p = assumeSorted(a).upperBound(4.2);
+    assert(equal(p, [ 5, 6 ]));
 }
 
 unittest
@@ -6570,6 +6587,8 @@ unittest
     assert(p.empty);
     p = assumeSorted(a).equalRange(7);
     assert(p.empty);
+    p = assumeSorted(a).equalRange(3.0);
+    assert(equal(p, [ 3, 3, 3]));
 }
 
 unittest

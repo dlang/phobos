@@ -4852,8 +4852,6 @@ enum OneShot { Fwd, Bwd };
     if(is(Char : dchar))
 {
     alias Stream.DataIndex DataIndex;
-    alias const(Char)[] String;
-    enum threadAllocSize = 16;
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
     DataIndex[] merge;
@@ -4960,7 +4958,6 @@ enum OneShot { Fwd, Bwd };
             writeln("------------------------------------------");
         if(exhausted)
         {
-
             return false;
         }
         if(re.flags & RegexInfo.oneShot)
@@ -5021,8 +5018,7 @@ enum OneShot { Fwd, Bwd };
                     break;
                 }
             }
-        else
-            exhausted = true;
+
         genCounter++; //increment also on each end
         debug(fred_matching) writefln("Threaded matching threads at end");
         //try out all zero-width posibilities
@@ -5032,8 +5028,17 @@ enum OneShot { Fwd, Bwd };
         }
         if(!matched)
             eval!false(createStart(index), matches);//new thread starting at end of input
-        if(matched && !(re.flags & RegexOption.global))
-           exhausted = true;
+        if(matched)
+        {//in case NFA found match along the way
+         //and last possible longer alternative ultimately failed
+            s.reset(matches[0].end);//reset to last successful match
+            next();//and reload front character
+            //--- here the exact state of stream was restored ---
+            exhausted = atEnd || !(re.flags & RegexOption.global);
+            //+ empty match advances the input
+            if(!exhausted && matches[0].begin == matches[0].end)
+                next(); 
+        }
         return matched;
     }
 
@@ -7435,6 +7440,11 @@ else
                 if(ch != '-') //'--' is an operator
                     assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
             }
+            //bugzilla 7718
+            string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
+            auto reStrCmd = regex (`(".*")|('.*')`, "g");
+            assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
+                         [`"/GIT/Ruby Apps/sec"`, `'notimer'`]));
         }
         test_body!bmatch();
         test_body!match();
@@ -7518,7 +7528,7 @@ else
     unittest
     {//bugzilla 7300
         assert(!match("a"d, "aa"d));
-    }
+    }    
 
     unittest
     {//bugzilla 7674
