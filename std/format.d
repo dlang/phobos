@@ -1337,7 +1337,7 @@ if (isStaticArray!T)
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!isSomeString!T && isDynamicArray!T)
+if (!(isSomeString!T || is(T == struct) || is(T == union)) && isDynamicArray!T)
 {
     static if (is(const(T) == const(void[])))
     {
@@ -1358,6 +1358,13 @@ if (!isSomeString!T && isDynamicArray!T)
 
 unittest
 {
+    // Test for bug 7628
+    struct S1 { int[] arr; alias arr this; }
+    struct S2 { int[] arr; alias arr this; string toString() { return "S"; } }
+    static assert(__traits(compiles, formatTest(S1, "[]")));
+    formatTest(S1(), "[]");
+    formatTest(S2(), "S");
+
     // void[]
     void[] val0;
     formatTest( val0, "[]" );
