@@ -1611,9 +1611,9 @@ unittest
 struct NotNull(T)
 {
     T t;
-    alias t this;
+    alias t this; /// this is substitutable for the regular (nullable) type
     @disable this();
-    this(T value)
+    this(T value) /// constructs
     {
         assert(value !is null);
         t = value;
@@ -1692,6 +1692,9 @@ unittest
 
     test = &dummy; // make it valid again
     takesConstNotNull(notNull(test)); // should Just Work
+
+    NotNull!(int*) foo2 = foo; // we should be able to assign NotNull to other NotNulls too
+    foo2 = foo; // including init and assignment
 }
 
 
