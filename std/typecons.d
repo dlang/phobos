@@ -1640,6 +1640,9 @@ NotNull!T notNull(T)(T t)
 }
 unittest
 {
+    import core.exception;
+    import std.exception;
+
     void NotNullCompiliationTest1()() // I'm making these templates to defer compiling them
     {
         NotNull!(int*) defaultInitiliation; // should fail because this would be null otherwise
@@ -1659,11 +1662,7 @@ unittest
 
     int* test;
     // this will compile; the nullness isn't certain at compile time, but must throw at runtime assignment
-    try
-    {
-        foo = test;
-	assert(0, "it let us assign null");
-    } catch (Error e) { /* desired result */ }
+    assertThrown!AssertError(foo = test);
 
     test = &dummy;
 
@@ -1684,11 +1683,7 @@ unittest
     assert(!__traits(compiles, takesNotNull(notNull(null)))); // notNull(null) shouldn't compile
     test = null; // reset our pointer
 
-    try
-    {
-        takesNotNull(notNull(test)); // test is null now, so this should throw an assert failure
-	assert(0, "it let us pass a null value to a NotNull function");
-    } catch (Error e) { /* desired result */ }
+    assertThrown!AssertError(takesNotNull(notNull(test))); // test is null now, so this should throw an assert failure
 
     void takesConstNotNull(in NotNull!(int *) a) {}
 
