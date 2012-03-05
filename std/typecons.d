@@ -1613,16 +1613,18 @@ struct NotNull(T)
     T t;
     alias t this; /// this is substitutable for the regular (nullable) type
     @disable this();
-    this(T value) /// constructs
+    /// constructs with a runtime not null check
+    this(T value)
     {
         assert(value !is null);
         t = value;
     }
 
-    @disable this(typeof(null));
+    @disable this(typeof(null)); /// the null literal can be caught at compile time
 
-    @disable typeof(this) opAssign(typeof(null));
+    @disable typeof(this) opAssign(typeof(null)); /// ditto
 
+    /// does a runtime null check on assignment, to ensure we never store null
     typeof(this) opAssign(T rhs)
     {
         assert(rhs !is null);
