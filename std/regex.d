@@ -227,7 +227,7 @@ import core.bitop, core.stdc.string, core.stdc.stdlib;
 import ascii = std.ascii;
 import std.string : representation;
 
-version(unittest) debug import std.stdio;
+debug import std.stdio;
 
 private:
 @safe:
@@ -1148,15 +1148,23 @@ struct Parser(R, bool CTFE=false)
                     put(Bytecode(IR.Option, 0));
                     break;
                 }
+                uint len, orStart;
                 //start a new option
-                if(fixupStack.length == 1)//only root entry
-                    fix = -1;
-                uint len = cast(uint)ir.length - fix;
-                insertInPlaceAlt(ir, fix+1, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
-                assert(ir[fix+1].code == IR.OrStart);
+                if(fixupStack.length == 1)
+                {//only root entry, effectively no fixup
+                    len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
+                    orStart = 0;   
+                }
+                else
+                {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
+                    len = cast(uint)ir.length - fix - (ir[fix].length - 1);
+                    orStart = fix + ir[fix].length;
+                }
+                insertInPlaceAlt(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                assert(ir[orStart].code == IR.OrStart);
                 put(Bytecode(IR.GotoEndOr, 0));
-                fixupStack.push(fix+1); //fixup for StartOR
-                fixupStack.push(cast(uint)ir.length); //for Option
+                fixupStack.push(orStart); //fixup for StartOR
+                fixupStack.push(cast(uint)ir.length); //for second Option
                 put(Bytecode(IR.Option, 0));
                 break;
             default://no groups or whatever
@@ -2117,7 +2125,6 @@ private:
     //print out disassembly a program's IR
     @trusted debug public void print() const
     {//@@@BUG@@@ write is system
-        import std.stdio;
         writefln("PC\tINST\n");
         prettyPrint(delegate void(const(char)[] s){ write(s); },ir);
         writefln("\n");
@@ -4041,7 +4048,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         assert(re.ir[pc].code == IR.Option);
                         len = re.ir[pc].data;
-                        auto pc_save = pc+len-1;
+                        auto pc_save = pc+len-IRL!(IR.GotoEndOr);
                         pc = pc + len + IRL!(IR.Option);
                         while(re.ir[pc].code == IR.Option)
                         {
@@ -7112,7 +7119,9 @@ unittest
         TestVectors(    `(?<=((ab|da)*))x`,    "abdaabx", "y",        "$&-$2-$1",  "x-ab-abdaab"),
         TestVectors(    `a(?<=(ba(?<=(aba)(?<=aaba))))`, "aabaa", "y", "$&-$1-$2", "a-ba-aba"),
         TestVectors(    `.(?<!b).`,   "bax",  "y", "$&", "ax"),
-        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y", "$&", "x"),
+        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y",  "$&", "x"),
+        TestVectors(    `(?<=\.|[!?]+)X`,   "Hey?!X", "y", "$&", "X"),
+        TestVectors(    `(?<=\.|[!?]+)a{3}`,   ".Nope.aaaX", "y", "$&", "aaa"),
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
