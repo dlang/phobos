@@ -901,15 +901,15 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
+template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
 {
     static if (!is(T X == const(U), U) && !is(T X == immutable(U), U))
     {
         alias T Rebindable;
     }
-    else static if (isArray!(T))
+    else static if (isArray!T)
     {
-        alias const(ElementType!(T))[] Rebindable;
+        alias const(ForeachType!T)[] Rebindable;
     }
     else
     {
@@ -959,8 +959,8 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
 Convenience function for creating a $(D Rebindable) using automatic type
 inference.
 */
-Rebindable!(T) rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isArray!(T))
+Rebindable!T rebindable(T)(T obj)
+if (is(T == class) || is(T == interface) || isArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -972,7 +972,7 @@ This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
 $(D class) or a $(D Rebindable).
 */
-Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
+Rebindable!T rebindable(T)(Rebindable!T obj)
 {
     return obj;
 }
@@ -1043,6 +1043,20 @@ unittest
     const arrConst = arr;
     assert(rebindable(arr) == arr);
     assert(rebindable(arrConst) == arr);
+
+    // Test for bug 7654
+    void foo(immutable(char[]) s)
+    {
+        auto r1 = rebindable(s);        // works as expected
+        Rebindable!(typeof(s)) r2 = s;  // doesn't work!
+    }
+    foo("hello");
+    static assert(is(Rebindable!(const( char[])) == const( char)[]));
+    static assert(is(Rebindable!(const(wchar[])) == const(wchar)[]));
+    static assert(is(Rebindable!(const(dchar[])) == const(dchar)[]));
+    static assert(is(Rebindable!(immutable( char[])) ==  string));
+    static assert(is(Rebindable!(immutable(wchar[])) == wstring));
+    static assert(is(Rebindable!(immutable(dchar[])) == dstring));
 }
 
 /**
