@@ -2770,7 +2770,14 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X, B)(auto ref B b) { return a == b; }
+    auto ref opEquals(this X)(auto ref typeof(this) b)
+    {
+        return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+    }
+    auto ref opEquals(this X, B)(auto ref B b) if (!is(B == typeof(this)))
+    {
+        return a == b;
+    }
 
     auto ref opCmp(this X, B)(auto ref B b)
         if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
@@ -2901,8 +2908,8 @@ unittest
         assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
     assert(a ~ [10,11] == [1,2,3,4,10,11]);
     assert(a[0]    == 1);
-    //assert(a[]     == [1,2,3,4]);
-    //assert(a[2..4] == [3,4]);
+    //assert(a[]     == [1,2,3,4]);     // blocked by bug 2486
+    //assert(a[2..4] == [3,4]);         // blocked by bug 2486
     a = a;
     a = [5,6,7,8];  assert(a == [5,6,7,8]);
     a[0]     = 0;   assert(a == [0,6,7,8]);
