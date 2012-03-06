@@ -915,11 +915,14 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
     {
         struct Rebindable
         {
-            private union
+        private:
+            U stripped;
+            @property ref T original() inout pure nothrow @trusted
             {
-                T original;
-                U stripped;
+                return *cast(inout(T)*)&stripped;
             }
+
+        public:
             void opAssign(T another) pure nothrow
             {
                 stripped = cast(U) another;
