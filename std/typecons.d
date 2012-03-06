@@ -945,7 +945,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
                 opAssign(initializer);
             }
 
-            @property ref inout(T) get() inout pure nothrow
+            @property ref inout(T) get() inout pure nothrow @safe
             {
                 return original;
             }
