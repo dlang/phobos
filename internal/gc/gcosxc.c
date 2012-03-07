@@ -13,6 +13,9 @@
 void _d_gc_addrange( void* pbot, void* ptop );
 void _d_gc_removerange( void* p );
 
+struct Array { size_t length; void *ptr; };
+extern struct Array _deh_eh_array;
+
 typedef struct
 {
     const char* seg;
@@ -39,6 +42,18 @@ static void on_add_image( const struct mach_header_64* h, intptr_t slide )
             continue;
         _d_gc_addrange( (void*) sect->addr + slide,
                         (void*) sect->addr + slide + sect->size );
+    }
+
+    sect = getsectbynamefromheader_64( h,
+                                    "__DATA",
+                                    "__deh_eh" );
+    if (sect && sect->size)
+    {
+        /* BUG: this will fail if there are multiple images with __deh_eh
+         * sections. Not set up to handle that.
+         */
+        _deh_eh_array.ptr = (void *) sect->addr + slide;
+        _deh_eh_array.length = sect->size;
     }
 }
 
@@ -80,6 +95,18 @@ static void on_add_image( const struct mach_header* h, intptr_t slide )
             continue;
         _d_gc_addrange( (void*) sect->addr + slide,
                         (void*) sect->addr + slide + sect->size );
+    }
+
+    sect = getsectbynamefromheader( h,
+                                    "__DATA",
+                                    "__deh_eh" );
+    if (sect && sect->size)
+    {
+        /* BUG: this will fail if there are multiple images with __deh_eh
+         * sections. Not set up to handle that.
+         */
+        _deh_eh_array.ptr = (void *) sect->addr + slide;
+        _deh_eh_array.length = sect->size;
     }
 }
 

@@ -1,7 +1,7 @@
 /**
  * Implementation of exception handling support routines for Posix.
  *
- * Copyright: Copyright Digital Mars 2000 - 2010.
+ * Copyright: Copyright Digital Mars 2000 - 2012.
  * License:
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
@@ -22,6 +22,15 @@
 import std.c.linux.linuxextern;
 
 version (linux) import std.c.linux.linux;
+
+extern (C)
+{
+    version (OSX)
+    {
+        // Set by internal.gc.gcosxc.on_add_image()
+        ubyte[] _deh_eh_array;
+    }
+}
 
 extern (C) int _d_isbaseof(ClassInfo oc, ClassInfo c);
 
@@ -91,10 +100,19 @@ DHandlerTable *__eh_finddata(void *address)
 {
     debug printf("FuncTable.sizeof = %p\n", FuncTable.sizeof);
     debug printf("__eh_finddata(address = %p)\n", address);
-    debug printf("_deh_beg = %p, _deh_end = %p\n", &_deh_beg, &_deh_end);
-    for (auto ft = cast(FuncTable *)&_deh_beg;
-         ft < cast(FuncTable *)&_deh_end;
-         ft++)
+
+    version (OSX)
+    {
+        auto pstart = cast(FuncTable *)_deh_eh_array.ptr;
+        auto pend   = cast(FuncTable *)&_deh_eh_array[length];
+    }
+    else
+    {
+        auto pstart = cast(FuncTable *)&_deh_beg;
+        auto pend   = cast(FuncTable *)&_deh_end;
+    }
+    debug printf("_deh_beg = %p, _deh_end = %p\n", pstart, pend);
+    for (auto ft = pstart; ft < pend; ft++)
     {
       debug printf("\tft = %p, fptr = %p, fsize = x%03x, handlertable = %p\n",
               ft, ft.fptr, ft.fsize, ft.handlertable);

@@ -9,7 +9,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module core.sys.osx.mach.loader;
+module std.c.osx.mach.loader;
 
 version (OSX):
 
@@ -46,32 +46,32 @@ enum : uint
 
 struct section
 {
-        char[16] sectname;
-        char[16] segname;
-        uint addr;
-        uint size;
-        uint offset;
-        uint align_;
-        uint reloff;
-        uint nreloc;
-        uint flags;
-        uint reserved1;
-        uint reserved2;
+    char[16] sectname;
+    char[16] segname;
+    uint     addr;
+    uint     size;
+    uint     offset;
+    uint     align_;
+    uint     reloff;
+    uint     nreloc;
+    uint     flags;
+    uint     reserved1;
+    uint     reserved2;
 }
 
 struct section_64
 {
-        char[16] sectname;
-        char[16] segname;
-        long addr;
-        long size;
-        uint offset;
-        uint align_;
-        uint reloff;
-        uint nreloc;
-        uint flags;
-        uint reserved1;
-        uint reserved2;
-        uint reserved3;
+    char[16] sectname;
+    char[16] segname;
+    ulong    addr;
+    ulong    size;
+    uint     offset;
+    uint     align_;
+    uint     reloff;
+    uint     nreloc;
+    uint     flags;
+    uint     reserved1;
+    uint     reserved2;
+    uint     reserved3;
 }
 

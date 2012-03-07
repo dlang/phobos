@@ -9,15 +9,18 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module core.sys.osx.mach.dyld;
+module std.c.osx.mach.dyld;
 
 version (OSX):
 
-import core.sys.osx.mach.loader;
+import std.c.stdint;
+import std.c.osx.mach.loader;
 
 extern (C):
 
-uint _dyld_image_count ();
-mach_header* _dyld_get_image_header (uint image_index);
-
+uint         _dyld_image_count();
+char*        _dyld_get_image_name(uint image_index);
+mach_header* _dyld_get_image_header(uint image_index);
+void         _dyld_register_func_for_add_image(void function(in mach_header* mh, intptr_t vmaddr_slide));
+void         _dyld_register_func_for_remove_image(void function(in mach_header* mh, intptr_t vmaddr_slide));
 

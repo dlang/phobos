@@ -9,11 +9,11 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module core.sys.osx.mach.getsect;
+module std.c.osx.mach.getsect;
 
 version (OSX):
 
-import core.sys.osx.mach.loader;
+import std.c.osx.mach.loader;
 
 extern (C):
 
