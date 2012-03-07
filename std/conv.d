@@ -930,7 +930,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
 
 /// ditto
 T toImpl(T, S)(S s)
-    if (is(S : Object) &&
+    if (is(S : Object) && !is(S == struct) &&
         isSomeString!T)
 {
     return toStr!T(s);
