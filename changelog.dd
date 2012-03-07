@@ -45,6 +45,8 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7674): regex replace requires escaped format)
         $(LI $(BUGZILLA 7679): std.regex.split and splitter don't work w/ ctRegex)
         $(LI $(BUGZILLA 7718): regex and ctRegex produce different results)
+        $(LI $(BUGZILLA 7628): std.format, incorrect formatValue overload)
+        $(LI $(BUGZIILA 7669): std.conv, incorrect toImpl overload)
      )
  )
 
