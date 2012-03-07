@@ -65,7 +65,7 @@ class ModuleCtorError : Exception
 
 // Win32: this gets initialized by minit.asm
 // linux: this gets initialized in _moduleCtor()
-// OSX: this gets initialized in _moduleCtor()
+// OSX: this gets initialized in gcosxc()
 extern (C) ModuleInfo[] _moduleinfo_array;
 
 version (linux)
@@ -107,7 +107,7 @@ version (Solaris)
     extern (C) ModuleReference *_Dmodule_ref;  // start of linked list
 }
 
-version (OSX)
+version (none)
 {
     extern (C)
     {
@@ -145,7 +145,7 @@ extern (C) void _moduleCtor()
         }
     }
 
-    version (FreeBSD)
+    else version (FreeBSD)
     {
         int len = 0;
         ModuleReference *mr;
@@ -160,7 +160,7 @@ extern (C) void _moduleCtor()
         }
     }
 
-    version (Solaris)
+    else version (Solaris)
     {
        int len = 0;
        ModuleReference *mr;
@@ -175,15 +175,10 @@ extern (C) void _moduleCtor()
        }
     }
 
-    version (OSX)
+    else version (OSX)
     {   /* The ModuleInfo references are stored in the special segment
-         * __minfodata, which is bracketed by the segments __minfo_beg
-         * and __minfo_end. The variables _minfo_beg and _minfo_end
-         * are of zero size and are in the two bracketing segments,
-         * respectively.
+         * __minfodata.
          */
-        size_t length = cast(ModuleInfo*)&_minfo_end - cast(ModuleInfo*)&_minfo_beg;
-        _moduleinfo_array = (cast(ModuleInfo*)&_minfo_beg)[0 .. length];
         debug printf("moduleinfo: ptr = %p, length = %d\n", _moduleinfo_array.ptr, _moduleinfo_array.length);
 
         debug foreach (m; _moduleinfo_array)
@@ -193,10 +188,15 @@ extern (C) void _moduleCtor()
         }
     }
 
-    version (Win32)
+    else version (Win32)
     {
         // Ensure module destructors also get called on program termination
         //_fatexit(&_STD_moduleDtor);
+    }
+
+    else
+    {
+        static assert("unsupported system");
     }
 
     _moduleinfo_dtors = new ModuleInfo[_moduleinfo_array.length];
