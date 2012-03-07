@@ -981,11 +981,7 @@ template RepresentationTypeTuple(T)
         }
         else
         {
-            static if (is(T[0] R: Rebindable!R))
-            {
-                alias Impl!(Impl!R, T[1 .. $]) Impl;
-            }
-            else  static if (is(T[0] == struct) || is(T[0] == union))
+            static if (is(T[0] == struct) || is(T[0] == union))
             {
     // @@@BUG@@@ this should work
     //             alias .RepresentationTypes!(T[0].tupleof)
@@ -1389,12 +1385,6 @@ template hasAliasing(T...)
         anySatisfy!(isDelegate, T);
 }
 
-// Specialization to special-case std.typecons.Rebindable.
-template hasAliasing(R : Rebindable!R)
-{
-    enum hasAliasing = hasAliasing!R;
-}
-
 unittest
 {
     struct S1 { int a; Object b; }
@@ -1495,10 +1485,6 @@ template hasUnsharedAliasing(T...)
     static if (!T.length)
     {
         enum hasUnsharedAliasing = false;
-    }
-    else static if (is(T[0] R: Rebindable!R))
-    {
-        enum hasUnsharedAliasing = hasUnsharedAliasing!R;
     }
     else
     {
