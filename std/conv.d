@@ -959,6 +959,13 @@ unittest
     assert(to!string(a) == "null");
     a = new A;
     assert(to!string(a) == "an A");
+
+    // Bug 7660
+    class C { string toString() { return "C"; } }
+    struct S { C c; alias c this; }
+    S s; s.c = new C();
+    static assert(__traits(compiles, to!string(s)));
+    assert(to!string(s) == "C");
 }
 
 /// ditto
