@@ -4877,7 +4877,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "hours" ||
            units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         try
         {
@@ -5361,8 +5361,11 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         {
             static void TestST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
             {
+                auto other = orig;
                 orig.roll!"seconds"(seconds);
+                other.roll!"secs"(seconds);
                 _assertPred!"=="(orig, expected, "", __FILE__, line);
+                _assertPred!"=="(other, expected, "", __FILE__, line);
             }
 
             //Test A.D.
@@ -13907,11 +13910,11 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     //Shares documentation with "hours" version.
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         static if(units == "minutes")
             enum memberVarStr = "minute";
-        else static if(units == "seconds")
+        else static if(isSecondTimeUnit!units)
             enum memberVarStr = "second";
         else
             static assert(0);
@@ -16150,7 +16153,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     /+ref DateTime+/ void roll(string units)(long value) pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         _tod.roll!units(value);
     }
@@ -31891,7 +31894,7 @@ bool valid(string units)(int value) pure nothrow
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
-       units == "seconds")
+       isSecondTimeUnit!units)
 {
     static if(units == "months")
         return value >= Month.jan && value <= Month.dec;
@@ -31899,7 +31902,7 @@ bool valid(string units)(int value) pure nothrow
         return value >= 0 && value <= TimeOfDay.maxHour;
     else static if(units == "minutes")
         return value >= 0 && value <= TimeOfDay.maxMinute;
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
         return value >= 0 && value <= TimeOfDay.maxSecond;
 }
 
@@ -31947,7 +31950,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
-       units == "seconds")
+       isSecondTimeUnit!units)
 {
     static if(units == "months")
     {
@@ -31964,7 +31967,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
         if(!valid!units(value))
             throw new DateTimeException(numToString(value) ~ " is not a valid minute of an hour.", file, line);
     }
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
     {
         if(!valid!units(value))
             throw new DateTimeException(numToString(value) ~ " is not a valid second of a minute.", file, line);
@@ -32291,7 +32294,7 @@ template hnsecsPer(string units)
         enum hnsecsPer = 10L;
     else static if(units == "msecs")
         enum hnsecsPer = 1000 * hnsecsPer!"usecs";
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
         enum hnsecsPer = 1000 * hnsecsPer!"msecs";
     else static if(units == "minutes")
         enum hnsecsPer = 60 * hnsecsPer!"seconds";
