@@ -687,7 +687,7 @@ unittest
 
     getTimes(deleteme, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(5);
+    enum leeway = seconds(5);
 
     {
         auto diffa = accessTime1 - currTime;
@@ -700,7 +700,7 @@ unittest
 
     version(fullFileTests)
     {
-        enum sleepTime = dur!"seconds"(2);
+        enum sleepTime = seconds(2);
         Thread.sleep(sleepTime);
 
         currTime = Clock.currTime();
@@ -781,7 +781,7 @@ version(Windows) unittest
 
     getTimesWin(deleteme, creationTime1, accessTime1, modificationTime1);
 
-    enum leeway = dur!"seconds"(5);
+    enum leeway = seconds(5);
 
     {
         auto diffc = creationTime1 - currTime;
@@ -800,7 +800,7 @@ version(Windows) unittest
 
     version(fullFileTests)
     {
-        Thread.sleep(dur!"seconds"(2));
+        Thread.sleep(seconds(2));
 
         currTime = Clock.currTime();
         write(deleteme, "b");
@@ -2701,11 +2701,11 @@ unittest
     SysTime ftc1, fta1, ftm1;
     getTimes(deleteme, ftc1, fta1, ftm1);
     enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
-    setTimes(deleteme, fta1 + dur!"seconds"(50), ftm1 + dur!"seconds"(50));
+    setTimes(deleteme, fta1 + seconds(50), ftm1 + seconds(50));
     SysTime ftc2, fta2, ftm2;
     getTimes(deleteme, ftc2, fta2, ftm2);
-    assert(fta1 + dur!"seconds(50) == fta2, text(fta1 + dur!"seconds(50), "!=", fta2));
-    assert(ftm1 + dur!"seconds(50) == ftm2);
+    assert(fta1 + seconds(50) == fta2, text(fta1 + seconds(50), "!=", fta2));
+    assert(ftm1 + seconds(50) == ftm2);
 }
 +/
 
@@ -3246,12 +3246,12 @@ DirEntry dirEntry(in char[] name)
 unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     immutable path = deleteme ~ "_dir";
     scope(exit) { if(path.exists) rmdirRecurse(path); }
 
     mkdir(path);
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3296,12 +3296,12 @@ unittest
 unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     immutable path = deleteme ~ "_file";
     scope(exit) { if(path.exists) remove(path); }
 
     write(path, "hello world");
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
@@ -3346,7 +3346,7 @@ unittest
 version(linux) unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     immutable orig = deleteme ~ "_dir";
     mkdir(orig);
     immutable path = deleteme ~ "_slink";
@@ -3354,7 +3354,7 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3391,7 +3391,7 @@ version(linux) unittest
 version(linux) unittest
 {
     auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     immutable orig = deleteme ~ "_file";
     write(orig, "hello world");
     immutable path = deleteme ~ "_slink";
@@ -3399,7 +3399,7 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
+    Thread.sleep(seconds(2));
     auto de = dirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
