@@ -69,16 +69,18 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     Various functions take a string (or strings) to represent a unit of time
     (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),
-    $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
-    $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
-    $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some subset thereof.
-    There are a few functions in core.time which take $(D "nsecs"), but because
-    nothing in std.datetime has precision greater than hnsecs, and very little
-    in core.time does, no functions in std.datetime accept $(D "nsecs").
-    To remember which units are abbreviated and which aren't,
-    all units seconds and greater use their full names, and all
-    sub-second units are abbreviated (since they'd be rather long if they
-    weren't).
+    $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"), $(D "secs")
+    (equivalent to $(D "seconds")), $(D "msecs") (milliseconds), $(D "usecs")
+    (microseconds), $(D "hnsecs") (hecto-nanoseconds - i.e. 100 ns), or some
+    subset thereof.  There are a few functions in core.time which take
+    $(D "nsecs"), but because nothing in std.datetime has precision greater
+    than hnsecs, and very little in core.time does, no functions in
+    std.datetime accept $(D "nsecs").  To remember which units are abbreviated
+    and which aren't, all units greater than seconds use their full names, and
+    all sub-second units are abbreviated (since they'd be rather long if they
+    weren't).  The one exception is seconds, which can be either seconds, or
+    abbreviated secs, since all other names with "seconds" in them are
+    abbreviated.
 
     Note:
         $(D DateTimeException) is an alias for core.time's $(D TimeException),
@@ -304,12 +306,12 @@ enum AutoStart
 
 /++
     Array of the strings representing time units, starting with the smallest
-    unit and going to the largest. It does not include $(D "nsecs").
+    unit and going to the largest. It does not include $(D "nsecs") or $(D "secs").
 
    Includes $(D "hnsecs") (hecto-nanoseconds (100 ns)),
    $(D "usecs") (microseconds), $(D "msecs") (milliseconds), $(D "seconds"),
-   $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"), and
-   $(D "years")
+   $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"),
+   and $(D "years")
   +/
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
@@ -4500,8 +4502,8 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         year's worth of days gets the exact same $(D SysTime).
 
         Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
-        $(D "minutes"), $(D "seconds"), $(D "msecs"), $(D "usecs"), and
-        $(D "hnsecs").
+        $(D "minutes"), $(D "seconds"), $(D "secs"), $(D "msecs"),
+        $(D "usecs"), and $(D "hnsecs").
 
         Note that when rolling msecs, usecs or hnsecs, they all add up to a
         second. So, for example, rolling 1000 msecs is exactly the same as
@@ -4877,7 +4879,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "hours" ||
            units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         try
         {
@@ -5361,8 +5363,11 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         {
             static void TestST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
             {
+                auto other = orig;
                 orig.roll!"seconds"(seconds);
+                other.roll!"secs"(seconds);
                 _assertPred!"=="(orig, expected, "", __FILE__, line);
+                _assertPred!"=="(other, expected, "", __FILE__, line);
             }
 
             //Test A.D.
@@ -13821,7 +13826,8 @@ public:
         one hours's worth of minutes gets the exact same
         $(D TimeOfDay).
 
-        Accepted units are $(D "hours"), $(D "minutes"), and $(D "seconds").
+        Accepted units are $(D "hours"), $(D "minutes"), and $(D "seconds")
+        (or $(D "secs")).
 
         Params:
             units = The units to add.
@@ -13851,7 +13857,7 @@ tod5.roll!"seconds"(1);
 assert(tod5 == TimeOfDay(23, 59, 0));
 
 auto tod6 = TimeOfDay(0, 0, 0);
-tod6.roll!"seconds"(-1);
+tod6.roll!"secs"(-1);
 assert(tod6 == TimeOfDay(0, 0, 59));
 --------------------
       +/
@@ -13887,7 +13893,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
             assert(tod5 == TimeOfDay(23, 59, 0));
 
             auto tod6 = TimeOfDay(0, 0, 0);
-            tod6.roll!"seconds"(-1);
+            tod6.roll!"secs"(-1);
             assert(tod6 == TimeOfDay(0, 0, 59));
         }
     }
@@ -13907,11 +13913,11 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     //Shares documentation with "hours" version.
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         static if(units == "minutes")
             enum memberVarStr = "minute";
-        else static if(units == "seconds")
+        else static if(isSecondTimeUnit!units)
             enum memberVarStr = "second";
         else
             static assert(0);
@@ -16080,7 +16086,7 @@ assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
         year's worth of days gets the exact same $(D DateTime).
 
         Accepted units are $(D "days"), $(D "minutes"), $(D "hours"),
-        $(D "minutes"), and $(D "seconds").
+        $(D "minutes"), and $(D "seconds") (or $(D "secs")).
 
         Params:
             units = The units to add.
@@ -16150,7 +16156,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     /+ref DateTime+/ void roll(string units)(long value) pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
-           units == "seconds")
+           isSecondTimeUnit!units)
     {
         _tod.roll!units(value);
     }
@@ -31891,7 +31897,7 @@ bool valid(string units)(int value) pure nothrow
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
-       units == "seconds")
+       isSecondTimeUnit!units)
 {
     static if(units == "months")
         return value >= Month.jan && value <= Month.dec;
@@ -31899,7 +31905,7 @@ bool valid(string units)(int value) pure nothrow
         return value >= 0 && value <= TimeOfDay.maxHour;
     else static if(units == "minutes")
         return value >= 0 && value <= TimeOfDay.maxMinute;
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
         return value >= 0 && value <= TimeOfDay.maxSecond;
 }
 
@@ -31947,7 +31953,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
-       units == "seconds")
+       isSecondTimeUnit!units)
 {
     static if(units == "months")
     {
@@ -31964,7 +31970,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
         if(!valid!units(value))
             throw new DateTimeException(numToString(value) ~ " is not a valid minute of an hour.", file, line);
     }
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
     {
         if(!valid!units(value))
             throw new DateTimeException(numToString(value) ~ " is not a valid second of a minute.", file, line);
@@ -32291,7 +32297,7 @@ template hnsecsPer(string units)
         enum hnsecsPer = 10L;
     else static if(units == "msecs")
         enum hnsecsPer = 1000 * hnsecsPer!"usecs";
-    else static if(units == "seconds")
+    else static if(isSecondTimeUnit!units)
         enum hnsecsPer = 1000 * hnsecsPer!"msecs";
     else static if(units == "minutes")
         enum hnsecsPer = 60 * hnsecsPer!"seconds";
