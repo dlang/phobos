@@ -416,7 +416,7 @@ referring to the same handle will see a closed file henceforth.
             if (p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) == 0,
+                errnoEnforce(.pclose(p.handle) != -1,
                         "Could not close pipe `"~p.name~"'");
                 return;
             }
