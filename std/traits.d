@@ -3019,27 +3019,11 @@ unittest
  */
 template StringTypeOf(T) if (isSomeString!T)
 {
-    alias typeof(T.init[]) StringTypeOf;
-    //alias ArrayTypeOf!T StringTypeOf;
+    alias ArrayTypeOf!T StringTypeOf;
 }
 
 unittest
 {
-    foreach (Ch; TypeTuple!(char, wchar, dchar))
-    {
-        foreach (Char; TypeTuple!(Ch, const(Ch), immutable(Ch)))
-        {
-            foreach (Str; TypeTuple!(Char[], const(Char)[], immutable(Char)[]))
-            {
-                class  C(Str) { Str val;  alias val this; }
-                struct S(Str) { Str val;  alias val this; }
-
-                static assert(is(StringTypeOf!(C!Str) == Str));
-                static assert(is(StringTypeOf!(S!Str) == Str));
-            }
-        }
-    }
-/+
     foreach (T; CharTypeList)
     foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
     {
@@ -3059,7 +3043,6 @@ unittest
     {
         static assert(!is(StringTypeOf!( Q!T[] )));
     }
-+/
 }
 
 /*
@@ -3144,13 +3127,20 @@ template BuiltinTypeOf(T)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
- * Detect whether T is a built-in integral type. Types $(D bool), $(D
- * char), $(D wchar), and $(D dchar) are not considered integral.
+ * Detect whether we can treat T as a built-in boolean type.
+ */
+template isBoolean(T)
+{
+    enum bool isBoolean = is(BooleanTypeOf!T);
+}
+
+/**
+ * Detect whether we can treat T as a built-in integral type. Types $(D bool),
+ * $(D char), $(D wchar), and $(D dchar) are not considered integral.
  */
 template isIntegral(T)
 {
-    enum bool isIntegral = staticIndexOf!(Unqual!(T), byte,
-            ubyte, short, ushort, int, uint, long, ulong) >= 0;
+    enum bool isIntegral = is(IntegralTypeOf!T);
 }
 
 unittest
@@ -3207,13 +3197,11 @@ unittest
 }
 
 /**
- * Detect whether T is a built-in floating point type.
+ * Detect whether we can treat T as a built-in floating point type.
  */
-
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint = staticIndexOf!(Unqual!(T),
-            float, double, real) >= 0;
+    enum bool isFloatingPoint = is(FloatingPointTypeOf!T);
 }
 
 unittest
@@ -3239,12 +3227,12 @@ unittest
 }
 
 /**
-Detect whether T is a built-in numeric type (integral or floating
+Detect whether we can treat T as a built-in numeric type (integral or floating
 point).
  */
 template isNumeric(T)
 {
-    enum bool isNumeric = isIntegral!(T) || isFloatingPoint!(T);
+    enum bool isNumeric = is(NumericTypeOf!T);
 }
 
 /**
@@ -3252,8 +3240,7 @@ Detect whether $(D T) is a built-in unsigned numeric type.
  */
 template isUnsigned(T)
 {
-    enum bool isUnsigned = staticIndexOf!(Unqual!T,
-            ubyte, ushort, uint, ulong) >= 0;
+    enum bool isUnsigned = is(UnsignedTypeOf!T);
 }
 
 /**
@@ -3261,16 +3248,15 @@ Detect whether $(D T) is a built-in signed numeric type.
  */
 template isSigned(T)
 {
-    enum bool isSigned = staticIndexOf!(Unqual!T,
-            byte, short, int, long, float, double, real) >= 0;
+    enum bool isSigned = is(SignedTypeOf!T);
 }
 
 /**
-Detect whether T is one of the built-in character types
+Detect whether we can treat T as one of the built-in character types.
  */
 template isSomeChar(T)
 {
-    enum isSomeChar = staticIndexOf!(Unqual!T, char, wchar, dchar) >= 0;
+    enum isSomeChar = is(CharTypeOf!T);
 }
 
 unittest
@@ -3289,9 +3275,8 @@ unittest
 }
 
 /**
-Detect whether T is one of the built-in string types
+Detect whether we can treat T as one of the built-in string types.
  */
-
 template isSomeString(T)
 {
     enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
@@ -3405,7 +3390,7 @@ unittest
  */
 template isAssociativeArray(T)
 {
-    enum bool isAssociativeArray = __traits(isAssociativeArray, T);
+    enum bool isAssociativeArray = is(AssocArrayTypeOf!T);
 }
 
 unittest
@@ -3423,6 +3408,11 @@ unittest
     static assert(!isAssociativeArray!(Foo));
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
+}
+
+template isBuiltinType(T)
+{
+    enum isBuiltinType = is(BuiltinTypeOf!T);
 }
 
 /**
@@ -3895,18 +3885,22 @@ unittest
  * Returns the corresponding unsigned type for T. T must be a numeric
  * integral type, otherwise a compile-time error occurs.
  */
-
 template Unsigned(T)
 {
     template Impl(T)
     {
-        static if (isUnsigned!(T)) alias T Impl;
-        else static if (is(T == byte )) alias ubyte  Impl;
-        else static if (is(T == short)) alias ushort Impl;
-        else static if (is(T == int  )) alias uint   Impl;
-        else static if (is(T == long )) alias ulong  Impl;
-        else static assert(false, "Type " ~ T.stringof
-                           ~ " does not have an Unsigned counterpart");
+        static if (is(UnsignedTypeOf!T X))
+            alias X Impl;
+        else static if (is(SignedTypeOf!T X))
+        {
+            static if (is(X == byte )) alias ubyte  Impl;
+            static if (is(X == short)) alias ushort Impl;
+            static if (is(X == int  )) alias uint   Impl;
+            static if (is(X == long )) alias ulong  Impl;
+        }
+        else
+            static assert(false, "Type " ~ T.stringof ~
+                                 " does not have an Unsigned counterpart");
     }
 
     alias ModifyTypePreservingSTC!(Impl, OriginalType!T) Unsigned;
@@ -3936,7 +3930,7 @@ template Largest(T...) if(T.length >= 1)
     {
         alias T[0] Largest;
     }
-    static if (T.length == 2)
+    else static if (T.length == 2)
     {
         static if(T[0].sizeof >= T[1].sizeof)
         {
@@ -3969,13 +3963,18 @@ template Signed(T)
 {
     template Impl(T)
     {
-        static if (isSigned!(T)) alias T Impl;
-        else static if (is(T == ubyte )) alias byte  Impl;
-        else static if (is(T == ushort)) alias short Impl;
-        else static if (is(T == uint  )) alias int   Impl;
-        else static if (is(T == ulong )) alias long  Impl;
-        else static assert(false, "Type " ~ T.stringof
-                           ~ " does not have an Signed counterpart");
+        static if (is(SignedTypeOf!T X))
+            alias X Impl;
+        else static if (is(UnsignedTypeOf!T X))
+        {
+            static if (is(X == ubyte )) alias byte  Impl;
+            static if (is(X == ushort)) alias short Impl;
+            static if (is(X == uint  )) alias int   Impl;
+            static if (is(X == ulong )) alias long  Impl;
+        }
+        else
+            static assert(false, "Type " ~ T.stringof ~
+                                 " does not have an Signed counterpart");
     }
 
     alias ModifyTypePreservingSTC!(Impl, OriginalType!T) Signed;
