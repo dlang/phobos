@@ -2842,7 +2842,6 @@ version(Posix)
     enum string curdir = ".";       // / String representing the current directory.
     enum string pardir = "..";      // / String representing the parent directory.
 
-    static assert(sep.length == 1 && altsep.length == 0);
     private bool isSep(dchar ch) {
         return ch == sep[0];
     }
