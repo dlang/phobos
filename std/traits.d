@@ -3022,7 +3022,7 @@ unittest
  */
 template isMutable(T)
 {
-    enum isMutable = !is(T == const) && !is(T == immutable);
+    enum isMutable = !is(T == const) && !is(T == immutable) && !is(T == inout);
 }
 
 unittest
@@ -3033,7 +3033,9 @@ unittest
     static assert( isMutable!(shared const(int)[]));
 
     static assert(!isMutable!(const int));
+    static assert(!isMutable!(inout int));
     static assert(!isMutable!(shared(const int)));
+    static assert(!isMutable!(shared(inout int)));
     static assert(!isMutable!(immutable string));
 }
 
