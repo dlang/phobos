@@ -3363,6 +3363,7 @@ has both opApply and a range interface.
 template ForeachType(T)
 {
     alias ReturnType!(typeof(
+    (inout int x = 0)
     {
         foreach(elem; T.init)
         {
@@ -3377,6 +3378,7 @@ unittest
     static assert(is(ForeachType!(uint[]) == uint));
     static assert(is(ForeachType!(string) == immutable(char)));
     static assert(is(ForeachType!(string[string]) == string));
+    static assert(is(ForeachType!(inout(int)[]) == inout(int)));
 }
 
 
