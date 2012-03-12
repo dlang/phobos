@@ -10,6 +10,7 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7299): std.uni missing doc comments)
         $(LI $(BUGZILLA 7374): stdin.byLine() throws AssertError on empty input)
         $(LI $(BUGZILLA 7628): std.format formatValue incorrect overload)
+        $(LI $(BUGZILLA 7674): regex replace requires escaped format)
      )
  )
 
