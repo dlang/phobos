@@ -930,7 +930,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
 
 /// ditto
 T toImpl(T, S)(S s)
-    if (is(S : Object) && !is(S == struct) &&
+    if (is(S == Object) &&
         isSomeString!T)
 {
     return toStr!T(s);
@@ -961,10 +961,9 @@ unittest
     assert(to!string(a) == "an A");
 
     // Bug 7660
-    class C { string toString() { return "C"; } }
+    class C { override string toString() { return "C"; } }
     struct S { C c; alias c this; }
     S s; s.c = new C();
-    static assert(__traits(compiles, to!string(s)));
     assert(to!string(s) == "C");
 }
 
