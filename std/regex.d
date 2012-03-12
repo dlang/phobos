@@ -6766,7 +6766,10 @@ public:
     }
 }
 
-///A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
+/**
+    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
+    Captured subexpressions have no effect on the resulting range.
+*/
 public Splitter!(Range) splitter(Range, RegEx)(Range r, RegEx pat)
     if( is(BasicElementOf!Range : dchar) && is(RegEx == Regex!(BasicElementOf!Range)))
 {
