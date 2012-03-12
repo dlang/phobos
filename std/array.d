@@ -1427,23 +1427,45 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
     if (from.empty) return subject;
-    auto app = appender!(E[])();
 
+    auto balance = std.algorithm.find(subject, from.save);
+    if (balance.empty)
+        return subject;
+
+    auto app = appender!(E[])();
+    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(to.save);
+    replaceInto(app, balance[from.length .. $], from, to);
+
+    return app.data;
+}
+
+/++
+    Same as above, but outputs the result via OutputRange $(D sink). 
+    If no match is found the original array is transfered to $(D sink) as is.
++/
+void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
+if (isOutputRange!(Sink, E) && isDynamicArray!(E[]) 
+    && isForwardRange!R1 && isForwardRange!R2
+    && (hasLength!R2 || isSomeString!R2))
+{
+    if (from.empty)
+    {
+        sink.put(subject);
+        return;
+    }
     for (;;)
     {
         auto balance = std.algorithm.find(subject, from.save);
         if (balance.empty)
         {
-            if (app.data.empty) return subject;
-            app.put(subject);
+            sink.put(subject);
             break;
         }
-        app.put(subject[0 .. subject.length - balance.length]);
-        app.put(to.save);
+        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(to.save);
         subject = balance[from.length .. $];
     }
-
-    return app.data;
 }
 
 unittest
@@ -1474,6 +1496,28 @@ unittest
 
     immutable s = "This is a foo foo list";
     assert(replace(s, "foo", "silly") == "This is a silly silly list");
+}
+
+unittest
+{
+    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+        TestTypes;
+
+    struct CheckOutput(C)
+    {
+        C[] desired;
+        this(C[] arr){ desired = arr; }
+        void put(C[] part){ assert(skipOver(desired, part)); }
+    }
+    foreach (S; TestTypes)
+    {
+        alias typeof(S.init[0]) Char;
+        S s = to!S("yet another dummy text, yet another ...");
+        S from = to!S("yet another");
+        S into = to!S("some");
+        replaceInto(CheckOutput!(Char)(to!S("some dummy text, some ..."))
+                    , s, from, into);
+    }
 }
 
 /+
