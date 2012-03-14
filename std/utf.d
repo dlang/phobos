@@ -1468,7 +1468,24 @@ auto p5 = toUTFz!(const(wchar)*)("hello world");
 auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 --------------------
   +/
-P toUTFz(P, S)(S str) @system
+template toUTFz(P)
+{
+    P toUTFz(S)(S str) @system
+    {
+        return toUTFzImpl!(P, S)(str);
+    }
+}
+
+/++ Ditto +/
+template toUTFz(P, S)
+{
+    P toUTFz(S str) @system
+    {
+        return toUTFzImpl!(P, S)(str);
+    }
+}
+
+private P toUTFzImpl(P, S)(S str) @system
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
        is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
@@ -1485,7 +1502,7 @@ P toUTFz(P, S)(S str) @system
 
     //If the P is mutable, then we have to make a copy.
     static if(is(Unqual!(typeof(*P.init)) == typeof(*P.init)))
-        return toUTFz!(P, const(C)[])(cast(const(C)[])str);
+        return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
     else
     {
         immutable p = str.ptr + str.length;
@@ -1502,11 +1519,11 @@ P toUTFz(P, S)(S str) @system
         if((cast(size_t)p & 3) && *p == '\0')
             return str.ptr;
 
-        return toUTFz!(P, const(C)[])(cast(const(C)[])str);
+        return toUTFzImpl!(P, const(C)[])(cast(const(C)[])str);
     }
 }
 
-P toUTFz(P, S)(S str) @system
+private P toUTFzImpl(P, S)(S str) @system
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
        !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
@@ -1540,7 +1557,7 @@ P toUTFz(P, S)(S str) @system
     }
 }
 
-P toUTFz(P, S)(S str)
+private P toUTFzImpl(P, S)(S str)
     if(isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
        !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
