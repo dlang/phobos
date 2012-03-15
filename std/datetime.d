@@ -31169,7 +31169,7 @@ version(testStdDateTime) unittest
 
     Returns a $(D d_time) for the given $(D SysTime).
  +/
-deprecated long sysTimeToDTime(in SysTime sysTime)
+deprecated long sysTimeToDTime(in SysTime sysTime) pure nothrow
 {
     return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
 }
