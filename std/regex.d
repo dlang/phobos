@@ -6439,6 +6439,12 @@ public template ctRegex(alias pattern, alias flags=[])
     enum ctRegex = ctRegexImpl!(pattern, flags).nr;
 }
 
+template isRegexFor(RegEx, R)
+{
+    enum isRegexFor = is(RegEx == Regex!(BasicElementOf!R))
+                 || is(RegEx == StaticRegex!(BasicElementOf!R));
+}
+
 /++
     Start matching $(D input) to regex pattern $(D re),
     using Thompson NFA matching scheme.
@@ -6546,8 +6552,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
 +/
 public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R format)
-  if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R))
-     || is(RegEx == StaticRegex!(BasicElementOf!R)))
+  if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6589,7 +6594,7 @@ public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R for
     ---
 +/
 public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegEx re)
-    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6698,16 +6703,16 @@ assert(equal(splitter(s1, regex(", *")),
     ["", "abc", "de", "fg", "hi", ""]));
 ----
 +/
-public struct Splitter(Range, alias Engine=ThompsonMatcher)
-    if(isSomeString!Range)
+public struct Splitter(Range, alias RegEx=Regex)
+    if(isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
     Range _input;
     size_t _offset;
-    alias RegexMatch!(Range, Engine) Rx;
+    alias typeof(match(Range.init,RegEx.init)) Rx;
     Rx _match;
 
-    @trusted this(Range input, Regex!(BasicElementOf!Range) separator)
+    @trusted this(Range input, RegEx separator)  
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
         separator.flags |= RegexOption.global;
@@ -6770,15 +6775,15 @@ public:
     A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
     Captured subexpressions have no effect on the resulting range.
 */
-public Splitter!(Range) splitter(Range, RegEx)(Range r, RegEx pat)
-    if( is(BasicElementOf!Range : dchar) && is(RegEx == Regex!(BasicElementOf!Range)))
+public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
+    if(is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
-    return Splitter!(Range)(r, pat);
+    return Splitter!(Range, RegEx)(r, pat);
 }
 
 ///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
-    if(isSomeString!String && is(RegEx == Regex!(BasicElementOf!String)))
+    if(isSomeString!String  && isRegexFor!(RegEx, String))
 {
     auto a = appender!(String[])();
     foreach(e; splitter(input, rx))
@@ -7502,6 +7507,17 @@ else
     unittest
     {//bugzilla 7111
         assert(!match("", regex("^")).empty);
+    }
+
+    unittest
+    {// bugzilla 7679
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            enum re = ctRegex!(to!S(r"\."));
+            auto str = to!S("a.b");
+            assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
+            assert(split(str, re) == [to!S("a"), to!S("b")]);
+        }
     }
 }
 
