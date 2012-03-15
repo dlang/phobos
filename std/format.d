@@ -680,7 +680,19 @@ struct FormatSpec(Char)
     private void fillUp()
     {
         // Reset content
-        allFlags = 0;
+        if (__ctfe)
+        {
+            flDash = false;
+            flZero = false;
+            flSpace = false;
+            flPlus = false;
+            flHash = false;
+        }
+        else
+        {
+            allFlags = 0;
+        }
+
         width = 0;
         precision = UNSPECIFIED;
         nested = null;
@@ -864,7 +876,18 @@ struct FormatSpec(Char)
     private bool readUpToNextSpec(R)(ref R r)
     {
         // Reset content
-        allFlags = 0;
+        if (__ctfe)
+        {
+            flDash = false;
+            flZero = false;
+            flSpace = false;
+            flPlus = false;
+            flHash = false;
+        }
+        else
+        {
+            allFlags = 0;
+        }
         width = 0;
         precision = UNSPECIFIED;
         nested = null;
