@@ -2136,7 +2136,7 @@ else version(Windows)
             return _size;
         }
 
-        deprecated @property d_time creationTime() const pure nothrow
+        deprecated @property d_time creationTime() const
         {
             return sysTimeToDTime(_timeCreated);
         }
@@ -2146,7 +2146,7 @@ else version(Windows)
             return cast(SysTime)_timeCreated;
         }
 
-        deprecated @property d_time lastAccessTime() const pure nothrow
+        deprecated @property d_time lastAccessTime() const
         {
             return sysTimeToDTime(_timeLastAccessed);
         }
@@ -2156,7 +2156,7 @@ else version(Windows)
             return cast(SysTime)_timeLastAccessed;
         }
 
-        deprecated @property d_time lastWriteTime() const pure nothrow
+        deprecated @property d_time lastWriteTime() const
         {
             return sysTimeToDTime(_timeLastModified);
         }
