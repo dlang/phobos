@@ -28,6 +28,7 @@ import core.thread;
 import std.c.process;
 import std.c.string;
 
+import std.array;
 import std.conv;
 import std.exception;
 import std.internal.processinit;
@@ -37,7 +38,7 @@ import std.typecons;
 
 version (Windows)
 {
-    import std.array, std.format, std.random, std.file;
+    import std.format, std.random, std.file;
     import core.sys.windows.windows;
     import std.utf;
     import std.windows.syserror;
@@ -978,7 +979,7 @@ private string escapePosixArgument(in char[] arg)
     return assumeUnique(buf);
 }
 
-pure @safe nothrow
+@safe nothrow
 private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
