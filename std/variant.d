@@ -703,6 +703,16 @@ public:
             {
                 return to!T(get!(const(char)[]));
             }
+            // I'm not sure why this doesn't convert to const(char),
+            // but apparently it doesn't (probably a deeper bug).
+            //
+            // Until that is fixed, this quick addition keeps a common
+            // function working. "10".coerce!int ought to work.
+            else if (convertsTo!(immutable(char)[]))
+            {
+                return to!T(get!(immutable(char)[]));
+            }
+
             else
             {
                 enforce(false, text("Type ", type(), " does not convert to ",
