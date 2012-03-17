@@ -6622,7 +6622,7 @@ public @trusted void replaceFmt(R, Capt, OutR)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    enum State { Normal, Escape, Dollar }
+    enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
 L_Replace_Loop:
@@ -6632,29 +6632,16 @@ L_Replace_Loop:
         case State.Normal:
             for(offset = 0; offset < format.length; offset++)//no decoding
             {
-                switch(format[offset])
+                if(format[offset] == '$')
                 {
-                case '\\':
-                    state = State.Escape;
-                    sink.put(format[0 .. offset]);
-                    format = format[offset+1 .. $];//safe since special chars are ascii only
-                    continue L_Replace_Loop;
-                case '$':
                     state = State.Dollar;
                     sink.put(format[0 .. offset]);
                     format = format[offset+1 .. $];//ditto
                     continue L_Replace_Loop;
-                default:
                 }
             }
             sink.put(format[0 .. offset]);
             format = format[offset .. $];
-            break;
-        case State.Escape:
-            offset = std.utf.stride(format, 0);
-            sink.put(format[0 .. offset]);
-            format = format[offset .. $];
-            state = State.Normal;
             break;
         case State.Dollar:
             if(ascii.isDigit(format[0]))
@@ -7518,6 +7505,12 @@ else
         assert(!match("", regex("^")).empty);
     }
 
+    unittest
+    {//bugzilla 7674
+        assert("1234".replace(regex("^"), "$$") == "$1234");
+        assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
+        assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
+    }
     unittest
     {// bugzilla 7679
         foreach(S; TypeTuple!(string, wstring, dstring))
