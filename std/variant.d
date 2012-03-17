@@ -735,6 +735,13 @@ public:
         }
     }
 
+    // testing the string coerce
+    unittest
+    {
+        Variant a = "10";
+	assert(a.coerce!int == 10);
+    }
+
     /**
      * Formats the stored value as a string.
      */
