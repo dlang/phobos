@@ -1117,6 +1117,9 @@ storing larger types, or for saving memory.
 
 alias VariantN!(maxSize!(creal, char[], void delegate())) Variant;
 
+/// $(D_PARAM var) is an alternate version of $(D_PARAM Variant).
+alias Variant var;
+
 /**
  * Returns an array of variants constructed from $(D_PARAM args).
  * Example:
