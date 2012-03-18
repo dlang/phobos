@@ -1915,18 +1915,19 @@ else version(Windows)
     struct DirEntry
     {
     public:
+        alias name this;
 
-        @property string name() const
+        @property string name() const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir() const
+        @property bool isDir() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        @property bool isFile() const
+        @property bool isFile() const pure nothrow
         {
             //Are there no options in Windows other than directory and file?
             //If there are, then this probably isn't the best way to determine
@@ -1934,37 +1935,37 @@ else version(Windows)
             return !isDir;
         }
 
-        @property bool isSymlink() const
+        @property bool isSymlink() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
-        @property ulong size() const
+        @property ulong size() const pure nothrow
         {
             return _size;
         }
 
-        @property SysTime timeCreated() const
+        @property SysTime timeCreated() const pure nothrow
         {
             return cast(SysTime)_timeCreated;
         }
 
-        @property SysTime timeLastAccessed() const
+        @property SysTime timeLastAccessed() const pure nothrow
         {
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property SysTime timeLastModified() const
+        @property SysTime timeLastModified() const pure nothrow
         {
             return cast(SysTime)_timeLastModified;
         }
 
-        @property uint attributes() const
+        @property uint attributes() const pure nothrow
         {
             return _attributes;
         }
 
-        @property uint linkAttributes() const
+        @property uint linkAttributes() const pure nothrow
         {
             return _attributes;
         }
@@ -2040,8 +2041,9 @@ else version(Posix)
     struct DirEntry
     {
     public:
+        alias name this;
 
-        @property string name() const
+        @property string name() const pure nothrow
         {
             return _name;
         }
@@ -2791,23 +2793,7 @@ public:
     @property bool empty(){ return impl.empty; }
     @property DirEntry front(){ return impl.front; }
     void popFront(){ impl.popFront(); }
-    int opApply(int delegate(ref string name) dg)
-    {
-        foreach(DirEntry v; impl.refCountedPayload)
-        {
-            string s = v.name;
-            if(dg(s))
-                return 1;
-        }
-        return 0;
-    }
-    int opApply(int delegate(ref DirEntry name) dg)
-    {
-        foreach(DirEntry v; impl.refCountedPayload)
-            if(dg(v))
-                return 1;
-        return 0;
-    }
+
 }
 /++
     Returns an input range of DirEntry that lazily iterates a given directory,
@@ -2896,6 +2882,21 @@ unittest
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
     }
+}
+
+unittest
+{
+    //issue 7264
+    foreach (string name; dirEntries(".", "*.d", SpanMode.breadth))
+    {
+
+    }
+    foreach (entry; dirEntries(".", SpanMode.breadth))
+    {
+        static assert(is(typeof(entry) == DirEntry));
+    }
+    //issue 7138
+    auto a = array(dirEntries(".", SpanMode.shallow));
 }
 
 /++
