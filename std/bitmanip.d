@@ -818,6 +818,14 @@ struct BitArray
         return cast(void[])ptr[0 .. dim];
     }
 
+    /***************************************
+     * Convert to $(D size_t[]).
+     */
+    size_t[] opCast()
+    {
+        return ptr[0 .. dim];
+    }
+
     unittest
     {
         debug(bitarray) printf("BitArray.opCast unittest\n");
