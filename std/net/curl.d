@@ -3678,7 +3678,7 @@ struct Curl
                                   size_t size, size_t nmemb, void* ptr)
     {
         auto b = cast(Curl*) ptr;
-        auto s = str[0..size*nmemb].chomp;
+        auto s = str[0..size*nmemb].chomp();
         if (b._onReceiveHeader != null)
             b._onReceiveHeader(s);
 
