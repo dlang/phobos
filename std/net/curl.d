@@ -153,6 +153,7 @@ import core.thread;
 import etc.c.curl;
 import std.algorithm;
 import std.array;
+import std.benchmark;
 import std.concurrency;
 import std.conv;
 import std.datetime;
@@ -1138,7 +1139,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be 
+// Do not create instances of this struct since it will be
 // moved when the bug has been fixed.
 // Range that reads one line at a time asynchronously.
 static struct AsyncLineInputRange(Char)
@@ -1294,7 +1295,7 @@ unittest
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be 
+// Do not create instances of this struct since it will be
 // moved when the bug has been fixed.
 // Range that reads one chunk at a time asynchronously.
 static struct AsyncChunkInputRange

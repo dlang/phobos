@@ -1083,9 +1083,9 @@ if (isIntegral!T)
     // Forward on to formatIntegral to handle both T and const(T)
     // Saves duplication of code for both versions.
     static if (isSigned!T)
-        formatIntegral(w, cast(long) val, f, Unsigned!(T).max);
+        formatIntegral(w, cast(long) val, fs, Unsigned!(T).max);
     else
-        formatIntegral(w, cast(ulong) val, f, T.max);
+        formatIntegral(w, cast(ulong) val, fs, T.max);
 }
 
 private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, ulong mask)
@@ -1098,11 +1098,11 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
         fs.spec == 'x' || fs.spec == 'X' ? 16 :
         fs.spec == 'o' ? 8 :
         fs.spec == 'b' ? 2 :
-        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' ? 10 :
+        fs.spec == 's' || fs.spec == 'd' || fs.spec == 'u' || fs.spec == 'h' ? 10 :
         0;
     enforceEx!FormatException(
             base > 0,
-            "integral");
+            "integral %" ~ fs.spec);
 
     bool negative = (base == 10 && arg < 0);
     if (negative)

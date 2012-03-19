@@ -7,6 +7,7 @@
     Source:    $(PHOBOSSRC std/_benchmark.d)
  */
 module std.benchmark;
+
 import std.datetime, std.traits, std.range, std.stdio, std.typecons;
 version(unittest) import std.random;
 
@@ -150,7 +151,7 @@ public:
         sw.start();
         sw.stop();
         sw.reset();
-        assert(sw.peek().to!("seconds", real) == 0);
+        assert(sw.peek().to!("seconds", real)() == 0);
     }
 
 
@@ -178,7 +179,7 @@ public:
             doublestart = false;
         assert(!doublestart);
         sw.stop();
-        assert((t1 - sw.peek()).to!("seconds", real) <= 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() <= 0);
     }
 
 
@@ -205,7 +206,7 @@ public:
         catch(AssertError e)
             doublestop = false;
         assert(!doublestop);
-        assert((t1 - sw.peek()).to!("seconds", real) == 0);
+        assert((t1 - sw.peek()).to!("seconds", real)() == 0);
     }
 
 
@@ -320,14 +321,46 @@ auto r = benchmark!(
     (uint n) { foreach (i; 0 .. n) auto b = to!dstring(a); })
     (10_000_000);
 auto names = [ "intToString", "intToWstring", "intToDstring" ];
-foreach (i, timing; r)
+ foreach (i, timing; r)
     writefln("%s: %sns/call", names[i], (r[i] / 10_000_000.).to!("nsecs", int));
 --------------------
 */
-TickDuration[fun.length] benchmark(fun...)(uint times)
-if ((is(typeof(fun[0]())) || is(typeof(fun[0](times))))
-        && (lengthof!fun() == 1 || is(typeof(benchmark!(fun[1 .. $])(times)))))
+
+/**
+ * Benchmarks one or more functions and returns the time per iteration
+ * for each function. The iteration overhead is automatically
+ * subtracted.
+ *
+ * A benchmarked function may take no arguments, in which case $(D
+ * benchmark) automatically calls it repeatedly until it collects a
+ * meaningful timing. (This is because too short a time would be
+ * highly influenced by timer resolution and measurement noise.) After
+ * that, $(D benchmark) divides the total time to the number of
+ * iterations to obtain the time per iteration (then subtracts the
+ * time per iteration caused by the iteration.
+ *
+ * A function may also take one argument of type $(D uint), in which
+ * case $(D benchmark) assumes the function does iteration
+ * internally. So $(D benchmark) calls the function with different
+ * argument values (instead of doing its own iteration) and computes
+ * the time per iteration accordingly.
+ *
+ * Measurement is done in epochs. For each function benchmarked, the
+ * smallest time is taken over all epochs.
+ */
+TickDuration[fun.length] benchmark(fun...)()
+// if (
+//     // First function must be callable with no arguments or one
+//     // argument of type uint
+//     (is(typeof(fun[0]())) || is(typeof(fun[0](1u))))
+//     &&
+//     // Recurse for all other functions
+//     (lengthof!fun() == 1 || is(typeof(benchmark!(fun[1 .. $])())))
+//     )
 {
+    immutable uint epochs = 5;
+    TickDuration minSignificantDuration = TickDuration.from!"usecs"(5);
+
     // Baseline function. Use asm inside the body to avoid
     // optimizations.
     static void baseline() { asm { nop; } }
@@ -335,37 +368,68 @@ if ((is(typeof(fun[0]())) || is(typeof(fun[0](times))))
     // Use a local pointer to avoid TLS access overhead
     auto theStopWatch = &.theStopWatch;
 
-    // Get baseline loop time
-    with (*theStopWatch) running ? reset() : start();
-    foreach(j; 0 .. times)
-    {
-        baseline();
-    }
-    auto baselineTime = theStopWatch.peek();
+    // All functions to look at include the baseline and the measured
+    // functions.
+    import std.typetuple;
+    alias TypeTuple!(baseline, fun) allFuns;
+    TickDuration baselineTimePerIteration;
+    TickDuration[fun.length] result;
 
-    TickDuration[lengthof!fun()] result;
-    foreach (i, unused; fun)
+    // MEASUREMENTS START HERE
+
+    foreach (i, measured; allFuns)
     {
-        theStopWatch.reset();
-        static if (is(typeof(fun[i](times))))
+        TickDuration bestEpoch;
+
+        // So we have several epochs, and bestEpoch will track the
+        // minimum time across epochs.
+        foreach (epoch; 0 .. epochs)
         {
-            fun[i](times);
+            // Within each epoch, we call the function repeatedly
+            // until we collect at least a total time of
+            // minSignificantDuration.
+            for (uint repeats = 1; repeats < 1_000_000_000; repeats *= 10)
+            {
+                auto elapsed = callFun!(allFuns[i])(repeats, *theStopWatch);
+
+                if (elapsed < minSignificantDuration)
+                {
+                    // Crappy measurement, try again with more repeats
+                    continue;
+                }
+
+                // Good measurement, record it if it's better than the
+                // minimum.
+                auto timePerIteration = elapsed / cast(double) repeats;
+                if (bestEpoch == bestEpoch.init || timePerIteration < bestEpoch)
+                {
+                    bestEpoch = timePerIteration;
+                }
+                break;
+            }
+        }
+
+        // Store the final result
+        static if (i == 0)
+        {
+            baselineTimePerIteration = bestEpoch;
         }
         else
         {
-            foreach(j; 0 .. times)
-            {
-                fun[i]();
-            }
+            result[i - 1] = bestEpoch;
         }
-        auto elapsed = theStopWatch.peek();
-
-        // Subtract baseline
-        result[i] = elapsed < baselineTime
-            ? result[i].init
-            : elapsed - baselineTime;
     }
 
+    // MEASUREMENTS JUST ENDED
+
+    // Subtract the baseline from all results
+    foreach (i, f; fun)
+    {
+        //writeln(__traits(identifier, fun[i]));
+        result[i] -= baselineTimePerIteration;
+    }
+
+    // Return result sans the baseline
     return result;
 }
 
@@ -381,10 +445,10 @@ unittest
         {auto b = to!string(a);},
         {auto b = to!wstring(a);},
         {auto b = to!dstring(a);})
-        (10_000_000);
+        ();
     auto names = [ "intToString", "intToWstring", "intToDstring" ];
     foreach (i, timing; r)
-        writefln("%s: %sns/call", names[i], (r[i] / 10_000_000.).to!("nsecs", int));
+        writefln("%s: %sns/call", names[i], r[i].to!("nsecs", int)());
 }
 
 // Verify Example 2
@@ -399,106 +463,54 @@ unittest
         (uint n) { foreach (i; 0 .. n) auto b = to!string(a); },
         (uint n) { foreach (i; 0 .. n) auto b = to!wstring(a); },
         (uint n) { foreach (i; 0 .. n) auto b = to!dstring(a); })
-        (10_000_000);
+        ();
     auto names = [ "intToString", "intToWstring", "intToDstring" ];
     foreach (i, timing; r)
-        writefln("%s: %sns/call", names[i], (r[i] / 10_000_000.).to!("nsecs", int));
+        writefln("%s: %sns/call", names[i], r[i].to!("nsecs", int)());
 }
 
-/**
-Benchmarks one function, automatically issuing multiple calls to
-achieve good accuracy.
-
-The call $(D benchmark!fun(timeBudget, trials)) repeats $(D trials)
-times the time-measured experiment of calling $(D fun) once, and then
-takes the minimum of the times obtained. If the minimum obtained $(D
-tMin) is greater than or equal to $(D timeBudget), the function
-returns $(D tuple(1u, tMin)).
-
-If, on the other hand, $(D tMin < timeBudget), then $(D benchmark)
-repeats the experiment $(D trials) times, but this time measuring the
-time spent in calling $(D fun) 10 times, 100 times, 1000 times and so
-on, until the time budget is exceeded by one experiment. Then $(D
-benchmark) returns $(D tuple(n, tMin)), where $(D n) (always a power
-of 10) is the number of loops to achieve $(D tMin). In all cases, the
-effective time spent per call is $(D tMin / n).
-
-To make sure you only run the function exactly once (e.g. the function
-performs database or networking work), _benchmark it with $(D
-benchmark!(fun)(TickDuration.init, 1)). That ensures that there's only
-one trial, and since the time budget is $(D 0), the first experiment
-will pass muster.
-
-Params:
-
-fun = Alias of callable object (e.g. function name). It should take
-either no arguments or one integral argument, which is the iterations
-count.
-
-timeBudget = The time budget allocated for iterating $(D fun) multiple
-times. Ideally there would be no need for a time budget, but measuring
-very fast functions is affected by imperfections of the timer and
-other vagaries. Therefore, the function must be run multiple times
-until it exceeds the time budget. Then the estimated run time is the
-time obtained divided by the number of iterations. The default time
-budget is $(D 10ms).
-
-trials = When iterating calls to $(D fun), multipled such iterations
-must be tried because each individual measurement may be affected by
-e.g. a task switch or other activity on the machine. Therefore, the
-iteration is repeated $(D trials) time and the minimum of the obtained
-times is taken. The default value of $(D trials) is $(D 10).
-
-Returns:
-
-A tuple containing the number of iterations in the first member and
-the time in $(D TickDuration) format for the function being
-benchmarked.
-
-Example:
-----
-import std.conv;
-int a;
-void fun() { auto b = to!(string)(a); }
-auto r = benchmark!fun();
-writefln("Milliseconds to call fun() %s times: %s",
-    r[0], r[1].to!("msecs", int));
-----
+/*
+ * Calls a function either by alias or by string
  */
-auto benchmark(alias fun)(TickDuration timeBudget = TickDuration.from!"msecs"(10),
-        uint trials = 10)
-if (is(typeof(benchmark!fun(1u))))
+private TickDuration callFun(alias measured)(uint repeats, ref StopWatch theStopWatch)
 {
-    uint n = 1;
-    TickDuration elapsed;
-  bigloop:
-    for (; n < 1_000_000_000; n *= 10)
+    with (theStopWatch) running ? reset() : start();
+
+    static if (is(typeof(measured) == string))
     {
-        // Take the minimum of 10 trials
-        foreach (k; 0 .. trials)
+        // We got the measuredction name as a string
+        static if (is(typeof(mixin(measured ~ "(repeats)"))))
         {
-            TickDuration elapsedThisPass = benchmark!fun(n)[0];
-            if (elapsedThisPass < elapsed || k == 0)
+            // Internal iteration
+            mixin(measured ~ "(repeats);");
+        }
+        else
+        {
+            // External iteration
+            foreach (j; 0 .. repeats)
             {
-                elapsed = elapsedThisPass;
+                mixin(measured ~ "();");
             }
         }
-        // Done if time budget exceeded
-        if (elapsed >= timeBudget)
+    }
+    else
+    {
+        static if (is(typeof(measured(repeats))))
         {
-            break;
+            // Internal iteration
+            measured(repeats);
+        }
+        else
+        {
+            // External iteration
+            foreach (j; 0 .. repeats)
+            {
+                measured();
+            }
         }
     }
-
-    return tuple(n, elapsed);
+    return theStopWatch.peek();
 }
-
-// void foo(string moduleName, fun...)()
-// {
-//     mixin("import " ~ moduleName ~ ";");
-//     mixin("pragma(msg, __traits(allMembers, mymain));");
-//     mixin(fun[3] ~ "(0);");
-// }
 
 /**
 Benchmarks an entire module given its name. Benchmarking first
@@ -616,11 +628,114 @@ was $(D 5.28) times faster than $(D append_builtin)), and with $(D
 1/14.28x) for $(D concat) (meaning that $(D append_concat)'s speed was
 $(D 14.28) times $(I slower) than $(D append_builtin)'s speed).
  */
-void benchmarkModule(string mod, functions...)(File target = stdout,
-        TickDuration timeBudget = TickDuration.from!"msecs"(10),
-        uint trials = 10)
+
+private template onlyBenchmarks(T...)
 {
-    writeln("giba");
+    import std.typetuple;
+
+    static if (!T.length)
+    {
+        alias T onlyBenchmarks;
+    }
+    else static if (T[0].length > 10 && T[0][0 .. 10] == "benchmark_")
+    {
+        alias TypeTuple!(T[0], onlyBenchmarks!(T[1 .. $])) onlyBenchmarks;
+    }
+    else
+    {
+        alias TypeTuple!(onlyBenchmarks!(T[1 .. $])) onlyBenchmarks;
+    }
+}
+
+struct BenchmarkResult
+{
+    string moduleName;
+    string benchmarkName;
+    TickDuration perIteration;
+}
+
+void benchmarkModule(string moduleName)(ref BenchmarkResult[] results)
+{
+    mixin("alias onlyBenchmarks!(__traits(allMembers, ." ~ moduleName
+            ~ ")) theBenchmarks;");
+
+    auto times = benchmark!(theBenchmarks)();
+
+    foreach (i, benchmarkName; theBenchmarks)
+    {
+        results ~= BenchmarkResult(moduleName, benchmarkName, times[i]);
+    }
+}
+
+mixin(benchmarkThisModule("std.benchmark"));
+
+shared static this()
+{
+    printBenchmarks();
+}
+
+void addBenchmarks(void function(ref BenchmarkResult[]) fun)
+{
+    allBenchmarks ~= fun;
+}
+
+private void function(ref BenchmarkResult[])[] allBenchmarks;
+
+BenchmarkResult[] runBenchmarks()
+{
+    BenchmarkResult[] result;
+    foreach (b; allBenchmarks)
+    {
+        b(result);
+    }
+    return result;
+}
+
+// string formatBenchmarks(BenchmarkResult[] data)
+// {
+//     return null;
+// }
+
+void printBenchmarks(File target = stdout)
+{
+    auto data = runBenchmarks();
+    //writeln(accumulated);
+    target.writefln(
+        "=================================================="
+        "=============================\n"
+        "%-49s%8s%12s%10s\n" // sum must be 79
+        "================================================="
+        "==============================", "Benchmark",
+        "relative", "t/call", "calls/s");
+
+    string thisModule, thisGroup;
+
+    foreach (datum; data)
+    {
+        if (thisModule != datum.moduleName)
+        {
+            thisModule = datum.moduleName;
+            // Print a line with module information
+            target.writeln("--- module ", thisModule, ' ',
+                    repeat('-', 79 - thisModule.length - "--- module ".length - 1));
+        }
+        double itersPerSecond = 1.0 / datum.perIteration.to!("seconds", double)();
+        target.writefln("%s %s %s", datum.benchmarkName,
+                datum.perIteration.to!("nsecs", uint)(), itersPerSecond);
+    }
+}
+
+string benchmarkThisModule(string moduleName)
+{
+    return "
+        shared static this()
+        {
+            addBenchmarks(& benchmarkModule!`" ~ moduleName ~ "`);
+        }
+    ";
+}
+
+/+
 /+
     import std.algorithm;
 
@@ -743,6 +858,8 @@ void benchmarkModule(string mod, functions...)(File target = stdout,
 +/
 }
 
++/
+
 debug (std_benchmark)
 {
     private void benchmark_fileWrite()
@@ -785,7 +902,7 @@ debug (std_benchmark)
 
     unittest
     {
-        benchmarkModule!"std.benchmark"();
+        //benchmarkModule!"std.benchmark"();
     }
 }
 
@@ -860,7 +977,7 @@ unittest
 
     //writeln(benchmark!benchmark_findDouble(10_000)[0].to!("msecs",
     //uint));
-    benchmark!benchmark_findDouble(10_000);
+    benchmark!benchmark_findDouble();
 }
 
 __EOF__
