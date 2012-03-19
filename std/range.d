@@ -2462,7 +2462,7 @@ if (isInputRange!R && !hasSlicing!R)
             alias length opDollar;
 
             static if (isForwardRange!R)
-                auto save() { return this; }
+                @property auto save() { return this; }
         }
 
         return Result(range, n);
@@ -2550,7 +2550,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
             void popBack() { assert(!empty); _empty = true; }
-            auto save() { return Result(_source.save, empty); }
+            @property auto save() { return Result(_source.save, empty); }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
             alias length opDollar;
@@ -5901,8 +5901,8 @@ unittest {
     static assert(hasLength!(typeof(arrWrapped)));
     arrWrapped[0] = 0;
     assert(arr[0] == 0);
-    assert(arr.moveFront == 0);
-    assert(arr.moveBack == 4);
+    assert(arr.moveFront() == 0);
+    assert(arr.moveBack() == 4);
     assert(arr.moveAt(1) == 2);
 
     foreach(elem; arrWrapped) {}

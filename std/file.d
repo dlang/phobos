@@ -3662,7 +3662,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
-        return callback(de.name.baseName);
+        return callback(baseName(de.name));
     }
 
     _listDir(pathname, &listing);
