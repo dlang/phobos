@@ -1575,13 +1575,13 @@ P toUTFz(P, S)(S str)
        !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
-    auto retval = appender!(typeof(*P.init)[])();
+    auto retval = Appender!(typeof(*P.init)[])();
 
     foreach(dchar c; str)
         retval.put(c);
     retval.put('\0');
 
-    return cast(P)retval.data.ptr;
+    return cast(P)retval.dup.ptr;
 }
 
 //Verify Examples.

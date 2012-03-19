@@ -1463,36 +1463,36 @@ unittest
     }
 
     { // with OutputRange
-        auto a = Appender!(char[])([]);
-        auto b = Appender!(ubyte[])([]);
+        auto a = appender!(char[])();
+        auto b = appender!(ubyte[])();
 
         assert(Base64.encode(tv[""], a) == 0);
-        assert(Base64.decode(a.data, b) == 0);
-        assert(tv[""] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup, b) == 0);
+        assert(tv[""] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["f"], a) == 4);
-        assert(Base64.decode(a.data,  b) == 1);
-        assert(tv["f"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup,  b) == 1);
+        assert(tv["f"] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["fo"], a) == 4);
-        assert(Base64.decode(a.data,   b) == 2);
-        assert(tv["fo"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup,   b) == 2);
+        assert(tv["fo"] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["foo"], a) == 4);
-        assert(Base64.decode(a.data,    b) == 3);
-        assert(tv["foo"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup,    b) == 3);
+        assert(tv["foo"] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["foob"], a) == 8);
-        assert(Base64.decode(a.data,     b) == 4);
-        assert(tv["foob"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup,     b) == 4);
+        assert(tv["foob"] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["fooba"], a) == 8);
-        assert(Base64.decode(a.data, b)      == 5);
-        assert(tv["fooba"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup, b)      == 5);
+        assert(tv["fooba"] == b.dup); a.clear(); b.clear();
 
         assert(Base64.encode(tv["foobar"], a) == 8);
-        assert(Base64.decode(a.data, b)       == 6);
-        assert(tv["foobar"] == b.data); a.clear(); b.clear();
+        assert(Base64.decode(a.dup, b)       == 6);
+        assert(tv["foobar"] == b.dup); a.clear(); b.clear();
     }
 
     { // with InputRange
@@ -1502,12 +1502,12 @@ unittest
         assert(Base64.decode(map!q{a}(encoded)) == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
 
         // InputRange to OutputRange
-        auto a = Appender!(char[])([]);
-        auto b = Appender!(ubyte[])([]);
+        auto a = appender!(char[])();
+        auto b = appender!(ubyte[])();
         assert(Base64.encode(map!(to!(ubyte))(["20", "251", "156", "3", "217", "126"]), a) == 8);
-        assert(a.data == "FPucA9l+");
-        assert(Base64.decode(map!q{a}(a.data), b) == 6);
-        assert(b.data == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
+        assert(a.dup == "FPucA9l+");
+        assert(Base64.decode(map!q{a}(a.dup), b) == 6);
+        assert(b.dup == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
     }
 
     { // Encoder and Decoder

@@ -27934,19 +27934,21 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         else version(Windows)
         {
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
-            auto retval = appender!(string[])();
+            auto app = Appender!(string[])();
 
             foreach(winName; windowsNames)
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
 
                 if(tzName.startsWith(subName))
-                    retval.put(tzName);
+                    app.put(tzName);
             }
 
-            sort(retval.data);
+            auto retval = app.dup;
 
-            return retval.data;
+            sort(retval);
+
+            return retval;
         }
     }
 
@@ -29597,7 +29599,7 @@ assert(tz.dstName == "PDT");
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        auto timezones = appender!(string[])();
+        auto timezones = Appender!(string[])();
 
         foreach(DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
         {
@@ -29616,9 +29618,10 @@ assert(tz.dstName == "PDT");
             }
         }
 
-        sort(timezones.data);
 
-        return timezones.data;
+        auto result = timezones.dup;
+        sort(result);
+        return result;
     }
 
     unittest
@@ -30099,7 +30102,7 @@ else version(Windows)
 
         static string[] getInstalledTZNames()
         {
-            auto timezones = appender!(string[])();
+            auto timezones = Appender!(string[])();
 
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
@@ -30107,9 +30110,12 @@ else version(Windows)
             {
                 timezones.put(tzKeyName);
             }
-            sort(timezones.data);
 
-            return timezones.data;
+            auto result = timezones.dup;
+
+            sort(result);
+
+            return result;
         }
 
         unittest

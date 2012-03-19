@@ -2968,21 +2968,8 @@ private struct DirIteratorImpl
     // be more efficient to not call stat in addition to lstat).
     bool _followSymlink;
     DirEntry _cur;
-    Appender!(DirHandle[]) _stack;
-    Appender!(DirEntry[]) _stashed; //used in depth first mode
-    //stack helpers
-    void pushExtra(DirEntry de){ _stashed.put(de); }
-    //ditto
-    bool hasExtra(){ return !_stashed.data.empty; }
-    //ditto
-    DirEntry popExtra()
-    {
-        DirEntry de;
-        de = _stashed.data[$-1];
-        _stashed.shrinkTo(_stashed.data.length - 1);
-        return de;
 
-    }
+    // To avoid forward reference issues, we must define DirHandle and DirEntry
     version(Windows)
     {
         struct DirHandle
@@ -2990,7 +2977,29 @@ private struct DirIteratorImpl
             string dirpath;
             HANDLE h;
         }
+    } else version(Posix) {
+        struct DirHandle
+        {
+            string dirpath;
+            DIR*   h;
+        }
+    }
 
+    Appender!(DirHandle[]) _stack;
+    Appender!(DirEntry[] ) _stashed; //used in depth first mode
+    //stack helpers
+    void pushExtra(DirEntry de){ _stashed.put(de); }
+    //ditto
+    bool hasExtra(){ return !_stashed.empty; }
+    //ditto
+    DirEntry popExtra()
+    {
+        DirEntry de = _stashed.back;
+        _stashed.removeBack;
+        return de;
+    }
+    version(Windows)
+    {
         bool stepIn(string directory)
         {
             string search_pattern = buildPath(directory, "*.*");
@@ -3014,7 +3023,7 @@ private struct DirIteratorImpl
 
         bool next()
         {
-            if(_stack.data.empty)
+            if(_stack.empty)
                 return false;
             bool result;
             if (useWfuncs)
@@ -3035,7 +3044,7 @@ private struct DirIteratorImpl
         {
             if(fetch)
             {
-                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if(FindNextFileW(_stack.back.h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
@@ -3043,12 +3052,12 @@ private struct DirIteratorImpl
             }
             while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
                     || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if(FindNextFileW(_stack.back.h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
-            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur._init(_stack.back.dirpath, findinfo);
             return true;
         }
 
@@ -3056,7 +3065,7 @@ private struct DirIteratorImpl
         {
             if(fetch)
             {
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                if(FindNextFileA(_stack.back.h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
@@ -3064,25 +3073,25 @@ private struct DirIteratorImpl
             }
             while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
                     || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
+                if(FindNextFileA(_stack.back.h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
-            _cur._init(_stack.data[$-1].dirpath, findinfo);
+            _cur._init(_stack.back.dirpath, findinfo);
             return true;
         }
 
         void popDirStack()
         {
-            assert(!_stack.data.empty);
-            FindClose(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(!_stack.empty);
+            FindClose(_stack.back.h);
+            _stack.removeBack;
         }
 
         void releaseDirStack()
         {
-            foreach( d;  _stack.data)
+            foreach(d;_stack[])
                 FindClose(d.h);
         }
 
@@ -3093,12 +3102,6 @@ private struct DirIteratorImpl
     }
     else version(Posix)
     {
-        struct DirHandle
-        {
-            string dirpath;
-            DIR*   h;
-        }
-
         bool stepIn(string directory)
         {
             auto h = cenforce(opendir(toStringz(directory)), directory);
@@ -3108,15 +3111,15 @@ private struct DirIteratorImpl
 
         bool next()
         {
-            if(_stack.data.empty)
+            if(_stack.empty)
                 return false;
-            for(dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+            for(dirent* fdata; (fdata = readdir(_stack.back.h)) != null; )
             {
                 // Skip "." and ".."
                 if(core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
                    core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
                 {
-                    _cur._init(_stack.data[$-1].dirpath, fdata);
+                    _cur._init(_stack.back.dirpath, fdata);
                     return true;
                 }
             }
@@ -3126,15 +3129,15 @@ private struct DirIteratorImpl
 
         void popDirStack()
         {
-            assert(!_stack.data.empty);
-            closedir(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(!_stack.empty);
+            closedir(_stack.back.h);
+            _stack.removeBack;
         }
 
         void releaseDirStack()
         {
-            foreach( d;  _stack.data)
-                closedir(d.h);
+            for(auto d = _stack[]; !d.empty; d.popFront)
+                FindClose(d.front.h);
         }
 
         bool mayStepIn()
@@ -3143,13 +3146,12 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink, string file = __FILE__, int line = __LINE__)
     {
         _mode = mode;
         _followSymlink = followSymlink;
-        _stack = appender(cast(DirHandle[])[]);
-        if(_mode == SpanMode.depth)
-            _stashed = appender(cast(DirEntry[])[]);
+        _stack      = appender!(DirHandle[])();
+        _stashed    = appender!(DirEntry[] )();
         if(stepIn(pathname))
         {
             if(_mode == SpanMode.depth)
@@ -3165,7 +3167,7 @@ private struct DirIteratorImpl
                 }
         }
     }
-    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
+    @property bool empty(){ return _stashed.empty && _stack.empty; }
     @property DirEntry front(){ return _cur; }
     void popFront()
     {
@@ -3222,19 +3224,23 @@ public:
     void popFront(){ impl.popFront(); }
     int opApply(int delegate(ref string name) dg)
     {
-        foreach(DirEntry v; impl.refCountedPayload)
-        {
-            string s = v.name;
+        //@@@BUG@@@ foreach + refcounting inside refcounting = too many dtors
+        while(!empty) {
+            auto s = front.name;
             if(dg(s))
                 return 1;
+            popFront();
         }
         return 0;
     }
     int opApply(int delegate(ref DirEntry name) dg)
     {
-        foreach(DirEntry v; impl.refCountedPayload)
-            if(dg(v))
+        while(!empty) {
+            auto de = front;
+            if(dg(de))
                 return 1;
+            popFront();
+        }
         return 0;
     }
 }
@@ -3585,7 +3591,7 @@ Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
 {
     typeof(return) result;
-    auto app = appender!(typeof(return))();
+    Appender!(typeof(return)) app;
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
     scope(exit) f.close();
@@ -3597,7 +3603,7 @@ slurp(Types...)(string filename, in char[] format)
                         "'"));
         app.put(toAdd);
     }
-    return app.data;
+    return app.dup;
 }
 
 unittest
@@ -3642,7 +3648,7 @@ void main(string[] args)
  +/
 string[] listDir(C)(in C[] pathname)
 {
-    auto result = appender!(string[])();
+    Appender!(string[]) result;
 
     bool listing(string filename)
     {
@@ -3652,7 +3658,7 @@ string[] listDir(C)(in C[] pathname)
 
     _listDir(pathname, &listing);
 
-    return result.data;
+    return result.dup;
 }
 
 unittest
@@ -3714,7 +3720,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     import std.regexp;
-    auto result = appender!(string[])();
+    Appender!(string[]) result;
     bool callback(DirEntry* de)
     {
         if(followSymlink ? de.isDir : attrIsDir(de.linkAttributes))
@@ -3742,7 +3748,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 
     _listDir(pathname, &callback);
 
-    return result.data;
+    return result.dup;
 }
 
 /******************************************************

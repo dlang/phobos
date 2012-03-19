@@ -16,8 +16,8 @@ import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
        std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 import std.c.string : memcpy;
+import core.stdc.stdlib : malloc, free;
 version(unittest) import core.exception, std.stdio;
-
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
@@ -60,12 +60,12 @@ if (isIterable!Range && !isNarrowString!Range)
     }
     else
     {
-        auto a = appender!(E[])();
+        auto app = Appender!(E[])();
         foreach (e; r)
         {
-            a.put(e);
+            app.put(e);
         }
-        return a.data;
+        return app.dup;
     }
 }
 
@@ -320,7 +320,7 @@ assert(a == [ 2, 3 ]);
 ----
 */
 
-void popFront(A)(ref A a)
+void popFront(A)(ref A a) @safe pure nothrow
 if (!isNarrowString!A && isDynamicArray!A && isMutable!A && !is(A == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -339,7 +339,7 @@ unittest
 
 // Specialization for narrow strings. The necessity of
 // !isStaticArray!A suggests a compiler @@@BUG@@@.
-void popFront(A)(ref A a)
+void popFront(A)(ref A a) @safe pure
 if (isNarrowString!A && isMutable!A && !isStaticArray!A)
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -387,7 +387,7 @@ assert(a == [ 1, 2 ]);
 ----
 */
 
-void popBack(A)(ref A a)
+void popBack(A)(ref A a) @safe pure nothrow
 if (isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
 {
     assert(a.length);
@@ -404,7 +404,7 @@ unittest
 }
 
 // Specialization for arrays of char
-@trusted void popBack(A)(ref A a)
+@trusted void popBack(A)(ref A a) @safe pure
     if(isNarrowString!A && isMutable!A)
 {
     assert(a.length, "Attempting to popBack() past the front of an array of " ~
@@ -452,7 +452,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.front == 1);
 ----
 */
-ref T front(T)(T[] a)
+ref T front(T)(T[] a) @safe pure nothrow
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~
@@ -460,7 +460,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     return a[0];
 }
 
-dchar front(A)(A a) if (isNarrowString!A)
+dchar front(A)(A a) @safe pure if (isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~
                      typeof(a[0]).stringof);
@@ -493,7 +493,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.back == 3);
 ----
 */
-ref T back(T)(T[] a) if (!isNarrowString!(T[]))
+ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~
                      typeof(a[0]).stringof);
@@ -512,7 +512,7 @@ unittest
 }
 
 // Specialization for strings
-dchar back(A)(A a)
+dchar back(A)(A a) @safe pure
     if(isDynamicArray!A && isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~
@@ -610,11 +610,11 @@ T[] insert(T, Range)(T[] array, size_t pos, Range stuff)
     }
     else
     {
-        auto app = appender!(T[])();
+        auto app = Appender!(T[])();
         app.put(array[0 .. pos]);
         app.put(stuff);
         app.put(array[pos .. $]);
-        return app.data;
+        return app.dup;
     }
 }
 
@@ -698,30 +698,54 @@ a.insertInPlace(3, 10u, 11);
 assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
  +/
-void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
-    if(isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+    if( allIsOutputRange!(T[],U) )
 {
-    insertInPlaceImpl(array, pos, stuff);
+    Appender!(T[]) app;
+    app.put(array[0 .. pos]);
+    foreach(item; stuff) {
+        app.put(item);
+    }
+    app.put(array[pos .. $]);
+    array = app.dup;
+//
+//    T[staticConvertible!(T, U)] stackSpace = void;
+//    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+//    insertInPlaceImpl(array, pos, range);
+//
 }
 
-/++ Ditto +/
-void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(isSomeString!(T[]) && allSatisfy!(isCharOrString, U))
-{
-    dchar[staticConvertible!(dchar, U)] stackSpace = void;
-    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
-    insertInPlaceImpl(array, pos, range);
-}
 
-/++ Ditto +/
-void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(!isSomeString!(T[]) && allSatisfy!(isInputRangeOrConvertible!T, U))
-{
-    T[staticConvertible!(T, U)] stackSpace = void;
-    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
-    insertInPlaceImpl(array, pos, range);
+//void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
+//    if( isOutputRange!(Unqual!T[], Range) )
+//{
+//    insertInPlaceImpl(array, pos, stuff);
+//}
+//
+///++ Ditto +/
+//void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+//    if(isSomeString!(T[]) && allIsOutputRange!(Unqual!T[],U) )
+//{
+//    dchar[staticConvertible!(dchar, U)] stackSpace = void;
+//    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+//    insertInPlaceImpl(array, pos, range);
+//}
+//
+///++ Ditto +/
+//void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
+//    if(!isSomeString!(T[]) && allIsOutputRange!(Unqual!T[],U))
+//{
+//    T[staticConvertible!(T, U)] stackSpace = void;
+//    auto range = chain(makeRangeTuple(stackSpace[], stuff).expand);
+//    insertInPlaceImpl(array, pos, range);
+//}
+
+// returns true is isOutputRange(T,U) is satisfied for all U
+private template allIsOutputRange(T,U...) {
+    static if(U.length == 0)
+        enum allIsOutputRange = true;
+    else
+        enum allIsOutputRange = isOutputRange!(T,U[0]) && allIsOutputRange!(T,U[1..$]);
 }
 
 // returns number of consecutive elements at front of U that are convertible to E
@@ -786,16 +810,14 @@ private auto makeRangeTuple(E, U...)(E[] place, U stuff)
 }
 
 
-private void insertInPlaceImpl(T, Range)(ref T[] array, size_t pos, Range stuff)
-    if(isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+private void insertInPlaceImpl(T, Range, string file = __FILE__, int line = __LINE__)(ref T[] array, size_t pos, Range stuff)
+    if( isOutputRange!(Unqual!T[], Range) )
 {
-    auto app = appender!(T[])();
+    Appender!(T[]) app;
     app.put(array[0 .. pos]);
     app.put(stuff);
     app.put(array[pos .. $]);
-    array = app.data;
+    array = app.dup;
 }
 
 
@@ -1100,12 +1122,12 @@ Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
 if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
 {
     Unqual!S1 us = s;
-    auto app = appender!(Unqual!(S1)[])();
+    auto app = Appender!(Unqual!(S1)[])();
     foreach (word; std.algorithm.splitter(us, delim))
     {
         app.put(word);
     }
-    return app.data;
+    return app.dup;
 }
 
 unittest
@@ -1225,7 +1247,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
         return result;
     }
     else
-        return copy(iter, appender!(typeof(return))()).data;
+        return copy(iter, Appender!(typeof(return))()).dup;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
@@ -1273,7 +1295,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
     if(ror.empty)
         return typeof(return).init;
 
-    auto result = appender!(typeof(return))();
+    auto result = Appender!(typeof(return))();
 
     static if(isForwardRange!RoR)
     {
@@ -1295,9 +1317,11 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR, R)(RoR ror, R sep)
     }
 
     static if(isForwardRange!RoR)
-        return result.data;
-    else
-        return result.data[0 .. $ - sep.length];
+        return result.dup;
+    else {
+        result.removeBack(sep.length);
+        return result.dup;//[0 .. $ - sep.length];
+    }
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
@@ -1317,7 +1341,7 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
         return cast(typeof(return)) result;
     }
     else
-        return copy(iter, appender!(typeof(return))()).data;
+        return copy(iter, Appender!(typeof(return))()).dup;
 }
 
 ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
@@ -1352,12 +1376,12 @@ ElementEncodingType!(ElementType!RoR)[] joinImpl(RoR)(RoR ror)
     if(ror.empty)
         return typeof(return).init;
 
-    auto result = appender!(typeof(return))();
+    auto result = Appender!(typeof(return))();
 
     foreach(r; ror)
         result.put(r);
 
-    return result.data;
+    return result.dup;
 }
 
 unittest
@@ -1444,14 +1468,14 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
     if (from.empty) return subject;
-    auto app = appender!(E[])();
+    auto app = Appender!(E[])();
 
     for (;;)
     {
         auto balance = std.algorithm.find(subject, from.save);
         if (balance.empty)
         {
-            if (app.data.empty) return subject;
+            if (app.empty) return subject;
             app.put(subject);
             break;
         }
@@ -1460,7 +1484,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         subject = balance[from.length .. $];
     }
 
-    return app.data;
+    return app.dup;
 }
 
 unittest
@@ -1537,7 +1561,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
         app.put(subject[0 .. from]);
         app.put(stuff);
         app.put(subject[to .. $]);
-        return app.data;
+        return app.dup;
     }
 }
 
@@ -1643,11 +1667,11 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
              (is(T == const T) || is(T == immutable T))) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    auto app = appender!(T[])();
+    auto app = Appender!(T[])();
     app.put(array[0 .. from]);
     app.put(stuff);
     app.put(array[to .. $]);
-    array = app.data;
+    array = app.dup;
 
     //This simplified version can be used once the old replace has been removed
     //and the new one uncommented out.
@@ -1755,12 +1779,12 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
     if (from.empty) return subject;
     auto balance = std.algorithm.find(subject, from.save);
     if (balance.empty) return subject;
-    auto app = appender!R1();
+    auto app = Appender!R1();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
     app.put(balance[from.length .. $]);
 
-    return app.data;
+    return app.dup;
 }
 
 unittest
@@ -1824,349 +1848,781 @@ unittest
     assert(i == 0);
 }
 
-/**
-Implements an output range that appends data to an array. This is
-recommended over $(D a ~= data) when appending many elements because it is more
-efficient.
+/* Changes: This is Issue 5813, requires Issue 5233
+    (*) Fixes a memory leak when putting an array, due to false pointers
+    (*) Fixes Issue 4287 - opOpAssign!("~=") for std.array.Appender
+    (*) [] slicing (range of T)
 
-Example:
+    (*) Fixes lack of toString method
+    (*) Fixes lack of to/opCast conversion routines
+
+    Chain based architecture
+    allocations only flattened on call to data/dup/idup
+    opSlice provides a zero-overhead walker of the data structure.
+    Uses a free list for the first segment allocation.
+
+Performance testing:
+    Small appends: Fastest method. (Dominated by memory allocation)
+    Medium appends: about the same (Dominated put's efficiency)
+    Large appends: fastest method (Dominated by memory)
+
+    Faster than a ~= b, except for a single append where b.length < a.capacity - a.length; (Not much slower)
+*/
+// Store a free-list of memory pages for Appender!T
+private void* __appender_scaned_freelist;
+private void* __appender_noscan_freelist;
+private extern(C) void*_memset32(void*, int, size_t); // from rt.memset;
+
+/** Implements an output range that stores data. This is highly recommended
+    over $(D a ~= data) as appender is memory and computationally optimal.
+
+    Example:
 ----
-auto app = appender!string();
-string b = "abcdefg";
-foreach (char c; b) app.put(c);
-assert(app.data == "abcdefg");
-
+// Use appender for array building
 int[] a = [ 1, 2 ];
-auto app2 = appender(a);
-app2.put(3);
-app2.put([ 4, 5, 6 ]);
-assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+auto builder = appender(a);
+builder.put(3);
+builder.put([ 4, 5, 6 ]);
+assert(builder.dup == [ 1, 2, 3, 4, 5, 6 ]);
+
+// Or as a reusable, dynamically-sized buffer
+Appender!(char[]) buffer;
+foreach(str;[`Hello`,` `,`World`,`!`]) {
+    buffer.clear;
+    foreach(dchar c; str) {
+        buffer ~= c;
+    }
+    assert( equal(buffer[], str) );
+}
 ----
  */
-struct Appender(A : T[], T)
-{
-    private struct Data
-    {
-        size_t capacity;
-        Unqual!(T)[] arr;
-    }
+struct Appender(A : T[], T) if(T.sizeof <= 4096 - 4*size_t.sizeof) {
+    private {
+        enum  PageSize = 4096;          // Memory page size (in bytes)
+        alias Unqual!T E;               // Internal element type
 
-    private Data* _data;
-
-/**
-Construct an appender with a given array.  Note that this does not copy the
-data.  If the array has a larger capacity as determined by arr.capacity,
-it will be used by the appender.  After initializing an appender on an array,
-appending to the original array will reallocate.
-*/
-    this(T[] arr)
-    {
-        // initialize to a given array.
-        _data = new Data;
-        _data.arr = cast(Unqual!(T)[])arr;
-
-        if (__ctfe)
-            return;
-
-        // We want to use up as much of the block the array is in as possible.
-        // if we consume all the block that we can, then array appending is
-        // safe WRT built-in append, and we can use the entire block.
-        auto cap = arr.capacity;
-        if(cap > arr.length)
-            arr.length = cap;
-        // we assume no reallocation occurred
-        assert(arr.ptr is _data.arr.ptr);
-        _data.capacity = arr.length;
-    }
-
-/**
-Reserve at least newCapacity elements for appending.  Note that more elements
-may be reserved than requested.  If newCapacity < capacity, then nothing is
-done.
-*/
-    void reserve(size_t newCapacity)
-    {
-        if(!_data)
-            _data = new Data;
-        if(_data.capacity < newCapacity)
-        {
-            // need to increase capacity
-            immutable len = _data.arr.length;
-            if (__ctfe)
-            {
-                _data.arr.length = newCapacity;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = newCapacity;
-                return;
+        struct Segment {
+            static if(hasIndirections!T) {
+                alias __appender_scaned_freelist freelist;
+            } else {
+                alias __appender_noscan_freelist freelist;
             }
-            immutable growsize = (newCapacity - len) * T.sizeof;
-            auto u = GC.extend(_data.arr.ptr, growsize, growsize);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
-            else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newCapacity * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
-        }
-    }
 
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, $(D capacity) returns $(D 0).
- */
-    @property size_t capacity()
-    {
-        return _data ? _data.capacity : 0;
-    }
+            enum        slackInit = (PageSize - size_t.sizeof * 4 ) / E.sizeof;
+            union {
+                struct {                    // Runtime
+                    size_t      slack;          // The remaining capacity
+                    E*          ptr;            // The empty data
+                    Segment*    next;           // The next data segment
+                    union {
+                      size_t    count;          // reference count (_head only)
+                      Segment*  prev;           // Previous segment(_tail only)
+                    }
+                }
+                struct {                    // CTFE ()
+                    // @@@BUG@@@ Currently limited by CTFE mutation issues
+                    E[]         data;           // The data array
 
-/**
-Returns the managed array.
- */
-    @property T[] data()
-    {
-        return cast(typeof(return))(_data ? _data.arr : null);
-    }
-
-    // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems)
-    {
-        if(!_data)
-            _data = new Data;
-        immutable len = _data.arr.length;
-        immutable reqlen = len + nelems;
-        if (reqlen > _data.capacity)
-        {
-            if (__ctfe)
-            {
-                _data.arr.length = reqlen;
-                _data.arr = _data.arr[0..len];
-                _data.capacity = reqlen;
-                return;
-            }
-            // Time to reallocate.
-            // We need to almost duplicate what's in druntime, except we
-            // have better access to the capacity field.
-            auto newlen = newCapacity(reqlen);
-            // first, try extending the current block
-            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            if(u)
-            {
-                // extend worked, update the capacity
-                _data.capacity = u / T.sizeof;
-            }
-            else
-            {
-                // didn't work, must reallocate
-                auto bi = GC.qalloc(newlen * T.sizeof,
-                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                _data.capacity = bi.size / T.sizeof;
-                if(len)
-                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
-                // leave the old data, for safety reasons
-            }
-        }
-    }
-
-    private static size_t newCapacity(size_t newlength)
-    {
-        long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
-        // limit to doubling the length, we don't want to grow too much
-        if(mult > 200)
-            mult = 200;
-        auto newext = cast(size_t)((newlength * mult + 99) / 100);
-        return newext > newlength ? newext : newlength;
-    }
-
-/**
-Appends one item to the managed array.
- */
-    void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
-            isSomeChar!T && isSomeChar!U)
-    {
-        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
-        {
-            // must do some transcoding around here
-            Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
-            auto len = std.utf.encode(encoded, item);
-            put(encoded[0 .. len]);
-        }
-        else
-        {
-            ensureAddable(1);
-            immutable len = _data.arr.length;
-            _data.arr.ptr[len] = cast(Unqual!T)item;
-            _data.arr = _data.arr.ptr[0 .. len + 1];
-        }
-    }
-
-    // Const fixing hack.
-    void put(Range)(Range items)
-    if(isInputRange!(Unqual!Range) && !isInputRange!Range) {
-        alias put!(Unqual!Range) p;
-        p(items);
-    }
-
-/**
-Appends an entire range to the managed array.
- */
-    void put(Range)(Range items) if (isInputRange!Range
-            && is(typeof(Appender.init.put(items.front))))
-    {
-        // note, we disable this branch for appending one type of char to
-        // another because we can't trust the length portion.
-        static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
-                     !is(Range == Unqual!T[]) &&
-                     !is(Range == const(T)[]) &&
-                     !is(Range == immutable(T)[])) &&
-                    is(typeof(items.length) == size_t))
-        {
-            // optimization -- if this type is something other than a string,
-            // and we are adding exactly one element, call the version for one
-            // element.
-            static if(!isSomeChar!T)
-            {
-                if(items.length == 1)
-                {
-                    put(items.front);
-                    return;
+                    size_t      ct_slack() const pure nothrow @property {
+                        return data.capacity - data.length;
+                    }
                 }
             }
 
-            // make sure we have enough space, then add the items
-            ensureAddable(items.length);
-            immutable len = _data.arr.length;
-            immutable newlen = len + items.length;
-            _data.arr = _data.arr.ptr[0..newlen];
-            static if(is(typeof(_data.arr[] = items)))
-            {
-                _data.arr.ptr[len..newlen] = items;
+            // Returns: a pointer to the full portion of the segment
+            E*     base()     const pure nothrow @property {
+                assert(!__ctfe);
+                return cast(E*)(&this+1);
             }
-            else
-            {
-                for(size_t i = len; !items.empty; items.popFront(), ++i)
-                    _data.arr.ptr[i] = cast(Unqual!T)items.front;
+            // Returns: the number of used elements in this segment
+            size_t length()   const pure nothrow @property {
+                return __ctfe ? data.length : slackInit - slack;
+            }
+            // Returns: the number of elements in this segment
+            size_t capacity() const pure nothrow @property {
+                return __ctfe ? data.capacity : slackInit;
+            }
+
+            // Create a new segment
+            static Segment* _make(Segment* prev) @property {
+                if(__ctfe){
+                    auto s = new Segment;
+                    s.data = data.init;
+                    return s;
+                }
+                auto seg = cast(Segment*) freelist;
+                if( seg )    { // There was a segment to re-use
+                    freelist = seg.next;
+                } else       { // Allocate a new segment
+                    seg = cast(Segment*) malloc(PageSize);
+                    static if (hasIndirections!T) {
+                        GC.addRange(seg, PageSize);
+                    }
+                }
+                seg.slack   = slackInit;
+                seg.ptr     = seg.base;
+                seg.next    = null;
+                seg.prev    = prev;
+                return seg;
+            }
+
+            // Saves the first segment to the free-list, frees the rest.
+            void free() @property { // const pure nothrow
+                if(__ctfe) return;
+
+                assert(&this !is null);
+                assert(count == 0);
+                auto s = next;
+                while(s) {
+                    auto sn = s.next;
+                    //static extern (C) void gc_free( void* p ) pure nothrow;
+                    .free( s );
+                    s = sn;
+                }
+
+                // Clear the memory of unwanted false pointers
+                static if(hasIndirections!T) {
+                    _memset32(&this,0,PageSize/int.sizeof);
+                }
+
+                next     = cast(Segment*) freelist;
+                freelist = &this;
             }
         }
-        else
-        {
-            //pragma(msg, Range.stringof);
-            // Generic input range
-            for (; !items.empty; items.popFront())
-            {
-                put(items.front);
+        static assert(Segment.sizeof == 4*size_t.sizeof);
+
+        Segment*  _head;        // The head data segment
+        Segment*  _tail;        // The last data segment
+
+        // Initialize the Appender
+        void _init() @property {
+            _head = _tail = Segment._make(cast(Segment*) 1);
+        }
+
+        // Advances the _tail, adding a segment if needs be.
+        void _grow() @property {
+            // Add another segment
+            if(!_tail.next)
+                _tail.next = Segment._make(_tail);
+            _tail          = _tail.next;
+        }
+
+        // Returns: the total number of elements in the appender
+        size_t _length() const pure nothrow @property {
+            if(__ctfe) return _head ? _head.length : 0;
+
+            size_t len = 0;
+            for(const(Segment)* d = _head; d; d = d.next)
+                len    += d.length;
+            return len;
+        }
+    }
+
+    // Maintain the segment reference count
+    this(this) {
+        if(!__ctfe && _head) {
+            _head.count++;
+        }
+    }
+    // Maintain the segment reference count
+    ~this() { // pure nothrow
+        assert(__ctfe || !_head || _head.count > 0);
+        if(__ctfe || !_head || --_head.count)  // Uninitialized || RefCount > 0
+            return;
+        _head.free;
+    }
+
+    /// Appends to the output range
+    void put(U)(U item) @property if ( isOutputRange!(T[],U) )
+    {
+        import std.stdio;
+        if(__ctfe && !_tail)
+            _init;
+        // put(T)
+        static if ( isImplicitlyConvertible!(U, E) || is(Unqual!U == E)) {
+            if(__ctfe) {
+                _tail.data ~= cast(E) item;
+                return;
+            }
+            // Runtime
+            if(!_tail || _tail.slack == 0 ) {
+                if(!_tail) _init;
+                else       _grow;
+            }
+             *_tail.ptr++ = cast(E) item;
+            --_tail.slack;
+        // fast put(T[])
+        } else static if( (isArray!U && is(Unqual!(typeof(U[0])) == E)) ||
+            (!isArray!U && is(typeof(_tail.ptr[0..item.length] = (cast(E[]) item[])[0..1])))) {
+            auto items  = cast(E[]) item[];
+            if(__ctfe) {
+                _tail.data ~= items;
+                return;
+            }
+            // Runtime
+            if(!_tail || _tail.slack < items.length ) {
+                if(!_tail) {
+                    _init;
+                }
+                while(_tail.slack < items.length) {
+                    // Fill up the remaining slack
+                    _tail.ptr[0 .. _tail.slack] = items[0.._tail.slack];
+                    _tail.ptr   += _tail.slack;
+                    items        = items[_tail.slack..$];
+                    _tail.slack  = 0;
+                    _grow;
+                 }
+            }
+            // Push the items
+            _tail.ptr[0..items.length] = items;
+            _tail.ptr   += items.length;
+            _tail.slack -= items.length;
+
+        // Everything else
+        } else {
+            .put!(typeof(this),U,true,Unqual!T)(this,item);
+        }
+    }
+
+    /// ditto
+    ref typeof(this) opOpAssign(string op, U)(U item)
+        if ( op=="~" && isOutputRange!(Unqual!T[],U) )
+    {
+        put(item);
+        return this;
+    }
+
+// Need to do a build with this gone to trace / fix phobos
+    /// Returns: a copy of the appender's data in an array.
+    static if(!is(T == E) && hasIndirections!T) {
+        private
+    }   E[] dupTo(ref E[] arr) pure @property { // nothrow
+            size_t i   = 0;
+            size_t len = void;
+            arr.length = _length;
+            for(const(Segment)* d = _head; d !is null; d = d.next, i += len) {
+                len = d.length;
+                arr[i..i+len] = d.base[0..len];
+            }
+            return arr;
+        }
+    /// ditto
+    T[] dup() pure @property {
+        if(__ctfe) {
+            return cast(T[])(_head !is null ?  _head.data : null);
+        }
+        if(_head == _tail) {
+            return cast(T[])(_head ? _head.base[0.._head.length].dup : null);
+        }
+        E[] arr;
+        return cast(T[]) dupTo(arr);
+    }
+    static if(is(T==immutable) || !hasIndirections!T) {
+        /// ditto
+        immutable(T)[] idup() pure @property {
+            return cast(immutable(T)[]) dup;
+        }
+    }
+
+    T[] opDispatch(string name)() pure @property
+        if(name == "data") {
+        pragma(msg, softDeprec!("2.059", "Winter 2012", "Appender.data", "Appender.dup"));
+        return dup;
+    }
+
+    /// Constructs an appender and makes a copy of the array.
+    this(T[] arr) {
+        put(arr);
+    }
+
+    /// Construct an appender with a capacity of at least N elements.
+    this(size_t N) {
+        reserve(N);
+    }
+
+    /// Returns: the number of elements that can be added before allocation.
+    size_t slack() const pure nothrow @property {
+        if(__ctfe) return _head ? _head.ct_slack : 0;
+
+        size_t sum = 0;
+        for(const(Segment)* seg = _tail; seg !is null; seg = seg.next) {
+            sum += seg.slack;
+        }
+        return sum;
+    }
+
+    /// Returns: the number of elements already added to the appender
+    size_t walkLength() const pure nothrow @property { return _length; }
+
+    /// Increases the slack by at least N elements
+    void extend(size_t N) {
+        if(!_head) _init;
+
+        if(__ctfe) {
+//            _head.data.length = _head.data.length + N;
+            return;
+        }
+
+        auto len = slack;
+        auto seg = _tail;
+        while(seg.next !is null)
+            seg = seg.next;
+
+        while(N > len) {
+            seg.next = Segment._make(seg);
+            len     += seg.next.slack;
+            seg      = seg.next;
+        }
+    }
+
+    /// Returns: the total number of elements currently allocated.
+    size_t capacity() const pure nothrow @property {
+        if(__ctfe) return _head ? _head.capacity : 0;
+
+        size_t sum = 0;
+        for(const(Segment)* seg = _tail; seg !is null; seg = seg.next) {
+            sum += seg.capacity;
+        }
+        return sum;
+    }
+
+    /// Ensures that the capacity is a least newCapacity elements.
+    void reserve(size_t newCapacity) {
+        auto cap  = capacity;
+        if(  cap >= newCapacity) return;
+        extend( newCapacity - cap );
+    }
+
+    /// Clears the appender. Does not zero or destruct existing items.
+    typeof(this) clear() pure nothrow @property {
+        if(__ctfe) { if(_head) _head.data.length = 0; return this; }
+
+        for(auto seg = _head; seg !is null; seg = seg.next) {
+            seg.slack = Segment.slackInit;
+            seg.ptr   = _head.base;
+        }
+        _tail = _head;
+        return this;
+    }
+
+    /** Shrinks the appender to a given length if less than the current
+        length. Does not zero or destruct existing items.
+     */
+    void shrinkTo(size_t newlength) pure nothrow {
+        if(__ctfe) { if(_head) _head.data.length = newlength; return; }
+
+        for(auto seg = _head; seg !is null; seg = seg.next) {
+            if(newlength == 0) {
+                seg.slack = Segment.slackInit;
+                seg.ptr   = _head.base;
+                continue;
+            }
+            auto len = seg.length;
+            if( len >= newlength ) {
+                seg.ptr   = seg.base + newlength;
+                seg.slack = Segment.slackInit - newlength;
+                newlength = 0;
+            } else {
+                newlength -= len;
+            }
+        }
+        assert(newlength==0,"Appender.shrinkTo: newlength > capacity");
+    }
+
+    /// Provides a bi-directional range over the appender's elements
+    /// Currently doesn't kept the appender alive, etc
+    struct Slice(U) {
+        private {
+            Segment* _head;     // Current front segment
+            Segment* _tail;     // Current back segment
+            U*       _front;    // Current front pointer
+            U*       _back;     // Current back pointer
+            Segment* _ref_count;// Ref counting segment
+        }
+
+        // Construct a slice
+        this(App)(ref App app, string file = __FILE__,int line = __LINE__) {
+            if(__ctfe) {
+                _head = cast(Segment*) app._head;
+                return;
+            }
+            _head       = cast(Segment*) app._head;
+            _tail       = cast(Segment*) app._tail;
+            if(_head !is null && _head.ptr != _head.base) {
+                _ref_count  = cast(Segment*) app._head;
+                _ref_count.count++;
+                _front = _head.base;
+                while(_tail.ptr is _tail.base) {
+                    _tail = _tail.prev;
+                }
+                _back  = _tail.ptr;
+            } else {
+                // These should be the Slice.init values
+                //_ref_count = _front = _back = null;
+            }
+        }
+
+        // Maintain the segment reference count
+        this(this) {
+            if(!__ctfe && _ref_count) {
+                _ref_count.count++;
+            }
+        }
+        // Maintain the segment reference count
+        ~this() { // pure nothrow
+            assert(__ctfe || !_head || ( _head && _head.count > 0));
+            // Uninitialized || RefCount > 0
+            if(__ctfe || !_ref_count || --_ref_count.count)
+                return;
+            _ref_count.free;
+        }
+
+        /// The range interface
+        U front() pure nothrow @property {
+            if(__ctfe) return _head.data[0];
+            return *_front;
+        }
+        /// ditto
+        U back() pure nothrow @property {
+            if(__ctfe) return _head.data[$-1];
+            return *(_back-1);
+        }
+        static if(is(U == E)) {
+            // Allow non-escaping mutation of the appender (non-const)
+            //@@@BUG@@@ this must be defined after T front() to work with put, etc.
+            /// ditto
+            void front(U value) pure nothrow @property {
+                if(__ctfe) { _head.data[0] = value; return; }
+                *_front = value;
+            }
+            /// ditto
+            void back(U value) pure nothrow @property {
+                if(__ctfe) { _head.data[$-1] = value; return; }
+                *(_back-1) = value;
+            }
+        }
+        /// ditto
+        bool empty() const pure nothrow @property {
+            if(__ctfe) return _head.data.empty;
+            return _front is _back;
+        }
+        /// ditto
+        typeof(this) save() pure nothrow @property {
+            return this;
+        }
+        /// ditto
+        void popFront() pure @property {
+            if(empty) return;
+            if(__ctfe) { _head.data = _head.data[1..$]; return; }
+            _front++;
+            while( _front >= _head.ptr ) {
+                _head  =  _head.next;
+                if(_head is null) {
+                    _front = _back = null;
+                    return;
+                }
+                _front =  _head.base;
+            }
+        }
+        /// ditto
+        void popBack() pure @property {
+            if(empty) return;
+            if(__ctfe) { _head.data = _head.data[0..$-1]; return; }
+            _back--;
+            while( _back <= _tail.base ) {
+                if(_tail is _ref_count) {
+                    _front = _back = null;
+                    return;
+                }
+                _tail  =  _tail.prev;
+                _back  =  _tail.ptr;
             }
         }
     }
 
-    // only allow overwriting data on non-immutable and non-const data
-    static if(!is(T == immutable) && !is(T == const))
-    {
-/**
-Clears the managed array.  This allows the elements of the array to be reused
-for appending.
+    /// Returns: a forward range iterating over the Appender's content
+    auto opSlice() @property { // pure nothrow
+        return Slice!(E)(this);
+    }
+    /// ditto
+    auto opSlice() @property const { // pure nothrow
+        return Slice!(const(E))(this);
+    }
 
-Note that clear is disabled for immutable or const element types, due to the
-possibility that $(D Appender) might overwrite immutable data.
-*/
-        void clear()
-        {
-            if (_data)
-            {
-                _data.arr = _data.arr.ptr[0..0];
+    /// Returns: true if no elements have been stored in the appender
+    bool empty() const pure nothrow @property {
+        return _head is null || (__ctfe ? _head.data.empty :_head.ptr==_head.base);
+    }
+
+    /// Returns: the last element of the appender. Not UTF safe.
+    T back() nothrow pure @property {
+        if(__ctfe) {
+            assert(_head !is null && !_head.data.empty);
+            return _head.data[$-1];
+        }
+        if(_tail is null || _tail.ptr == _tail.base) {
+            assert(_head !is _tail);
+            return *(_tail.prev.ptr-1);
+        }
+        return *(_tail.ptr-1);
+    }
+    /// ditto
+    void back(T value) nothrow pure @property {
+        if(__ctfe) {
+            assert(_head !is null && !_head.data.empty);
+            _head.data[$-1] = value;
+            return;
+        }
+        if(_tail is null || _tail.ptr == _tail.base) {
+            assert(_head !is _tail);
+            *(_tail.prev.ptr-1) = value;
+            return;
+        }
+        *(_tail.ptr-1) = value;
+        return;
+    }
+
+    /// Removes N values at the back of the appender. Defaults to 1.
+    void removeBack(size_t N = 1) nothrow pure @property {
+        if(__ctfe) {
+            assert(_head !is null && _head.data.length >= N);
+            _head.data.length = _head.data.length - N;
+            return;
+        }
+
+        assert(_tail !is null);
+        // pop a segment, in addition to an element
+        while( _tail.length < N ) {
+            assert(_head !is _tail);
+            N          -= _tail.length;
+            _tail.ptr   = _tail.base;
+            _tail.slack = Segment.slackInit;
+            _tail       = _tail.prev;
+        }
+        // pop an element
+        _tail.ptr   -= N;
+        _tail.slack += N;
+        return;
+    }
+
+    /// Insertion aliases
+    alias put insertBack;
+    alias put insert;           ///ditto
+    alias put linearInsert;     ///ditto
+
+    /// Returns: the first element of the appender. Not UTF safe.
+    T front() nothrow pure @property {
+        if(__ctfe) {
+            return _head.data[0];
+        }
+        assert(_head !is null && _head.ptr !is _head.base);
+        return *_head.base;
+    }
+    ///ditto
+    void front(T value) nothrow pure @property {
+        if(__ctfe) {
+            _head.data[0] = value;
+            return;
+        }
+        assert(_head !is null && _head.ptr !is _head.base);
+        *_head.base = value;
+    }
+
+    /// Removes the last element from c and returns it.
+    T removeAny() nothrow pure @property {
+        if(__ctfe) {
+            assert(_head !is null && _head.data.length >= 1);
+            auto result = _head.data[$-1];
+            _head.data = _head.data[0..$-1];
+            return result;
+        }
+
+        assert(_tail !is null);
+        // pop a segment, in addition to an element
+        while( _tail.length == 0 ) {
+            assert(_head !is _tail);
+            _tail.ptr   = _tail.base;
+            _tail.slack = Segment.slackInit;
+            _tail       = _tail.prev;
+        }
+        _tail.ptr--;
+        _tail.slack++;
+        return *(_tail.ptr);
+    }
+
+    /** Signed index function with linear complexity.
+Example:
+---
+auto app = appender("signed indexing");
+assert(app.front == app.linearIndex( 0));
+assert(app.back  == app.linearIndex(-1));
+---
+    */
+    T linearIndex(ptrdiff_t i) nothrow pure { //
+        if(i >= 0) {    // positive indexing
+            for(auto d = _head; d; d = d.next) {
+                if(d.length > i)
+                    return *(d.base+i);
+                i -= d.length;
+            }
+            assert(false, "Appender linearIndex out of bounds.");
+        } else {        // negative indexing
+            for(auto d = _tail; d; d = d !is _head ? d.prev : null){
+                if(d.length >= -i)
+                    return *(d.ptr+i);
+                i += d.length;
+            }
+            assert(false, "Appender linearIndex out of bounds.");
+        }
+    }
+    ///ditto
+    void linearIndex(ptrdiff_t i, T value)  { //nothrow pure
+        if(i >= 0) {    // positive indexing
+            for(auto d = _head; d; d = d.next) {
+                if(d.length > i) {
+                    *(d.base+i) = value;
+                    return;
+                }
+                i -= d.length;
+            }
+            assert(false, "Appender linearIndex out of bounds.");
+        } else {        // negative indexing
+            for(auto d = _tail; d; d = d !is _head ? d.prev : null) {
+                if(d.length >= -i) {
+                    *(d.ptr+i) = value;
+                    return;
+                }
+                i += d.length;
+            }
+            assert(false, "Appender linearIndex out of bounds.");
+        }
+    }
+
+    /** A limited functionality zero-overhead scoped wrapper around
+        an existing mutable array.
+Example:
+---
+auto buffer = cast(char[]) "HIC SVNT DRACONES";
+// Clear the buffer, saving the 'H'
+auto wb = Appender!string(buffer, 1);
+// Use 'put' or '~=' to append data
+wb.put("ere ");
+wb ~= "be dragons";
+// Inspect the buffer as is.
+assert(buffer == "Here be dragonsES");
+assert(buffer[0..wb.walkLength] == "Here be dragons");
+// sync the buffer and underlying appender (may allocate)
+wb.sync;
+assert(buffer == "Here be dragonsES");
+// Add some more data
+wb ~= " and dungeons!";
+assert(buffer == "Here be dragons a");
+// Sync the buffer and get the used portion
+auto data = wb.syncedData;
+assert(buffer == "Here be dragons and dungeons!");
+assert(data   == "Here be dragons and dungeons!");
+---
+    */
+    @system struct wrappedBuffer {
+        private {
+            Segment     seg;        // For the wrapped array
+            Appender    app;        // Not all functions are supported
+            E[]*        arr;        // The wrapped array
+        }
+        /// Construct a wrapped buffer
+        this(ref E[] _arr, size_t preseverdLength = 0) nothrow {
+            assert(preseverdLength <= _arr.length);
+            arr         = &_arr;
+            seg.slack   = _arr.length - preseverdLength;
+            seg.ptr     = _arr.ptr    + preseverdLength;
+            seg.next    = null;
+            seg.count   = 1;
+            app._head   = app._tail = &seg;
+        }
+
+        // Ensure that the appender's memory is freed.
+        ~this() {
+            if(seg.next !is null) {
+                seg.next.count = 0;
+                seg.next.free;
+            }
+
+            app._head = null;
+        }
+
+        // Prevent copying
+        @disable this(this) {}
+
+        /// Returns: the used length of the buffer
+        size_t walkLength() const pure @property { //nothrow
+            // No extra segments
+            if(app._head is app._tail) {
+                return arr.length - seg.slack;
+            } else {
+                size_t len = arr.length;
+                for(const(Segment)* d = seg.next; d !is null; d = d.next) {
+                    len += d.length;
+                }
+                return len;
             }
         }
 
-/**
-Shrinks the managed array to the given length.  Passing in a length that's
-greater than the current array length throws an enforce exception.
-*/
-        void shrinkTo(size_t newlength)
-        {
-            if(_data)
-            {
-                enforce(newlength <= _data.arr.length);
-                _data.arr = _data.arr.ptr[0..newlength];
+        /// Manual synchronizes the array and appender
+        void sync() pure @property { //nothrow
+            // The array and appender are out of sync
+            if(app._head != app._tail) {
+                // Get the new total length
+                size_t len = arr.length;
+                for(auto d = seg.next; d !is null; d = d.next) {
+                    len += d.length;
+                }
+                // Update the array's length
+                size_t i   = arr.length;
+                arr.length = len;
+                // Copy in the elements and clear the extra data segments
+                 for(auto d = seg.next; d !is null; d = d.next, i += len) {
+                    len                 = d.length;
+                    (*arr)[i..i+len]    = d.base[0..len];
+                    d.ptr               = d.base;
+                    d.slack             = Segment.slackInit;
+                }
+                // Update the segment
+                seg.slack = 0;
+                seg.ptr   = arr.ptr;
             }
-            else
-                enforce(newlength == 0);
+        }
+        /// Appends to the output range
+        void put(U)(U item) @property if ( isOutputRange!(T[],U) ){
+            app.put(item);
+        }
+        ///ditto
+        ref typeof(this) opOpAssign(string op, U)(U item)
+            if ( op=="~" && isOutputRange!(Unqual!T[],U) )
+        {
+            app.put(item);
+            return this;
+        }
+
+        /// Returns: the used portion of the buffer. Synchronizes if necessary
+        E[] usedBuffer() pure @property { //nothrow pure
+            sync;
+            return (*arr)[0..$-seg.slack];
         }
     }
 }
-
-/**
-An appender that can update an array in-place.  It forwards all calls to an
-underlying appender implementation.  Any calls made to the appender also update
-the pointer to the original array passed in.
-*/
-struct RefAppender(A : T[], T)
-{
-    private
-    {
-        Appender!(A, T) impl;
-        T[] *arr;
-    }
-
-/**
-Construct a ref appender with a given array reference.  This does not copy the
-data.  If the array has a larger capacity as determined by arr.capacity, it
-will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
-value.
-
-Note, do not use builtin appending (i.e. ~=) on the original array passed in
-until you are done with the appender, because calls to the appender override
-those appends.
-*/
-    this(T[] *arr)
-    {
-        impl = Appender!(A, T)(*arr);
-        this.arr = arr;
-    }
-
-    auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
-    {
-        // we do it this way because we can't cache a void return
-        scope(exit) *this.arr = impl.data;
-        mixin("return impl." ~ fn ~ "(args);");
-    }
-
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).  If any
-appending will reallocate, $(D capacity) returns $(D 0).
- */
-    @property size_t capacity()
-    {
-        return impl.capacity;
-    }
-
-/**
-Returns the managed array.
- */
-    @property T[] data()
-    {
-        return impl.data;
-    }
-}
-
 /++
     Convenience function that returns an $(D Appender!(A)) object initialized
     with $(D array).
  +/
-Appender!(E[]) appender(A : E[], E)(A array = null)
+Appender!(E[]) appender(A : E[], E)(A array)
 {
     return Appender!(E[])(array);
+}
+///ditto
+Appender!(E[]) appender(A : E[], E)() {
+    typeof(return) app;
+    app._init;
+    return app;
 }
 
 unittest
@@ -2174,78 +2630,165 @@ unittest
     auto app = appender!(char[])();
     string b = "abcdefg";
     foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
+    assert(app.dup == "abcdefg");
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(a);
-    assert(app2.data == [ 1, 2 ]);
+    assert(app2.dup == [ 1, 2 ]);
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(app2.dup == [ 1, 2, 3, 4, 5, 6 ]);
     app2.put([ 7 ]);
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6, 7 ]);
+    assert(app2.dup == [ 1, 2, 3, 4, 5, 6, 7 ]);
 
     app2.reserve(5);
     assert(app2.capacity >= 5);
 
     app2.shrinkTo(3);
-    assert(app2.data == [ 1, 2, 3 ]);
-    assertThrown(app2.shrinkTo(5));
+    assert(app2.dup == [ 1, 2, 3 ]);
 
-    auto app3 = appender([]);
-    app3.shrinkTo(0);
+    // shrinkTo uses assert() not enforce
+    debug assertThrown(app2.shrinkTo(5));
+
+//    Void[] appender?
+//    auto app3 = appender([]);
+//    app3.shrinkTo(0);
 
     // Issue 5663 tests
     {
         Appender!(char[]) app5663i;
         assertNotThrown(app5663i.put("\xE3"));
-        assert(app5663i.data == "\xE3");
+        assert(app5663i.dup == "\xE3");
 
         Appender!(char[]) app5663c;
         assertNotThrown(app5663c.put(cast(const(char)[])"\xE3"));
-        assert(app5663c.data == "\xE3");
+        assert(app5663c.dup == "\xE3");
 
         Appender!(char[]) app5663m;
         assertNotThrown(app5663m.put(cast(char[])"\xE3"));
-        assert(app5663m.data == "\xE3");
+        assert(app5663m.dup == "\xE3");
     }
 }
 
-/++
-    Convenience function that returns a $(D RefAppender!(A)) object initialized
-    with $(D array).  Don't use null for the $(D array) pointer, use the other
-    version of $(D appender) instead.
- +/
-RefAppender!(E[]) appender(A : E[]*, E)(A array)
-{
-    return RefAppender!(E[])(array);
-}
-
-unittest
-{
-    auto arr = new char[0];
-    auto app = appender(&arr);
-    string b = "abcdefg";
-    foreach (char c; b) app.put(c);
-    assert(app.data == "abcdefg");
-    assert(arr == "abcdefg");
-
+// Ddoc example
+unittest {
     int[] a = [ 1, 2 ];
-    auto app2 = appender(&a);
-    assert(app2.data == [ 1, 2 ]);
-    assert(a == [ 1, 2 ]);
-    app2.put(3);
-    app2.put([ 4, 5, 6 ][]);
-    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
-    assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+    auto builder = appender(a);
+    builder.put(3);
+    builder.put([ 4, 5, 6 ]);
+    assert(builder.dup == [ 1, 2, 3, 4, 5, 6 ]);
 
-    app2.reserve(5);
-    assert(app2.capacity >= 5);
-
-    app2.shrinkTo(3);
-    assert(app2.data == [ 1, 2, 3 ]);
-    assertThrown(app2.shrinkTo(5));
+    // Or as a reusable buffered range
+    Appender!(char[]) buffer;
+    foreach(str;[`Hello`,` `,`World`,`!`]) {
+        buffer.clear;
+        foreach(dchar c; str) {
+            buffer ~= c;
+        }
+        assert( equal(buffer[], str) );
+    }
 }
+
+// Ddoc example, wrapBuffe
+unittest {
+//    auto buffer = cast(char[]) "HIC SVNT DRACONES";
+//    // Clear the buffer, saving the 'H'
+//    auto wb = Appender!string.wrappedBuffer(buffer, 1);
+//    // Use 'put' or '~=' to append data
+//    wb.put("ere ");
+//    wb ~= "be dragons";
+//    // Inspect the buffer as is.
+//    assert(buffer == "Here be dragonsES");
+//    assert(buffer[0..wb.walkLength] == "Here be dragons");
+//    // sync the buffer and underlying appender (may allocate)
+//    wb.sync;
+//    assert(buffer == "Here be dragonsES");
+//    // Add some more data
+//    wb ~= " and dungeons!";
+//    assert(buffer == "Here be dragons a");
+//    // Sync the buffer and get the used portion
+//    auto data = wb.usedBuffer;
+//    assert(buffer == "Here be dragons and dungeons!");
+//    assert(data   == "Here be dragons and dungeons!");
+}
+
+// signed index example
+unittest {
+    auto app = appender("signed indexing");
+    assert(app.front == app.linearIndex( 0));
+    assert(app.back  == app.linearIndex(-1));
+}
+
+// New appender functionality unittest
+unittest {
+    auto test = "qwerty";
+    Appender!string app;
+    assert(app.empty);
+    assert(app.slack == 0);
+    app ~= test;
+    assert(!app.empty);
+    assert(equal(app[],test));
+    app.clear;
+    assert(app.empty);
+    assert(app.slack > 0);
+    app.insertBack(test);
+    assert(equal(app[],test));
+    app.clear.insert(test);
+    assert(equal(app[],test));
+    app.clear.linearInsert(test);
+    assert(equal(app[],test));
+    assert(app.front == test.front);
+    assert(app.back  == test.back);
+    assert(app.removeAny == test.back);
+    assert(equal(app[],test[0..$-1]));
+    assert(app.walkLength == test.length-1);
+    auto s1 = app.slack;
+    app.clear;
+    assert(app.slack == s1 + test.length-1);
+    app ~= "abcd";
+    app.back  = 'z';
+    app.front = 'w';
+    app.linearIndex( 1,'x');
+    app.linearIndex(-2,'y');
+    assert(equal(app[],"wxyz"));
+    assert(equal(retro(app[]),"zyxw"));
+}
+
+///++
+//    Convenience function that returns a $(D RefAppender!(A)) object initialized
+//    with $(D array).  Don't use null for the $(D array) pointer, use the other
+//    version of $(D appender) instead.
+// +/
+//RefAppender!(E[]) appender(A : E[]*, E)(A array)
+//{
+//    return RefAppender!(E[])(array);
+//}
+//
+//unittest
+//{
+//    auto arr = new char[0];
+//    auto app = appender(&arr);
+//    string b = "abcdefg";
+//    foreach (char c; b) app.put(c);
+//    assert(app.data == "abcdefg");
+//    assert(arr == "abcdefg");
+//
+//    int[] a = [ 1, 2 ];
+//    auto app2 = appender(&a);
+//    assert(app2.data == [ 1, 2 ]);
+//    assert(a == [ 1, 2 ]);
+//    app2.put(3);
+//    app2.put([ 4, 5, 6 ][]);
+//    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+//    assert(a == [ 1, 2, 3, 4, 5, 6 ]);
+//
+//    app2.reserve(5);
+//    assert(app2.capacity >= 5);
+//
+//    app2.shrinkTo(3);
+//    assert(app2.data == [ 1, 2, 3 ]);
+//    assertThrown(app2.shrinkTo(5));
+//}
 
 /*
 A simple slice type only holding pointers to the beginning and the end

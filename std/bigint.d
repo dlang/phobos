@@ -600,15 +600,15 @@ unittest
 
         formattedWrite(w1, fmt, BigInt(10));
         formattedWrite(w2, fmt, 10);
-        assert(w1.data == w2.data);
-        assert(w1.data == entry[1]);
+        assert(w1.dup == w2.dup);
+        assert(w1.dup == entry[1]);
         w1.clear();
         w2.clear();
 
         formattedWrite(w1, fmt, BigInt(-10));
         formattedWrite(w2, fmt, -10);
-        assert(w1.data == w2.data);
-        assert(w1.data == entry[2]);
+        assert(w1.dup == w2.dup);
+        assert(w1.dup == entry[2]);
         w1.clear();
         w2.clear();
     }
@@ -651,15 +651,15 @@ unittest
 
         formattedWrite(w1, fmt, BigInt(10));
         formattedWrite(w2, fmt, 10);
-        assert(w1.data == w2.data);     // Equal only positive BigInt
-        assert(w1.data == entry[1]);
+        assert(w1.dup == w2.dup);     // Equal only positive BigInt
+        assert(w1.dup == entry[1]);
         w1.clear();
         w2.clear();
 
         formattedWrite(w1, fmt, BigInt(-10));
         //formattedWrite(w2, fmt, -10);
-        //assert(w1.data == w2.data);
-        assert(w1.data == entry[2]);
+        //assert(w1.dup == w2.dup);
+        assert(w1.dup == entry[2]);
         w1.clear();
         //w2.clear();
     }
@@ -678,5 +678,5 @@ unittest
     formattedWrite(w1, "%010d", x);
     BigInt bx = x;
     formattedWrite(w2, "%010d", bx);
-    assert(w1.data == w2.data);
+    assert(w1.dup == w2.dup);
 }

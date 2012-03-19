@@ -516,7 +516,7 @@ assert(s[0] == "abc" && s[1] == 4.5);
             }
         }
         app.put(footer);
-        return app.data;
+        return app.dup;
     }
 }
 
@@ -2521,15 +2521,14 @@ to deallocate the corresponding resource.
         debug(RefCounted) if (RefCounted.debugging) writeln("done!");
     }
 
-/**
-Assignment operators
- */
-    void opAssign(typeof(this) rhs)
-    {
-        swap(RefCounted._store, rhs.RefCounted._store);
-    }
+//    void opAssign(typeof(this) rhs)
+//    {
+//        swap(RefCounted._store, rhs.RefCounted._store);
+//    }
 
-/// Ditto
+/**
+Assignment operator
+ */
     void opAssign(T rhs)
     {
         RefCounted._store._payload = move(rhs);

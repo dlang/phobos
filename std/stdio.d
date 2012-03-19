@@ -791,25 +791,12 @@ with every line.  */
     }
 
 /** ditto */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+        if (isSomeChar!C && !is(C==const) && !is(C==immutable))
     {
-        static if (is(C == char))
-        {
-            enforce(p && p.handle, "Attempt to read from an unopened file.");
-            return readlnImpl(p.handle, buf, terminator);
-        }
-        else
-        {
-            // TODO: optimize this
-            string s = readln(terminator);
-            if (!s.length) return 0;
-            buf.length = 0;
-            foreach (wchar c; s)
-            {
-                buf ~= c;
-            }
-            return buf.length;
-        }
+        enforce(p && p.handle, "Attempt to read from an unopened file.");
+        buf = readlnImpl(p.handle, buf, terminator);
+        return buf.length;
     }
 
 /** ditto */
@@ -2205,8 +2192,12 @@ Initialize with a message and an error code. */
             auto s = std.c.string.strerror(errno);
         }
         auto sysmsg = to!string(s);
-        super(message ? message ~ "(" ~ sysmsg ~ ")" : sysmsg);
+        super(message ? message ~ "(" ~ sysmsg ~ ")"  : sysmsg);
     }
+    this(string message, string file, int line) {
+        this(text(file,"(",line,"): ",message));
+    }
+
 
 /** Convenience functions that throw an $(D StdioException). */
     static void opCall(string msg)
@@ -2267,7 +2258,7 @@ unittest
 
 // Private implementation of readln
 version (DIGITAL_MARS_STDIO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+private C[] readlnImpl(C)(FILE* fps, ref C[] buffer, dchar terminator = '\n')
 {
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
@@ -2277,17 +2268,20 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
      */
     auto fp = cast(_iobuf*)fps;
 
+    // Grab a buffer
+    auto app = Appender!(C[]).wrappedBuffer(buffer);
+
+    /* Stream is in wide characters.
+     * Read them and convert to chars.
+     */
     if (__fhnd_info[fp._file] & FHND_WCHAR)
-    {   /* Stream is in wide characters.
-         * Read them and convert to chars.
-         */
+    {
         static assert(wchar_t.sizeof == 2);
-        auto app = appender(buf);
-        app.clear();
         for (int c = void; (c = FGETWC(fp)) != -1; )
         {
             if ((c & ~0x7F) == 0)
-            {   app.put(cast(char) c);
+            {
+                app ~= cast(char) c;
                 if (c == terminator)
                     break;
             }
@@ -2304,57 +2298,38 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
                 //std.utf.encode(buf, c);
-                app.put(cast(dchar)c);
+                app ~= cast(dchar)c;
             }
         }
-        if (ferror(fps))
-            StdioException();
-        buf = app.data;
-        return buf.length;
+        enforceEx!StdioException( !ferror(fps) );
+        return app.usedBuffer;
     }
 
-    auto sz = GC.sizeOf(buf.ptr);
-    //auto sz = buf.length;
-    buf = buf.ptr[0 .. sz];
-    if (fp._flag & _IONBF)
-    {
-        /* Use this for unbuffered I/O, when running
-         * across buffer boundaries, or for any but the common
-         * cases.
-         */
-      L1:
-        auto app = appender(buf);
-        app.clear();
-        if(app.capacity == 0)
-            app.reserve(128); // get at least 128 bytes available
-
+    /* Use this for unbuffered I/O, when running
+     * across buffer boundaries, or for any but the common
+     * cases.
+     */
+    if (fp._flag & _IONBF) {
+L1:
         int c;
-        while((c = FGETC(fp)) != -1) {
-            app.put(cast(char) c);
-            if(c == terminator) {
-                buf = app.data;
-                return buf.length;
-            }
-
+        while((c = FGETC(fp)) != -1)
+        {
+            app ~= cast(char) c;
+            if(c == terminator)
+                return app.usedBuffer;
         }
-
-        if (ferror(fps))
-            StdioException();
-        buf = app.data;
-        return buf.length;
-    }
-    else
-    {
-        int u = fp._cnt;
-        char* p = fp._ptr;
-        int i;
-        if (fp._flag & _IOTRAN)
-        {   /* Translated mode ignores \r and treats ^Z as end-of-file
-             */
+        enforceEx!StdioException( !ferror(fps) );
+        return app.usedBuffer;
+    } else {
+        // Must update these if less than the full buffer is read          fp._cnt -= i;  fp._ptr += i;
+        int   u = fp._cnt; // length
+        char* p = fp._ptr; // ptr
+        int   i;           // = 0
+        if (fp._flag & _IOTRAN) {
             char c;
             while (1)
             {
-                if (i == u)                // if end of buffer
+                if (i == u)         // if end of buffer
                     goto L1;        // give up
                 c = p[i];
                 i++;
@@ -2372,44 +2347,35 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     goto L1;
                 }
             }
-            if (i > sz)
-            {
-                buf = uninitializedArray!(char[])(i);
+            if (i > 1) {
+                app ~= p[0..i-1];
             }
-            if (i - 1)
-                memcpy(buf.ptr, p, i - 1);
-            buf[i - 1] = cast(char)terminator;
-            buf = buf[0 .. i];
+            app ~= cast(char) terminator;
             if (terminator == '\n' && c == '\r')
                 i++;
-        }
-        else
-        {
+        } else {
             while (1)
             {
-                if (i == u)                // if end of buffer
+                if (i == u)         // if end of buffer
                     goto L1;        // give up
                 auto c = p[i];
                 i++;
                 if (c == terminator)
                     break;
             }
-            if (i > sz)
-            {
-                buf = uninitializedArray!(char[])(i);
-            }
-            memcpy(buf.ptr, p, i);
-            buf = buf[0 .. i];
+            app ~= p[0..i];
         }
         fp._cnt -= i;
         fp._ptr += i;
-        return i;
+        return app.usedBuffer;
     }
 }
 
 version (GCC_IO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+private C[] readlnImpl(C)(FILE* fps, ref C[] buffer, dchar terminator = '\n')
 {
+    auto app = Appender!(C[]).wrappedBuffer(buffer);
+
     if (fwide(fps, 0) > 0)
     {   /* Stream is in wide characters.
          * Read them and convert to chars.
@@ -2419,11 +2385,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         auto fp = cast(_iobuf*)fps;
         version (Windows)
         {
-            buf.length = 0;
             for (int c = void; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                {   buf ~= c;
+                {   app ~= cast(char) c;
                     if (c == terminator)
                         break;
                 }
@@ -2439,33 +2404,30 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
-                    std.utf.encode(buf, c);
+                    //std.utf.encode(buf, c);
+                    app ~= cast(dchar) c;
                 }
             }
-            if (ferror(fp))
-                StdioException();
-            return buf.length;
         }
         else version (Posix)
         {
-            buf.length = 0;
             for (int c; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                    buf ~= cast(char)c;
+                    app ~= cast(char)c;
                 else
-                    std.utf.encode(buf, cast(dchar)c);
+                    //std.utf.encode(buf, c);
+                    app ~= cast(dchar) c;
                 if (c == terminator)
                     break;
             }
-            if (ferror(fps))
-                StdioException();
-            return buf.length;
         }
         else
         {
             static assert(0);
         }
+        enforceEx!StdioException( !ferror(fps) );
+        return app.usedBuffer;
     }
 
     char *lineptr = null;
@@ -2476,25 +2438,17 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     {
         if (ferror(fps))
             StdioException();
-        buf.length = 0;                // end of file
-        return 0;
+        return null; // end of file
     }
-    buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
-    if (s <= buf.length)
-    {
-        buf.length = s;
-        buf[] = lineptr[0 .. s];
-    }
-    else
-    {
-        buf = lineptr[0 .. s].dup;
-    }
-    return s;
+    app ~= lineptr[0 .. s];
+    return app.usedBuffer;
 }
 
 version (GENERIC_IO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+private C[] readlnImpl(C)(FILE* fps, ref C[] buffer, dchar terminator = '\n')
 {
+    auto app = Appender!(C[]).wrappedBuffer(buffer);
+
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
     auto fp = cast(_iobuf*)fps;
@@ -2504,11 +2458,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
          */
         version (Windows)
         {
-            buf.length = 0;
             for (int c; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                {   buf ~= c;
+                {   app ~= cast(char) c;
                     if (c == terminator)
                         break;
                 }
@@ -2524,12 +2477,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
-                    std.utf.encode(buf, c);
+                    //std.utf.encode(buf, c);
+                    app ~= cast(dchar) c;
                 }
             }
-            if (ferror(fp))
-                StdioException();
-            return buf.length;
         }
         else version (Posix)
         {
@@ -2551,19 +2502,19 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         {
             static assert(0);
         }
+        enforceEx!StdioException( !ferror(fps) );
+        return app.usedBuffer;
     }
 
     // Narrow stream
-    buf.length = 0;
     for (int c; (c = FGETC(fp)) != -1; )
     {
-        buf ~= cast(char)c;
+        app ~= cast(char)c;
         if (c == terminator)
             break;
     }
-    if (ferror(fps))
-        StdioException();
-    return buf.length;
+    enforceEx!StdioException( !ferror(fps) );
+    return app.usedBuffer;
 }
 
 

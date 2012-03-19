@@ -353,13 +353,13 @@ string shell(string cmd)
     version(Windows)
     {
         // Generate a random filename
-        auto a = appender!string();
+        auto app = appender!string();
         foreach (ref e; 0 .. 8)
         {
-            formattedWrite(a, "%x", rndGen.front);
+            formattedWrite(app, "%x", rndGen.front);
             rndGen.popFront();
         }
-        auto filename = a.data;
+        auto filename = app.dup;
         scope(exit) if (exists(filename)) remove(filename);
         errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
         return readText(filename);
@@ -368,14 +368,26 @@ string shell(string cmd)
     {
         File f;
         f.popen(cmd, "r");
-        char[] line;
-        string result;
-        while (f.readln(line))
+        char[] buffer;
+        auto result = Appender!string();
+        // In this version buffer never shrinks, and make no extra memory allocations.
+        do
         {
-            result ~= line;
-        }
+            auto line = buffer;
+            auto len  = f.readln(line);
+            if(len == 0)
+                break;
+            result.put(line);
+            if(line.length > buffer.length)
+                buffer = line;
+        } while (true);
+//      // This version causes the buffer to continualy shrink then expand
+//        while (f.readln(line))
+//        {
+//            result.put(line);
+//        }
         f.close();
-        return result;
+        return result.dup;
     }
     else
         static assert(0, "shell not implemented for this OS.");

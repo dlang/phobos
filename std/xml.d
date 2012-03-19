@@ -352,7 +352,7 @@ S encode(S)(S s)
 {
     string r;
     size_t lastI;
-    auto result = appender!S();
+    auto result = Appender!S();
 
     foreach (i, c; s)
     {
@@ -371,9 +371,9 @@ S encode(S)(S s)
         lastI = i + 1;
     }
 
-    if (!result.data) return s;
+    if (result.empty) return s; // no escapes found
     result.put(s[lastI .. $]);
-    return result.data;
+    return result.dup;
 }
 
 unittest

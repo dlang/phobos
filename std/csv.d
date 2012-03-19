@@ -1075,7 +1075,7 @@ private:
     Separator _separator;
     Separator _quote;
     Contents curContentsoken;
-    typeof(appender!(dchar[])()) _front;
+    Appender!(dchar[]) _front;
     bool _empty;
     size_t[] _popCount;
 public:
@@ -1194,7 +1194,7 @@ public:
         if(_input.range.front == _separator)
             _input.range.popFront();
 
-        _front.shrinkTo(0);
+        _front.clear;
 
         prime();
     }
@@ -1207,7 +1207,7 @@ public:
         foreach(i; 0..skipNum)
         {
             _input.col++;
-            _front.shrinkTo(0);
+            _front.clear;
             if(_input.range.front == _separator)
                 _input.range.popFront();
 
@@ -1218,7 +1218,7 @@ public:
             {
                 ice.row = _input.row;
                 ice.col = _input.col;
-                ice.partialData = _front.data.idup;
+                ice.partialData = _front.idup;
                 throw ice;
             }
             catch(ConvException e)
@@ -1240,7 +1240,7 @@ public:
         {
             ice.row = _input.row;
             ice.col = _input.col;
-            ice.partialData = _front.data.idup;
+            ice.partialData = _front.idup;
             throw ice;
         }
 
@@ -1258,7 +1258,7 @@ public:
         if(skipNum)
             prime(skipNum);
 
-        try curContentsoken = to!Contents(_front.data);
+        try curContentsoken = to!Contents(_front.dup);
         catch(ConvException e)
         {
             throw new CSVException(e.msg, _input.row, _input.col, e);
@@ -1279,19 +1279,19 @@ public:
  * auto a = appender!(char[])();
  *
  * csvNextToken(str,a,',','"');
- * assert(a.data == "65");
+ * assert(a.dup == "65");
  * assert(str == ",63\n123,3673");
  *
  * str.popFront();
- * a.shrinkTo(0);
+ * a.clear;
  * csvNextToken(str,a,',','"');
- * assert(a.data == "63");
+ * assert(a.dup == "63");
  * assert(str == "\n123,3673");
  *
  * str.popFront();
- * a.shrinkTo(0);
+ * a.clear;
  * csvNextToken(str,a,',','"');
- * assert(a.data == "123");
+ * assert(a.dup == "123");
  * assert(str == ",3673");
  * -------
  *
@@ -1417,37 +1417,37 @@ unittest
 
     auto a = appender!(dchar[])();
     csvNextToken!string(str,a,',','"');
-    assert(a.data == "\U00010143Hello");
+    assert(a.dup == "\U00010143Hello");
     assert(str == ",65,63.63\nWorld,123,3673.562");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "65");
+    assert(a.dup == "65");
     assert(str == ",63.63\nWorld,123,3673.562");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "63.63");
+    assert(a.dup == "63.63");
     assert(str == "\nWorld,123,3673.562");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "World");
+    assert(a.dup == "World");
     assert(str == ",123,3673.562");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "123");
+    assert(a.dup == "123");
     assert(str == ",3673.562");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "3673.562");
+    assert(a.dup == "3673.562");
     assert(str == "");
 }
 
@@ -1458,37 +1458,37 @@ unittest
 
     auto a = appender!(dchar[])();
     csvNextToken!string(str,a,',','"');
-    assert(a.data == "one");
+    assert(a.dup == "one");
     assert(str == `,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "two");
+    assert(a.dup == "two");
     assert(str == `,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "three \"quoted\"");
+    assert(a.dup == "three \"quoted\"");
     assert(str == `,"",` ~ "\"five\nnew line\"\nsix");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "");
+    assert(a.dup == "");
     assert(str == ",\"five\nnew line\"\nsix");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "five\nnew line");
+    assert(a.dup == "five\nnew line");
     assert(str == "\nsix");
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "six");
+    assert(a.dup == "six");
     assert(str == "");
 }
 
@@ -1498,12 +1498,12 @@ unittest
     string str = "one,";
     auto a = appender!(dchar[])();
     csvNextToken(str,a,',','"');
-    assert(a.data == "one");
+    assert(a.dup == "one");
     assert(str == ",");
 
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a,',','"');
-    assert(a.data == "");
+    assert(a.dup == "");
 }
 
 // Test exceptions
@@ -1511,7 +1511,7 @@ unittest
 {
     string str = "\"one\nnew line";
 
-    typeof(appender!(dchar[])()) a;
+    Appender!(dchar[]) a;
     try
     {
         a = appender!(dchar[])();
@@ -1520,7 +1520,7 @@ unittest
     }
     catch (IncompleteCellException ice)
     {
-        assert(a.data == "one\nnew line");
+        assert(a.dup == "one\nnew line");
         assert(str == "");
     }
 
@@ -1534,7 +1534,7 @@ unittest
     }
     catch (IncompleteCellException ice)
     {
-        assert(a.data == "Hello world");
+        assert(a.dup == "Hello world");
         assert(str == "\"");
     }
 
@@ -1542,11 +1542,11 @@ unittest
 
     a = appender!(dchar[])();
     csvNextToken!(string,Malformed.ignore)(str,a,',','"');
-    assert(a.data == "one");
+    assert(a.dup == "one");
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken!(string,Malformed.ignore)(str,a,',','"');
-    assert(a.data == " two \"quoted\" end");
+    assert(a.dup == " two \"quoted\" end");
 }
 
 
@@ -1557,23 +1557,23 @@ unittest
 
     auto a = appender!(dchar[])();
     csvNextToken(str,a, '|','/');
-    assert(a.data == "one"d);
+    assert(a.dup == "one"d);
     assert(str == `|two|/three "quoted"/|//`);
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a, '|','/');
-    assert(a.data == "two"d);
+    assert(a.dup == "two"d);
     assert(str == `|/three "quoted"/|//`);
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a, '|','/');
-    assert(a.data == `three "quoted"`);
+    assert(a.dup == `three "quoted"`);
     assert(str == `|//`);
 
     str.popFront();
-    a.shrinkTo(0);
+    a.clear;
     csvNextToken(str,a, '|','/');
-    assert(a.data == ""d);
+    assert(a.dup == ""d);
 }

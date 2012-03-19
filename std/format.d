@@ -294,11 +294,11 @@ void main()
 {
     auto writer = appender!string();
     formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
-    assert(writer.data == "42 is the ultimate answer.");
+    assert(writer.dup == "42 is the ultimate answer.");
     // Clear the writer
     writer = appender!string();
     formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-    assert(writer.data == "Date: 5 October");
+    assert(writer.dup == "Date: 5 October");
 }
 ------------------------
 
@@ -654,27 +654,27 @@ struct FormatSpec(Char)
         auto w = appender!(char[])();
         auto f = FormatSpec("abc%sdef%sghi");
         f.writeUpToNextSpec(w);
-        assert(w.data == "abc", w.data);
+        assert(w.dup == "abc", w.dup);
         assert(f.trailing == "def%sghi", text(f.trailing));
         f.writeUpToNextSpec(w);
-        assert(w.data == "abcdef", w.data);
+        assert(w.dup == "abcdef", w.dup);
         assert(f.trailing == "ghi");
         // test with embedded %%s
         f = FormatSpec("ab%%cd%%ef%sg%%h%sij");
         w.clear();
         f.writeUpToNextSpec(w);
-        assert(w.data == "ab%cd%ef" && f.trailing == "g%%h%sij", w.data);
+        assert(w.dup == "ab%cd%ef" && f.trailing == "g%%h%sij", w.dup);
         f.writeUpToNextSpec(w);
-        assert(w.data == "ab%cd%efg%h" && f.trailing == "ij");
+        assert(w.dup == "ab%cd%efg%h" && f.trailing == "ij");
         // bug4775
         f = FormatSpec("%%%s");
         w.clear();
         f.writeUpToNextSpec(w);
-        assert(w.data == "%" && f.trailing == "");
+        assert(w.dup == "%" && f.trailing == "");
         f = FormatSpec("%%%%%s%%");
         w.clear();
         while (f.writeUpToNextSpec(w)) continue;
-        assert(w.data == "%%%");
+        assert(w.dup == "%%%");
     }
 
     private void fillUp()
@@ -931,7 +931,7 @@ struct FormatSpec(Char)
         if (precision != FormatSpec!Char.UNSPECIFIED)
             put(w, '.'), formatValue(w, precision, f);
         put(w, spec);
-        return w.data;
+        return w.dup;
     }
 
     unittest
@@ -968,7 +968,7 @@ struct FormatSpec(Char)
                 tr.popFront();
             }
         }
-        return w.data;
+        return w.dup;
     }
 
     string toString()
@@ -1644,7 +1644,7 @@ if (isSomeString!T)
         try
         {
             // ignore other specifications and quote
-            auto app = appender!(typeof(T[0])[])();
+            Appender!(typeof(T[0])[]) app;
             put(app, '\"');
             for (size_t i = 0; i < val.length; )
             {
@@ -1656,7 +1656,7 @@ if (isSomeString!T)
                 formatChar(app, c);
             }
             put(app, '\"');
-            put(w, app.data());
+            put(w, app[]);
             return;
         }
         catch (UTFException)
@@ -2082,7 +2082,7 @@ unittest
     FormatSpec!char f;
     auto w = appender!(char[])();
     formatValue(w, bug, f);
-    assert(w.data == `Bug7230("hello", #{overlap a, b, c}, 10)`);
+    assert(w.dup == `Bug7230("hello", #{overlap a, b, c}, 10)`);
 }
 
 unittest
@@ -2093,7 +2093,7 @@ unittest
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, s, f);
-    assert(w.data == "S()");
+    assert(w.dup == "S()");
 }
 
 /**
@@ -2301,8 +2301,8 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
     auto w = appender!string();
     formatValue(w, val, f);
     enforceEx!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+            w.dup == expected,
+            text("expected = `", expected, "`, result = `", w.dup, "`"), fn, ln);
 }
 
 version(unittest)
@@ -2311,32 +2311,32 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
     auto w = appender!string();
     formattedWrite(w, fmt, val);
     enforceEx!AssertError(
-            w.data == expected,
-            text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
+            w.dup == expected,
+            text("expected = `", expected, "`, result = `", w.dup, "`"), fn, ln);
 }
 
 unittest
 {
     auto stream = appender!string();
     formattedWrite(stream, "%s", 1.1);
-    assert(stream.data == "1.1", stream.data);
+    assert(stream.dup == "1.1", stream.dup);
 
     stream = appender!string();
     formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
-    assert(stream.data == "[4, 9, 25]", stream.data);
+    assert(stream.dup == "[4, 9, 25]", stream.dup);
 
     // Test shared data.
     stream = appender!string();
     shared int s = 6;
     formattedWrite(stream, "%s", s);
-    assert(stream.data == "6");
+    assert(stream.dup == "6");
 }
 
 unittest
 {
     auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
-    assert(stream.data == "42", stream.data);
+    assert(stream.dup == "42", stream.dup);
 }
 
 unittest
@@ -2345,12 +2345,12 @@ unittest
     auto w = appender!(char[])();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
-    assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
-        && w.data[2] == 4 && w.data[3] == 5);
+    assert(w.dup.length == 4 && w.dup[0] == 2 && w.dup[1] == 3
+        && w.dup[2] == 4 && w.dup[3] == 5);
     w.clear();
     formattedWrite(w, "%-r", a);
-    assert(w.data.length == 4 && w.data[0] == 5 && w.data[1] == 4
-        && w.data[2] == 3 && w.data[3] == 2);
+    assert(w.dup.length == 4 && w.dup[0] == 5 && w.dup[1] == 4
+        && w.dup[2] == 3 && w.dup[3] == 2);
 }
 
 unittest
@@ -2360,14 +2360,14 @@ unittest
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
             42, 0);
-    assert(w.data == "Numbers 0 and 42 are reversed and 420 repeated",
-            w.data);
+    assert(w.dup == "Numbers 0 and 42 are reversed and 420 repeated",
+            w.dup);
     w.clear();
     formattedWrite(w, "asd%s", 23);
-    assert(w.data == "asd23", w.data);
+    assert(w.dup == "asd23", w.dup);
     w.clear();
     formattedWrite(w, "%s%s", 23, 45);
-    assert(w.data == "2345", w.data);
+    assert(w.dup == "2345", w.dup);
 }
 
 unittest
@@ -2379,12 +2379,12 @@ unittest
 
     formattedWrite(stream,
             "hello world! %s %s ", true, 57, 1_000_000_000, 'x', " foo");
-    assert(stream.data == "hello world! true 57 ",
-        stream.data);
+    assert(stream.dup == "hello world! true 57 ",
+        stream.dup);
 
     stream.clear();
     formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    // std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    // std.c.stdio.fwrite(stream.dup.ptr, stream.length, 1, stderr);
 
     /* The host C library is used to format floats.  C99 doesn't
     * specify what the hex digit before the decimal point is for
@@ -2392,66 +2392,66 @@ unittest
 
     version (linux)
     {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
+        assert(stream.dup == "1.67 -0X1.47AE147AE147BP+0 nan",
+                stream.dup);
     }
     else version (OSX)
     {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
+        assert(stream.dup == "1.67 -0X1.47AE147AE147BP+0 nan",
+                stream.dup);
     }
     else
     {
-        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
-                stream.data);
+        assert(stream.dup == "1.67 -0X1.47AE147AE147BP+0 nan",
+                stream.dup);
     }
     stream.clear();
 
     formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "1234af AFAFAFAF");
+    assert(stream.dup == "1234af AFAFAFAF");
     stream.clear();
 
     formattedWrite(stream, "%b %o", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "100100011010010101111 25753727657");
+    assert(stream.dup == "100100011010010101111 25753727657");
     stream.clear();
 
     formattedWrite(stream, "%d %s", 0x1234AF, 0xAFAFAFAF);
-    assert(stream.data == "1193135 2947526575");
+    assert(stream.dup == "1193135 2947526575");
     stream.clear();
 
     // formattedWrite(stream, "%s", 1.2 + 3.4i);
-    // assert(stream.data == "1.2+3.4i");
+    // assert(stream.dup == "1.2+3.4i");
     // stream.clear();
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    assert(stream.dup == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
     formattedWrite(stream, "%#06.*f",2,12.345);
-    assert(stream.data == "012.35");
+    assert(stream.dup == "012.35");
     stream.clear();
 
     formattedWrite(stream, "%#0*.*f",6,2,12.345);
-    assert(stream.data == "012.35");
+    assert(stream.dup == "012.35");
     stream.clear();
 
     const real constreal = 1;
     formattedWrite(stream, "%g",constreal);
-    assert(stream.data == "1");
+    assert(stream.dup == "1");
     stream.clear();
 
     formattedWrite(stream, "%7.4g:", 12.678);
-    assert(stream.data == "  12.68:");
+    assert(stream.dup == "  12.68:");
     stream.clear();
 
     formattedWrite(stream, "%7.4g:", 12.678L);
-    assert(stream.data == "  12.68:");
+    assert(stream.dup == "  12.68:");
     stream.clear();
 
     formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
-    assert(stream.data == "-4.000000|-0010|0x001|  0x1",
-            stream.data);
+    assert(stream.dup == "-4.000000|-0010|0x001|  0x1",
+            stream.dup);
     stream.clear();
 
     int i;
@@ -2459,258 +2459,258 @@ unittest
 
     i = -10;
     formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "-10|-10|-10|-10|-10.0000");
+    assert(stream.dup == "-10|-10|-10|-10|-10.0000");
     stream.clear();
 
     i = -5;
     formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "-5| -5|-05|-5|-5.0000");
+    assert(stream.dup == "-5| -5|-05|-5|-5.0000");
     stream.clear();
 
     i = 0;
     formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "0|  0|000|0|0.0000");
+    assert(stream.dup == "0|  0|000|0|0.0000");
     stream.clear();
 
     i = 5;
     formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "5|  5|005|5|5.0000");
+    assert(stream.dup == "5|  5|005|5|5.0000");
     stream.clear();
 
     i = 10;
     formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-    assert(stream.data == "10| 10|010|10|10.0000");
+    assert(stream.dup == "10| 10|010|10|10.0000");
     stream.clear();
 
     formattedWrite(stream, "%.0d", 0);
-    assert(stream.data == "");
+    assert(stream.dup == "");
     stream.clear();
 
     formattedWrite(stream, "%.g", .34);
-    assert(stream.data == "0.3");
+    assert(stream.dup == "0.3");
     stream.clear();
 
     stream.clear(); formattedWrite(stream, "%.0g", .34);
-    assert(stream.data == "0.3");
+    assert(stream.dup == "0.3");
 
     stream.clear(); formattedWrite(stream, "%.2g", .34);
-    assert(stream.data == "0.34");
+    assert(stream.dup == "0.34");
 
     stream.clear(); formattedWrite(stream, "%0.0008f", 1e-08);
-    assert(stream.data == "0.00000001");
+    assert(stream.dup == "0.00000001");
 
     stream.clear(); formattedWrite(stream, "%0.0008f", 1e-05);
-    assert(stream.data == "0.00001000");
+    assert(stream.dup == "0.00001000");
 
     //return;
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //std.c.stdio.fwrite(stream.dup.ptr, stream.dup.length, 1, stderr);
 
     s = "helloworld";
     string r;
     stream.clear(); formattedWrite(stream, "%.2s", s[0..5]);
-    assert(stream.data == "he");
+    assert(stream.dup == "he");
     stream.clear(); formattedWrite(stream, "%.20s", s[0..5]);
-    assert(stream.data == "hello");
+    assert(stream.dup == "hello");
     stream.clear(); formattedWrite(stream, "%8s", s[0..5]);
-    assert(stream.data == "   hello");
+    assert(stream.dup == "   hello");
 
     byte[] arrbyte = new byte[4];
     arrbyte[0] = 100;
     arrbyte[1] = -99;
     arrbyte[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrbyte);
-    assert(stream.data == "[100, -99, 0, 0]", stream.data);
+    assert(stream.dup == "[100, -99, 0, 0]", stream.dup);
 
     ubyte[] arrubyte = new ubyte[4];
     arrubyte[0] = 100;
     arrubyte[1] = 200;
     arrubyte[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrubyte);
-    assert(stream.data == "[100, 200, 0, 0]", stream.data);
+    assert(stream.dup == "[100, 200, 0, 0]", stream.dup);
 
     short[] arrshort = new short[4];
     arrshort[0] = 100;
     arrshort[1] = -999;
     arrshort[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrshort);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
     stream.clear(); formattedWrite(stream, "%s",arrshort);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
 
     ushort[] arrushort = new ushort[4];
     arrushort[0] = 100;
     arrushort[1] = 20_000;
     arrushort[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrushort);
-    assert(stream.data == "[100, 20000, 0, 0]");
+    assert(stream.dup == "[100, 20000, 0, 0]");
 
     int[] arrint = new int[4];
     arrint[0] = 100;
     arrint[1] = -999;
     arrint[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrint);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
     stream.clear(); formattedWrite(stream, "%s",arrint);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
 
     long[] arrlong = new long[4];
     arrlong[0] = 100;
     arrlong[1] = -999;
     arrlong[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrlong);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
     stream.clear(); formattedWrite(stream, "%s",arrlong);
-    assert(stream.data == "[100, -999, 0, 0]");
+    assert(stream.dup == "[100, -999, 0, 0]");
 
     ulong[] arrulong = new ulong[4];
     arrulong[0] = 100;
     arrulong[1] = 999;
     arrulong[3] = 0;
     stream.clear(); formattedWrite(stream, "%s", arrulong);
-    assert(stream.data == "[100, 999, 0, 0]");
+    assert(stream.dup == "[100, 999, 0, 0]");
 
     string[] arr2 = new string[4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";
     stream.clear(); formattedWrite(stream, "%s", arr2);
-    assert(stream.data == `["hello", "world", "", "foo"]`, stream.data);
+    assert(stream.dup == `["hello", "world", "", "foo"]`, stream.dup);
 
     stream.clear(); formattedWrite(stream, "%.8d", 7);
-    assert(stream.data == "00000007");
+    assert(stream.dup == "00000007");
 
     stream.clear(); formattedWrite(stream, "%.8x", 10);
-    assert(stream.data == "0000000a");
+    assert(stream.dup == "0000000a");
 
     stream.clear(); formattedWrite(stream, "%-3d", 7);
-    assert(stream.data == "7  ");
+    assert(stream.dup == "7  ");
 
     stream.clear(); formattedWrite(stream, "%*d", -3, 7);
-    assert(stream.data == "7  ");
+    assert(stream.dup == "7  ");
 
     stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
-    //writeln(stream.data);
-    assert(stream.data == "7");
+    //writeln(stream.dup);
+    assert(stream.dup == "7");
 
 //  assert(false);
 //   typedef int myint;
 //   myint m = -7;
 //   stream.clear(); formattedWrite(stream, "", m);
-//   assert(stream.data == "-7");
+//   assert(stream.dup == "-7");
 
     stream.clear(); formattedWrite(stream, "%s", "abc"c);
-    assert(stream.data == "abc");
+    assert(stream.dup == "abc");
     stream.clear(); formattedWrite(stream, "%s", "def"w);
-    assert(stream.data == "def", text(stream.data.length));
+    assert(stream.dup == "def", text(stream.dup.length));
     stream.clear(); formattedWrite(stream, "%s", "ghi"d);
-    assert(stream.data == "ghi");
+    assert(stream.dup == "ghi");
 
 here:
     void* p = cast(void*)0xDEADBEEF;
     stream.clear(); formattedWrite(stream, "%s", p);
-    assert(stream.data == "DEADBEEF", stream.data);
+    assert(stream.dup == "DEADBEEF", stream.dup);
 
     stream.clear(); formattedWrite(stream, "%#x", 0xabcd);
-    assert(stream.data == "0xabcd");
+    assert(stream.dup == "0xabcd");
     stream.clear(); formattedWrite(stream, "%#X", 0xABCD);
-    assert(stream.data == "0XABCD");
+    assert(stream.dup == "0XABCD");
 
     stream.clear(); formattedWrite(stream, "%#o", octal!12345);
-    assert(stream.data == "012345");
+    assert(stream.dup == "012345");
     stream.clear(); formattedWrite(stream, "%o", 9);
-    assert(stream.data == "11");
+    assert(stream.dup == "11");
 
     stream.clear(); formattedWrite(stream, "%+d", 123);
-    assert(stream.data == "+123");
+    assert(stream.dup == "+123");
     stream.clear(); formattedWrite(stream, "%+d", -123);
-    assert(stream.data == "-123");
+    assert(stream.dup == "-123");
     stream.clear(); formattedWrite(stream, "% d", 123);
-    assert(stream.data == " 123");
+    assert(stream.dup == " 123");
     stream.clear(); formattedWrite(stream, "% d", -123);
-    assert(stream.data == "-123");
+    assert(stream.dup == "-123");
 
     stream.clear(); formattedWrite(stream, "%%");
-    assert(stream.data == "%");
+    assert(stream.dup == "%");
 
     stream.clear(); formattedWrite(stream, "%d", true);
-    assert(stream.data == "1");
+    assert(stream.dup == "1");
     stream.clear(); formattedWrite(stream, "%d", false);
-    assert(stream.data == "0");
+    assert(stream.dup == "0");
 
     stream.clear(); formattedWrite(stream, "%d", 'a');
-    assert(stream.data == "97", stream.data);
+    assert(stream.dup == "97", stream.dup);
     wchar wc = 'a';
     stream.clear(); formattedWrite(stream, "%d", wc);
-    assert(stream.data == "97");
+    assert(stream.dup == "97");
     dchar dc = 'a';
     stream.clear(); formattedWrite(stream, "%d", dc);
-    assert(stream.data == "97");
+    assert(stream.dup == "97");
 
     byte b = byte.max;
     stream.clear(); formattedWrite(stream, "%x", b);
-    assert(stream.data == "7f");
+    assert(stream.dup == "7f");
     stream.clear(); formattedWrite(stream, "%x", ++b);
-    assert(stream.data == "80");
+    assert(stream.dup == "80");
     stream.clear(); formattedWrite(stream, "%x", ++b);
-    assert(stream.data == "81");
+    assert(stream.dup == "81");
 
     short sh = short.max;
     stream.clear(); formattedWrite(stream, "%x", sh);
-    assert(stream.data == "7fff");
+    assert(stream.dup == "7fff");
     stream.clear(); formattedWrite(stream, "%x", ++sh);
-    assert(stream.data == "8000");
+    assert(stream.dup == "8000");
     stream.clear(); formattedWrite(stream, "%x", ++sh);
-    assert(stream.data == "8001");
+    assert(stream.dup == "8001");
 
     i = int.max;
     stream.clear(); formattedWrite(stream, "%x", i);
-    assert(stream.data == "7fffffff");
+    assert(stream.dup == "7fffffff");
     stream.clear(); formattedWrite(stream, "%x", ++i);
-    assert(stream.data == "80000000");
+    assert(stream.dup == "80000000");
     stream.clear(); formattedWrite(stream, "%x", ++i);
-    assert(stream.data == "80000001");
+    assert(stream.dup == "80000001");
 
     stream.clear(); formattedWrite(stream, "%x", 10);
-    assert(stream.data == "a");
+    assert(stream.dup == "a");
     stream.clear(); formattedWrite(stream, "%X", 10);
-    assert(stream.data == "A");
+    assert(stream.dup == "A");
     stream.clear(); formattedWrite(stream, "%x", 15);
-    assert(stream.data == "f");
+    assert(stream.dup == "f");
     stream.clear(); formattedWrite(stream, "%X", 15);
-    assert(stream.data == "F");
+    assert(stream.dup == "F");
 
     Object c = null;
     stream.clear(); formattedWrite(stream, "%s", c);
-    assert(stream.data == "null");
+    assert(stream.dup == "null");
 
     enum TestEnum
     {
         Value1, Value2
     }
     stream.clear(); formattedWrite(stream, "%s", TestEnum.Value2);
-    assert(stream.data == "Value2", stream.data);
+    assert(stream.dup == "Value2", stream.dup);
     stream.clear(); formattedWrite(stream, "%s", cast(TestEnum)5);
-    assert(stream.data == "cast(TestEnum)5", stream.data);
+    assert(stream.dup == "cast(TestEnum)5", stream.dup);
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     //stream.clear(); formattedWrite(stream, "%s", aa.values);
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
-    //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
+    //std.c.stdio.fwrite(stream.dup.ptr, stream.dup.length, 1, stderr);
+    //assert(stream.dup == "[[h,e,l,l,o],[b,e,t,t,y]]");
     //stream.clear(); formattedWrite(stream, "%s", aa);
-    //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+    //assert(stream.dup == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 
     static const dchar[] ds = ['a','b'];
     for (int j = 0; j < ds.length; ++j)
     {
         stream.clear(); formattedWrite(stream, " %d", ds[j]);
         if (j == 0)
-            assert(stream.data == " 97");
+            assert(stream.dup == " 97");
         else
-            assert(stream.data == " 98");
+            assert(stream.dup == " 98");
     }
 
     stream.clear(); formattedWrite(stream, "%.-3d", 7);
-    assert(stream.data == "7", ">" ~ stream.data ~ "<");
+    assert(stream.dup == "7", ">" ~ stream.dup ~ "<");
 
 
     // systematic test
@@ -2806,11 +2806,11 @@ here:
                                       break;
                                   }
                                   auto exp = buf[0 .. strlen(buf.ptr)];
-                                  if (stream.data != exp)
+                                  if (stream.dup != exp)
                                   {
                                       writeln("Format: \"", fmt, '"');
                                       writeln("Expected: >", exp, "<");
-                                      writeln("Actual:   >", stream.data,
+                                      writeln("Actual:   >", stream.dup,
                                               "<");
                                       assert(false);
                                   }
@@ -2846,12 +2846,12 @@ unittest
         T value = 1;
         stream.clear();
         formattedWrite(stream, "%s", value);
-        assert(stream.data == "1");
+        assert(stream.dup == "1");
     }
 
     //auto r = std.string.format("%s", aa.values);
     stream.clear(); formattedWrite(stream, "%s", aa);
-    //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.data);
+    //assert(stream.dup == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.dup);
 //    r = std.string.format("%s", aa);
 //   assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 }
@@ -2872,7 +2872,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
-    auto input = w.data;
+    auto input = w.dup;
     enforceEx!AssertError(
             input == formatted,
             input, fn, ln);
@@ -3265,7 +3265,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         return result;
     }
     else
-        return app.data;
+        return app.dup;
 }
 
 unittest
@@ -5087,5 +5087,5 @@ unittest
     // bugzilla 3479
     auto stream = appender!(char[])();
     formattedWrite(stream, "%2$.*1$d", 12, 10);
-    assert(stream.data == "000000000010", stream.data);
+    assert(stream.dup == "000000000010", stream.dup);
 }

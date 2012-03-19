@@ -96,7 +96,7 @@ struct Interval
     {
         auto s = appender!string();
         formattedWrite(s,"%s..%s", begin, end);
-        return s.data;
+        return s.dup;
     }
 
 }

@@ -1290,7 +1290,7 @@ unittest
 deprecated S capwords(S)(S s) if (isSomeString!S)
 {
     alias typeof(s[0]) C;
-    auto retval = appender!(C[])();
+    auto retval = Appender!(C[])();
     bool inWord = false;
     size_t wordStart = 0;
 
@@ -1306,7 +1306,7 @@ deprecated S capwords(S)(S s) if (isSomeString!S)
         }
         else if(!inWord)
         {
-            if(!retval.data.empty)
+            if(!retval.empty)
                 retval.put(' ');
 
             wordStart = i;
@@ -1317,7 +1317,7 @@ deprecated S capwords(S)(S s) if (isSomeString!S)
     if(inWord)
         retval.put(capitalize(s[wordStart .. $]));
 
-    return cast(S)retval.data;
+    return cast(S)retval.dup;
 }
 
 unittest
@@ -1380,7 +1380,7 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
 {
     size_t iStart = 0;
     size_t nextI = 0;
-    auto retval = appender!(S[])();
+    auto retval = Appender!(S[])();
 
     for(size_t i; i < s.length; i = nextI)
     {
@@ -1410,7 +1410,7 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no)
     if(iStart != nextI)
         retval.put(s[iStart .. $]);
 
-    return retval.data;
+    return retval.dup;
 }
 
 unittest
@@ -2266,7 +2266,7 @@ private auto translateImpl(C1, T, C2)(C1[] str,
                                       T transTable,
                                       const(C2)[] toRemove) @trusted
 {
-    auto retval = appender!(C1[])();
+    auto retval = Appender!(C1[])();
 
     bool[dchar] removeTable;
 
@@ -2286,7 +2286,7 @@ private auto translateImpl(C1, T, C2)(C1[] str,
             retval.put(c);
     }
 
-    return retval.data;
+    return retval.dup;
 }
 
 
@@ -2954,7 +2954,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     if (to.empty && !mod_d)
         to = std.conv.to!(typeof(to))(from);
 
-    auto result = appender!(C1[])();
+    auto result = Appender!(C1[])();
     bool modified;
     dchar lastc;
 
@@ -3040,7 +3040,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         modified = false;
     }
 
-    return result.data;
+    return result.dup;
 }
 
 unittest

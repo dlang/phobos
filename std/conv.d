@@ -99,7 +99,7 @@ private
         auto w = appender!T();
         FormatSpec!(typeof(T.init[0])) f;
         formatValue(w, src, f);
-        return w.data;
+        return w.dup;
     }
 }
 
@@ -827,7 +827,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
     {
         alias Unqual!(typeof(T.init[0])) Char;
         // array-to-string conversion
-        auto result = appender!(Char[])();
+        auto result = Appender!(Char[])();
         result.put(leftBracket);
         bool first = true;
         for (; !s.empty; s.popFront())
@@ -843,7 +843,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
             result.put(to!T(s.front));
         }
         result.put(rightBracket);
-        return cast(T) result.data;
+        return cast(T) result.dup;
     }
 }
 
@@ -911,7 +911,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
                                                  "std.format.formattedWrite"));
 
     alias Unqual!(typeof(T.init[0])) Char;
-    auto result = appender!(Char[])();
+    auto result = Appender!(Char[])();
 // hash-to-string conversion
     result.put(leftBracket);
     bool first = true;
@@ -925,7 +925,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
         result.put(to!T(v));
     }
     result.put(rightBracket);
-    return cast(T) result.data;
+    return cast(T) result.dup;
 }
 
 /// ditto
@@ -1000,7 +1000,7 @@ T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
         // ok, attempt to forge the tuple
         t = cast(typeof(t)) &s;
         alias Unqual!(typeof(T.init[0])) Char;
-        auto app = appender!(Char[])();
+        auto app = Appender!(Char[])();
         app.put(left);
         foreach (i, e; t.field)
         {
@@ -1009,7 +1009,7 @@ T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
             app.put(to!T(e));
         }
         app.put(right);
-        return cast(T) app.data;
+        return cast(T) app.dup;
     }
     else
     {
@@ -1980,7 +1980,7 @@ body
 
     Target v = 0;
     size_t i = 0;
-    
+
     for (; !s.empty; s.popFront(), ++i)
     {
         uint c = s.front;
@@ -2949,7 +2949,7 @@ Target parseElement(Target, Source)(ref Source s)
     if (s.front == '\"')
     {
         s.popFront();
-        return result.data;
+        return result.dup;
     }
     while (true)
     {
@@ -2959,7 +2959,7 @@ Target parseElement(Target, Source)(ref Source s)
         {
             case '\"':
                 s.popFront();
-                return result.data;
+                return result.dup;
             case '\\':
                 result.put(parseEscape(s));
                 break;

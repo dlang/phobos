@@ -482,7 +482,7 @@ static assert(Bytecode.sizeof == 4);
 //debugging tool, prints out instruction along with opcodes
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
-    auto output = appender!string();
+    auto output = Appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
     switch(irb[pc].code)
     {
@@ -537,7 +537,7 @@ static assert(Bytecode.sizeof == 4);
     }
     if(irb[pc].hotspot)
         formattedWrite(output, " Hotspot %u", irb[pc+1].raw);
-    return output.data;
+    return output.dup;
 }
 
 //another pretty printer, writes out the bytecode of a regex and where the pc is
@@ -626,7 +626,7 @@ struct Group(DataIndex)
     {
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
-        return a.data;
+        return a.dup;
     }
 }
 
@@ -801,38 +801,31 @@ auto memoizeExpr(string expr)()
 //basic stack, just in case it gets used anywhere else then Parser
 @trusted struct Stack(T, bool CTFE=false)
 {
-    static if(!CTFE)
-        Appender!(T[]) stack;//compiles but bogus at CTFE
-    else
-    {
-        struct Proxy
-        {
-            T[] data;
-            void put(T val)
-            {
-                data ~= val;
-            }
-            void shrinkTo(size_t sz){   data = data[0..sz]; }
-        }
-        Proxy stack;
-    }
-    @property bool empty(){ return stack.data.empty; }
+    T[]    _data;
+    size_t _index;
+
+    @property bool empty(){ return _index == 0; }
     void push(T item)
     {
-        stack.put(item);
+        if(_index >= _data.length) {
+            _data.length = max(128,_index*2);
+        }
+        _data[_index++] = item;
     }
+    // ref T is required for this to work properly with std.regex
     @property ref T top()
     {
-        assert(!empty);
-        return stack.data[$-1];
+        return _data[_index-1];
     }
-    @property size_t length() {  return stack.data.length; }
+
+    @property size_t length() {  return _index; }
     T pop()
     {
-        assert(!empty);
-        auto t = stack.data[$-1];
-        stack.shrinkTo(stack.data.length-1);
-        return t;
+        return _data[--_index];
+    }
+
+    @property auto all() {
+        return _data[0.._index];
     }
 }
 
@@ -1015,7 +1008,7 @@ struct Parser(R, bool CTFE=false)
         while(!empty)
         {
             debug(fred_parser)
-                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.stack.data);
+                writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.all);
             switch(current)
             {
             case '(':
@@ -1052,7 +1045,8 @@ struct Parser(R, bool CTFE=false)
                         if(current != '>')
                             error("Expected '>' closing named group");
                         next();
-                        nglob = groupStack.top++;
+                        nglob = groupStack.top;
+                        groupStack.top = nglob + 1;
                         enforce(groupStack.top <= maxGroupNumber, "limit on submatches is exceeded");
                         auto t = NamedGroup(name, nglob);
 
@@ -1088,7 +1082,8 @@ struct Parser(R, bool CTFE=false)
                 }
                 else
                 {
-                    nglob = groupStack.top++;
+                    nglob = groupStack.top;
+                    groupStack.top = nglob + 1;
                     enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
                     put(Bytecode(IR.GroupStart, nglob));
                 }
@@ -1391,7 +1386,7 @@ struct Parser(R, bool CTFE=false)
         ir[fix+1] = Bytecode.fromRaw(groupStack.top);
         //groups are cumulative across lookarounds
         ir[fix+2] = Bytecode.fromRaw(groupStack.top+g);
-        groupStack.top += g;
+        groupStack.top = groupStack.top + g;
     }
 
     //CodepointSet operations relatively in order of priority
@@ -1422,7 +1417,7 @@ struct Parser(R, bool CTFE=false)
             else
                 set.add(ch);
         }
-        
+
         static Operator twinSymbolOperator(dchar symbol)
         {
             switch(symbol)
@@ -1435,7 +1430,7 @@ struct Parser(R, bool CTFE=false)
                 return Operator.SymDifference;
             case '&':
                 return Operator.Intersection;
-            default: 
+            default:
                 assert(false);
             }
         }
@@ -1477,7 +1472,7 @@ struct Parser(R, bool CTFE=false)
                 case '&':
                     // then last is treated as normal char and added as implicit union
                     state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags); 
+                    addWithFlags(set, last, re_flags);
                     last = current;
                     break;
                 case '-': // still need more info
@@ -1718,7 +1713,7 @@ struct Parser(R, bool CTFE=false)
             while(cond(opstack.top))
             {
                 debug(fred_charset)
-                    writeln(opstack.stack.data);
+                    writeln(opstack.all);
                 if(!apply(opstack.pop(),vstack))
                     return false;//syntax error
                 if(opstack.empty)
@@ -1883,7 +1878,7 @@ struct Parser(R, bool CTFE=false)
         case '1': .. case '9':
             uint nref = cast(uint)current - '0';
             uint maxBackref;
-            foreach(v; groupStack.stack.data)
+            foreach(v; groupStack.all)
                 maxBackref += v;
             uint localLimit = maxBackref - groupStack.top;
             enforce(nref < maxBackref, "Backref to unseen group");
@@ -1948,7 +1943,7 @@ struct Parser(R, bool CTFE=false)
         ir = null;
         formattedWrite(app, "%s\nPattern with error: `%s` <--HERE-- `%s`",
                        msg, origin[0..$-pat.length], pat);
-        throw new RegexException(app.data);
+        throw new RegexException(app.dup);
     }
 
     alias BasicElementOf!R Char;
@@ -2332,7 +2327,7 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
                     uint max = re.ir[pc+4].raw;
                     if(counter < max)
                     {
-                        if(app.data.length < limit && rand(3) > 0)
+                        if(app.length < limit && rand(3) > 0)
                         {
                             pc -= len;
                             counter += step;
@@ -2355,13 +2350,13 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
                 case IR.InfiniteEnd:
                 case IR.InfiniteQEnd:
                     uint len = re.ir[pc].data;
-                    if(app.data.length == dataLenOld)
+                    if(app.length == dataLenOld)
                     {
                         pc += IRL!(IR.InfiniteEnd);
                         break;
                     }
-                    dataLenOld = app.data.length;
-                    if(app.data.length < limit && rand(3) > 0)
+                    dataLenOld = app.length;
+                    if(app.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
                         pc = pc + IRL!(IR.InfiniteEnd);
@@ -2379,14 +2374,14 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 
     @property Char[] front()
     {
-        return app.data;
+        return app.dup;
     }
 
     @property empty(){  return false; }
 
     void popFront()
     {
-        app.shrinkTo(0);
+        app.clear;
         compose();
     }
 }
@@ -2665,7 +2660,7 @@ public:
 
                 case IR.GotoEndOr:
                     t.pc += IRL!(IR.GotoEndOr)+re.ir[t.pc].data;
-                    assert(re.ir[t.pc].code == IR.OrEnd);
+                    assert(re.ir[t.pc].code == IR.OrEnd, text(typeof(re.ir[t.pc].code).stringof,"'",re.ir[t.pc].code,"' != '",IR.OrEnd,"'") );
                     goto case;
                 case IR.OrEnd:
                     t.pc += IRL!(IR.OrEnd);
@@ -6556,7 +6551,7 @@ public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R for
         offset = m.pre.length + m.hit.length;
     }
     app.put(input[offset .. $]);
-    return app.data;
+    return app.dup;
 }
 
 /++
@@ -6598,7 +6593,7 @@ public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegE
         offset = m.pre.length + m.hit.length;
     }
     app.put(input[offset .. $]);
-    return app.data;
+    return app.dup;
 }
 
 //produce replacement string from format using captures for substitue
@@ -6777,7 +6772,7 @@ public @trusted String[] split(String, RegEx)(String input, RegEx rx)
     auto a = appender!(String[])();
     foreach(e; splitter(input, rx))
         a.put(e);
-    return a.data;
+    return a.dup;
 }
 
 ///Exception object thrown in case of errors during regex compilation.
@@ -7118,7 +7113,7 @@ unittest
     {
         auto app = appender!(String)();
         replaceFmt(fmt, m.captures, app, true);
-        return app.data;
+        return app.dup;
     }
     void run_tests(alias matchFn)()
     {
@@ -7130,7 +7125,7 @@ unittest
             {
                 auto app = appender!(String)();
                 replaceFmt(fmt, m.captures, app, true);
-                return app.data;
+                return app.dup;
             }
             Regex!(Char) r;
             foreach(a, tvd; tv)
@@ -7486,7 +7481,7 @@ else
         auto w1 = ["", "abc", "de", "fg", "hi", ""];
         assert(equal(split(s1, regex(", *")), w1[]));
     }
-    unittest 
+    unittest
     { // bugzilla 7141
         string pattern = `[a\--b]`;
         assert(match("-", pattern));

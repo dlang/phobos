@@ -139,7 +139,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         }
 
         string parseString() {
-                auto str = appender!string();
+                auto str = Appender!string();
 
         Next:
                 switch(peekChar()) {
@@ -181,7 +181,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                         goto Next;
                 }
 
-                return str.data;
+                return str.dup;
         }
 
         void parseValue(JSONValue* value) {
@@ -232,7 +232,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
 
                 case '0': .. case '9':
                 case '-':
-                        auto number = appender!string();
+                        auto number = Appender!string();
                         bool isFloat;
 
                         void readInteger() {
@@ -268,7 +268,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                 readInteger();
                         }
 
-                        string data = number.data;
+                        string data = number.dup;
                         if(isFloat) {
                                 value.type = JSON_TYPE.FLOAT;
                                 value.floating = parse!real(data);
@@ -319,7 +319,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
  Takes a tree of JSON values and returns the serialized string.
 */
 string toJSON(in JSONValue* root) {
-        auto json = appender!string();
+        auto json = Appender!string();
 
         void toString(string str) {
                 json.put('"');
@@ -395,7 +395,7 @@ string toJSON(in JSONValue* root) {
         }
 
         toValue(root);
-        return json.data;
+        return json.dup;
 }
 
 private void appendJSONChar(Appender!string* dst, dchar c,
