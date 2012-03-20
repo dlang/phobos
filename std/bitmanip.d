@@ -813,7 +813,7 @@ struct BitArray
     /***************************************
      * Convert to $(D void[]).
      */
-    void[] opCast()
+    void[] opCast(T : void[])()
     {
         return cast(void[])ptr[0 .. dim];
     }
@@ -821,7 +821,7 @@ struct BitArray
     /***************************************
      * Convert to $(D size_t[]).
      */
-    size_t[] opCast()
+    size_t[] opCast(T : size_t[])()
     {
         return ptr[0 .. dim];
     }
