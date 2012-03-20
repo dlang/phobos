@@ -5932,7 +5932,16 @@ unittest {
     assert(equal(app.data, [1,2,3]));
 }
 
-//helper for SortedRange lowerBound etc.
+/**
+  Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
+  The following code should compile:
+  ---
+  T1 t1; 
+  T2 t2;
+  fn(t1, t2);
+  fn(t2, t1);
+  ---
+*/
 template isTwoWayCompatible(alias fn, T1, T2)
 {
     enum isTwoWayCompatible = is(typeof( (){ 
