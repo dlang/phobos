@@ -1507,7 +1507,7 @@ unittest
  *
  *  struct VarVisitor {
  *       int opCall(string s) {
- *           return s.length;
+ *           return cast(int)s.length;
  *       }
  *
  *       int opCall(int i) const {
@@ -1531,6 +1531,7 @@ unittest
  * Throws: VariantException if $(D_PARAM variant) doesn't hold a value.
  */
 auto applyVisitor(Visitor, size_t maxSize, Types...)(ref VariantN!(maxSize,Types) variant, ref Visitor visitor)
+    if (Types.length > 0) // Only Algebraic types are supported
 {
     if (!variant.hasValue())
         throw new VariantException("variant must hold a value before being visited.");
@@ -1559,7 +1560,7 @@ unittest
 
     struct VarVisitor {
         int opCall(string s) const {
-            return s.length;
+            return cast(int)s.length;
         }
 
         int opCall(ref int i) const {
@@ -1575,7 +1576,11 @@ unittest
 
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
-    assert(!__traits(compiles, applyVisitor(variant2, visitor)));
+    static assert(!__traits(compiles, applyVisitor(variant2, visitor)));
+
+    // mustn't compile as generic Variant not supported
+    Variant v;
+    static assert(!__traits(compiles, applyVisitor(v,visitor)));
 }
 
 
@@ -1598,7 +1603,7 @@ private template FirstParam(Fnc)
  * Algebraic!(int, string) variant;
  *
  * static int func(string s) {
- *    return s.length;
+ *    return cast(int)s.length;
  * }
  *
  * variant = "test";
@@ -1612,7 +1617,6 @@ private template FirstParam(Fnc)
  * Throws: VariantException if $(D_PARAM variant) doesn't hold a value.
  */
 auto applyDelegate(VariantType, Delegate...)(VariantType variant, Delegate dgs)
-    if (!is (VariantType == Variant))
 {
     if (!variant.hasValue())
         throw new VariantException("variant must hold a value before being visited.");
@@ -1645,7 +1649,7 @@ unittest
     Algebraic!(int, string) variant;
 
     // not all handled check
-    // assert(!__traits(compile, applyDelegate(variant, (int i){ })));
+    static assert(!__traits(compiles, applyDelegate(variant, (int i){ }) ));
 
     variant = 10;
     auto which = 0;
@@ -1656,15 +1660,15 @@ unittest
     // integer overload was called
     assert(which == 0);
 
-    // mustn't compile
-//     Variant v;
-//     applyDelegate(v,
-//                   (string s){ which = 1; },
-//                   (int i){ which = 0; }
-//                   );
+    // mustn't compile as generic Variant not supported
+    Variant v;
+    static assert(!__traits(compiles, applyDelegate(v,
+                  (string s){ which = 1; },
+                  (int i){ which = 0; }
+                  )));
 
     static int func(string s) {
-        return s.length;
+        return cast(int)s.length;
     }
 
     struct Caller {
