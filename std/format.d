@@ -90,6 +90,17 @@ $(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
    than needed by the format specification, they are ignored but only
    if at least one argument was formatted.
 
+   The format string supports the formatting of array and nested array elements
+   via the grouping format specifiers $(B %&#40;) and $(B %&#41;). Each
+   matching pair of $(B %&#40;) and $(B %&#41;) corresponds with a single array
+   argument. The enclosed sub-format string is applied to individual array
+   elements.  The trailing portion of the sub-format string following the
+   conversion specifier for the array element is interpreted as the array
+   delimiter, and is therefore omitted following the last array element. The
+   $(B %|) specifier may be used to explicitly indicate the start of the
+   delimiter, so that the preceding portion of the string will be included
+   following the last array element.  (See below for explicit examples.)
+
    Params:
 
    w = Output is sent do this writer. Typical output writers include
@@ -284,7 +295,7 @@ $(I FormatChar):
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
     </dl>
 
-Example:
+Examples:
 
 -------------------------
 import std.c.stdio;
@@ -306,6 +317,74 @@ The positional and non-positional styles can be mixed in the same
 format string. (POSIX leaves this behavior undefined.) The internal
 counter for non-positional parameters tracks the next parameter after
 the largest positional parameter already used.
+
+Example using array and nested array formatting:
+-------------------------
+import std.stdio;
+
+void main()
+{
+    writefln("My items are %(%s %).", [1,2,3]);
+    writefln("My items are %(%s, %).", [1,2,3]);
+}
+-------------------------
+   The output is:
+<pre class=console>
+My array is 1 2 3.
+My array is 1, 2, 3.
+</pre>
+
+   The trailing end of the sub-format string following the specifier for each
+   item is interpreted as the array delimiter, and is therefore omitted
+   following the last array item. The $(B %|) delimiter specifier may be used
+   to indicate where the delimiter begins, so that the portion of the format
+   string prior to it will be retained in the last array element:
+-------------------------
+import std.stdio;
+
+void main()
+{
+    writefln("My items are %(-%s-%|, %).", [1,2,3]);
+}
+-------------------------
+   which gives the output:
+<pre class=console>
+My array is -1-, -2-, -3-.
+</pre>
+
+   These grouping format specifiers may be nested in the case of a nested
+   array argument:
+-------------------------
+import std.stdio;
+void main() {
+     auto mat = [[1, 2, 3],
+                 [4, 5, 6],
+                 [7, 8, 9]];
+
+     writefln("%(%(%d %)\n%)", mat);
+     writeln();
+
+     writefln("[%(%(%d %)\n%)]", mat);
+     writeln();
+
+     writefln("[%([%(%d %)]%|\n%)]", mat);
+     writeln();
+}
+-------------------------
+   The output is:
+<pre class=console>
+1 2 3
+4 5 6
+7 8 9
+
+[1 2 3
+4 5 6
+7 8 9]
+
+[[1 2 3]
+[4 5 6]
+[7 8 9]]
+</pre>
  */
 void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
