@@ -2772,6 +2772,7 @@ mixin template Proxy(alias a)
 {
     auto ref opEquals(this X)(auto ref typeof(this) b)
     {
+        static assert(a.stringof.startsWith("this."));
         return a == mixin("b."~a.stringof[5..$]);   // remove "this."
     }
     auto ref opEquals(this X, B)(auto ref B b) if (!is(B == typeof(this)))
