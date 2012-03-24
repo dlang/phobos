@@ -364,10 +364,10 @@ void main() {
      writefln("%(%(%d %)\n%)", mat);
      writeln();
 
-     writefln("[%(%(%d %)\n%)]", mat);
+     writefln("[%(%(%d %)\n %)]", mat);
      writeln();
 
-     writefln("[%([%(%d %)]%|\n%)]", mat);
+     writefln("[%([%(%d %)]%|\n %)]", mat);
      writeln();
 }
 -------------------------
@@ -378,12 +378,12 @@ void main() {
 7 8 9
 
 [1 2 3
-4 5 6
-7 8 9]
+ 4 5 6
+ 7 8 9]
 
 [[1 2 3]
-[4 5 6]
-[7 8 9]]
+ [4 5 6]
+ [7 8 9]]
 </pre>
  */
 void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
