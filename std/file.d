@@ -228,21 +228,10 @@ class FileException : Exception
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
     }
-
-    /++
-        Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM getErrno) in Posix).
-
-        Params:
-            name = Name of file for which the error occurred.
-            msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
-     +/
-    version(Posix) this(in char[] name,
-                        uint errno = .getErrno(),
-                        string file = __FILE__,
-                        size_t line = __LINE__)
+    else version(Posix) this(in char[] name,
+                             uint errno = .getErrno(),
+                             string file = __FILE__,
+                             size_t line = __LINE__)
     {
         auto s = strerror(errno);
         this(name, to!string(s), file, line);
@@ -1332,7 +1321,7 @@ unittest
 /++
     Returns whether the given file is a symbolic link.
 
-    On Windows, return $(D true) when the file is either a symbolic link or a
+    On Windows, returns $(D true) when the file is either a symbolic link or a
     junction point.
 
     Params:
@@ -1733,8 +1722,7 @@ version(Windows) string getcwd()
         return toUTF8(ptr[0 .. n2]);
     }
 }
-
-version (Posix) string getcwd()
+else version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
