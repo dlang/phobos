@@ -1622,7 +1622,18 @@ unittest
     static assert(!__traits(compiles, applyVisitor(v,visitor)));
 }
 
+private template isAlgebraic(Type)
+{
+    enum isAlgebraic = __traits(hasMember, Type, "AllowedTypes")
+                    && Type.AllowedTypes.length > 0
+                    && __traits(hasMember, Type, "hasValue")
+                    && __traits(hasMember, Type, "peek");
+}
 
+/**
+ * For use in applyDelegate and staticMap: Extracts
+ * the first paremeter's type of a delegate or function.
+ */
 private template FirstParam(Fnc)
 {
     alias ParameterTypeTuple!Fnc[0] FirstParam;
@@ -1656,6 +1667,7 @@ private template FirstParam(Fnc)
  * Throws: VariantException if $(D_PARAM variant) doesn't hold a value.
  */
 auto applyDelegate(VariantType, Delegate...)(VariantType variant, Delegate dgs)
+    if (isAlgebraic!VariantType)
 {
     if (!variant.hasValue())
         throw new VariantException("variant must hold a value before being visited.");
