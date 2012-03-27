@@ -1317,7 +1317,7 @@ copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
 $(XREF traits, hasAliasing)), then the representation of $(D source)
 is bitwise copied into $(D target) and then $(D source = T.init) is
 evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF contracts, pointsTo).
+also $(XREF exception, pointsTo).
 
 Preconditions:
 $(D &source == &target || !pointsTo(source, source))
