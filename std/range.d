@@ -261,7 +261,7 @@ _range methods in virtual functions.
 
 )
 
-Ranges whose elements are sorted affords better efficiency with certain
+Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(D $(LREF assumeSorted)) function can be used to
 construct a $(D $(LREF SortedRange)) from a pre-sorted _range. SortedRange
 objects provide some additional _range operations that take advantage of the
