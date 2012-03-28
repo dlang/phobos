@@ -774,21 +774,11 @@ auto memoizeExpr(string expr)()
         s.add(Interval(0,0x7f));
     else
     {
-        version(fred_perfect_hashing)
-        {
-            uint key = phash(name);
-            if(key >= PHASHNKEYS || ucmp(name,unicodeProperties[key].name) != 0)
-                enforce(0, "invalid property name");
-            s = cast(CodepointSet)unicodeProperties[key].set;
-        }
-        else
-        {
-            auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
-            //creating empty Codepointset is a workaround
-            auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
-            enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
-            s = range[eq].set.dup;
-        }
+        auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
+        //creating empty Codepointset is a workaround
+        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
+        enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
+        s = range[eq].set.dup;
     }
 
     if(casefold)
@@ -873,23 +863,19 @@ struct Parser(R, bool CTFE=false)
         if(isSomeString!S)
     {
         pat = origin = pattern;
+        //reserve slightly more then avg as sampled from unittests
         if(!__ctfe)
-            ir.reserve(pat.length);
+            ir.reserve((pat.length*5+2)/4);
         parseFlags(flags);
         _current = ' ';//a safe default for freeform parsing
         next();
-        if(__ctfe)
-            parseRegex();
-        else
+        try
         {
-            try
-            {
-                parseRegex();
-            }
-            catch(Exception e)
-            {
-                error(e.msg);//also adds pattern location
-            }
+            parseRegex();
+        }
+        catch(Exception e)
+        {
+            error(e.msg);//also adds pattern location
         }
         put(Bytecode(IR.End, 0));
     }
@@ -911,10 +897,8 @@ struct Parser(R, bool CTFE=false)
             empty =  true;
             return false;
         }
-        //for CTFEability
-        size_t idx=0;
-        _current = decode(pat, idx);
-        pat = pat[idx..$];
+        _current = pat.front;
+        pat.popFront();
         return true;
     }
 
@@ -1250,7 +1234,7 @@ struct Parser(R, bool CTFE=false)
         default:
             if(replace)
             {
-                moveAllAlt(ir[offset+1..$],ir[offset..$-1]);
+                moveAll(ir[offset+1..$],ir[offset..$-1]);
                 ir.length -= 1;
             }
             return;
@@ -1299,15 +1283,8 @@ struct Parser(R, bool CTFE=false)
             }
             else if(replace)
             {
-                if(__ctfe)//CTFE workaround: no moveAll and length -= x;
-                {
-                    ir = ir[0..offset] ~ ir[offset+1..$];
-                }
-                else
-                {
-                    moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
-                    ir.length -= 1;
-                }
+                moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
             enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
@@ -2160,15 +2137,10 @@ private:
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict,String name)
+@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    //@@@BUG@@@ assumeSorted kills "-inline"
-    //auto fnd = assumeSorted(map!"a.name"(dict)).lowerBound(name).length;
-    uint fnd;
-    for(fnd = 0; fnd<dict.length; fnd++)
-        if(equal(dict[fnd].name,name))
-            break;
-    enforce(fnd < dict.length, text("no submatch named ", name));
+    auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
+    enforce(equal(dict[fnd].name, name), text("no submatch named ", name));
     return dict[fnd].group;
 }
 
@@ -2766,7 +2738,7 @@ public:
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
-    {
+    {//@BUG: apparently assumes little endian machines
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;
@@ -2779,9 +2751,10 @@ public:
             while(p != end)
             {
                 if(!~state)
-                {
+                {//speed up seeking first matching place
                     for(;;)
                     {
+                        assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
@@ -2796,31 +2769,40 @@ public:
                     {
                         state = (state<<1) | table[p[1]];
                         state = (state<<1) | table[p[2]];
-                        p += 3;
+                        p += 4;
                     }
-                }
-                //first char is already tested, see if that's all
-                if(!(state & limit))//division rounds down for dchar
-                    return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                        -length+1;
-                static if(charSize == 3)
-                {
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
-                    state = (state<<1) | table[p[3]];
-                    p+=4;
+                    else
+                        p++;
+                    //first char is tested, see if that's all
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 else
-                {
-                    state = (state<<1) | table[p[1]];
-                    p++;
+                {//have some bits/states for possible matches,
+                 //use the usual shift-or cycle
+                    static if(charSize == 3)
+                    {
+                        state = (state<<1) | table[p[0]];
+                        state = (state<<1) | table[p[1]];
+                        state = (state<<1) | table[p[2]];
+                        p+=4;
+                    }
+                    else
+                    {
+                        state = (state<<1) | table[p[0]];
+                        p++;
+                    }
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 debug(fred_search) writefln("State: %32b", state);
             }
         }
         else
         {
-            //in this path we have to shift first
+            //normal path, partially unrolled for char/wchar
             static if(charSize == 3)
             {
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
@@ -4870,8 +4852,6 @@ enum OneShot { Fwd, Bwd };
     if(is(Char : dchar))
 {
     alias Stream.DataIndex DataIndex;
-    alias const(Char)[] String;
-    enum threadAllocSize = 16;
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
     DataIndex[] merge;
@@ -4978,7 +4958,6 @@ enum OneShot { Fwd, Bwd };
             writeln("------------------------------------------");
         if(exhausted)
         {
-
             return false;
         }
         if(re.flags & RegexInfo.oneShot)
@@ -5039,8 +5018,7 @@ enum OneShot { Fwd, Bwd };
                     break;
                 }
             }
-        else
-            exhausted = true;
+
         genCounter++; //increment also on each end
         debug(fred_matching) writefln("Threaded matching threads at end");
         //try out all zero-width posibilities
@@ -5050,8 +5028,17 @@ enum OneShot { Fwd, Bwd };
         }
         if(!matched)
             eval!false(createStart(index), matches);//new thread starting at end of input
-        if(matched && !(re.flags & RegexOption.global))
-           exhausted = true;
+        if(matched)
+        {//in case NFA found match along the way
+         //and last possible longer alternative ultimately failed
+            s.reset(matches[0].end);//reset to last successful match
+            next();//and reload front character
+            //--- here the exact state of stream was restored ---
+            exhausted = atEnd || !(re.flags & RegexOption.global);
+            //+ empty match advances the input
+            if(!exhausted && matches[0].begin == matches[0].end)
+                next(); 
+        }
         return matched;
     }
 
@@ -6278,6 +6265,24 @@ public:
     @property ref captures(){ return this; }
 }
 
+unittest//verify example
+{
+    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
+    auto c = m.captures;
+    assert(c.pre == "@");// part of input preceeding match
+    assert(c.post == "#"); // immediately after match
+    assert(c.hit == c[0] && c.hit == "abc");// the whole match
+    assert(c[2] =="b");
+    assert(c.front == "abc");
+    c.popFront();
+    assert(c.front == "a");
+    assert(c.back == "c");
+    c.popBack();
+    assert(c.back == "b");
+    popFrontN(c, 2);
+    assert(c.empty);
+}
+
 /++
     A regex engine state, as returned by $(D match) family of functions.
 
@@ -6397,9 +6402,19 @@ public:
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
-public auto regex(S)(S pattern, const(char)[] flags="")
+@trusted public auto regex(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
 {
+    enum cacheSize = 8; //TODO: invent nice interface to control regex caching
+    if(__ctfe)
+        return regexImpl(pattern, flags);
+    return memoize!(regexImpl!S, cacheSize)(pattern, flags);
+}
+
+public auto regexImpl(S)(S pattern, const(char)[] flags="")
+    if(isSomeString!(S))
+{
+    alias Regex!(BasicElementOf!S) Reg;
     if(!__ctfe)
     {
         auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
@@ -7228,8 +7243,9 @@ unittest
         run_tests!match(); //thompson VM
     }
 }
- version(fred_ct)
- {
+
+version(fred_ct)
+{
     unittest
     {
         auto cr = ctRegex!("abc");
@@ -7424,6 +7440,11 @@ else
                 if(ch != '-') //'--' is an operator
                     assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
             }
+            //bugzilla 7718
+            string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
+            auto reStrCmd = regex (`(".*")|('.*')`, "g");
+            assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
+                         [`"/GIT/Ruby Apps/sec"`, `'notimer'`]));
         }
         test_body!bmatch();
         test_body!match();
@@ -7502,8 +7523,12 @@ else
     }
     unittest
     {//bugzilla 7111
-        assert(!match("", regex("^")).empty);
+        assert(match("", regex("^")));
     }
+    unittest
+    {//bugzilla 7300
+        assert(!match("a"d, "aa"d));
+    }    
 
     unittest
     {//bugzilla 7674
@@ -7523,4 +7548,4 @@ else
     }
 }
 
-}
+}//version(unittest)
