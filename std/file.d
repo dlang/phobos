@@ -228,21 +228,10 @@ class FileException : Exception
         this(name, sysErrorString(errno), file, line);
         this.errno = errno;
     }
-
-    /++
-        Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM getErrno) in Posix).
-
-        Params:
-            name = Name of file for which the error occurred.
-            msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
-     +/
-    version(Posix) this(in char[] name,
-                        uint errno = .getErrno(),
-                        string file = __FILE__,
-                        size_t line = __LINE__)
+    else version(Posix) this(in char[] name,
+                             uint errno = .getErrno(),
+                             string file = __FILE__,
+                             size_t line = __LINE__)
     {
         auto s = strerror(errno);
         this(name, to!string(s), file, line);
@@ -581,55 +570,6 @@ unittest
     assert(getSize(deleteme) == 3);
 }
 
-/*************************
- * $(RED Deprecated. It will be removed in March 2012. Please use either the
- *       version of $(D getTimes) which takes two arguments or $(D getTimesWin)
- *       (Windows-Only) instead.)
- */
-version(StdDdoc) deprecated void getTimes(in char[] name,
-                                          out d_time ftc,
-                                          out d_time fta,
-                                          out d_time ftm);
-else version(Windows) deprecated void getTimes(C)(in C[] name,
-                                                  out d_time ftc,
-                                                  out d_time fta,
-                                                  out d_time ftm) if(is(Unqual!C == char))
-{
-    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
-                "with 3 arguments has been deprecated. It will be removed in " ~
-                "March 2012. Please use either the version of getTimes with " ~
-                "two arguments or getTimesWin (Windows-Only) instead.");
-
-    WIN32_FIND_DATAW filefindbuf;
-
-    HANDLE findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-    ftc = FILETIME2d_time(&filefindbuf.ftCreationTime);
-    fta = FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-    ftm = FILETIME2d_time(&filefindbuf.ftLastWriteTime);
-
-    if (findhndl == cast(HANDLE)-1)
-    {
-        throw new FileException(name.idup);
-    }
-    FindClose(findhndl);
-}
-else version(Posix) deprecated void getTimes(C)(in C[] name,
-                                                out d_time ftc,
-                                                out d_time fta,
-                                                out d_time ftm) if(is(Unqual!C == char))
-{
-    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.getTimes " ~
-                "with 3 arguments has been deprecated. It will be removed in " ~
-                "March 2012. Please use either the version of getTimes with " ~
-                "two arguments or getTimesWin (Windows-Only) instead.");
-
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    ftc = cast(d_time) statbuf.st_ctime * ticksPerSecond;
-    fta = cast(d_time) statbuf.st_atime * ticksPerSecond;
-    ftm = cast(d_time) statbuf.st_mtime * ticksPerSecond;
-}
-
 
 /++
     Get the access and modified times of file $(D name).
@@ -642,15 +582,9 @@ else version(Posix) deprecated void getTimes(C)(in C[] name,
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimes(in char[] name,
-                               out SysTime fileAccessTime,
-                               out SysTime fileModificationTime);
-//Oh, how it would be nice of you could overload templated functions with
-//non-templated functions. Untemplatize this when the old getTimes goes away.
-else void getTimes(C)(in C[] name,
-                      out SysTime fileAccessTime,
-                      out SysTime fileModificationTime)
-    if(is(Unqual!C == char))
+void getTimes(in char[] name,
+              out SysTime fileAccessTime,
+              out SysTime fileModificationTime)
 {
     version(Windows)
     {
@@ -880,68 +814,6 @@ else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
     fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
 }
 
-
-/++
- $(RED Deprecated. It will be removed in March 2012. Please use
-       $(D timeLastModified) instead.)
- +/
-version(StdDdoc) deprecated d_time lastModified(in char[] name);
-else deprecated d_time lastModified(C)(in C[] name)
-    if(is(Unqual!C == char))
-{
-    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
-
-    version(Windows)
-    {
-        d_time dummy = void, ftm = void;
-        getTimes(name, dummy, dummy, ftm);
-        return ftm;
-    }
-    else version(Posix)
-    {
-        struct_stat64 statbuf = void;
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-        return cast(d_time) statbuf.st_mtime * ticksPerSecond;
-    }
-}
-
-
-/++
- $(RED Deprecated. It will be removed in March 2012. Please use
-       $(D timeLastModified) instead.)
- +/
-version(StdDdoc) deprecated d_time lastModified(in char[] name, d_time returnIfMissing);
-else deprecated d_time lastModified(C)(in C[] name, d_time returnIfMissing)
-    if(is(Unqual!C == char))
-{
-    pragma(msg, hardDeprec!("2.055", "March 2012", "lastModified", "timeLastModified"));
-
-    version(Windows)
-    {
-        if (!exists(name)) return returnIfMissing;
-        d_time dummy = void, ftm = void;
-        getTimes(name, dummy, dummy, ftm);
-        return ftm;
-    }
-    else version(Posix)
-    {
-        struct_stat64 statbuf = void;
-        return stat64(toStringz(name), &statbuf) != 0
-            ? returnIfMissing
-            : cast(d_time) statbuf.st_mtime * ticksPerSecond;
-    }
-}
-
-unittest
-{
-    //std.process.system("echo a>deleteme") == 0 || assert(false);
-    if (exists(deleteme)) remove(deleteme);
-    write(deleteme, "a\n");
-    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    // assert(lastModified("deleteme") >
-    //         lastModified("this file does not exist", d_time.min));
-    //assert(lastModified("deleteme") > lastModified(__FILE__));
-}
 
 /++
     Returns the time that the given file was last modified.
@@ -1210,15 +1082,6 @@ unittest
     }
 }
 
-/++
- $(RED Deprecated. It will be removed in March 2012. Please use
-       $(D isDir) instead.)
- +/
-deprecated @property bool isdir(in char[] name)
-{
-    return name.isDir;
-}
-
 
 /++
     $(RED Deprecated. It will be removed in May 2012.
@@ -1354,15 +1217,6 @@ unittest
     }
 }
 
-/++
- $(RED Deprecated. It will be removed in March 2012. Please use
-       $(D isDir) instead.)
- +/
-deprecated @property bool isfile(in char[] name)
-{
-    return name.isFile;
-}
-
 
 /++
     $(RED Deprecated. It will be removed in May 2012.
@@ -1467,7 +1321,7 @@ unittest
 /++
     Returns whether the given file is a symbolic link.
 
-    On Windows, return $(D true) when the file is either a symbolic link or a
+    On Windows, returns $(D true) when the file is either a symbolic link or a
     junction point.
 
     Params:
@@ -1868,8 +1722,7 @@ version(Windows) string getcwd()
         return toUTF8(ptr[0 .. n2]);
     }
 }
-
-version (Posix) string getcwd()
+else version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
@@ -1928,12 +1781,6 @@ assert(de2.isDir);
           +/
         @property bool isDir();
 
-        /++
-         $(RED Deprecated. It will be removed in March 2012. Please use
-               $(D isDir) instead.)
-         +/
-        deprecated alias isDir isdir;
-
 
         /++
             Returns whether the file represented by this $(D DirEntry) is a file.
@@ -1961,12 +1808,6 @@ assert(!de2.isFile);
         @property bool isFile();
 
         /++
-         $(RED Deprecated. It will be removed in March 2012. Please use
-               $(D isFile) instead.)
-         +/
-        deprecated alias isFile isfile;
-
-        /++
             Returns whether the file represented by this $(D DirEntry) is a
             symbolic link.
 
@@ -1980,24 +1821,6 @@ assert(!de2.isFile);
             in bytes.
           +/
         @property ulong size();
-
-        /++
-            $(RED Deprecated. It will be removed in March 2012. Please use
-                   $(D timeCreated) instead.)
-
-            Returns the creation time of the file represented by this
-            $(D DirEntry).
-
-            $(RED Note that this property has existed for both Windows and Posix
-                  systems but that it is $(I incorrect) on Posix systems. Posix
-                  systems do not have access to the creation time of a file. On
-                  Posix systems this property has incorrectly been the time that
-                  the file's status status last changed. If you want that value,
-                  then get it from the $(D statBuf) property, which gives you
-                  access to the $(D stat) struct which Posix systems use (check
-                  out $(D stat)'s man page for more details.))
-          +/
-        deprecated @property d_time creationTime() const;
 
         /++
             $(BLUE This function is Windows-Only.)
@@ -2021,19 +1844,6 @@ assert(!de2.isFile);
         deprecated @property SysTime timeStatusChanged();
 
         /++
-            $(RED Deprecated. It will be removed in March 2012. Please use
-                  $(D timeLastAccessed) instead.)
-
-            Returns the time that the file represented by this $(D DirEntry) was
-            last accessed.
-
-            Note that many file systems do not update the access time for files
-            (generally for performance reasons), so there's a good chance that
-            $(D lastAccessTime) will return the same value as $(D lastWriteTime).
-          +/
-        deprecated @property d_time lastAccessTime();
-
-        /++
             Returns the time that the file represented by this $(D DirEntry) was
             last accessed.
 
@@ -2043,15 +1853,6 @@ assert(!de2.isFile);
             $(D timeLastModified).
           +/
         @property SysTime timeLastAccessed();
-
-        /++
-            $(RED Deprecated. It will be removed in March 2012. Please use
-                  $(D timeLastModified) instead.)
-
-            Returns the time that the file represented by this $(D DirEntry) was
-            last modified.
-          +/
-        deprecated @property d_time lastWriteTime();
 
         /++
             Returns the time that the file represented by this $(D DirEntry) was
@@ -2102,20 +1903,19 @@ else version(Windows)
     struct DirEntry
     {
     public:
+        alias name this;
 
-        @property string name() const
+        @property string name() const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir() const
+        @property bool isDir() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        deprecated alias isDir isdir;
-
-        @property bool isFile() const
+        @property bool isFile() const pure nothrow
         {
             //Are there no options in Windows other than directory and file?
             //If there are, then this probably isn't the best way to determine
@@ -2123,54 +1923,37 @@ else version(Windows)
             return !isDir;
         }
 
-        deprecated alias isFile isfile;
-
-        @property bool isSymlink() const
+        @property bool isSymlink() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
-        @property ulong size() const
+        @property ulong size() const pure nothrow
         {
             return _size;
         }
 
-        deprecated @property d_time creationTime() const
-        {
-            return sysTimeToDTime(_timeCreated);
-        }
-
-        @property SysTime timeCreated() const
+        @property SysTime timeCreated() const pure nothrow
         {
             return cast(SysTime)_timeCreated;
         }
 
-        deprecated @property d_time lastAccessTime() const
-        {
-            return sysTimeToDTime(_timeLastAccessed);
-        }
-
-        @property SysTime timeLastAccessed() const
+        @property SysTime timeLastAccessed() const pure nothrow
         {
             return cast(SysTime)_timeLastAccessed;
         }
 
-        deprecated @property d_time lastWriteTime() const
-        {
-            return sysTimeToDTime(_timeLastModified);
-        }
-
-        @property SysTime timeLastModified() const
+        @property SysTime timeLastModified() const pure nothrow
         {
             return cast(SysTime)_timeLastModified;
         }
 
-        @property uint attributes() const
+        @property uint attributes() const pure nothrow
         {
             return _attributes;
         }
 
-        @property uint linkAttributes() const
+        @property uint linkAttributes() const pure nothrow
         {
             return _attributes;
         }
@@ -2246,8 +2029,9 @@ else version(Posix)
     struct DirEntry
     {
     public:
+        alias name this;
 
-        @property string name() const
+        @property string name() const pure nothrow
         {
             return _name;
         }
@@ -2259,16 +2043,12 @@ else version(Posix)
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        deprecated alias isDir isdir;
-
         @property bool isFile()
         {
             _ensureStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
-
-        deprecated alias isFile isfile;
 
         @property bool isSymlink()
         {
@@ -2277,27 +2057,10 @@ else version(Posix)
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
 
-        // This property was not documented before, and it's almost
-        // worthless, since the odds are high that it will be DT_UNKNOWN,
-        // so it continues to be left undocumented.
-        //
-        // Will be removed in March 2012.
-        deprecated @property ubyte d_type()
-        {
-            return _dType;
-        }
-
         @property ulong size()
         {
             _ensureStatDone();
             return _statBuf.st_size;
-        }
-
-        deprecated @property d_time creationTime()
-        {
-            _ensureStatDone();
-
-            return cast(d_time)_statBuf.st_ctime * ticksPerSecond;
         }
 
         @property SysTime timeStatusChanged()
@@ -2307,25 +2070,11 @@ else version(Posix)
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
 
-        deprecated @property d_time lastAccessTime()
-        {
-            _ensureStatDone();
-
-            return cast(d_time)_statBuf.st_atime * ticksPerSecond;
-        }
-
         @property SysTime timeLastAccessed()
         {
             _ensureStatDone();
 
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
-        }
-
-        deprecated @property d_time lastWriteTime()
-        {
-            _ensureStatDone();
-
-            return cast(d_time)_statBuf.st_mtime * ticksPerSecond;
         }
 
         @property SysTime timeLastModified()
@@ -2598,52 +2347,6 @@ void copy(in char[] from, in char[] to)
     }
 }
 
-    /++
-       $(RED Deprecated. It will be removed in March 2012. Please use the
-             version which takes a $(XREF datetime, SysTime) instead.)
-
-        Set access/modified times of file $(D name).
-
-        Throws:
-            $(D FileException) on error.
-     +/
-version(StdDdoc) deprecated void setTimes(in char[] name, d_time fta, d_time ftm);
-else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
-    if(is(Unqual!C == char))
-{
-    pragma(msg, "Notice: As of Phobos 2.055, the version of std.file.setTimes " ~
-                "which takes std.date.d_time has been deprecated. It will be " ~
-                "removed in March 2012. Please use the version which takes " ~
-                "std.datetime.SysTime instead.");
-
-    version(Windows)
-    {
-        const ta = d_time2FILETIME(fta);
-        const tm = d_time2FILETIME(ftm);
-        alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL, HANDLE.init)
-            defaults;
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-
-        cenforce(SetFileTime(h, null, &ta, &tm), name);
-    }
-    else version(Posix)
-    {
-        timeval[2] t = void;
-        t[0].tv_sec = to!int(fta / ticksPerSecond);
-        t[0].tv_usec = cast(int)
-            (cast(long) ((cast(double) fta / ticksPerSecond)
-                    * 1_000_000) % 1_000_000);
-        t[1].tv_sec = to!int(ftm / ticksPerSecond);
-        t[1].tv_usec = cast(int)
-            (cast(long) ((cast(double) ftm / ticksPerSecond)
-                    * 1_000_000) % 1_000_000);
-        enforce(utimes(toStringz(name), t) == 0);
-    }
-}
-
 
 /++
     Set access/modified times of file $(D name).
@@ -2655,13 +2358,9 @@ else deprecated void setTimes(C)(in C[] name, d_time fta, d_time ftm)
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void setTimes(in char[] name,
-                               SysTime fileAccessTime,
-                               SysTime fileModificationTime);
-else void setTimes(C)(in C[] name,
-                      SysTime fileAccessTime,
-                      SysTime fileModificationTime)
-    if(is(Unqual!C == char))
+void setTimes(in char[] name,
+              SysTime fileAccessTime,
+              SysTime fileModificationTime)
 {
     version(Windows)
     {
@@ -3082,23 +2781,7 @@ public:
     @property bool empty(){ return impl.empty; }
     @property DirEntry front(){ return impl.front; }
     void popFront(){ impl.popFront(); }
-    int opApply(int delegate(ref string name) dg)
-    {
-        foreach(DirEntry v; impl.refCountedPayload)
-        {
-            string s = v.name;
-            if(dg(s))
-                return 1;
-        }
-        return 0;
-    }
-    int opApply(int delegate(ref DirEntry name) dg)
-    {
-        foreach(DirEntry v; impl.refCountedPayload)
-            if(dg(v))
-                return 1;
-        return 0;
-    }
+
 }
 /++
     Returns an input range of DirEntry that lazily iterates a given directory,
@@ -3187,6 +2870,21 @@ unittest
         //writeln(name);
         assert(e.isFile || e.isDir, e.name);
     }
+}
+
+unittest
+{
+    //issue 7264
+    foreach (string name; dirEntries(".", "*.d", SpanMode.breadth))
+    {
+
+    }
+    foreach (entry; dirEntries(".", SpanMode.breadth))
+    {
+        static assert(is(typeof(entry) == DirEntry));
+    }
+    //issue 7138
+    auto a = array(dirEntries(".", SpanMode.shallow));
 }
 
 /++
@@ -3661,7 +3359,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
-        return callback(de.name.baseName);
+        return callback(baseName(de.name));
     }
 
     _listDir(pathname, &listing);
@@ -3724,37 +3422,4 @@ else version(Posix)
                 break;
         }
     }
-}
-
-
-//==============================================================================
-// Stuff from std.date so that we don't have to import std.date and end up with
-// the "scheduled for deprecation" pragma message from std.date showing up just
-// because someone imports std.file.
-//
-// These will be removed either when the functions in std.file which use them
-// are removed.
-//==============================================================================
-//
-
-deprecated alias long d_time;
-deprecated enum d_time d_time_nan = long.min;
-deprecated enum ticksPerSecond = 1000;
-
-version(Windows)
-{
-    deprecated d_time FILETIME2d_time(const FILETIME *ft)
-    {
-        auto sysTime = FILETIMEToSysTime(ft);
-
-        return sysTimeToDTime(sysTime);
-    }
-}
-
-
-template hardDeprec(string vers, string date, string oldFunc, string newFunc)
-{
-    enum hardDeprec = Format!("Notice: As of Phobos %s, std.file.%s has been deprecated " ~
-                              "It will be removed in %s. Please use std.file.%s instead.",
-                              vers, oldFunc, date, newFunc);
 }

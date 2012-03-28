@@ -7,9 +7,12 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 5964): std.stdio.readln can throw a UnicodeException)
         $(LI $(BUGZILLA 6403): Upgrade std.regex to Unicode UTS #18 Level 1 support)
         $(LI $(BUGZILLA 7111): New regex engine cannot match beginning of empty string)
+        $(LI $(BUGZILLA 7138): Can't call array() on dirEntries)
+        $(LI $(BUGZILLA 7264): Can't iterate result from 4-arg dirEntries as string)
         $(LI $(BUGZILLA 7299): std.uni missing doc comments)
         $(LI $(BUGZILLA 7374): stdin.byLine() throws AssertError on empty input)
         $(LI $(BUGZILLA 7628): std.format formatValue incorrect overload)
+        $(LI $(BUGZILLA 7674): regex replace requires escaped format)
      )
  )
 
