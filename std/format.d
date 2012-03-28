@@ -103,8 +103,8 @@ $(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
 
    Params:
 
-   w = Output is sent do this writer. Typical output writers include
-   $(XREF array,Appender!string) and $(XREF stdio,BlockingTextWriter).
+   w = Output is sent to this writer. Typical output writers include
+   $(XREF array,Appender!string) and $(XREF stdio,LockingTextWriter).
 
    fmt = Format string.
 
