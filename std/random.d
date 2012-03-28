@@ -1095,7 +1095,7 @@ unittest
 }
 
 /**
-Shuffles elements of $(D r) using $(D r) as a shuffler. $(D r) must be
+Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
 
