@@ -83,11 +83,11 @@
     $(REG_ROW \t, Matches a tab character. )
     $(REG_ROW \v, Matches a vertical tab character. )
     $(REG_ROW \d, Matches any unicode digit. )
-    $(REG_ROW \D, Matches any character but unicode digits. )
+    $(REG_ROW \D, Matches any character except unicode digits. )
     $(REG_ROW \w, Matches any word character (note: this includes numbers).)
     $(REG_ROW \W, Matches any non-word character.)
     $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
-    $(REG_ROW \S, Matches any character but those recognized as $(I \s ). )
+    $(REG_ROW \S, Matches any character except those recognized as $(I \s ). )
     $(REG_ROW \\, Matches \ character. )
     $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
     $(REG_ROW \p{PropertyName}, Matches a character that belongs
