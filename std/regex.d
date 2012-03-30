@@ -1,6 +1,6 @@
 //Written in the D programming language
 /++
-  $(LUCKY Regular expressions) are commonly used method of pattern matching
+  $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
   include validation of user input and ubiquitous find & replace
@@ -18,7 +18,7 @@
       foreach(line; stdin.byLine)
       {
         //match returns a range that can be iterated
-        //to get all of subsequent matches
+        //to get all subsequent matches
         foreach(c; match(line, r))
             writeln(c.hit);
       }
@@ -30,8 +30,8 @@
 
   //works just like normal regex:
   auto m2 = match("foo/bar", ctr);   //first match found here if any
-  assert(m2);   // be sure to check if there is a match, before examining contents!
-  assert(m2.captures[1] == "bar");//captures is a range of submatches, 0 - full match
+  assert(m2);   // be sure to check if there is a match before examining contents!
+  assert(m2.captures[1] == "bar");   //captures is a range of submatches, 0 - full match
 
   ...
 
@@ -42,18 +42,18 @@
 
   ---
 
-  The general usage guideline is keeping regex complexity on the side of simplicity,
+  The general usage guideline is to keep regex complexity on the side of simplicity,
   as its capabilities reside in purely character-level manipulation,
-  and as such are ill suited for tasks  involving higher level invariants
-  like matching an integer number $(U bounded) in [a,b] interval.
+  and as such are ill-suited for tasks involving higher level invariants
+  like matching an integer number $(U bounded) in an [a,b] interval.
   Checks of this sort of are better addressed by additional post-processing.
 
-  The basic syntax shouldn't surprize experienced users of regular expressions.
-  Thankfully, nowdays the web is bustling with resources to help newcomers, and a good
- $(WEB www.regular-expressions.info, reference with tutorial ) on regular expressions
-  could be found.
+  The basic syntax shouldn't surprise experienced users of regular expressions.
+  Thankfully, nowadays the web is bustling with resources to help newcomers, and a good
+  $(WEB www.regular-expressions.info, reference with tutorial) on regular expressions
+  can be found.
 
-  This library uses ECMAScript syntax flavor with the following extensions:
+  This library uses an ECMAScript syntax flavor with the following extensions:
   $(UL
     $(LI Named subexpressions, with Python syntax. )
     $(LI Unicode properties such as Scripts, Blocks and common binary properties e.g Alphabetic, White_Space, Hex_Digit etc.)
@@ -62,16 +62,16 @@
 
   $(REG_START Pattern syntax )
   $(I std.regex operates on codepoint level,
-    'character' in this table denotes single unicode codepoint.)
+    'character' in this table denotes a single unicode codepoint.)
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
     $(REG_TITLE Atoms, Match single characters )
     $(REG_ROW any character except [|*+?(), Matches the character itself. )
     $(REG_ROW ., In single line mode matches any charcter.
       Otherwise it matches any character except '\n' and '\r'. )
-    $(REG_ROW [class], Matches single character
+    $(REG_ROW [class], Matches a single character
       that belongs to this character class. )
-    $(REG_ROW [^class], Matches single character that
+    $(REG_ROW [^class], Matches a single character that
       does $(U not) belong to this character class.)
     $(REG_ROW \cC, Matches the control character corresponding to letter C)
     $(REG_ROW \xXX, Matches a character with hexadecimal value of XX. )
@@ -83,23 +83,23 @@
     $(REG_ROW \t, Matches a tab character. )
     $(REG_ROW \v, Matches a vertical tab character. )
     $(REG_ROW \d, Matches any unicode digit. )
-    $(REG_ROW \D, Matches any character but unicode digit. )
+    $(REG_ROW \D, Matches any character except unicode digits. )
     $(REG_ROW \w, Matches any word character (note: this includes numbers).)
     $(REG_ROW \W, Matches any non-word character.)
     $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
-    $(REG_ROW \S, Matches any character but these recognized as $(I \s ). )
+    $(REG_ROW \S, Matches any character except those recognized as $(I \s ). )
     $(REG_ROW \\, Matches \ character. )
     $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
-    $(REG_ROW \p{PropertyName}, Matches character that belongs
-      to unicode PropertyName set.
-      Single letter abreviations could be used without surrounding {,}. )
-    $(REG_ROW  \P{PropertyName}, Matches character that does not belong
-      to unicode PropertyName set.
-      Single letter abreviations could be used without surrounding {,}. )
+    $(REG_ROW \p{PropertyName}, Matches a character that belongs
+      to the unicode PropertyName set.
+      Single letter abbreviations can be used without surrounding {,}. )
+    $(REG_ROW  \P{PropertyName}, Matches a character that does not belong
+      to the unicode PropertyName set.
+      Single letter abbreviations can be used without surrounding {,}. )
     $(REG_ROW \p{InBasicLatin}, Matches any character that is part of
-        BasicLatin unicode $(U block).)
+        the BasicLatin unicode $(U block).)
     $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
-        BasicLatin unicode $(U block).)
+        the BasicLatin unicode $(U block).)
     $(REG_ROW \p{Cyrilic}, Matches any character that is part of
         Cyrilic $(U script).)
     $(REG_ROW \P{Cyrilic}, Matches any character except ones in
@@ -113,57 +113,57 @@
       Greedy version - tries as many times as possible.)
     $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
       Lazy version  - stops as early as possible.)
-    $(REG_ROW {n}, Matches previous character/subexpression n exactly times. )
+    $(REG_ROW {n}, Matches previous character/subexpression exactly n times. )
     $(REG_ROW {n&#44}, Matches previous character/subexpression n times or more.
       Greedy version - tries as many times as possible. )
     $(REG_ROW {n&#44}?, Matches previous character/subexpression n times or more.
       Lazy version - stops as early as possible.)
     $(REG_ROW {n&#44m}, Matches previous character/subexpression n to m times.
-      Greedy version - tries as many times as possible. )
+      Greedy version - tries as many times as possible, but no more than m times. )
     $(REG_ROW {n&#44m}?, Matches previous character/subexpression n to m times.
       Lazy version - stops as early as possible, but no less then n times.)
     $(REG_TITLE Other, Subexpressions & alternations )
     $(REG_ROW (regex),  Matches subexpression regex,
-      saving matched portion of text for later retrival. )
+      saving matched portion of text for later retrieval. )
     $(REG_ROW (?:regex), Matches subexpression regex,
       $(U not) saving matched portion of text. Useful to speed up matching. )
-    $(REG_ROW A|B, Matches subexpression A, failing that matches B. )
+    $(REG_ROW A|B, Matches subexpression A, or failing that, matches B. )
     $(REG_ROW (?P&lt;name&gt;regex), Matches named subexpression
         regex labeling it with name 'name'.
-        When refering to matched portion of text,
+        When referring to a matched portion of text,
         names work like aliases in addition to direct numbers.
      )
-    $(REG_TITLE Assertions, Match position rather then character )
+    $(REG_TITLE Assertions, Match position rather than character )
     $(REG_ROW ^, Matches at the begining of input or line (in multiline mode).)
     $(REG_ROW $, Matches at the end of input or line (in multiline mode). )
     $(REG_ROW \b, Matches at word boundary. )
     $(REG_ROW \B, Matches when $(U not) at word boundary. )
     $(REG_ROW (?=regex), Zero-width lookahead assertion.
         Matches at a point where the subexpression
-        regex could be matched starting from current position.
+        regex could be matched starting from the current position.
       )
     $(REG_ROW (?!regex), Zero-width negative lookahead assertion.
         Matches at a point where the subexpression
-        regex could $(U not ) be matched starting from current position.
+        regex could $(U not) be matched starting from the current position.
       )
     $(REG_ROW (?<=regex), Zero-width lookbehind assertion. Matches at a point
         where the subexpression regex could be matched ending
-        at current position (matching goes backwards).
+        at the current position (matching goes backwards).
       )
     $(REG_ROW  (?<!regex), Zero-width negative lookbehind assertion.
       Matches at a point where the subexpression regex could $(U not)
-      be matched ending at current position (matching goes backwards).
+      be matched ending at the current position (matching goes backwards).
      )
   )
 
   $(REG_START Character classes )
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
-    $(REG_ROW Any atom, Have the same meaning as outside of character class.)
-    $(REG_ROW a-z, Includes  characters a, b, c, ..., z. )
+    $(REG_ROW Any atom, Has the same meaning as outside of a character class.)
+    $(REG_ROW a-z, Includes characters a, b, c, ..., z. )
     $(REG_ROW [a||b]&#44 [a--b]&#44 [a~~b]&#44 [a&&b], Where a, b are arbitrary classes,
      means union, set difference, symmetric set difference, and intersection respectively.
-     $(I Any sequence of character class elements implicitly forms union.) )
+     $(I Any sequence of character class elements implicitly forms a union.) )
   )
 
   $(REG_START Regex flags )
@@ -175,7 +175,7 @@
        as well as start and end of input.)
     $(REG_ROW s, Single-line mode, makes . match '\n' and '\r' as well. )
     $(REG_ROW x, Free-form syntax, ignores whitespace in pattern,
-      useful for formating complex regular expressions. )
+      useful for formatting complex regular expressions. )
   )
 
   $(B Unicode support)
@@ -186,9 +186,9 @@
     $(LI 1.1 Hex notation via any of \uxxxx, \U00YYYYYY, \xZZ.)
     $(LI 1.2 Unicode properties.)
     $(LI 1.3 Character classes with set operations.)
-    $(LI 1.4 Word boundaries use full set of "word" characters.)
+    $(LI 1.4 Word boundaries use the full set of "word" characters.)
     $(LI 1.5 Using simple casefolding to match case
-        insensitevely across full range of codepoints.)
+        insensitively across the full range of codepoints.)
     $(LI 1.6 Respecting line breaks as any of
         \u000A | \u000B | \u000C | \u000D | \u0085 | \u2028 | \u2029 | \u000D\u000A.)
     $(LI 1.7 Operating on codepoint level.)
@@ -196,16 +196,18 @@
   *With exception of point 1.1.1, as of yet, normalization of input
     is expected to be enforced by user.
 
+  $(B Slicing)
+
   All matches returned by pattern matching functionality in this library
-  are slices of original input. Notable exception being $(D replace) family of functions
-  that generate new string from input.
+  are slices of the original input, with the notable exception of the $(D replace)
+  family of functions which generate a new string from the input.
 
   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
 
   API and utility constructs are based on original $(D std.regex)
-  by Walter Bright and Andrei Alexandrescu
+  by Walter Bright and Andrei Alexandrescu.
 
   Copyright: Copyright Dmitry Olshansky, 2011
 
