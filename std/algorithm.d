@@ -3664,7 +3664,7 @@ unittest
 
 /++
     Returns the number of elements which must be popped from $(D haystack)
-    before $(D pred(hastack.front)) is $(D true.).
+    before $(D pred(haystack.front)) is $(D true).
 
     Examples:
 --------------------
