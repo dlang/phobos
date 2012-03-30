@@ -1,10 +1,304 @@
 // Written in the D programming language.
 
 /**
-This module defines the notion of range (by the membership tests $(D
-isInputRange), $(D isForwardRange), $(D isBidirectionalRange), $(D
-isRandomAccessRange)), range capability tests (such as $(D hasLength)
-or $(D hasSlicing)), and a few useful _range incarnations.
+This module defines the notion of a range. Ranges generalize the concept of
+arrays, lists, or anything that involves sequential access. This abstraction
+enables the same set of algorithms (see $(LINK2 std_algorithm.html,
+std.algorithm)) to be used with a vast variety of different concrete types. For
+example, a linear search algorithm such as $(LINK2 std_algorithm.html#find,
+std.algorithm.find) works not just for arrays, but for linked-lists, input
+files, incoming network data, etc.
+
+For more detailed information about the conceptual aspect of ranges and the
+motivation behind them, see Andrei Alexandrescu's article
+$(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357&rll=1,
+$(I On Iteration)).
+
+This module defines several templates for testing whether a given object is a
+_range, and what kind of _range it is:
+$(BOOKTABLE ,
+
+$(TR $(TD $(D $(LREF isInputRange)))
+$(TD Tests if something is an $(I input _range), defined to be something from
+which one can sequentially read data using the primitives $(D front), $(D
+popFront), and $(D empty).
+))
+
+$(TR $(TD $(D $(LREF isOutputRange)))
+$(TD Tests if something is an $(I output _range), defined to be something to
+which one can sequentially write data using the $(D $(LREF put)) primitive.
+))
+
+$(TR $(TD $(D $(LREF isForwardRange)))
+$(TD Tests if something is a $(I forward _range), defined to be an input _range
+with the additional capability that one can save one's current position with
+the $(D save) primitive, thus allowing one to iterate over the same _range
+multiple times.
+))
+
+$(TR $(TD $(D $(LREF isBidirectionalRange)))
+$(TD Tests if something is a $(I bidirectional _range), that is, an input
+_range that allows reverse traversal using the primitives $(D back) and $(D
+popBack).
+))
+
+$(TR $(TD $(D $(LREF isRandomAccessRange)))
+$(TD Tests if something is a $(I random access _range), which is a
+bidirectional _range that also supports the array subscripting operation via
+the primitive $(D opIndex).
+))
+
+)
+
+A number of templates are provided that test for various _range capabilities:
+
+$(BOOKTABLE ,
+
+$(TR $(TD $(D $(LREF hasMobileElements)))
+$(TD Tests if a given _range's elements can be moved around using the
+primitives $(D moveFront), $(D moveBack), or $(D moveAt).
+))
+
+$(TR $(TD $(D $(LREF ElementType)))
+$(TD Returns the element type of a given _range.
+))
+
+$(TR $(TD $(D $(LREF ElementEncodingType)))
+$(TD Returns the encoding element type of a given _range.
+))
+
+$(TR $(TD $(D $(LREF hasSwappableElements)))
+$(TD Tests if a _range is a forward _range with swappable elements.
+))
+
+$(TR $(TD $(D $(LREF hasAssignableElements)))
+$(TD Tests if a _range is a forward _range with mutable elements.
+))
+
+$(TR $(TD $(D $(LREF hasLvalueElements)))
+$(TD Tests if a _range is a forward _range with elements that can be passed by
+reference and have their address taken.
+))
+
+$(TR $(TD $(D $(LREF hasLength)))
+$(TD Tests if a given _range has the $(D length) attribute.
+))
+
+$(TR $(TD $(D $(LREF isInfinite)))
+$(TD Tests if a given _range is an $(I infinite _range).
+))
+
+$(TR $(TD $(D $(LREF hasSlicing)))
+$(TD Tests if a given _range supports the array slicing operation $(D R[x..y]).
+))
+
+$(TR $(TD $(D $(LREF walkLength)))
+$(TD Computes the length of any _range in O(n) time.
+))
+
+)
+
+A rich set of _range creation and composition templates are provided that let
+you construct new ranges out of existing ranges:
+
+$(BOOKTABLE ,
+
+$(TR $(TD $(D $(LREF retro)))
+$(TD Iterates a bidirectional _range backwards.
+))
+
+$(TR $(TD $(D $(LREF stride)))
+$(TD Iterates a _range with stride $(I n).
+))
+
+$(TR $(TD $(D $(LREF chain)))
+$(TD Concatenates several ranges into a single _range.
+))
+
+$(TR $(TD $(D $(LREF roundRobin)))
+$(TD Given $(I n) ranges, creates a new _range that return the $(I n) first
+elements of each _range, in turn, then the second element of each _range, and
+so on, in a round-robin fashion.
+))
+
+$(TR $(TD $(D $(LREF radial)))
+$(TD Given a random-access _range and a starting point, creates a _range that
+alternately returns the next left and next right element to the starting point.
+))
+
+$(TR $(TD $(D $(LREF take)))
+$(TD Creates a sub-_range consisting of only up to the first $(I n) elements of
+the given _range.
+))
+
+$(TR $(TD $(D $(LREF takeExactly)))
+$(TD Like $(D take), but assumes the given _range actually has $(I n) elements,
+and therefore also defines the $(D length) property.
+))
+
+$(TR $(TD $(D $(LREF takeOne)))
+$(TD Creates a random-access _range consisting of exactly the first element of
+the given _range.
+))
+
+$(TR $(TD $(D $(LREF takeNone)))
+$(TD Creates a random-access _range consisting of zero elements of the given
+_range.
+))
+
+$(TR $(TD $(D $(LREF drop)))
+$(TD Creates the _range that results from discarding the first $(I n) elements
+from the given _range.
+))
+
+$(TR $(TD $(D $(LREF repeat)))
+$(TD Creates a _range that consists of a single element repeated $(I n) times,
+or an infinite _range repeating that element indefinitely.
+))
+
+$(TR $(TD $(D $(LREF cycle)))
+$(TD Creates an infinite _range that repeats the given forward _range
+indefinitely. Good for implementing circular buffers.
+))
+
+$(TR $(TD $(D $(LREF zip)))
+$(TD Given $(I n) _ranges, creates a _range that successively returns a tuple
+of all the first elements, a tuple of all the second elements, etc.
+))
+
+$(TR $(TD $(D $(LREF lockstep)))
+$(TD Iterates $(I n) _ranges in lockstep, for use in a $(D foreach) loop.
+Similar to $(D zip), except that $(D lockstep) is designed especially for $(D
+foreach) loops.
+))
+
+$(TR $(TD $(D $(LREF recurrence)))
+$(TD Creates a forward _range whose values are defined by a mathematical
+recurrence relation.
+))
+
+$(TR $(TD $(D $(LREF sequence)))
+$(TD Similar to $(D recurrence), except that a random-access _range is created.
+))
+
+$(TR $(TD $(D $(LREF iota)))
+$(TD Creates a _range consisting of numbers between a starting point and ending
+point, spaced apart by a given interval.
+))
+
+$(TR $(TD $(D $(LREF frontTransversal)))
+$(TD Creates a _range that iterates over the first elements of the given
+ranges.
+))
+
+$(TR $(TD $(D $(LREF transversal)))
+$(TD Creates a _range that iterates over the $(I n)'th elements of the given
+random-access ranges.
+))
+
+$(TR $(TD $(D $(LREF indexed)))
+$(TD Creates a _range that offers a view of a given _range as though its
+elements were reordered according to a given _range of indices.
+))
+
+$(TR $(TD $(D $(LREF chunks)))
+$(TD Creates a _range that returns fixed-size chunks of the original _range.
+))
+
+)
+
+These _range-construction tools are implemented using templates; but sometimes
+an object-based interface for ranges is needed. For this purpose, this module
+provides a number of object and $(D interface) definitions that can be used to
+wrap around _range objects created by the above templates:
+
+$(BOOKTABLE ,
+
+$(TR $(TD $(D $(LREF InputRange)))
+$(TD Wrapper for input ranges.
+))
+
+$(TR $(TD $(D $(LREF InputAssignable)))
+$(TD Wrapper for input ranges with assignable elements.
+))
+
+$(TR $(TD $(D $(LREF ForwardRange)))
+$(TD Wrapper for forward ranges.
+))
+
+$(TR $(TD $(D $(LREF ForwardAssignable)))
+$(TD Wrapper for forward ranges with assignable elements.
+))
+
+$(TR $(TD $(D $(LREF BidirectionalRange)))
+$(TD Wrapper for bidirectional ranges.
+))
+
+$(TR $(TD $(D $(LREF BidirectionalAssignable)))
+$(TD Wrapper for bidirectional ranges with assignable elements.
+))
+
+$(TR $(TD $(D $(LREF RandomAccessFinite)))
+$(TD Wrapper for finite random-access ranges.
+))
+
+$(TR $(TD $(D $(LREF RandomAccessAssignable)))
+$(TD Wrapper for finite random-access ranges with assignable elements.
+))
+
+$(TR $(TD $(D $(LREF RandomAccessInfinite)))
+$(TD Wrapper for infinite random-access ranges.
+))
+
+$(TR $(TD $(D $(LREF OutputRange)))
+$(TD Wrapper for output ranges.
+))
+
+$(TR $(TD $(D $(LREF OutputRangeObject)))
+$(TD Class that implements the $(D OutputRange) interface and wraps the
+$(D put) methods in virtual functions.
+))
+
+$(TR $(TD $(D $(LREF InputRangeObject)))
+$(TD Class that implements the $(D InputRange) interface and wraps the input
+_range methods in virtual functions.
+))
+
+)
+
+Ranges whose elements are sorted afford better efficiency with certain
+operations. For this, the $(D $(LREF assumeSorted)) function can be used to
+construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(D $(LINK2
+std_algorithm.html#sort, std.algorithm.sort)) function also conveniently
+returns a $(D SortedRange). $(D SortedRange) objects provide some additional
+_range operations that take advantage of the fact that the _range is sorted.
+
+Finally, this module also defines some convenience functions for
+manipulating ranges:
+
+$(BOOKTABLE ,
+
+$(TR $(TD $(D $(LREF popFrontN)))
+$(TD Advances a given _range by $(I n) elements.
+))
+
+$(TR $(TD $(D $(LREF popBackN)))
+$(TD Advances a given bidirectional _range from the right by $(I n) elements.
+))
+
+$(TR $(TD $(D $(LREF moveFront)))
+$(TD Removes the front element of a _range.
+))
+
+$(TR $(TD $(D $(LREF moveBack)))
+$(TD Removes the back element of a bidirectional _range.
+))
+
+$(TR $(TD $(D $(LREF moveAt)))
+$(TD Removes the $(I i)'th element of a random-access _range.
+))
+
+)
 
 Source: $(PHOBOSSRC std/_range.d)
 
