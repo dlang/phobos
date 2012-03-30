@@ -7,7 +7,7 @@ enables the same set of algorithms (see $(LINK2 std_algorithm.html,
 std.algorithm)) to be used with a vast variety of different concrete types. For
 example, a linear search algorithm such as $(LINK2 std_algorithm.html#find,
 std.algorithm.find) works not just for arrays, but for linked-lists, input
-files, incoming network data, etc..
+files, incoming network data, etc.
 
 For more detailed information about the conceptual aspect of ranges and the
 motivation behind them, see Andrei Alexandrescu's article
@@ -136,9 +136,14 @@ $(TD Like $(D take), but assumes the given _range actually has $(I n) elements,
 and therefore also defines the $(D length) property.
 ))
 
-$(TR $(TD $(D $(LREF takeOne)), $(D $(LREF takeNone)))
-$(TD Creates a random-access _range consisting of exactly the first element
-(respectively, no elements) of the given _range.
+$(TR $(TD $(D $(LREF takeOne)))
+$(TD Creates a random-access _range consisting of exactly the first element of
+the given _range.
+))
+
+$(TR $(TD $(D $(LREF takeNone)))
+$(TD Creates a random-access _range consisting of zero elements of the given
+_range.
 ))
 
 $(TR $(TD $(D $(LREF drop)))
@@ -158,7 +163,7 @@ indefinitely. Good for implementing circular buffers.
 
 $(TR $(TD $(D $(LREF zip)))
 $(TD Given $(I n) _ranges, creates a _range that successively returns a tuple
-of all the first elements, a tuple of all the second elements, etc..
+of all the first elements, a tuple of all the second elements, etc.
 ))
 
 $(TR $(TD $(D $(LREF lockstep)))
