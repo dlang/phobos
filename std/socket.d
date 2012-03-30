@@ -1785,7 +1785,7 @@ version(StdDdoc)
     }
 }
 else
-static if (is(typeof(sockaddr_un)))
+static if (is(sockaddr_un))
 {
     class UnixAddress: Address
     {

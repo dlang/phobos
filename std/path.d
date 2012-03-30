@@ -2782,13 +2782,15 @@ unittest
 
 // =============================================================================
 // Everything below this line is from an old version of std.path, and is
-// scheduled for deprecation in March 2012.
+// deprecated and will be removed in October 2012.
 // =============================================================================
 
 
 import std.algorithm, std.array, std.conv, std.file, std.process, std.string,
     std.traits;
 import core.stdc.errno, core.stdc.stdlib;
+
+deprecated:
 
 version(Posix)
 {
@@ -2814,7 +2816,6 @@ version(Windows)
     enum string curdir = ".";       // / String representing the current directory.
     enum string pardir = "..";      // / String representing the parent directory.
 
-    static assert(sep.length == 1 && altsep.length == 1);
     private bool isSep(dchar ch) {
         return ch == sep[0] || ch == altsep[0];
     }
@@ -2840,14 +2841,13 @@ version(Posix)
     enum string curdir = ".";       // / String representing the current directory.
     enum string pardir = "..";      // / String representing the parent directory.
 
-    static assert(sep.length == 1 && altsep.length == 0);
     private bool isSep(dchar ch) {
         return ch == sep[0];
     }
 }
 
 /******************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF filenameCmp) instead.)
  *
  * Compare file names.
@@ -2866,7 +2866,7 @@ int fcmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
 }
 
 /***************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF extension) instead.)
  *
  * Extracts the extension from a filename or path.
@@ -2964,7 +2964,7 @@ version (OldStdPathUnittest) unittest
 }
 
 /***************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF stripExtension) instead.)
  *
  * Returns the extensionless version of a filename or path.
@@ -3040,7 +3040,7 @@ version (OldStdPathUnittest) unittest
 }
 
 /***************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF baseName) instead.)
  *
  * Extracts the base name of a path and optionally chops off a
@@ -3147,7 +3147,7 @@ version (OldStdPathUnittest) unittest
 }
 
 /***************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF dirName) instead.)
  *
  * Extracts the directory part of a path.
@@ -3383,7 +3383,7 @@ version (OldStdPathUnittest) unittest // dirname + basename
 
 
 /*********************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF driveName) instead.)
  *
  * Extracts the drive letter of a path.
@@ -3430,7 +3430,7 @@ body
 }
 
 /*****************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF defaultExtension) instead.)
  *
  * Appends a default extension to a filename.
@@ -3471,7 +3471,7 @@ string defaultExt()(string filename, string ext)
 
 
 /*****************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF setExtension) instead.)
  *
  * Adds or replaces an extension to a filename.
@@ -3518,7 +3518,7 @@ string addExt()(string filename, string ext)
 
 
 /**************************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF isAbsolute) instead.)
  *
  * Checks if path is absolute.
@@ -3580,7 +3580,7 @@ version (OldStdPathUnittest) unittest
 }
 
 /**
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF absolutePath) instead.)
  *
  * Converts a relative path into an absolute path.
@@ -3623,7 +3623,7 @@ version (OldStdPathUnittest) unittest
 }
 
 /**************************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF buildPath) instead.)
  *
  * Joins two or more path components.
@@ -3816,7 +3816,7 @@ unittest
 }
 
 /**********************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF filenameCharCmp) instead.)
  *
  * Matches filename characters.
@@ -3868,7 +3868,7 @@ bool fncharmatch()(dchar c1, dchar c2)
 }
 
 /*************************************
- * $(RED Scheduled for deprecation in March 2012. Please use
+ * $(RED Deprecated. It will be removed in October 2012. Please use
  *       $(LREF globMatch) instead.)
  *
  * Matches a pattern against a filename.

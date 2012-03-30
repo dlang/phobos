@@ -227,7 +227,7 @@ import core.bitop, core.stdc.string, core.stdc.stdlib;
 import ascii = std.ascii;
 import std.string : representation;
 
-version(unittest) debug import std.stdio;
+debug import std.stdio;
 
 private:
 @safe:
@@ -1148,15 +1148,23 @@ struct Parser(R, bool CTFE=false)
                     put(Bytecode(IR.Option, 0));
                     break;
                 }
+                uint len, orStart;
                 //start a new option
-                if(fixupStack.length == 1)//only root entry
-                    fix = -1;
-                uint len = cast(uint)ir.length - fix;
-                insertInPlaceAlt(ir, fix+1, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
-                assert(ir[fix+1].code == IR.OrStart);
+                if(fixupStack.length == 1)
+                {//only root entry, effectively no fixup
+                    len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
+                    orStart = 0;   
+                }
+                else
+                {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
+                    len = cast(uint)ir.length - fix - (ir[fix].length - 1);
+                    orStart = fix + ir[fix].length;
+                }
+                insertInPlaceAlt(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                assert(ir[orStart].code == IR.OrStart);
                 put(Bytecode(IR.GotoEndOr, 0));
-                fixupStack.push(fix+1); //fixup for StartOR
-                fixupStack.push(cast(uint)ir.length); //for Option
+                fixupStack.push(orStart); //fixup for StartOR
+                fixupStack.push(cast(uint)ir.length); //for second Option
                 put(Bytecode(IR.Option, 0));
                 break;
             default://no groups or whatever
@@ -2117,7 +2125,6 @@ private:
     //print out disassembly a program's IR
     @trusted debug public void print() const
     {//@@@BUG@@@ write is system
-        import std.stdio;
         writefln("PC\tINST\n");
         prettyPrint(delegate void(const(char)[] s){ write(s); },ir);
         writefln("\n");
@@ -4041,7 +4048,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         assert(re.ir[pc].code == IR.Option);
                         len = re.ir[pc].data;
-                        auto pc_save = pc+len-1;
+                        auto pc_save = pc+len-IRL!(IR.GotoEndOr);
                         pc = pc + len + IRL!(IR.Option);
                         while(re.ir[pc].code == IR.Option)
                         {
@@ -6439,6 +6446,12 @@ public template ctRegex(alias pattern, alias flags=[])
     enum ctRegex = ctRegexImpl!(pattern, flags).nr;
 }
 
+template isRegexFor(RegEx, R)
+{
+    enum isRegexFor = is(RegEx == Regex!(BasicElementOf!R))
+                 || is(RegEx == StaticRegex!(BasicElementOf!R));
+}
+
 /++
     Start matching $(D input) to regex pattern $(D re),
     using Thompson NFA matching scheme.
@@ -6546,8 +6559,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
 +/
 public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R format)
-  if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R))
-     || is(RegEx == StaticRegex!(BasicElementOf!R)))
+  if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6589,7 +6601,7 @@ public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R for
     ---
 +/
 public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegEx re)
-    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6610,7 +6622,7 @@ public @trusted void replaceFmt(R, Capt, OutR)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    enum State { Normal, Escape, Dollar }
+    enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
 L_Replace_Loop:
@@ -6620,29 +6632,16 @@ L_Replace_Loop:
         case State.Normal:
             for(offset = 0; offset < format.length; offset++)//no decoding
             {
-                switch(format[offset])
+                if(format[offset] == '$')
                 {
-                case '\\':
-                    state = State.Escape;
-                    sink.put(format[0 .. offset]);
-                    format = format[offset+1 .. $];//safe since special chars are ascii only
-                    continue L_Replace_Loop;
-                case '$':
                     state = State.Dollar;
                     sink.put(format[0 .. offset]);
                     format = format[offset+1 .. $];//ditto
                     continue L_Replace_Loop;
-                default:
                 }
             }
             sink.put(format[0 .. offset]);
             format = format[offset .. $];
-            break;
-        case State.Escape:
-            offset = std.utf.stride(format, 0);
-            sink.put(format[0 .. offset]);
-            format = format[offset .. $];
-            state = State.Normal;
             break;
         case State.Dollar:
             if(ascii.isDigit(format[0]))
@@ -6698,16 +6697,16 @@ assert(equal(splitter(s1, regex(", *")),
     ["", "abc", "de", "fg", "hi", ""]));
 ----
 +/
-public struct Splitter(Range, alias Engine=ThompsonMatcher)
-    if(isSomeString!Range)
+public struct Splitter(Range, alias RegEx=Regex)
+    if(isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
     Range _input;
     size_t _offset;
-    alias RegexMatch!(Range, Engine) Rx;
+    alias typeof(match(Range.init,RegEx.init)) Rx;
     Rx _match;
 
-    @trusted this(Range input, Regex!(BasicElementOf!Range) separator)
+    @trusted this(Range input, RegEx separator)  
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
         separator.flags |= RegexOption.global;
@@ -6766,16 +6765,19 @@ public:
     }
 }
 
-///A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
-public Splitter!(Range) splitter(Range, RegEx)(Range r, RegEx pat)
-    if( is(BasicElementOf!Range : dchar) && is(RegEx == Regex!(BasicElementOf!Range)))
+/**
+    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
+    Captured subexpressions have no effect on the resulting range.
+*/
+public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
+    if(is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
-    return Splitter!(Range)(r, pat);
+    return Splitter!(Range, RegEx)(r, pat);
 }
 
 ///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
-    if(isSomeString!String && is(RegEx == Regex!(BasicElementOf!String)))
+    if(isSomeString!String  && isRegexFor!(RegEx, String))
 {
     auto a = appender!(String[])();
     foreach(e; splitter(input, rx))
@@ -7112,7 +7114,9 @@ unittest
         TestVectors(    `(?<=((ab|da)*))x`,    "abdaabx", "y",        "$&-$2-$1",  "x-ab-abdaab"),
         TestVectors(    `a(?<=(ba(?<=(aba)(?<=aaba))))`, "aabaa", "y", "$&-$1-$2", "a-ba-aba"),
         TestVectors(    `.(?<!b).`,   "bax",  "y", "$&", "ax"),
-        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y", "$&", "x"),
+        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y",  "$&", "x"),
+        TestVectors(    `(?<=\.|[!?]+)X`,   "Hey?!X", "y", "$&", "X"),
+        TestVectors(    `(?<=\.|[!?]+)a{3}`,   ".Nope.aaaX", "y", "$&", "aaa"),
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
@@ -7499,6 +7503,23 @@ else
     unittest
     {//bugzilla 7111
         assert(!match("", regex("^")).empty);
+    }
+
+    unittest
+    {//bugzilla 7674
+        assert("1234".replace(regex("^"), "$$") == "$1234");
+        assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
+        assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
+    }
+    unittest
+    {// bugzilla 7679
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            enum re = ctRegex!(to!S(r"\."));
+            auto str = to!S("a.b");
+            assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
+            assert(split(str, re) == [to!S("a"), to!S("b")]);
+        }
     }
 }
 

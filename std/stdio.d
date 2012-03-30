@@ -416,7 +416,7 @@ referring to the same handle will see a closed file henceforth.
             if (p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) == 0,
+                errnoEnforce(.pclose(p.handle) != -1,
                         "Could not close pipe `"~p.name~"'");
                 return;
             }
@@ -673,13 +673,9 @@ arguments in text format to the file. */
             {
                 toTextRange(arg, w);
             }
-            else static if (is(Unqual!A == bool))
+            else static if (isBoolean!A)
             {
                 put(w, arg ? "true" : "false");
-            }
-            else static if (is(A : char))
-            {
-                put(w, arg);
             }
             else static if (isSomeChar!A)
             {
