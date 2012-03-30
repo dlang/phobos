@@ -170,11 +170,11 @@ version(testStdDateTime) unittest
 //Verify Examples for core.time.Duration which couldn't be in core.time.
 version(testStdDateTime) unittest
 {
-    assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
+    assert(std.datetime.Date(2010, 9, 7) + days(5) ==
            std.datetime.Date(2010, 9, 12));
 
     assert(std.datetime.Date(2010, 9, 7) - std.datetime.Date(2010, 10, 3) ==
-           dur!"days"(-26));
+           days(-26));
 }
 
 //Note: There various functions which void as their return type and ref of the
@@ -5959,22 +5959,22 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         {
             auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678));
 
-            _assertPred!"=="(st + dur!"weeks"(7), SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"weeks"(-7), SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"days"(7), SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"days"(-7), SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"hours"(7), SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"hours"(-7), SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"minutes"(7), SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"minutes"(-7), SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"seconds"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"seconds"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st + dur!"msecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
-            _assertPred!"=="(st + dur!"msecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
-            _assertPred!"=="(st + dur!"usecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-            _assertPred!"=="(st + dur!"usecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
-            _assertPred!"=="(st + dur!"hnsecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
-            _assertPred!"=="(st + dur!"hnsecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
+            _assertPred!"=="(st + weeks(7), SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + weeks(-7), SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + days(7), SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + days(-7), SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + hours(7), SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + hours(-7), SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + minutes(7), SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + minutes(-7), SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + seconds(7), SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + seconds(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st + msecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
+            _assertPred!"=="(st + msecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
+            _assertPred!"=="(st + usecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
+            _assertPred!"=="(st + usecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
+            _assertPred!"=="(st + hnsecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
+            _assertPred!"=="(st + hnsecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -5984,22 +5984,22 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
                 _assertPred!"=="(st + TickDuration.from!"usecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
             }
 
-            _assertPred!"=="(st - dur!"weeks"(-7), SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"weeks"(7), SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"days"(-7), SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"days"(7), SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"hours"(-7), SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"hours"(7), SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"minutes"(-7), SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"minutes"(7), SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"seconds"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"seconds"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
-            _assertPred!"=="(st - dur!"msecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
-            _assertPred!"=="(st - dur!"msecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
-            _assertPred!"=="(st - dur!"usecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-            _assertPred!"=="(st - dur!"usecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
-            _assertPred!"=="(st - dur!"hnsecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
-            _assertPred!"=="(st - dur!"hnsecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
+            _assertPred!"=="(st - weeks(-7), SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - weeks(7), SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - days(-7), SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - days(7), SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - hours(-7), SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - hours(7), SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - minutes(-7), SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - minutes(7), SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - seconds(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - seconds(7), SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
+            _assertPred!"=="(st - msecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
+            _assertPred!"=="(st - msecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
+            _assertPred!"=="(st - usecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
+            _assertPred!"=="(st - usecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
+            _assertPred!"=="(st - hnsecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
+            _assertPred!"=="(st - hnsecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -6009,9 +6009,9 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
                 _assertPred!"=="(st - TickDuration.from!"usecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
             }
 
-            static void TestST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+            static void TestST(in SysTime orig, long numHnsecs, in SysTime expected, size_t line = __LINE__)
             {
-                _assertPred!"=="(orig + dur!"hnsecs"(hnsecs), expected, "", __FILE__, line);
+                _assertPred!"=="(orig + hnsecs(numHnsecs), expected, "", __FILE__, line);
             }
 
             //Test A.D.
@@ -6125,7 +6125,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
             TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9_999_999)));
             TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), FracSec.from!"hnsecs"(888_887)));
 
-            auto duration = dur!"seconds"(12);
+            auto duration = seconds(12);
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(__traits(compiles, cst + duration));
@@ -6181,45 +6181,45 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     {
         version(testStdDateTime)
         {
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"weeks"(7), SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"weeks"(-7), SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"days"(7), SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"days"(-7), SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), weeks(7), SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), weeks(-7), SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), days(7), SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), days(-7), SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
 
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hours"(7), SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hours"(-7), SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"minutes"(7), SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"minutes"(-7), SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"seconds"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"seconds"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"msecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(7)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"msecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"msecs"(993)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"usecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(7)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"usecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"usecs"(999_993)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hnsecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
-            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hnsecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hours(7), SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hours(-7), SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), minutes(7), SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), minutes(-7), SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), seconds(7), SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), seconds(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), msecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(7)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), msecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"msecs"(993)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), usecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(7)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), usecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"usecs"(999_993)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hnsecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
+            _assertPred!"+="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hnsecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
 
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"weeks"(-7), SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"weeks"(7), SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"days"(-7), SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"days"(7), SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), weeks(-7), SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), weeks(7), SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), days(-7), SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), days(7), SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
 
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hours"(-7), SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hours"(7), SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"minutes"(-7), SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"minutes"(7), SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"seconds"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"seconds"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"msecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(7)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"msecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"msecs"(993)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"usecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(7)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"usecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"usecs"(999_993)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hnsecs"(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
-            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), dur!"hnsecs"(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hours(-7), SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hours(7), SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), minutes(-7), SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), minutes(7), SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), seconds(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), seconds(7), SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), msecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(7)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), msecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"msecs"(993)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), usecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(7)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), usecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"usecs"(999_993)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hnsecs(-7), SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
+            _assertPred!"-="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)), hnsecs(7), SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
 
             static void TestST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
             {
-                orig += dur!"hnsecs"(hnsecs);
+                orig += hnsecs(hnsecs);
                 _assertPred!"=="(orig, expected, "", __FILE__, line);
             }
 
@@ -6334,7 +6334,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
             TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9_999_999)));
             TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), FracSec.from!"hnsecs"(888_887)));
 
-            auto duration = dur!"seconds"(12);
+            auto testDuration = seconds(12);
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(!__traits(compiles, cst += duration));
@@ -6357,7 +6357,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
     Duration opBinary(string op)(in SysTime rhs) const pure nothrow
         if(op == "-")
     {
-        return dur!"hnsecs"(_stdTime - rhs._stdTime);
+        return hnsecs(_stdTime - rhs._stdTime);
     }
 
     unittest
@@ -6365,73 +6365,73 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         version(testStdDateTime)
         {
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1998, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(31_536_000));
+                        seconds(31_536_000));
             _assertPred!"=="(SysTime(DateTime(1998, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(-31_536_000));
+                        seconds(-31_536_000));
 
             _assertPred!"=="(SysTime(DateTime(1999, 8, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(26_78_400));
+                        seconds(26_78_400));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 8, 6, 12, 30, 33)),
-                        dur!"seconds"(-26_78_400));
+                        seconds(-26_78_400));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 5, 12, 30, 33)),
-                        dur!"seconds"(86_400));
+                        seconds(86_400));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 5, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(-86_400));
+                        seconds(-86_400));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 11, 30, 33)),
-                        dur!"seconds"(3600));
+                        seconds(3600));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 11, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(-3600));
+                        seconds(-3600));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 31, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(60));
+                        seconds(60));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 31, 33)),
-                        dur!"seconds"(-60));
+                        seconds(-60));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 34)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"seconds"(1));
+                        seconds(1));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 34)),
-                        dur!"seconds"(-1));
+                        seconds(-1));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(532)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"msecs"(532));
+                        msecs(532));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"msecs"(532)),
-                        dur!"msecs"(-532));
+                        msecs(-532));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(333_347)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"usecs"(333_347));
+                        usecs(333_347));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"usecs"(333_347)),
-                        dur!"usecs"(-333_347));
+                        usecs(-333_347));
 
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_234_567)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)),
-                        dur!"hnsecs"(1_234_567));
+                        hnsecs(1_234_567));
             _assertPred!"=="(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_234_567)),
-                        dur!"hnsecs"(-1_234_567));
+                        hnsecs(-1_234_567));
 
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), dur!"seconds"(45033));
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(1, 1, 1, 12, 30, 33)), dur!"seconds"(-45033));
-            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), dur!"seconds"(-41367));
-            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 12, 30, 33)), dur!"seconds"(41367));
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), seconds(45033));
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(1, 1, 1, 12, 30, 33)), seconds(-45033));
+            _assertPred!"=="(SysTime(DateTime(0, 12, 31, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), seconds(-41367));
+            _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 12, 30, 33)), seconds(41367));
 
             _assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)),
-                            dur!"hnsecs"(1));
+                            hnsecs(1));
             _assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)),
-                            dur!"hnsecs"(-1));
+                            hnsecs(-1));
 
             auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
             _assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz) -
                             SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz),
-                            dur!"hnsecs"(0));
+                            hnsecs(0));
 
             _assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz) -
                             SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), UTC()),
-                            dur!"hours"(8));
+                            hours(8));
 
             _assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), UTC()) -
                             SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz),
-                            dur!"hours"(-8));
+                            hours(-8));
 
             auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -11448,23 +11448,23 @@ assert(d == Date(2010, 1, 25));
         {
             auto date = Date(1999, 7, 6);
 
-            _assertPred!"=="(date + dur!"weeks"(7), Date(1999, 8, 24));
-            _assertPred!"=="(date + dur!"weeks"(-7), Date(1999, 5, 18));
-            _assertPred!"=="(date + dur!"days"(7), Date(1999, 7, 13));
-            _assertPred!"=="(date + dur!"days"(-7), Date(1999, 6, 29));
+            _assertPred!"=="(date + weeks(7), Date(1999, 8, 24));
+            _assertPred!"=="(date + weeks(-7), Date(1999, 5, 18));
+            _assertPred!"=="(date + days(7), Date(1999, 7, 13));
+            _assertPred!"=="(date + days(-7), Date(1999, 6, 29));
 
-            _assertPred!"=="(date + dur!"hours"(24), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"hours"(-24), Date(1999, 7, 5));
-            _assertPred!"=="(date + dur!"minutes"(1440), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"minutes"(-1440), Date(1999, 7, 5));
-            _assertPred!"=="(date + dur!"seconds"(86_400), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"seconds"(-86_400), Date(1999, 7, 5));
-            _assertPred!"=="(date + dur!"msecs"(86_400_000), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"msecs"(-86_400_000), Date(1999, 7, 5));
-            _assertPred!"=="(date + dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
-            _assertPred!"=="(date + dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
-            _assertPred!"=="(date + dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
+            _assertPred!"=="(date + hours(24), Date(1999, 7, 7));
+            _assertPred!"=="(date + hours(-24), Date(1999, 7, 5));
+            _assertPred!"=="(date + minutes(1440), Date(1999, 7, 7));
+            _assertPred!"=="(date + minutes(-1440), Date(1999, 7, 5));
+            _assertPred!"=="(date + seconds(86_400), Date(1999, 7, 7));
+            _assertPred!"=="(date + seconds(-86_400), Date(1999, 7, 5));
+            _assertPred!"=="(date + msecs(86_400_000), Date(1999, 7, 7));
+            _assertPred!"=="(date + msecs(-86_400_000), Date(1999, 7, 5));
+            _assertPred!"=="(date + usecs(86_400_000_000), Date(1999, 7, 7));
+            _assertPred!"=="(date + usecs(-86_400_000_000), Date(1999, 7, 5));
+            _assertPred!"=="(date + hnsecs(864_000_000_000), Date(1999, 7, 7));
+            _assertPred!"=="(date + hnsecs(-864_000_000_000), Date(1999, 7, 5));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -11474,23 +11474,23 @@ assert(d == Date(2010, 1, 25));
                 _assertPred!"=="(date + TickDuration.from!"usecs"(-86_400_000_000), Date(1999, 7, 5));
             }
 
-            _assertPred!"=="(date - dur!"weeks"(-7), Date(1999, 8, 24));
-            _assertPred!"=="(date - dur!"weeks"(7), Date(1999, 5, 18));
-            _assertPred!"=="(date - dur!"days"(-7), Date(1999, 7, 13));
-            _assertPred!"=="(date - dur!"days"(7), Date(1999, 6, 29));
+            _assertPred!"=="(date - weeks(-7), Date(1999, 8, 24));
+            _assertPred!"=="(date - weeks(7), Date(1999, 5, 18));
+            _assertPred!"=="(date - days(-7), Date(1999, 7, 13));
+            _assertPred!"=="(date - days(7), Date(1999, 6, 29));
 
-            _assertPred!"=="(date - dur!"hours"(-24), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"hours"(24), Date(1999, 7, 5));
-            _assertPred!"=="(date - dur!"minutes"(-1440), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"minutes"(1440), Date(1999, 7, 5));
-            _assertPred!"=="(date - dur!"seconds"(-86_400), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"seconds"(86_400), Date(1999, 7, 5));
-            _assertPred!"=="(date - dur!"msecs"(-86_400_000), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"msecs"(86_400_000), Date(1999, 7, 5));
-            _assertPred!"=="(date - dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
-            _assertPred!"=="(date - dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
-            _assertPred!"=="(date - dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
+            _assertPred!"=="(date - hours(-24), Date(1999, 7, 7));
+            _assertPred!"=="(date - hours(24), Date(1999, 7, 5));
+            _assertPred!"=="(date - minutes(-1440), Date(1999, 7, 7));
+            _assertPred!"=="(date - minutes(1440), Date(1999, 7, 5));
+            _assertPred!"=="(date - seconds(-86_400), Date(1999, 7, 7));
+            _assertPred!"=="(date - seconds(86_400), Date(1999, 7, 5));
+            _assertPred!"=="(date - msecs(-86_400_000), Date(1999, 7, 7));
+            _assertPred!"=="(date - msecs(86_400_000), Date(1999, 7, 5));
+            _assertPred!"=="(date - usecs(-86_400_000_000), Date(1999, 7, 7));
+            _assertPred!"=="(date - usecs(86_400_000_000), Date(1999, 7, 5));
+            _assertPred!"=="(date - hnsecs(-864_000_000_000), Date(1999, 7, 7));
+            _assertPred!"=="(date - hnsecs(864_000_000_000), Date(1999, 7, 5));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -11500,7 +11500,7 @@ assert(d == Date(2010, 1, 25));
                 _assertPred!"=="(date - TickDuration.from!"usecs"(86_400_000_000), Date(1999, 7, 5));
             }
 
-            auto duration = dur!"days"(12);
+            auto duration = days(12);
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
             static assert(__traits(compiles, date + duration));
@@ -11556,43 +11556,43 @@ assert(d == Date(2010, 1, 25));
     {
         version(testStdDateTime)
         {
-            _assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 8, 24));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 5, 18));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 7, 13));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 6, 29));
+            _assertPred!"+="(Date(1999, 7, 6), weeks(7), Date(1999, 8, 24));
+            _assertPred!"+="(Date(1999, 7, 6), weeks(-7), Date(1999, 5, 18));
+            _assertPred!"+="(Date(1999, 7, 6), days(7), Date(1999, 7, 13));
+            _assertPred!"+="(Date(1999, 7, 6), days(-7), Date(1999, 6, 29));
 
-            _assertPred!"+="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 5));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 5));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 5));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 5));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
-            _assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), hours(24), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), hours(-24), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), minutes(1440), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), minutes(-1440), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), seconds(86_400), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), seconds(-86_400), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), msecs(86_400_000), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), msecs(-86_400_000), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), usecs(86_400_000_000), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), usecs(-86_400_000_000), Date(1999, 7, 5));
+            _assertPred!"+="(Date(1999, 7, 6), hnsecs(864_000_000_000), Date(1999, 7, 7));
+            _assertPred!"+="(Date(1999, 7, 6), hnsecs(-864_000_000_000), Date(1999, 7, 5));
 
-            _assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 8, 24));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 5, 18));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 7, 13));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 6, 29));
+            _assertPred!"-="(Date(1999, 7, 6), weeks(-7), Date(1999, 8, 24));
+            _assertPred!"-="(Date(1999, 7, 6), weeks(7), Date(1999, 5, 18));
+            _assertPred!"-="(Date(1999, 7, 6), days(-7), Date(1999, 7, 13));
+            _assertPred!"-="(Date(1999, 7, 6), days(7), Date(1999, 6, 29));
 
-            _assertPred!"-="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 5));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 5));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 5));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 5));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
-            _assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), hours(-24), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), hours(24), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), minutes(-1440), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), minutes(1440), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), seconds(-86_400), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), seconds(86_400), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), msecs(-86_400_000), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), msecs(86_400_000), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), usecs(-86_400_000_000), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), usecs(86_400_000_000), Date(1999, 7, 5));
+            _assertPred!"-="(Date(1999, 7, 6), hnsecs(-864_000_000_000), Date(1999, 7, 7));
+            _assertPred!"-="(Date(1999, 7, 6), hnsecs(864_000_000_000), Date(1999, 7, 5));
 
-            auto duration = dur!"days"(12);
+            auto duration = days(12);
             auto date = Date(1999, 7, 6);
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
@@ -11619,7 +11619,7 @@ assert(d == Date(2010, 1, 25));
     Duration opBinary(string op)(in Date rhs) const pure nothrow
         if(op == "-")
     {
-        return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
+        return days(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
 
     unittest
@@ -11628,12 +11628,12 @@ assert(d == Date(2010, 1, 25));
         {
             auto date = Date(1999, 7, 6);
 
-            _assertPred!"=="(Date(1999, 7, 6) - Date(1998, 7, 6), dur!"days"(365));
-            _assertPred!"=="(Date(1998, 7, 6) - Date(1999, 7, 6), dur!"days"(-365));
-            _assertPred!"=="(Date(1999, 6, 6) - Date(1999, 5, 6), dur!"days"(31));
-            _assertPred!"=="(Date(1999, 5, 6) - Date(1999, 6, 6), dur!"days"(-31));
-            _assertPred!"=="(Date(1999, 1, 1) - Date(1998, 12, 31), dur!"days"(1));
-            _assertPred!"=="(Date(1998, 12, 31) - Date(1999, 1, 1), dur!"days"(-1));
+            _assertPred!"=="(Date(1999, 7, 6) - Date(1998, 7, 6), days(365));
+            _assertPred!"=="(Date(1998, 7, 6) - Date(1999, 7, 6), days(-365));
+            _assertPred!"=="(Date(1999, 6, 6) - Date(1999, 5, 6), days(31));
+            _assertPred!"=="(Date(1999, 5, 6) - Date(1999, 6, 6), days(-31));
+            _assertPred!"=="(Date(1999, 1, 1) - Date(1998, 12, 31), days(1));
+            _assertPred!"=="(Date(1998, 12, 31) - Date(1999, 1, 1), days(-1));
 
             const cdate = Date(1999, 7, 6);
             immutable idate = Date(1999, 7, 6);
@@ -13858,7 +13858,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "hours")
     {
-        this += dur!"hours"(value);
+        this += hours(value);
     }
 
     //Verify Examples.
@@ -14166,19 +14166,19 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         {
             auto tod = TimeOfDay(12, 30, 33);
 
-            _assertPred!"=="(tod + dur!"hours"(7), TimeOfDay(19, 30, 33));
-            _assertPred!"=="(tod + dur!"hours"(-7), TimeOfDay(5, 30, 33));
-            _assertPred!"=="(tod + dur!"minutes"(7), TimeOfDay(12, 37, 33));
-            _assertPred!"=="(tod + dur!"minutes"(-7), TimeOfDay(12, 23, 33));
-            _assertPred!"=="(tod + dur!"seconds"(7), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod + dur!"seconds"(-7), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod + hours(7), TimeOfDay(19, 30, 33));
+            _assertPred!"=="(tod + hours(-7), TimeOfDay(5, 30, 33));
+            _assertPred!"=="(tod + minutes(7), TimeOfDay(12, 37, 33));
+            _assertPred!"=="(tod + minutes(-7), TimeOfDay(12, 23, 33));
+            _assertPred!"=="(tod + seconds(7), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod + seconds(-7), TimeOfDay(12, 30, 26));
 
-            _assertPred!"=="(tod + dur!"msecs"(7000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod + dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
-            _assertPred!"=="(tod + dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod + dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
-            _assertPred!"=="(tod + dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod + dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod + msecs(7000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod + msecs(-7000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod + usecs(7_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod + usecs(-7_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod + hnsecs(70_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod + hnsecs(-70_000_000), TimeOfDay(12, 30, 26));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -14188,19 +14188,19 @@ assert(tod6 == TimeOfDay(0, 0, 59));
                 _assertPred!"=="(tod + TickDuration.from!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
             }
 
-            _assertPred!"=="(tod - dur!"hours"(-7), TimeOfDay(19, 30, 33));
-            _assertPred!"=="(tod - dur!"hours"(7), TimeOfDay(5, 30, 33));
-            _assertPred!"=="(tod - dur!"minutes"(-7), TimeOfDay(12, 37, 33));
-            _assertPred!"=="(tod - dur!"minutes"(7), TimeOfDay(12, 23, 33));
-            _assertPred!"=="(tod - dur!"seconds"(-7), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod - dur!"seconds"(7), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod - hours(-7), TimeOfDay(19, 30, 33));
+            _assertPred!"=="(tod - hours(7), TimeOfDay(5, 30, 33));
+            _assertPred!"=="(tod - minutes(-7), TimeOfDay(12, 37, 33));
+            _assertPred!"=="(tod - minutes(7), TimeOfDay(12, 23, 33));
+            _assertPred!"=="(tod - seconds(-7), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod - seconds(7), TimeOfDay(12, 30, 26));
 
-            _assertPred!"=="(tod - dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod - dur!"msecs"(7000), TimeOfDay(12, 30, 26));
-            _assertPred!"=="(tod - dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod - dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
-            _assertPred!"=="(tod - dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"=="(tod - dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod - msecs(-7000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod - msecs(7000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod - usecs(-7_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod - usecs(7_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"=="(tod - hnsecs(-70_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"=="(tod - hnsecs(70_000_000), TimeOfDay(12, 30, 26));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -14210,7 +14210,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
                 _assertPred!"=="(tod - TickDuration.from!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
             }
 
-            auto duration = dur!"hours"(11);
+            auto duration = hours(11);
             const ctod = TimeOfDay(12, 33, 30);
             immutable itod = TimeOfDay(12, 33, 30);
             static assert(__traits(compiles, tod + duration));
@@ -14268,35 +14268,35 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     {
         version(testStdDateTime)
         {
-            auto duration = dur!"hours"(12);
+            auto duration = hours(12);
 
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(19, 30, 33));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(5, 30, 33));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 37, 33));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 23, 33));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 40));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 26));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), hours(7), TimeOfDay(19, 30, 33));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), hours(-7), TimeOfDay(5, 30, 33));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), minutes(7), TimeOfDay(12, 37, 33));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), minutes(-7), TimeOfDay(12, 23, 33));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), seconds(7), TimeOfDay(12, 30, 40));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), seconds(-7), TimeOfDay(12, 30, 26));
 
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 40));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), msecs(7000), TimeOfDay(12, 30, 40));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), msecs(-7000), TimeOfDay(12, 30, 26));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), usecs(7_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), usecs(-7_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), hnsecs(70_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"+="(TimeOfDay(12, 30, 33), hnsecs(-70_000_000), TimeOfDay(12, 30, 26));
 
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(19, 30, 33));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(5, 30, 33));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 37, 33));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 23, 33));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 40));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 26));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), hours(-7), TimeOfDay(19, 30, 33));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), hours(7), TimeOfDay(5, 30, 33));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), minutes(-7), TimeOfDay(12, 37, 33));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), minutes(7), TimeOfDay(12, 23, 33));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), seconds(-7), TimeOfDay(12, 30, 40));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), seconds(7), TimeOfDay(12, 30, 26));
 
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 26));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
-            _assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), msecs(-7000), TimeOfDay(12, 30, 40));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), msecs(7000), TimeOfDay(12, 30, 26));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), usecs(-7_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), usecs(7_000_000), TimeOfDay(12, 30, 26));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), hnsecs(-70_000_000), TimeOfDay(12, 30, 40));
+            _assertPred!"-="(TimeOfDay(12, 30, 33), hnsecs(70_000_000), TimeOfDay(12, 30, 26));
 
             const ctod = TimeOfDay(12, 33, 30);
             immutable itod = TimeOfDay(12, 33, 30);
@@ -14326,7 +14326,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
         immutable rhsSec = rhs._hour * 3600 + rhs._minute * 60 + rhs._second;
 
-        return dur!"seconds"(lhsSec - rhsSec);
+        return seconds(lhsSec - rhsSec);
     }
 
     unittest
@@ -14335,14 +14335,14 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         {
             auto tod = TimeOfDay(12, 30, 33);
 
-            _assertPred!"=="(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33), dur!"seconds"(-19_061));
-            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52), dur!"seconds"(19_061));
-            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33), dur!"seconds"(-7200));
-            _assertPred!"=="(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(7200));
-            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33), dur!"seconds"(-240));
-            _assertPred!"=="(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(240));
-            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34), dur!"seconds"(-1));
-            _assertPred!"=="(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33), dur!"seconds"(1));
+            _assertPred!"=="(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33), seconds(-19_061));
+            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52), seconds(19_061));
+            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33), seconds(-7200));
+            _assertPred!"=="(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33), seconds(7200));
+            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33), seconds(-240));
+            _assertPred!"=="(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33), seconds(240));
+            _assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34), seconds(-1));
+            _assertPred!"=="(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33), seconds(1));
 
             const ctod = TimeOfDay(12, 30, 33);
             immutable itod = TimeOfDay(12, 30, 33);
@@ -16710,23 +16710,23 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
         {
             auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
-            _assertPred!"=="(dt + dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt + dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt + dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt + dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt + weeks(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt + weeks(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt + days(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt + days(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
 
-            _assertPred!"=="(dt + dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            _assertPred!"=="(dt + dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            _assertPred!"=="(dt + dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            _assertPred!"=="(dt + dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            _assertPred!"=="(dt + dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt + dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt + dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt + dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt + dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt + dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt + dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt + dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt + hours(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            _assertPred!"=="(dt + hours(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            _assertPred!"=="(dt + minutes(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            _assertPred!"=="(dt + minutes(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            _assertPred!"=="(dt + seconds(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt + seconds(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt + msecs(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt + msecs(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt + usecs(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt + usecs(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt + hnsecs(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt + hnsecs(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -16736,23 +16736,23 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
                 _assertPred!"=="(dt + TickDuration.from!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
             }
 
-            _assertPred!"=="(dt - dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt - dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt - dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            _assertPred!"=="(dt - dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt - weeks(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt - weeks(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt - days(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            _assertPred!"=="(dt - days(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
 
-            _assertPred!"=="(dt - dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            _assertPred!"=="(dt - dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            _assertPred!"=="(dt - dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            _assertPred!"=="(dt - dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            _assertPred!"=="(dt - dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt - dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt - dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt - dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt - dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt - dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"=="(dt - dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"=="(dt - dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt - hours(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            _assertPred!"=="(dt - hours(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            _assertPred!"=="(dt - minutes(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            _assertPred!"=="(dt - minutes(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            _assertPred!"=="(dt - seconds(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt - seconds(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt - msecs(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt - msecs(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt - usecs(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt - usecs(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"=="(dt - hnsecs(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"=="(dt - hnsecs(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
             //This probably only runs in cases where gettimeofday() is used, but it's
             //hard to do this test correctly with variable ticksPerSec.
@@ -16762,7 +16762,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
                 _assertPred!"=="(dt - TickDuration.from!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
             }
 
-            auto duration = dur!"seconds"(12);
+            auto duration = seconds(12);
             const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             static assert(__traits(compiles, cdt + duration));
@@ -16818,43 +16818,43 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     {
         version(testStdDateTime)
         {
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), weeks(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), weeks(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), days(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), days(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
 
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hours(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hours(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), minutes(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), minutes(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), seconds(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), seconds(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), msecs(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), msecs(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), usecs(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), usecs(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hnsecs(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hnsecs(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), weeks(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), weeks(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), days(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), days(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
 
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hours(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hours(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), minutes(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), minutes(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), seconds(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), seconds(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), msecs(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), msecs(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), usecs(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), usecs(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hnsecs(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            _assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), hnsecs(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
-            auto duration = dur!"seconds"(12);
+            auto duration = seconds(12);
             const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             static assert(!__traits(compiles, cdt += duration));
@@ -16880,7 +16880,7 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
         immutable dateResult = _date - rhs.date;
         immutable todResult = _tod - rhs._tod;
 
-        return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
+        return hnsecs(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
     }
 
     unittest
@@ -16891,50 +16891,50 @@ assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
 
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(31_536_000));
+                        seconds(31_536_000));
             _assertPred!"=="(DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-31_536_000));
+                        seconds(-31_536_000));
 
             _assertPred!"=="(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(26_78_400));
+                        seconds(26_78_400));
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-26_78_400));
+                        seconds(-26_78_400));
 
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(86_400));
+                        seconds(86_400));
             _assertPred!"=="(DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-86_400));
+                        seconds(-86_400));
 
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)),
-                        dur!"seconds"(3600));
+                        seconds(3600));
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-3600));
+                        seconds(-3600));
 
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(60));
+                        seconds(60));
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                        dur!"seconds"(-60));
+                        seconds(-60));
 
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(1));
+                        seconds(1));
             _assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                          DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                        dur!"seconds"(-1));
+                        seconds(-1));
 
-            _assertPred!"=="(DateTime(1, 1, 1, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(45033));
-            _assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(1, 1, 1, 12, 30, 33), dur!"seconds"(-45033));
-            _assertPred!"=="(DateTime(0, 12, 31, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(-41367));
-            _assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(0, 12, 31, 12, 30, 33), dur!"seconds"(41367));
+            _assertPred!"=="(DateTime(1, 1, 1, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), seconds(45033));
+            _assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(1, 1, 1, 12, 30, 33), seconds(-45033));
+            _assertPred!"=="(DateTime(0, 12, 31, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), seconds(-41367));
+            _assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(0, 12, 31, 12, 30, 33), seconds(41367));
 
             const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
             immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -18478,7 +18478,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).end ==
         Examples:
 --------------------
 assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
-       dur!"days"(5903));
+       days(5903));
 --------------------
       +/
     @property typeof(end - begin) length() const pure nothrow
@@ -19305,10 +19305,10 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
 auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
 auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
 
-interval1.shift(dur!"days"(50));
+interval1.shift(days(50));
 assert(interval1 == Interval!Date(Date(1996, 2, 21), Date(2012, 5, 25)));
 
-interval2.shift(dur!"days"(-50));
+interval2.shift(days(-50));
 assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
 --------------------
       +/
@@ -19595,9 +19595,9 @@ auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
 auto func = (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
-                    return date + dur!"days"(2);
+                    return date + days(2);
 
-                return date + dur!"days"(1);
+                return date + days(1);
             };
 auto range = interval.fwdRange(func);
 
@@ -19688,9 +19688,9 @@ auto interval = Interval!Date(Date(2010, 9, 1), Date(2010, 9, 9));
 auto func = (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
+                    return date - days(2);
 
-                return date - dur!"days"(1);
+                return date - days(1);
             };
 auto range = interval.bwdRange(func);
 
@@ -19811,16 +19811,16 @@ unittest
         Interval!DateTime(DateTime.init, DateTime.init);
         Interval!SysTime(SysTime(0), SysTime(0));
 
-        Interval!DateTime(DateTime.init, dur!"days"(7));
+        Interval!DateTime(DateTime.init, days(7));
 
         //Verify Examples.
         Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-        assert(Interval!Date(Date(1996, 1, 2), dur!"weeks"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 23)));
-        assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
-        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"hours"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 15, 0, 0)));
-        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"minutes"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 3, 0)));
-        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"seconds"(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
-        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"msecs"(3000)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
+        assert(Interval!Date(Date(1996, 1, 2), weeks(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 23)));
+        assert(Interval!Date(Date(1996, 1, 2), days(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
+        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), hours(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 15, 0, 0)));
+        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), minutes(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 3, 0)));
+        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), seconds(3)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
+        assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), msecs(3000)) == Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 12, 0, 3)));
     }
 }
 
@@ -19867,11 +19867,11 @@ unittest
 {
     version(testStdDateTime)
     {
-        _assertPred!"=="(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length, dur!"days"(0));
-        _assertPred!"=="(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length, dur!"days"(90));
-        _assertPred!"=="(Interval!TimeOfDay(TimeOfDay(0, 30, 0), TimeOfDay(12, 22, 7)).length, dur!"seconds"(42_727));
-        _assertPred!"=="(Interval!DateTime(DateTime(2010, 1, 1, 0, 30, 0), DateTime(2010, 1, 2, 12, 22, 7)).length, dur!"seconds"(129_127));
-        _assertPred!"=="(Interval!SysTime(SysTime(DateTime(2010, 1, 1, 0, 30, 0)), SysTime(DateTime(2010, 1, 2, 12, 22, 7))).length, dur!"seconds"(129_127));
+        _assertPred!"=="(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length, days(0));
+        _assertPred!"=="(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length, days(90));
+        _assertPred!"=="(Interval!TimeOfDay(TimeOfDay(0, 30, 0), TimeOfDay(12, 22, 7)).length, seconds(42_727));
+        _assertPred!"=="(Interval!DateTime(DateTime(2010, 1, 1, 0, 30, 0), DateTime(2010, 1, 2, 12, 22, 7)).length, seconds(129_127));
+        _assertPred!"=="(Interval!SysTime(SysTime(DateTime(2010, 1, 1, 0, 30, 0)), SysTime(DateTime(2010, 1, 2, 12, 22, 7))).length, seconds(129_127));
 
         const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -19879,7 +19879,7 @@ unittest
         static assert(__traits(compiles, iInterval.length));
 
         //Verify Examples.
-        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == dur!"days"(5903));
+        assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length == days(5903));
     }
 }
 
@@ -19912,7 +19912,7 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).contains(Date(2010, 7, 4)));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).contains(Date(2010, 7, 4)));
 
         assert(!interval.contains(Date(2009, 7, 4)));
         assert(!interval.contains(Date(2010, 7, 3)));
@@ -19945,9 +19945,9 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(interval.contains(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).contains(interval));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).contains(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(interval.contains(Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).contains(interval));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).contains(Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(interval.contains(interval));
         assert(!interval.contains(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20044,7 +20044,7 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isBefore(Date(2010, 7, 4)));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isBefore(Date(2010, 7, 4)));
 
         assert(!interval.isBefore(Date(2009, 7, 3)));
         assert(!interval.isBefore(Date(2010, 7, 3)));
@@ -20077,9 +20077,9 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(interval.isBefore(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isBefore(interval));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isBefore(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(interval.isBefore(Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isBefore(interval));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isBefore(Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!interval.isBefore(interval));
         assert(!interval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20177,7 +20177,7 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isAfter(Date(2010, 7, 4)));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isAfter(Date(2010, 7, 4)));
 
         assert(interval.isAfter(Date(2009, 7, 4)));
         assert(interval.isAfter(Date(2010, 7, 3)));
@@ -20210,9 +20210,9 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(interval.isAfter(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isAfter(interval));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).isAfter(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(interval.isAfter(Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isAfter(interval));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).isAfter(Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!interval.isAfter(interval));
         assert(interval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20309,9 +20309,9 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(interval.intersects(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersects(interval));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersects(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(interval.intersects(Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).intersects(interval));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).intersects(Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(interval.intersects(interval));
         assert(!interval.intersects(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20410,9 +20410,9 @@ unittest
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersection(interval));
-        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), dur!"days"(0)).intersection(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).intersection(interval));
+        assertThrown!DateTimeException(Interval!Date(Date(2010, 7, 4), days(0)).intersection(Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
         assertThrown!DateTimeException(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
@@ -20543,9 +20543,9 @@ unittest
             interval1.isAdjacent(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), interval));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!interval.isAdjacent(interval));
         assert(!interval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -20649,9 +20649,9 @@ unittest
             interval1.merge(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), interval));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
         assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
@@ -20788,9 +20788,9 @@ unittest
             interval1.span(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), interval));
-        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(interval, Interval!Date(Date(2010, 7, 4), days(0))));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), interval));
+        assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), days(0)), Interval!Date(Date(2010, 7, 4), days(0))));
 
         _assertPred!"=="(interval.span(interval), interval);
         _assertPred!"=="(interval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))),
@@ -20929,7 +20929,7 @@ unittest
             interval.shift(duration);
         }
 
-        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), dur!"days"(1)));
+        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), days(0)), days(1)));
 
         static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
         {
@@ -20937,22 +20937,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), Interval!Date(Date(2010, 7, 26), Date(2012, 1, 29)));
-        testInterval(interval, dur!"days"(-22), Interval!Date(Date(2010, 6, 12), Date(2011, 12, 16)));
+        testInterval(interval, days(22), Interval!Date(Date(2010, 7, 26), Date(2012, 1, 29)));
+        testInterval(interval, days(-22), Interval!Date(Date(2010, 6, 12), Date(2011, 12, 16)));
 
         const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-        static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.shift(days(5))));
+        static assert(!__traits(compiles, iInterval.shift(days(5))));
 
         //Verify Examples.
         auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
         auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 4, 5));
 
-        interval1.shift(dur!"days"(50));
+        interval1.shift(days(50));
         assert(interval1 == Interval!Date(Date(1996, 2, 21), Date(2012, 5, 25)));
 
-        interval2.shift(dur!"days"(-50));
+        interval2.shift(days(-50));
         assert(interval2 == Interval!Date(Date(1995, 11, 13), Date(2012, 2, 15)));
     }
 }
@@ -20970,7 +20970,7 @@ unittest
                 interval.shift(years, months);
             }
 
-            assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), 1, 0));
+            assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), days(0)), 1, 0));
 
             static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, in I expected, size_t line = __LINE__)
             {
@@ -21023,8 +21023,8 @@ unittest
             interval.expand(duration);
         }
 
-        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), dur!"days"(1)));
-        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)), dur!"days"(-5)));
+        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), days(0)), days(1)));
+        assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)), days(-5)));
 
         static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
         {
@@ -21032,22 +21032,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), Interval!Date(Date(2000, 6, 12), Date(2012, 1, 29)));
-        testInterval(interval, dur!"days"(-22), Interval!Date(Date(2000, 7, 26), Date(2011, 12, 16)));
+        testInterval(interval, days(22), Interval!Date(Date(2000, 6, 12), Date(2012, 1, 29)));
+        testInterval(interval, days(-22), Interval!Date(Date(2000, 7, 26), Date(2011, 12, 16)));
 
         const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-        static assert(!__traits(compiles, cInterval.expand(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.expand(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.expand(days(5))));
+        static assert(!__traits(compiles, iInterval.expand(days(5))));
 
         //Verify Examples.
         auto interval1 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
         auto interval2 = Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
 
-        interval1.expand(dur!"days"(2));
+        interval1.expand(days(2));
         assert(interval1 == Interval!Date(Date(1995, 12, 31), Date(2012, 3, 3)));
 
-        interval2.expand(dur!"days"(-2));
+        interval2.expand(days(-2));
         assert(interval2 == Interval!Date(Date(1996, 1, 4), Date(2012, 2, 28)));
     }
 }
@@ -21065,7 +21065,7 @@ unittest
                 interval.expand(years, months);
             }
 
-            assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), 1, 0));
+            assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), days(0)), 1, 0));
             assertThrown!DateTimeException(testIntervalFail(Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)), -5, 0));
 
             static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow, Direction dir, in I expected, size_t line = __LINE__)
@@ -21146,7 +21146,7 @@ unittest
                 interval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
             }
 
-            assertThrown!DateTimeException(testInterval1(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+            assertThrown!DateTimeException(testInterval1(Interval!Date(Date(2010, 7, 4), days(0))));
 
             static void testInterval2(Interval!Date interval)
             {
@@ -21171,9 +21171,9 @@ unittest
             auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
-                                return date + dur!"days"(2);
+                                return date + days(2);
 
-                            return date + dur!"days"(1);
+                            return date + days(1);
                         };
             auto range = interval.fwdRange(func);
 
@@ -21215,7 +21215,7 @@ unittest
                 interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
             }
 
-            assertThrown!DateTimeException(testInterval1(Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+            assertThrown!DateTimeException(testInterval1(Interval!Date(Date(2010, 7, 4), days(0))));
 
             static void testInterval2(Interval!Date interval)
             {
@@ -21240,9 +21240,9 @@ unittest
             auto func = delegate (in Date date)
                         {
                             if((date.day & 1) == 0)
-                                return date - dur!"days"(2);
+                                return date - days(2);
 
-                            return date - dur!"days"(1);
+                            return date - days(1);
                         };
             auto range = interval.bwdRange(func);
 
@@ -22045,10 +22045,10 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
 auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
 auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.shift(dur!"days"(50));
+interval1.shift(days(50));
 assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
 
-interval2.shift(dur!"days"(-50));
+interval2.shift(days(-50));
 assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
       +/
@@ -22086,10 +22086,10 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
 auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.shift(dur!"days"(50));
+interval1.shift(days(50));
 assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
 
-interval2.shift(dur!"days"(-50));
+interval2.shift(days(-50));
 assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
           +/
@@ -22119,10 +22119,10 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
 auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-interval1.expand(dur!"days"(2));
+interval1.expand(days(2));
 assert(interval1 == PosInfInterval!Date(Date(1995, 12, 31)));
 
-interval2.expand(dur!"days"(-2));
+interval2.expand(days(-2));
 assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
 --------------------
       +/
@@ -22230,9 +22230,9 @@ auto interval = PosInfInterval!Date(Date(2010, 9, 1));
 auto func = (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
-                    return date + dur!"days"(2);
+                    return date + days(2);
 
-                return date + dur!"days"(1);
+                return date + days(1);
             };
 auto range = interval.fwdRange(func);
 
@@ -22403,7 +22403,7 @@ unittest
             posInfInterval.contains(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(posInfInterval.contains(posInfInterval));
         assert(!posInfInterval.contains(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -22530,7 +22530,7 @@ unittest
             posInfInterval.isBefore(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!posInfInterval.isBefore(posInfInterval));
         assert(!posInfInterval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -22656,7 +22656,7 @@ unittest
             posInfInterval.isAfter(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!posInfInterval.isAfter(posInfInterval));
         assert(posInfInterval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -22754,7 +22754,7 @@ unittest
             posInfInterval.intersects(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(posInfInterval.intersects(posInfInterval));
         assert(!posInfInterval.intersects(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -22852,7 +22852,7 @@ unittest
             interval1.intersection(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
         assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
@@ -22978,7 +22978,7 @@ unittest
             posInfInterval.isAdjacent(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!posInfInterval.isAdjacent(posInfInterval));
         assert(!posInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -23075,7 +23075,7 @@ unittest
             posInfInterval.merge(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
 
@@ -23194,7 +23194,7 @@ unittest
             posInfInterval.span(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         _assertPred!"=="(posInfInterval.span(posInfInterval),
                     posInfInterval);
@@ -23315,22 +23315,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), PosInfInterval!Date(Date(2010, 7, 26)));
-        testInterval(interval, dur!"days"(-22), PosInfInterval!Date(Date(2010, 6, 12)));
+        testInterval(interval, days(22), PosInfInterval!Date(Date(2010, 7, 26)));
+        testInterval(interval, days(-22), PosInfInterval!Date(Date(2010, 6, 12)));
 
         const cInterval = PosInfInterval!Date(Date(2010, 7, 4));
         immutable iInterval = PosInfInterval!Date(Date(2010, 7, 4));
-        static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.shift(days(5))));
+        static assert(!__traits(compiles, iInterval.shift(days(5))));
 
         //Verify Examples.
         auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
         auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-        interval1.shift(dur!"days"(50));
+        interval1.shift(days(50));
         assert(interval1 == PosInfInterval!Date(Date(1996, 2, 21)));
 
-        interval2.shift(dur!"days"(-50));
+        interval2.shift(days(-50));
         assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
     }
 }
@@ -23395,22 +23395,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), PosInfInterval!Date(Date(2000, 6, 12)));
-        testInterval(interval, dur!"days"(-22), PosInfInterval!Date(Date(2000, 7, 26)));
+        testInterval(interval, days(22), PosInfInterval!Date(Date(2000, 6, 12)));
+        testInterval(interval, days(-22), PosInfInterval!Date(Date(2000, 7, 26)));
 
         const cInterval = PosInfInterval!Date(Date(2010, 7, 4));
         immutable iInterval = PosInfInterval!Date(Date(2010, 7, 4));
-        static assert(!__traits(compiles, cInterval.expand(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.expand(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.expand(days(5))));
+        static assert(!__traits(compiles, iInterval.expand(days(5))));
 
         //Verify Examples.
         auto interval1 = PosInfInterval!Date(Date(1996, 1, 2));
         auto interval2 = PosInfInterval!Date(Date(1996, 1, 2));
 
-        interval1.expand(dur!"days"(2));
+        interval1.expand(days(2));
         assert(interval1 == PosInfInterval!Date(Date(1995, 12, 31)));
 
-        interval2.expand(dur!"days"(-2));
+        interval2.expand(days(-2));
         assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
     }
 }
@@ -23487,9 +23487,9 @@ unittest
         auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
-                            return date + dur!"days"(2);
+                            return date + days(2);
 
-                        return date + dur!"days"(1);
+                        return date + days(1);
                     };
         auto range = interval.fwdRange(func);
 
@@ -24308,10 +24308,10 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
 auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
 auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
 
-interval1.shift(dur!"days"(50));
+interval1.shift(days(50));
 assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
 
-interval2.shift(dur!"days"(-50));
+interval2.shift(days(-50));
 assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
 --------------------
       +/
@@ -24381,10 +24381,10 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
 auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
 
-interval1.expand(dur!"days"(2));
+interval1.expand(days(2));
 assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
 
-interval2.expand(dur!"days"(-2));
+interval2.expand(days(-2));
 assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
 --------------------
       +/
@@ -24492,9 +24492,9 @@ auto interval = NegInfInterval!Date(Date(2010, 9, 9));
 auto func = (in Date date) //For iterating over even-numbered days.
             {
                 if((date.day & 1) == 0)
-                    return date - dur!"days"(2);
+                    return date - days(2);
 
-                return date - dur!"days"(1);
+                return date - days(1);
             };
 auto range = interval.bwdRange(func);
 
@@ -24662,7 +24662,7 @@ unittest
             negInfInterval.contains(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(negInfInterval.contains(negInfInterval));
         assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -24790,7 +24790,7 @@ unittest
             negInfInterval.isBefore(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!negInfInterval.isBefore(negInfInterval));
         assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -24914,7 +24914,7 @@ unittest
             negInfInterval.isAfter(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!negInfInterval.isAfter(negInfInterval));
         assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -25016,7 +25016,7 @@ unittest
             negInfInterval.intersects(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(negInfInterval.intersects(negInfInterval));
         assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -25114,7 +25114,7 @@ unittest
             interval1.intersection(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
         assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
@@ -25240,7 +25240,7 @@ unittest
             negInfInterval.isAdjacent(interval);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assert(!negInfInterval.isAdjacent(negInfInterval));
         assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
@@ -25339,7 +25339,7 @@ unittest
             interval1.merge(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
 
@@ -25458,7 +25458,7 @@ unittest
             interval1.span(interval2);
         }
 
-        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+        assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), days(0))));
 
         _assertPred!"=="(negInfInterval.span(negInfInterval),
                     negInfInterval);
@@ -25579,22 +25579,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), NegInfInterval!Date(Date(2012, 1, 29)));
-        testInterval(interval, dur!"days"(-22), NegInfInterval!Date(Date(2011, 12, 16)));
+        testInterval(interval, days(22), NegInfInterval!Date(Date(2012, 1, 29)));
+        testInterval(interval, days(-22), NegInfInterval!Date(Date(2011, 12, 16)));
 
         const cInterval = NegInfInterval!Date(Date(2012, 1, 7));
         immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
-        static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.shift(days(5))));
+        static assert(!__traits(compiles, iInterval.shift(days(5))));
 
         //Verify Examples.
         auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
         auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
 
-        interval1.shift(dur!"days"(50));
+        interval1.shift(days(50));
         assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
 
-        interval2.shift(dur!"days"(-50));
+        interval2.shift(days(-50));
         assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
     }
 }
@@ -25664,22 +25664,22 @@ unittest
             _assertPred!"=="(interval, expected, "", __FILE__, line);
         }
 
-        testInterval(interval, dur!"days"(22), NegInfInterval!Date(Date(2012, 1, 29)));
-        testInterval(interval, dur!"days"(-22), NegInfInterval!Date(Date(2011, 12, 16)));
+        testInterval(interval, days(22), NegInfInterval!Date(Date(2012, 1, 29)));
+        testInterval(interval, days(-22), NegInfInterval!Date(Date(2011, 12, 16)));
 
         const cInterval = NegInfInterval!Date(Date(2012, 1, 7));
         immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
-        static assert(!__traits(compiles, cInterval.expand(dur!"days"(5))));
-        static assert(!__traits(compiles, iInterval.expand(dur!"days"(5))));
+        static assert(!__traits(compiles, cInterval.expand(days(5))));
+        static assert(!__traits(compiles, iInterval.expand(days(5))));
 
         //Verify Examples.
         auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
         auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
 
-        interval1.expand(dur!"days"(2));
+        interval1.expand(days(2));
         assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
 
-        interval2.expand(dur!"days"(-2));
+        interval2.expand(days(-2));
         assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
     }
 }
@@ -25756,9 +25756,9 @@ unittest
         auto func = delegate (in Date date)
                     {
                         if((date.day & 1) == 0)
-                            return date - dur!"days"(2);
+                            return date - days(2);
 
-                        return date - dur!"days"(1);
+                        return date - days(1);
                     };
         auto range = interval.bwdRange(func);
 
@@ -25860,7 +25860,7 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
         else
             immutable adjustedDays = days == 0 ? -7 : days - 7;
 
-        return retval += dur!"days"(adjustedDays);
+        return retval += days(adjustedDays);
     }
 
     return &func;
@@ -26089,7 +26089,7 @@ unittest
     duration later.
 
     Using this delegate allows iteration over successive time points which
-    are apart by the given duration e.g. passing $(D dur!"days"(3)) to
+    are apart by the given duration e.g. passing $(D days(3)) to
     $(D everyDuration) would result in a delegate which could be used to iterate
     over a range of days which are each 3 days apart.
 
@@ -26103,7 +26103,7 @@ unittest
     Examples:
 --------------------
 auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-auto func = everyDuration!Date(dur!"days"(8));
+auto func = everyDuration!Date(days(8));
 auto range = interval.fwdRange(func);
 
 //Using PopFirst.yes would have made this Date(2010, 9, 10).
@@ -26143,8 +26143,8 @@ unittest
 {
     version(testStdDateTime)
     {
-        auto funcFwd = everyDuration!Date(dur!"days"(27));
-        auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
+        auto funcFwd = everyDuration!Date(days(27));
+        auto funcBwd = everyDuration!(Date, Direction.bwd)(days(27));
 
         _assertPred!"=="(funcFwd(Date(2009, 12, 25)), Date(2010, 1, 21));
         _assertPred!"=="(funcFwd(Date(2009, 12, 26)), Date(2010, 1, 22));
@@ -26156,14 +26156,14 @@ unittest
         _assertPred!"=="(funcBwd(Date(2010, 1, 23)), Date(2009, 12, 27));
         _assertPred!"=="(funcBwd(Date(2010, 1, 24)), Date(2009, 12, 28));
 
-        static assert(__traits(compiles, everyDuration!Date(dur!"hnsecs"(1))));
-        static assert(__traits(compiles, everyDuration!TimeOfDay(dur!"hnsecs"(1))));
-        static assert(__traits(compiles, everyDuration!DateTime(dur!"hnsecs"(1))));
-        static assert(__traits(compiles, everyDuration!SysTime(dur!"hnsecs"(1))));
+        static assert(__traits(compiles, everyDuration!Date(hnsecs(1))));
+        static assert(__traits(compiles, everyDuration!TimeOfDay(hnsecs(1))));
+        static assert(__traits(compiles, everyDuration!DateTime(hnsecs(1))));
+        static assert(__traits(compiles, everyDuration!SysTime(hnsecs(1))));
 
         //Verify Examples.
         auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-        auto func = everyDuration!Date(dur!"days"(8));
+        auto func = everyDuration!Date(days(8));
         auto range = interval.fwdRange(func);
 
         //Using PopFirst.yes would have made this Date(2010, 9, 10).
@@ -26225,7 +26225,7 @@ unittest
     Examples:
 --------------------
 auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, days(2));
 auto range = interval.fwdRange(func);
 
 //Using PopFirst.yes would have made this Date(2014, 10, 12).
@@ -26248,7 +26248,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (int years,
                                         int months = 0,
                                         AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
-                                        D duration = dur!"days"(0)) nothrow
+                                        D duration = days(0)) nothrow
     if(isTimePoint!TP &&
        __traits(compiles, TP.init + duration) &&
        __traits(compiles, TP.init.add!"years"(years)) &&
@@ -26285,8 +26285,8 @@ unittest
     version(testStdDateTime)
     {
         {
-            auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
-            auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+            auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, days(3));
+            auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, days(3));
 
             _assertPred!"=="(funcFwd(Date(2009, 12, 25)), Date(2011, 2, 28));
             _assertPred!"=="(funcFwd(Date(2009, 12, 26)), Date(2011, 3, 1));
@@ -26302,8 +26302,8 @@ unittest
         }
 
         {
-            auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.no, dur!"days"(3));
-            auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+            auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.no, days(3));
+            auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, days(3));
 
             _assertPred!"=="(funcFwd(Date(2009, 12, 25)), Date(2011, 2, 28));
             _assertPred!"=="(funcFwd(Date(2009, 12, 26)), Date(2011, 3, 1));
@@ -26318,14 +26318,14 @@ unittest
             _assertPred!"=="(funcBwd(Date(2011, 3, 4)), Date(2010, 1, 1));
         }
 
-        static assert(__traits(compiles, everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-        static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-        static assert(__traits(compiles, everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-        static assert(__traits(compiles, everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
+        static assert(__traits(compiles, everyDuration!Date(1, 2, AllowDayOverflow.yes, hnsecs(1))));
+        static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, hnsecs(1))));
+        static assert(__traits(compiles, everyDuration!DateTime(1, 2, AllowDayOverflow.yes, hnsecs(1))));
+        static assert(__traits(compiles, everyDuration!SysTime(1, 2, AllowDayOverflow.yes, hnsecs(1))));
 
         //Verify Examples.
         auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-        auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+        auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, days(2));
         auto range = interval.fwdRange(func);
 
         //Using PopFirst.yes would have made this Date(2014, 10, 12).
@@ -26751,7 +26751,7 @@ unittest
             foreach(date; range)
             {
                 _assertPred!"=="(date, expected);
-                expected += dur!"days"(7);
+                expected += days(7);
             }
 
             _assertPred!"=="(walkLength(range), 79);
@@ -26771,7 +26771,7 @@ unittest
             foreach(date; range)
             {
                 _assertPred!"=="(date, expected);
-                expected += dur!"days"(-7);
+                expected += days(-7);
             }
 
             _assertPred!"=="(walkLength(range), 79);
@@ -27134,7 +27134,7 @@ unittest
         foreach(date; take(range, 79))
         {
             _assertPred!"=="(date, expected);
-            expected += dur!"days"(7);
+            expected += days(7);
         }
 
         const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -27432,7 +27432,7 @@ unittest
         foreach(date; take(range, 79))
         {
             _assertPred!"=="(date, expected);
-            expected += dur!"days"(-7);
+            expected += days(-7);
         }
 
         const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
@@ -27590,7 +27590,7 @@ public:
       +/
     Duration utcOffsetAt(long stdTime) const nothrow
     {
-        return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
+        return hnsecs(utcToTZ(stdTime) - stdTime);
     }
 
 
@@ -27652,7 +27652,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             scope(failure) writefln("Failed time zone: %s", tzName);
 
             immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != dur!"hnsecs"(0);
+            immutable hasDST = dstOffset != hnsecs(0);
 
             version(Posix)
                 _assertPred!"=="(tz.name, tzName);
@@ -27755,39 +27755,39 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             version(linux)   enum utcZone = "UTC";
             version(OSX)     enum utcZone = "UTC";
 
-            auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
-                        testTZ("America/New_York", "EST", "EDT", dur!"hours"(-5), dur!"hours"(1)),
-                        //testTZ("America/Santiago", "CLT", "CLST", dur!"hours"(-4), dur!"hours"(1), false),
-                        testTZ("Europe/London", "GMT", "BST", dur!"hours"(0), dur!"hours"(1)),
-                        testTZ("Europe/Paris", "CET", "CEST", dur!"hours"(1), dur!"hours"(1)),
+            auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", hours(-8), hours(1)),
+                        testTZ("America/New_York", "EST", "EDT", hours(-5), hours(1)),
+                        //testTZ("America/Santiago", "CLT", "CLST", hours(-4), hours(1), false),
+                        testTZ("Europe/London", "GMT", "BST", hours(0), hours(1)),
+                        testTZ("Europe/Paris", "CET", "CEST", hours(1), hours(1)),
                         //Per www.timeanddate.com, it should be "CST" and "CDT",
                         //but the OS insists that it's "CST" for both. We should
                         //probably figure out how to report an error in the TZ
                         //database and report it.
                         testTZ("Australia/Adelaide", "CST", "CST",
-                               dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
+                               hours(9) + minutes(30), hours(1), false)];
 
-            testTZ(utcZone, "UTC", "UTC", dur!"hours"(0), dur!"hours"(0));
+            testTZ(utcZone, "UTC", "UTC", hours(0), hours(0));
             assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
         }
         else version(Windows)
         {
             auto tzs = [testTZ("America/Los_Angeles", "Pacific Standard Time",
-                               "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
+                               "Pacific Daylight Time", hours(-8), hours(1)),
                         testTZ("America/New_York", "Eastern Standard Time",
-                               "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
+                               "Eastern Daylight Time", hours(-5), hours(1)),
                         //testTZ("America/Santiago", "Pacific SA Standard Time",
-                               //"Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
+                               //"Pacific SA Daylight Time", hours(-4), hours(1), false),
                         testTZ("Europe/London", "GMT Standard Time",
-                               "GMT Daylight Time", dur!"hours"(0), dur!"hours"(1)),
+                               "GMT Daylight Time", hours(0), hours(1)),
                         testTZ("Europe/Paris", "Romance Standard Time",
-                               "Romance Daylight Time", dur!"hours"(1), dur!"hours"(1)),
+                               "Romance Daylight Time", hours(1), hours(1)),
                         testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
                                "Cen. Australia Daylight Time",
-                               dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
+                               hours(9) + minutes(30), hours(1), false)];
 
             testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
-                   "Greenwich Daylight Time", dur!"hours"(0), dur!"hours"(0));
+                   "Greenwich Daylight Time", hours(0), hours(0));
             assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
         }
         else
@@ -27798,15 +27798,15 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             auto tz = tzs[i];
             immutable spring = dstSwitches[i][2];
             immutable fall = dstSwitches[i][3];
-            auto stdOffset = SysTime(dstSwitches[i][0] + dur!"days"(-1), tz).utcOffset;
-            auto dstOffset = stdOffset + dur!"hours"(1);
+            auto stdOffset = SysTime(dstSwitches[i][0] + days(-1), tz).utcOffset;
+            auto dstOffset = stdOffset + hours(1);
 
             //Verify that creating a SysTime in the given time zone results
             //in a SysTime with the correct std time during and surrounding
             //a DST switch.
             foreach(hour; -12 .. 13)
             {
-                auto st = SysTime(dstSwitches[i][0] + dur!"hours"(hour), tz);
+                auto st = SysTime(dstSwitches[i][0] + hours(hour), tz);
                 immutable targetHour = hour < 0 ? hour + 24 : hour;
 
                 static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
@@ -27827,18 +27827,18 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
                     enforce(st.dstInEffect == dstInEffect, msg("1"));
                     enforce(st.utcOffset == offset, msg("2"));
-                    enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                    enforce((st + minutes(1)).utcOffset == offset, msg("3"));
                 }
 
                 if(hour == spring)
                 {
                     testHour(st, spring + 1, tz.name);
-                    testHour(st + dur!"minutes"(1), spring + 1, tz.name);
+                    testHour(st + minutes(1), spring + 1, tz.name);
                 }
                 else
                 {
                     testHour(st, targetHour, tz.name);
-                    testHour(st + dur!"minutes"(1), targetHour, tz.name);
+                    testHour(st + minutes(1), targetHour, tz.name);
                 }
 
                 if(hour < spring)
@@ -27846,12 +27846,12 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                 else
                     testOffset1(dstOffset, true);
 
-                st = SysTime(dstSwitches[i][1] + dur!"hours"(hour), tz);
+                st = SysTime(dstSwitches[i][1] + hours(hour), tz);
                 testHour(st, targetHour, tz.name);
 
                 //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
                 if(hour == fall - 1)
-                    testHour(st + dur!"hours"(1), targetHour, tz.name);
+                    testHour(st + hours(1), targetHour, tz.name);
 
                     if(hour < fall)
                         testOffset1(dstOffset, true);
@@ -27863,14 +27863,14 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             //time zone results in the correct time during and surrounding
             //a DST switch.
             bool first = true;
-            auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
-            auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
+            auto springSwitch = SysTime(dstSwitches[i][0] + hours(spring), UTC()) - stdOffset;
+            auto fallSwitch = SysTime(dstSwitches[i][1] + hours(fall), UTC()) - dstOffset;
             //@@@BUG@@@ 3659 makes this necessary.
-            auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+            auto fallSwitchMinus1 = fallSwitch - hours(1);
 
             foreach(hour; -24 .. 25)
             {
-                auto utc = SysTime(dstSwitches[i][0] + dur!"hours"(hour), UTC());
+                auto utc = SysTime(dstSwitches[i][0] + hours(hour), UTC());
                 auto local = utc.toOtherTZ(tz);
 
                 void testOffset2(Duration offset, size_t line = __LINE__)
@@ -27882,7 +27882,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                     }
 
                     enforce((utc + offset).hour == local.hour, msg("1"));
-                    enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                    enforce((utc + offset + minutes(1)).hour == local.hour, msg("2"));
                 }
 
                 if(utc < springSwitch)
@@ -27890,7 +27890,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                 else
                     testOffset2(dstOffset);
 
-                utc = SysTime(dstSwitches[i][1] + dur!"hours"(hour), UTC());
+                utc = SysTime(dstSwitches[i][1] + hours(hour), UTC());
                 local = utc.toOtherTZ(tz);
 
                 if(utc == fallSwitch || utc == fallSwitchMinus1)
@@ -28427,15 +28427,15 @@ public:
                     setTZEnvVar(tzName);
                     immutable spring = tzInfos[i][3];
                     immutable fall = tzInfos[i][4];
-                    auto stdOffset = SysTime(tzInfos[i][1] + dur!"hours"(-12)).utcOffset;
-                    auto dstOffset = stdOffset + dur!"hours"(1);
+                    auto stdOffset = SysTime(tzInfos[i][1] + hours(-12)).utcOffset;
+                    auto dstOffset = stdOffset + hours(1);
 
                     //Verify that creating a SysTime in the given time zone results
                     //in a SysTime with the correct std time during and surrounding
                     //a DST switch.
                     foreach(hour; -12 .. 13)
                     {
-                        auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
+                        auto st = SysTime(tzInfos[i][1] + hours(hour));
                         immutable targetHour = hour < 0 ? hour + 24 : hour;
 
                         static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
@@ -28456,18 +28456,18 @@ public:
 
                             enforce(st.dstInEffect == dstInEffect, msg("1"));
                             enforce(st.utcOffset == offset, msg("2"));
-                            enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                            enforce((st + minutes(1)).utcOffset == offset, msg("3"));
                         }
 
                         if(hour == spring)
                         {
                             testHour(st, spring + 1, tzName);
-                            testHour(st + dur!"minutes"(1), spring + 1, tzName);
+                            testHour(st + minutes(1), spring + 1, tzName);
                         }
                         else
                         {
                             testHour(st, targetHour, tzName);
-                            testHour(st + dur!"minutes"(1), targetHour, tzName);
+                            testHour(st + minutes(1), targetHour, tzName);
                         }
 
                         if(hour < spring)
@@ -28475,12 +28475,12 @@ public:
                         else
                             testOffset1(dstOffset, true);
 
-                        st = SysTime(tzInfos[i][2] + dur!"hours"(hour));
+                        st = SysTime(tzInfos[i][2] + hours(hour));
                         testHour(st, targetHour, tzName);
 
                         //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
                         if(hour == fall - 1)
-                            testHour(st + dur!"hours"(1), targetHour, tzName);
+                            testHour(st + hours(1), targetHour, tzName);
 
                         if(hour < fall)
                             testOffset1(dstOffset, true);
@@ -28492,14 +28492,14 @@ public:
                     //time zone results in the correct time during and surrounding
                     //a DST switch.
                     bool first = true;
-                    auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
-                    auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
+                    auto springSwitch = SysTime(tzInfos[i][1] + hours(spring), UTC()) - stdOffset;
+                    auto fallSwitch = SysTime(tzInfos[i][2] + hours(fall), UTC()) - dstOffset;
                     //@@@BUG@@@ 3659 makes this necessary.
-                    auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+                    auto fallSwitchMinus1 = fallSwitch - hours(1);
 
                     foreach(hour; -24 .. 25)
                     {
-                        auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
+                        auto utc = SysTime(tzInfos[i][1] + hours(hour), UTC());
                         auto local = utc.toLocalTime();
 
                         void testOffset2(Duration offset, size_t line = __LINE__)
@@ -28511,7 +28511,7 @@ public:
                             }
 
                             enforce((utc + offset).hour == local.hour, msg("1"));
-                            enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                            enforce((utc + offset + minutes(1)).hour == local.hour, msg("2"));
                         }
 
                         if(utc < springSwitch)
@@ -28519,7 +28519,7 @@ public:
                         else
                             testOffset2(dstOffset);
 
-                        utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
+                        utc = SysTime(tzInfos[i][2] + hours(hour), UTC());
                         local = utc.toLocalTime();
 
                         if(utc == fallSwitch || utc == fallSwitchMinus1)
@@ -28690,7 +28690,7 @@ public:
       +/
     override Duration utcOffsetAt(long stdTime) const nothrow
     {
-        return dur!"hnsecs"(0);
+        return hnsecs(0);
     }
 
 
@@ -28826,7 +28826,7 @@ public:
       +/
     override Duration utcOffsetAt(long stdTime) const nothrow
     {
-        return dur!"minutes"(utcOffset);
+        return minutes(utcOffset);
     }
 
 
@@ -30302,8 +30302,8 @@ else version(Windows)
                     }
 
                     auto localDateTime = cast(DateTime)SysTime(adjTime, UTC());
-                    auto localDateTimeBefore = localDateTime - dur!"hours"(1);
-                    auto localDateTimeAfter = localDateTime + dur!"hours"(1);
+                    auto localDateTimeBefore = localDateTime - hours(1);
+                    auto localDateTimeAfter = localDateTime + hours(1);
 
                     auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
                     auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
@@ -31512,7 +31512,7 @@ else version(Windows)
             auto converted = SYSTEMTIMEToSysTime(&st, UTC());
 
             _assertPred!"<="(abs((converted - sysTime)),
-                            dur!"seconds"(2));
+                            seconds(2));
         }
     }
 
@@ -31587,7 +31587,7 @@ else version(Windows)
             auto converted = FILETIMEToSysTime(&ft);
 
             _assertPred!"<="(abs((converted - sysTime)),
-                            dur!"seconds"(2));
+                            seconds(2));
         }
     }
 
@@ -33068,10 +33068,10 @@ unittest
   +/
 template hasOverloadedOpBinaryWithDuration(T)
 {
-    enum hasOverloadedOpBinaryWithDuration = __traits(compiles, T.init + dur!"days"(5)) &&
-                                             is(typeof(T.init + dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init - dur!"days"(5)) &&
-                                             is(typeof(T.init - dur!"days"(5)) == Unqual!T) &&
+    enum hasOverloadedOpBinaryWithDuration = __traits(compiles, T.init + days(5)) &&
+                                             is(typeof(T.init + days(5)) == Unqual!T) &&
+                                             __traits(compiles, T.init - days(5)) &&
+                                             is(typeof(T.init - days(5)) == Unqual!T) &&
                                              __traits(compiles, T.init + TickDuration.from!"hnsecs"(5)) &&
                                              is(typeof(T.init + TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
                                              __traits(compiles, T.init - TickDuration.from!"hnsecs"(5)) &&
@@ -33109,10 +33109,10 @@ unittest
   +/
 template hasOverloadedOpAssignWithDuration(T)
 {
-    enum hasOverloadedOpAssignWithDuration = __traits(compiles, T.init += dur!"days"(5)) &&
-                                             is(typeof(T.init += dur!"days"(5)) == Unqual!T) &&
-                                             __traits(compiles, T.init -= dur!"days"(5)) &&
-                                             is(typeof(T.init -= dur!"days"(5)) == Unqual!T) &&
+    enum hasOverloadedOpAssignWithDuration = __traits(compiles, T.init += days(5)) &&
+                                             is(typeof(T.init += days(5)) == Unqual!T) &&
+                                             __traits(compiles, T.init -= days(5)) &&
+                                             is(typeof(T.init -= days(5)) == Unqual!T) &&
                                              __traits(compiles, T.init += TickDuration.from!"hnsecs"(5)) &&
                                              is(typeof(T.init += TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
                                              __traits(compiles, T.init -= TickDuration.from!"hnsecs"(5)) &&
@@ -33489,7 +33489,7 @@ version(unittest)
     void initializeTests()
     {
         immutable lt = LocalTime().utcToTZ(0);
-        currLocalDiffFromUTC = dur!"hnsecs"(lt);
+        currLocalDiffFromUTC = hnsecs(lt);
 
         immutable otherTZ = lt < 0 ? TimeZone.getTimeZone("Australia/Sydney")
                                    : TimeZone.getTimeZone("America/Denver");

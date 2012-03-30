@@ -637,7 +637,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
  */
 deprecated bool receiveTimeout(T...)( long ms, T ops )
 {
-    return receiveTimeout( dur!"msecs"( ms ), ops );
+    return receiveTimeout( msecs( ms ), ops );
 }
 
 /++
@@ -672,7 +672,7 @@ unittest
 
     assert( __traits( compiles,
                       {
-                          receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
+                          receiveTimeout( msecs(10), (int x) {}, (Variant x) {} );
                       } ) );
 }
 
@@ -997,7 +997,7 @@ private
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
                 alias vals[1 .. $] ops;
-                assert( vals[0] >= dur!"msecs"(0) );
+                assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
                 Duration period = vals[0];
             }

@@ -48,7 +48,7 @@ module std.socket;
 import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv;
 
 import core.stdc.config;
-import core.time : dur, Duration;
+import core.time : seconds, msecs, usecs, hnsecs, dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce, collectException;
 
@@ -2216,7 +2216,7 @@ private:
             auto pair = socketPair();
             auto sock = pair[0];
             sock.setOption(SocketOptionLevel.SOCKET,
-                SocketOption.RCVTIMEO, dur!"msecs"(msecs));
+                SocketOption.RCVTIMEO, msecs(msecs));
 
             auto sw = StopWatch(AutoStart.yes);
             ubyte[1] buf;
@@ -2757,17 +2757,17 @@ public:
         // while Linux and BSD return a timeval struct.
         version (Windows)
         {
-            int msecs;
-            getOption(level, option, (&msecs)[0 .. 1]);
+            int numMsecs;
+            getOption(level, option, (&numMsecs)[0 .. 1]);
             if (option == SocketOption.RCVTIMEO)
-                msecs += WINSOCK_TIMEOUT_SKEW;
-            result = dur!"msecs"(msecs);
+                numMsecs += WINSOCK_TIMEOUT_SKEW;
+            result = msecs(numMsecs);
         }
         else version (Posix)
         {
             TimeVal tv;
             getOption(level, option, (&tv.ctimeval)[0..1]);
-            result = dur!"seconds"(tv.seconds) + dur!"usecs"(tv.microseconds);
+            result = seconds(tv.seconds) + usecs(tv.microseconds);
         }
         else static assert(false);
     }
@@ -2825,7 +2825,7 @@ public:
      * // Set a receive timeout, and then wait at one end of
      * // the socket pair, knowing that no data will arrive.
      * pair[0].setOption(SocketOptionLevel.SOCKET,
-     *     SocketOption.RCVTIMEO, dur!"seconds"(1));
+     *     SocketOption.RCVTIMEO, seconds(1));
      *
      * auto sw = StopWatch(AutoStart.yes);
      * ubyte[1] buffer;
@@ -2839,7 +2839,7 @@ public:
         enforce(option == SocketOption.SNDTIMEO || option == SocketOption.RCVTIMEO,
                 new SocketParameterException("Not a valid timeout option: " ~ to!string(option)));
 
-        enforce(value >= dur!"hnsecs"(0), new SocketParameterException(
+        enforce(value >= hnsecs(0), new SocketParameterException(
                     "Timeout duration must not be negative."));
 
         version (Windows)
