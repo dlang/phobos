@@ -2770,7 +2770,15 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X, B)(auto ref B b) { return a == b; }
+    auto ref opEquals(this X)(auto ref typeof(this) b)
+    {
+        static assert(a.stringof.startsWith("this."));
+        return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+    }
+    auto ref opEquals(this X, B)(auto ref B b) if (!is(B == typeof(this)))
+    {
+        return a == b;
+    }
 
     auto ref opCmp(this X, B)(auto ref B b)
         if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
@@ -2799,7 +2807,24 @@ mixin template Proxy(alias a)
     auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
     auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
 
-    auto ref opAssign     (this X, V      )(auto ref V v)                             { return a       = v; }
+    static if (!is(typeof(this) == class))
+    {
+        private import std.traits;
+        static if (isAssignable!(typeof(a), typeof(a)))
+        {
+            auto ref opAssign(this X)(auto ref typeof(this) v)
+            {
+                a = mixin("v."~a.stringof[5..$]);   // remove "this."
+                return this;
+            }
+        }
+        else
+        {
+            @disable void opAssign(this X)(auto ref typeof(this) v);
+        }
+    }
+
+    auto ref opAssign     (this X, V      )(auto ref V v) if (!is(V == typeof(this))) { return a       = v; }
     auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
     auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
@@ -2862,6 +2887,7 @@ unittest
     assert(15 - m == 5);
     assert(20 * m == 200);
     assert(50 / m == 5);
+    m = m;
     m = 20; assert(m == 20);
 }
 unittest
@@ -2883,8 +2909,9 @@ unittest
         assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
     assert(a ~ [10,11] == [1,2,3,4,10,11]);
     assert(a[0]    == 1);
-    //assert(a[]     == [1,2,3,4]);
-    //assert(a[2..4] == [3,4]);
+    //assert(a[]     == [1,2,3,4]);     // blocked by bug 2486
+    //assert(a[2..4] == [3,4]);         // blocked by bug 2486
+    a = a;
     a = [5,6,7,8];  assert(a == [5,6,7,8]);
     a[0]     = 0;   assert(a == [0,6,7,8]);
     a[]      = 1;   assert(a == [1,1,1,1]);
@@ -2920,6 +2947,9 @@ unittest
     auto h = new Hoge(new Foo());
     int n;
 
+    // blocked by bug 7641
+    //static assert(!__traits(compiles, { Foo f = h; }));
+
     // field
     h.field = 1;            // lhs of assign
     n = h.field;            // rhs of assign
@@ -2953,8 +2983,43 @@ unittest
 
     // template member function
     assert(h.tempfunc!int() == 0);
+}
+unittest
+{
+    struct MyInt
+    {
+        int payload;
 
-    //assert(h.TempFunc2!int.tempfunc2!double("a") == tuple(0, double.nan, "a"));
+        mixin Proxy!payload;
+    }
+
+    MyInt v;
+    v = v;
+
+    struct Foo
+    {
+        @disable void opAssign(typeof(this));
+    }
+    struct MyFoo
+    {
+        Foo payload;
+
+        mixin Proxy!payload;
+    }
+    MyFoo f;
+    static assert(!__traits(compiles, f = f));
+
+    struct MyFoo2
+    {
+        Foo payload;
+
+        mixin Proxy!payload;
+
+        // override default Proxy behavior
+        void opAssign(typeof(this) rhs){}
+    }
+    MyFoo2 f2;
+    f2 = f2;
 }
 
 /**
