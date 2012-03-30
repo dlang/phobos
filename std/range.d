@@ -5933,6 +5933,27 @@ unittest {
 }
 
 /**
+  Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
+  The following code should compile:
+  ---
+  T1 t1; 
+  T2 t2;
+  fn(t1, t2);
+  fn(t2, t1);
+  ---
+*/
+template isTwoWayCompatible(alias fn, T1, T2)
+{
+    enum isTwoWayCompatible = is(typeof( (){ 
+            T1 e; 
+            T2 v;
+            return fn(v,e) && fn(e,v); 
+        }
+    ));
+}
+
+
+/**
    Policy used with the searching primitives $(D lowerBound), $(D
    upperBound), and $(D equalRange) of $(LREF SortedRange) below.
  */
@@ -6233,10 +6254,9 @@ if (isRandomAccessRange!Range)
    ----
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (is(V : ElementType!Range))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        ElementType!Range v = value;
-        return this[0 .. getTransitionIndex!(sp, geq)(v)];
+        return this[0 .. getTransitionIndex!(sp, geq)(value)];
     }
 
 // upperBound
@@ -6257,10 +6277,9 @@ if (isRandomAccessRange!Range)
    ----
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (is(V : ElementType!Range))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        ElementType!Range v = value;
-        return this[getTransitionIndex!(sp, gt)(v) .. length];
+        return this[getTransitionIndex!(sp, gt)(value) .. length];
     }
 
 // equalRange
@@ -6284,7 +6303,8 @@ if (isRandomAccessRange!Range)
    assert(equal(r, [ 3, 3, 3 ]));
    ----
 */
-    auto equalRange(V)(V value) if (is(V : ElementType!Range))
+    auto equalRange(V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -6339,7 +6359,8 @@ assert(equal(r[1], [ 3, 3, 3 ]));
 assert(equal(r[2], [ 4, 4, 5, 6 ]));
 ----
 */
-    auto trisect(V)(V value) if (is(V : ElementType!Range))
+    auto trisect(V)(V value)
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -6447,6 +6468,19 @@ unittest
 
 unittest
 {
+    auto a = [ "A", "AG", "B", "E", "F" ];
+    auto r = assumeSorted!"cmp(a,b) < 0"(a).trisect("B"w);
+    assert(equal(r[0], [ "A", "AG" ]));
+    assert(equal(r[1], [ "B" ]));
+    assert(equal(r[2], [ "E", "F" ]));
+    r = assumeSorted!"cmp(a,b) < 0"(a).trisect("A"d);
+    assert(r[0].empty);
+    assert(equal(r[1], [ "A" ]));
+    assert(equal(r[2], [ "AG", "B", "E", "F" ]));
+}
+
+unittest
+{
     static void test(SearchPolicy pol)()
     {
         auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -6536,6 +6570,8 @@ unittest
     assert(equal(p, [0, 1, 2, 3, 4]));
     p = assumeSorted(a).lowerBound(6);
     assert(equal(p, [ 0, 1, 2, 3, 4, 5]));
+    p = assumeSorted(a).lowerBound(6.9);
+    assert(equal(p, [ 0, 1, 2, 3, 4, 5, 6]));
 }
 
 unittest
@@ -6543,6 +6579,8 @@ unittest
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
     assert(equal(p, [4, 4, 5, 6 ]));
+    p = assumeSorted(a).upperBound(4.2);
+    assert(equal(p, [ 5, 6 ]));
 }
 
 unittest
@@ -6558,6 +6596,8 @@ unittest
     assert(p.empty);
     p = assumeSorted(a).equalRange(7);
     assert(p.empty);
+    p = assumeSorted(a).equalRange(3.0);
+    assert(equal(p, [ 3, 3, 3]));
 }
 
 unittest

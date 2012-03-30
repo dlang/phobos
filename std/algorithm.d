@@ -1406,7 +1406,7 @@ unittest
 /// Ditto
 T move(T)(ref T src)
 {
-    T result;
+    T result=void;
     move(src, result);
     return result;
 }
@@ -8770,4 +8770,10 @@ unittest
 // First member is the item, second is the occurrence count
     //writeln(b[0]);
     assert(b[0] == tuple(4.0, 2u));
+}
+
+unittest//Issue 6217 
+{
+    auto x = map!"a"([1,2,3]);
+    x = move(x);
 }
