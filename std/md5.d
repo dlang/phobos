@@ -49,7 +49,7 @@ void mdFile(string filename)
 
     MD5_CTX context;
     context.start();
-    foreach (buffer; File(filename).byChunk(4096 * 1024))
+    foreach (buffer; File(filename).byChunk(64 * 1024))
         context.update(buffer);
     context.finish(digest);
     writefln("MD5 (%s) = %s", filename, digestToString(digest));
