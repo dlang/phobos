@@ -706,6 +706,7 @@ version(Windows) unittest
 {
     auto currTime = Clock.currTime();
 
+    if (exists(deleteme)) remove(deleteme);
     write(deleteme, "a");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
 
