@@ -527,6 +527,21 @@ void remove(in char[] name)
             "Failed to remove file " ~ name);
 }
 
+version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name)
+{
+    WIN32_FILE_ATTRIBUTE_DATA fad;
+    enforce(GetFileAttributesExW(std.utf.toUTF16z(name), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    return fad;
+}
+
+version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh)
+{
+    ULARGE_INTEGER li;
+    li.LowPart  = dwLow;
+    li.HighPart = dwHigh;
+    return li.QuadPart;
+}
+
 /***************************************************
 Get size of file $(D name) in bytes.
 
@@ -536,20 +551,8 @@ ulong getSize(in char[] name)
 {
     version(Windows)
     {
-        const (char)[] file = name[];
-
-        //FindFirstFileX can't handle file names which end in a backslash.
-        if(file.endsWith(sep))
-            file.popBackN(sep.length);
-
-        WIN32_FIND_DATAW filefindbuf;
-
-        HANDLE findhndl = FindFirstFileW(std.utf.toUTF16z(file), &filefindbuf);
-        uint resulth = filefindbuf.nFileSizeHigh;
-        uint resultl = filefindbuf.nFileSizeLow;
-
-        cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), file);
-        return (cast(ulong) resulth << 32) + resultl;
+        with (getFileAttributesWin(name))
+            return makeUlong(nFileSizeLow, nFileSizeHigh);
     }
     else version(Posix)
     {
@@ -588,15 +591,11 @@ void getTimes(in char[] name,
 {
     version(Windows)
     {
-        WIN32_FIND_DATAW filefindbuf;
-
-        HANDLE findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-        fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
-        fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
-
-        enforce(findhndl != cast(HANDLE)-1, new FileException(name.idup));
-
-        FindClose(findhndl);
+        with (getFileAttributesWin(name))
+        {
+            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+        }
     }
     else version(Posix)
     {
@@ -687,19 +686,12 @@ else version(Windows) void getTimesWin(in char[] name,
                                        out SysTime fileAccessTime,
                                        out SysTime fileModificationTime)
 {
-    WIN32_FIND_DATAW filefindbuf;
-
-    HANDLE findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-    fileCreationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftCreationTime);
-    fileAccessTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastAccessTime);
-    fileModificationTime = std.datetime.FILETIMEToSysTime(&filefindbuf.ftLastWriteTime);
-
-    if(findhndl == cast(HANDLE)-1)
+    with (getFileAttributesWin(name))
     {
-        throw new FileException(name.idup);
+        fileCreationTime = std.datetime.FILETIMEToSysTime(&ftCreationTime);
+        fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+        fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
     }
-
-    FindClose(findhndl);
 }
 
 version(Windows) unittest
@@ -1965,22 +1957,14 @@ else version(Windows)
         {
             _name = path.idup;
 
-            //FindFirstFileX can't handle file names which end in a backslash.
-            if(_name.endsWith(sep))
-                _name.popBackN(sep.length);
-
-            WIN32_FIND_DATAW fd;
-
-            HANDLE findhndl = FindFirstFileW(std.utf.toUTF16z(_name), &fd);
-            enforce(findhndl != INVALID_HANDLE_VALUE);
-
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-
-            cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), _name);
+            with (getFileAttributesWin(path))
+            {
+                _size = makeUlong(nFileSizeLow, nFileSizeHigh);
+                _timeCreated = std.datetime.FILETIMEToSysTime(&ftCreationTime);
+                _timeLastAccessed = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
+                _timeLastModified = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+                _attributes = dwFileAttributes;
+            }
         }
 
         void _init(in char[] path, in WIN32_FIND_DATA* fd)
