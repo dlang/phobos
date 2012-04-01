@@ -1,5 +1,20 @@
 $(VERSION 059, ddd mm, 2012, =================================================,
 
+    $(WHATSNEW
+        $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
+             have been removed. Please use std.datetime instead.)
+        $(LI Several deprecated functions in std.file have been removed.)
+        $(LI The old functions in std.path which were scheduled for deprecation
+             have now been deprecated. Please use the new ones which were
+             introduced in 2.055. However, note that curdir and pardir do not
+             have replacements, because they're "." and ".." respectively on all
+             OSes so variables for them were seen as unnecessary. Also, one major
+             change to note about the new std.path functions is that when operating
+             on extensions, they expect "." to be part of the extension whereas the
+             old ones did not (e.g. "file.txt".extension == ".txt" whereas
+             "file.txt".getExt() == "txt").)
+    )
+
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 4604): A stack overflow with writeln)
         $(LI $(BUGZILLA 5523): std.regex handles "\s" and "\W" (etc.) inside square brackets improperly)
