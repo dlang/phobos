@@ -13,6 +13,12 @@ $(VERSION 059, ddd mm, 2012, =================================================,
              on extensions, they expect "." to be part of the extension whereas the
              old ones did not (e.g. "file.txt".extension == ".txt" whereas
              "file.txt".getExt() == "txt").)
+        $(LI The version of std.exception.enforceEx which was scheduled for
+             deprecation has been deprecated. Please use the version which
+             takes exceptions which can be constructed with new E(msg, file, line)
+             (rather than just new E(msg) as the old version did). That way,
+             exceptions constructed with enforceEx will give the file and line
+             number where enforceEx was called.)
         $(LI Get rid of Win9x support.)
         $(LI std.typecons: Added Proxy mixin template.)
         $(LI std.format: Added documentation about compound format specifier.)
