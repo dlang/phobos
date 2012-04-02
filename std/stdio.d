@@ -969,7 +969,7 @@ unittest
 }
 
 
-/*
+/**
 */
 struct LockingTextReader
 {
@@ -1043,9 +1043,11 @@ struct LockingTextReader
 unittest
 {
     static assert(isInputRange!LockingTextReader);
+
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
     scope(exit) std.file.remove(deleteme);
+
     int x, y;
     auto f = File(deleteme);
     f.readf("%s ", &x);
@@ -1280,44 +1282,18 @@ template isStreamingDevice(T)
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
 $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
-string to $(D args[0]). A call without any arguments will fail to
+string to $(D file). A call without any arguments will fail to
 compile.
 
-Throws: In case of an I/O error, throws an $(D StdioException).
+If the $(D file) is not opened, throws an exception. Otherwise, writes its
+arguments in text format to the file.
+
+If the $(D file) is not specified, $(D stdout) is used in default.
+
+Throws:
+    In case of an I/O error, throws an $(D StdioException).
  */
-void write(T...)(T args) if (!is(T[0] : File))
-{
-    stdout.write(args);
-}
-
-unittest
-{
-    //printf("Entering test at line %d\n", __LINE__);
-    scope(failure) printf("Failed test at line %d\n", __LINE__);
-    void[] buf;
-    if (false) write(buf);
-    // test write
-    auto deleteme = testFilename();
-    auto f = File(deleteme, "w");
-    f.write("Hello, ",  "world number ", 42, "!");
-    f.close();
-    scope(exit) { std.file.remove(deleteme); }
-    assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
-    // // test write on stdout
-    //auto saveStdout = stdout;
-    //scope(exit) stdout = saveStdout;
-    //stdout.open(file, "w");
-    Object obj;
-    //write("Hello, ",  "world number ", 42, "! ", obj);
-    //stdout.close();
-    // auto result = cast(char[]) std.file.read(file);
-    // assert(result == "Hello, world number 42! null", result);
-}
-
-/***********************************
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file. */
-void write(S...)(File file, S args)
+void write(T...)(File file, T args) if (T.length >= 1)
 {
     auto w = LockingTextWriter(file);
     foreach (arg; args)
@@ -1347,25 +1323,75 @@ void write(S...)(File file, S args)
     }
 }
 
+/// ditto
+void write(T...)(T args) if (!is(T[0] : File) && T.length >= 1)
+{
+    stdout.write(args);
+}
+
+unittest
+{
+    //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
+    void[] buf;
+    if (false) write(buf);
+
+    // test write
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    f.write("Hello, ",  "world number ", 42, "!");
+    f.close();
+    scope(exit) { std.file.remove(deleteme); }
+    assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
+
+    // // test write on stdout
+    //auto saveStdout = stdout;
+    //scope(exit) stdout = saveStdout;
+    //stdout.open(file, "w");
+    Object obj;
+    //write("Hello, ",  "world number ", 42, "! ", obj);
+    //stdout.close();
+    // auto result = cast(char[]) std.file.read(file);
+    // assert(result == "Hello, world number 42! null", result);
+}
+
 /***********************************
- * Equivalent to $(D write(args, '\n')).  Calling $(D writeln) without
+ * Equivalent to $(D write(file, args, '\n')).  Calling $(D writeln) without
  * arguments is valid and just prints a newline to the standard
  * output.
+ *
+ * If the file is not opened, throws an exception. Otherwise, writes its
+ * arguments in text format to the file, followed by a newline.
+
+If the $(D file) is not specified, $(D stdout) is used in default.
+
  */
 
-/**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, followed by a newline. */
-void writeln(S...)(File file, S args)
+void writeln(T...)(File file, T args)
 {
     file.write(args, '\n');
     errnoEnforce(.fflush(file.p.handle) == 0,
                 "Could not flush file `"~file.p.name~"'");
 }
 
-void writeln(T...)(T args) if (T.length == 0)
+/// ditto
+void writeln(T...)(T args) if (!is(T[0] : File))
 {
-    enforce(fputc('\n', .stdout.p.handle) == '\n');
+    static if (T.length == 0)
+    {
+        enforce(fputc('\n', .stdout.p.handle) == '\n');
+    }
+    else static if (T.length == 1 && is(T[0] : const(char)[]))
+    {
+        // Specialization for strings - a very frequent case
+        enforce(fprintf(.stdout.p.handle, "%.*s\n",
+                        cast(int) args[0].length, args[0].ptr) >= 0);
+    }
+    else
+    {
+        // Most general instance
+        stdout.write(args, '\n');
+    }
 }
 
 unittest
@@ -1374,32 +1400,16 @@ unittest
     if (false) writeln();
 }
 
-// Specialization for strings - a very frequent case
-void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
-{
-    enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    cast(int) args[0].length, args[0].ptr) >= 0);
-}
-
 unittest
 {
     if (false) writeln("wyda");
 }
 
-// Most general instance
-void writeln(T...)(T args)
-if ((T.length >  1 ||
-     T.length == 1 && !is(typeof(args[0]) : const(char)[])) &&
-    !is(typeof(args[0]) : File))
-{
-    stdout.write(args, '\n');
-}
-
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writeln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1412,6 +1422,7 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1426,33 +1437,15 @@ unittest
                 "Hello, world number 42!\n");
 }
 
-/**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, according to the format in the
-first argument. */
-void writef(S...)(File file, S args) // if (isSomeString!(S[0]))
-{
-    enum errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writef or writefln. If no formatting is needed,"
-        " you may want to use write or writeln.";
-
-    assert(file.p);
-    assert(file.p.handle);
-    static assert(S.length>0, errorMessage);
-    static assert(isSomeString!(S[0]), errorMessage);
-    auto w = LockingTextWriter(file);
-    std.format.formattedWrite(w, args);
-}
-
 /***********************************
- * If the first argument $(D args[0]) is a $(D FILE*), use
- * $(LINK2 std_format.html#format-string, the format specifier) in
- * $(D args[1]) to control the formatting of $(D
- * args[2..$]), and write the resulting string to $(D args[0]).
- * If $(D arg[0]) is not a $(D FILE*), the call is
- * equivalent to $(D writef(stdout, args)).
+ * Use $(LINK2 std_format.html#format-string, the format specifier) in
+ * $(D args[0]) to control the formatting of $(D args[1..$]), and write
+ * the resulting string to $(D file).
  *
+
+If the $(D file) is not opened, throws an exception..
+
+If the $(D file) is not specified, $(D stdout) is used in default.
 
 IMPORTANT:
 
@@ -1487,7 +1480,23 @@ to write numbers in platform-native format.
 
 */
 
-void writef(T...)(T args) if (!is(typeof(args[0]) : File))
+void writef(T...)(File file, T args)
+{
+    enum errorMessage =
+        "You must pass a formatting string as the first"
+        " argument to writef or writefln. If no formatting is needed,"
+        " you may want to use write or writeln.";
+
+    assert(file.p);
+    assert(file.p.handle);
+    static assert(T.length > 0, errorMessage);
+    static assert(isSomeString!(T[0]), errorMessage);
+    auto w = LockingTextWriter(file);
+    std.format.formattedWrite(w, args);
+}
+
+/// ditto
+void writef(T...)(T args) if (!is(T[0] : File))
 {
     stdout.writef(args);
 }
@@ -1496,6 +1505,7 @@ unittest
 {
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writef
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1503,6 +1513,7 @@ unittest
     f.writef("Hello, %s world number %s!", "nice", 42);
     f.close();
     assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
+
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1513,29 +1524,29 @@ unittest
 }
 
 /***********************************
- * Equivalent to $(D writef(args, '\n')).
+ * Equivalent to $(D writef(file, args, '\n')).
  */
-void writefln(T...)(T args) if (!is(typeof(args[0]) : File))
+void writefln(T...)(File file, T args)
 {
-    stdout.writefln(args);
-}
-
-/**
-Same as writef, plus adds a newline. */
-void writefln(S...)(File file, S args)
-{
-    static assert(S.length>0, errorMessage);
-    static assert(isSomeString!(S[0]), errorMessage);
+    static assert(T.length > 0, errorMessage);
+    static assert(isSomeString!(T[0]), errorMessage);
     auto w = LockingTextWriter(file);
     std.format.formattedWrite(w, args);
     w.put('\n');
     .fflush(file.p.handle);
 }
 
+/// ditto
+void writefln(T...)(T args) if (!is(T[0] : File))
+{
+    stdout.writefln(args);
+}
+
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writefln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1549,6 +1560,7 @@ unittest
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
+
     // test write on stdout
     // auto saveStdout = stdout;
     // scope(exit) stdout = saveStdout;
@@ -1570,15 +1582,24 @@ unittest
 }
 
 /**
- * Read data from the file according to the specified
+ * Read data from the $(D file) according to the specified
  * $(LINK2 std_format.html#format-string, format specifier) using
  * $(XREF format,formattedRead).
+
+If the $(D file) is not specified, $(D stdin) is used in default.
+
  */
 uint readf(Data...)(File file, in char[] format, Data data)
 {
     assert(file.isOpen);
     auto input = LockingTextReader(file);
     return formattedRead(input, format, data);
+}
+
+/// ditto
+uint readf(Data...)(in char[] format, Data args)
+{
+    return stdin.readf(format, args);
 }
 
 unittest
@@ -1590,16 +1611,6 @@ unittest
     auto f = File(deleteme);
     f.readf("%s\n", &s);
     assert(s == "hello", "["~s~"]");
-}
-
-/**
- * Read data from $(D stdin) according to the specified
- * $(LINK2 std_format.html#format-string, format specifier) using
- * $(XREF format,formattedRead).
- */
-uint readf(A...)(in char[] format, A args)
-{
-    return stdin.readf(format, args);
 }
 
 unittest
@@ -1614,15 +1625,57 @@ unittest
 }
 
 /**********************************
-Read line from stream $(D fp) and write it to $(D buf[]), including
+ * Read line from stream $(D file).
+
+If the $(D file) is not specified, $(D stdin) is used in default.
+
+ * Returns:
+ *        $(D null) for end of file,
+ *        $(D char[]) for line read from $(D file), including terminating character
+ * Params:
+ *        $(D file) = input stream
+ *        $(D terminator) = line terminator, '\n' by default
+ * Throws:
+ *        $(D StdioException) on error
+ * Example:
+ *        Reads $(D stdin) and writes it to $(D stdout).
+---
+import std.stdio;
+
+int main()
+{
+    char[] buf;
+    while ((buf = stdin.readln()) != null)
+        write(buf);
+    return 0;
+}
+---
+*/
+S readln(S = string)(File file, dchar terminator = '\n')
+{
+    Unqual!(typeof(S.init[0]))[] buf;
+    file.readln(buf, terminator);
+    return assumeUnique(buf);
+}
+
+/// ditto
+string readln()(dchar terminator = '\n')
+{
+    return stdin.readln(terminator);
+}
+
+/**********************************
+Read line from stream $(D file) and write it to $(D buf[]), including
 terminating character.
 
-This is often faster than $(D File.readln(dchar)) because the buffer
+This is often faster than $(D readln(File, dchar)) because the buffer
 is reused each call. Note that reusing the buffer means that the
 previous contents of it has to be copied if needed.
 
+If the $(D file) is not specified, $(D stdin) is used in default.
+
 Params:
-fp = input stream
+file = input stream
 buf = buffer used to store the resulting line data. buf is
 resized as necessary.
 
@@ -1650,14 +1703,7 @@ This method is more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line.  */
-S readln(S = string)(File file, dchar terminator = '\n')
-{
-    Unqual!(typeof(S.init[0]))[] buf;
-    file.readln(buf, terminator);
-    return assumeUnique(buf);
-}
 
-/** ditto */
 size_t readln(C)(File file, ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
 {
     static if (is(C == char))
@@ -1699,6 +1745,12 @@ unittest
     }
 }
 
+/// ditto
+size_t readln(C)(ref C[] buf, dchar terminator = '\n')
+{
+    return stdin.readln(buf, terminator);
+}
+
 /** ditto */
 size_t readln(C, R)(File file, ref C[] buf, R terminator)
     if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
@@ -1736,40 +1788,6 @@ unittest
     }
 }
 
-/**********************************
- * Read line from stream $(D fp).
- * Returns:
- *        $(D null) for end of file,
- *        $(D char[]) for line read from $(D fp), including terminating character
- * Params:
- *        $(D fp) = input stream
- *        $(D terminator) = line terminator, '\n' by default
- * Throws:
- *        $(D StdioException) on error
- * Example:
- *        Reads $(D stdin) and writes it to $(D stdout).
----
-import std.stdio;
-
-int main()
-{
-    char[] buf;
-    while ((buf = readln()) != null)
-        write(buf);
-    return 0;
-}
----
-*/
-string readln()(dchar terminator = '\n')
-{
-    return stdin.readln(terminator);
-}
-
-/** ditto */
-size_t readln()(ref char[] buf, dchar terminator = '\n')
-{
-    return stdin.readln(buf, terminator);
-}
 
 /*
  * Convenience function that forwards to $(D std.c.stdio.fopen)
