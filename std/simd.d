@@ -1,5 +1,9 @@
 module std.simd;
 
+pure:
+nothrow:
+@safe:
+
 ///////////////////////////////////////////////////////////////////////////////
 // Version mess
 ///////////////////////////////////////////////////////////////////////////////
@@ -1089,43 +1093,7 @@ short8,short8 unpackBytes(byte16)
 }
 */
 
-R unpackLow(SIMDVer Ver = sseVer, T, PromotionOf!T R)(T v)
-{
-	version(X86_OR_X64)
-	{
-		version(DigitalMars)
-		{
-			static assert(0, "TODO");
-		}
-		else version(GNU)
-		{
-			static if(is(T == int32))
-				return cast(R)interleaveLow!Ver(v, shiftRightImmediate!Ver(v, 31));
-			else static if(is(T == uint4))
-				return cast(R)interleaveLow!Ver(v, 0);
-			else static if(is(T == short8))
-				return shiftRightImmediate!Ver(cast(int4)interleaveLow!Ver(v, v), 16);
-			else static if(is(T == ushort8))
-				return cast(R)interleaveLow!Ver(v, 0);
-			else static if(is(T == byte16))
-				return shiftRightImmediate!Ver(cast(short8)interleaveLow!Ver(v, v), 8);
-			else static if(is(T == ubyte16))
-				return cast(R)interleaveLow!Ver(v, 0);
-			else
-				static assert(0, "Unsupported vector type: " ~ T.stringof);
-		}
-	}
-	else version(ARM)
-	{
-		static assert(0, "TODO");
-	}
-	else
-	{
-		static assert(0, "Unsupported on this architecture");
-	}
-}
-
-R unpackHigh(SIMDVer Ver = sseVer, T, PromotionOf!T R)(T v)
+PromotionOf!T unpackLow(SIMDVer Ver = sseVer, T)(T v)
 {
 	version(X86_OR_X64)
 	{
@@ -1136,17 +1104,17 @@ R unpackHigh(SIMDVer Ver = sseVer, T, PromotionOf!T R)(T v)
 		else version(GNU)
 		{
 			static if(is(T == int4))
-				return cast(R)interleaveHigh!Ver(v, shiftRightImmediate!Ver(v, 31));
+				return cast(PromotionOf!T)interleaveLow!Ver(v, shiftRightImmediate!(31, Ver)(v));
 			else static if(is(T == uint4))
-				return cast(R)interleaveHigh!Ver(v, cast(uint4)0);
+				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
 			else static if(is(T == short8))
-				return shiftRightImmediate!Ver(cast(int4)interleaveHigh!Ver(v, v), 16);
+				return shiftRightImmediate!(16, Ver)(cast(int4)interleaveLow!Ver(v, v));
 			else static if(is(T == ushort8))
-				return cast(R)interleaveHigh!Ver(v, cast(ushort8)0);
+				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
 			else static if(is(T == byte16))
-				return shiftRightImmediate!Ver(cast(short8)interleaveHigh!Ver(v, v), 8);
+				return shiftRightImmediate!(8, Ver)(cast(short8)interleaveLow!Ver(v, v));
 			else static if(is(T == ubyte16))
-				return cast(R)interleaveHigh!Ver(v, cast(ubyte16)0);
+				return cast(PromotionOf!T)interleaveLow!Ver(v, 0);
 			else
 				static assert(0, "Unsupported vector type: " ~ T.stringof);
 		}
@@ -1161,7 +1129,43 @@ R unpackHigh(SIMDVer Ver = sseVer, T, PromotionOf!T R)(T v)
 	}
 }
 
-R pack(SIMDVer Ver = sseVer, T, DemotionOf!T R)(T v1, T v2)
+PromotionOf!T unpackHigh(SIMDVer Ver = sseVer, T)(T v)
+{
+	version(X86_OR_X64)
+	{
+		version(DigitalMars)
+		{
+			static assert(0, "TODO");
+		}
+		else version(GNU)
+		{
+			static if(is(T == int4))
+				return cast(PromotionOf!T)interleaveHigh!Ver(v, shiftRightImmediate!(31, Ver)(v));
+			else static if(is(T == uint4))
+				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(uint4)0);
+			else static if(is(T == short8))
+				return shiftRightImmediate!(16, Ver)(cast(int4)interleaveHigh!Ver(v, v));
+			else static if(is(T == ushort8))
+				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(ushort8)0);
+			else static if(is(T == byte16))
+				return shiftRightImmediate!(8, Ver)(cast(short8)interleaveHigh!Ver(v, v));
+			else static if(is(T == ubyte16))
+				return cast(PromotionOf!T)interleaveHigh!Ver(v, cast(ubyte16)0);
+			else
+				static assert(0, "Unsupported vector type: " ~ T.stringof);
+		}
+	}
+	else version(ARM)
+	{
+		static assert(0, "TODO");
+	}
+	else
+	{
+		static assert(0, "Unsupported on this architecture");
+	}
+}
+
+DemotionOf!T pack(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
 	version(X86_OR_X64)
 	{
@@ -1209,7 +1213,7 @@ R pack(SIMDVer Ver = sseVer, T, DemotionOf!T R)(T v1, T v2)
 	}
 }
 
-R packSaturate(SIMDVer Ver = sseVer, T, DemotionOf!T R)(T v1, T v2)
+DemotionOf!T packSaturate(SIMDVer Ver = sseVer, T)(T v1, T v2)
 {
 	version(X86_OR_X64)
 	{
@@ -2099,6 +2103,7 @@ T trunc(SIMDVer Ver = sseVer, T)(T v)
 
 				return _mm_or_ps( t, v );
 */
+			}
 		}
 	}
 	else version(ARM)
