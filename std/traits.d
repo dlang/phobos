@@ -3236,6 +3236,22 @@ template isNumeric(T)
 }
 
 /**
+Detect whether T is a builtin type.
+ */
+template isBuiltin(T)
+{
+    enum bool isBuiltin = isNumeric!T || isSomeChar!T || isBoolean!T || is(T == void);
+}
+
+unittest {
+	static assert(isBuiltin!void);
+	static assert(isBuiltin!(immutable(int)));
+	static assert(isBuiltin!(shared(float)));
+	static assert(isBuiltin!(shared(const bool)));
+	static assert(isBuiltin!(const(dchar)));
+}
+
+/**
 Detect whether $(D T) is a built-in unsigned numeric type.
  */
 template isUnsigned(T)
