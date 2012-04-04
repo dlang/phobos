@@ -2403,6 +2403,14 @@ unittest
     assert(a[1] == [3,4]);
 }
 
+// test replace!Stuff with range Stuff
+unittest
+{
+    auto a = Array!int([1, 42, 5]);
+    a.replace(a[1 .. 2], [2, 3, 4]);
+    assert(equal(a[], [1, 2, 3, 4, 5]));
+}
+
 // BinaryHeap
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
