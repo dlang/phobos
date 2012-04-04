@@ -2174,9 +2174,6 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(_data);
-        immutable offset = r.ptr - _data._payload.ptr;
-        enforce(offset <= length);
         size_t result;
         for (; !stuff.empty; stuff.popFront())
         {
