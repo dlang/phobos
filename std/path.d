@@ -59,6 +59,7 @@ version(Posix)
     import core.stdc.errno;
     import core.sys.posix.pwd;
     import core.sys.posix.stdlib;
+    private import core.exception : onOutOfMemoryError;
 }
 
 
@@ -2795,7 +2796,6 @@ deprecated:
 version(Posix)
 {
     private import core.sys.posix.pwd;
-    private import core.exception : onOutOfMemoryError;
 }
 
 version(Windows)
