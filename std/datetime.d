@@ -29286,7 +29286,7 @@ assert(tz.dstName == "PDT");
         version(Posix)
             auto file = tzDatabaseDir ~ name;
         else version(Windows)
-            auto file = tzDatabaseDir ~ replace(strip(name), "/", sep);
+            auto file = tzDatabaseDir ~ replace(strip(name), "/", dirSeparator);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29595,10 +29595,10 @@ assert(tz.dstName == "PDT");
         version(Posix)
             subName = strip(subName);
         else version(Windows)
-            subName = replace(strip(subName), "/", sep);
+            subName = replace(strip(subName), "/", dirSeparator);
 
-        if(!tzDatabaseDir.endsWith(sep))
-            tzDatabaseDir ~= sep;
+        if(!tzDatabaseDir.endsWith(dirSeparator))
+            tzDatabaseDir ~= dirSeparator;
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
