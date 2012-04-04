@@ -2179,8 +2179,8 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         {
             if (r.empty)
             {
-                // append the rest
-                return result + insertBack(stuff);
+                // insert the rest
+                return result + insertBefore(r, stuff);
             }
             r.front = stuff.front;
             r.popFront();
