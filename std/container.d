@@ -2187,7 +2187,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
             ++result;
         }
         // Remove remaining stuff in r
-        remove(r);
+        linearRemove(r);
         return result;
     }
 
