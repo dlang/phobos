@@ -6230,18 +6230,21 @@ unittest {
   Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
   The following code should compile:
   ---
-  T1 t1; 
-  T2 t2;
-  fn(t1, t2);
-  fn(t2, t1);
+  T1 foo();
+  T2 bar();
+
+  fn(foo(), bar());
+  fn(bar(), foo());
   ---
 */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
     enum isTwoWayCompatible = is(typeof( (){ 
-            T1 e; 
-            T2 v;
-            return fn(v,e) && fn(e,v); 
+            T1 foo();
+            T2 bar();
+
+            fn(foo(), bar());
+            fn(bar(), foo());
         }
     ));
 }
