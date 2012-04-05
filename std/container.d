@@ -2107,7 +2107,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        enforce(r._outer._data == _data && r._a < length);
+        enforce(r._outer._data is _data && r._a <= length);
         reserve(length + 1);
         assert(_data.RefCounted.isInitialized);
         // Move elements over by one slot
@@ -2123,7 +2123,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(r._outer._data == _data && r._a <= length);
+        enforce(r._outer._data is _data && r._a <= length);
         static if (isForwardRange!Stuff)
         {
             // Can find the length in advance
@@ -2409,6 +2409,23 @@ unittest
     auto a = Array!int([1, 42, 5]);
     a.replace(a[1 .. 2], [2, 3, 4]);
     assert(equal(a[], [1, 2, 3, 4, 5]));
+}
+
+// test insertBefore and replace with empty Arrays
+unittest {
+    auto a = Array!int();
+    a.insertBefore(a[], 1);
+    assert(equal(a[], [1]));
+}
+unittest {
+    auto a = Array!int();
+    a.insertBefore(a[], [1, 2]);
+    assert(equal(a[], [1, 2]));
+}
+unittest {
+    auto a = Array!int();
+    a.replace(a[], [1, 2]);
+    assert(equal(a[], [1, 2]));
 }
 
 // BinaryHeap
