@@ -2203,7 +2203,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         {
             r.front = stuff;
             r.popFront();
-            remove(r);
+            linearRemove(r);
         }
         return 1;
     }
@@ -2426,6 +2426,11 @@ unittest {
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
+}
+unittest {
+    auto a = Array!int();
+    a.replace(a[], 1);
+    assert(equal(a[], [1]));
 }
 
 // BinaryHeap
