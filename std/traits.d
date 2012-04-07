@@ -3795,6 +3795,22 @@ unittest
 }
 
 /**
+Returns the target type of an array.
+*/
+template ArrayTarget(T : T[])
+{
+    alias T ArrayTarget;
+}
+
+unittest
+{
+    static assert( is(ArrayTarget!(int[]) == int));
+    static assert( is(ArrayTarget!(long[0]) == long));
+
+    static assert(!is(ArrayTarget!int));
+}
+
+/**
  * Detect whether T is an associative array type
  */
 template isAssociativeArray(T)
