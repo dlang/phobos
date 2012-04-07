@@ -296,6 +296,7 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
     else static if (is(Conn : FTP))
     {
         conn.url = url;
+        conn.handle.set(CurlOption.upload, 1L);
     }
     else
     {
@@ -759,6 +760,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 
     if (!sendData.empty)
     {
+        client.handle.set(CurlOption.upload, 1L);
         client.onSend = delegate size_t(void[] buf)
         {
             size_t minLen = min(buf.length, sendData.length);
@@ -1553,12 +1555,6 @@ private mixin template Protocol()
 
     // Network settings
 
-    /// The URL to specify the location of the resource.
-    @property void url(const(char)[] url)
-    {
-        p.curl.set(CurlOption.url, url);
-    }
-
     /** Proxy
      *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
      */
@@ -1967,7 +1963,8 @@ struct HTTP
     this(const(char)[] url)
     {
         initialize();
-        p.curl.set(CurlOption.url, url);
+
+        this.url = url;
     }
 
     static HTTP opCall()
@@ -2054,6 +2051,14 @@ struct HTTP
         }
 
         return p.curl.perform(throwOnError);
+    }
+
+    /// The URL to specify the location of the resource.
+    @property void url(const(char)[] url)
+    {
+        if (!startsWith(url.toLower(), "http://", "https://"))
+            url = "http://" ~ url;
+        p.curl.set(CurlOption.url, url);
     }
 
     // This is a workaround for mixed in content not having its
@@ -2636,7 +2641,8 @@ struct FTP
     this(const(char)[] url)
     {
         initialize();
-        p.curl.set(CurlOption.url, url);
+        
+        this.url = url;
     }
 
     static FTP opCall()
@@ -2689,6 +2695,14 @@ struct FTP
         return p.curl.perform(throwOnError);
     }
 
+    /// The URL to specify the location of the resource.
+    @property void url(const(char)[] url)
+    {
+        if (!startsWith(url.toLower(), "ftp://", "ftps://"))
+            url = "ftp://" ~ url;
+        p.curl.set(CurlOption.url, url);
+    }
+
     // This is a workaround for mixed in content not having its
     // docs mixed in.
     version (StdDdoc)
@@ -2722,9 +2736,6 @@ struct FTP
         @property void connectTimeout(Duration d);
 
         // Network settings
-
-        /// The URL to specify the location of the resource.
-        @property void url(const(char)[] url);
 
         /** Proxy
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
@@ -2871,10 +2882,9 @@ struct FTP
      * ---
      * import std.net.curl;
      * auto client = FTP();
-     * upload("my_file.txt", "ftp.digitalmars.com", client);
      * client.addCommand("RNFR my_file.txt");
      * client.addCommand("RNTO my_renamed_file.txt");
-     * client.perform();
+     * upload("my_file.txt", "ftp.digitalmars.com", client);
      * ---
      */
     void addCommand(const(char)[] command)
@@ -2969,6 +2979,14 @@ struct SMTP
         p.curl.perform();
     }
 
+    /// The URL to specify the location of the resource.
+    @property void url(const(char)[] url)
+    {
+        if (!startsWith(url.toLower(), "smtp://", "smtps://"))
+            url = "smtp://" ~ url;
+        p.curl.set(CurlOption.url, url);
+    }
+
     // This is a workaround for mixed in content not having its
     // docs mixed in.
     version (StdDdoc)
@@ -3002,9 +3020,6 @@ struct SMTP
         @property void connectTimeout(Duration d);
 
         // Network settings
-
-        /// The URL to specify the location of the resource.
-        @property void url(const(char)[] url);
 
         /** Proxy
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
