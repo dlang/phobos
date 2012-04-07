@@ -3973,6 +3973,22 @@ unittest
 }
 
 /**
+Returns the element type of an array.
+*/
+template ArrayElementType(T : T[])
+{
+    alias T ArrayElementType;
+}
+
+unittest
+{
+    static assert( is(ArrayElementType!(int[]) == int));
+    static assert( is(ArrayElementType!(long[0]) == long));
+
+    static assert(!is(ArrayElementType!int));
+}
+
+/**
  * Detect whether T is an associative array type
  */
 template isAssociativeArray(T)
