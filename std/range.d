@@ -1188,7 +1188,7 @@ struct MyInfiniteRange
 
 template isInfinite(R)
 {
-    static if (isInputRange!R && is(char[1 + R.empty]))
+    static if (isInputRange!R && __traits(compiles, { enum e = R.empty; }))
         enum bool isInfinite = !R.empty;
     else
         enum bool isInfinite = false;
@@ -1196,8 +1196,8 @@ template isInfinite(R)
 
 unittest
 {
-    assert(!isInfinite!(int[]));
-    assert(isInfinite!(Repeat!(int)));
+    static assert(!isInfinite!(int[]));
+    static assert(isInfinite!(Repeat!(int)));
 }
 
 /**
