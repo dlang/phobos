@@ -2030,7 +2030,6 @@ template InterfacesTuple(T)
 
 unittest
 {
-    struct Test1_WorkaroundForBug2986
     {
         // doc example
         interface I1 {}
@@ -2041,7 +2040,6 @@ unittest
         alias InterfacesTuple!(C) TL;
         static assert(is(TL[0] == I1) && is(TL[1] == I2));
     }
-    struct Test2_WorkaroundForBug2986
     {
         interface Iaa {}
         interface Iab {}
@@ -2051,11 +2049,11 @@ unittest
         interface Ib : Iba, Ibb {}
         interface I : Ia, Ib {}
         interface J {}
-        class B : J {}
-        class C : B, Ia, Ib {}
+        class B2 : J {}
+        class C2 : B2, Ia, Ib {}
         static assert(is(InterfacesTuple!(I) ==
                         TypeTuple!(Ia, Iaa, Iab, Ib, Iba, Ibb)));
-        static assert(is(InterfacesTuple!(C) ==
+        static assert(is(InterfacesTuple!(C2) ==
                         TypeTuple!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
     }
 }
