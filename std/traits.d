@@ -3443,17 +3443,20 @@ unittest
 /**
 Returns the target type of a pointer.
 */
-template pointerTarget(T : T*)
+template PointerTarget(T : T*)
 {
-    alias T pointerTarget;
+    alias T PointerTarget;
 }
+
+/// $(RED Scheduled for deprecation. Please use $(LREF PointerTarget) instead.)
+alias PointerTarget pointerTarget;
 
 unittest
 {
-    static assert( is(pointerTarget!(int*) == int));
-    static assert( is(pointerTarget!(long*) == long));
+    static assert( is(PointerTarget!(int*) == int));
+    static assert( is(PointerTarget!(long*) == long));
 
-    static assert(!is(pointerTarget!int));
+    static assert(!is(PointerTarget!int));
 }
 
 /**
