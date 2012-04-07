@@ -1792,7 +1792,7 @@ template hasIndirections(T)
                 enum Impl = true;
             else
                 enum Impl = Impl!(T[1 .. $]) ||
-                    Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
+                    Impl!(RepresentationTypeTuple!(ArrayTarget!(T[0])));
         }
         else
         {
@@ -2747,12 +2747,12 @@ template ImplicitConversionTargets(T)
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
     // @@@BUG@@@ this should work
-    // else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-    //     alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+    // else static if (isDynamicArray!T && !is(ArrayTarget!T == const))
+    //     alias TypeTuple!(const(ArrayTarget!T)[]) ImplicitConversionTargets;
     else static if (is(T == char[]))
         alias TypeTuple!(const(char)[]) ImplicitConversionTargets;
-    else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-        alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+    else static if (isDynamicArray!T && !is(ArrayTarget!T == const))
+        alias TypeTuple!(const(ArrayTarget!T)[]) ImplicitConversionTargets;
     else static if (is(T : void*))
         alias TypeTuple!(void*) ImplicitConversionTargets;
     else

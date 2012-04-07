@@ -399,7 +399,7 @@ private:
             {
                 enforce(0, "Not implemented");
             }
-            static if (isDynamicArray!(A) && allowed!(typeof(A.init[0])))
+            static if (isDynamicArray!(A) && allowed!(ArrayTarget!A))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;

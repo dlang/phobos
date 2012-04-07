@@ -33891,7 +33891,7 @@ template _isPrintable(T...)
     else static if(T.length == 1)
     {
         enum _isPrintable = (!isArray!(T[0]) && __traits(compiles, to!string(T[0].init))) ||
-                           (isArray!(T[0]) && __traits(compiles, to!string(T[0].init[0])));
+                           __traits(compiles, to!string(ArrayTarget!(T[0]).init));
     }
     else
     {
