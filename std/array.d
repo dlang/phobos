@@ -1533,7 +1533,7 @@ unittest
     }
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        alias typeof(S.init[0]) Char;
+        alias ElementEncodingType!S Char;
         S s = to!S("yet another dummy text, yet another ...");
         S from = to!S("yet another");
         S into = to!S("some");

@@ -1624,7 +1624,7 @@ this() @trusted
             static if(
                 Args.length > 1 &&
                 randAssignable!(Args[$ - 1]) &&
-                is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))
+                is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
                 alias args[$ - 1] buf;
