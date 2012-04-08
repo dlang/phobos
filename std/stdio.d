@@ -665,19 +665,19 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A)
+            static if (isSomeString!A && !is(A == enum))
             {
                 put(w, arg);
             }
-            else static if (isIntegral!A)
+            else static if (isIntegral!A && !is(A == enum))
             {
                 toTextRange(arg, w);
             }
-            else static if (isBoolean!A)
+            else static if (isBoolean!A && !is(A == enum))
             {
                 put(w, arg ? "true" : "false");
             }
-            else static if (isSomeChar!A)
+            else static if (isSomeChar!A && !is(A == enum))
             {
                 put(w, arg);
             }
@@ -1556,7 +1556,7 @@ unittest
 
 // Specialization for strings - a very frequent case
 void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
+if (T.length == 1 && is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum))
 {
     enforce(fprintf(.stdout.p.handle, "%.*s\n",
                     cast(int) args[0].length, args[0].ptr) >= 0);
@@ -1569,7 +1569,7 @@ unittest
 
 // Most general instance
 void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
+if (T.length > 1 || T.length == 1 && !(is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum)))
 {
     stdout.write(args, '\n');
 }
@@ -1602,6 +1602,38 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
+
+    enum EI : int    { A, B }
+    enum ED : double { A, B }
+    enum EC : char   { A, B }
+    enum ES : string { A = "aaa", B = "bbb" }
+
+    f.writeln(EI.A);  // false, but A on 2.058
+    f.writeln(EI.B);  // true, but B on 2.058
+
+    f.writeln(ED.A);  // A
+    f.writeln(ED.B);  // B
+
+    f.writeln(EC.A);  // A
+    f.writeln(EC.B);  // B
+
+    f.writeln(ES.A);  // A
+    f.writeln(ES.B);  // B
+
+    f.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\r\nB\r\nA\r\nB\r\nA\r\nB\r\nA\r\nB\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
 
 /***********************************
