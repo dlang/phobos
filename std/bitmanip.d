@@ -358,16 +358,25 @@ struct BitArray
     size_t* ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
 
+    /**********************************************
+     * Gets the amount of native words backing this $(D BitArray).
+     */
     @property const size_t dim()
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
 
+    /**********************************************
+     * Gets the amount of bits in the $(D BitArray).
+     */
     @property const size_t length()
     {
         return len;
     }
 
+    /**********************************************
+     * Sets the amount of bits in the $(D BitArray).
+     */
     @property void length(size_t newlen)
     {
         if (newlen != len)
@@ -392,7 +401,7 @@ struct BitArray
     }
 
     /**********************************************
-     * Support for [$(I index)] operation for BitArray.
+     * Gets the $(D i)'th bit in the $(D BitArray).
      */
     bool opIndex(size_t i) const
     in
@@ -418,7 +427,9 @@ struct BitArray
         Fun(a);
     }
 
-    /** ditto */
+    /**********************************************
+     * Sets the $(D i)'th bit in the $(D BitArray).
+     */
     bool opIndexAssign(bool b, size_t i)
     in
     {
@@ -434,7 +445,7 @@ struct BitArray
     }
 
     /**********************************************
-     * Support for array.dup property for BitArray.
+     * Duplicates the $(D BitArray) and its contents.
      */
     @property BitArray dup()
     {
@@ -465,7 +476,7 @@ struct BitArray
     }
 
     /**********************************************
-     * Support for foreach loops for BitArray.
+     * Support for $(D foreach) loops for $(D BitArray).
      */
     int opApply(scope int delegate(ref bool) dg)
     {
@@ -533,9 +544,8 @@ struct BitArray
 
 
     /**********************************************
-     * Support for array.reverse property for BitArray.
+     * Reverses the bits of the $(D BitArray).
      */
-
     @property BitArray reverse()
     out (result)
     {
@@ -578,9 +588,8 @@ struct BitArray
 
 
     /**********************************************
-     * Support for array.sort property for BitArray.
+     * Sorts the $(D BitArray)'s elements.
      */
-
     @property BitArray sort()
     out (result)
     {
@@ -641,9 +650,8 @@ struct BitArray
 
 
     /***************************************
-     * Support for operators == and != for bit arrays.
+     * Support for operators == and != for $(D BitArray).
      */
-
     const bool opEquals(const ref BitArray a2)
     {
         int i;
@@ -690,9 +698,8 @@ struct BitArray
     }
 
     /***************************************
-     * Implement comparison operators.
+     * Supports comparison operators for $(D BitArray).
      */
-
     int opCmp(BitArray a2)
     {
         uint i;
@@ -748,9 +755,8 @@ struct BitArray
     }
 
     /***************************************
-     * Set BitArray to contents of ba[]
+     * Set this $(D BitArray) to the contents of $(D ba).
      */
-
     void init(bool[] ba)
     {
         length = ba.length;
@@ -762,10 +768,10 @@ struct BitArray
 
 
     /***************************************
-     * Map BitArray onto v[], with numbits being the number of bits
+     * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
      * in the array. Does not copy the data.
      *
-     * This is the inverse of opCast.
+     * This is the inverse of $(D opCast).
      */
     void init(void[] v, size_t numbits)
     in
@@ -805,11 +811,19 @@ struct BitArray
     }
 
     /***************************************
-     * Convert to void[].
+     * Convert to $(D void[]).
      */
-    void[] opCast()
+    void[] opCast(T : void[])()
     {
         return cast(void[])ptr[0 .. dim];
+    }
+
+    /***************************************
+     * Convert to $(D size_t[]).
+     */
+    size_t[] opCast(T : size_t[])()
+    {
+        return ptr[0 .. dim];
     }
 
     unittest
@@ -825,7 +839,7 @@ struct BitArray
     }
 
     /***************************************
-     * Support for unary operator ~ for bit arrays.
+     * Support for unary operator ~ for $(D BitArray).
      */
     BitArray opCom()
     {
@@ -859,7 +873,7 @@ struct BitArray
 
 
     /***************************************
-     * Support for binary operator & for bit arrays.
+     * Support for binary operator & for $(D BitArray).
      */
     BitArray opAnd(BitArray e2)
     in
@@ -899,7 +913,7 @@ struct BitArray
 
 
     /***************************************
-     * Support for binary operator | for bit arrays.
+     * Support for binary operator | for $(D BitArray).
      */
     BitArray opOr(BitArray e2)
     in
@@ -939,7 +953,7 @@ struct BitArray
 
 
     /***************************************
-     * Support for binary operator ^ for bit arrays.
+     * Support for binary operator ^ for $(D BitArray).
      */
     BitArray opXor(BitArray e2)
     in
@@ -979,9 +993,9 @@ struct BitArray
 
 
     /***************************************
-     * Support for binary operator - for bit arrays.
+     * Support for binary operator - for $(D BitArray).
      *
-     * $(I a - b) for BitArrays means the same thing as $(I a &amp; ~b).
+     * $(D a - b) for $(D BitArray) means the same thing as $(D a &amp; ~b).
      */
     BitArray opSub(BitArray e2)
     in
@@ -1021,7 +1035,7 @@ struct BitArray
 
 
     /***************************************
-     * Support for operator &= bit arrays.
+     * Support for operator &= for $(D BitArray).
      */
     BitArray opAndAssign(BitArray e2)
     in
@@ -1057,7 +1071,7 @@ struct BitArray
 
 
     /***************************************
-     * Support for operator |= for bit arrays.
+     * Support for operator |= for $(D BitArray).
      */
     BitArray opOrAssign(BitArray e2)
     in
@@ -1092,7 +1106,7 @@ struct BitArray
     }
 
     /***************************************
-     * Support for operator ^= for bit arrays.
+     * Support for operator ^= for $(D BitArray).
      */
     BitArray opXorAssign(BitArray e2)
     in
@@ -1127,9 +1141,9 @@ struct BitArray
     }
 
     /***************************************
-     * Support for operator -= for bit arrays.
+     * Support for operator -= for $(D BitArray).
      *
-     * $(I a -= b) for BitArrays means the same thing as $(I a &amp;= ~b).
+     * $(D a -= b) for $(D BitArray) means the same thing as $(D a &amp;= ~b).
      */
     BitArray opSubAssign(BitArray e2)
     in
@@ -1164,7 +1178,7 @@ struct BitArray
     }
 
     /***************************************
-     * Support for operator ~= for bit arrays.
+     * Support for operator ~= for $(D BitArray).
      */
 
     BitArray opCatAssign(bool b)
@@ -1230,7 +1244,7 @@ struct BitArray
     }
 
     /***************************************
-     * Support for binary operator ~ for bit arrays.
+     * Support for binary operator ~ for $(D BitArray).
      */
     BitArray opCat(bool b)
     {

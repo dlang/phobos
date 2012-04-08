@@ -58,16 +58,6 @@ body
     }
 }
 
-//ditto
-@trusted void moveAllAlt(T)(T[] src, T[] dest)
-{//moveAll is @system
-    if(__ctfe)
-        foreach(i,v; src)
-            dest[i] = v;
-    else
-        moveAll(src, dest);
-}
-
 //$(D Interval)  represents an interval of codepoints: [a,b).
 struct Interval
 {

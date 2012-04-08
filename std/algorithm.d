@@ -8,11 +8,11 @@ $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Searching) $(TD $(MYREF balancedParens) $(MYREF
 boyerMooreFinder) $(MYREF canFind) $(MYREF count) $(MYREF countUntil)
-$(MYREF endsWith) $(MYREF find) $(MYREF findAdjacent) $(MYREF
-findAmong) $(MYREF findSkip) $(MYREF findSplit) $(MYREF
-findSplitAfter) $(MYREF findSplitBefore) $(MYREF indexOf) $(MYREF
-minCount) $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF
-startsWith) $(MYREF until) )
+$(MYREF endsWith) $(MYREF commonPrefix) $(MYREF find) $(MYREF
+findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
+$(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF indexOf)
+$(MYREF minCount) $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver)
+$(MYREF startsWith) $(MYREF until) )
 )
 $(TR $(TDNW Comparison) $(TD $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
@@ -437,7 +437,7 @@ template map(fun...) if (fun.length >= 1)
                 {
                     return _input.length;
                 }
-                
+
                 alias length opDollar;
             }
 
@@ -1317,7 +1317,7 @@ copy. Specifically: $(UL $(LI If $(D hasAliasing!T) is true (see
 $(XREF traits, hasAliasing)), then the representation of $(D source)
 is bitwise copied into $(D target) and then $(D source = T.init) is
 evaluated.)  $(LI Otherwise, $(D target = source) is evaluated.)) See
-also $(XREF contracts, pointsTo).
+also $(XREF exception, pointsTo).
 
 Preconditions:
 $(D &source == &target || !pointsTo(source, source))
@@ -1406,7 +1406,7 @@ unittest
 /// Ditto
 T move(T)(ref T src)
 {
-    T result;
+    T result=void;
     move(src, result);
     return result;
 }
@@ -3267,7 +3267,7 @@ public:
     {
         return needle.length;
     }
-    
+
     alias length opDollar;
 }
 
@@ -3664,7 +3664,7 @@ unittest
 
 /++
     Returns the number of elements which must be popped from $(D haystack)
-    before $(D pred(hastack.front)) is $(D true.).
+    before $(D pred(haystack.front)) is $(D true).
 
     Examples:
 --------------------
@@ -4385,6 +4385,53 @@ unittest
     assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5]), 7) == 1);
     assert(!endsWith([0, 1, 2, 3, 4, 5], wrap([2, 4, 5])));
     assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], wrap([3, 4, 5])) == 2);
+}
+
+/**
+Returns the common prefix of two ranges. Example:
+
+----
+assert(commonPrefix("hello, world", "hello, there") == "hello, ");
+----
+
+The type of the result is the same as $(D takeExactly(r1, n)), where
+$(D n) is the number of elements that both ranges start with.
+ */
+auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
+if (isForwardRange!R1 && isForwardRange!R2)
+{
+    static if (isSomeString!R1 && isSomeString!R2
+            && (ElementEncodingType!R1).sizeof == (ElementEncodingType!R2).sizeof
+            || isRandomAccessRange!R1 && hasLength!R2)
+    {
+        auto limit = min(r1.length, r2.length);
+        foreach (i; 0 .. limit)
+        {
+            if (!binaryFun!pred(r1[i], r2[i]))
+            {
+                return r1[0 .. i];
+            }
+        }
+        return r1[0 .. 0];
+    }
+    else
+    {
+        auto result = r1.save;
+        size_t i = 0;
+        for (; !r1.empty && !r2.empty && binaryFun!pred(r1.front, r2.front);
+             ++i, r1.popFront(), r2.popFront())
+        {
+        }
+        return takeExactly(result, i);
+    }
+}
+
+unittest
+{
+    assert(commonPrefix("hello, world", "hello, there") == "hello, ");
+    assert(equal(commonPrefix("hello, world", "hello, there"w), "hello, "));
+    assert(equal(commonPrefix("hello, world"w, "hello, there"), "hello, "));
+    assert(equal(commonPrefix("hello, world", "hello, there"d), "hello, "));
 }
 
 // findAdjacent
@@ -5367,8 +5414,8 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    
-    static Range2 genericImpl(Range1 source, Range2 target) 
+
+    static Range2 genericImpl(Range1 source, Range2 target)
     {
         for (; !source.empty; source.popFront())
         {
@@ -5377,24 +5424,24 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
         return target;
     }
-    
+
     static if(isArray!Range1 && isArray!Range2 &&
     is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        immutable overlaps = 
-            (source.ptr >= target.ptr && 
+        immutable overlaps =
+            (source.ptr >= target.ptr &&
              source.ptr < target.ptr + target.length) ||
-            (target.ptr >= source.ptr && 
+            (target.ptr >= source.ptr &&
              target.ptr < source.ptr + source.length);
-            
-        if(overlaps) 
+
+        if(overlaps)
         {
             return genericImpl(source, target);
         }
-        else 
+        else
         {
-            // Array specialization.  This uses optimized memory copying 
-            // routines under the hood and is about 10-20x faster than the 
+            // Array specialization.  This uses optimized memory copying
+            // routines under the hood and is about 10-20x faster than the
             // generic implementation.
             enforce(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
@@ -5428,7 +5475,7 @@ unittest
         auto e = copy(filter!("a > 1")(a), b);
         assert(b[0] == 5 && e.length == 1);
     }
-    
+
     {
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         copy(a[5..10], a[4..9]);
@@ -7814,7 +7861,7 @@ unittest
 }
 
 /**
-Returns $(D true) if and only if all values in $(D range) satisfy the 
+Returns $(D true) if and only if all values in $(D range) satisfy the
 predicate $(D pred).  Performs $(BIGOH r.length) evaluations of $(D pred).
 
 Examples:
@@ -8040,7 +8087,7 @@ public:
             }
             return result;
         }
-        
+
         alias length opDollar;
     }
 }
@@ -8723,4 +8770,10 @@ unittest
 // First member is the item, second is the occurrence count
     //writeln(b[0]);
     assert(b[0] == tuple(4.0, 2u));
+}
+
+unittest//Issue 6217 
+{
+    auto x = map!"a"([1,2,3]);
+    x = move(x);
 }

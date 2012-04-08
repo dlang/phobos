@@ -517,7 +517,7 @@ template DerivedToFront(TList...)
 
 
 /**
-Evaluates to $(D TypeTuple!(F[T[0]], F[T[1]], ..., F[T[$ - 1]])).
+Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
 
 Example:
 ----
@@ -553,7 +553,7 @@ unittest
 }
 
 /**
-Evaluates to $(D F[T[0]] && F[T[1]] && ... && F[T[$ - 1]]).
+Evaluates to $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
 Example:
 ----
@@ -584,7 +584,7 @@ unittest
 }
 
 /**
-Evaluates to $(D F[T[0]] || F[T[1]] || ... || F[T[$ - 1]]).
+Evaluates to $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
 Example:
 ----
