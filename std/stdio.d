@@ -159,61 +159,6 @@ else
 }
 
 //------------------------------------------------------------------------------
-struct ByRecord(Fields...)
-{
-private:
-    File file;
-    char[] line;
-    Tuple!(Fields) current;
-    string format;
-
-public:
-    this(File f, string format)
-    {
-        assert(f.isOpen);
-        file = f;
-        this.format = format;
-        popFront(); // prime the range
-    }
-
-    /// Range primitive implementations.
-    @property bool empty()
-    {
-        return !file.isOpen;
-    }
-
-    /// Ditto
-    @property ref Tuple!(Fields) front()
-    {
-        return current;
-    }
-
-    /// Ditto
-    void popFront()
-    {
-        enforce(file.isOpen);
-        file.readln(line);
-        if (!line.length)
-        {
-            file.detach();
-        }
-        else
-        {
-            line = chomp(line);
-            formattedRead(line, format, &current);
-            enforce(line.empty, text("Leftover characters in record: `",
-                            line, "'"));
-        }
-    }
-}
-
-template byRecord(Fields...)
-{
-    ByRecord!(Fields) byRecord(File f, string format)
-    {
-        return typeof(return)(f, format);
-    }
-}
 
 /**
 Encapsulates a $(D FILE*). Generally D does not attempt to provide
@@ -657,226 +602,6 @@ _setvbuf) for the file handle. */
     }
 
 /**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file. */
-    void write(S...)(S args)
-    {
-        auto w = lockingTextWriter;
-        foreach (arg; args)
-        {
-            alias typeof(arg) A;
-            static if (isSomeString!A)
-            {
-                put(w, arg);
-            }
-            else static if (isIntegral!A)
-            {
-                toTextRange(arg, w);
-            }
-            else static if (isBoolean!A)
-            {
-                put(w, arg ? "true" : "false");
-            }
-            else static if (isSomeChar!A)
-            {
-                put(w, arg);
-            }
-            else
-            {
-                // Most general case
-                std.format.formattedWrite(w, "%s", arg);
-            }
-        }
-    }
-
-/**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, followed by a newline. */
-    void writeln(S...)(S args)
-    {
-        write(args, '\n');
-        errnoEnforce(.fflush(p.handle) == 0,
-                    "Could not flush file `"~p.name~"'");
-    }
-
-    private enum errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writef or writefln. If no formatting is needed,"
-        " you may want to use write or writeln.";
-
-/**
-If the file is not opened, throws an exception. Otherwise, writes its
-arguments in text format to the file, according to the format in the
-first argument. */
-    void writef(S...)(S args) // if (isSomeString!(S[0]))
-    {
-        assert(p);
-        assert(p.handle);
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
-        auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
-    }
-
-/**
-Same as writef, plus adds a newline. */
-    void writefln(S...)(S args)
-    {
-        static assert(S.length>0, errorMessage);
-        static assert(isSomeString!(S[0]), errorMessage);
-        auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
-        w.put('\n');
-        .fflush(p.handle);
-    }
-
-/**********************************
-Read line from stream $(D fp) and write it to $(D buf[]), including
-terminating character.
-
-This is often faster than $(D File.readln(dchar)) because the buffer
-is reused each call. Note that reusing the buffer means that the
-previous contents of it has to be copied if needed.
-
-Params:
-fp = input stream
-buf = buffer used to store the resulting line data. buf is
-resized as necessary.
-
-Returns:
-0 for end of file, otherwise number of characters read
-
-Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
-conversion error.
-
-Example:
----
-// Reads $(D stdin) and writes it to $(D stdout).
-import std.stdio;
-
-int main()
-{
-    char[] buf;
-    while (stdin.readln(buf))
-        write(buf);
-    return 0;
-}
----
-
-This method is more efficient than the one in the previous example
-because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
-with every line.  */
-    S readln(S = string)(dchar terminator = '\n')
-    {
-        Unqual!(typeof(S.init[0]))[] buf;
-        readln(buf, terminator);
-        return assumeUnique(buf);
-    }
-
-    unittest
-    {
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "hello\nworld\n");
-        scope(exit) std.file.remove(deleteme);
-        foreach (C; Tuple!(char, wchar, dchar).Types)
-        {
-            auto witness = [ "hello\n", "world\n" ];
-            auto f = File(deleteme);
-            uint i = 0;
-            immutable(C)[] buf;
-            while ((buf = f.readln!(typeof(buf))()).length)
-            {
-                assert(i < witness.length);
-                assert(equal(buf, witness[i++]));
-            }
-            assert(i == witness.length);
-        }
-    }
-
-/** ditto */
-    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
-    {
-        static if (is(C == char))
-        {
-            enforce(p && p.handle, "Attempt to read from an unopened file.");
-            return readlnImpl(p.handle, buf, terminator);
-        }
-        else
-        {
-            // TODO: optimize this
-            string s = readln(terminator);
-            if (!s.length) return 0;
-            buf.length = 0;
-            foreach (wchar c; s)
-            {
-                buf ~= c;
-            }
-            return buf.length;
-        }
-    }
-
-/** ditto */
-    size_t readln(C, R)(ref C[] buf, R terminator)
-        if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
-    {
-        auto last = terminator.back();
-        C[] buf2;
-        swap(buf, buf2);
-        for (;;) {
-            if (!readln(buf2, last) || endsWith(buf2, terminator)) {
-                if (buf.empty) {
-                    buf = buf2;
-                } else {
-                    buf ~= buf2;
-                }
-                break;
-            }
-            buf ~= buf2;
-        }
-        return buf.length;
-    }
-
-    unittest
-    {
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
-        auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
-        scope(exit) std.file.remove(deleteme);
-        auto f = File(deleteme);
-        uint i = 0;
-        char[] buf;
-        while (f.readln(buf, "\n\r"))
-        {
-            assert(i < witness.length);
-            assert(buf == witness[i++]);
-        }
-    }
-
-    /**
-     * Read data from the file according to the specified
-     * $(LINK2 std_format.html#format-string, format specifier) using
-     * $(XREF format,formattedRead).
-     */
-    uint readf(Data...)(in char[] format, Data data)
-    {
-        assert(isOpen);
-        auto input = LockingTextReader(this);
-        return formattedRead(input, format, data);
-    }
-
-    unittest
-    {
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "hello\nworld\n");
-        scope(exit) std.file.remove(deleteme);
-        string s;
-        auto f = File(deleteme);
-        f.readf("%s\n", &s);
-        assert(s == "hello", "["~s~"]");
-    }
-
-/**
  Returns a temporary file by calling $(WEB
  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
     static File tmpfile()
@@ -923,11 +648,40 @@ Returns the file number corresponding to this object.
         return .fileno(cast(FILE*) p.handle);
     }
 
+/// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
+    @property ulong size()
+    {
+        ulong pos = void;
+        if (collectException(pos = tell)) return ulong.max;
+        scope(exit) seek(pos);
+        seek(0, SEEK_END);
+        return tell;
+    }
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    scope(exit) collectException(std.file.remove(deleteme));
+    std.file.write(deleteme, "1 2 3");
+    auto f = File(deleteme);
+    assert(f.size == 5);
+    assert(f.tell == 0);
+}
+
+
 /**
-Range that reads one line at a time. */
-    alias std.string.KeepTerminator KeepTerminator;
-    /// ditto
-    struct ByLine(Char, Terminator)
+Convenience function that returns the $(D LinesReader) corresponding
+to this file. */
+alias std.string.KeepTerminator KeepTerminator;
+/// ditto
+auto byLine(Terminator = char, Char = char)
+(File file, KeepTerminator keepTerminator = KeepTerminator.no,
+        Terminator terminator = '\n')
+{
+    /**
+    Range that reads one line at a time. */
+    static struct ByLine
     {
         File file;
         Char[] line;
@@ -991,139 +745,54 @@ Range that reads one line at a time. */
         }
     }
 
-/**
-Convenience function that returns the $(D LinesReader) corresponding
-to this file. */
-    ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
-    (KeepTerminator keepTerminator = KeepTerminator.no,
-            Terminator terminator = '\n')
+    return ByLine(file, keepTerminator, terminator);
+}
+
+unittest
+{
+    //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "");
+    scope(success) std.file.remove(deleteme);
+
+    // Test empty file
+    auto f = File(deleteme);
+    foreach (line; f.byLine())
     {
-        return typeof(return)(this, keepTerminator, terminator);
+        assert(false);
     }
+    f.close();
 
-    unittest
+    void test(string txt, string[] witness,
+            KeepTerminator kt = KeepTerminator.no)
     {
-        //printf("Entering test at line %d\n", __LINE__);
-        scope(failure) printf("Failed test at line %d\n", __LINE__);
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "");
-        scope(success) std.file.remove(deleteme);
-
-        // Test empty file
+        uint i;
+        std.file.write(deleteme, txt);
         auto f = File(deleteme);
-        foreach (line; f.byLine())
+        scope(exit)
         {
-            assert(false);
+            f.close();
+            assert(!f.isOpen);
         }
-        f.close();
-
-        void test(string txt, string[] witness,
-                KeepTerminator kt = KeepTerminator.no)
+        foreach (line; f.byLine(kt))
         {
-            uint i;
-            std.file.write(deleteme, txt);
-            auto f = File(deleteme);
-            scope(exit)
-            {
-                f.close();
-                assert(!f.isOpen);
-            }
-            foreach (line; f.byLine(kt))
-            {
-                assert(line == witness[i++]);
-            }
-            assert(i == witness.length, text(i, " != ", witness.length));
+            assert(line == witness[i++]);
         }
-
-        test("", null);
-        test("\n", [ "" ]);
-        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
-        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
-
-        test("", null, KeepTerminator.yes);
-        test("\n", [ "\n" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
-        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+        assert(i == witness.length, text(i, " != ", witness.length));
     }
 
-    template byRecord(Fields...)
-    {
-        ByRecord!(Fields) byRecord(string format)
-        {
-            return typeof(return)(this, format);
-        }
-    }
+    test("", null);
+    test("\n", [ "" ]);
+    test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+    test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
 
-    unittest
-    {
-        // auto deleteme = testFilename();
-        // rndGen.popFront();
-        // scope(failure) printf("Failed test at line %d\n", __LINE__);
-        // std.file.write(deleteme, "1 2\n4 1\n5 100");
-        // scope(exit) std.file.remove(deleteme);
-        // File f = File(deleteme);
-        // scope(exit) f.close();
-        // auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
-        // uint i;
-        // foreach (e; f.byRecord!(int, int)("%s %s"))
-        // {
-        //     //.writeln(e);
-        //     assert(e == t[i++]);
-        // }
-    }
+    test("", null, KeepTerminator.yes);
+    test("\n", [ "\n" ], KeepTerminator.yes);
+    test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
+    test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
+}
 
-
-    /**
-     * Range that reads a chunk at a time.
-     */
-    struct ByChunk
-    {
-      private:
-        File    file_;
-        ubyte[] chunk_;
-
-
-      public:
-        this(File file, size_t size)
-        in
-        {
-            assert(size, "size must be larger than 0");
-        }
-        body
-        {
-            file_  = file;
-            chunk_ = new ubyte[](size);
-
-            popFront();
-        }
-
-
-        /// Range primitive operations.
-        @property
-        bool empty() const
-        {
-            return !file_.isOpen;
-        }
-
-
-        /// Ditto
-        @property
-        nothrow ubyte[] front()
-        {
-            return chunk_;
-        }
-
-
-        /// Ditto
-        void popFront()
-        {
-            enforce(!empty, "Cannot call popFront on empty range");
-
-            chunk_ = file_.rawRead(chunk_);
-            if (chunk_.length == 0)
-                file_.detach();
-        }
-    }
 
 /**
 Iterates through a file a chunk at a time by using $(D foreach).
@@ -1147,198 +816,161 @@ always greater than zero).
 
 In case of an I/O error, an $(D StdioException) is thrown.
  */
-    ByChunk byChunk(size_t chunkSize)
+auto byChunk(File file, size_t chunkSize)
+{
+    /**
+     * Range that reads a chunk at a time.
+     */
+    static struct ByChunk
     {
-        return ByChunk(this, chunkSize);
-    }
+      private:
+        File    file_;
+        ubyte[] chunk_;
 
-    unittest
-    {
-        scope(failure) printf("Failed test at line %d\n", __LINE__);
-
-        auto deleteme = testFilename();
-        std.file.write(deleteme, "asd\ndef\nasdf");
-
-        auto witness = ["asd\n", "def\n", "asdf" ];
-        auto f = File(deleteme);
-        scope(exit)
+      public:
+        this(File file, size_t size)
+        in
         {
-            f.close();
-            assert(!f.isOpen);
-            std.file.remove(deleteme);
+            assert(size, "size must be larger than 0");
+        }
+        body
+        {
+            file_  = file;
+            chunk_ = new ubyte[](size);
+
+            popFront();
         }
 
-        uint i;
-        foreach (chunk; f.byChunk(4))
-            assert(chunk == cast(ubyte[])witness[i++]);
-
-        assert(i == witness.length);
-    }
-
-/**
-$(D Range) that locks the file and allows fast writing to it.
- */
-    struct LockingTextWriter
-    {
-        FILE* fps;          // the shared file handle
-        _iobuf* handle;     // the unshared version of fps
-        int orientation;
-
-        this(ref File f)
+        /// Range primitive operations.
+        @property
+        bool empty() const
         {
-            enforce(f.p && f.p.handle);
-            fps = f.p.handle;
-            orientation = fwide(fps, 0);
-            FLOCK(fps);
-            handle = cast(_iobuf*)fps;
+            return !file_.isOpen;
         }
 
-        ~this()
+        /// Ditto
+        @property
+        nothrow ubyte[] front()
         {
-            FUNLOCK(fps);
-            fps = null;
-            handle = null;
+            return chunk_;
         }
 
-        this(this)
+        /// Ditto
+        void popFront()
         {
-            enforce(fps);
-            FLOCK(fps);
-        }
+            enforce(!empty, "Cannot call popFront on empty range");
 
-        /// Range primitive implementations.
-        void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
-        {
-            static if (isSomeString!A)
-                alias typeof(writeme[0]) C;
-            else
-                alias ElementType!A C;
-            static assert(!is(C == void));
-            if (writeme[0].sizeof == 1 && orientation <= 0)
-            {
-                //file.write(writeme); causes infinite recursion!!!
-                //file.rawWrite(writeme);
-                auto result =
-                    .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
-                if (result != writeme.length) errnoEnforce(0);
-            }
-            else
-            {
-                // put each character in turn
-                foreach (dchar c; writeme)
-                {
-                    put(c);
-                }
-            }
-        }
-
-        // @@@BUG@@@ 2340
-        //void front(C)(C c) if (is(C : dchar)) {
-        /// ditto
-        void put(C)(C c) if (is(C : const(dchar)))
-        {
-            static if (c.sizeof == 1)
-            {
-                // simple char
-                if (orientation <= 0) FPUTC(c, handle);
-                else FPUTWC(c, handle);
-            }
-            else static if (c.sizeof == 2)
-            {
-                if (orientation <= 0)
-                {
-                    if (c <= 0x7F)
-                    {
-                        FPUTC(c, handle);
-                    }
-                    else
-                    {
-                        char[4] buf;
-                        auto b = std.utf.toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
-                    }
-                }
-                else
-                {
-                    FPUTWC(c, handle);
-                }
-            }
-            else // 32-bit characters
-            {
-                if (orientation <= 0)
-                {
-                    if (c <= 0x7F)
-                    {
-                        FPUTC(c, handle);
-                    }
-                    else
-                    {
-                        char[4] buf = void;
-                        auto b = std.utf.toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
-                    }
-                }
-                else
-                {
-                    version (Windows)
-                    {
-                        assert(isValidDchar(c));
-                        if (c <= 0xFFFF)
-                        {
-                            FPUTWC(c, handle);
-                        }
-                        else
-                        {
-                            FPUTWC(cast(wchar)
-                                    ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), handle);
-                            FPUTWC(cast(wchar)
-                                    (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                    handle);
-                        }
-                    }
-                    else version (Posix)
-                    {
-                        FPUTWC(c, handle);
-                    }
-                    else
-                    {
-                        static assert(0);
-                    }
-                }
-            }
+            chunk_ = file_.rawRead(chunk_);
+            if (chunk_.length == 0)
+                file_.detach();
         }
     }
 
-/// Convenience function.
-    @property LockingTextWriter lockingTextWriter()
-    {
-        return LockingTextWriter(this);
-    }
-
-/// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
-    @property ulong size()
-    {
-        ulong pos = void;
-        if (collectException(pos = tell)) return ulong.max;
-        scope(exit) seek(pos);
-        seek(0, SEEK_END);
-        return tell;
-    }
+    return ByChunk(file, chunkSize);
 }
 
 unittest
 {
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     auto deleteme = testFilename();
-    scope(exit) collectException(std.file.remove(deleteme));
-    std.file.write(deleteme, "1 2 3");
+    std.file.write(deleteme, "asd\ndef\nasdf");
+
+    auto witness = ["asd\n", "def\n", "asdf" ];
     auto f = File(deleteme);
-    assert(f.size == 5);
-    assert(f.tell == 0);
+    scope(exit)
+    {
+        f.close();
+        assert(!f.isOpen);
+        std.file.remove(deleteme);
+    }
+
+    uint i;
+    foreach (chunk; f.byChunk(4))
+        assert(chunk == cast(ubyte[])witness[i++]);
+
+    assert(i == witness.length);
 }
 
+
+/*
+*/
+auto byRecord(Fields...)(File f, string format)
+{
+    struct ByRecord
+    {
+    private:
+        File file;
+        char[] line;
+        Tuple!(Fields) current;
+        string format;
+
+    public:
+        this(File f, string format)
+        {
+            assert(f.isOpen);
+            file = f;
+            this.format = format;
+            popFront(); // prime the range
+        }
+
+        /// Range primitive implementations.
+        @property bool empty()
+        {
+            return !file.isOpen;
+        }
+
+        /// Ditto
+        @property ref Tuple!(Fields) front()
+        {
+            return current;
+        }
+
+        /// Ditto
+        void popFront()
+        {
+            enforce(file.isOpen);
+            file.readln(line);
+            if (!line.length)
+            {
+                file.detach();
+            }
+            else
+            {
+                line = chomp(line);
+                formattedRead(line, format, &current);
+                enforce(line.empty, text("Leftover characters in record: `",
+                                line, "'"));
+            }
+        }
+    }
+
+    return ByRecord(f, format);
+}
+
+unittest
+{
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "1 2\n4 1\n5 100");
+    scope(exit) std.file.remove(deleteme);
+    {
+        File f = File(deleteme);
+        scope(exit) f.close();
+        auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
+        uint i;
+        foreach (e; f.byRecord!(int, int)("%s %s"))
+        {
+            //writeln(e);
+            assert(e == t[i++]);
+        }
+        assert(i == 3);
+    }
+}
+
+
+/**
+*/
 struct LockingTextReader
 {
     private File _f;
@@ -1411,9 +1043,11 @@ struct LockingTextReader
 unittest
 {
     static assert(isInputRange!LockingTextReader);
+
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
     scope(exit) std.file.remove(deleteme);
+
     int x, y;
     auto f = File(deleteme);
     f.readf("%s ", &x);
@@ -1423,6 +1057,150 @@ unittest
     f.readf("%d ", &x);
     assert(x == 3);
     //pragma(msg, "--- todo: readf ---");
+}
+
+/**
+$(D Range) that locks the file and allows fast writing to it.
+ */
+struct LockingTextWriter
+{
+    FILE* fps;          // the shared file handle
+    _iobuf* handle;     // the unshared version of fps
+    int orientation;
+
+    this(ref File f)
+    {
+        enforce(f.p && f.p.handle);
+        fps = f.p.handle;
+        orientation = fwide(fps, 0);
+        FLOCK(fps);
+        handle = cast(_iobuf*)fps;
+    }
+
+    ~this()
+    {
+        FUNLOCK(fps);
+        fps = null;
+        handle = null;
+    }
+
+    this(this)
+    {
+        enforce(fps);
+        FLOCK(fps);
+    }
+
+    /// Range primitive implementations.
+    void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
+    {
+        static if (isSomeString!A)
+            alias typeof(writeme[0]) C;
+        else
+            alias ElementType!A C;
+        static assert(!is(C == void));
+        if (writeme[0].sizeof == 1 && orientation <= 0)
+        {
+            //file.write(writeme); causes infinite recursion!!!
+            //file.rawWrite(writeme);
+            auto result =
+                .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+            if (result != writeme.length) errnoEnforce(0);
+        }
+        else
+        {
+            // put each character in turn
+            foreach (dchar c; writeme)
+            {
+                put(c);
+            }
+        }
+    }
+
+    // @@@BUG@@@ 2340
+    //void front(C)(C c) if (is(C : dchar)) {}
+
+    /// ditto
+    void put(C)(C c) if (is(C : const(dchar)))
+    {
+        static if (c.sizeof == 1)
+        {
+            // simple char
+            if (orientation <= 0) FPUTC(c, handle);
+            else FPUTWC(c, handle);
+        }
+        else static if (c.sizeof == 2)
+        {
+            if (orientation <= 0)
+            {
+                if (c <= 0x7F)
+                {
+                    FPUTC(c, handle);
+                }
+                else
+                {
+                    char[4] buf;
+                    auto b = std.utf.toUTF8(buf, c);
+                    foreach (i ; 0 .. b.length)
+                        FPUTC(b[i], handle);
+                }
+            }
+            else
+            {
+                FPUTWC(c, handle);
+            }
+        }
+        else // 32-bit characters
+        {
+            if (orientation <= 0)
+            {
+                if (c <= 0x7F)
+                {
+                    FPUTC(c, handle);
+                }
+                else
+                {
+                    char[4] buf = void;
+                    auto b = std.utf.toUTF8(buf, c);
+                    foreach (i ; 0 .. b.length)
+                        FPUTC(b[i], handle);
+                }
+            }
+            else
+            {
+                version (Windows)
+                {
+                    assert(isValidDchar(c));
+                    if (c <= 0xFFFF)
+                    {
+                        FPUTWC(c, handle);
+                    }
+                    else
+                    {
+                        FPUTWC(cast(wchar)
+                                ((((c - 0x10000) >> 10) & 0x3FF)
+                                        + 0xD800), handle);
+                        FPUTWC(cast(wchar)
+                                (((c - 0x10000) & 0x3FF) + 0xDC00),
+                                handle);
+                    }
+                }
+                else version (Posix)
+                {
+                    FPUTWC(c, handle);
+                }
+                else
+                {
+                    static assert(0);
+                }
+            }
+        }
+    }
+}
+
+// Convenience function. (Make undocumented)
+@property LockingTextWriter lockingTextWriter(File file)
+{
+    return LockingTextWriter(file);
 }
 
 private
@@ -1504,12 +1282,49 @@ template isStreamingDevice(T)
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
 $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
-string to $(D args[0]). A call without any arguments will fail to
+string to $(D file). A call without any arguments will fail to
 compile.
 
-Throws: In case of an I/O error, throws an $(D StdioException).
+If the $(D file) is not opened, throws an exception. Otherwise, writes its
+arguments in text format to the file.
+
+If the $(D file) is not specified, $(D stdout) is used in default.
+
+Throws:
+    In case of an I/O error, throws an $(D StdioException).
  */
-void write(T...)(T args) if (!is(T[0] : File))
+void write(T...)(File file, T args) if (T.length >= 1)
+{
+    auto w = LockingTextWriter(file);
+    foreach (arg; args)
+    {
+        alias typeof(arg) A;
+        static if (isSomeString!A)
+        {
+            put(w, arg);
+        }
+        else static if (isIntegral!A)
+        {
+            toTextRange(arg, w);
+        }
+        else static if (isBoolean!A)
+        {
+            put(w, arg ? "true" : "false");
+        }
+        else static if (isSomeChar!A)
+        {
+            put(w, arg);
+        }
+        else
+        {
+            // Most general case
+            std.format.formattedWrite(w, "%s", arg);
+        }
+    }
+}
+
+/// ditto
+void write(T...)(T args) if (!is(T[0] : File) && T.length >= 1)
 {
     stdout.write(args);
 }
@@ -1520,6 +1335,7 @@ unittest
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
     if (false) write(buf);
+
     // test write
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1527,6 +1343,7 @@ unittest
     f.close();
     scope(exit) { std.file.remove(deleteme); }
     assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
+
     // // test write on stdout
     //auto saveStdout = stdout;
     //scope(exit) stdout = saveStdout;
@@ -1539,13 +1356,42 @@ unittest
 }
 
 /***********************************
- * Equivalent to $(D write(args, '\n')).  Calling $(D writeln) without
+ * Equivalent to $(D write(file, args, '\n')).  Calling $(D writeln) without
  * arguments is valid and just prints a newline to the standard
  * output.
+ *
+ * If the file is not opened, throws an exception. Otherwise, writes its
+ * arguments in text format to the file, followed by a newline.
+
+If the $(D file) is not specified, $(D stdout) is used in default.
+
  */
-void writeln(T...)(T args) if (T.length == 0)
+
+void writeln(T...)(File file, T args)
 {
-    enforce(fputc('\n', .stdout.p.handle) == '\n');
+    file.write(args, '\n');
+    errnoEnforce(.fflush(file.p.handle) == 0,
+                "Could not flush file `"~file.p.name~"'");
+}
+
+/// ditto
+void writeln(T...)(T args) if (!is(T[0] : File))
+{
+    static if (T.length == 0)
+    {
+        enforce(fputc('\n', .stdout.p.handle) == '\n');
+    }
+    else static if (T.length == 1 && is(T[0] : const(char)[]))
+    {
+        // Specialization for strings - a very frequent case
+        enforce(fprintf(.stdout.p.handle, "%.*s\n",
+                        cast(int) args[0].length, args[0].ptr) >= 0);
+    }
+    else
+    {
+        // Most general instance
+        stdout.write(args, '\n');
+    }
 }
 
 unittest
@@ -1554,30 +1400,16 @@ unittest
     if (false) writeln();
 }
 
-// Specialization for strings - a very frequent case
-void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
-{
-    enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    cast(int) args[0].length, args[0].ptr) >= 0);
-}
-
 unittest
 {
     if (false) writeln("wyda");
 }
 
-// Most general instance
-void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
-{
-    stdout.write(args, '\n');
-}
-
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writeln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1590,6 +1422,7 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1605,13 +1438,14 @@ unittest
 }
 
 /***********************************
- * If the first argument $(D args[0]) is a $(D FILE*), use
- * $(LINK2 std_format.html#format-string, the format specifier) in
- * $(D args[1]) to control the formatting of $(D
- * args[2..$]), and write the resulting string to $(D args[0]).
- * If $(D arg[0]) is not a $(D FILE*), the call is
- * equivalent to $(D writef(stdout, args)).
+ * Use $(LINK2 std_format.html#format-string, the format specifier) in
+ * $(D args[0]) to control the formatting of $(D args[1..$]), and write
+ * the resulting string to $(D file).
  *
+
+If the $(D file) is not opened, throws an exception..
+
+If the $(D file) is not specified, $(D stdout) is used in default.
 
 IMPORTANT:
 
@@ -1646,7 +1480,23 @@ to write numbers in platform-native format.
 
 */
 
-void writef(T...)(T args)
+void writef(T...)(File file, T args)
+{
+    enum errorMessage =
+        "You must pass a formatting string as the first"
+        " argument to writef or writefln. If no formatting is needed,"
+        " you may want to use write or writeln.";
+
+    assert(file.p);
+    assert(file.p.handle);
+    static assert(T.length > 0, errorMessage);
+    static assert(isSomeString!(T[0]), errorMessage);
+    auto w = LockingTextWriter(file);
+    std.format.formattedWrite(w, args);
+}
+
+/// ditto
+void writef(T...)(T args) if (!is(T[0] : File))
 {
     stdout.writef(args);
 }
@@ -1655,6 +1505,7 @@ unittest
 {
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writef
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1662,6 +1513,7 @@ unittest
     f.writef("Hello, %s world number %s!", "nice", 42);
     f.close();
     assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
+
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1672,17 +1524,29 @@ unittest
 }
 
 /***********************************
- * Equivalent to $(D writef(args, '\n')).
+ * Equivalent to $(D writef(file, args, '\n')).
  */
-void writefln(T...)(T args)
+void writefln(T...)(File file, T args)
+{
+    static assert(T.length > 0, errorMessage);
+    static assert(isSomeString!(T[0]), errorMessage);
+    auto w = LockingTextWriter(file);
+    std.format.formattedWrite(w, args);
+    w.put('\n');
+    .fflush(file.p.handle);
+}
+
+/// ditto
+void writefln(T...)(T args) if (!is(T[0] : File))
 {
     stdout.writefln(args);
 }
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writefln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1696,6 +1560,7 @@ unittest
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
+
     // test write on stdout
     // auto saveStdout = stdout;
     // scope(exit) stdout = saveStdout;
@@ -1717,13 +1582,35 @@ unittest
 }
 
 /**
- * Read data from $(D stdin) according to the specified
+ * Read data from the $(D file) according to the specified
  * $(LINK2 std_format.html#format-string, format specifier) using
  * $(XREF format,formattedRead).
+
+If the $(D file) is not specified, $(D stdin) is used in default.
+
  */
-uint readf(A...)(in char[] format, A args)
+uint readf(Data...)(File file, in char[] format, Data data)
+{
+    assert(file.isOpen);
+    auto input = LockingTextReader(file);
+    return formattedRead(input, format, data);
+}
+
+/// ditto
+uint readf(Data...)(in char[] format, Data args)
 {
     return stdin.readf(format, args);
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "hello\nworld\n");
+    scope(exit) std.file.remove(deleteme);
+    string s;
+    auto f = File(deleteme);
+    f.readf("%s\n", &s);
+    assert(s == "hello", "["~s~"]");
 }
 
 unittest
@@ -1738,12 +1625,15 @@ unittest
 }
 
 /**********************************
- * Read line from stream $(D fp).
+ * Read line from stream $(D file).
+
+If the $(D file) is not specified, $(D stdin) is used in default.
+
  * Returns:
  *        $(D null) for end of file,
- *        $(D char[]) for line read from $(D fp), including terminating character
+ *        $(D char[]) for line read from $(D file), including terminating character
  * Params:
- *        $(D fp) = input stream
+ *        $(D file) = input stream
  *        $(D terminator) = line terminator, '\n' by default
  * Throws:
  *        $(D StdioException) on error
@@ -1755,22 +1645,149 @@ import std.stdio;
 int main()
 {
     char[] buf;
-    while ((buf = readln()) != null)
+    while ((buf = stdin.readln()) != null)
         write(buf);
     return 0;
 }
 ---
 */
-string readln(dchar terminator = '\n')
+S readln(S = string)(File file, dchar terminator = '\n')
+{
+    Unqual!(typeof(S.init[0]))[] buf;
+    file.readln(buf, terminator);
+    return assumeUnique(buf);
+}
+
+/// ditto
+string readln()(dchar terminator = '\n')
 {
     return stdin.readln(terminator);
 }
 
-/** ditto */
-size_t readln(ref char[] buf, dchar terminator = '\n')
+/**********************************
+Read line from stream $(D file) and write it to $(D buf[]), including
+terminating character.
+
+This is often faster than $(D readln(File, dchar)) because the buffer
+is reused each call. Note that reusing the buffer means that the
+previous contents of it has to be copied if needed.
+
+If the $(D file) is not specified, $(D stdin) is used in default.
+
+Params:
+file = input stream
+buf = buffer used to store the resulting line data. buf is
+resized as necessary.
+
+Returns:
+0 for end of file, otherwise number of characters read
+
+Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
+conversion error.
+
+Example:
+---
+// Reads $(D stdin) and writes it to $(D stdout).
+import std.stdio;
+
+int main()
+{
+    char[] buf;
+    while (stdin.readln(buf))
+        write(buf);
+    return 0;
+}
+---
+
+This method is more efficient than the one in the previous example
+because $(D stdin.readln(buf)) reuses (if possible) memory allocated
+by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
+with every line.  */
+
+size_t readln(C)(File file, ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+{
+    static if (is(C == char))
+    {
+        enforce(file.p && file.p.handle, "Attempt to read from an unopened file.");
+        return readlnImpl(file.p.handle, buf, terminator);
+    }
+    else
+    {
+        // TODO: optimize this
+        string s = file.readln(terminator);
+        if (!s.length) return 0;
+        buf.length = 0;
+        foreach (wchar c; s)
+        {
+            buf ~= c;
+        }
+        return buf.length;
+    }
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "hello\nworld\n");
+    scope(exit) std.file.remove(deleteme);
+    foreach (C; Tuple!(char, wchar, dchar).Types)
+    {
+        auto witness = [ "hello\n", "world\n" ];
+        auto f = File(deleteme);
+        uint i = 0;
+        immutable(C)[] buf;
+        while ((buf = f.readln!(typeof(buf))()).length)
+        {
+            assert(i < witness.length);
+            assert(equal(buf, witness[i++]));
+        }
+        assert(i == witness.length);
+    }
+}
+
+/// ditto
+size_t readln(C)(ref C[] buf, dchar terminator = '\n')
 {
     return stdin.readln(buf, terminator);
 }
+
+/** ditto */
+size_t readln(C, R)(File file, ref C[] buf, R terminator)
+    if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
+{
+    auto last = terminator.back();
+    C[] buf2;
+    swap(buf, buf2);
+    for (;;) {
+        if (!file.readln(buf2, last) || endsWith(buf2, terminator)) {
+            if (buf.empty) {
+                buf = buf2;
+            } else {
+                buf ~= buf2;
+            }
+            break;
+        }
+        buf ~= buf2;
+    }
+    return buf.length;
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
+    auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
+    scope(exit) std.file.remove(deleteme);
+    auto f = File(deleteme);
+    uint i = 0;
+    char[] buf;
+    while (f.readln(buf, "\n\r"))
+    {
+        assert(i < witness.length);
+        assert(buf == witness[i++]);
+    }
+}
+
 
 /*
  * Convenience function that forwards to $(D std.c.stdio.fopen)
@@ -2256,26 +2273,6 @@ __gshared
     File stdin;
     File stdout;
     File stderr;
-}
-
-unittest
-{
-    scope(failure) printf("Failed test at line %d\n", __LINE__);
-    auto deleteme = testFilename();
-    std.file.write(deleteme, "1 2\n4 1\n5 100");
-    scope(exit) std.file.remove(deleteme);
-    {
-        File f = File(deleteme);
-        scope(exit) f.close();
-        auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
-        uint i;
-        foreach (e; f.byRecord!(int, int)("%s %s"))
-        {
-            //writeln(e);
-            assert(e == t[i++]);
-        }
-        assert(i == 3);
-    }
 }
 
 // Private implementation of readln
