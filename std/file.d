@@ -2463,21 +2463,22 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
-    auto d = deleteme ~ ".dir/a/b/c/d/e/f/g";
+    collectException(rmdirRecurse(deleteme));
+    auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
     mkdirRecurse(d);
-    core.sys.posix.unistd.symlink(toStringz(deleteme ~ ".dir/a/b/c"),
-            toStringz(deleteme ~ ".dir/link"));
-    rmdirRecurse(deleteme ~ ".dir/link");
+    core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
+            (deleteme~"/link\0").ptr);
+    rmdirRecurse(deleteme~"/link");
     enforce(exists(d));
-    rmdirRecurse(deleteme ~ ".dir");
-    enforce(!exists(deleteme ~ ".dir"));
+    rmdirRecurse(deleteme);
+    enforce(!exists(deleteme));
 
-    d = deleteme ~ ".dir/a/b/c/d/e/f/g";
+    d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf " ~ deleteme ~ ".dir/a/b/c " ~ deleteme ~ ".dir/link");
-    rmdirRecurse(deleteme ~ ".dir");
-    enforce(!exists(deleteme ~ ".dir"));
+    std.process.system("ln -sf "~deleteme~"/a/b/c /tmp/"~deleteme~"/link");
+    rmdirRecurse(deleteme);
+    enforce(!exists(deleteme));
 }
 
 unittest
@@ -2932,7 +2933,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 DirEntry dirEntry(in char[] name)
 {
     if(!name.exists)
-        throw new FileException(text("File ", name, " does not exist."));
+        throw new FileException(text("File ", name, " does not exist"));
 
     DirEntry dirEntry;
 
