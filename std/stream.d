@@ -1299,31 +1299,38 @@ class Stream : InputStream, OutputStream {
   override string toString() {
     if (!readable)
       return super.toString();
-    size_t pos;
-    size_t rdlen;
-    size_t blockSize;
-    char[] result;
-    if (seekable) {
-      ulong orig_pos = position;
-      position(0);
-      blockSize = cast(size_t)size;
-      result = new char[blockSize];
-      while (blockSize > 0) {
-        rdlen = readBlock(&result[pos], blockSize);
-        pos += rdlen;
-        blockSize -= rdlen;
-      }
-      position(orig_pos);
-    } else {
-      blockSize = 4096;
-      result = new char[blockSize];
-      while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
-        pos += rdlen;
-        blockSize += rdlen;
-        result.length = result.length + blockSize;
-      }
+    try
+    {
+        size_t pos;
+        size_t rdlen;
+        size_t blockSize;
+        char[] result;
+        if (seekable) {
+          ulong orig_pos = position;
+          scope(exit) position(orig_pos);
+          position(0);
+          blockSize = cast(size_t)size;
+          result = new char[blockSize];
+          while (blockSize > 0) {
+            rdlen = readBlock(&result[pos], blockSize);
+            pos += rdlen;
+            blockSize -= rdlen;
+          }
+        } else {
+          blockSize = 4096;
+          result = new char[blockSize];
+          while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
+            pos += rdlen;
+            blockSize += rdlen;
+            result.length = result.length + blockSize;
+          }
+        }
+        return cast(string) result[0 .. pos];
     }
-    return cast(string) result[0 .. pos];
+    catch (Throwable)
+    {
+        return super.toString();
+    }
   }
 
   /***
@@ -1333,17 +1340,25 @@ class Stream : InputStream, OutputStream {
   override size_t toHash() @trusted {
     if (!readable || !seekable)
       return super.toHash();
-    ulong pos = position;
-    uint crc = init_crc32 ();
-    position(0);
-    ulong len = size;
-    for (ulong i = 0; i < len; i++) {
-      ubyte c;
-      read(c);
-      crc = update_crc32(c, crc);
+    try
+    {
+        ulong pos = position;
+        scope(exit) position(pos);
+        uint crc = init_crc32();
+        position(0);
+        ulong len = size;
+        for (ulong i = 0; i < len; i++)
+        {
+          ubyte c;
+          read(c);
+          crc = update_crc32(c, crc);
+        }
+        return crc;
     }
-    position(pos);
-    return crc;
+    catch (Throwable)
+    {
+        return super.toHash();
+    }
   }
 
   // helper for checking that the stream is readable
