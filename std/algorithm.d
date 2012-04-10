@@ -6782,7 +6782,8 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
 {
     alias binaryFun!(less) lessFun;
-    static if (is(typeof(lessFun(r.front, r.front)) == bool))
+    alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
+    static if (is(LessRet == bool))
     {
         sortImpl!(lessFun, ss)(r);
         static if(is(typeof(text(r))))
