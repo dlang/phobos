@@ -62,7 +62,7 @@ private import std.internal.math.errorfunction;
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *
  * ***********************************************/
-//pure nothrow:
+pure nothrow @safe:
 /** The Gamma function, $(GAMMA)(x)
  *
  *  $(GAMMA)(x) is a generalisation of the factorial function

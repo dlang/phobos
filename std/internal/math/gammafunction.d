@@ -79,7 +79,7 @@ immutable real[8] logGammaDenominator = [
  * $(GAMMA)(x) = sqrt(2 &pi;) x<sup>x-0.5</sup> exp(-x) (1 + 1/x P(1/x))
  *
  */
-real gammaStirling(real x)
+real gammaStirling(real x) @safe pure nothrow
 {
     // CEPHES code Copyright 1994 by Stephen L. Moshier
 
@@ -139,7 +139,7 @@ enum real MAXGAMMA = 1755.5483429L;
  *    $(SV -&infin;,     $(NAN)      )
  *  )
  */
-real gamma(real x)
+real gamma(real x) @safe pure nothrow
 {
 /* Based on code from the CEPHES library.
  * CEPHES code Copyright 1994 by Stephen L. Moshier
@@ -279,7 +279,7 @@ unittest {
  *    $(SV &plusmn;&infin;, +&infin;    )
  *  )
  */
-real logGamma(real x)
+real logGamma(real x) @safe pure nothrow
 {
     /* Based on code from the CEPHES library.
      * CEPHES code Copyright 1994 by Stephen L. Moshier
@@ -439,7 +439,7 @@ enum real BETA_BIGINV = 1.084202172485504434007e-19L;
  * The integral is evaluated by a continued fraction expansion
  * or, when b*x is small, by a power series.
  */
-real betaIncomplete(real aa, real bb, real xx )
+real betaIncomplete(real aa, real bb, real xx ) @safe pure nothrow
 {
     if ( !(aa>0 && bb>0) )
     {
@@ -540,7 +540,7 @@ real betaIncomplete(real aa, real bb, real xx )
  *
  *  Newton iterations or interval halving is used.
  */
-real betaIncompleteInv(real aa, real bb, real yy0 )
+real betaIncompleteInv(real aa, real bb, real yy0 ) @safe pure nothrow
 {
     real a, b, y0, d, y, x, x0, x1, lgm, yp, di, dithresh, yl, yh, xt;
     int i, rflg, dir, nflg;
@@ -830,7 +830,7 @@ private {
 
 // Continued fraction expansion #1 for incomplete beta integral
 // Use when x < (a+1)/(a+b+2)
-real betaDistExpansion1(real a, real b, real x )
+real betaDistExpansion1(real a, real b, real x ) @safe pure nothrow
 {
     real xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
     real k1, k2, k3, k4, k5, k6, k7, k8;
@@ -913,7 +913,7 @@ real betaDistExpansion1(real a, real b, real x )
 
 // Continued fraction expansion #2 for incomplete beta integral
 // Use when x > (a+1)/(a+b+2)
-real betaDistExpansion2(real a, real b, real x )
+real betaDistExpansion2(real a, real b, real x ) @safe pure nothrow
 {
     real  xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
     real k1, k2, k3, k4, k5, k6, k7, k8;
@@ -994,7 +994,7 @@ real betaDistExpansion2(real a, real b, real x )
 
 /* Power series for incomplete gamma integral.
    Use when b*x is small.  */
-real betaDistPowerSeries(real a, real b, real x )
+real betaDistPowerSeries(real a, real b, real x ) @safe pure nothrow
 {
     real ai = 1.0L / a;
     real u = (1.0L - b) * x;
@@ -1046,7 +1046,7 @@ real betaDistPowerSeries(real a, real b, real x )
  * continued fraction expansion, depending on the relative
  * values of a and x.
  */
-real gammaIncomplete(real a, real x )
+real gammaIncomplete(real a, real x ) @safe pure nothrow
 in {
    assert(x >= 0);
    assert(a > 0);
@@ -1089,7 +1089,7 @@ body {
 }
 
 /** ditto */
-real gammaIncompleteCompl(real a, real x )
+real gammaIncompleteCompl(real a, real x ) @safe pure nothrow
 in {
    assert(x >= 0);
    assert(a > 0);
@@ -1169,7 +1169,7 @@ body {
  * the routine performs up to 10 Newton iterations to find the
  * root of incompleteGammaCompl(a,x) - p = 0.
  */
-real gammaIncompleteComplInv(real a, real p)
+real gammaIncompleteComplInv(real a, real p) @safe pure nothrow
 in {
   assert(p>=0 && p<= 1);
   assert(a>0);
@@ -1310,7 +1310,7 @@ assert(gammaIncompleteComplInv(3, 0)==real.infinity);
 *  digamma(x) = d/dx logGamma(x)
 *
 */
-real digamma(real x)
+real digamma(real x) @safe pure nothrow
 {
    // Based on CEPHES, Stephen L. Moshier.
 
