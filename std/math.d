@@ -856,7 +856,7 @@ long rndtol(real x) @safe pure nothrow;    /* intrinsic */
  * greater than long.max, the result is
  * indeterminate.
  */
-extern (C) real rndtonl(real x);
+extern (C) real rndtonl(real x) @safe pure nothrow;
 
 /***************************************
  * Compute square root of x.
@@ -1570,7 +1570,7 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow    { return core.stdc.math.ilogbl(x); }
+int ilogb(real x)  @trusted pure nothrow    { return core.stdc.math.ilogbl(x); }
 
 alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
@@ -1705,7 +1705,7 @@ real log2(real x) @safe pure nothrow
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
+real logb(real x) @trusted pure nothrow    { return core.stdc.math.logbl(x); }
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1721,7 +1721,7 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+real fmod(real x, real y) @trusted pure nothrow { return core.stdc.math.fmodl(x, y); }
 
 /************************************
  * Breaks x into an integral part and a fractional part, each of which has
@@ -1734,7 +1734,7 @@ real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); 
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
  * )
  */
-real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
+real modf(real x, ref real i) @trusted pure nothrow { return core.stdc.math.modfl(x,&i); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -1748,7 +1748,7 @@ real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
-real scalbn(real x, int n) @trusted nothrow
+real scalbn(real x, int n) @trusted pure nothrow
 {
     version(InlineAsm_X86_Any) {
         // scalbnl is not supported on DMD-Windows, so use asm.
@@ -1777,7 +1777,7 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
+real cbrt(real x) @trusted pure nothrow    { return core.stdc.math.cbrtl(x); }
 
 
 /*******************************
@@ -1895,26 +1895,26 @@ unittest
 deprecated
 {
 // Deprecated: use std.mathspecial.erf instead
-real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
+real erf(real x)  @trusted pure nothrow   { return core.stdc.math.erfl(x); }
 // Deprecated: use std.mathspecial.erfc instead
-real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
+real erfc(real x)  @trusted pure nothrow  { return core.stdc.math.erfcl(x); }
 // Deprecated: use std.mathspecial.logGamma instead
-real lgamma(real x) @trusted nothrow { return core.stdc.math.lgammal(x); }
+real lgamma(real x) @trusted pure nothrow { return core.stdc.math.lgammal(x); }
 // Deprecated: use std.mathspecial.gamma instead
-real tgamma(real x) @trusted nothrow { return core.stdc.math.tgammal(x); }
+real tgamma(real x) @trusted pure nothrow { return core.stdc.math.tgammal(x); }
 }
 
 /**************************************
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
+real ceil(real x) pure @trusted nothrow    { return core.stdc.math.ceill(x); }
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
+real floor(real x) pure @trusted nothrow    { return core.stdc.math.floorl(x); }
 
 /******************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1923,7 +1923,7 @@ real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
+real nearbyint(real x) @trusted pure nothrow { return core.stdc.math.nearbyintl(x); }
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1966,7 +1966,7 @@ long lrint(real x) @trusted pure nothrow
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) @trusted nothrow { return core.stdc.math.roundl(x); }
+real round(real x) @trusted pure nothrow { return core.stdc.math.roundl(x); }
 
 /**********************************************
  * Return the value of x rounded to the nearest integer.
@@ -1974,7 +1974,7 @@ real round(real x) @trusted nothrow { return core.stdc.math.roundl(x); }
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
  */
-long lround(real x) @trusted nothrow
+long lround(real x) @trusted pure nothrow
 {
     version (Posix)
         return core.stdc.math.llroundl(x);
@@ -1997,7 +1997,7 @@ version(Posix)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
+real trunc(real x) @trusted pure nothrow { return core.stdc.math.truncl(x); }
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -2021,9 +2021,9 @@ real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
+real remainder(real x, real y) @trusted pure nothrow { return core.stdc.math.remainderl(x, y); }
 
-real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
+real remquo(real x, real y, out int n) @trusted pure nothrow  /// ditto
 {
     version (Posix)
         return core.stdc.math.remquol(x, y, &n);
@@ -3892,7 +3892,7 @@ unittest
    only if the ranges have the same number of elements and if $(D
    approxEqual) evaluates to $(D true) for each pair of elements.
  */
-bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
+bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5) @safe pure nothrow
 {
     static if (isInputRange!T)
     {
@@ -3947,7 +3947,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 /**
    Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
  */
-bool approxEqual(T, U)(T lhs, U rhs)
+bool approxEqual(T, U)(T lhs, U rhs) @safe pure nothrow
 {
     return approxEqual(lhs, rhs, 1e-2, 1e-5);
 }

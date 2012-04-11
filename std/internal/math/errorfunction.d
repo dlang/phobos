@@ -101,7 +101,7 @@ immutable real [7] U = [ 0x1.dde6025c395ae34ep+19, 0x1.c4bc8b6235df35aap+18,
  * A special function expx2(x) is used to suppress error amplification
  * in computing exp(-x^2).
  */
-real erfc(real a)
+real erfc(real a) @safe pure nothrow
 {
     if (a == real.infinity)
         return 0.0;
@@ -152,7 +152,7 @@ private {
    valid for x > 1.
    Use with normalDistribution and expx2.  */
 
-real erfce(real x)
+real erfce(real x) @safe pure nothrow
 {
     real y = 1.0/x;
 
@@ -184,7 +184,7 @@ real erfce(real x)
  * arithmetic   domain     # trials      peak         rms
  *    IEEE      0,1         50000       2.0e-19     5.7e-20
  */
-real erf(real x)
+real erf(real x) @safe pure nothrow
 {
     if (x == 0.0)
         return x; // deal with negative zero
@@ -251,7 +251,7 @@ unittest {
  *   IEEE     -106.566, 106.566    10^5       1.6e-19     4.4e-20
  */
 
-real expx2(real x, int sign)
+real expx2(real x, int sign) @safe pure nothrow
 {
     /*
     Cephes Math Library Release 2.9:  June, 2000
@@ -309,7 +309,7 @@ $(LINK http://www.netlib.org/cephes/ldoubdoc.html),
 G. Marsaglia, "Evaluating the Normal Distribution",
 Journal of Statistical Software <b>11</b>, (July 2004).
 */
-real normalDistributionImpl(real a)
+real normalDistributionImpl(real a) @safe pure nothrow
 {
     real x = a * SQRT1_2;
     real z = abs(x);
@@ -345,7 +345,7 @@ assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
  * For larger arguments,  x/sqrt(2 pi) = w + w^3 R(w^2)/S(w^2)) ,
  * where w = p - 0.5 .
  */
-real normalDistributionInvImpl(real p)
+real normalDistributionInvImpl(real p) @safe pure nothrow
 in {
   assert(p>=0.0L && p<=1.0L, "Domain error");
 }
