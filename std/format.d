@@ -1131,6 +1131,62 @@ unittest {
 }
 
 /**
+   Helper function FormatSpec for a single specifier give in $(D fmt)
+
+   Returns a FormatSpec with the specifier parsed.
+
+   Enforces giving only one specifier to the function.
+  */
+FormatSpec!Char singleSpec(Char)(Char[] fmt)
+{
+    if (fmt.length < 2)
+        throw new Exception("fmt must be at least 2 characters long");
+    if (fmt[0] != '%')
+        throw new Exception("fmt must start with a '%' character");
+
+    auto a = appender!(Char[])();
+    auto spec = FormatSpec!Char(fmt);
+    //dummy write
+    spec.writeUpToNextSpec(a);
+
+    if (spec.trailing != "") {
+        throw new Exception(text("Trailing characters in fmt string: '",
+                    spec.trailing));
+    }
+
+    return spec;
+}
+unittest {
+    auto spec = singleSpec("%2.3e");
+
+    assert(spec.trailing == "");
+    assert(spec.spec == 'e');
+    assert(spec.width == 2);
+    assert(spec.precision == 3);
+
+    try {
+        singleSpec("");
+        assert(false);
+    } catch (Exception e) {
+        //GULP
+    }
+
+    try {
+        singleSpec("2.3e");
+        assert(false);
+    } catch (Exception e) {
+        //GULP
+    }
+
+    try {
+        singleSpec("%2.3eTest");
+        assert(false);
+    } catch (Exception e) {
+        //GULP
+    }
+}
+
+/**
    $(D bool)s are formatted as "true" or "false" with %s and as "1" or
    "0" with integral-specific format specs.
  */
