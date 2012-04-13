@@ -1131,9 +1131,10 @@ unittest {
 }
 
 /**
-   Helper function FormatSpec for a single specifier give in $(D fmt)
+   Helper function that returns a $(D FormatSpec) for a single specifier given
+   in $(D fmt)
 
-   Returns a FormatSpec with the specifier parsed.
+   Returns a $(D FormatSpec) with the specifier parsed.
 
    Enforces giving only one specifier to the function.
   */
