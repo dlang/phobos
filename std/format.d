@@ -69,7 +69,7 @@ class FormatException : Exception
 }
 
 /**
-$(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
+$(RED Scheduled for deprecation. Please use $(D FormatException) instead.)
  */
 /*deprecated*/ alias FormatException FormatError;
 
@@ -564,8 +564,29 @@ template FormatSpec(Char)
 }
 
 /**
- A compiled version of an individual format specifier, backwards
- compatible with $(D printf) specifiers.
+   A General handler for $(D printf) style format specifiers. Used for building more
+   specific formatting functions.
+
+   Example:
+----
+auto a = appender!(string)();
+auto fmt = "Number: %2.4e\nString: %s";
+auto f = FormatSpec!char(fmt);
+
+f.writeUpToNextSpec(a);
+
+assert(a.data == "Number: ");
+assert(f.trailing == "\nString: %s");
+assert(f.spec == 'e');
+assert(f.width == 2);
+assert(f.precision == 4);
+
+f.writeUpToNextSpec(a);
+
+assert(a.data == "Number: \nString: ");
+assert(f.trailing == "");
+assert(f.spec == 's');
+----
  */
 struct FormatSpec(Char)
     if (is(Unqual!Char == Char))
@@ -692,10 +713,8 @@ struct FormatSpec(Char)
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Given a string format specification fmt, parses a format
-       specifier. The string is assumed to start with the character
-       immediately following the $(D '%'). The string is advanced to
-       right after the end of the format specifier.
+       Construct a new $(D FormatSpec) using the format string $(D fmt), no
+       processing is done until needed.
      */
     this(in Char[] fmt)
     {
@@ -1089,6 +1108,26 @@ struct FormatSpec(Char)
                 "\nnested = ", nested,
                 "\ntrailing = ", trailing, "\n");
     }
+}
+unittest {
+    //Test the example
+    auto a = appender!(string)();
+    auto fmt = "Number: %2.4e\nString: %s";
+    auto f = FormatSpec!char(fmt);
+
+    f.writeUpToNextSpec(a);
+
+    assert(a.data == "Number: ");
+    assert(f.trailing == "\nString: %s");
+    assert(f.spec == 'e');
+    assert(f.width == 2);
+    assert(f.precision == 4);
+
+    f.writeUpToNextSpec(a);
+
+    assert(a.data == "Number: \nString: ");
+    assert(f.trailing == "");
+    assert(f.spec == 's');
 }
 
 /**
