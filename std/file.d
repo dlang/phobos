@@ -539,8 +539,8 @@ ulong getSize(in char[] name)
         const (char)[] file = name[];
 
         //FindFirstFileX can't handle file names which end in a backslash.
-        if(file.endsWith(sep))
-            file.popBackN(sep.length);
+        if(file.endsWith(dirSeparator))
+            file.popBackN(dirSeparator.length);
 
         WIN32_FIND_DATAW filefindbuf;
 
@@ -1965,8 +1965,8 @@ else version(Windows)
             _name = path.idup;
 
             //FindFirstFileX can't handle file names which end in a backslash.
-            if(_name.endsWith(sep))
-                _name.popBackN(sep.length);
+            if(_name.endsWith(dirSeparator))
+                _name.popBackN(dirSeparator.length);
 
             WIN32_FIND_DATAW fd;
 
