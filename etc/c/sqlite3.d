@@ -47,7 +47,7 @@ enum SQLITE_SOURCE_ID         = "2011-04-17 17:25:17 154ddbc17120be2915eb03edc52
 /**
 ** CAPI3REF: Run-Time Library Version Numbers
 */
-immutable(char)* sqlite3_version;
+extern immutable(char)* sqlite3_version;
 /// Ditt
 immutable(char)* sqlite3_libversion();
 /// Ditto
@@ -1037,7 +1037,7 @@ int sqlite3_sleep(int);
 /**
 ** CAPI3REF: Name Of The Folder Holding Temporary Files
 */
-char *sqlite3_temp_directory;
+extern char *sqlite3_temp_directory;
 
 /**
 ** CAPI3REF: Test For Auto-Commit Mode

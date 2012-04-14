@@ -416,7 +416,7 @@ referring to the same handle will see a closed file henceforth.
             if (p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) == 0,
+                errnoEnforce(.pclose(p.handle) != -1,
                         "Could not close pipe `"~p.name~"'");
                 return;
             }
@@ -452,9 +452,14 @@ file handle and throws on error.
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
-file handle and throws on error.
+file handle and throws on error. The number of items to read and the size of
+each item is inferred from the size and type of the input array, respectively.
 
-$(D rawRead) always read in binary mode on Windows.
+Returns: The slice of $(D buffer) containing the data that was actually read.
+This will be shorter than $(D buffer) if EOF was reached before the buffer
+could be filled.
+
+$(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
@@ -495,10 +500,12 @@ $(D rawRead) always read in binary mode on Windows.
 
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the
-file handle and throws on error.
+cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+handle and throws on error. The number of items to write and the size of each
+item is inferred from the size and type of the input array, respectively. An
+error is thrown if the buffer could not be written in its entirety.
 
-$(D rawWrite) always write in binary mode on Windows.
+$(D rawWrite) always writes in binary mode on Windows.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -658,23 +665,19 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A)
+            static if (isSomeString!A && !is(A == enum))
             {
                 put(w, arg);
             }
-            else static if (isIntegral!A)
+            else static if (isIntegral!A && !is(A == enum))
             {
                 toTextRange(arg, w);
             }
-            else static if (is(Unqual!A == bool))
+            else static if (isBoolean!A && !is(A == enum))
             {
                 put(w, arg ? "true" : "false");
             }
-            else static if (is(A : char))
-            {
-                put(w, arg);
-            }
-            else static if (isSomeChar!A)
+            else static if (isSomeChar!A && !is(A == enum))
             {
                 put(w, arg);
             }
@@ -743,7 +746,8 @@ resized as necessary.
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D StdioException) on error
+Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
+conversion error.
 
 Example:
 ---
@@ -849,6 +853,11 @@ with every line.  */
         }
     }
 
+    /**
+     * Read data from the file according to the specified
+     * $(LINK2 std_format.html#format-string, format specifier) using
+     * $(XREF format,formattedRead).
+     */
     uint readf(Data...)(in char[] format, Data data)
     {
         assert(isOpen);
@@ -936,8 +945,8 @@ Range that reads one line at a time. */
         /// Range primitive implementations.
         @property bool empty() const
         {
-            if (!file.isOpen) return true;
             if (line !is null) return false;
+            if (!file.isOpen) return true;
 
             // First read ever, must make sure stream is not empty. We
             // do so by reading a character and putting it back. Doing
@@ -966,11 +975,13 @@ Range that reads one line at a time. */
         /// Ditto
         void popFront()
         {
-            enforce(file.isOpen);
+            assert(file.isOpen);
+            assumeSafeAppend(line);
             file.readln(line, terminator);
             if (line.empty)
             {
                 file.detach();
+                line = null;
             }
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
@@ -1545,7 +1556,7 @@ unittest
 
 // Specialization for strings - a very frequent case
 void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
+if (T.length == 1 && is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum))
 {
     enforce(fprintf(.stdout.p.handle, "%.*s\n",
                     cast(int) args[0].length, args[0].ptr) >= 0);
@@ -1558,7 +1569,7 @@ unittest
 
 // Most general instance
 void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
+if (T.length > 1 || T.length == 1 && !(is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum)))
 {
     stdout.write(args, '\n');
 }
@@ -1591,6 +1602,38 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
+
+    enum EI : int    { A, B }
+    enum ED : double { A, B }
+    enum EC : char   { A, B }
+    enum ES : string { A = "aaa", B = "bbb" }
+
+    f.writeln(EI.A);  // false, but A on 2.058
+    f.writeln(EI.B);  // true, but B on 2.058
+
+    f.writeln(ED.A);  // A
+    f.writeln(ED.B);  // B
+
+    f.writeln(EC.A);  // A
+    f.writeln(EC.B);  // B
+
+    f.writeln(ES.A);  // A
+    f.writeln(ES.B);  // B
+
+    f.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\r\nB\r\nA\r\nB\r\nA\r\nB\r\nA\r\nB\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
 
 /***********************************
@@ -1706,7 +1749,9 @@ unittest
 }
 
 /**
- * Formatted read one line from stdin.
+ * Read data from $(D stdin) according to the specified
+ * $(LINK2 std_format.html#format-string, format specifier) using
+ * $(XREF format,formattedRead).
  */
 uint readf(A...)(in char[] format, A args)
 {
@@ -2554,13 +2599,35 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
 
     // Narrow stream
-    buf.length = 0;
+    // First, fill the existing buffer
+    for (size_t bufPos = 0; bufPos < buf.length; )
+    {
+        immutable c = FGETC(fp);
+        if (c == -1)
+        {
+            buf.length = bufPos;
+            goto endGame;
+        }
+        buf.ptr[bufPos++] = cast(char) c;
+        if (c == terminator)
+        {
+            // No need to test for errors in file
+            buf.length = bufPos;
+            return bufPos;
+        }
+    }
+    // Then, append to it
     for (int c; (c = FGETC(fp)) != -1; )
     {
         buf ~= cast(char)c;
         if (c == terminator)
-            break;
+        {
+            // No need to test for errors in file
+            return buf.length;
+        }
     }
+
+  endGame:
     if (ferror(fps))
         StdioException();
     return buf.length;

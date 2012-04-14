@@ -452,7 +452,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.front == 1);
 ----
 */
-ref T front(T)(T[] a)
+@property ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~
@@ -460,7 +460,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     return a[0];
 }
 
-dchar front(A)(A a) if (isNarrowString!A)
+@property dchar front(A)(A a) if (isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~
                      typeof(a[0]).stringof);
@@ -493,7 +493,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.back == 3);
 ----
 */
-ref T back(T)(T[] a) if (!isNarrowString!(T[]))
+@property ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~
                      typeof(a[0]).stringof);
@@ -512,7 +512,7 @@ unittest
 }
 
 // Specialization for strings
-dchar back(A)(A a)
+@property dchar back(A)(A a)
     if(isDynamicArray!A && isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~

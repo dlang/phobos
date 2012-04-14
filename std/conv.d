@@ -2120,8 +2120,7 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string fn = __FILE__, size_t ln = __LINE__)
-        (string msg = null)
+    ConvException bailOut(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (!msg)
             msg = "Floating point conversion error";

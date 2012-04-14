@@ -58,16 +58,6 @@ body
     }
 }
 
-//ditto
-@trusted void moveAllAlt(T)(T[] src, T[] dest)
-{//moveAll is @system
-    if(__ctfe)
-        foreach(i,v; src)
-            dest[i] = v;
-    else
-        moveAll(src, dest);
-}
-
 //$(D Interval)  represents an interval of codepoints: [a,b).
 struct Interval
 {
@@ -358,7 +348,7 @@ struct CodepointSet
     }
 
     //Test if this set is empty.
-    @property bool empty() const {   return ivals.empty; }
+    @property bool empty() const pure nothrow {   return ivals.empty; }
 
     //Write out in regular expression style [\uxxxx-\uyyyy...].
     @trusted void printUnicodeSet(R)(R sink) const
@@ -408,7 +398,7 @@ struct CodepointSet
     }
 
     //ditto
-    hash_t toHash() const
+    hash_t toHash() const pure nothrow @safe
     {
         hash_t hash = 5381+7*ivals.length;
         if(!empty)

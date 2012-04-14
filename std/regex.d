@@ -1,6 +1,6 @@
 //Written in the D programming language
 /++
-  $(LUCKY Regular expressions) are commonly used method of pattern matching
+  $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
   include validation of user input and ubiquitous find & replace
@@ -18,7 +18,7 @@
       foreach(line; stdin.byLine)
       {
         //match returns a range that can be iterated
-        //to get all of subsequent matches
+        //to get all subsequent matches
         foreach(c; match(line, r))
             writeln(c.hit);
       }
@@ -30,8 +30,8 @@
 
   //works just like normal regex:
   auto m2 = match("foo/bar", ctr);   //first match found here if any
-  assert(m2);   // be sure to check if there is a match, before examining contents!
-  assert(m2.captures[1] == "bar");//captures is a range of submatches, 0 - full match
+  assert(m2);   // be sure to check if there is a match before examining contents!
+  assert(m2.captures[1] == "bar");   //captures is a range of submatches, 0 - full match
 
   ...
 
@@ -42,18 +42,18 @@
 
   ---
 
-  The general usage guideline is keeping regex complexity on the side of simplicity,
+  The general usage guideline is to keep regex complexity on the side of simplicity,
   as its capabilities reside in purely character-level manipulation,
-  and as such are ill suited for tasks  involving higher level invariants
-  like matching an integer number $(U bounded) in [a,b] interval.
+  and as such are ill-suited for tasks involving higher level invariants
+  like matching an integer number $(U bounded) in an [a,b] interval.
   Checks of this sort of are better addressed by additional post-processing.
 
-  The basic syntax shouldn't surprize experienced users of regular expressions.
-  Thankfully, nowdays the web is bustling with resources to help newcomers, and a good
- $(WEB www.regular-expressions.info, reference with tutorial ) on regular expressions
-  could be found.
+  The basic syntax shouldn't surprise experienced users of regular expressions.
+  Thankfully, nowadays the web is bustling with resources to help newcomers, and a good
+  $(WEB www.regular-expressions.info, reference with tutorial) on regular expressions
+  can be found.
 
-  This library uses ECMAScript syntax flavor with the following extensions:
+  This library uses an ECMAScript syntax flavor with the following extensions:
   $(UL
     $(LI Named subexpressions, with Python syntax. )
     $(LI Unicode properties such as Scripts, Blocks and common binary properties e.g Alphabetic, White_Space, Hex_Digit etc.)
@@ -62,16 +62,16 @@
 
   $(REG_START Pattern syntax )
   $(I std.regex operates on codepoint level,
-    'character' in this table denotes single unicode codepoint.)
+    'character' in this table denotes a single unicode codepoint.)
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
     $(REG_TITLE Atoms, Match single characters )
     $(REG_ROW any character except [|*+?(), Matches the character itself. )
     $(REG_ROW ., In single line mode matches any charcter.
       Otherwise it matches any character except '\n' and '\r'. )
-    $(REG_ROW [class], Matches single character
+    $(REG_ROW [class], Matches a single character
       that belongs to this character class. )
-    $(REG_ROW [^class], Matches single character that
+    $(REG_ROW [^class], Matches a single character that
       does $(U not) belong to this character class.)
     $(REG_ROW \cC, Matches the control character corresponding to letter C)
     $(REG_ROW \xXX, Matches a character with hexadecimal value of XX. )
@@ -83,23 +83,23 @@
     $(REG_ROW \t, Matches a tab character. )
     $(REG_ROW \v, Matches a vertical tab character. )
     $(REG_ROW \d, Matches any unicode digit. )
-    $(REG_ROW \D, Matches any character but unicode digit. )
+    $(REG_ROW \D, Matches any character except unicode digits. )
     $(REG_ROW \w, Matches any word character (note: this includes numbers).)
     $(REG_ROW \W, Matches any non-word character.)
     $(REG_ROW \s, Matches whitespace, same as \p{White_Space}.)
-    $(REG_ROW \S, Matches any character but these recognized as $(I \s ). )
+    $(REG_ROW \S, Matches any character except those recognized as $(I \s ). )
     $(REG_ROW \\, Matches \ character. )
     $(REG_ROW \c where c is one of [|*+?(), Matches the character c itself. )
-    $(REG_ROW \p{PropertyName}, Matches character that belongs
-      to unicode PropertyName set.
-      Single letter abreviations could be used without surrounding {,}. )
-    $(REG_ROW  \P{PropertyName}, Matches character that does not belong
-      to unicode PropertyName set.
-      Single letter abreviations could be used without surrounding {,}. )
+    $(REG_ROW \p{PropertyName}, Matches a character that belongs
+      to the unicode PropertyName set.
+      Single letter abbreviations can be used without surrounding {,}. )
+    $(REG_ROW  \P{PropertyName}, Matches a character that does not belong
+      to the unicode PropertyName set.
+      Single letter abbreviations can be used without surrounding {,}. )
     $(REG_ROW \p{InBasicLatin}, Matches any character that is part of
-        BasicLatin unicode $(U block).)
+        the BasicLatin unicode $(U block).)
     $(REG_ROW \P{InBasicLatin}, Matches any character except ones in
-        BasicLatin unicode $(U block).)
+        the BasicLatin unicode $(U block).)
     $(REG_ROW \p{Cyrilic}, Matches any character that is part of
         Cyrilic $(U script).)
     $(REG_ROW \P{Cyrilic}, Matches any character except ones in
@@ -113,57 +113,57 @@
       Greedy version - tries as many times as possible.)
     $(REG_ROW +?, Matches previous character/subexpression 1 or more times.
       Lazy version  - stops as early as possible.)
-    $(REG_ROW {n}, Matches previous character/subexpression n exactly times. )
+    $(REG_ROW {n}, Matches previous character/subexpression exactly n times. )
     $(REG_ROW {n&#44}, Matches previous character/subexpression n times or more.
       Greedy version - tries as many times as possible. )
     $(REG_ROW {n&#44}?, Matches previous character/subexpression n times or more.
       Lazy version - stops as early as possible.)
     $(REG_ROW {n&#44m}, Matches previous character/subexpression n to m times.
-      Greedy version - tries as many times as possible. )
+      Greedy version - tries as many times as possible, but no more than m times. )
     $(REG_ROW {n&#44m}?, Matches previous character/subexpression n to m times.
       Lazy version - stops as early as possible, but no less then n times.)
     $(REG_TITLE Other, Subexpressions & alternations )
     $(REG_ROW (regex),  Matches subexpression regex,
-      saving matched portion of text for later retrival. )
+      saving matched portion of text for later retrieval. )
     $(REG_ROW (?:regex), Matches subexpression regex,
       $(U not) saving matched portion of text. Useful to speed up matching. )
-    $(REG_ROW A|B, Matches subexpression A, failing that matches B. )
+    $(REG_ROW A|B, Matches subexpression A, or failing that, matches B. )
     $(REG_ROW (?P&lt;name&gt;regex), Matches named subexpression
         regex labeling it with name 'name'.
-        When refering to matched portion of text,
+        When referring to a matched portion of text,
         names work like aliases in addition to direct numbers.
      )
-    $(REG_TITLE Assertions, Match position rather then character )
+    $(REG_TITLE Assertions, Match position rather than character )
     $(REG_ROW ^, Matches at the begining of input or line (in multiline mode).)
     $(REG_ROW $, Matches at the end of input or line (in multiline mode). )
     $(REG_ROW \b, Matches at word boundary. )
     $(REG_ROW \B, Matches when $(U not) at word boundary. )
     $(REG_ROW (?=regex), Zero-width lookahead assertion.
         Matches at a point where the subexpression
-        regex could be matched starting from current position.
+        regex could be matched starting from the current position.
       )
     $(REG_ROW (?!regex), Zero-width negative lookahead assertion.
         Matches at a point where the subexpression
-        regex could $(U not ) be matched starting from current position.
+        regex could $(U not) be matched starting from the current position.
       )
     $(REG_ROW (?<=regex), Zero-width lookbehind assertion. Matches at a point
         where the subexpression regex could be matched ending
-        at current position (matching goes backwards).
+        at the current position (matching goes backwards).
       )
     $(REG_ROW  (?<!regex), Zero-width negative lookbehind assertion.
       Matches at a point where the subexpression regex could $(U not)
-      be matched ending at current position (matching goes backwards).
+      be matched ending at the current position (matching goes backwards).
      )
   )
 
   $(REG_START Character classes )
   $(REG_TABLE
     $(REG_TITLE Pattern element, Semantics )
-    $(REG_ROW Any atom, Have the same meaning as outside of character class.)
-    $(REG_ROW a-z, Includes  characters a, b, c, ..., z. )
+    $(REG_ROW Any atom, Has the same meaning as outside of a character class.)
+    $(REG_ROW a-z, Includes characters a, b, c, ..., z. )
     $(REG_ROW [a||b]&#44 [a--b]&#44 [a~~b]&#44 [a&&b], Where a, b are arbitrary classes,
      means union, set difference, symmetric set difference, and intersection respectively.
-     $(I Any sequence of character class elements implicitly forms union.) )
+     $(I Any sequence of character class elements implicitly forms a union.) )
   )
 
   $(REG_START Regex flags )
@@ -175,20 +175,20 @@
        as well as start and end of input.)
     $(REG_ROW s, Single-line mode, makes . match '\n' and '\r' as well. )
     $(REG_ROW x, Free-form syntax, ignores whitespace in pattern,
-      useful for formating complex regular expressions. )
+      useful for formatting complex regular expressions. )
   )
 
   $(B Unicode support)
 
   This library provides full Level 1 support* according to
-    $(WEB http://unicode.org/reports/tr18/, UTS 18). Specifically:
+    $(WEB unicode.org/reports/tr18/, UTS 18). Specifically:
   $(UL
     $(LI 1.1 Hex notation via any of \uxxxx, \U00YYYYYY, \xZZ.)
     $(LI 1.2 Unicode properties.)
     $(LI 1.3 Character classes with set operations.)
-    $(LI 1.4 Word boundaries use full set of "word" characters.)
+    $(LI 1.4 Word boundaries use the full set of "word" characters.)
     $(LI 1.5 Using simple casefolding to match case
-        insensitevely across full range of codepoints.)
+        insensitively across the full range of codepoints.)
     $(LI 1.6 Respecting line breaks as any of
         \u000A | \u000B | \u000C | \u000D | \u0085 | \u2028 | \u2029 | \u000D\u000A.)
     $(LI 1.7 Operating on codepoint level.)
@@ -196,16 +196,18 @@
   *With exception of point 1.1.1, as of yet, normalization of input
     is expected to be enforced by user.
 
+  $(B Slicing)
+
   All matches returned by pattern matching functionality in this library
-  are slices of original input. Notable exception being $(D replace) family of functions
-  that generate new string from input.
+  are slices of the original input, with the notable exception of the $(D replace)
+  family of functions which generate a new string from the input.
 
   License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
   Authors: Dmitry Olshansky,
 
   API and utility constructs are based on original $(D std.regex)
-  by Walter Bright and Andrei Alexandrescu
+  by Walter Bright and Andrei Alexandrescu.
 
   Copyright: Copyright Dmitry Olshansky, 2011
 
@@ -227,7 +229,7 @@ import core.bitop, core.stdc.string, core.stdc.stdlib;
 import ascii = std.ascii;
 import std.string : representation;
 
-version(unittest) debug import std.stdio;
+debug import std.stdio;
 
 private:
 @safe:
@@ -774,21 +776,11 @@ auto memoizeExpr(string expr)()
         s.add(Interval(0,0x7f));
     else
     {
-        version(fred_perfect_hashing)
-        {
-            uint key = phash(name);
-            if(key >= PHASHNKEYS || ucmp(name,unicodeProperties[key].name) != 0)
-                enforce(0, "invalid property name");
-            s = cast(CodepointSet)unicodeProperties[key].set;
-        }
-        else
-        {
-            auto range = assumeSorted!((x,y){ return ucmp(x.name, y.name) < 0; })(unicodeProperties);
-            //creating empty Codepointset is a workaround
-            auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
-            enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
-            s = range[eq].set.dup;
-        }
+        auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
+        //creating empty Codepointset is a workaround
+        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
+        enforce(eq!=range.length && ucmp(name,range[eq].name)==0,"invalid property name");
+        s = range[eq].set.dup;
     }
 
     if(casefold)
@@ -873,23 +865,19 @@ struct Parser(R, bool CTFE=false)
         if(isSomeString!S)
     {
         pat = origin = pattern;
+        //reserve slightly more then avg as sampled from unittests
         if(!__ctfe)
-            ir.reserve(pat.length);
+            ir.reserve((pat.length*5+2)/4);
         parseFlags(flags);
         _current = ' ';//a safe default for freeform parsing
         next();
-        if(__ctfe)
-            parseRegex();
-        else
+        try
         {
-            try
-            {
-                parseRegex();
-            }
-            catch(Exception e)
-            {
-                error(e.msg);//also adds pattern location
-            }
+            parseRegex();
+        }
+        catch(Exception e)
+        {
+            error(e.msg);//also adds pattern location
         }
         put(Bytecode(IR.End, 0));
     }
@@ -911,10 +899,8 @@ struct Parser(R, bool CTFE=false)
             empty =  true;
             return false;
         }
-        //for CTFEability
-        size_t idx=0;
-        _current = decode(pat, idx);
-        pat = pat[idx..$];
+        _current = pat.front;
+        pat.popFront();
         return true;
     }
 
@@ -1148,15 +1134,23 @@ struct Parser(R, bool CTFE=false)
                     put(Bytecode(IR.Option, 0));
                     break;
                 }
+                uint len, orStart;
                 //start a new option
-                if(fixupStack.length == 1)//only root entry
-                    fix = -1;
-                uint len = cast(uint)ir.length - fix;
-                insertInPlaceAlt(ir, fix+1, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
-                assert(ir[fix+1].code == IR.OrStart);
+                if(fixupStack.length == 1)
+                {//only root entry, effectively no fixup
+                    len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
+                    orStart = 0;   
+                }
+                else
+                {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
+                    len = cast(uint)ir.length - fix - (ir[fix].length - 1);
+                    orStart = fix + ir[fix].length;
+                }
+                insertInPlaceAlt(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                assert(ir[orStart].code == IR.OrStart);
                 put(Bytecode(IR.GotoEndOr, 0));
-                fixupStack.push(fix+1); //fixup for StartOR
-                fixupStack.push(cast(uint)ir.length); //for Option
+                fixupStack.push(orStart); //fixup for StartOR
+                fixupStack.push(cast(uint)ir.length); //for second Option
                 put(Bytecode(IR.Option, 0));
                 break;
             default://no groups or whatever
@@ -1242,7 +1236,7 @@ struct Parser(R, bool CTFE=false)
         default:
             if(replace)
             {
-                moveAllAlt(ir[offset+1..$],ir[offset..$-1]);
+                moveAll(ir[offset+1..$],ir[offset..$-1]);
                 ir.length -= 1;
             }
             return;
@@ -1291,15 +1285,8 @@ struct Parser(R, bool CTFE=false)
             }
             else if(replace)
             {
-                if(__ctfe)//CTFE workaround: no moveAll and length -= x;
-                {
-                    ir = ir[0..offset] ~ ir[offset+1..$];
-                }
-                else
-                {
-                    moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
-                    ir.length -= 1;
-                }
+                moveAll(ir[offset+1 .. $],ir[offset .. $-1]);
+                ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
             enforce(ir.length + len < maxCompiledLength,  "maximum compiled pattern length is exceeded");
@@ -2117,7 +2104,6 @@ private:
     //print out disassembly a program's IR
     @trusted debug public void print() const
     {//@@@BUG@@@ write is system
-        import std.stdio;
         writefln("PC\tINST\n");
         prettyPrint(delegate void(const(char)[] s){ write(s); },ir);
         writefln("\n");
@@ -2153,15 +2139,10 @@ private:
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict,String name)
+@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    //@@@BUG@@@ assumeSorted kills "-inline"
-    //auto fnd = assumeSorted(map!"a.name"(dict)).lowerBound(name).length;
-    uint fnd;
-    for(fnd = 0; fnd<dict.length; fnd++)
-        if(equal(dict[fnd].name,name))
-            break;
-    enforce(fnd < dict.length, text("no submatch named ", name));
+    auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
+    enforce(equal(dict[fnd].name, name), text("no submatch named ", name));
     return dict[fnd].group;
 }
 
@@ -2759,7 +2740,7 @@ public:
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
-    {
+    {//@BUG: apparently assumes little endian machines
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;
@@ -2772,9 +2753,10 @@ public:
             while(p != end)
             {
                 if(!~state)
-                {
+                {//speed up seeking first matching place
                     for(;;)
                     {
+                        assert(p <= end, text(p," vs ", end));
                         p = cast(ubyte*)memchr(p, fChar, end - p);
                         if(!p)
                             return haystack.length;
@@ -2789,31 +2771,40 @@ public:
                     {
                         state = (state<<1) | table[p[1]];
                         state = (state<<1) | table[p[2]];
-                        p += 3;
+                        p += 4;
                     }
-                }
-                //first char is already tested, see if that's all
-                if(!(state & limit))//division rounds down for dchar
-                    return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
-                        -length+1;
-                static if(charSize == 3)
-                {
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
-                    state = (state<<1) | table[p[3]];
-                    p+=4;
+                    else
+                        p++;
+                    //first char is tested, see if that's all
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 else
-                {
-                    state = (state<<1) | table[p[1]];
-                    p++;
+                {//have some bits/states for possible matches,
+                 //use the usual shift-or cycle
+                    static if(charSize == 3)
+                    {
+                        state = (state<<1) | table[p[0]];
+                        state = (state<<1) | table[p[1]];
+                        state = (state<<1) | table[p[2]];
+                        p+=4;
+                    }
+                    else
+                    {
+                        state = (state<<1) | table[p[0]];
+                        p++;
+                    }
+                    if(!(state & limit))
+                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                            -length;
                 }
                 debug(fred_search) writefln("State: %32b", state);
             }
         }
         else
         {
-            //in this path we have to shift first
+            //normal path, partially unrolled for char/wchar
             static if(charSize == 3)
             {
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
@@ -4041,7 +4032,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         assert(re.ir[pc].code == IR.Option);
                         len = re.ir[pc].data;
-                        auto pc_save = pc+len-1;
+                        auto pc_save = pc+len-IRL!(IR.GotoEndOr);
                         pc = pc + len + IRL!(IR.Option);
                         while(re.ir[pc].code == IR.Option)
                         {
@@ -4863,8 +4854,6 @@ enum OneShot { Fwd, Bwd };
     if(is(Char : dchar))
 {
     alias Stream.DataIndex DataIndex;
-    alias const(Char)[] String;
-    enum threadAllocSize = 16;
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
     DataIndex[] merge;
@@ -4971,7 +4960,6 @@ enum OneShot { Fwd, Bwd };
             writeln("------------------------------------------");
         if(exhausted)
         {
-
             return false;
         }
         if(re.flags & RegexInfo.oneShot)
@@ -5032,8 +5020,7 @@ enum OneShot { Fwd, Bwd };
                     break;
                 }
             }
-        else
-            exhausted = true;
+
         genCounter++; //increment also on each end
         debug(fred_matching) writefln("Threaded matching threads at end");
         //try out all zero-width posibilities
@@ -5043,8 +5030,17 @@ enum OneShot { Fwd, Bwd };
         }
         if(!matched)
             eval!false(createStart(index), matches);//new thread starting at end of input
-        if(matched && !(re.flags & RegexOption.global))
-           exhausted = true;
+        if(matched)
+        {//in case NFA found match along the way
+         //and last possible longer alternative ultimately failed
+            s.reset(matches[0].end);//reset to last successful match
+            next();//and reload front character
+            //--- here the exact state of stream was restored ---
+            exhausted = atEnd || !(re.flags & RegexOption.global);
+            //+ empty match advances the input
+            if(!exhausted && matches[0].begin == matches[0].end)
+                next(); 
+        }
         return matched;
     }
 
@@ -5558,14 +5554,14 @@ enum OneShot { Fwd, Bwd };
             alias evalBack evalFn;
         assert(clist == (ThreadList!DataIndex).init || startPc==RestartPc); // incorrect after a partial match
         assert(nlist == (ThreadList!DataIndex).init || startPc==RestartPc);
+        static if(direction == OneShot.Fwd)
+            startPc = startPc;
+        else
+            startPc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
         if(!atEnd)//if no char
         {
             if (startPc!=RestartPc){
-                auto startT = createStart(index);
-                static if(direction == OneShot.Fwd)
-                    startT.pc = startPc;
-                else
-                    startT.pc = cast(uint)re.ir.length-IRL!(IR.LookbehindEnd);
+                auto startT = createStart(index, startPc);
                 genCounter++;
                 evalFn!true(startT, matches);
             }
@@ -5611,6 +5607,9 @@ enum OneShot { Fwd, Bwd };
         {
             evalFn!false(t, matches);
         }
+        if(!matched)
+            evalFn!false(createStart(index, startPc), matches);
+   
         return (matched?MatchResult.Match:MatchResult.NoMatch);
     }
 
@@ -6097,12 +6096,12 @@ enum OneShot { Fwd, Bwd };
     }
 
     //creates a start thread
-    Thread!DataIndex*  createStart(DataIndex index)
+    Thread!DataIndex* createStart(DataIndex index, uint pc=0)
     {
         auto t = allocate();
         t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
         t.matches[0].begin = index;
-        t.pc = 0;
+        t.pc = pc;
         t.counter = 0;
         t.uopCounter = 0;
         return t;
@@ -6139,7 +6138,7 @@ enum OneShot { Fwd, Bwd };
     }
     ----
 +/
-@trusted public struct Captures(R,DIndex)
+@trusted public struct Captures(R, DIndex=size_t)
     if(isSomeString!R)
 {//@trusted because of union inside
     alias DIndex DataIndex;
@@ -6268,6 +6267,24 @@ public:
     @property ref captures(){ return this; }
 }
 
+unittest//verify example
+{
+    auto m = match("@abc#", regex(`(\w)(\w)(\w)`));
+    auto c = m.captures;
+    assert(c.pre == "@");// part of input preceeding match
+    assert(c.post == "#"); // immediately after match
+    assert(c.hit == c[0] && c.hit == "abc");// the whole match
+    assert(c[2] =="b");
+    assert(c.front == "abc");
+    c.popFront();
+    assert(c.front == "a");
+    assert(c.back == "c");
+    c.popBack();
+    assert(c.back == "b");
+    popFrontN(c, 2);
+    assert(c.empty);
+}
+
 /++
     A regex engine state, as returned by $(D match) family of functions.
 
@@ -6387,9 +6404,19 @@ public:
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
-public auto regex(S)(S pattern, const(char)[] flags="")
+@trusted public auto regex(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
 {
+    enum cacheSize = 8; //TODO: invent nice interface to control regex caching
+    if(__ctfe)
+        return regexImpl(pattern, flags);
+    return memoize!(regexImpl!S, cacheSize)(pattern, flags);
+}
+
+public auto regexImpl(S)(S pattern, const(char)[] flags="")
+    if(isSomeString!(S))
+{
+    alias Regex!(BasicElementOf!S) Reg;
     if(!__ctfe)
     {
         auto parser = Parser!(Unqual!(typeof(pattern)))(pattern, flags);
@@ -6434,6 +6461,12 @@ template ctRegexImpl(alias pattern, string flags=[])
 public template ctRegex(alias pattern, alias flags=[])
 {
     enum ctRegex = ctRegexImpl!(pattern, flags).nr;
+}
+
+template isRegexFor(RegEx, R)
+{
+    enum isRegexFor = is(RegEx == Regex!(BasicElementOf!R))
+                 || is(RegEx == StaticRegex!(BasicElementOf!R));
 }
 
 /++
@@ -6543,8 +6576,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
 +/
 public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R format)
-  if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R))
-     || is(RegEx == StaticRegex!(BasicElementOf!R)))
+  if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6586,7 +6618,7 @@ public @trusted R replace(alias scheme=match, R, RegEx)(R input, RegEx re, R for
     ---
 +/
 public @trusted R replace(alias fun, R, RegEx, alias scheme=match)(R input, RegEx re)
-    if(isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+    if(isSomeString!R && isRegexFor!(RegEx, R))
 {
     auto app = appender!(R)();
     auto matches = scheme(input, re);
@@ -6607,7 +6639,7 @@ public @trusted void replaceFmt(R, Capt, OutR)
     if(isOutputRange!(OutR, ElementEncodingType!R[]) &&
         isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
-    enum State { Normal, Escape, Dollar }
+    enum State { Normal, Dollar }
     auto state = State.Normal;
     size_t offset;
 L_Replace_Loop:
@@ -6617,29 +6649,16 @@ L_Replace_Loop:
         case State.Normal:
             for(offset = 0; offset < format.length; offset++)//no decoding
             {
-                switch(format[offset])
+                if(format[offset] == '$')
                 {
-                case '\\':
-                    state = State.Escape;
-                    sink.put(format[0 .. offset]);
-                    format = format[offset+1 .. $];//safe since special chars are ascii only
-                    continue L_Replace_Loop;
-                case '$':
                     state = State.Dollar;
                     sink.put(format[0 .. offset]);
                     format = format[offset+1 .. $];//ditto
                     continue L_Replace_Loop;
-                default:
                 }
             }
             sink.put(format[0 .. offset]);
             format = format[offset .. $];
-            break;
-        case State.Escape:
-            offset = std.utf.stride(format, 0);
-            sink.put(format[0 .. offset]);
-            format = format[offset .. $];
-            state = State.Normal;
             break;
         case State.Dollar:
             if(ascii.isDigit(format[0]))
@@ -6695,16 +6714,16 @@ assert(equal(splitter(s1, regex(", *")),
     ["", "abc", "de", "fg", "hi", ""]));
 ----
 +/
-public struct Splitter(Range, alias Engine=ThompsonMatcher)
-    if(isSomeString!Range)
+public struct Splitter(Range, alias RegEx=Regex)
+    if(isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
     Range _input;
     size_t _offset;
-    alias RegexMatch!(Range, Engine) Rx;
+    alias typeof(match(Range.init,RegEx.init)) Rx;
     Rx _match;
 
-    @trusted this(Range input, Regex!(BasicElementOf!Range) separator)
+    @trusted this(Range input, RegEx separator)  
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
         separator.flags |= RegexOption.global;
@@ -6763,16 +6782,19 @@ public:
     }
 }
 
-///A helper function, creates a $(D Spliiter) on range $(D r) separated by regex $(D pat).
-public Splitter!(Range) splitter(Range, RegEx)(Range r, RegEx pat)
-    if( is(BasicElementOf!Range : dchar) && is(RegEx == Regex!(BasicElementOf!Range)))
+/**
+    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
+    Captured subexpressions have no effect on the resulting range.
+*/
+public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
+    if(is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
-    return Splitter!(Range)(r, pat);
+    return Splitter!(Range, RegEx)(r, pat);
 }
 
 ///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
-    if(isSomeString!String && is(RegEx == Regex!(BasicElementOf!String)))
+    if(isSomeString!String  && isRegexFor!(RegEx, String))
 {
     auto a = appender!(String[])();
     foreach(e; splitter(input, rx))
@@ -7109,7 +7131,9 @@ unittest
         TestVectors(    `(?<=((ab|da)*))x`,    "abdaabx", "y",        "$&-$2-$1",  "x-ab-abdaab"),
         TestVectors(    `a(?<=(ba(?<=(aba)(?<=aaba))))`, "aabaa", "y", "$&-$1-$2", "a-ba-aba"),
         TestVectors(    `.(?<!b).`,   "bax",  "y", "$&", "ax"),
-        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y", "$&", "x"),
+        TestVectors(    `(?<=b(?<!ab)).`,   "abbx",  "y",  "$&", "x"),
+        TestVectors(    `(?<=\.|[!?]+)X`,   "Hey?!X", "y", "$&", "X"),
+        TestVectors(    `(?<=\.|[!?]+)a{3}`,   ".Nope.aaaX", "y", "$&", "aaa"),
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
@@ -7221,8 +7245,9 @@ unittest
         run_tests!match(); //thompson VM
     }
 }
- version(fred_ct)
- {
+
+version(fred_ct)
+{
     unittest
     {
         auto cr = ctRegex!("abc");
@@ -7417,16 +7442,14 @@ else
                 if(ch != '-') //'--' is an operator
                     assert(match(to!string(ch),regex(`[\`~ch~`-\`~ch~`]`)));
             }
+            //bugzilla 7718
+            string strcmd = "./myApp.rb -os OSX -path \"/GIT/Ruby Apps/sec\" -conf 'notimer'";
+            auto reStrCmd = regex (`(".*")|('.*')`, "g");
+            assert(equal(map!"a[0]"(matchFn(strcmd, reStrCmd)),
+                         [`"/GIT/Ruby Apps/sec"`, `'notimer'`]));
         }
         test_body!bmatch();
         test_body!match();
-    }
-    //@@@BUG@@@ template function doesn't work inside unittest block
-    version(unittest)
-    Cap.String baz(Cap)(Cap m)
-    if (is(Cap==Captures!(Cap.String,Cap.DataIndex)))
-    {
-        return std.string.toUpper(m.hit);
     }
 
     // tests for replace
@@ -7436,6 +7459,11 @@ else
         {
             foreach(i, v; TypeTuple!(string, wstring, dstring))
             {
+                auto baz(Cap)(Cap m)
+                if (is(Cap==Captures!(Cap.String)))
+                {
+                    return std.string.toUpper(m.hit);
+                }
                 alias v String;
                 assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
                        == to!String("ack rapacity"));
@@ -7445,7 +7473,7 @@ else
                        == to!String("[n]oon"));
                 assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
                        == to!String(": test2 test1 :"));
-                auto s = std.regex.replace!(baz!(Captures!(String,size_t)))(to!String("Strap a rocket engine on a chicken."),
+                auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                         regex(to!String("[ar]"), "g"));
                 assert(s == "StRAp A Rocket engine on A chicken.");
             }
@@ -7486,6 +7514,7 @@ else
         auto w1 = ["", "abc", "de", "fg", "hi", ""];
         assert(equal(split(s1, regex(", *")), w1[]));
     }
+
     unittest 
     { // bugzilla 7141
         string pattern = `[a\--b]`;
@@ -7494,6 +7523,31 @@ else
         string pattern2 = `[&-z]`;
         assert(match("b", pattern2));
     }
+    unittest
+    {//bugzilla 7111
+        assert(match("", regex("^")));
+    }
+    unittest
+    {//bugzilla 7300
+        assert(!match("a"d, "aa"d));
+    }    
+
+    unittest
+    {//bugzilla 7674
+        assert("1234".replace(regex("^"), "$$") == "$1234");
+        assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
+        assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
+    }
+    unittest
+    {// bugzilla 7679
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            enum re = ctRegex!(to!S(r"\."));
+            auto str = to!S("a.b");
+            assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
+            assert(split(str, re) == [to!S("a"), to!S("b")]);
+        }
+    }
 }
 
-}
+}//version(unittest)

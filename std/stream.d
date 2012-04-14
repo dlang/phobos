@@ -1299,31 +1299,38 @@ class Stream : InputStream, OutputStream {
   override string toString() {
     if (!readable)
       return super.toString();
-    size_t pos;
-    size_t rdlen;
-    size_t blockSize;
-    char[] result;
-    if (seekable) {
-      ulong orig_pos = position;
-      position(0);
-      blockSize = cast(size_t)size;
-      result = new char[blockSize];
-      while (blockSize > 0) {
-        rdlen = readBlock(&result[pos], blockSize);
-        pos += rdlen;
-        blockSize -= rdlen;
-      }
-      position(orig_pos);
-    } else {
-      blockSize = 4096;
-      result = new char[blockSize];
-      while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
-        pos += rdlen;
-        blockSize += rdlen;
-        result.length = result.length + blockSize;
-      }
+    try
+    {
+        size_t pos;
+        size_t rdlen;
+        size_t blockSize;
+        char[] result;
+        if (seekable) {
+          ulong orig_pos = position;
+          scope(exit) position(orig_pos);
+          position(0);
+          blockSize = cast(size_t)size;
+          result = new char[blockSize];
+          while (blockSize > 0) {
+            rdlen = readBlock(&result[pos], blockSize);
+            pos += rdlen;
+            blockSize -= rdlen;
+          }
+        } else {
+          blockSize = 4096;
+          result = new char[blockSize];
+          while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
+            pos += rdlen;
+            blockSize += rdlen;
+            result.length = result.length + blockSize;
+          }
+        }
+        return cast(string) result[0 .. pos];
     }
-    return cast(string) result[0 .. pos];
+    catch (Throwable)
+    {
+        return super.toString();
+    }
   }
 
   /***
@@ -1333,17 +1340,25 @@ class Stream : InputStream, OutputStream {
   override size_t toHash() @trusted {
     if (!readable || !seekable)
       return super.toHash();
-    ulong pos = position;
-    uint crc = init_crc32 ();
-    position(0);
-    ulong len = size;
-    for (ulong i = 0; i < len; i++) {
-      ubyte c;
-      read(c);
-      crc = update_crc32(c, crc);
+    try
+    {
+        ulong pos = position;
+        scope(exit) position(pos);
+        uint crc = init_crc32();
+        position(0);
+        ulong len = size;
+        for (ulong i = 0; i < len; i++)
+        {
+          ubyte c;
+          read(c);
+          crc = update_crc32(c, crc);
+        }
+        return crc;
     }
-    position(pos);
-    return crc;
+    catch (Throwable)
+    {
+        return super.toHash();
+    }
   }
 
   // helper for checking that the stream is readable
@@ -1855,13 +1870,8 @@ class File: Stream {
     readable = cast(bool)(mode & FileMode.In);
     writeable = cast(bool)(mode & FileMode.Out);
     version (Windows) {
-      if (std.file.useWfuncs) {
-        hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
-                            null, createMode, 0, null);
-      } else {
-        hFile = CreateFileA(std.file.toMBSz(filename), access, share,
-                            null, createMode, 0, null);
-      }
+      hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
+                          null, createMode, 0, null);
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
     version (Posix) {
@@ -1954,9 +1964,9 @@ class File: Stream {
   override size_t readBlock(void* buffer, size_t size) {
     assertReadable();
     version (Windows) {
-          auto dwSize = to!DWORD(size);
+      auto dwSize = to!DWORD(size);
       ReadFile(hFile, buffer, dwSize, &dwSize, null);
-          size = dwSize;
+      size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.read(hFile, buffer, size);
       if (size == -1)
@@ -1969,9 +1979,9 @@ class File: Stream {
   override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Windows) {
-          auto dwSize = to!DWORD(size);
+      auto dwSize = to!DWORD(size);
       WriteFile(hFile, buffer, dwSize, &dwSize, null);
-          size = dwSize;
+      size = dwSize;
     } else version (Posix) {
       size = core.sys.posix.unistd.write(hFile, buffer, size);
       if (size == -1)
@@ -2380,8 +2390,8 @@ class EndianStream : FilterStream {
 
   override wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
-    readExact(result.ptr, result.length * wchar.sizeof);
-    fixBlockBO(&result,2,length);
+    readExact(result.ptr, length * wchar.sizeof);
+    fixBlockBO(result.ptr, wchar.sizeof, length);
     return result;
   }
 

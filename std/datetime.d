@@ -799,6 +799,12 @@ public:
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
      +/
+    bool opEquals(const SysTime rhs) const pure nothrow
+    {
+        return opEquals(rhs);
+    }
+
+    /// ditto
     bool opEquals(const ref SysTime rhs) const pure nothrow
     {
         return _stdTime == rhs._stdTime;
@@ -28407,13 +28413,13 @@ public:
             {
                 scope(exit) clearTZEnvVar();
 
-                auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
-                                tuple("America/New_York",    DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
-                                tuple("America/Santiago",    DateTime(2012, 10, 14), DateTime(2012, 3, 11), 0, 0),
-                                tuple("Atlantic/Azores",     DateTime(2011, 3, 27),  DateTime(2011, 10, 30), 0, 1),
-                                tuple("Europe/London",       DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 1, 2),
-                                tuple("Europe/Paris",        DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 2, 3),
-                                tuple("Australia/Adelaide",  DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
+                auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                                tuple("America/New_York",    DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                                //tuple("America/Santiago",    DateTime(2011, 8, 21), DateTime(2011, 5, 8), 0, 0),
+                                tuple("Atlantic/Azores",     DateTime(2011, 3, 27), DateTime(2011, 10, 30), 0, 1),
+                                tuple("Europe/London",       DateTime(2012, 3, 25), DateTime(2012, 10, 28), 1, 2),
+                                tuple("Europe/Paris",        DateTime(2012, 3, 25), DateTime(2012, 10, 28), 2, 3),
+                                tuple("Australia/Adelaide",  DateTime(2012, 10, 7), DateTime(2012, 4, 1), 2, 3)];
 
                 foreach(i; 0 .. tzInfos.length)
                 {
@@ -29280,7 +29286,7 @@ assert(tz.dstName == "PDT");
         version(Posix)
             auto file = tzDatabaseDir ~ name;
         else version(Windows)
-            auto file = tzDatabaseDir ~ replace(strip(name), "/", sep);
+            auto file = tzDatabaseDir ~ replace(strip(name), "/", dirSeparator);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29589,10 +29595,10 @@ assert(tz.dstName == "PDT");
         version(Posix)
             subName = strip(subName);
         else version(Windows)
-            subName = replace(strip(subName), "/", sep);
+            subName = replace(strip(subName), "/", dirSeparator);
 
-        if(!tzDatabaseDir.endsWith(sep))
-            tzDatabaseDir ~= sep;
+        if(!tzDatabaseDir.endsWith(dirSeparator))
+            tzDatabaseDir ~= dirSeparator;
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
@@ -30816,6 +30822,12 @@ public:
 
 
     ///
+    bool opEquals(const StopWatch rhs) const pure nothrow
+    {
+        return opEquals(rhs);
+    }
+
+    /// ditto
     bool opEquals(const ref StopWatch rhs) const pure nothrow
     {
         return _timeStart == rhs._timeStart &&
@@ -31150,61 +31162,6 @@ version(testStdDateTime) unittest
 //==============================================================================
 // Section with public helper functions and templates.
 //==============================================================================
-
-/++
-    $(RED Deprecated. It will be removed in March 2012. This is only here to
-          help transition code which uses std.date to using std.datetime.)
-
-    Returns a $(D d_time) for the given $(D SysTime).
- +/
-deprecated long sysTimeToDTime(in SysTime sysTime)
-{
-    return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
-}
-
-version(testStdDateTime) unittest
-{
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), UTC())),
-                    0);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC())),
-                    1);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC())),
-                    -1);
-
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 2), UTC())),
-                    86_400_000);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31), UTC())),
-                    -86_400_000);
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in March 2012. This is only here to
-          help transition code which uses std.date to using std.datetime.)
-
-    Returns a $(D SysTime) for the given $(D d_time).
- +/
-deprecated SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
-{
-    immutable hnsecs = convert!("msecs", "hnsecs")(dTime) + 621355968000000000L;
-
-    return SysTime(hnsecs, tz);
-}
-
-version(testStdDateTime) unittest
-{
-    _assertPred!"=="(dTimeToSysTime(0),
-                    SysTime(DateTime(1970, 1, 1), UTC()));
-    _assertPred!"=="(dTimeToSysTime(1),
-                    SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC()));
-    _assertPred!"=="(dTimeToSysTime(-1),
-                    SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()));
-
-    _assertPred!"=="(dTimeToSysTime(86_400_000),
-                    SysTime(DateTime(1970, 1, 2), UTC()));
-    _assertPred!"=="(dTimeToSysTime(-86_400_000),
-                    SysTime(DateTime(1969, 12, 31), UTC()));
-}
 
 
 /++

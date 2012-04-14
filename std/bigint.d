@@ -336,7 +336,7 @@ public:
     }
 
     ///
-    bool opEquals(Tdummy=void)(ref const BigInt y) const
+    bool opEquals()(auto ref const BigInt y) const
     {
        return sign == y.sign && y.data == data;
     }
