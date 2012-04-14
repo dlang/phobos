@@ -81,7 +81,7 @@ import std.exception;
 import std.path;
 import std.stdio;
 import std.string;
-//import std.typecons;
+import std.typecons;
 
 
 version(Posix)
@@ -1049,8 +1049,6 @@ public:
 // ============================== execute() ==============================
 
 
-struct ProcessResult { int status; string output; }
-
 /** Executes the given program and returns its exit code and output.
 
     This function blocks until the program terminates.
@@ -1061,8 +1059,7 @@ struct ProcessResult { int status; string output; }
     if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
     ---
 */
-/*Tuple!(int, "status", string, "output")*/
-ProcessResult execute(string command)
+Tuple!(int, "status", string, "output") execute(string command)
 {
     auto p = pipeProcess(command,
         Redirect.stdout | Redirect.stderrToStdout);
@@ -1078,8 +1075,7 @@ ProcessResult execute(string command)
 
 
 /// ditto
-/*Tuple!(int, "status", string, "output")*/
-ProcessResult execute(string name, string[] args...)
+Tuple!(int, "status", string, "output") execute(string name, string[] args...)
 {
     auto p = pipeProcess(name, args,
         Redirect.stdout | Redirect.stderrToStdout);
@@ -1128,8 +1124,7 @@ version(Windows) private string getShell()
     writefln("ls exited with code %s and said: %s", ls.status, ls.output);
     ---
 */
-/*Tuple!(int, "status", string, "output")*/
-ProcessResult shell(string command)
+Tuple!(int, "status", string, "output") shell(string command)
 {
     version(Windows)
         return execute(getShell() ~ " " ~ shellSwitch ~ " " ~ command);
