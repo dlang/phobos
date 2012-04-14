@@ -1167,7 +1167,7 @@ version(Windows) @property int thisProcessID()
     Examples:
     ---
     // Return variable, or throw an exception if it doesn't exist.
-    auto path = environment["PATH"];
+    string path = environment["PATH"];
 
     // Add/replace variable.
     environment["foo"] = "bar";
@@ -1176,14 +1176,13 @@ version(Windows) @property int thisProcessID()
     environment.remove("foo");
 
     // Return variable, or null if it doesn't exist.
-    auto foo = environment.get("foo");
+    string foo = environment.get("foo");
 
     // Return variable, or a default value if it doesn't exist.
-    auto foo = environment.get("foo", "default foo value");
+    string foo = environment.get("foo", "default foo value");
 
-    // Return an associative array of type string[string] containing
-    // all the environment variables.
-    auto aa = environment.toAA();
+    // Return an associative array containing all the environment variables.
+    string[string] aa = environment.toAA();
     ---
 */
 alias Environment environment;
