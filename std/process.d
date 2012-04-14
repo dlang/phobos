@@ -387,15 +387,14 @@ version(Posix) private Pid spawnProcessImpl
     File stdin_, File stdout_, File stderr_, Config config)
 {
     // Make sure the file exists and is executable.
-    if (std.string.indexOf(name, std.path.sep) == -1)
+    if (any!isDirSeparator(name))
     {
-        name = searchPathFor(name);
-        enforce(name != null, "Executable file not found: "~name);
+        enforce(isExecutable(name), "Not an executable file: "~name);
     }
     else
     {
-        enforce(name != null  &&  isExecutable(name),
-            "Executable file not found: "~name);
+        name = searchPathFor(name);
+        enforce(name != null, "Executable file not found: "~name);
     }
 
     // Get the file descriptors of the streams.
