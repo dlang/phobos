@@ -236,7 +236,7 @@ public:
 
 
 
-/** Spawn a new process.
+/** Spawns a new process.
 
     This function returns immediately, and the child process
     executes in parallel with its parent.
@@ -574,7 +574,7 @@ else version(Windows) private Pid spawnProcessImpl
     return new Pid(pi.dwProcessId, pi.hProcess);
 }
 
-// Search the PATH variable for the given executable file,
+// Searches the PATH variable for the given executable file,
 // (checking that it is in fact executable).
 version(Posix) private string searchPathFor(string executable)
 {
@@ -590,7 +590,7 @@ version(Posix) private string searchPathFor(string executable)
     return null;
 }
 
-// Convert a C array of C strings to a string[] array,
+// Converts a C array of C strings to a string[] array,
 // setting the program name as the zeroth element.
 version(Posix) private const(char)** toArgz(string prog, const string[] args)
 {
@@ -606,7 +606,7 @@ version(Posix) private const(char)** toArgz(string prog, const string[] args)
     return argz.ptr;
 }
 
-// Convert a string[string] array to a C array of C strings
+// Converts a string[string] array to a C array of C strings
 // on the form "key=value".
 version(Posix) private const(char)** toEnvz(const string[string] env)
 {
@@ -641,7 +641,7 @@ else version(Windows) private LPVOID toEnvz(const string[string] env)
 }
 
 
-// Check whether the file exists and can be executed by the
+// Checks whether the file exists and can be executed by the
 // current user.
 version(Posix) private bool isExecutable(string path)
 {
@@ -695,7 +695,7 @@ enum Config
 
 
 
-/** Wait for a specific spawned process to terminate and return
+/** Waits for a specific spawned process to terminate and returns
     its exit status.
 
     In general one should always _wait for child processes to terminate
@@ -749,7 +749,7 @@ public:
     @property File writeEnd() { return _write; }
 
 
-    /** Create a new pipe. */
+    /** Creates a new pipe. */
     version(Posix) static Pipe create()
     {
         int[2] fds;
@@ -831,7 +831,7 @@ public:
 
 
 
-    /** Close both ends of the pipe.
+    /** Closes both ends of the pipe.
 
         Normally it is not necessary to do this manually, as $(XREF stdio,File)
         objects are automatically closed when there are no more references
@@ -860,7 +860,7 @@ unittest
 // ============================== pipeProcess() ==============================
 
 
-/** Start a new process, and create pipes to redirect its standard
+/** Starts a new process, creating pipes to redirect its standard
     input, output and/or error streams.
 
     These functions return immediately, leaving the child process to
@@ -1005,7 +1005,7 @@ private:
     File _stdin, _stdout, _stderr;
 
 public:
-    /** Return the $(LREF Pid) of the child process. */
+    /** Returns the $(LREF Pid) of the child process. */
     @property Pid pid()
     {
         enforce (_pid !is null);
@@ -1013,7 +1013,7 @@ public:
     }
 
 
-    /** Return an $(XREF stdio,File) that allows writing to the child process'
+    /** Returns an $(XREF stdio,File) that allows writing to the child process'
         standard input stream.
     */
     @property File stdin()
@@ -1024,7 +1024,7 @@ public:
     }
 
 
-    /** Return an $(XREF stdio,File) that allows reading from the child
+    /** Returns an $(XREF stdio,File) that allows reading from the child
         process' standard output/error stream.
     */
     @property File stdout()
@@ -1051,7 +1051,7 @@ public:
 
 struct ProcessResult { int status; string output; }
 
-/** Execute the given program and return its exit code and output.
+/** Executes the given program and returns its exit code and output.
 
     This function blocks until the program terminates.
     The $(D output) string includes what the program writes to its
@@ -1103,7 +1103,7 @@ version(Posix)   private immutable string shellSwitch = "-c";
 version(Windows) private immutable string shellSwitch = "/C";
 
 
-// Get the user's default shell.
+// Gets the user's default shell.
 version(Posix)  private string getShell()
 {
     return environment.get("SHELL", "/bin/sh");
@@ -1117,7 +1117,7 @@ version(Windows) private string getShell()
 
 
 
-/** Execute $(D _command) in the user's default _shell, and return its
+/** Executes $(D _command) in the user's default _shell and returns its
     exit code and output.
 
     This function blocks until the command terminates.
@@ -1144,7 +1144,7 @@ ProcessResult shell(string command)
 // ============================== thisProcessID ==============================
 
 
-/** Get the process ID number of the current process. */
+/** Returns the process ID number of the current process. */
 version(Posix) @property int thisProcessID()
 {
     return getpid();
@@ -1201,8 +1201,8 @@ abstract final class Environment
 static:
 
 private:
-    // Return the length of an environment variable (in number of
-    // wchars, including the null terminator), 0 if it doesn't exist.
+    // Returns the length of an environment variable (in number of
+    // wchars, including the null terminator), or 0 if it doesn't exist.
     version(Windows)
     int varLength(LPCWSTR namez)
     {
@@ -1210,7 +1210,7 @@ private:
     }
 
 
-    // Retrieve the environment variable, or return false on failure.
+    // Retrieves the environment variable, returns false on failure.
     bool getImpl(string name, out string value)
     {
         version(Posix)
@@ -1245,7 +1245,7 @@ private:
 
 
 public:
-    // Retrieve an environment variable, throw on failure.
+    // Retrieves an environment variable, throws on failure.
     string opIndex(string name)
     {
         string value;
@@ -1255,7 +1255,7 @@ public:
 
 
 
-    // Assign a value to an environment variable.  If the variable
+    // Assigns a value to an environment variable.  If the variable
     // exists, it is overwritten.
     string opIndexAssign(string value, string name)
     {
@@ -1290,7 +1290,7 @@ public:
 
 
 
-    // Remove an environment variable.  The function succeeds even
+    // Removes an environment variable.  The function succeeds even
     // if the variable isn't in the environment.
     void remove(string name)
     {
@@ -1309,7 +1309,7 @@ public:
 
 
 
-    // Same as opIndex, except return a default value if
+    // Same as opIndex, except it returns a default value if
     // the variable doesn't exist.
     string get(string name, string defaultValue = null)
     {
@@ -1320,7 +1320,7 @@ public:
 
 
 
-    // Return all environment variables in an associative array.
+    // Returns all environment variables in an associative array.
     string[string] toAA()
     {
         string[string] aa;
