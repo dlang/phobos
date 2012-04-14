@@ -110,7 +110,7 @@ void main(string[] args)
             return 1;
         }
     });
-    auto pipe5 = Pipe.create();
+    auto pipe5 = pipe();
     pid = spawnProcess(exe, pipe5.readEnd);
     pipe5.writeEnd.writeln("hello world");
     assert (wait(pid) == 0);
@@ -127,8 +127,8 @@ void main(string[] args)
             stderr.write("hello error");
         }
     });
-    auto pipe6o = Pipe.create();
-    auto pipe6e = Pipe.create();
+    auto pipe6o = pipe();
+    auto pipe6e = pipe();
     pid = spawnProcess(exe, stdin, pipe6o.writeEnd, pipe6e.writeEnd);
     assert (pipe6o.readEnd.readln().chomp() == "hello output");
     assert (pipe6e.readEnd.readln().chomp() == "hello error");
@@ -172,7 +172,7 @@ version (Posix)
 
 
     // POSIX test 2: Pseudo-test of path-searching algorithm.
-    auto pipeX = Pipe.create();
+    auto pipeX = pipe();
     pid = spawnProcess("ls -l", stdin, pipeX.writeEnd);
     bool found = false;
     foreach (line; pipeX.readEnd.byLine())

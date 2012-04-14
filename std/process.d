@@ -298,25 +298,25 @@ public:
     Use the $(I ls) _command to retrieve a list of files:
     ---
     string[] files;
-    auto pipe = Pipe.create();
+    auto p = pipe();
 
-    auto pid = spawnProcess("ls", stdin, pipe.writeEnd);
+    auto pid = spawnProcess("ls", stdin, p.writeEnd);
     scope(exit) wait(pid);
 
-    foreach (f; pipe.readEnd.byLine())  files ~= f.idup;
+    foreach (f; p.readEnd.byLine())  files ~= f.idup;
     ---
     Use the $(I ls -l) _command to get a list of files, pipe the output
     to $(I grep) and let it filter out all files except D source files,
     and write the output to the file $(I dfiles.txt):
     ---
     // Let's emulate the command "ls -l | grep \.d > dfiles.txt"
-    auto pipe = Pipe.create();
+    auto p = pipe();
     auto file = File("dfiles.txt", "w");
 
-    auto lsPid = spawnProcess("ls -l", stdin, pipe.writeEnd);
+    auto lsPid = spawnProcess("ls -l", stdin, p.writeEnd);
     scope(exit) wait(lsPid);
 
-    auto grPid = spawnProcess("grep \\.d", pipe.readEnd, file);
+    auto grPid = spawnProcess("grep \\.d", p.readEnd, file);
     scope(exit) wait(grPid);
     ---
     Open a set of files in OpenOffice Writer, and make it print
@@ -720,19 +720,101 @@ int wait(Pid pid)
 
 
 
-/** A unidirectional pipe.
+/** Creates a unidirectional _pipe.
 
-    Data is written to one end of the pipe and read from the other.
+    Data is written to one end of the _pipe and read from the other.
     ---
-    auto p = Pipe.create();
+    auto p = pipe();
     p.writeEnd.writeln("Hello World");
     assert (p.readEnd.readln().chomp() == "Hello World");
     ---
     Pipes can, for example, be used for interprocess communication
-    by spawning a new process and passing one end of the pipe to
+    by spawning a new process and passing one end of the _pipe to
     the child, while the parent uses the other end.  See the
     $(LREF spawnProcess) documentation for examples of this.
 */
+version(Posix) Pipe pipe()
+{
+    int[2] fds;
+    errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0,
+                 "Unable to create pipe");
+
+    Pipe p;
+
+    // TODO: Using the internals of File like this feels like a hack,
+    // but the File.wrapFile() function disables automatic closing of
+    // the file.  Perhaps there should be a protected version of
+    // wrapFile() that fills this purpose?
+    p._read.p = new File.Impl(
+        errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
+        1, null);
+    p._write.p = new File.Impl(
+        errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"),
+        1, null);
+
+    return p;
+}
+else version(Windows) Pipe pipe()
+{
+    // use CreatePipe to create an anonymous pipe
+    HANDLE readHandle;
+    HANDLE writeHandle;
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sa.sizeof;
+    sa.lpSecurityDescriptor = null;
+    sa.bInheritHandle = true;
+    if(!CreatePipe(&readHandle, &writeHandle, &sa, 0))
+    {
+        throw new Exception("Error creating pipe: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
+    }
+
+    // Create file descriptors from the handles
+    auto readfd = _handleToFD(readHandle, FHND_DEVICE);
+    auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
+
+    Pipe p;
+    version(PIPE_USE_ALT_FDOPEN)
+    {
+        // This is a re-implementation of DMC's fdopen, but without the
+        // mucking with the file descriptor.  POSIX standard requires the
+        // new fdopen'd file to retain the given file descriptor's
+        // position.
+        FILE * local_fdopen(int fd, const(char)* mode)
+        {
+            auto fp = core.stdc.stdio.fopen("NUL", mode);
+            if(!fp)
+                return null;
+            FLOCK(fp);
+            auto iob = cast(_iobuf*)fp;
+            .close(iob._file);
+            iob._file = fd;
+            iob._flag &= ~_IOTRAN;
+            FUNLOCK(fp);
+            return fp;
+        }
+
+        p._read.p = new File.Impl(
+            errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
+            1, null);
+        p._write.p = new File.Impl(
+            errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
+            1, null);
+    }
+    else
+    {
+        p._read.p = new File.Impl(
+            errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
+            1, null);
+        p._write.p = new File.Impl(
+            errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
+            1, null);
+    }
+
+    return p;
+}
+
+
+/// ditto
 struct Pipe
 {
 private:
@@ -746,88 +828,6 @@ public:
 
     /** The write end of the pipe. */
     @property File writeEnd() { return _write; }
-
-
-    /** Creates a new pipe. */
-    version(Posix) static Pipe create()
-    {
-        int[2] fds;
-        errnoEnforce(pipe(fds) == 0, "Unable to create pipe");
-
-        Pipe p;
-
-        // TODO: Using the internals of File like this feels like a hack,
-        // but the File.wrapFile() function disables automatic closing of
-        // the file.  Perhaps there should be a protected version of
-        // wrapFile() that fills this purpose?
-        p._read.p = new File.Impl(
-            errnoEnforce(fdopen(fds[0], "r"), "Cannot open read end of pipe"),
-            1, null);
-        p._write.p = new File.Impl(
-            errnoEnforce(fdopen(fds[1], "w"), "Cannot open write end of pipe"),
-            1, null);
-
-        return p;
-    }
-    else version(Windows) static Pipe create()
-    {
-        // use CreatePipe to create an anonymous pipe
-        HANDLE readHandle;
-        HANDLE writeHandle;
-        SECURITY_ATTRIBUTES sa;
-        sa.nLength = sa.sizeof;
-        sa.lpSecurityDescriptor = null;
-        sa.bInheritHandle = true;
-        if(!CreatePipe(&readHandle, &writeHandle, &sa, 0))
-        {
-            throw new Exception("Error creating pipe: " ~ sysErrorString(GetLastError()), __FILE__, __LINE__);
-        }
-
-        // Create file descriptors from the handles
-        auto readfd = _handleToFD(readHandle, FHND_DEVICE);
-        auto writefd = _handleToFD(writeHandle, FHND_DEVICE);
-
-        Pipe p;
-        version(PIPE_USE_ALT_FDOPEN)
-        {
-            // This is a re-implementation of DMC's fdopen, but without the
-            // mucking with the file descriptor.  POSIX standard requires the
-            // new fdopen'd file to retain the given file descriptor's
-            // position.
-            FILE * local_fdopen(int fd, const(char)* mode)
-            {
-                auto fp = core.stdc.stdio.fopen("NUL", mode);
-                if(!fp)
-                    return null;
-                FLOCK(fp);
-                auto iob = cast(_iobuf*)fp;
-                .close(iob._file);
-                iob._file = fd;
-                iob._flag &= ~_IOTRAN;
-                FUNLOCK(fp);
-                return fp;
-            }
-
-            p._read.p = new File.Impl(
-                errnoEnforce(local_fdopen(readfd, "r"), "Cannot open read end of pipe"),
-                1, null);
-            p._write.p = new File.Impl(
-                errnoEnforce(local_fdopen(writefd, "a"), "Cannot open write end of pipe"),
-                1, null);
-        }
-        else
-        {
-            p._read.p = new File.Impl(
-                errnoEnforce(fdopen(readfd, "r"), "Cannot open read end of pipe"),
-                1, null);
-            p._write.p = new File.Impl(
-                errnoEnforce(fdopen(writefd, "a"), "Cannot open write end of pipe"),
-                1, null);
-        }
-
-        return p;
-    }
-
 
 
     /** Closes both ends of the pipe.
@@ -846,9 +846,10 @@ public:
     }
 }
 
+
 unittest
 {
-    auto p = Pipe.create();
+    auto p = pipe();
     p.writeEnd.writeln("Hello World");
     assert (p.readEnd.readln().chomp() == "Hello World");
 }
@@ -899,7 +900,7 @@ ProcessPipes pipeProcess(string name, string[] args,
 
     if (redirectFlags & Redirect.stdin)
     {
-        auto p = Pipe.create();
+        auto p = pipe();
         stdinFile = p.readEnd;
         pipes._stdin = p.writeEnd;
     }
@@ -913,7 +914,7 @@ ProcessPipes pipeProcess(string name, string[] args,
         enforce((redirectFlags & Redirect.stdoutToStderr) == 0,
             "Invalid combination of options: Redirect.stdout | "
            ~"Redirect.stdoutToStderr");
-        auto p = Pipe.create();
+        auto p = pipe();
         stdoutFile = p.writeEnd;
         pipes._stdout = p.readEnd;
     }
@@ -927,7 +928,7 @@ ProcessPipes pipeProcess(string name, string[] args,
         enforce((redirectFlags & Redirect.stderrToStdout) == 0,
             "Invalid combination of options: Redirect.stderr | "
            ~"Redirect.stderrToStdout");
-        auto p = Pipe.create();
+        auto p = pipe();
         stderrFile = p.writeEnd;
         pipes._stderr = p.readEnd;
     }
