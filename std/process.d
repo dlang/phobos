@@ -123,44 +123,6 @@ else version(Windows)
 /** A handle corresponding to a spawned process. */
 final class Pid
 {
-private:
-
-    // Special values for _processID.
-    enum invalid = -1, terminated = -2;
-
-    // OS process ID number.  Only nonnegative IDs correspond to
-    // running processes.
-    int _processID = invalid;
-
-
-    // Exit code cached by wait().  This is only expected to hold a
-    // sensible value if _processID == terminated.
-    int _exitCode;
-
-
-    // Pids are only meant to be constructed inside this module, so
-    // we make the constructor private.
-    version(Windows)
-    {
-        HANDLE _handle;
-        this(int pid, HANDLE handle)
-        {
-            _processID = pid;
-            _handle = handle;
-        }
-    }
-    else
-    {
-        this(int id)
-        {
-            _processID = id;
-        }
-    }
-
-
-
-public:
-
     /** The ID number assigned to the process by the operating
         system.
     */
@@ -229,6 +191,41 @@ public:
                 CloseHandle(_handle);
                 _handle = INVALID_HANDLE_VALUE;
             }
+        }
+    }
+
+
+private:
+
+    // Special values for _processID.
+    enum invalid = -1, terminated = -2;
+
+    // OS process ID number.  Only nonnegative IDs correspond to
+    // running processes.
+    int _processID = invalid;
+
+
+    // Exit code cached by wait().  This is only expected to hold a
+    // sensible value if _processID == terminated.
+    int _exitCode;
+
+
+    // Pids are only meant to be constructed inside this module, so
+    // we make the constructor private.
+    version(Windows)
+    {
+        HANDLE _handle;
+        this(int pid, HANDLE handle)
+        {
+            _processID = pid;
+            _handle = handle;
+        }
+    }
+    else
+    {
+        this(int id)
+        {
+            _processID = id;
         }
     }
 }
@@ -817,11 +814,6 @@ else version(Windows) Pipe pipe()
 /// ditto
 struct Pipe
 {
-private:
-    File _read, _write;
-
-
-public:
     /** The read end of the pipe. */
     @property File readEnd() { return _read; }
 
@@ -844,6 +836,10 @@ public:
         _read.close();
         _write.close();
     }
+
+
+private:
+    File _read, _write;
 }
 
 
@@ -999,12 +995,6 @@ enum Redirect
 */
 struct ProcessPipes
 {
-private:
-    Redirect _redirectFlags;
-    Pid _pid;
-    File _stdin, _stdout, _stderr;
-
-public:
     /** Returns the $(LREF Pid) of the child process. */
     @property Pid pid()
     {
@@ -1041,6 +1031,13 @@ public:
             "Child process' standard error stream hasn't been redirected.");
         return _stderr;
     }
+
+
+private:
+
+    Redirect _redirectFlags;
+    Pid _pid;
+    File _stdin, _stdout, _stderr;
 }
 
 
@@ -1193,53 +1190,10 @@ abstract final class Environment
             environ = * _NSGetEnviron();
         }
     }
+
+
 static:
 
-private:
-    // Returns the length of an environment variable (in number of
-    // wchars, including the null terminator), or 0 if it doesn't exist.
-    version(Windows)
-    int varLength(LPCWSTR namez)
-    {
-        return GetEnvironmentVariableW(namez, null, 0);
-    }
-
-
-    // Retrieves the environment variable, returns false on failure.
-    bool getImpl(string name, out string value)
-    {
-        version(Posix)
-        {
-            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
-            if (vz == null) return false;
-            auto v = vz[0 .. strlen(vz)];
-
-            // Cache the last call's result.
-            static string lastResult;
-            if (v != lastResult) lastResult = v.idup;
-            value = lastResult;
-            return true;
-        }
-
-        else version(Windows)
-        {
-            const namez = toUTF16z(name);
-            immutable len = varLength(namez);
-            if (len == 0) return false;
-            if (len == 1) return true;
-
-            auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
-            value = toUTF8(buf[0 .. $-1]);
-            return true;
-        }
-
-        else static assert(0);
-    }
-
-
-
-public:
     // Retrieves an environment variable, throws on failure.
     string opIndex(string name)
     {
@@ -1367,6 +1321,49 @@ public:
         return aa;
     }
 
+
+private:
+
+    // Returns the length of an environment variable (in number of
+    // wchars, including the null terminator), or 0 if it doesn't exist.
+    version(Windows)
+    int varLength(LPCWSTR namez)
+    {
+        return GetEnvironmentVariableW(namez, null, 0);
+    }
+
+
+    // Retrieves the environment variable, returns false on failure.
+    bool getImpl(string name, out string value)
+    {
+        version(Posix)
+        {
+            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
+            if (vz == null) return false;
+            auto v = vz[0 .. strlen(vz)];
+
+            // Cache the last call's result.
+            static string lastResult;
+            if (v != lastResult) lastResult = v.idup;
+            value = lastResult;
+            return true;
+        }
+
+        else version(Windows)
+        {
+            const namez = toUTF16z(name);
+            immutable len = varLength(namez);
+            if (len == 0) return false;
+            if (len == 1) return true;
+
+            auto buf = new WCHAR[len];
+            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
+            value = toUTF8(buf[0 .. $-1]);
+            return true;
+        }
+
+        else static assert(0);
+    }
 }
 
 
