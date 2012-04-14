@@ -1140,7 +1140,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be 
+// Do not create instances of this struct since it will be
 // moved when the bug has been fixed.
 // Range that reads one line at a time asynchronously.
 static struct AsyncLineInputRange(Char)
@@ -1296,7 +1296,7 @@ unittest
 
 // Workaround bug #2458
 // It should really be defined inside the byLineAsync method.
-// Do not create instances of this struct since it will be 
+// Do not create instances of this struct since it will be
 // moved when the bug has been fixed.
 // Range that reads one chunk at a time asynchronously.
 static struct AsyncChunkInputRange
@@ -2095,9 +2095,6 @@ struct HTTP
 
         // Network settings
 
-        /// The URL to specify the location of the resource.
-        @property void url(const(char)[] url);
-
         /** Proxy
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy)
          */
@@ -2641,7 +2638,7 @@ struct FTP
     this(const(char)[] url)
     {
         initialize();
-        
+
         this.url = url;
     }
 
