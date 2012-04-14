@@ -4,31 +4,32 @@
 
     This is a summary of the functions in this module:
     $(UL $(LI
-        $(D spawnProcess()) spawns a new _process, optionally assigning it an
+        $(LREF spawnProcess) spawns a new _process, optionally assigning it an
         arbitrary set of standard input, output, and error streams.
-        It returns immediately, leaving the child _process to execute in
-        parallel with its parent.  All other functions in this module that
-        spawn processes are built around $(D spawnProcess()).)
+        The function returns immediately, leaving the child _process to execute
+        in parallel with its parent.  All other functions in this module that
+        spawn processes are built around $(LREF spawnProcess).)
     $(LI
-        $(D wait()) makes the parent _process wait for a child _process to
+        $(LREF wait) makes the parent _process wait for a child _process to
         terminate.  In general one should always do this, to avoid
         child _processes becoming "zombies" when the parent _process exits.
-        Scope guards are perfect for this – see the $(D spawnProcess())
+        Scope guards are perfect for this – see the $(LREF spawnProcess)
         documentation for examples.)
     $(LI
-        $(D pipeProcess()) and $(D pipeShell()) also spawn a child _process which
-        runs in parallel with its parent.  However, instead of taking
+        $(LREF pipeProcess) and $(LREF pipeShell) also spawn a child _process
+        which runs in parallel with its parent.  However, instead of taking
         arbitrary streams, they automatically create a set of
         pipes that allow the parent to communicate with the child
         through the child's standard input, output, and/or error streams.
-        These functions correspond roughly to C's $(D popen()) function.)
+        These functions correspond roughly to C's $(D popen) function.)
     $(LI
-        $(D execute()) and $(D shell()) start a new _process and wait for it
+        $(LREF execute) and $(LREF shell) start a new _process and wait for it
         to complete before returning.  Additionally, they capture
-        the _process' standard output and return it as a string.
-        These correspond roughly to C's $(D system()) function.
-    ))
-    The functions that have names containing "shell" run the given command
+        the _process' standard output and error streams and return
+        the output of these as a string.
+        These correspond roughly to C's $(D system) function.)
+    )
+    $(LREF shell) and $(LREF pipeShell) both run the given command
     through the user's default command interpreter.  On Windows, this is
     the $(I cmd.exe) program, on POSIX it is determined by the SHELL environment
     variable (defaulting to $(I /bin/sh) if it cannot be determined).  The
@@ -41,7 +42,7 @@
     strings.  Use the latter whenever the program name or any of the arguments
     contain spaces.
 
-    Unless the program name contains a directory, all functions will
+    Unless a directory is specified in the program name, all functions will
     search for the executable in the directories specified in the PATH
     environment variable.
 
@@ -242,7 +243,8 @@ public:
 
     Unless a directory is specified in the $(D _command) (or $(D name))
     parameter, this function will search the directories in the
-    PATH environment variable for the program.
+    PATH environment variable for the program.  To run an executable in
+    the current directory, use $(D "./$(I executable_name)").
 
     Params:
         command = A string containing the program name and
@@ -257,33 +259,34 @@ public:
             same environment as the parent process.
 
         stdin_ = The standard input stream of the child process.
-            This can be any $(D File) that is opened for reading.
+            This can be any $(XREF stdio,File) that is opened for reading.
             By default the child process inherits the parent's input
             stream.
 
         stdout_ = The standard output stream of the child process.
-            This can be any $(D File) that is opened for writing.
+            This can be any $(XREF stdio,File) that is opened for writing.
             By default the child process inherits the parent's output
             stream.
 
         stderr_ = The standard error stream of the child process.
-            This can be any $(D File) that is opened for writing.
+            This can be any $(XREF stdio,File) that is opened for writing.
             By default the child process inherits the parent's error
             stream.
 
-        config = Options controlling the behaviour of spawnProcess().
+        config = Options controlling the behaviour of $(D spawnProcess).
+            See the $(LREF Config) documentation for details.
 
         name = The name of the executable file.
 
         args = The _command line arguments to give to the program.
             (There is no need to specify the program name as the
-            zeroth argument, this is done automatically.)
+            zeroth argument; this is done automatically.)
 
     Note:
-    If you pass a $(D File) object that is $(I not) one of the standard
+    If you pass an $(XREF stdio,File) object that is $(I not) one of the standard
     input/output/error streams of the parent process, that stream
     will by default be closed in the parent process when this
-    function returns.  See the $(D Config) documentation below for information
+    function returns.  See the $(LREF Config) documentation below for information
     about how to disable this behaviour.
 
     Examples:
@@ -304,7 +307,7 @@ public:
     ---
     Use the $(I ls -l) _command to get a list of files, pipe the output
     to $(I grep) and let it filter out all files except D source files,
-    and write the output to the file "dfiles.txt":
+    and write the output to the file $(I dfiles.txt):
     ---
     // Let's emulate the command "ls -l | grep \.d > dfiles.txt"
     auto pipe = Pipe.create();
@@ -318,7 +321,7 @@ public:
     ---
     Open a set of files in OpenOffice Writer, and make it print
     any error messages to the standard output stream.  Note that since
-    the filenames contain spaces, we must specify them as an array:
+    the filenames contain spaces, we have to pass them in an array:
     ---
     spawnProcess("oowriter", ["my document.odt", "your document.odt"],
         stdin, stdout, stdout);
@@ -648,7 +651,7 @@ version(Posix) private bool isExecutable(string path)
 
 
 
-/** Flags that control the behaviour of $(D spawnProcess()).
+/** Flags that control the behaviour of $(LREF spawnProcess).
     Use bitwise OR to combine flags.
 
     Example:
@@ -675,7 +678,7 @@ enum Config
     /** Unless the child process inherits the standard
         input/output/error streams of its parent, one almost
         always wants the streams closed in the parent when
-        $(D spawnProcess()) returns.  Therefore, by default, this
+        $(LREF spawnProcess) returns.  Therefore, by default, this
         is done.  If this is not desirable, pass any of these
         options to spawnProcess.
     */
@@ -684,7 +687,7 @@ enum Config
     noCloseStderr = 4,                                  /// ditto
 
     /** On Windows, this option causes the process to run in
-        a graphical console.  On POSIX it has no effect.
+        a console window.  On POSIX it has no effect.
     */
     gui = 8,
 }
@@ -693,19 +696,21 @@ enum Config
 
 
 /** Wait for a specific spawned process to terminate and return
-    its exit status.  See the $(D spawnProcess()) documentation above
-    for examples of usage.
+    its exit status.
 
     In general one should always _wait for child processes to terminate
     before exiting the parent process.  Otherwise, they may become
-    "zombies" – processes that are defunct, yet still occupy a slot
-    in the OS process table.
+    "$(WEB en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
+    that are defunct, yet still occupy a slot in the OS process table.
 
     Note:
     On POSIX systems, if the process is terminated by a signal,
     this function returns a negative number whose absolute value
     is the signal number.  (POSIX restricts normal exit codes
     to the range 0-255.)
+
+    Examples:
+    See the $(LREF spawnProcess) documentation.
 */
 int wait(Pid pid)
 {
@@ -716,8 +721,9 @@ int wait(Pid pid)
 
 
 
-/** A unidirectional pipe.  Data is written to one end of the pipe
-    and read from the other.
+/** A unidirectional pipe.
+
+    Data is written to one end of the pipe and read from the other.
     ---
     auto p = Pipe.create();
     p.writeEnd.writeln("Hello World");
@@ -726,7 +732,7 @@ int wait(Pid pid)
     Pipes can, for example, be used for interprocess communication
     by spawning a new process and passing one end of the pipe to
     the child, while the parent uses the other end.  See the
-    $(D spawnProcess()) documentation for examples of this.
+    $(LREF spawnProcess) documentation for examples of this.
 */
 struct Pipe
 {
@@ -827,7 +833,7 @@ public:
 
     /** Close both ends of the pipe.
 
-        Normally it is not necessary to do this manually, as $(D File)
+        Normally it is not necessary to do this manually, as $(XREF stdio,File)
         objects are automatically closed when there are no more references
         to them.
 
@@ -855,11 +861,11 @@ unittest
 
 
 /** Start a new process, and create pipes to redirect its standard
-    input, output and/or error streams.  This function returns
-    immediately, leaving the child process to execute in parallel
-    with the parent.
+    input, output and/or error streams.
 
-    $(D pipeShell()) invokes the user's _command interpreter
+    These functions return immediately, leaving the child process to
+    execute in parallel with the parent.
+    $(LREF pipeShell) invokes the user's _command interpreter
     to execute the given program or _command.
 
     Example:
@@ -964,7 +970,7 @@ ProcessPipes pipeShell(string command, Redirect redirectFlags = Redirect.all)
 
 
 
-/** Flags that can be passed to $(D pipeProcess()) and $(D pipeShell())
+/** Flags that can be passed to $(LREF pipeProcess) and $(LREF pipeShell)
     to specify which of the child process' standard streams are redirected.
     Use bitwise OR to combine flags.
 */
@@ -988,7 +994,7 @@ enum Redirect
 
 
 
-/** Object containing $(D File) handles that allow communication with
+/** Object containing $(XREF stdio,File) handles that allow communication with
     a child process through its standard streams.
 */
 struct ProcessPipes
@@ -999,7 +1005,7 @@ private:
     File _stdin, _stdout, _stderr;
 
 public:
-    /** Return the $(D Pid) of the child process. */
+    /** Return the $(LREF Pid) of the child process. */
     @property Pid pid()
     {
         enforce (_pid !is null);
@@ -1007,7 +1013,7 @@ public:
     }
 
 
-    /** Return a $(D File) that allows writing to the child process'
+    /** Return an $(XREF stdio,File) that allows writing to the child process'
         standard input stream.
     */
     @property File stdin()
@@ -1018,8 +1024,8 @@ public:
     }
 
 
-    /** Return a $(D File) that allows reading from the child process'
-        standard output/error stream.
+    /** Return an $(XREF stdio,File) that allows reading from the child
+        process' standard output/error stream.
     */
     @property File stdout()
     {
@@ -1045,11 +1051,11 @@ public:
 
 struct ProcessResult { int status; string output; }
 
-/** Execute the given program.
+/** Execute the given program and return its exit code and output.
 
-    This function blocks until the program returns, and returns
-    its exit code and output (what it writes to its
-    standard output $(I and) error streams).
+    This function blocks until the program terminates.
+    The $(D output) string includes what the program writes to its
+    standard error stream as well as its standard output stream.
     ---
     auto dmd = execute("dmd myapp.d");
     if (dmd.status != 0) writeln("Compilation failed:\n", dmd.output);
@@ -1111,10 +1117,12 @@ version(Windows) private string getShell()
 
 
 
-/** Execute $(D _command) in the user's default _shell.
-    This function blocks until the _command returns, and returns
-    its exit code and output (what the process writes to its
-    standard output $(I and) error streams).
+/** Execute $(D _command) in the user's default _shell, and return its
+    exit code and output.
+
+    This function blocks until the command terminates.
+    The $(D output) string includes what the command writes to its
+    standard error stream as well as its standard output stream.
     ---
     auto ls = shell("ls -l");
     writefln("ls exited with code %s and said: %s", ls.status, ls.output);
