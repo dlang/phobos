@@ -757,24 +757,19 @@ template variadicFunctionStyle(func...)
 {
     alias Unqual!(FunctionTypeOf!func) Func;
 
-    Variadic determineVariadicity()
-    {
-        // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
-        immutable callconv = functionLinkage!Func;
-        immutable mfunc = mangledName!Func;
-        immutable mtype = mangledName!(ReturnType!Func);
-        debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
+    // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
+    enum callconv = functionLinkage!Func;
+    enum mfunc = mangledName!Func;
+    enum mtype = mangledName!(ReturnType!Func);
+    static assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
 
-        immutable argclose = mfunc[$ - mtype.length - 1];
-        final switch (argclose)
-        {
-            case 'X': return Variadic.typesafe;
-            case 'Y': return (callconv == "C") ? Variadic.c : Variadic.d;
-            case 'Z': return Variadic.no;
-        }
-    }
+    enum argclose = mfunc[$ - mtype.length - 1];
+    static assert(argclose >= 'X' && argclose <= 'Z');
 
-    enum Variadic variadicFunctionStyle = determineVariadicity();
+    enum Variadic variadicFunctionStyle =
+        argclose == 'X' ? Variadic.typesafe :
+        argclose == 'Y' ? (callconv == "C") ? Variadic.c : Variadic.d :
+        Variadic.no; // 'Z'
 }
 
 unittest
@@ -3465,14 +3460,7 @@ unittest
  */
 template isIterable(T)
 {
-    static if (is(typeof({ foreach(elem; T.init) {} })))
-    {
-        enum bool isIterable = true;
-    }
-    else
-    {
-        enum bool isIterable = false;
-    }
+    enum isIterable = is(typeof({ foreach(elem; T.init) {} }));
 }
 
 unittest
