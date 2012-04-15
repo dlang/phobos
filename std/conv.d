@@ -1048,21 +1048,23 @@ T toImpl(T, S)(S s)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to! string(E.a) == "a"c);
-    assert(to!wstring(E.b) == "b"w);
-    assert(to!dstring(E.c) == "c"d);
 
-    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-    assert(to! string(F.x) == "x"c);
-    assert(to!wstring(F.y) == "y"w);
-    assert(to!dstring(F.z) == "z"d);
+    enum EU { a = 0, b = 1, c = 2 }     // base type is unsigned
+    enum EI { a = -1, b = 0, c = 1 }    // base type is signed (bug 7909)
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+
+    foreach (E; TypeTuple!(EU, EI, EF))
+    {
+        assert(to! string(E.a) == "a"c);
+        assert(to!wstring(E.a) == "a"w);
+        assert(to!dstring(E.a) == "a"d);
+    }
 
     // Test an value not corresponding to an enum member.
-    auto o = cast(E)5;
-    assert(to! string(o) == "cast(E)5"c);
-    assert(to!wstring(o) == "cast(E)5"w);
-    assert(to!dstring(o) == "cast(E)5"d);
+    auto o = cast(EU)5;
+    assert(to! string(o) == "cast(EU)5"c);
+    assert(to!wstring(o) == "cast(EU)5"w);
+    assert(to!dstring(o) == "cast(EU)5"d);
 }
 
 /// ditto
