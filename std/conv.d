@@ -101,6 +101,12 @@ private
         formatValue(w, src, f);
         return w.data;
     }
+
+    template isEnumStrToStr(S, T)   // @@@Workaround@@@
+    {
+        enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
+                              is(S == enum) && isSomeString!T;
+    }
 }
 
 /**
@@ -250,7 +256,7 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T))
+    if (isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T))
 {
     alias isUnsigned isUnsignedInt;
 
@@ -1038,8 +1044,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S s)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(S == enum) &&
+    if (is(S == enum) &&
         isSomeString!T)
 {
     return toStr!T(s);
@@ -1049,11 +1054,14 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    enum EB { a = true }
     enum EU { a = 0, b = 1, c = 2 }     // base type is unsigned
     enum EI { a = -1, b = 0, c = 1 }    // base type is signed (bug 7909)
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC { a = 'a', b = 'b' }
+    enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; TypeTuple!(EU, EI, EF))
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
