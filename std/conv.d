@@ -1089,7 +1089,7 @@ deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")
 
 /// ditto
 T toImpl(T, S)(S b)
-    if (is(Unqual!S == bool) &&
+    if (isBoolean!S &&
         isSomeString!T)
 {
     return toStr!T(b);
@@ -1106,7 +1106,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S c)
-    if (isSomeChar!(Unqual!S) &&
+    if (isSomeChar!S &&
         isSomeString!T)
 {
     return toStr!T(c);
@@ -1148,7 +1148,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S input)
-    if (isIntegral!S && isUnsigned!S &&
+    if (isIntegral!S &&
         isSomeString!T)
 {
     return toStr!T(input);
@@ -1165,26 +1165,7 @@ unittest
         assert(to!string(to!Int(9)) == "9");
         assert(to!string(to!Int(123)) == "123");
     }
-}
 
-/// ditto
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isSigned!S &&
-        isSomeString!T)
-{
-    return toStr!T(value);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(wtext(int.max) == "2147483647"w);
-    assert(wtext(int.min) == "-2147483648"w);
-    assert(to!string(0L) == "0");
-}
-
-unittest
-{
     foreach (Int; TypeTuple!(byte, short, int, long))
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1200,9 +1181,17 @@ unittest
     }
 }
 
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    assert(wtext(int.max) == "2147483647"w);
+    assert(wtext(int.min) == "-2147483648"w);
+    assert(to!string(0L) == "0");
+}
+
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!(Unqual!S) &&
+    if (isIntegral!S &&
         isSomeString!T)
 in
 {
@@ -1210,7 +1199,7 @@ in
 }
 body
 {
-    static if (!is(Unqual!S == ulong))
+    static if (!is(IntegralTypeOf!S == ulong))
     {
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
