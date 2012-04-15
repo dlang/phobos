@@ -2104,24 +2104,25 @@ Target parse(Target, Source)(ref Source s)
         ~ to!string(s) ~ "'");
 }
 
-//@@@BUG4737@@@: typeid doesn't work for scoped enum with initializer
-version(unittest)
-{
-    private enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-}
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to!E("a"c) == E.a);
-    assert(to!E("b"w) == E.b);
-    assert(to!E("c"d) == E.c);
 
-    assert(to!F("x"c) == F.x);
-    assert(to!F("y"w) == F.y);
-    assert(to!F("z"d) == F.z);
+    enum EB : bool { a = true, b = false, c = a }
+    enum EU { a, b, c }
+    enum EI { a = -1, b = 0, c = 1 }
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC : char { a = 'a', b = 'b', c = 'c' }
+    enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    assertThrown!ConvException(to!E("d"));
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    {
+        assert(to!E("a"c) == E.a);
+        assert(to!E("b"w) == E.b);
+        assert(to!E("c"d) == E.c);
+
+        assertThrown!ConvException(to!E("d"));
+    }
 }
 
 unittest // bugzilla 4744
