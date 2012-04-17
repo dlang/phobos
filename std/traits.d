@@ -1476,8 +1476,11 @@ template hasIndirections(T)
         }
         else static if(isStaticArray!(T[0]))
         {
-            enum Impl = Impl!(T[1 .. $]) ||
-                Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
+            static if (is(T[0] _ : void[N], size_t N))
+                enum Impl = true;
+            else
+                enum Impl = Impl!(T[1 .. $]) ||
+                    Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
         }
         else
         {
@@ -1509,6 +1512,9 @@ unittest
     static assert(!hasIndirections!(void function()));
     static assert( hasIndirections!(void*[1]));
     static assert(!hasIndirections!(byte[1]));
+
+    // void static array hides actual type of bits, so "may have indirections".
+    static assert( hasIndirections!(void[1]));
 }
 
 // These are for backwards compatibility, are intentionally lacking ddoc,
