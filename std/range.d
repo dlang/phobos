@@ -517,6 +517,7 @@ calling $(D r.empty) has, or would have, returned $(D false).))
 template isInputRange(R)
 {
     enum bool isInputRange = is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;       // can define a range object
         if (r.empty) {}   // can test for empty
@@ -539,6 +540,7 @@ unittest
     static assert(isInputRange!(int[]));
     static assert(isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
+    static assert(isInputRange!(inout(int)[])); // bug 7824
 }
 
 /**
