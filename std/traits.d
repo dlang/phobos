@@ -188,7 +188,10 @@ template moduleName(alias T)
         static assert(T.stringof[0..8] != "package ", "cannot get the module name for a package");
 
     static if (T.stringof.length >= 8 && T.stringof[0..7] == "module ")
-        enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+        static if (__traits(compiles, packageName!(T)))
+            enum moduleName = packageName!(T) ~ '.' ~ T.stringof[7..$];
+        else
+            enum moduleName = T.stringof[7..$];
     else
         alias moduleName!(__traits(parent, T)) moduleName;
 }
@@ -757,24 +760,19 @@ template variadicFunctionStyle(func...)
 {
     alias Unqual!(FunctionTypeOf!func) Func;
 
-    Variadic determineVariadicity()
-    {
-        // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
-        immutable callconv = functionLinkage!Func;
-        immutable mfunc = mangledName!Func;
-        immutable mtype = mangledName!(ReturnType!Func);
-        debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
+    // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
+    enum callconv = functionLinkage!Func;
+    enum mfunc = mangledName!Func;
+    enum mtype = mangledName!(ReturnType!Func);
+    static assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
 
-        immutable argclose = mfunc[$ - mtype.length - 1];
-        final switch (argclose)
-        {
-            case 'X': return Variadic.typesafe;
-            case 'Y': return (callconv == "C") ? Variadic.c : Variadic.d;
-            case 'Z': return Variadic.no;
-        }
-    }
+    enum argclose = mfunc[$ - mtype.length - 1];
+    static assert(argclose >= 'X' && argclose <= 'Z');
 
-    enum Variadic variadicFunctionStyle = determineVariadicity();
+    enum Variadic variadicFunctionStyle =
+        argclose == 'X' ? Variadic.typesafe :
+        argclose == 'Y' ? (callconv == "C") ? Variadic.c : Variadic.d :
+        Variadic.no; // 'Z'
 }
 
 unittest
@@ -2030,7 +2028,6 @@ template InterfacesTuple(T)
 
 unittest
 {
-    struct Test1_WorkaroundForBug2986
     {
         // doc example
         interface I1 {}
@@ -2041,7 +2038,6 @@ unittest
         alias InterfacesTuple!(C) TL;
         static assert(is(TL[0] == I1) && is(TL[1] == I2));
     }
-    struct Test2_WorkaroundForBug2986
     {
         interface Iaa {}
         interface Iab {}
@@ -2051,11 +2047,11 @@ unittest
         interface Ib : Iba, Ibb {}
         interface I : Ia, Ib {}
         interface J {}
-        class B : J {}
-        class C : B, Ia, Ib {}
+        class B2 : J {}
+        class C2 : B2, Ia, Ib {}
         static assert(is(InterfacesTuple!(I) ==
                         TypeTuple!(Ia, Iaa, Iab, Ib, Iba, Ibb)));
-        static assert(is(InterfacesTuple!(C) ==
+        static assert(is(InterfacesTuple!(C2) ==
                         TypeTuple!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
     }
 }
@@ -3475,17 +3471,20 @@ unittest
 /**
 Returns the target type of a pointer.
 */
-template pointerTarget(T : T*)
+template PointerTarget(T : T*)
 {
-    alias T pointerTarget;
+    alias T PointerTarget;
 }
+
+/// $(RED Scheduled for deprecation. Please use $(LREF PointerTarget) instead.)
+alias PointerTarget pointerTarget;
 
 unittest
 {
-    static assert( is(pointerTarget!(int*) == int));
-    static assert( is(pointerTarget!(long*) == long));
+    static assert( is(PointerTarget!(int*) == int));
+    static assert( is(PointerTarget!(long*) == long));
 
-    static assert(!is(pointerTarget!int));
+    static assert(!is(PointerTarget!int));
 }
 
 /**
@@ -3497,14 +3496,7 @@ unittest
  */
 template isIterable(T)
 {
-    static if (is(typeof({ foreach(elem; T.init) {} })))
-    {
-        enum bool isIterable = true;
-    }
-    else
-    {
-        enum bool isIterable = false;
-    }
+    enum isIterable = is(typeof({ foreach(elem; T.init) {} }));
 }
 
 unittest

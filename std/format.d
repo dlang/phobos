@@ -2469,7 +2469,7 @@ unittest
    Pointers are formatted as hex integers.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isPointer!T)
+if (/*!hasToString!(T, Char) && */isPointer!T)
 {
     if (val is null)
         put(w, "null");
@@ -2509,6 +2509,19 @@ unittest
     formatTest( p, "null" );
 
     auto q = cast(void*)0xFFEECCAA;
+    formatTest( q, "FFEECCAA" );
+}
+
+unittest
+{
+    struct S
+    {
+        string toString(){ return ""; }
+    }
+    S* p = null;
+    formatTest( p, "null" );
+
+    S* q = cast(S*)0xFFEECCAA;
     formatTest( q, "FFEECCAA" );
 }
 

@@ -82,14 +82,16 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 .asm.obj:
 	$(CC) -c $*
 
-targets : phobos.lib
+LIB=phobos.lib
+
+targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj phobos.lib
+test.exe : test.obj $(LIB)
 	$(DMD) test.obj -g -L/map
 
 OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
@@ -346,12 +348,12 @@ SRC_ZLIB= \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
-phobos.lib : $(OBJS) $(SRCS) \
+$(LIB) : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) phobos.lib
+unittest : $(SRCS) $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
@@ -362,12 +364,12 @@ unittest : $(SRCS) phobos.lib
 #unittest : unittest.exe
 #	unittest
 #
-#unittest.exe : unittest.d phobos.lib
+#unittest.exe : unittest.d $(LIB)
 #	$(DMD) unittest -g
 #	dmc unittest.obj -g
 
-cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+cov : $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) $(LIB)
 	cov
 
 html : $(DOCS)
@@ -951,14 +953,14 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del unittest1.obj unittest.obj unittest.map unittest.exe
-	del phobos.lib
+	del $(LIB)
 	del phobos.json
 
 cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\windows\lib\ 
+	$(CP) $(LIB) $(DIR)\windows\lib\ 
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
