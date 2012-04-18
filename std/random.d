@@ -1498,22 +1498,45 @@ struct RandomSample(R, Random = void)
 /**
 Constructor.
 */
-    static if (hasLength!R)
-        this(R input, size_t howMany)
-        {
-            this(input, howMany, input.length);
-        }
 
-    this(R input, size_t howMany, size_t total)
-    {
-        _input = input;
-        _available = total;
-        _toSelect = howMany;
-        enforce(_toSelect <= _available);
-        // we should skip some elements initially so we don't always
-        // start with the first
-        prime();
-    }
+	private void init(R input, size_t howMany, size_t total)
+	{
+		_input = input;
+		_available = total;
+		_toSelect = howMany;
+		enforce(_toSelect <= _available);
+		// we should skip some elements initially so we don't always
+		// start with the first
+		prime();
+	}
+
+	static if(is(Random == void))
+	{
+		static if (hasLength!R)
+			this(R input, size_t howMany)
+			{
+				this(input, howMany, input.length);
+			}
+
+		this(R input, size_t howMany, size_t total)
+		{
+			init(input, howMany, total);
+		}
+	}
+	else
+	{
+		static if (hasLength!R)
+			this(R input, size_t howMany, Random _gen)
+			{
+				this(input, howMany, input.length, _gen);
+			}
+
+		this(R input, size_t howMany, size_t total, Random _gen)
+		{
+			gen = _gen;
+			init(input, howMany, total);
+		}
+	}
 
 /**
    Range primitives.
@@ -1608,8 +1631,7 @@ auto randomSample(R)(R r, size_t n) if (hasLength!R)
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
 if(isInputRange!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, total);
-    ret.gen = gen;
+    auto ret = RandomSample!(R, Random)(r, n, total, gen);
     return ret;
 }
 
@@ -1617,8 +1639,7 @@ if(isInputRange!R && isUniformRNG!Random)
 auto randomSample(R, Random)(R r, size_t n, Random gen)
 if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, r.length);
-    ret.gen = gen;
+    auto ret = RandomSample!(R, Random)(r, n, r.length, gen);
     return ret;
 }
 
