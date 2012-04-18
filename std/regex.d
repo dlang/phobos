@@ -6557,7 +6557,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
     //Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replace("12000 + 42100 = 56000", com, ",") == "12,000 + 42,100 = 56,100");
+    assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
 
     The format string can reference parts of match using the following notation.
