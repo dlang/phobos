@@ -555,6 +555,7 @@ unittest
  * ---
  * import std.traits;
  * alias int[string] Hash;
+ * static assert(is(KeyType!Hash == string));
  * KeyType!Hash str = "string";   // str is declared as string
  * --- 
  */
@@ -569,6 +570,7 @@ template KeyType(V : V[K], K)
  * ---
  * import std.traits;
  * alias int[string] Hash;
+ * static assert(is(ValueType!Hash == int));
  * ValueType!Hash num = 1;   // num is declared as int
  * --- 
  */
@@ -579,9 +581,11 @@ template ValueType(V : V[K], K)
 
 unittest
 {
-    alias int[string] AA;
-    static assert(is(KeyType!AA == string));
-    static assert(is(ValueType!AA == int));
+    alias int[string] Hash;
+    static assert(is(KeyType!Hash == string));
+    static assert(is(ValueType!Hash == int));
+    KeyType!Hash str = "a";
+    ValueType!Hash num = 1;
 }
 
 /**
