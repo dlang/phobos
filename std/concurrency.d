@@ -1043,8 +1043,8 @@ private
                     if( *depends && tid != owner )
                     {
                         auto e = new LinkTerminated( tid );
-                        auto msg = Message( MsgType.standard, e );
-                        if( onStandardMsg( msg ) )
+                        auto m = Message( MsgType.standard, e );
+                        if( onStandardMsg( m ) )
                             return true;
                         throw e;
                     }
@@ -1053,8 +1053,8 @@ private
                 {
                     owner = Tid.init;
                     auto e = new OwnerTerminated( tid );
-                    auto msg = Message( MsgType.standard, e );
-                    if( onStandardMsg( msg ) )
+                    auto m = Message( MsgType.standard, e );
+                    if( onStandardMsg( m ) )
                         return true;
                     throw e;
                 }

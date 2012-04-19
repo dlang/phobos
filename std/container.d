@@ -152,8 +152,8 @@ $(TD Same as $(D c.stableInsert(v)) but relaxes complexity to linear.))
 $(TR  $(TDNW $(D c.removeAny())) $(TDNW $(D log n$(SUB c)))
 $(TD Removes some element from $(D c) and returns it.))
 
-$(TR  $(TDNW $(D c.stableRemoveAny(v))) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.removeAny(v)), but is guaranteed to not invalidate any
+$(TR  $(TDNW $(D c.stableRemoveAny())) $(TDNW $(D log n$(SUB c)))
+$(TD Same as $(D c.removeAny()), but is guaranteed to not invalidate any
 iterators.))
 
 $(TR  $(TDNW $(D c.insertFront(v))) $(TDNW $(D log n$(SUB c)))
