@@ -1109,7 +1109,8 @@ struct FormatSpec(Char)
                 "\ntrailing = ", trailing, "\n");
     }
 }
-unittest {
+unittest
+{
     //Test the example
     auto a = appender!(string)();
     auto fmt = "Number: %2.4e\nString: %s";
@@ -1140,24 +1141,24 @@ unittest {
   */
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
-    if (fmt.length < 2)
-        throw new Exception("fmt must be at least 2 characters long");
-    if (fmt[0] != '%')
-        throw new Exception("fmt must start with a '%' character");
+    enforce(fmt.length >= 2, new Exception("fmt must be at least 2 characters long"));
+    enforce(fmt.front == '%', new Exception("fmt must start with a '%' character"));
 
-    auto a = appender!(Char[])();
+    static struct DummyOutputRange {
+        void put(C)(C[] buf) {} // eat elements
+    }
+    auto a = DummyOutputRange();
     auto spec = FormatSpec!Char(fmt);
     //dummy write
     spec.writeUpToNextSpec(a);
 
-    if (spec.trailing != "") {
-        throw new Exception(text("Trailing characters in fmt string: '",
-                    spec.trailing));
-    }
+    enforce(spec.trailing.empty,
+            new Exception(text("Trailing characters in fmt string: '", spec.trailing)));
 
     return spec;
 }
-unittest {
+unittest
+{
     auto spec = singleSpec("%2.3e");
 
     assert(spec.trailing == "");
@@ -1165,26 +1166,9 @@ unittest {
     assert(spec.width == 2);
     assert(spec.precision == 3);
 
-    try {
-        singleSpec("");
-        assert(false);
-    } catch (Exception e) {
-        //GULP
-    }
-
-    try {
-        singleSpec("2.3e");
-        assert(false);
-    } catch (Exception e) {
-        //GULP
-    }
-
-    try {
-        singleSpec("%2.3eTest");
-        assert(false);
-    } catch (Exception e) {
-        //GULP
-    }
+    assertThrown(singleSpec(""));
+    assertThrown(singleSpec("2.3e"));
+    assertThrown(singleSpec("%2.3eTest"));
 }
 
 /**
