@@ -4105,6 +4105,18 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
     }
     return r2.empty ? (r1 = r, true) : false;
 }
+/// ditto
+bool skipOver(alias pred, R1, R2)(ref R1 r1, R2 r2)
+    if (isSomeFunction!pred && is(typeof(pred(r1.front, r2.front))))
+{
+    auto r = r1.save;
+    while (!r2.empty && !r.empty && pred(r.front, r2.front))
+    {
+        r.popFront();
+        r2.popFront();
+    }
+    return r2.empty ? (r1 = r, true) : false;
+}
 
 unittest
 {
@@ -4113,6 +4125,13 @@ unittest
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
     assert(skipOver(s1, "Hell") && s1 == "o world");
+
+    string[]  r1 = ["abc", "def", "hij"];
+    dstring[] r2 = ["abc"d];
+    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]));
+    assert(r1 == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r1, r2));
+    assert(r1 == ["def", "hij"]);
 }
 
 /**
@@ -4127,12 +4146,27 @@ if (is(typeof(binaryFun!pred(r.front, e))))
         ? (r.popFront(), true)
         : false;
 }
+/// ditto
+bool skipOver(alias pred, R, E)(ref R r, E e)
+    if (isSomeFunction!pred && is(typeof(pred(r.front, e))))
+{
+    return pred(r.front, e)
+        ? (r.popFront, true)
+        : false;
+}
 
 unittest {
     auto s1 = "Hello world";
-    assert(!skipOver(s1, "Ha"));
+    assert(!skipOver(s1, 'a'));
     assert(s1 == "Hello world");
-    assert(skipOver(s1, "Hell") && s1 == "o world");
+    assert(skipOver(s1, 'H') && s1 == "ello world");
+
+    string[] r = ["abc", "def", "hij"];
+    dstring e = "abc"d;
+    assert(!skipOver!((a, b) => a.equal(b))(r, "def"d));
+    assert(r == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r, e));
+    assert(r == ["def", "hij"]);
 }
 
 /* (Not yet documented.)
