@@ -4361,6 +4361,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property auto save() { return this; }
         Value opIndex(ulong n)
         {
+            assert(n < this.length);
+
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + step * n);
@@ -4427,6 +4429,8 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property auto save() { return this; }
         Value opIndex(ulong n)
         {
+            assert(n < this.length);
+
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + n);
