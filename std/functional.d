@@ -145,7 +145,7 @@ unittest
 */
 //alias binaryFun!(q{a == b}) equalTo;
 
-/*
+/**
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
 */
