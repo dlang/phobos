@@ -6261,7 +6261,7 @@ public:
     }
 
     ///Number of matches in this object.
-    @property size_t length() const { return b-f;  }
+    @property size_t length() const { return _empty ? 0 : b-f;  }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
