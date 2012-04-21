@@ -26,7 +26,7 @@ struct SafeGC
        Pointer to object of type $(D T). If $(D T) has $(D class)
        type, $(D Pointer!T) is $(D T*), not $(D T).
      */
-    template OwningPointer(T) { alias T* Pointer; }
+    template OwningPointer(T) { alias T* OwningPointer; }
 
     /**
        Pointer to object of type $(D T). If $(D T) has $(D class)
@@ -167,10 +167,6 @@ struct DList(T, A = SafeGC)
         private A.Pointer!Node next, prev;
     }
 
-    private alias A.Pointer!Node NodePtr;
-
-    private A.OwningPointer!Node _root;
-
     @property auto dup()
     {
         if (!_root) return NodePtr.init;
@@ -240,6 +236,10 @@ struct DList(T, A = SafeGC)
     void insert(T obj)
     {
     }
+
+    private alias A.Pointer!Node NodePtr;
+    // State
+    private A.OwningPointer!Node _root;
 }
 
 version(unittest) private class Test
