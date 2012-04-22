@@ -1300,7 +1300,7 @@ class Stream : InputStream, OutputStream {
    * If the stream is not seekable the contents from the current position to eof
    * is read and returned.
    */
-  override string toString() {
+  override string toString() const { with (cast(Stream)this) {
     if (!readable)
       return super.toString();
     try
@@ -1335,13 +1335,13 @@ class Stream : InputStream, OutputStream {
     {
         return super.toString();
     }
-  }
+  } }
 
   /***
    * Get a hash of the stream by reading each byte and using it in a CRC-32
    * checksum.
    */
-  override size_t toHash() @trusted {
+  override size_t toHash() @trusted const { with (cast(Stream)this) {
     if (!readable || !seekable)
       return super.toHash();
     try
@@ -1363,7 +1363,7 @@ class Stream : InputStream, OutputStream {
     {
         return super.toHash();
     }
-  }
+  } }
 
   // helper for checking that the stream is readable
   final protected void assertReadable() {
@@ -2605,10 +2605,10 @@ class TArrayStream(Buffer): Stream {
     return cast(ubyte[])res;
   }
 
-  override string toString() {
+  override string toString() const { with (cast(TArrayStream!Buffer)this) {
       // assume data is UTF8
       return to!(string)(cast(char[])data);
-  }
+  } }
 }
 
 /* Test the TArrayStream */
