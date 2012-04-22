@@ -1610,34 +1610,48 @@ unittest
 */
 struct NotNull(T)
 {
-    T t;
-    alias t this; /// this is substitutable for the regular (nullable) type
+    private T _notNullData;
+    // Apparently a compiler bug - the invariant being uncommented breaks all kinds of stuff.
+    // invariant() { assert(_notNullData !is null); }
+
+    alias _notNullData this; /// this is substitutable for the regular (nullable) type
     @disable this();
-    /// constructs with a runtime not null check
+
+    // this could arguably break the static type check because
+    // you can assign it from a variable that is null.. but I
+    // think it is important that NotNull!Object = new Object();
+    // works, without having to say assumeNotNull(new Object())
+    // for convenience of using with local variables.
+
+    /// constructs with a runtime not null check (via assert())
     this(T value)
     {
         assert(value !is null);
-        t = value;
+        _notNullData = value;
     }
 
     @disable this(typeof(null)); /// the null literal can be caught at compile time
-
     @disable typeof(this) opAssign(typeof(null)); /// ditto
-
-    /// does a runtime null check on assignment, to ensure we never store null
-    typeof(this) opAssign(T rhs)
+    NotNull!T opAssign(NotNull!T rhs)
     {
-        assert(rhs !is null);
-        t = rhs;
+        this._notNullData = rhs._notNullData;
         return this;
     }
 }
 
-/// A convenience function to construct a NotNull value. If you pass it null, it will throw.
-NotNull!T notNull(T)(T t)
+/// A convenience function to construct a NotNull value from something you know isn't null.
+NotNull!T assumeNotNull(T)(T t)
 {
 	return NotNull!T(t);
 }
+
+/// A convenience function to check for null. If you pass null, it will throw an exception. Otherwise, return NotNull!T.
+NotNull!T checkNotNull(T)(T t)
+{
+	enforce(t !is null);
+	return NotNull!T(t);
+}
+
 unittest
 {
     import core.exception;
@@ -1661,12 +1675,10 @@ unittest
     assert(!__traits(compiles, foo = null)); // again, literal null is caught at compile time
 
     int* test;
-    // this will compile; the nullness isn't certain at compile time, but must throw at runtime assignment
-    assertThrown!AssertError(foo = test);
 
     test = &dummy;
 
-    foo = test; // should be fine
+    foo = assumeNotNull(test); // should be fine
 
     void bar(int* a) {}
 
@@ -1679,16 +1691,16 @@ unittest
     assert(!__traits(compiles, takesNotNull(test))); // should not work; plain int might be null
     takesNotNull(foo); // should be fine
 
-    takesNotNull(notNull(test)); // this should work too
-    assert(!__traits(compiles, takesNotNull(notNull(null)))); // notNull(null) shouldn't compile
+    takesNotNull(assumeNotNull(test)); // this should work too
+    assert(!__traits(compiles, takesNotNull(assumeNotNull(null)))); // notNull(null) shouldn't compile
     test = null; // reset our pointer
 
-    assertThrown!AssertError(takesNotNull(notNull(test))); // test is null now, so this should throw an assert failure
+    assertThrown!AssertError(takesNotNull(assumeNotNull(test))); // test is null now, so this should throw an assert failure
 
     void takesConstNotNull(in NotNull!(int *) a) {}
 
     test = &dummy; // make it valid again
-    takesConstNotNull(notNull(test)); // should Just Work
+    takesConstNotNull(assumeNotNull(test)); // should Just Work
 
     NotNull!(int*) foo2 = foo; // we should be able to assign NotNull to other NotNulls too
     foo2 = foo; // including init and assignment
