@@ -1608,7 +1608,7 @@ unittest
 		// it never stored null.
 	---
 */
-struct NotNull(T)
+struct NotNull(T) if(__traits(compiles, { T t; assert(t is null); }))
 {
     private T _notNullData;
     // Apparently a compiler bug - the invariant being uncommented breaks all kinds of stuff.
