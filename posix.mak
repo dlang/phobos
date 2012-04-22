@@ -60,9 +60,6 @@ BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
-CC =
-DMD ?=
-DDOC =
 CFLAGS =
 DFLAGS =
 
