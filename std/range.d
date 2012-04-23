@@ -4295,12 +4295,13 @@ unittest
    Returns a range that goes through the numbers $(D begin), $(D begin +
    step), $(D begin + 2 * step), $(D ...), up to and excluding $(D
    end). The range offered is a random access range. The two-arguments
-   version has $(D step = 1). If $(D begin < end && step <= 0) or $(D
-   begin > end && step >= 0), then an empty range is returned. If $(D
-   begin != end) and $(D step == 0), an exception is thrown.
+   version has $(D step = 1). If $(D begin < end && step < 0) or $(D
+   begin > end && step > 0) or $(D begin == end), then an empty range is
+   returned.
 
    Throws:
-   $(D Exception) if $(D step == 0)
+   $(D Exception) if $(D begin != end && step == 0), an exception is
+   thrown.
 
    Example:
    ----
@@ -4327,8 +4328,8 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, S step)
         {
-            if ((current <= pastLast && step >= 0) ||
-                    (current >= pastLast && step <= 0))
+            if ((current < pastLast && step >= 0) ||
+                    (current > pastLast && step <= 0))
             {
                 enforce(step != 0);
                 this.step = step;
@@ -4634,6 +4635,12 @@ unittest
     auto iota_of_longs_with_steps = iota(50L, 101L, 10);
     assert(iota_of_longs_with_steps.length == 6);
     assert(equal(iota_of_longs_with_steps, [50L, 60L, 70L, 80L, 90L, 100L]));
+
+    // iota of unsigned zero length (issue 6222, actually trying to consume it
+    // is the only way to find something is wrong because the public
+    // properties are all correct)
+    auto iota_zero_unsigned = iota(0, 0u, 3);
+    assert(count(iota_zero_unsigned) == 0);
 }
 
 unittest
