@@ -1611,10 +1611,15 @@ unittest
 struct NotNull(T) if(__traits(compiles, { T t; assert(t is null); }))
 {
     private T _notNullData;
+    @property inout(T) _notNullDataHelper() inout
+    {
+        assert(_notNullData !is null); // sanity check of invariant
+        return _notNullData;
+    }
     // Apparently a compiler bug - the invariant being uncommented breaks all kinds of stuff.
     // invariant() { assert(_notNullData !is null); }
 
-    alias _notNullData this; /// this is substitutable for the regular (nullable) type
+    alias _notNullDataHelper this; /// this is substitutable for the regular (nullable) type
     @disable this();
 
     // this could arguably break the static type check because
@@ -1632,6 +1637,8 @@ struct NotNull(T) if(__traits(compiles, { T t; assert(t is null); }))
 
     @disable this(typeof(null)); /// the null literal can be caught at compile time
     @disable typeof(this) opAssign(typeof(null)); /// ditto
+
+    /// .
     NotNull!T opAssign(NotNull!T rhs)
     {
         this._notNullData = rhs._notNullData;
@@ -1642,14 +1649,14 @@ struct NotNull(T) if(__traits(compiles, { T t; assert(t is null); }))
 /// A convenience function to construct a NotNull value from something you know isn't null.
 NotNull!T assumeNotNull(T)(T t)
 {
-	return NotNull!T(t);
+    return NotNull!T(t); // note the constructor asserts it is not null
 }
 
 /// A convenience function to check for null. If you pass null, it will throw an exception. Otherwise, return NotNull!T.
-NotNull!T checkNotNull(T)(T t)
+NotNull!T enforceNotNull(T)(T t)
 {
-	enforce(t !is null);
-	return NotNull!T(t);
+    enforce(t !is null);
+    return NotNull!T(t);
 }
 
 unittest
