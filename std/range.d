@@ -4353,15 +4353,17 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
         @property bool empty() const { return current == pastLast; }
-        @property Value front() { return current; }
+        @property Value front() { assert(!empty); return current; }
         alias front moveFront;
-        void popFront() { current += step; }
-        @property Value back() { return pastLast - step; }
+        void popFront() { assert(!empty); current += step; }
+        @property Value back() { assert(!empty); return pastLast - step; }
         alias back moveBack;
-        void popBack() { pastLast -= step; }
+        void popBack() { assert(!empty); pastLast -= step; }
         @property auto save() { return this; }
         Value opIndex(ulong n)
         {
+            assert(n < this.length);
+
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + step * n);
@@ -4419,15 +4421,17 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
         @property bool empty() const { return current == pastLast; }
-        @property Value front() { return current; }
+        @property Value front() { assert(!empty); return current; }
         alias front moveFront;
-        void popFront() { ++current; }
-        @property Value back() { return pastLast - 1; }
+        void popFront() { assert(!empty); ++current; }
+        @property Value back() { assert(!empty); return pastLast - 1; }
         alias back moveBack;
-        void popBack() { --pastLast; }
+        void popBack() { assert(!empty); --pastLast; }
         @property auto save() { return this; }
         Value opIndex(ulong n)
         {
+            assert(n < this.length);
+
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(Value) (current + n);
@@ -4490,7 +4494,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             }
         }
         @property bool empty() const { return index == count; }
-        @property Value front() { return start + step * index; }
+        @property Value front() { assert(!empty); return start + step * index; }
         alias front moveFront;
         void popFront()
         {
