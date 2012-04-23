@@ -4135,6 +4135,41 @@ unittest {
     assert(skipOver(s1, "Hell") && s1 == "o world");
 }
 
+/**
+Skips over a range while $(D pred) is true. Returns a range that is the
+elements skipped over.
+ */
+R skipWhile(alias pred, R)(ref R r)
+if (is(typeof(unaryFun!pred(r.front))))
+{
+    static if (is(typeof(pred) == string)) {
+        alias unaryFun!pred p;
+    } else {
+        alias pred p;
+    }
+
+    size_t idx = 0;
+    auto tmp = r.save;
+    while(!r.empty && unaryFun!pred(r.front)) {
+        static if (isNarrowString!R) {
+            idx += std.utf.stride(r, idx);
+        } else {
+            idx++;
+        }
+        r.popFront();
+    }
+
+    return tmp[0..idx];
+}
+
+unittest
+{
+    auto s = "123456abcdef";
+    bool fn(int i) {return i < 4;}
+    assert(s.skipWhile!(a => a.isDigit())() == "123456");
+    assert(s == "abcdef");
+}
+
 /* (Not yet documented.)
 Consume all elements from $(D r) that are equal to one of the elements
 $(D es).
