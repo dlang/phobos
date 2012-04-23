@@ -4095,16 +4095,10 @@ r1) and return $(D true). Otherwise, leave $(D r1) unchanged and
 return $(D false).
  */
 bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
-if (is(typeof(binaryFun!pred(r1.front, r2.front))) || is(typeof(pred(r1.front, r2.front))))
+if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
-    static if (is(typeof(pred) == string)) {
-        alias binaryFun!pred p;
-    } else {
-        alias pred p;
-    }
-
     auto r = r1.save;
-    while (!r2.empty && !r.empty && p(r.front, r2.front))
+    while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
     {
         r.popFront();
         r2.popFront();
@@ -4134,15 +4128,9 @@ element off $(D r) and return $(D true). Otherwise, leave $(D r)
 unchanged and return $(D false).
  */
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
-if (is(typeof(binaryFun!pred(r.front, e))) || is(typeof(pred(r.front, e))))
+if (is(typeof(binaryFun!pred(r.front, e))))
 {
-    static if (is(typeof(pred) == string)) {
-        alias binaryFun!pred p;
-    } else {
-        alias pred p;
-    }
-
-    return p(r.front, e)
+    return binaryFun!pred(r.front, e)
         ? (r.popFront(), true)
         : false;
 }
@@ -4161,40 +4149,6 @@ unittest {
     assert(r == ["def", "hij"]);
 }
 
-/**
-Skips over a range while $(D pred) is true. Returns a range that is the
-elements skipped over.
- */
-R skipWhile(alias pred, R)(ref R r)
-if (is(typeof(unaryFun!pred(r.front))) || is(typeof(pred(r.front))))
-{
-    static if (is(typeof(pred) == string)) {
-        alias unaryFun!pred p;
-    } else {
-        alias pred p;
-    }
-
-    size_t idx = 0;
-    auto tmp = r.save;
-    while(!r.empty && pred(r.front)) {
-        static if (isNarrowString!R) {
-            idx += std.utf.stride(r, idx);
-        } else {
-            idx++;
-        }
-        r.popFront();
-    }
-
-    return tmp[0..idx];
-}
-
-unittest
-{
-    auto s = "123456abcdef";
-    bool fn(int i) {return i < 4;}
-    assert(s.skipWhile!(a => a.isDigit())() == "123456");
-    assert(s == "abcdef");
-}
 
 /* (Not yet documented.)
 Consume all elements from $(D r) that are equal to one of the elements
