@@ -368,7 +368,7 @@ unittest
 }
 
 /**
-$(RED Deprecated. It will be removed in July 2012. Please define $(D opCast)
+$(RED Deprecated. It will be removed in August 2012. Please define $(D opCast)
       for user-defined types instead of a $(D to) function.
       $(LREF to) will now use $(D opCast).)
 
@@ -930,7 +930,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
 
 /// ditto
 T toImpl(T, S)(S s)
-    if (is(S : Object) &&
+    if (is(S == class) &&
         isSomeString!T)
 {
     return toStr!T(s);
@@ -959,6 +959,12 @@ unittest
     assert(to!string(a) == "null");
     a = new A;
     assert(to!string(a) == "an A");
+
+    // Bug 7660
+    class C { override string toString() { return "C"; } }
+    struct S { C c; alias c this; }
+    S s; s.c = new C();
+    assert(to!string(s) == "C");
 }
 
 /// ditto
@@ -2120,8 +2126,7 @@ Target parse(Target, Source)(ref Source p)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    ConvException bailOut(string fn = __FILE__, size_t ln = __LINE__)
-        (string msg = null)
+    ConvException bailOut(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
         if (!msg)
             msg = "Floating point conversion error";

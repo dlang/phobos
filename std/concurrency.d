@@ -496,7 +496,8 @@ private void _send(T...)( Tid tid, T vals )
  */
 private void _send(T...)( MsgType type, Tid tid, T vals )
 {
-    tid.mbox.put( Message( type, vals ) );
+    auto msg = Message( type, vals );
+    tid.mbox.put( msg );
 }
 
 
@@ -631,7 +632,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
 
 
 /**
- * $(RED Deprecated. It will be removed in July 2012. Please use the version
+ * $(RED Deprecated. It will be removed in August 2012. Please use the version
  *       which takes a $(CXREF time, Duration) instead.)
  */
 deprecated bool receiveTimeout(T...)( long ms, T ops )
@@ -1042,7 +1043,8 @@ private
                     if( *depends && tid != owner )
                     {
                         auto e = new LinkTerminated( tid );
-                        if( onStandardMsg( Message( MsgType.standard, e ) ) )
+                        auto m = Message( MsgType.standard, e );
+                        if( onStandardMsg( m ) )
                             return true;
                         throw e;
                     }
@@ -1051,7 +1053,8 @@ private
                 {
                     owner = Tid.init;
                     auto e = new OwnerTerminated( tid );
-                    if( onStandardMsg( Message( MsgType.standard, e ) ) )
+                    auto m = Message( MsgType.standard, e );
+                    if( onStandardMsg( m ) )
                         return true;
                     throw e;
                 }

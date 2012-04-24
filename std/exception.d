@@ -495,14 +495,14 @@ template enforceEx(E)
 }
 
 /++
-    $(RED Scheduled for deprecation in February 2012. Please use the version of
-          $(D enforceEx) which takes an exception that constructs with
+    $(RED Deprecated. It will be removed in October 2012. Please use the version
+          of $(D enforceEx) which takes an exception that constructs with
           $(D new E(msg, file, line)).)
 
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-template enforceEx(E)
+deprecated template enforceEx(E)
     if (is(typeof(new E(""))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
     T enforceEx(T)(T value, lazy string msg = "") @safe pure

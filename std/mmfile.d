@@ -32,15 +32,6 @@ version (Windows)
 {
     private import std.c.windows.windows;
     private import std.utf;
-
-    private __gshared const uint dwVersion;
-
-    shared static this()
-    {
-        /* http://msdn.microsoft.com/library/default.asp?url=/library/en-us
-           /sysinfo/base/getversion.asp */
-        dwVersion = GetVersion();
-    }
 }
 else version (Posix)
 {
@@ -188,12 +179,6 @@ class MmFile
             uint dwCreationDisposition;
             uint flProtect;
 
-            if (dwVersion & 0x80000000 && (dwVersion & 0xFF) == 3)
-            {
-                throw new FileException(filename,
-                        "Win32s does not implement mm files");
-            }
-
             switch (mode)
             {
             case Mode.read:
@@ -222,11 +207,6 @@ class MmFile
                 break;
 
             case Mode.readCopyOnWrite:
-                if (dwVersion & 0x80000000)
-                {
-                    throw new FileException(filename,
-                            "Win9x does not implement copy on write");
-                }
                 dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
                 dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
                 dwCreationDisposition = OPEN_EXISTING;
@@ -240,28 +220,14 @@ class MmFile
 
             if (filename)
             {
-                if (useWfuncs)
-                {
-                    auto namez = std.utf.toUTF16z(filename);
-                    hFile = CreateFileW(namez,
-                            dwDesiredAccess2,
-                            dwShareMode,
-                            null,
-                            dwCreationDisposition,
-                            FILE_ATTRIBUTE_NORMAL,
-                            cast(HANDLE)null);
-                }
-                else
-                {
-                    auto namez = std.file.toMBSz(filename);
-                    hFile = CreateFileA(namez,
-                            dwDesiredAccess2,
-                            dwShareMode,
-                            null,
-                            dwCreationDisposition,
-                            FILE_ATTRIBUTE_NORMAL,
-                            cast(HANDLE)null);
-                }
+                auto namez = std.utf.toUTF16z(filename);
+                hFile = CreateFileW(namez,
+                        dwDesiredAccess2,
+                        dwShareMode,
+                        null,
+                        dwCreationDisposition,
+                        FILE_ATTRIBUTE_NORMAL,
+                        cast(HANDLE)null);
                 if (hFile == INVALID_HANDLE_VALUE)
                     goto err1;
             }
@@ -519,11 +485,7 @@ class MmFile
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
         version(Windows) {
-            /* Note that under Windows 95, UnmapViewOfFile() seems to return
-             * random values, not TRUE or FALSE.
-             */
-            errnoEnforce(!data || UnmapViewOfFile(data.ptr) != FALSE ||
-                    (dwVersion & 0x80000000) != 0);
+            errnoEnforce(!data || UnmapViewOfFile(data.ptr) != FALSE);
         } else {
             errnoEnforce(!data || munmap(cast(void*)data, data.length) == 0,
                     "munmap failed");

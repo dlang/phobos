@@ -82,14 +82,16 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 .asm.obj:
 	$(CC) -c $*
 
-targets : phobos.lib
+LIB=phobos.lib
+
+targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj phobos.lib
+test.exe : test.obj $(LIB)
 	$(DMD) test.obj -g -L/map
 
 OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
@@ -109,7 +111,7 @@ SRCS_12 = std\array.d std\functional.d std\range.d \
 	std\path.d std\outbuffer.d std\utf.d
 
 SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\dateparse.d std\date.d std\datetime.d \
+    std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
@@ -126,14 +128,11 @@ SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
-	std\__fileinit.d \
-	std\datebase.d \
 	std\regex.d \
 	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
-	std\gregorian.d \
     std\mathspecial.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
@@ -196,7 +195,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
-	$(DOC)\std_date.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
@@ -206,7 +204,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
-	$(DOC)\std_gregorian.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -264,10 +261,10 @@ DOCS=	$(DOC)\object.html \
 SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
+	std\math.d std\string.d std\path.d std\datetime.d \
 	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
-	std\dateparse.d std\mmfile.d \
+	std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
@@ -279,8 +276,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d std\datebase.d \
-	std\__fileinit.d std\gregorian.d std\exception.d std\ascii.d
+	std\regex.d \
+	std\exception.d std\ascii.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -351,12 +348,12 @@ SRC_ZLIB= \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
-phobos.lib : $(OBJS) $(SRCS) \
+$(LIB) : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) phobos.lib
+unittest : $(SRCS) $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
@@ -367,12 +364,12 @@ unittest : $(SRCS) phobos.lib
 #unittest : unittest.exe
 #	unittest
 #
-#unittest.exe : unittest.d phobos.lib
+#unittest.exe : unittest.d $(LIB)
 #	$(DMD) unittest -g
 #	dmc unittest.obj -g
 
-cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+cov : $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) $(LIB)
 	cov
 
 html : $(DOCS)
@@ -434,12 +431,6 @@ ctype.obj : std\ctype.d
 csv.obj : std\csv.d
 	$(DMD) -c $(DFLAGS) std\csv.d
 
-date.obj : std\dateparse.d std\date.d
-	$(DMD) -c $(DFLAGS) std\date.d
-
-dateparse.obj : std\dateparse.d std\date.d
-	$(DMD) -c $(DFLAGS) std\dateparse.d
-
 datetime.obj : std\datetime.d
 	$(DMD) -c $(DFLAGS) std\datetime.d
 
@@ -451,9 +442,6 @@ exception.obj : std\exception.d
 
 file.obj : std\file.d
 	$(DMD) -c $(DFLAGS) std\file.d
-
-__fileinit.obj : std\__fileinit.d
-	$(DMD) -c $(DFLAGS) std\__fileinit.d
 
 format.obj : std\format.d
 	$(DMD) -c $(DFLAGS) std\format.d
@@ -750,9 +738,6 @@ $(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
-$(DOC)\std_date.html : $(STDDOC) std\date.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
-
 $(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
 
@@ -776,9 +761,6 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
-
-$(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
 
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
@@ -853,7 +835,7 @@ $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
 
 $(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- -d $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- -d $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
@@ -971,14 +953,14 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del unittest1.obj unittest.obj unittest.map unittest.exe
-	del phobos.lib
+	del $(LIB)
 	del phobos.json
 
 cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\windows\lib\ 
+	$(CP) $(LIB) $(DIR)\windows\lib\ 
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 

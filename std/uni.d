@@ -1,9 +1,9 @@
 // Written in the D programming language.
 
 /++
-    Functions which operate on unicode characters.
+    Functions which operate on Unicode characters.
 
-    For functions which operate on ASCII characters and ignore unicode
+    For functions which operate on ASCII characters and ignore Unicode
     characters, see $(LINK2 std_ascii.html, std.ascii).
 
     References:
@@ -30,8 +30,8 @@ enum dchar lineSep = '\u2028'; /// UTF line separator
 enum dchar paraSep = '\u2029'; /// UTF paragraph separator
 
 /++
-    Whether or not $(D c) is a unicode whitespace character.
-    (general unicode category: Part of C0(tab, vertical tab, form feed,
+    Whether or not $(D c) is a Unicode whitespace character.
+    (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
   +/
 bool isWhite(dchar c) @safe pure nothrow
@@ -45,10 +45,10 @@ bool isWhite(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Deprecated. It will be removed in July 2012. Please use
+   $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isLower) instead.)
 
-    Return whether $(D c) is a unicode lowercase character.
+    Return whether $(D c) is a Unicode lowercase character.
   +/
 deprecated bool isUniLower(dchar c) @safe pure nothrow
 {
@@ -56,7 +56,7 @@ deprecated bool isUniLower(dchar c) @safe pure nothrow
 }
 
 /++
-    Return whether $(D c) is a unicode lowercase character.
+    Return whether $(D c) is a Unicode lowercase character.
   +/
 bool isLower(dchar c) @safe pure nothrow
 {
@@ -68,10 +68,10 @@ bool isLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Deprecated. It will be removed in July 2012. Please use
+   $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isUpper) instead.)
 
-    Return whether $(D c) is a unicode uppercase character.
+    Return whether $(D c) is a Unicode uppercase character.
   +/
 deprecated bool isUniUpper(dchar c) @safe pure nothrow
 {
@@ -79,7 +79,7 @@ deprecated bool isUniUpper(dchar c) @safe pure nothrow
 }
 
 /++
-    Return whether $(D c) is a unicode uppercase character.
+    Return whether $(D c) is a Unicode uppercase character.
   +/
 bool isUpper(dchar c) @safe pure nothrow
 {
@@ -91,10 +91,10 @@ bool isUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Deprecated. It will be removed in July 2012. Please use
+   $(RED Deprecated. It will be removed in August 2012. Please use
    $(D toLower) instead.)
 
-    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 deprecated dchar toUniLower(dchar c) @safe pure nothrow
@@ -103,7 +103,7 @@ deprecated dchar toUniLower(dchar c) @safe pure nothrow
 }
 
 /++
-    If $(D c) is a unicode uppercase character, then its lowercase equivalent
+    If $(D c) is a Unicode uppercase character, then its lowercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 dchar toLower(dchar c) @safe pure nothrow
@@ -163,10 +163,10 @@ dchar toLower(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Deprecated. It will be removed in July 2012. Please use
+   $(RED Deprecated. It will be removed in August 2012. Please use
    $(D toUpper) instead.)
 
-    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 deprecated dchar toUniUpper(dchar c) @safe pure nothrow
@@ -175,7 +175,7 @@ deprecated dchar toUniUpper(dchar c) @safe pure nothrow
 }
 
 /++
-    If $(D c) is a unicode lowercase character, then its uppercase equivalent
+    If $(D c) is a Unicode lowercase character, then its uppercase equivalent
     is returned. Otherwise $(D c) is returned.
   +/
 dchar toUpper(dchar c) @safe pure nothrow
@@ -235,11 +235,11 @@ dchar toUpper(dchar c) @safe pure nothrow
 
 
 /++
-   $(RED Deprecated. It will be removed in July 2012. Please use
+   $(RED Deprecated. It will be removed in August 2012. Please use
    $(D isAlpha) instead.)
 
-    Returns whether $(D c) is a unicode alpha character (general unicode
-    category: Lu, Ll, Lt, Lm, and Lo).
+    Returns whether $(D c) is a Unicode alpha character
+    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
   +/
@@ -249,8 +249,8 @@ deprecated bool isUniAlpha(dchar c) @safe pure nothrow
 }
 
 /++
-    Returns whether $(D c) is a unicode alpha character (general unicode
-    category: Lu, Ll, Lt, Lm, and Lo).
+    Returns whether $(D c) is a Unicode alpha character
+    (general Unicode category: Lu, Ll, Lt, Lm, and Lo).
 
     Standards: Unicode 5.0.0.
   +/
@@ -648,8 +648,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Mn, Me, Mc)
+/++
+    Returns whether $(D c) is a Unicode mark
+    (general Unicode category: Mn, Me, Mc).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -998,8 +1000,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Nd, Nl, No)
+/++
+    Returns whether $(D c) is a Unicode numerical character
+    (general Unicode category: Nd, Nl, No).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1122,8 +1126,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf)
+/++
+    Returns whether $(D c) is a Unicode punctuation character
+    (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1490,11 +1496,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Sm, Sc, Sk, So)
+/++
+    Returns whether $(D c) is a Unicode symbol character
+    (general Unicode category: Sm, Sc, Sk, So)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSymbol(dchar c) @safe pure nothrow
 {
     static immutable dchar tableSm[][2] =
@@ -1801,11 +1808,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Zs)
+/++
+    Returns whether $(D c) is a Unicode whitespace character
+    (general Unicode category: Zs)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSpace(dchar c) @safe pure nothrow
 {
     return (c == 0x0020 ||
@@ -1820,8 +1828,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: L, M, N, P, S, Zs)
+/++
+    Returns whether $(D c) is a Unicode graphical character
+    (general Unicode category: L, M, N, P, S, Zs).
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1836,8 +1846,10 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cc)
+/++
+    Returns whether $(D c) is a Unicode control character
+    (general Unicode category: Cc)
+
     Standards: Unicode 6.0.0.
   +/
 
@@ -1852,11 +1864,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cf)
+/++
+    Returns whether $(D c) is a Unicode formatting character
+    (general Unicode category: Cf)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isFormat(dchar c) @safe pure nothrow
 {
     static immutable dchar tableCf[][2] =
@@ -1887,11 +1900,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Co)
+/++
+    Returns whether $(D c) is a Unicode Private Use character
+    (general Unicode category: Co)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isPrivateUse(dchar c) @safe pure nothrow
 {
     return (0x00_E000 <= c && c <= 0x00_F8FF)
@@ -1905,23 +1919,32 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cs)
+/++
+    Returns whether $(D c) is a Unicode surrogate character
+    (general Unicode category: Cs)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isSurrogate(dchar c) @safe pure nothrow
 {
     return (0xD800 <= c && c <= 0xDFFF);
 }
 
-// ditto
+/++
+    Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
+
+    Standards: Unicode 2.0.
+  +/
 bool isSurrogateHi(dchar c) @safe pure nothrow
 {
     return (0xD800 <= c && c <= 0xDBFF);
 }
 
-// ditto
+/++
+    Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
+
+    Standards: Unicode 2.0.
+  +/
 bool isSurrogateLo(dchar c) @safe pure nothrow
 {
     return (0xDC00 <= c && c <= 0xDFFF);
@@ -1932,11 +1955,12 @@ unittest
 }
 
 
-/+
-    (general unicode category: Cn)
+/++
+    Returns whether $(D c) is a Unicode non-character
+    (general Unicode category: Cn)
+
     Standards: Unicode 6.0.0.
   +/
-
 bool isNonCharacter(dchar c) @safe pure nothrow
 {
     static immutable dchar table[][2] =

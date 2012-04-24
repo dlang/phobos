@@ -124,10 +124,141 @@ version (Posix)
 }
 
 /**
+ * Test if Rng is a random-number generator. The overload
+ * taking a ElementType also makes sure that the Rng generates
+ * values of that type.
+ *
+ * A random-number generator has at least the following features:
+ * $(UL
+ *   $(LI it's an InputRange)
+ *   $(LI it has a 'bool isUniformRandom' field readable in CTFE)
+ * )
+ */
+template isUniformRNG(Rng, ElementType)
+{
+    enum bool isUniformRNG = isInputRange!Rng &&
+        is(typeof(Rng.front) == ElementType) &&
+        is(typeof(
+        {
+            static assert(Rng.isUniformRandom); //tag
+        }));
+}
+
+/**
+ * ditto
+ */
+template isUniformRNG(Rng)
+{
+    enum bool isUniformRNG = isInputRange!Rng &&
+        is(typeof(
+        {
+            static assert(Rng.isUniformRandom); //tag
+        }));
+}
+
+/**
+ * Test if Rng is seedable. The overload
+ * taking a ElementType also makes sure that the Rng generates
+ * values of that type.
+ *
+ * A seedable random-number generator has the following additional features:
+ * $(UL
+ *   $(LI it has a 'seed(ElementType)' function)
+ * )
+ */
+template isSeedable(Rng, ElementType)
+{
+    enum bool isSeedable = isUniformRNG!(Rng, ElementType) &&
+        is(typeof(
+        {
+            Rng r = void;                 // can define a Rng object
+            r.seed(ElementType.init);     // can seed a Rng
+        }));
+}
+
+///ditto
+template isSeedable(Rng)
+{
+    enum bool isSeedable = isUniformRNG!Rng &&
+        is(typeof(
+        {
+            Rng r = void;                       // can define a Rng object
+            r.seed(typeof(r.front).init);     // can seed a Rng
+        }));
+}
+
+unittest
+{
+    struct NoRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+    }
+    assert(!isUniformRNG!(NoRng, uint));
+    assert(!isUniformRNG!(NoRng));
+    assert(!isSeedable!(NoRng, uint));
+    assert(!isSeedable!(NoRng));
+    
+    struct NoRng2
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+        
+        enum isUniformRandom = false;
+    }
+    assert(!isUniformRNG!(NoRng2, uint));
+    assert(!isUniformRNG!(NoRng2));
+    assert(!isSeedable!(NoRng2, uint));
+    assert(!isSeedable!(NoRng2));
+    
+    struct NoRng3
+    {
+        @property bool empty() {return false;}
+        void popFront() {}
+        
+        enum isUniformRandom = true;
+    }
+    assert(!isUniformRNG!(NoRng3, uint));
+    assert(!isUniformRNG!(NoRng3));
+    assert(!isSeedable!(NoRng3, uint));
+    assert(!isSeedable!(NoRng3));
+    
+    struct validRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+        
+        enum isUniformRandom = true;
+    }
+    assert(isUniformRNG!(validRng, uint));
+    assert(isUniformRNG!(validRng));
+    assert(!isSeedable!(validRng, uint));
+    assert(!isSeedable!(validRng));
+
+    struct seedRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+        void seed(uint val){}
+        enum isUniformRandom = true;
+    }
+    assert(isUniformRNG!(seedRng, uint));
+    assert(isUniformRNG!(seedRng));
+    assert(isSeedable!(seedRng, uint));
+    assert(isSeedable!(seedRng));
+}
+
+/**
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
 {
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
     /// Does this generator have a fixed range? ($(D_PARAM true)).
     enum bool hasFixedRange = true;
     /// Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
@@ -328,7 +459,15 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 
 unittest
 {
-    static assert(isForwardRange!MinstdRand);
+    assert(isForwardRange!MinstdRand);
+    assert(isUniformRNG!MinstdRand);
+    assert(isUniformRNG!MinstdRand0);
+    assert(isUniformRNG!(MinstdRand, uint));
+    assert(isUniformRNG!(MinstdRand0, uint));
+    assert(isSeedable!MinstdRand);
+    assert(isSeedable!MinstdRand0);
+    assert(isSeedable!(MinstdRand, uint));
+    assert(isSeedable!(MinstdRand0, uint));
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
@@ -381,6 +520,9 @@ struct MersenneTwisterEngine(
     UIntType c, size_t l)
 {
     static assert(UIntType.min == 0);
+
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
 /**
 Parameter for the generator.
 */
@@ -547,6 +689,10 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
+    assert(isUniformRNG!Mt19937);
+    assert(isUniformRNG!(Mt19937, uint));
+    assert(isSeedable!Mt19937);
+    assert(isSeedable!(Mt19937, uint));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
@@ -591,6 +737,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
 
   public:
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
     /// Always $(D false) (random generators are infinite ranges).
     enum empty = false;
     /// Smallest generated value.
@@ -777,7 +925,11 @@ alias Xorshift128 Xorshift;                                /// ditto
 
 unittest
 {
-    static assert(isForwardRange!Xorshift);
+    assert(isForwardRange!Xorshift);
+    assert(isUniformRNG!Xorshift);
+    assert(isUniformRNG!(Xorshift, uint));
+    assert(isSeedable!Xorshift);
+    assert(isSeedable!(Xorshift, uint));
 
     // Result from reference implementation.
     auto checking = [
@@ -843,6 +995,14 @@ method being used.
  */
 
 alias Mt19937 Random;
+
+unittest
+{
+    assert(isUniformRNG!Random);
+    assert(isUniformRNG!(Random, uint));
+    assert(isSeedable!Random);
+    assert(isSeedable!(Random, uint));
+}
 
 /**
 Global random number generator used by various functions in this
@@ -1095,7 +1255,7 @@ unittest
 }
 
 /**
-Shuffles elements of $(D r) using $(D r) as a shuffler. $(D r) must be
+Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
 
@@ -1204,7 +1364,7 @@ foreach (e; randomCover(a, rnd))
 }
 ----
  */
-struct RandomCover(Range, Random)
+struct RandomCover(Range, Random) if (isUniformRNG!Random)
 {
     private Range _input;
     private Random _rnd;
@@ -1273,6 +1433,7 @@ struct RandomCover(Range, Random)
 
 /// Ditto
 RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
+    if(isUniformRNG!Random)
 {
     return typeof(return)(r, rnd);
 }
@@ -1319,6 +1480,7 @@ foreach (e; randomSample(a, 5))
 ----
  */
 struct RandomSample(R, Random = void)
+    if(isUniformRNG!Random || is(Random == void))
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1444,7 +1606,7 @@ auto randomSample(R)(R r, size_t n) if (hasLength!R)
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
-if(isInputRange!R && isInputRange!Random)
+if(isInputRange!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, total);
     ret.gen = gen;
@@ -1453,7 +1615,7 @@ if(isInputRange!R && isInputRange!Random)
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
-if (isInputRange!R && hasLength!R && isInputRange!Random)
+if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, r.length);
     ret.gen = gen;
@@ -1479,4 +1641,3 @@ unittest
     }
     assert(i == 5);
 }
-

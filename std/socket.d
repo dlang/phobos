@@ -50,7 +50,7 @@ import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv;
 import core.stdc.config;
 import core.time : dur, Duration;
 import std.algorithm : max;
-import std.exception : assumeUnique, enforce;
+import std.exception : assumeUnique, enforce, collectException;
 
 version(Windows)
 {
@@ -1093,15 +1093,29 @@ unittest
  *
  * Example:
  * ---
- * writeln("Looking up reverse of 8.8.8.8:");
+ * writeln("Enter IP address:");
+ * string ip = readln().chomp();
  * try
  * {
- *     auto address = parseAddress("8.8.8.8");
- *     writefln("  Reverse name: %s",
- *         address.toHostNameString());
+ *     Address address = parseAddress(ip);
+ *     writefln("Looking up reverse of %s:",
+ *         address.toAddrString());
+ *     try
+ *     {
+ *         string reverse = address.toHostNameString());
+ *         if (reverse)
+ *             writefln("  Reverse name: %s", reverse);
+ *         else
+ *             writeln("  Reverse hostname not found.");
+ *     }
+ *     catch (SocketException e)
+ *         writefln("  Lookup error: %s", e.msg);
  * }
  * catch (SocketException e)
- *     writefln("  Lookup failed: %s", e.msg);
+ * {
+ *     writefln("  %s is not a valid IP address: %s",
+ *         ip, e.msg);
+ * }
  * ---
  */
 Address parseAddress(in char[] hostaddr, in char[] service = null)
@@ -1143,6 +1157,8 @@ unittest
             address = parseAddress("63.105.9.61");
             assert(address.toAddrString() == "63.105.9.61");
         }
+
+        assert(collectException!SocketException(parseAddress("Invalid IP address")));
     });
 }
 
@@ -1187,10 +1203,10 @@ abstract class Address
 {
     /// Returns pointer to underlying $(D sockaddr) structure.
     sockaddr* name();
-    const(sockaddr)* name() const; /// ditto
+    abstract const(sockaddr)* name() const; /// ditto
 
     /// Returns actual size of underlying $(D sockaddr) structure.
-    socklen_t nameLen() const;
+    abstract socklen_t nameLen() const;
 
     /// Family of this address.
     @property AddressFamily addressFamily() const
@@ -1769,7 +1785,7 @@ version(StdDdoc)
     }
 }
 else
-static if (is(typeof(sockaddr_un)))
+static if (is(sockaddr_un))
 {
     class UnixAddress: Address
     {
@@ -2057,7 +2073,7 @@ public:
 
     /// Return the capacity of this $(D SocketSet). The exact meaning of the
     /// return value varies from platform to platform.
-    uint max() const
+    @property uint max() const
     {
         version(Windows)
         {

@@ -628,7 +628,7 @@ class Document : Element
          * You should rarely need to call this function. It exists so that
          * Documents can be used as associative array keys.
          */
-        override hash_t toHash()
+        override hash_t toHash() @trusted
         {
             return hash(prolog, hash(epilog, (cast()super).toHash()));
         }
@@ -1122,9 +1122,7 @@ class Tag
          */
         override hash_t toHash()
         {
-            hash_t hash = 0;
-            foreach(dchar c;name) hash = hash * 11 + c;
-            return hash;
+            return typeid(name).getHash(&name);
         }
 
         /**
@@ -2843,10 +2841,9 @@ private
         s = s[1..$];
     }
 
-    hash_t hash(string s,hash_t h=0)
+    hash_t hash(string s,hash_t h=0) @trusted nothrow
     {
-        foreach(dchar c;s) h = h * 11 + c;
-        return h;
+        return typeid(s).getHash(&s) + h;
     }
 
     // Definitions from the XML specification

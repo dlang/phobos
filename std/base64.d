@@ -715,19 +715,30 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      */
     @safe
     pure nothrow size_t decodeLength(in size_t sourceLength)
-    in
     {
         static if (Padding == NoPadding)
-            assert(sourceLength % 4 != 1, "Invalid no-padding Base64 format");
-        else
-            assert(sourceLength % 4 == 0, "Invalid Base64 format");
-    }
-    body
-    {
-        static if (Padding == NoPadding)
-            return (sourceLength / 4) * 3 + (sourceLength % 4 == 0 ? 0 : sourceLength % 4 == 2 ? 1 : 2);
+            return (sourceLength / 4) * 3 + (sourceLength % 4 < 2 ? 0 : sourceLength % 4 == 2 ? 1 : 2);
         else
             return (sourceLength / 4) * 3;
+    }
+
+
+    // Used in decode contracts. Calculates the actual size the decoded
+    // result should have, taking into account trailing padding.
+    @safe
+    pure nothrow private size_t realDecodeLength(R)(R source)
+    {
+        auto expect = decodeLength(source.length);
+        static if (Padding != NoPadding)
+        {
+            if (source.length % 4 == 0)
+            {
+                expect -= source.length == 0       ? 0 :
+                          source[$ - 2] == Padding ? 2 :
+                          source[$ - 1] == Padding ? 1 : 0;
+            }
+        }
+        return expect;
     }
 
 
@@ -756,9 +767,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
     out(result)
     {
-        immutable expect = decodeLength(source.length) - (source.length == 0       ? 0 :
-                                                          source[$ - 2] == Padding ? 2 :
-                                                          source[$ - 1] == Padding ? 1 : 0);
+        immutable expect = realDecodeLength(source);
         assert(result.length == expect, "The length of result is different from the expected length");
     }
     body
@@ -900,9 +909,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                                                       !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     out(result)
     {
-        immutable expect = decodeLength(source.length) - (source.length == 0       ? 0 :
-                                                          source[$ - 2] == Padding ? 2 :
-                                                          source[$ - 1] == Padding ? 1 : 0);
+        immutable expect = realDecodeLength(source);
         assert(result == expect, "The result of decode is different from the expected");
     }
     body
@@ -1374,7 +1381,7 @@ unittest
 {
     alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;
 
-    // Test vectors from RPC 4648
+    // Test vectors from RFC 4648
     ubyte[][string] tv = [
          ""      :cast(ubyte[])"",
          "f"     :cast(ubyte[])"f",
@@ -1420,10 +1427,20 @@ unittest
         assert(Base64.decode(Base64.encode(tv["fooba"]))  == tv["fooba"]);
         assert(Base64.decode(Base64.encode(tv["foobar"])) == tv["foobar"]);
 
-        try {
-            Base64.decode("ab|c");
-            assert(false);
-        } catch (Exception e) {}
+        assertThrown(Base64.decode("ab|c"));
+
+        // Test decoding incomplete strings. RFC does not specify the correct
+        // behavior, but the code should never throw Errors on invalid input.
+
+        // decodeLength is nothrow
+        assert(Base64.decodeLength(1) == 0);
+        assert(Base64.decodeLength(2) <= 1);
+        assert(Base64.decodeLength(3) <= 2);
+
+        // may throw Exceptions, may not throw Errors
+        collectException(Base64.decode("Zg"));
+        collectException(Base64.decode("Zg="));
+        collectException(Base64.decode("Zm8"));
     }
 
     { // No padding
@@ -1460,6 +1477,9 @@ unittest
         assert(Base64Re.decode(Base64Re.encode(tv["foob"]))   == tv["foob"]);
         assert(Base64Re.decode(Base64Re.encode(tv["fooba"]))  == tv["fooba"]);
         assert(Base64Re.decode(Base64Re.encode(tv["foobar"])) == tv["foobar"]);
+
+        // decodeLength is nothrow
+        assert(Base64.decodeLength(1) == 0);
     }
 
     { // with OutputRange

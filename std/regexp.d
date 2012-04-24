@@ -2,7 +2,7 @@
 // Regular Expressions.
 
 /**
- * $(RED Deprecated. It will be removed in February 2012.
+ * $(RED Deprecated.
  *       Please use $(LINK2 std_regex.html, std.regex) instead.)
  *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
@@ -125,7 +125,7 @@
 module std.regexp;
 
 pragma(msg, "Notice: As of Phobos 2.055, std.regexp has been deprecated. " ~
-            "It will be removed in February 2012. Please use std.regex instead.");
+            "Please use std.regex instead.");
 
 //debug = regexp;       // uncomment to turn on debugging printf's
 

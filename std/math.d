@@ -1021,14 +1021,14 @@ L_largepositive:
             // Set scratchreal = real.max.
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [ESP+8+8], 0x7FFE;
-            fstp ST(0), ST;
+            fstp ST(0);
             fld real ptr [ESP+8];  // load scratchreal
             fmul ST(0), ST;        // square it, to create havoc!
 L_was_nan:
             add ESP,12+8;
             ret PARAMSIZE;
 L_largenegative:
-            fstp ST(0), ST;
+            fstp ST(0);
             fld1;
             fchs; // return -1. Underflow flag is not set.
             add ESP,12+8;
@@ -1090,7 +1090,7 @@ L_largepositive:
             // Set scratchreal = real.max.
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [RSP+8+8], 0x7FFE;
-            fstp ST(0), ST;
+            fstp ST(0);
             fld real ptr [RSP+8];  // load scratchreal
             fmul ST(0), ST;        // square it, to create havoc!
 L_was_nan:
@@ -1098,7 +1098,7 @@ L_was_nan:
             ret;
 
 L_largenegative:
-            fstp ST(0), ST;
+            fstp ST(0);
             fld1;
             fchs; // return -1. Underflow flag is not set.
             add RSP,24;
@@ -1179,7 +1179,7 @@ L_subnormal:
             fld1;
             fscale;
             fstp real ptr [ESP+8]; // scratchreal = 2^^scratchint
-            fstp ST(0),ST;         // drop scratchint
+            fstp ST(0);         // drop scratchint
             jmp L_normal;
 
 L_extreme:  // Extreme exponent. X is very large positive, very
@@ -1198,7 +1198,7 @@ L_overflow:
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [ESP+8+8], 0x7FFE;
 L_waslargenegative:
-            fstp ST(0), ST;
+            fstp ST(0);
             fld real ptr [ESP+8];  // load scratchreal
             fmul ST(0), ST;        // square it, to create havoc!
 L_was_nan:
@@ -1260,7 +1260,7 @@ L_subnormal:
             fld1;
             fscale;
             fstp real ptr [RSP+8]; // scratchreal = 2^scratchint
-            fstp ST(0),ST;         // drop scratchint
+            fstp ST(0);         // drop scratchint
             jmp L_normal;
 
 L_extreme: // Extreme exponent. X is very large positive, very
@@ -1279,7 +1279,7 @@ L_overflow:
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [RSP+8+8], 0x7FFE;
 L_waslargenegative:
-            fstp ST(0), ST;
+            fstp ST(0);
             fld real ptr [RSP+8];  // load scratchreal
             fmul ST(0), ST;        // square it, to create havoc!
 L_was_nan:
@@ -1756,7 +1756,7 @@ real scalbn(real x, int n) @trusted nothrow
             fild n;
             fld x;
             fscale;
-            fstp ST(1), ST;
+            fstp ST(1);
         }
     } else {
         return core.stdc.math.scalbnl(x, n);
