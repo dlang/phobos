@@ -105,9 +105,9 @@ size_t capacity(void* p)
 void setTypeInfo(TypeInfo ti, void* p)
 {
     if (ti.flags() & 1)
-        hasNoPointers(p);
-    else
         hasPointers(p);
+    else
+        hasNoPointers(p);
 }
 
 void* getGCHandle()
@@ -970,27 +970,27 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
     {
         va_list ap;
         va_start(ap, __va_argsave);
-	TypeInfo tis = cast(TypeInfo_StaticArray)ti.next;
-	if (tis)
-	{
-	    /* Special handling for static arrays because we put their contents
-	     * on the stack, which isn't the ABI for D1 static arrays.
-	     * (It is for D2, though.)
-	     * The code here is ripped from std.c.stdarg, and initializes
-	     * assuming the data is always passed on the stack.
-	     */
-	    __va_list* vap = cast(__va_list*)ap;
-	    auto talign = tis.talign();
-	    auto tsize = tis.tsize();
-	    void* parmn = cast(void*)x.ptr + length * sizeelem;
-	    auto p = cast(void*)((cast(size_t)vap.stack_args + talign - 1) & ~(talign - 1));
-	    vap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
-	    parmn[0..tsize] = p[0..tsize];
-	}
-	else
-	{
-	    va_arg(ap, ti.next, cast(void*)x.ptr + length * sizeelem);
-	}
+        TypeInfo tis = cast(TypeInfo_StaticArray)ti.next;
+        if (tis)
+        {
+            /* Special handling for static arrays because we put their contents
+             * on the stack, which isn't the ABI for D1 static arrays.
+             * (It is for D2, though.)
+             * The code here is ripped from std.c.stdarg, and initializes
+             * assuming the data is always passed on the stack.
+             */
+            __va_list* vap = cast(__va_list*)ap;
+            auto talign = tis.talign();
+            auto tsize = tis.tsize();
+            void* parmn = cast(void*)x.ptr + length * sizeelem;
+            auto p = cast(void*)((cast(size_t)vap.stack_args + talign - 1) & ~(talign - 1));
+            vap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+            parmn[0..tsize] = p[0..tsize];
+        }
+        else
+        {
+            va_arg(ap, ti.next, cast(void*)x.ptr + length * sizeelem);
+        }
     }
     assert((cast(size_t)x.ptr & 15) == 0);
     assert(_gc.capacity(x.ptr) > x.length * sizeelem);
