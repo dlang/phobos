@@ -45,6 +45,7 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7674): regex replace requires escaped format)
         $(LI $(BUGZILLA 7679): std.regex.split and splitter don't work w/ ctRegex)
         $(LI $(BUGZILLA 7718): regex and ctRegex produce different results)
+        $(LI $(BUGZILLA 6116): May not join spawn()'ed threads)
      )
  )
 
@@ -177,7 +178,7 @@ $(VERSION 056, ddd mm, 2011, =================================================,
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved 
+      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved
            performance.)
       $(LI std.path has been rewritten from scratch and has a completely new API.)
       $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
