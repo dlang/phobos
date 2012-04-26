@@ -41,10 +41,11 @@ Macros:
 WIKI = Phobos/StdRandom
 
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift randome generator)
+           $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -1479,9 +1480,11 @@ foreach (e; randomSample(a, 5))
 }
 ----
 
-$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D,
-which selects a sample of size $(D n) in O(n) steps and requiring O(n)
-random variates, regardless of the size of the data being sampled.
+$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
+(see Vitter $(WEB http://dx.doi.org/10.1145/358105.893, 1984),
+$(WEB http://dx.doi.org/10.1145/23002.23003, 1987) which selects
+a sample of size $(D n) in O(n) steps and requiring O(n) random
+variates, regardless of the size of the data being sampled.
 */
 struct RandomSample(R, Random = void)
     if(isUniformRNG!Random || is(Random == void))
@@ -1580,7 +1583,7 @@ Returns the index of the visited record.
         return _index;
     }
 
-/**
+/*
 Vitter's Algorithm A, used when the ratio of needed sample values
 to remaining data values is sufficiently large.
 */
@@ -1624,7 +1627,7 @@ to remaining data values is sufficiently large.
         return S;
     }
 
-/**
+/*
 Randomly reset the value of _Vprime.
 */
     private double newVprime(size_t remaining)
@@ -1641,7 +1644,7 @@ Randomly reset the value of _Vprime.
         return r ^^ (1.0 / remaining);
     }
 
-/**
+/*
 Vitter's Algorithm D.  For an extensive description of the algorithm
 and its rationale, see:
 
