@@ -2216,7 +2216,8 @@ unittest
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
-is a range.
+is a range. If you do not provide a separator, then the ranges are
+joined directly without anything in between them.
 
 Example:
 ----
@@ -2227,6 +2228,7 @@ assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
 assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
 assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
   "Mary...has...a...little...lamb"));
+assert(equal(joiner(["abc", "def"]), "abcdef"));
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
@@ -2358,6 +2360,7 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+    assert(equal(joiner(["abc", "def"]), "abcdef"));
 }
 
 unittest
@@ -2367,6 +2370,7 @@ unittest
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
+/// Ditto
 auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
