@@ -1122,9 +1122,7 @@ class Tag
          */
         override hash_t toHash()
         {
-            hash_t hash = 0;
-            foreach(dchar c;name) hash = hash * 11 + c;
-            return hash;
+            return typeid(name).getHash(&name);
         }
 
         /**
@@ -2843,7 +2841,7 @@ private
         s = s[1..$];
     }
 
-    hash_t hash(string s,hash_t h=0) @trusted
+    hash_t hash(string s,hash_t h=0) @trusted nothrow
     {
         return typeid(s).getHash(&s) + h;
     }

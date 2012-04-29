@@ -4113,6 +4113,13 @@ unittest
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
     assert(skipOver(s1, "Hell") && s1 == "o world");
+
+    string[]  r1 = ["abc", "def", "hij"];
+    dstring[] r2 = ["abc"d];
+    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]));
+    assert(r1 == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r1, r2));
+    assert(r1 == ["def", "hij"]);
 }
 
 /**
@@ -4130,10 +4137,18 @@ if (is(typeof(binaryFun!pred(r.front, e))))
 
 unittest {
     auto s1 = "Hello world";
-    assert(!skipOver(s1, "Ha"));
+    assert(!skipOver(s1, 'a'));
     assert(s1 == "Hello world");
-    assert(skipOver(s1, "Hell") && s1 == "o world");
+    assert(skipOver(s1, 'H') && s1 == "ello world");
+
+    string[] r = ["abc", "def", "hij"];
+    dstring e = "abc"d;
+    assert(!skipOver!((a, b) => a.equal(b))(r, "def"d));
+    assert(r == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r, e));
+    assert(r == ["def", "hij"]);
 }
+
 
 /* (Not yet documented.)
 Consume all elements from $(D r) that are equal to one of the elements
@@ -4401,10 +4416,10 @@ auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
     static if (isSomeString!R1 && isSomeString!R2
-            && (ElementEncodingType!R1).sizeof == (ElementEncodingType!R2).sizeof
+            && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof
             || isRandomAccessRange!R1 && hasLength!R2)
     {
-        auto limit = min(r1.length, r2.length);
+        immutable limit = min(r1.length, r2.length);
         foreach (i; 0 .. limit)
         {
             if (!binaryFun!pred(r1[i], r2[i]))
@@ -4412,7 +4427,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 return r1[0 .. i];
             }
         }
-        return r1[0 .. 0];
+        return r1[0 .. limit];
     }
     else
     {
@@ -4429,6 +4444,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 unittest
 {
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
+    assert(commonPrefix("hello, ", "hello, world") == "hello, ");
     assert(equal(commonPrefix("hello, world", "hello, there"w), "hello, "));
     assert(equal(commonPrefix("hello, world"w, "hello, there"), "hello, "));
     assert(equal(commonPrefix("hello, world", "hello, there"d), "hello, "));

@@ -60,9 +60,6 @@ BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
-CC =
-DMD =
-DDOC =
 CFLAGS =
 DFLAGS =
 
@@ -83,14 +80,14 @@ endif
 # Set CC and DMD
 ifeq ($(OS),win32wine)
 	CC = wine dmc.exe
-	DMD = wine dmd.exe
+	DMD ?= wine dmd.exe
 	RUN = wine
 else
 	ifeq ($(OS),win32remote)
-		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
+		DMD ?= ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
 		CC = ssh 206.125.170.138 "cd code/dmd/phobos && dmc"
 	else
-		DMD = dmd
+		DMD ?= dmd
 		ifeq ($(OS),win32)
 			CC = dmc
 		else

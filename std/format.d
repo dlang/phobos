@@ -110,6 +110,8 @@ $(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
 
    args = Variadic argument list.
 
+   Returns: Formatted number of arguments.
+
    Throws: Mismatched arguments and formats result in a $(D
    FormatException) being thrown.
 
@@ -386,7 +388,7 @@ void main() {
  [7 8 9]]
 </pre>
  */
-void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
+uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     enum len = args.length;
     void function(Writer, const(void)*, ref FormatSpec!Char) funs[len] = void;
@@ -483,6 +485,7 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             ++currentArg;
         }
     }
+    return currentArg;
 }
 
 /**
@@ -1699,9 +1702,9 @@ unittest
         formatTest( [cast(StrType)"hello"],
                     `["hello"]` );
 
-        // 1 character escape sequences
-        formatTest( [cast(StrType)"\"\\\a\b\f\n\r\t\v"],
-                    `["\"\\\a\b\f\n\r\t\v"]` );
+        // 1 character escape sequences (' is not escaped in strings)
+        formatTest( [cast(StrType)"\"'\\\a\b\f\n\r\t\v"],
+                    `["\"'\\\a\b\f\n\r\t\v"]` );
 
         // Valid and non-printable code point (<= U+FF)
         formatTest( [cast(StrType)"\x00\x10\x1F\x20test"],
@@ -1887,11 +1890,11 @@ if (isInputRange!T)
 }
 
 // character formatting with ecaping
-private void formatChar(Writer)(Writer w, dchar c)
+private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
     if (std.uni.isGraphical(c))
     {
-        if (c == '\"' || c == '\\')
+        if (c == quote || c == '\\')
             put(w, '\\'), put(w, c);
         else
             put(w, c);
@@ -1937,7 +1940,7 @@ if (isSomeString!T)
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
                     goto LinvalidSeq;
-                formatChar(app, c);
+                formatChar(app, c, '"');
             }
             put(app, '\"');
             put(w, app.data());
@@ -1978,7 +1981,7 @@ if (isSomeChar!T)
     if (f.spec == 's')
     {
         put(w, '\'');
-        formatChar(w, val);
+        formatChar(w, val, '\'');
         put(w, '\'');
     }
     else
@@ -2046,6 +2049,8 @@ unittest
                 `["aaa":1, "bbb":2, "ccc":3]` );
     formatTest(  ['c':"str"],
                 `['c':"str"]` );
+    formatTest(  ['"':"\"", '\'':"'"],
+                `['"':"\"", '\'':"'"]` );
 
     // range formatting for AA
     auto aa3 = [1:"hello", 2:"world"];
@@ -2469,7 +2474,7 @@ unittest
    Pointers are formatted as hex integers.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isPointer!T)
+if (/*!hasToString!(T, Char) && */isPointer!T)
 {
     if (val is null)
         put(w, "null");
@@ -2509,6 +2514,19 @@ unittest
     formatTest( p, "null" );
 
     auto q = cast(void*)0xFFEECCAA;
+    formatTest( q, "FFEECCAA" );
+}
+
+unittest
+{
+    struct S
+    {
+        string toString(){ return ""; }
+    }
+    S* p = null;
+    formatTest( p, "null" );
+
+    S* q = cast(S*)0xFFEECCAA;
     formatTest( q, "FFEECCAA" );
 }
 
