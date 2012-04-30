@@ -267,7 +267,7 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure //TODO: nothrow (BUG 5700)
+    @trusted pure nothrow
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -901,11 +901,11 @@ unittest
     ---
 */
 immutable(C)[] buildPath(C)(const(C[])[] paths...)
-    //TODO: @safe pure nothrow (because of reduce() and to())
+    @safe pure //TODO: nothrow (because of reduce() and to())
     if (isSomeChar!C)
 {
     static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
-        @trusted //TODO: pure nothrow (because of to())
+        @trusted pure //TODO: nothrow (because of to())
     {
         if (rhs.empty) return to!(typeof(return))(lhs);
         if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
@@ -1603,8 +1603,7 @@ unittest
     }
 
     // CTFE
-    // Fails due to BUG 6416
-    //static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 }
 
 
@@ -1775,7 +1774,7 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 */
 string absolutePath(string path, string base = getcwd())
-    // TODO: @safe (BUG 6405) pure (because of buildPath())
+    @safe pure
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
@@ -1921,8 +1920,8 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assertThrown(relativePath("/foo", "bar"));
 
-        // TODO: pathSplitter() is not CTFEable
-        //static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        // CTFE
+        static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
     }
     else version (Windows)
     {
@@ -1936,8 +1935,8 @@ unittest
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
 
-        // TODO: pathSplitter() is not CTFEable
-        //static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        // CTFE
+        static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
     }
     else static assert (0);
 }
