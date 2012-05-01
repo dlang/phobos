@@ -17,8 +17,6 @@ import std.numeric;
 import std.traits;
 
 
-
-
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
 
@@ -61,7 +59,6 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow
         return Complex!double(re, im);
 }
 
-
 unittest
 {
     auto a = complex(1.0);
@@ -101,8 +98,6 @@ unittest
 }
 
 
-
-
 /** A complex number parametrised by a type $(D T), which must be either
     $(D float), $(D double) or $(D real).
 */
@@ -114,14 +109,44 @@ struct Complex(T)  if (isFloatingPoint!T)
     /** The imaginary part of the number. */
     T im;
 
+    /** Converts the complex number to a string representation.
 
-@safe pure nothrow  // The following functions depend only on std.math.
-{
+        If a $(D sink) delegate is specified, the string is passed to it
+        and this function returns $(D null).  Otherwise, this function
+        returns the string representation directly.
+
+        The output format is controlled via $(D formatSpec), which should consist
+        of a single POSIX format specifier, including the percent (%) character.
+        Note that complex numbers are floating point numbers, so the only
+        valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
+        gives the default behaviour. Positional parameters are not valid
+        in this context.
+
+        See the $(LINK2 std_format.html, std.format documentation) for
+        more information.
+    */
+    string toString(scope void delegate(const(char)[]) sink = null,
+                    string formatSpec = "%s")
+        const
+    {
+        if (sink == null)
+        {
+            char[] buf;
+            buf.reserve(100);
+            toString((const(char)[] s) { buf ~= s; }, formatSpec);
+            return cast(string) buf;
+        }
+
+        formattedWrite(sink, formatSpec, re);
+        if (signbit(im) == 0)  sink("+");
+        formattedWrite(sink, formatSpec, im);
+        sink("i");
+        return null;
+    }
+
+@safe pure nothrow:
 
     // ASSIGNMENT OPERATORS
-
-    // TODO: Make operators return by ref when DMD bug 2460 is fixed.
-
 
     // this = complex
     ref Complex opAssign(R : T)(Complex!R z)
@@ -131,7 +156,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
     // this = numeric
     ref Complex opAssign(R : T)(R r)
     {
@@ -140,11 +164,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
-
-
     // COMPARISON OPERATORS
-
 
     // this == complex
     bool opEquals(R : T)(Complex!R z) const
@@ -152,17 +172,13 @@ struct Complex(T)  if (isFloatingPoint!T)
         return re == z.re && im == z.im;
     }
 
-
     // this == numeric
     bool opEquals(R : T)(R r) const
     {
         return re == r && im == 0;
     }
 
-
-
     // UNARY OPERATORS
-
 
     // +complex
     Complex opUnary(string op)() const
@@ -171,7 +187,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
     // -complex
     Complex opUnary(string op)() const
         if (op == "-")
@@ -179,10 +194,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         return Complex(-re, -im);
     }
 
-
-
     // BINARY OPERATORS
-
 
     // complex op complex
     Complex!(CommonType!(T,R)) opBinary(string op, R)(Complex!R z) const
@@ -191,7 +203,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         auto w = C(this.re, this.im);
         return w.opOpAssign!(op)(z);
     }
-
 
     // complex op numeric
     Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
@@ -202,7 +213,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return w.opOpAssign!(op)(r);
     }
 
-
     // numeric + complex,  numeric * complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if ((op == "+" || op == "*") && (isNumeric!R))
@@ -210,14 +220,12 @@ struct Complex(T)  if (isFloatingPoint!T)
         return opBinary!(op)(r);
     }
 
-
     // numeric - complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "-" && isNumeric!R)
     {
         return Complex(r - re, -im);
     }
-
 
     // numeric / complex
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
@@ -246,10 +254,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         return w;
     }
 
-
-
-    // OPASSIGN OPERATORS
-
+    // OP-ASSIGN OPERATORS
 
     // complex += complex,  complex -= complex
     ref Complex opOpAssign(string op, C)(C z)
@@ -260,7 +265,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
     // complex *= complex
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "*" && is(C R == Complex!R))
@@ -270,7 +274,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         re = temp;
         return this;
     }
-
 
     // complex /= complex
     ref Complex opOpAssign(string op, C)(C z)
@@ -297,7 +300,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
     // complex ^^= complex
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
@@ -312,7 +314,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
-
     // complex += numeric,  complex -= numeric
     ref Complex opOpAssign(string op, U : T)(U a)
         if (op == "+" || op == "-")
@@ -320,7 +321,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         mixin ("re "~op~"= a;");
         return this;
     }
-
 
     // complex *= numeric,  complex /= numeric
     ref Complex opOpAssign(string op, U : T)(U a)
@@ -330,7 +330,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         mixin ("im "~op~"= a;");
         return this;
     }
-
 
     // complex ^^= real
     ref Complex opOpAssign(string op, R)(R r)
@@ -342,7 +341,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         im = ab*std.math.sin(ar);
         return this;
     }
-
 
     // complex ^^= int
     ref Complex opOpAssign(string op, U)(U i)
@@ -370,47 +368,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         }
         return this;
     }
-
-} // @safe pure nothrow
-
-
-
-    /** Convert the complex number to a string representation.
-
-        If a $(D sink) delegate is specified, the string is passed to it
-        and this function returns $(D null).  Otherwise, this function
-        returns the string representation directly.
-
-        The output format is controlled via $(D formatSpec), which should consist
-        of a single POSIX format specifier, including the percent (%) character.
-        Note that complex numbers are floating point numbers, so the only
-        valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-        gives the default behaviour. Positional parameters are not valid
-        in this context.
-
-        See the $(LINK2 std_format.html, std.format documentation) for
-        more information.
-    */
-    string toString
-        (scope void delegate(const(char)[]) sink = null, string formatSpec = "%s")
-        const
-    {
-        if (sink == null)
-        {
-            char[] buf;
-            buf.reserve(100);
-            toString((const(char)[] s) { buf ~= s; }, formatSpec);
-            return cast(string) buf;
-        }
-
-        formattedWrite(sink, formatSpec, re);
-        if (signbit(im) == 0)  sink("+");
-        formattedWrite(sink, formatSpec, im);
-        sink("i");
-        return null;
-    }
 }
-
 
 unittest
 {
@@ -425,7 +383,6 @@ unittest
     assert ((-c2).re == -(c2.re));
     assert ((-c2).im == -(c2.im));
     assert (c2 == -(-c2));
-
 
     // Check complex-complex operations.
     auto cpc = c1 + c2;
@@ -447,7 +404,6 @@ unittest
     auto cec = c1^^c2;
     assert (approxEqual(cec.re, 0.11524131979943839881, EPS));
     assert (approxEqual(cec.im, 0.21870790452746026696, EPS));
-
 
     // Check complex-real operations.
     double a = 123.456;
@@ -486,7 +442,6 @@ unittest
     assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
     assert (approxEqual(arg(cer), arg(c1)*3, EPS));
 
-
     // Check Complex-int operations.
     foreach (i; 0..6)
     {
@@ -496,7 +451,6 @@ unittest
         // the (-pi,pi] interval (only an issue for i>3).
         assert (approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
     }
-
 
     // Check operations between different complex types.
     auto cf = Complex!float(1.0, 1.0);
@@ -525,7 +479,6 @@ unittest
     z = 1.0L;
     assert (z == 1.0L);
     assert (z.re == 1.0  &&  z.im == 0.0);
-
 
     auto w = Complex!real(1.0, 1.0);
     z = w;
@@ -558,9 +511,7 @@ unittest
 }
 
 
-
-
-/*  Fold Complex!(Complex!T) to Complex!T.
+/*  Makes Complex!(Complex!T) fold to Complex!T.
 
     The rationale for this is that just like the real line is a
     subspace of the complex plane, the complex plane is a subspace
@@ -637,7 +588,7 @@ unittest
 }
 
 
-/** Construct a complex number given its absolute value and argument. */
+/** Constructs a complex number given its absolute value and argument. */
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow
 {
@@ -651,8 +602,6 @@ unittest
     assert (approxEqual(z.re, 1.0L, real.epsilon));
     assert (approxEqual(z.im, 1.0L, real.epsilon));
 }
-
-
 
 
 /** Trigonometric functions. */
