@@ -118,29 +118,6 @@ struct Complex(T)  if (isFloatingPoint!T)
 @safe pure nothrow  // The following functions depend only on std.math.
 {
 
-    /** Calculate the absolute value (or modulus) of the number. */
-    @property T abs() const
-    {
-        return hypot(re, im);
-    }
-
-
-    /** Calculate the argument (or phase) of the number. */
-    @property T arg() const
-    {
-        return atan2(im, re);
-    }
-
-
-    /** Return the complex conjugate of the number. */
-    @property Complex conj() const
-    {
-        return Complex(re, -im);
-    }
-
-
-
-
     // ASSIGNMENT OPERATORS
 
     // TODO: Make operators return by ref when DMD bug 2460 is fixed.
@@ -325,8 +302,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        FPTemporary!T r = abs;
-        FPTemporary!T t = arg;
+        FPTemporary!T r = abs(this);
+        FPTemporary!T t = arg(this);
         FPTemporary!T ab = r^^z.re * exp(-t*z.im);
         FPTemporary!T ar = t*z.re + log(r)*z.im;
 
@@ -359,8 +336,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        FPTemporary!T ab = abs^^r;
-        FPTemporary!T ar = arg*r;
+        FPTemporary!T ab = abs(this)^^r;
+        FPTemporary!T ar = arg(this)*r;
         re = ab*std.math.cos(ar);
         im = ab*std.math.sin(ar);
         return this;
@@ -438,15 +415,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 unittest
 {
     enum EPS = double.epsilon;
-
-    // Check abs() and arg()
-    auto c1 = Complex!double(1.0, 1.0);
-    assert (approxEqual(c1.abs, std.math.sqrt(2.0), EPS));
-    assert (approxEqual(c1.arg, PI_4, EPS));
-
-    auto c1c = c1.conj;
-    assert (c1c.re == 1.0 && c1c.im == -1.0);
-
+    auto c1 = complex(1.0, 1.0);
 
     // Check unary operations.
     auto c2 = Complex!double(0.5, 2.0);
@@ -468,12 +437,12 @@ unittest
     assert (cmc.im == c1.im - c2.im);
 
     auto ctc = c1 * c2;
-    assert (approxEqual(ctc.abs, c1.abs*c2.abs, EPS));
-    assert (approxEqual(ctc.arg, c1.arg+c2.arg, EPS));
+    assert (approxEqual(abs(ctc), abs(c1)*abs(c2), EPS));
+    assert (approxEqual(arg(ctc), arg(c1)+arg(c2), EPS));
 
     auto cdc = c1 / c2;
-    assert (approxEqual(cdc.abs, c1.abs/c2.abs, EPS));
-    assert (approxEqual(cdc.arg, c1.arg-c2.arg, EPS));
+    assert (approxEqual(abs(cdc), abs(c1)/abs(c2), EPS));
+    assert (approxEqual(arg(cdc), arg(c1)-arg(c2), EPS));
 
     auto cec = c1^^c2;
     assert (approxEqual(cec.re, 0.11524131979943839881, EPS));
@@ -496,8 +465,8 @@ unittest
     assert (ctr.im == c1.im*a);
 
     auto cdr = c1 / a;
-    assert (approxEqual(cdr.abs, c1.abs/a, EPS));
-    assert (approxEqual(cdr.arg, c1.arg, EPS));
+    assert (approxEqual(abs(cdr), abs(c1)/a, EPS));
+    assert (approxEqual(arg(cdr), arg(c1), EPS));
 
     auto rpc = a + c1;
     assert (rpc == cpr);
@@ -510,22 +479,22 @@ unittest
     assert (rtc == ctr);
 
     auto rdc = a / c1;
-    assert (approxEqual(rdc.abs, a/c1.abs, EPS));
-    assert (approxEqual(rdc.arg, -c1.arg, EPS));
+    assert (approxEqual(abs(rdc), a/abs(c1), EPS));
+    assert (approxEqual(arg(rdc), -arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert (approxEqual(cer.abs, c1.abs^^3, EPS));
-    assert (approxEqual(cer.arg, c1.arg*3, EPS));
+    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
+    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
 
 
     // Check Complex-int operations.
     foreach (i; 0..6)
     {
         auto cei = c1^^i;
-        assert (approxEqual(cei.abs, c1.abs^^i, EPS));
+        assert (approxEqual(abs(cei), abs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert (approxEqual(std.math.cos(cei.arg), std.math.cos(c1.arg*i), EPS));
+        assert (approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
     }
 
 
@@ -581,7 +550,7 @@ unittest
     assert (s1 == z1.toString());
 
     // Using custom format specifier
-    auto z2 = z1.conj;
+    auto z2 = conj(z1);
     char[] s2;
     z2.toString((const(char)[] c) { s2 ~= c; }, "%.8e");
     assert (s2 == "1.23456789e-01-1.23456789e-01i");
@@ -627,6 +596,45 @@ unittest
 }
 
 
+/** Calculates the absolute value (or modulus) of a complex number. */
+T abs(T)(Complex!T z) @safe pure nothrow
+{
+    return hypot(z.re, z.im);
+}
+
+unittest
+{
+    assert (abs(complex(1.0)) == 1.0);
+    assert (abs(complex(0.0, 1.0)) == 1.0);
+    assert (abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
+}
+
+
+/** Calculates the argument (or phase) of a complex number. */
+T arg(T)(Complex!T z) @safe pure nothrow
+{
+    return atan2(z.im, z.re);
+}
+
+unittest
+{
+    assert (arg(complex(1.0)) == 0.0);
+    assert (arg(complex(0.0L, 1.0L)) == PI_2);
+    assert (arg(complex(1.0L, 1.0L)) == PI_4);
+}
+
+
+/** Returns the complex conjugate of a complex number. */
+Complex!T conj(T)(Complex!T z) @safe pure nothrow
+{
+    return Complex!T(z.re, -z.im);
+}
+
+unittest
+{
+    assert (conj(complex(1.0)) == complex(1.0));
+    assert (conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
+}
 
 
 /** Construct a complex number given its absolute value and argument. */
