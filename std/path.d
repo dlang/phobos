@@ -85,7 +85,7 @@ else static assert (0, "unsupported platform");
 
 
 
-/** Determine whether the given character is a directory separator.
+/** Determines whether the given character is a directory separator.
 
     On Windows, this includes both $(D '\') and $(D '/').
     On POSIX, it's just $(D '/').
@@ -98,7 +98,7 @@ bool isDirSeparator(dchar c)  @safe pure nothrow
 }
 
 
-/*  Determine whether the given character is a drive separator.
+/*  Determines whether the given character is a drive separator.
 
     On Windows, this is true if c is the ':' character that separates
     the drive letter from the rest of the path.  On POSIX, this always
@@ -251,7 +251,8 @@ else static assert (0);
     ---
 
     Note:
-    This function only strips away the specified suffix.  If you want
+    This function $(I only) strips away the specified suffix, which
+    doesn't necessarily have to represent an extension.  If you want
     to remove the extension from a path, regardless of what the extension
     is, use $(LREF stripExtension).
     If you want the filename without leading directories and without
@@ -565,7 +566,8 @@ unittest
 
 
 
-/** Strip the drive from a Windows path.  On POSIX, this is a noop.
+/** Strips the drive from a Windows path.  On POSIX, the path is returned
+    unaltered.
 
     Example:
     ---
@@ -622,7 +624,7 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
 
 
 
-/** Get the _extension part of a file name, including the dot.
+/** Returns the _extension part of a file name, including the dot.
 
     If there is no _extension, $(D null) is returned.
 
@@ -684,7 +686,7 @@ unittest
 
 
 
-/** Return the path with the extension stripped off.
+/** Returns the path with the extension stripped off.
 
     Examples:
     ---
@@ -742,14 +744,16 @@ unittest
 
 
 
-/** Set the extension of a filename.
+/** Returns a string containing the _path given by $(D path), but where
+    the extension has been set to $(D ext).
 
     If the filename already has an extension, it is replaced.   If not, the
-    extension is simply appended to the filename.  Including the dot in the
-    extension is optional.
+    extension is simply appended to the filename.  Including a leading dot
+    in $(D ext) is optional.
 
     This function normally allocates a new string (the possible exception
-    being case when path is immutable and doesn't already have an extension).
+    being the case when path is immutable and doesn't already have an
+    extension).
 
     Examples:
     ---
@@ -821,8 +825,8 @@ unittest
 
 
 
-/** Set the extension of a filename, but only if it doesn't
-    already have one.
+/** Returns the _path given by $(D path), with the extension given by
+    $(D ext) appended if the path doesn't already have one.
 
     Including the dot in the extension is optional.
 
@@ -875,11 +879,11 @@ unittest
 
 
 
-/** Joins one or more path components.
+/** Combines one or more path components.
 
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
-    them. If any of the path components are rooted (see
+    them. If any of the path components are rooted (as defined by
     $(LREF isRooted)) the preceding path components will be dropped.
 
     Examples:
@@ -1382,7 +1386,7 @@ unittest
 
 unittest
 {
-    // 7397
+    // Test for issue 7397
     string[] ary = ["a", "b"];
     version (Posix)
     {
@@ -1742,10 +1746,10 @@ unittest
 
 
 
-/** Translate $(D path) into an absolute _path.
+/** Translates $(D path) into an absolute _path.
 
-    This means:
-    $(UL
+    The following algorithm is used:
+    $(OL
         $(LI If $(D path) is empty, return $(D null).)
         $(LI If $(D path) is already absolute, return it.)
         $(LI Otherwise, append $(D path) to $(D base) and return
@@ -1808,7 +1812,7 @@ unittest
 
 
 
-/** Translate $(D path) into a relative _path.
+/** Translates $(D path) into a relative _path.
 
     The returned _path is relative to $(D base), which is by default
     taken to be the current working directory.  If specified,
@@ -1944,7 +1948,7 @@ unittest
 
 
 
-/** Compare filename characters and return $(D < 0) if $(D a < b), $(D 0) if
+/** Compares filename characters and return $(D < 0) if $(D a < b), $(D 0) if
     $(D a == b) and $(D > 0) if $(D a > b).
 
     This function can perform a case-sensitive or a case-insensitive
@@ -2015,7 +2019,7 @@ unittest
 
 
 
-/** Compare file names and return
+/** Compares file names and returns
     $(D < 0) if $(D filename1 < filename2),
     $(D 0) if $(D filename1 == filename2) and
     $(D > 0) if $(D filename1 > filename2).
