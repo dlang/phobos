@@ -3175,6 +3175,101 @@ unittest
 }
 
 
+/**
+Returns the path to a directory for temporary files.
+
+This function searches through a list of directories and returns the
+first one which is found to exist.  The directories searched for are,
+in order,
+$(OL
+    $(LI The directory given by the $(D TMPDIR) environment variable.)
+    $(LI The directory given by the $(D TEMP) environment variable.)
+    $(LI The directory given by the $(D TMP) environment variable.)
+    $(LI A platform-specific directory.
+        $(UL
+            $(LI On Windows: $(D C:\TEMP), $(D C:\TMP), $(D \TEMP)
+                or $(D \TMP).)
+            $(LI On POSIX: $(D /tmp), $(D /var/tmp) or $(D /usr/tmp).)
+        )
+    )
+    $(LI As a last resort, the current directory (in which case $(D tempDir)
+        returns $(D ".")).)
+)
+
+The return value of the function is cached, so the above algorithm will
+only run the first time the function is called.  All subsequent runs will
+return the same string, regardless of whether environment variables and
+directory structures have changed in the meantime.
+
+$(D tempDir) is inspired by Python's
+$(D $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, tempfile.tempdir)).
+*/
+string tempDir()
+{
+    static string cache;
+    if (cache is null)
+    {
+        // This function looks through the list of alternative directories
+        // and returns the first one which exists and is a directory.
+        static string findExistingDir(T...)(lazy T alternatives)
+        {
+            foreach (dir; alternatives)
+                if (!dir.empty && exists(dir)) return dir;
+            return null;
+        }
+
+        version (Windows)
+        {
+            cache = findExistingDir(environment.get("TMPDIR"),
+                                    environment.get("TEMP"),
+                                    environment.get("TMP"),
+                                    `C:\TEMP`,
+                                    `C:\TMP`,
+                                    `\TEMP`,
+                                    `\TMP`);
+        }
+        else version (Posix)
+        {
+            cache = findExistingDir(environment.get("TMPDIR"),
+                                    environment.get("TEMP"),
+                                    environment.get("TMP"),
+                                    "/tmp",
+                                    "/var/tmp",
+                                    "/usr/tmp");
+        }
+        else static assert (false, "Unsupported platform");
+
+        if (cache is null) cache = ".";
+    }
+    return cache;
+}
+
+unittest
+{
+    // Backup and clear the relevant environment variables.
+    auto backupTmpdir = environment.get("TMPDIR");
+    auto backupTemp = environment.get("TEMP");
+    auto backupTmp = environment.get("TMP");
+    environment.remove("TMPDIR");
+    environment.remove("TEMP");
+    environment.remove("TMP");
+
+    // We need a directory which exists on all platforms. "/" should do
+    // the trick.
+    environment["TMP"] = "/";
+    assert(tempDir() == "/");
+
+    // Check that the result gets cached.
+    environment.remove("TMP");
+    assert(tempDir() == "/");
+
+    // Restore environment variables
+    environment["TMPDIR"] = backupTmpdir;
+    environment["TEMP"] = backupTemp;
+    environment["TMP"] = backupTmp;
+}
+
+
 /++
     $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
