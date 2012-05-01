@@ -1,7 +1,11 @@
 // Written in the D programming language.
 
-/** Module that will replace the built-in types $(D cfloat), $(D cdouble),
-    $(D creal), $(D ifloat), $(D idouble), and $(D ireal).
+/** This module contains the $(LREF Complex) type, which is used to represent
+    _complex numbers, along with related mathematical operations and functions.
+
+    $(LREF Complex) will eventually $(LINK2 ../deprecate.html, replace)
+    the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
+    $(D idouble), and $(D ireal).
 
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
