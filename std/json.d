@@ -61,6 +61,22 @@ struct JSONValue {
         }
         /// Specifies the _type of the value stored in this structure.
         JSON_TYPE                               type;
+
+        /// array syntax for json arrays
+        ref JSONValue opIndex(size_t i)
+            in { assert(type == JSON_TYPE.ARRAY, "json type is not array"); }
+        body
+        {
+            return array[i];
+        }
+
+        /// hash syntax for json objects
+        ref JSONValue opIndex(string k)
+            in { assert(type == JSON_TYPE.OBJECT, "json type is not object"); }
+        body
+        {
+            return object[k];
+        }
 }
 
 /**
