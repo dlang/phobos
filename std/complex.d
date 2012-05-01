@@ -3,7 +3,7 @@
 /** Module that will replace the built-in types $(D cfloat), $(D cdouble),
     $(D creal), $(D ifloat), $(D idouble), and $(D ireal).
 
-    Authors:    Lars Tandle Kyllingstad
+    Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:     $(PHOBOSSRC std/_complex.d)
@@ -631,6 +631,36 @@ unittest{
     assert(cos(complex(0.0)) == 1.0);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+}
+
+
+/** Calculates cos(y) + i sin(y).
+
+    On many CPUs (such as x86), this is a very efficient operation;
+    almost twice as fast as calculating sin(y) and cos(y) separately,
+    and is the preferred method when both are required.
+*/
+Complex!real expi(real y)  @trusted pure nothrow
+{
+    version(InlineAsm_X86_Any)
+    {
+        asm
+        {
+            fld y;
+            fsincos;
+            fxch ST(1), ST(0);
+        }
+    }
+    else
+    {
+        return Complex!real(std.math.cos(y), std.math.sin(y));
+    }
+}
+
+unittest
+{
+    assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
+    assert(expi(0.0L) == 1.0L);
 }
 
 
