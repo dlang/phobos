@@ -28,6 +28,10 @@
     $(LREF isValidFilename) and $(LREF isValidPath) functions to check
     this.
 
+    Most functions do not perform any memory allocations, and if a string is
+    returned, it is usually a slice of an input string.  If a function
+    allocates, this is explicitly mentioned in the documentation.
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
@@ -354,6 +358,11 @@ unittest
 
 /** Returns the directory part of a path.  On Windows, this
     includes the drive letter if present.
+
+    This function performs a memory allocation if and only if $(D path)
+    is mutable and does not have a directory (in which case a new mutable
+    string is needed to hold the returned current-directory symbol,
+    $(D ".")).
 
     Examples:
     ---
@@ -886,6 +895,8 @@ unittest
     them. If any of the path components are rooted (as defined by
     $(LREF isRooted)) the preceding path components will be dropped.
 
+    This function always allocates memory to hold the resulting path.
+
     Examples:
     ---
     version (Posix)
@@ -982,6 +993,8 @@ unittest
     On Windows, slashes are replaced with backslashes.
 
     Note that this function does not resolve symbolic links.
+
+    This function always allocates memory to hold the resulting path.
 
     Examples:
     ---
@@ -1756,6 +1769,8 @@ unittest
             the result. If $(D base) is not specified, the current
             working directory is used.)
     )
+    The function allocates memory if and only if it gets to the third stage
+    of this algorithm.
 
     Examples:
     ---
@@ -1836,6 +1851,8 @@ unittest
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
+    The function allocates memory if and only if it reaches the third stage
+    of the above algorithm.
 
     Examples:
     ---
@@ -2590,6 +2607,8 @@ unittest
     is empty. When the database version is used, the path won't be
     modified if the user doesn't exist in the database or there is
     not enough memory to perform the query.
+
+    This function performs several memory allocations.
 
     Returns:
     $(D inputPath) with the tilde expanded, or just $(D inputPath)
