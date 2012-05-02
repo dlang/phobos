@@ -70,6 +70,10 @@ version (unittest)
 version (Windows)
 {
     enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
+
+    // Required by tempPath():
+    private static extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
+                                                      LPWSTR lpBuffer);
 }
 else version (Posix)
 {
@@ -3178,30 +3182,30 @@ unittest
 /**
 Returns the path to a directory for temporary files.
 
-This function searches through a list of directories and returns the
-first one which is found to exist.  The directories searched for are,
-in order,
+On Windows, this function returns the result of calling the Windows API function
+$(D $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992.aspx, GetTempPath)).
+
+On POSIX platforms, it searches through the following list of directories
+and returns the first one which is found to exist:
 $(OL
     $(LI The directory given by the $(D TMPDIR) environment variable.)
     $(LI The directory given by the $(D TEMP) environment variable.)
     $(LI The directory given by the $(D TMP) environment variable.)
-    $(LI A platform-specific directory.
-        $(UL
-            $(LI On Windows: $(D C:\TEMP), $(D C:\TMP), $(D \TEMP)
-                or $(D \TMP).)
-            $(LI On POSIX: $(D /tmp), $(D /var/tmp) or $(D /usr/tmp).)
-        )
-    )
-    $(LI As a last resort, the current directory (in which case $(D tempDir)
-        returns $(D ".")).)
+    $(LI $(D /tmp))
+    $(LI $(D /var/tmp))
+    $(LI $(D /usr/tmp))
 )
 
-The return value of the function is cached, so the above algorithm will
-only run the first time the function is called.  All subsequent runs will
-return the same string, regardless of whether environment variables and
-directory structures have changed in the meantime.
+On all platforms, $(D tempDir) returns $(D ".") on failure, representing
+the current working directory.
 
-$(D tempDir) is inspired by Python's
+The return value of the function is cached, so the procedures described
+above will only be performed the first time the function is called.  All
+subsequent runs will return the same string, regardless of whether
+environment variables and directory structures have changed in the
+meantime.
+
+The POSIX $(D tempDir) algorithm is inspired by Python's
 $(D $(LINK2 http://docs.python.org/library/tempfile.html#tempfile.tempdir, tempfile.tempdir)).
 */
 string tempDir()
@@ -3209,27 +3213,23 @@ string tempDir()
     static string cache;
     if (cache is null)
     {
-        // This function looks through the list of alternative directories
-        // and returns the first one which exists and is a directory.
-        static string findExistingDir(T...)(lazy T alternatives)
+        version(Windows)
         {
-            foreach (dir; alternatives)
-                if (!dir.empty && exists(dir)) return dir;
-            return null;
+            wchar[MAX_PATH] buf;
+            DWORD len = GetTempPathW(buf.length, buf.ptr);
+            if (len) cache = toUTF8(buf[0 .. len]);
         }
+        else version(Posix)
+        {
+            // This function looks through the list of alternative directories
+            // and returns the first one which exists and is a directory.
+            static string findExistingDir(T...)(lazy T alternatives)
+            {
+                foreach (dir; alternatives)
+                    if (!dir.empty && exists(dir)) return dir;
+                return null;
+            }
 
-        version (Windows)
-        {
-            cache = findExistingDir(environment.get("TMPDIR"),
-                                    environment.get("TEMP"),
-                                    environment.get("TMP"),
-                                    `C:\TEMP`,
-                                    `C:\TMP`,
-                                    `\TEMP`,
-                                    `\TMP`);
-        }
-        else version (Posix)
-        {
             cache = findExistingDir(environment.get("TMPDIR"),
                                     environment.get("TEMP"),
                                     environment.get("TMP"),
@@ -3244,7 +3244,7 @@ string tempDir()
     return cache;
 }
 
-unittest
+version (Posix) unittest
 {
     // Backup and clear the relevant environment variables.
     auto backupTmpdir = environment.get("TMPDIR");
