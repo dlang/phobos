@@ -51,11 +51,7 @@ version (unittest)
 
         if(_first)
         {
-            version(Windows)
-                _deleteme = buildPath(std.process.getenv("TEMP"), _deleteme);
-            else version(Posix)
-                _deleteme = "/tmp/" ~ _deleteme;
-
+            _deleteme = buildPath(tempDir(), _deleteme);
             _first = false;
         }
 
@@ -3242,31 +3238,6 @@ string tempDir()
         if (cache is null) cache = ".";
     }
     return cache;
-}
-
-version (Posix) unittest
-{
-    // Backup and clear the relevant environment variables.
-    auto backupTmpdir = environment.get("TMPDIR");
-    auto backupTemp = environment.get("TEMP");
-    auto backupTmp = environment.get("TMP");
-    environment.remove("TMPDIR");
-    environment.remove("TEMP");
-    environment.remove("TMP");
-
-    // We need a directory which exists on all platforms. "/" should do
-    // the trick.
-    environment["TMP"] = "/";
-    assert(tempDir() == "/");
-
-    // Check that the result gets cached.
-    environment.remove("TMP");
-    assert(tempDir() == "/");
-
-    // Restore environment variables
-    environment["TMPDIR"] = backupTmpdir;
-    environment["TEMP"] = backupTemp;
-    environment["TMP"] = backupTmp;
 }
 
 
