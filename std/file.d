@@ -2476,7 +2476,7 @@ version(Posix) unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf "~deleteme~"/a/b/c /tmp/"~deleteme~"/link");
+    std.process.system("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
