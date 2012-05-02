@@ -325,12 +325,12 @@ public:
     {
         static if (op=="++")
         {
-            data = BigUint.addOrSubInt(data, 1UL, false, sign);
+            data = BigUint.addOrSubInt(data, 1UL, sign, sign);
             return this;
         }
         else static if (op=="--")
         {
-            data = BigUint.addOrSubInt(data, 1UL, true, sign);
+            data = BigUint.addOrSubInt(data, 1UL, !sign, sign);
             return this;
         }
     }
@@ -679,4 +679,15 @@ unittest
     BigInt bx = x;
     formattedWrite(w2, "%010d", bx);
     assert(w1.data == w2.data);
+    //8011
+    BigInt y = -3;
+    ++y;
+    assert(y.toLong() == -2);
+    y = 1;
+    --y;
+    assert(y.toLong() == 0);
+    --y;
+    assert(y.toLong() == -1);
+    --y;
+    assert(y.toLong() == -2);
 }
