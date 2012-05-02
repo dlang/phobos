@@ -68,8 +68,8 @@ version (Windows)
     enum FILE_ATTRIBUTE_REPARSE_POINT = 0x400;
 
     // Required by tempPath():
-    private static extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
-                                                      LPWSTR lpBuffer);
+    private extern(Windows) DWORD GetTempPathW(DWORD nBufferLength,
+                                               LPWSTR lpBuffer);
 }
 else version (Posix)
 {
