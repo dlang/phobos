@@ -272,7 +272,7 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure nothrow
+    @trusted pure //TODO: nothrow (BUG 5700)
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
