@@ -1792,13 +1792,14 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string absolutePath(string path, string base = getcwd())
+string absolutePath(string path, lazy string base = getcwd())
     @safe pure
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
-    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
-    return buildPath(base, path);
+    immutable baseVar = base;
+    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
+    return buildPath(baseVar, path);
 }
 
 
@@ -1881,17 +1882,18 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
-    (string path, string base = getcwd())
+    (string path, lazy string base = getcwd())
     //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
     if (!isAbsolute(path)) return path;
-    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
+    immutable baseVar = base;
+    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
 
     // Find common root with current working directory
     string result;
-    if (!__ctfe) result.reserve(base.length + path.length);
+    if (!__ctfe) result.reserve(baseVar.length + path.length);
 
-    auto basePS = pathSplitter(base);
+    auto basePS = pathSplitter(baseVar);
     auto pathPS = pathSplitter(path);
     if (filenameCmp!cs(basePS.front, pathPS.front) != 0) return path;
 
