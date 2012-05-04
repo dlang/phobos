@@ -747,21 +747,21 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
 
   private:
-    enum Size = bits / 32;
+    enum size = bits / 32;
 
     static if (bits == 32)
-        UIntType[Size] seeds_ = [2463534242];
+        UIntType[size] seeds_ = [2463534242];
     else static if (bits == 64)
-        UIntType[Size] seeds_ = [123456789, 362436069];
+        UIntType[size] seeds_ = [123456789, 362436069];
     else static if (bits == 96)
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629];
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629];
     else static if (bits == 128)
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123];
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
     else static if (bits == 160)
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
     else
     { // 192bits
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
     }
 
@@ -803,7 +803,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
         static if (bits == 192)
             return value_;
         else
-            return seeds_[Size - 1];
+            return seeds_[size - 1];
     }
 
 
@@ -886,7 +886,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
   private:
     @safe
-    static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
+    static nothrow void sanitizeSeeds(ref UIntType[size] seeds)
     {
         for (uint i; i < seeds.length; i++)
         {
@@ -898,9 +898,9 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
     unittest
     {
-        static if (Size  ==  4)  // Other bits too
+        static if (size  ==  4)  // Other bits too
         {
-            UIntType[Size] seeds = [1, 0, 0, 4];
+            UIntType[size] seeds = [1, 0, 0, 4];
 
             sanitizeSeeds(seeds);
 
