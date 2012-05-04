@@ -1481,10 +1481,10 @@ foreach (e; randomSample(a, 5))
 ----
 
 $(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
-(see Vitter $(WEB http://dx.doi.org/10.1145/358105.893, 1984),
-$(WEB http://dx.doi.org/10.1145/23002.23003, 1987)) which selects
-a sample of size $(D n) in O(n) steps and requiring O(n) random
-variates, regardless of the size of the data being sampled.
+(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
+dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
+of size $(D n) in O(n) steps and requiring O(n) random variates,
+regardless of the size of the data being sampled.
 */
 struct RandomSample(R, Random = void)
     if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
