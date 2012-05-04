@@ -247,6 +247,7 @@ unittest
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
+    if(isUnsigned!UIntType)
 {
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -511,14 +512,12 @@ unittest
 /**
 The $(LUCKY Mersenne Twister) generator.
  */
-struct MersenneTwisterEngine(
-    UIntType, size_t w, size_t n, size_t m, size_t r,
-    UIntType a, size_t u, size_t s,
-    UIntType b, size_t t,
-    UIntType c, size_t l)
+struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
+                             UIntType a, size_t u, size_t s,
+                             UIntType b, size_t t,
+                             UIntType c, size_t l)
+    if(isUnsigned!UIntType)
 {
-    static assert(UIntType.min == 0);
-
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
 /**
@@ -730,6 +729,7 @@ unittest
  * )
  */
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
+    if(isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
@@ -1248,6 +1248,7 @@ array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
+    if(isFloatingPoint!F)
 {
     useThis.length = n;
     foreach (ref e; useThis)
@@ -1275,7 +1276,8 @@ a random-access range with length.
  */
 
 void randomShuffle(Range, RandomGen = Random)(Range r,
-        ref RandomGen gen = rndGen)
+                                              ref RandomGen gen = rndGen)
+    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     foreach (i; 0 .. r.length)
     {
@@ -1381,7 +1383,8 @@ foreach (e; randomCover(a, rnd))
 }
 ----
  */
-struct RandomCover(Range, Random) if (isUniformRNG!Random)
+struct RandomCover(Range, Random)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     private Range _input;
     private Random _rnd;
@@ -1450,7 +1453,7 @@ struct RandomCover(Range, Random) if (isUniformRNG!Random)
 
 /// Ditto
 RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
-    if(isUniformRNG!Random)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     return typeof(return)(r, rnd);
 }
@@ -1497,7 +1500,7 @@ foreach (e; randomSample(a, 5))
 ----
  */
 struct RandomSample(R, Random = void)
-    if(isUniformRNG!Random || is(Random == void))
+    if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1616,7 +1619,8 @@ if(isInputRange!R)
 }
 
 /// Ditto
-auto randomSample(R)(R r, size_t n) if (hasLength!R)
+auto randomSample(R)(R r, size_t n)
+    if(isInputRange!R && hasLength!R)
 {
     return RandomSample!(R, void)(r, n, r.length);
 }
