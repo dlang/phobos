@@ -33,7 +33,7 @@
  *      $(LINK2 http://www.digitalmars.com/d/archives/28456.html, Signal/Slot mechanism?)$(BR)
  *      $(LINK2 http://www.digitalmars.com/d/archives/19470.html, Modern Features?)$(BR)
  *      $(LINK2 http://www.digitalmars.com/d/archives/16592.html, Delegates vs interfaces)$(BR)
- *      $(LINK2 http://www.digitalmars.com/d/archives/16583.html, The importance of component programming (properties, signals and slots, etc))$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/16583.html, The importance of component programming (properties$(COMMA) signals and slots$(COMMA) etc))$(BR)
  *      $(LINK2 http://www.digitalmars.com/d/archives/16368.html, signals and slots)$(BR)
  *
  * Bugs:
