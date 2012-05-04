@@ -113,15 +113,6 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-version (Windows)
-{
-    extern(Windows) int QueryPerformanceCounter(ulong *count);
-}
-
-version (Posix)
-{
-    private import core.sys.posix.sys.time;
-}
 
 /**
  * Test if Rng is a random-number generator. The overload
@@ -199,38 +190,38 @@ unittest
     assert(!isUniformRNG!(NoRng));
     assert(!isSeedable!(NoRng, uint));
     assert(!isSeedable!(NoRng));
-    
+
     struct NoRng2
     {
         @property uint front() {return 0;}
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = false;
     }
     assert(!isUniformRNG!(NoRng2, uint));
     assert(!isUniformRNG!(NoRng2));
     assert(!isSeedable!(NoRng2, uint));
     assert(!isSeedable!(NoRng2));
-    
+
     struct NoRng3
     {
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = true;
     }
     assert(!isUniformRNG!(NoRng3, uint));
     assert(!isUniformRNG!(NoRng3));
     assert(!isSeedable!(NoRng3, uint));
     assert(!isSeedable!(NoRng3));
-    
+
     struct validRng
     {
         @property uint front() {return 0;}
         @property bool empty() {return false;}
         void popFront() {}
-        
+
         enum isUniformRandom = true;
     }
     assert(isUniformRNG!(validRng, uint));
