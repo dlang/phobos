@@ -3067,6 +3067,9 @@ therefore avoiding the overhead of $(D new). This facility is unsafe;
 it is the responsibility of the user to not escape a reference to the
 object outside the scope.
 
+Note: it's illegal to move a class reference even if you are sure there
+is no pointers to it.
+
 Example:
 ----
 unittest
@@ -3077,6 +3080,9 @@ unittest
     a1.x = 42;
     a2.x = 53;
     assert(a1.x == 42);
+
+    auto a3 = a2; // illegal, fails to compile
+    assert([a2][0].x == 42); // illegal, unexpected behaviour
 }
 ----
  */
@@ -3087,12 +3093,33 @@ unittest
     return result;
 }
 
+private template maxAlignment(U...) if(isTypeTuple!U)
+{
+    static if(U.length == 1)
+        enum maxAlignment = U[0].alignof;
+    else
+        enum maxAlignment = max(U[0].alignof, .maxAlignment!(U[1 .. $]));
+}
+
 private struct Scoped(T)
 {
-    private byte[__traits(classInstanceSize, T)] Scoped_store = void;
+    private
+    {
+        // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
+        // small objects). We will just use the maximum of filed alignments.
+        alias maxAlignment!(void*, typeof(T.tupleof)) alignment;
+
+        static size_t aligned(size_t n)
+        {
+            enum badEnd = alignment - 1; // 0b11, 0b111, ...
+            return (n + badEnd) & ~badEnd;
+        }
+
+        void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
+    }
     @property inout(T) Scoped_payload() inout
     {
-        return cast(inout(T))(Scoped_store.ptr);
+        return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
     }
     alias Scoped_payload this;
 
@@ -3130,6 +3157,70 @@ private void destroy(T)(T obj) if (is(T == class))
         Base[0] b = obj;
         destroy(b);
     }
+}
+
+unittest // Issue 6580 testcase
+{
+    enum alignment = (void*).alignof;
+
+    static class C0 { }
+    static class C1 { byte b; }
+    static class C2 { byte[2] b; }
+    static class C3 { byte[3] b; }
+    static class C7 { byte[7] b; }
+    static assert(Scoped!C0.sizeof % alignment == 0);
+    static assert(Scoped!C1.sizeof % alignment == 0);
+    static assert(Scoped!C2.sizeof % alignment == 0);
+    static assert(Scoped!C3.sizeof % alignment == 0);
+    static assert(Scoped!C7.sizeof % alignment == 0);
+
+    enum longAlignment = long.alignof;
+    static class C1long { long l; byte b; }
+    static class C2long { byte[2] b; long l; }
+    static assert(Scoped!C1long.sizeof % longAlignment == 0);
+    static assert(Scoped!C2long.sizeof % longAlignment == 0);
+
+    void alignmentTest()
+    {
+        // Enshure `forAlignmentOnly` field really helps
+        auto c1long = scoped!C1long();
+        auto c2long = scoped!C2long();
+        assert(cast(size_t)&c1long.l % longAlignment == 0);
+        assert(cast(size_t)&c2long.l % longAlignment == 0);
+    }
+
+    alignmentTest();
+
+    version(DigitalMars)
+    {
+        void test(size_t size)
+        {
+            import core.stdc.stdlib;
+            alloca(size);
+            alignmentTest();
+        }
+        foreach(i; 0 .. 10)
+            test(i);
+    }
+    else 
+    {
+        void test(size_t size)()
+        {
+            byte[size] arr;
+            alignmentTest();
+        }
+        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+            test!i();
+    }
+}
+
+unittest // Original Issue 6580 testcase
+{
+    class C { int i; byte b; }
+
+    auto sa = [scoped!C(), scoped!C()];
+    assert(cast(size_t)&sa[0].i % int.alignof == 0);
+    assert(cast(size_t)&sa[1].i % int.alignof == 0); // fails
 }
 
 unittest
