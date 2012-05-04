@@ -17,6 +17,7 @@ Example: This example creates a DOM (Document Object Model) tree
 import std.xml;
 import std.stdio;
 import std.string;
+import std.file;
 
 // books.xml is used in various samples throughout the Microsoft XML Core
 // Services (MSXML) SDK.
@@ -34,7 +35,7 @@ void main()
     auto doc = new Document(s);
 
     // Plain-print it
-    writefln(doc);
+    writeln(doc);
 }
 ------------------------------------------------------------------------------
 
