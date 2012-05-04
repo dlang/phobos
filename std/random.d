@@ -273,8 +273,10 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
-    private static ulong gcd(ulong a, ulong b) {
-        while (b) {
+    private static ulong gcd(ulong a, ulong b)
+    {
+        while (b)
+        {
             auto t = b;
             b = a % b;
             a = t;
@@ -282,20 +284,24 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
-    private static ulong primeFactorsOnly(ulong n) {
+    private static ulong primeFactorsOnly(ulong n)
+    {
         ulong result = 1;
         ulong iter = 2;
-        for (; n >= iter * iter; iter += 2 - (iter == 2)) {
+        for (; n >= iter * iter; iter += 2 - (iter == 2))
+        {
             if (n % iter) continue;
             result *= iter;
-            do {
+            do
+            {
                 n /= iter;
             } while (n % iter == 0);
         }
         return result * n;
     }
 
-    unittest {
+    unittest
+    {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
         static assert(primeFactorsOnly(11) == 11);
@@ -306,7 +312,8 @@ The parameters of this distribution. The random number is $(D_PARAM x
     }
 
     private static bool properLinearCongruentialParameters(ulong m,
-            ulong a, ulong c) {
+            ulong a, ulong c)
+    {
         if (m == 0)
         {
             static if (is(UIntType == uint))
@@ -565,7 +572,8 @@ Parameter for the generator.
             static assert(max + 1 > 0);
             mt[0] = value % (max + 1);
         }
-        for (mti = 1; mti < n; ++mti) {
+        for (mti = 1; mti < n; ++mti)
+        {
             mt[mti] =
                 cast(UIntType)
                 (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti);
@@ -741,17 +749,18 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
   private:
     enum Size = bits / 32;
 
-    static if (bits == 32) {
+    static if (bits == 32)
         UIntType[Size] seeds_ = [2463534242];
-    } else static if (bits == 64) {
+    else static if (bits == 64)
         UIntType[Size] seeds_ = [123456789, 362436069];
-    } else static if (bits == 96) {
+    else static if (bits == 96)
         UIntType[Size] seeds_ = [123456789, 362436069, 521288629];
-    } else static if (bits == 128) {
+    else static if (bits == 128)
         UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123];
-    } else static if (bits == 160) {
+    else static if (bits == 160)
         UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
-    } else { // 192bits
+    else
+    { // 192bits
         UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
     }
@@ -791,11 +800,10 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     @property @safe
     nothrow UIntType front()
     {
-        static if (bits == 192) {
+        static if (bits == 192)
             return value_;
-        } else {
+        else
             return seeds_[Size - 1];
-        }
     }
 
 
@@ -807,33 +815,44 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     {
         UIntType temp;
 
-        static if (bits == 32) {
+        static if (bits == 32)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             temp      = temp >> b;
             seeds_[0] = temp ^ (temp << c);
-        } else static if (bits == 64) {
+        }
+        else static if (bits == 64)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[1] ^ (seeds_[1] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 96) {
+        }
+        else static if (bits == 96)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[2] ^ (seeds_[2] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 128){
+        }
+        else static if (bits == 128)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[3] ^ (seeds_[3] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 160){
+        }
+        else static if (bits == 160)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
-        } else { // 192bits
+        }
+        else
+        { // 192bits
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -869,7 +888,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     @safe
     static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
     {
-        for (uint i; i < seeds.length; i++) {
+        for (uint i; i < seeds.length; i++)
+        {
             if (seeds[i] == 0)
                 seeds[i] = i + 1;
         }
@@ -932,10 +952,12 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192)) {
+    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192))
+    {
         Type rnd;
 
-        foreach (e; checking[I]) {
+        foreach (e; checking[I])
+        {
             assert(rnd.front == e);
             rnd.popFront();
         }
@@ -961,7 +983,8 @@ auto n = rnd.front;
 {
     static bool seeded;
     static MinstdRand0 rand;
-    if (!seeded) {
+    if (!seeded)
+    {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
         rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
         seeded = true;
@@ -1050,18 +1073,19 @@ unittest
         assert('a' <= x && x <= 'z');
     }
 
-        foreach (i; 0 .. 20)
+    foreach (i; 0 .. 20)
     {
         auto x = uniform('a', 'z', gen);
         assert('a' <= x && x < 'z');
     }
 
-        foreach(i; 0 .. 20) {
-            immutable ubyte a = 0;
-                immutable ubyte b = 15;
-            auto x = uniform(a, b, gen);
-                assert(a <= x && x < b);
-        }
+    foreach(i; 0 .. 20)
+    {
+        immutable ubyte a = 0;
+            immutable ubyte b = 15;
+        auto x = uniform(a, b, gen);
+            assert(a <= x && x < b);
+    }
 }
 
 // Implementation of uniform for floating-point types
@@ -1320,7 +1344,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     auto mass = 0.0;
 
     size_t i = 0;
-    foreach (e; proportions) {
+    foreach (e; proportions)
+    {
         mass += e;
         if (point < mass) return i;
         i++;
@@ -1329,7 +1354,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     assert(false);
 }
 
-unittest {
+unittest
+{
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
