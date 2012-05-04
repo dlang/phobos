@@ -1,7 +1,7 @@
 $(VERSION 060, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
-        $(LI Added std.path.tempDir which returns the path to a directory
+        $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
     )
 
