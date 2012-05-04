@@ -139,7 +139,7 @@ void main()
  *
  */
 
-template Signal(T1...)
+mixin template Signal(T1...)
 {
     static import std.c.stdlib;
     static import core.exception;
@@ -156,7 +156,7 @@ template Signal(T1...)
     /***
      * Call each of the connected slots, passing the argument(s) i to them.
      */
-    void emit( T1 i )
+    final void emit( T1 i )
     {
         foreach (slot; slots[0 .. slots_idx])
         {   if (slot)
@@ -167,7 +167,7 @@ template Signal(T1...)
     /***
      * Add a slot to the list of slots to be called when emit() is called.
      */
-    void connect(slot_t slot)
+    final void connect(slot_t slot)
     {
         /* Do this:
          *    slots ~= slot;
@@ -204,7 +204,7 @@ template Signal(T1...)
     /***
      * Remove a slot from the list of slots to be called when emit() is called.
      */
-    void disconnect( slot_t slot)
+    final void disconnect(slot_t slot)
     {
         debug (signal) writefln("Signal.disconnect(slot)");
         for (size_t i = 0; i < slots_idx; )
@@ -227,7 +227,7 @@ template Signal(T1...)
      * It causes any slots dependent on o to be removed from the list
      * of slots to be called by emit().
      */
-    void unhook(Object o)
+    final void unhook(Object o)
     {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
         for (size_t i = 0; i < slots_idx; )
