@@ -1664,12 +1664,12 @@ Variable names are chosen to match those in Vitter's paper.
         // sampling with Algorithm A.
         if(_algorithmA)
         {
-            return skipA;
+            return skipA();
         }
         else if((_alphaInverse * _toSelect) > _available)
         {
             _algorithmA = true;
-            return skipA;
+            return skipA();
         }
         // Otherwise, we use the standard Algorithm D mechanism.
         else if ( _toSelect > 1 )
@@ -1760,7 +1760,7 @@ Variable names are chosen to match those in Vitter's paper.
     {
         if (empty) return;
         assert(_available && _available >= _toSelect);
-        immutable size_t S = skip;
+        immutable size_t S = skip();
         _input.popFrontN(S);
         _index += S;
         _available -= S;
