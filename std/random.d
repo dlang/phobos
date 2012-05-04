@@ -1589,42 +1589,43 @@ to remaining data values is sufficiently large.
 */
     private size_t skipA()
     {
-        size_t S;
-        double V, quot, top;
+        size_t s;
+        double v, quot, top;
 
         if(_toSelect==1)
         {
             static if(is(Random==void))
             {
-                S = uniform(0, _available);
+                s = uniform(0, _available);
             }
             else
             {
-                S = uniform(0, _available, gen);
+                s = uniform(0, _available, gen);
             }
         }
         else
         {
-            S = 0;
+            v = 0;
             top = _available - _toSelect;
             quot = top / _available;
 
             static if(is(Random==void))
             {
-                V = uniform!("()")(0.0, 1.0);
+                v = uniform!"()"(0.0, 1.0);
             }
             else
             {
-                V = uniform!("()")(0.0, 1.0, gen);
+                v = uniform!"()"(0.0, 1.0, gen);
             }
 
-            while (quot > V) {
-                ++S;
-                quot *= (top - S) / (_available - S);
+            while (quot > v)
+            {
+                ++s;
+                quot *= (top - s) / (_available - s);
             }
         }
 
-        return S;
+        return s;
     }
 
 /*
@@ -1634,11 +1635,11 @@ Randomly reset the value of _Vprime.
     {
         static if(is(Random == void))
         {
-            double r = uniform!("()")(0.0, 1.0);
+            double r = uniform!"()"(0.0, 1.0);
         }
         else
         {
-            double r = uniform!("()")(0.0, 1.0, gen);
+            double r = uniform!"()"(0.0, 1.0, gen);
         }
 
         return r ^^ (1.0 / remaining);
@@ -1674,32 +1675,32 @@ Variable names are chosen to match those in Vitter's paper.
         // Otherwise, we use the standard Algorithm D mechanism.
         else if ( _toSelect > 1 )
         {
-            size_t S;
+            size_t s;
             size_t qu1 = 1 + _available - _toSelect;
-            double X, y1;
+            double x, y1;
 
-            while(1)
+            while(true)
             {
-                // Step D2: set values of X and U.
-                for(X = _available * (1-_Vprime), S = cast(size_t) trunc(X);
-                    S >= qu1;
-                    X = _available * (1-_Vprime), S = cast(size_t) trunc(X))
+                // Step D2: set values of x and u.
+                for(x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
+                    s >= qu1;
+                    x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
                 {
                     _Vprime = newVprime(_toSelect);
                 }
 
                 static if(is(Random == void))
                 {
-                    double U = uniform!("()")(0.0, 1.0);
+                    double u = uniform!"()"(0.0, 1.0);
                 }
                 else
                 {
-                    double U = uniform!("()")(0.0, 1.0, gen);
+                    double u = uniform!"()"(0.0, 1.0, gen);
                 }
 
-                y1 = (U * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+                y1 = (u * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
 
-                _Vprime = y1 * ((-X/_available)+1.0) * ( qu1/( (cast(double) qu1) - S ) );
+                _Vprime = y1 * ((-x/_available)+1.0) * ( qu1/( (cast(double) qu1) - s ) );
 
                 // Step D3: if _Vprime <= 1.0 our work is done and we return S.
                 // Otherwise ...
@@ -1708,14 +1709,14 @@ Variable names are chosen to match those in Vitter's paper.
                     size_t top = _available - 1, limit;
                     double y2 = 1.0, bottom;
 
-                    if(_toSelect > (S+1) )
+                    if(_toSelect > (s+1) )
                     {
                         bottom = _available - _toSelect;
-                        limit = _available - S;
+                        limit = _available - s;
                     }
                     else
                     {
-                        bottom = _available - (S+1);
+                        bottom = _available - (s+1);
                         limit = qu1;
                     }
 
@@ -1727,7 +1728,7 @@ Variable names are chosen to match those in Vitter's paper.
                     }
 
                     // Step D4: decide whether or not to accept the current value of S.
-                    if( (_available/(_available-X)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    if( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
                     {
                         // If it's not acceptable, we generate a new value of _Vprime
                         // and go back to the start of the for(;;) loop.
@@ -1739,13 +1740,13 @@ Variable names are chosen to match those in Vitter's paper.
                         // based on the remaining number of sample points needed,
                         // and return S.
                         _Vprime = newVprime(_toSelect-1);
-                        return S;
+                        return s;
                     }
                 }
                 else
                 {
                     // Return if condition D3 satisfied.
-                    return S;
+                    return s;
                 }
             }
         }
@@ -1760,10 +1761,10 @@ Variable names are chosen to match those in Vitter's paper.
     {
         if (empty) return;
         assert(_available && _available >= _toSelect);
-        immutable size_t S = skip();
-        _input.popFrontN(S);
-        _index += S;
-        _available -= S;
+        immutable size_t s = skip();
+        _input.popFrontN(s);
+        _index += s;
+        _available -= s;
         assert(_available > 0);
         return;
     }
