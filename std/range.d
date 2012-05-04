@@ -4337,12 +4337,13 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 if (step > 0)
                 {
                     this.pastLast = pastLast - 1;
+                    this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
                     this.pastLast = pastLast + 1;
+                    this.pastLast += (current - this.pastLast) % -step;
                 }
-                this.pastLast -= (this.pastLast - current) % step;
                 this.pastLast += step;
             }
             else
@@ -4380,7 +4381,14 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property IndexType length() const
         {
-            return unsigned((pastLast - current) / step);
+            if (step > 0)
+            {
+                return unsigned((pastLast - current) / step);
+            }
+            else
+            {
+                return unsigned((current - pastLast) / -step);
+            }
         }
         
         alias length opDollar;
@@ -4645,6 +4653,14 @@ unittest
     // properties are all correct)
     auto iota_zero_unsigned = iota(0, 0u, 3);
     assert(count(iota_zero_unsigned) == 0);
+
+    // unsigned reverse iota can be buggy if .length doesn't take them into
+    // account (issue 7982).
+    assert(iota(10u, 0u, -1).length() == 10);
+    assert(iota(10u, 0u, -2).length() == 5);
+    assert(iota(uint.max, uint.max-10, -1).length() == 10);
+    assert(iota(uint.max, uint.max-10, -2).length() == 5);
+    assert(iota(uint.max, 0u, -1).length() == uint.max);
 }
 
 unittest
