@@ -1499,44 +1499,44 @@ struct RandomSample(R, Random = void)
 Constructor.
 */
 
-	private void init(R input, size_t howMany, size_t total)
-	{
-		_input = input;
-		_available = total;
-		_toSelect = howMany;
-		enforce(_toSelect <= _available);
-		// we should skip some elements initially so we don't always
-		// start with the first
-		prime();
-	}
+    private void initialize(R input, size_t howMany, size_t total)
+    {
+        _input = input;
+        _available = total;
+        _toSelect = howMany;
+        enforce(_toSelect <= _available);
+        // we should skip some elements initially so we don't always
+        // start with the first
+        prime();
+    }
 
-	static if(is(Random == void))
-	{
-		static if (hasLength!R)
-			this(R input, size_t howMany)
-			{
-				this(input, howMany, input.length);
-			}
+    static if(is(Random == void))
+    {
+        static if (hasLength!R)
+            this(R input, size_t howMany)
+            {
+                this(input, howMany, input.length);
+            }
 
-		this(R input, size_t howMany, size_t total)
-		{
-			init(input, howMany, total);
-		}
-	}
-	else
-	{
-		static if (hasLength!R)
-			this(R input, size_t howMany, Random _gen)
-			{
-				this(input, howMany, input.length, _gen);
-			}
+        this(R input, size_t howMany, size_t total)
+        {
+            initialize(input, howMany, total);
+        }
+    }
+    else
+    {
+        static if (hasLength!R)
+            this(R input, size_t howMany, Random gen)
+            {
+                this(input, howMany, input.length, gen);
+            }
 
-		this(R input, size_t howMany, size_t total, Random _gen)
-		{
-			gen = _gen;
-			init(input, howMany, total);
-		}
-	}
+        this(R input, size_t howMany, size_t total, Random gen)
+        {
+            this.gen = gen;
+            initialize(input, howMany, total);
+        }
+    }
 
 /**
    Range primitives.
