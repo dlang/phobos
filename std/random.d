@@ -1487,7 +1487,7 @@ a sample of size $(D n) in O(n) steps and requiring O(n) random
 variates, regardless of the size of the data being sampled.
 */
 struct RandomSample(R, Random = void)
-    if(isUniformRNG!Random || is(Random == void))
+    if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
     private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
