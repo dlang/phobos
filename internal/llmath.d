@@ -17,9 +17,25 @@ extern (C):
  *      [ECX,EBX] = [EDX,EAX] % [ECX,EBX]
  */
 
-void __ULDIV__()
+void __ULDIV2__()
 {
   version (D_InlineAsm_X86)
+    asm
+    {
+        naked                   ;
+        mov     EBX,4[ESP]      ;
+        jmp     __ULDIV__       ;
+    }
+  else version (D_InlineAsm_X86_64)
+        assert(0);
+  else
+        static assert(0);
+}
+
+void __ULDIV__()
+{
+    version (D_InlineAsm_X86)
+    {
     asm
     {
         naked                   ;
@@ -177,9 +193,10 @@ quo1:   // Quotient is 1
         xor     EDX,EDX         ;
         ret                     ;
     }
-  else version (D_InlineAsm_X86_64)
+    }
+    else version (D_InlineAsm_X86_64)
         assert(0);
-  else
+    else
         static assert(0);
 }
 
@@ -194,9 +211,25 @@ quo1:   // Quotient is 1
  *      ESI,EDI destroyed
  */
 
-void __LDIV__()
+void __LDIV2__()
 {
   version (D_InlineAsm_X86)
+    asm
+    {
+        naked                   ;
+        mov     EBX,4[ESP]      ;
+        jmp     __LDIV__        ;
+    }
+  else version (D_InlineAsm_X86_64)
+        assert(0);
+  else
+        static assert(0);
+}
+
+void __LDIV__()
+{
+    version (D_InlineAsm_X86)
+    {
     asm
     {
         naked                   ;
@@ -245,9 +278,10 @@ L10:    test    ECX,ECX         ;       // [ECX,EBX] negative?
 
 L12:    jmp     __ULDIV__       ;
     }
-  else version (D_InlineAsm_X86_64)
+    }
+    else version (D_InlineAsm_X86_64)
         assert(0);
-  else
+    else
         static assert(0);
 }
 
@@ -258,6 +292,8 @@ L12:    jmp     __ULDIV__       ;
  * Returns result in flags
  */
 
+version (none) // dmd inlines this now
+{
 void __LCMP__()
 {
   version (D_InlineAsm_X86)
@@ -284,7 +320,7 @@ C1:     ret                     ;
   else
         static assert(0);
 }
-
+}
 
 
 
@@ -296,7 +332,12 @@ real __U64_LDBL()
 {
     version (OSX)
     {
-      version (D_InlineAsm_X86)
+        version(D_InlineAsm_X86)
+        {
+            /* OSX version has to be concerned about 16 byte stack
+             * alignment and the inability to reference the data segment
+             * because of PIC.
+             */
         asm
         {   naked                               ;
             push        EDX                     ;
@@ -314,6 +355,7 @@ real __U64_LDBL()
         L1:                                     ;
             add         ESP, 8                  ;
             ret                                 ;
+        }
         }
       else version (D_InlineAsm_X86_64)
         asm
@@ -405,7 +447,7 @@ ulong __ULLNGDBL()
         static assert(0);
 }
 
-// Convert double to ulong
+// Convert double in EDX:EAX to ulong
 
 private short roundTo0 = 0xFBF;
 
