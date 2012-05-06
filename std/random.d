@@ -1255,6 +1255,50 @@ unittest
 }
 
 /**
+Generates a random floating-point number drawn from an
+exponential distribution with rate parameter $(D lambda),
+i.e. with cumulative distribution function
+    F(x) = 1 - exp(-lambda * x)
+and probability density function
+    f(x) = lambda * exp(-lambda * x).
+*/
+auto exponential(T = double)
+(T lambda)
+if(isFloatingPoint!T)
+{
+    return exponential!T(lambda, rndGen);
+}
+
+unittest
+{
+    Xorshift gen;
+    foreach(i; 0..20)
+    {
+        auto x = exponential(1.0);
+        assert(0 <= x);
+    }
+    foreach(i; 0..20)
+    {
+        auto x = exponential(2.0, gen);
+        assert(0 <= x);
+    }
+}
+
+/// Ditto
+auto exponential(T = double, UniformRandomNumberGenerator)
+(T lambda, ref UniformRandomNumberGenerator urng)
+if(isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+in
+{
+    assert(lambda > 0);
+}
+body
+{
+    T u = uniform!("[)",T, T, UniformRandomNumberGenerator)(0.0, 1.0, urng);
+    return -log(1 - u)/lambda;
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
