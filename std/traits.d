@@ -1680,14 +1680,18 @@ unittest
  */
 template hasElaborateDestructor(S)
 {
-    static if(!is(S == struct))
+    static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateDestructor = false;
+        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S[0]));
+    }
+    else static if(is(S == struct))
+    {
+        enum hasElaborateDestructor = hasMember!(S, "__dtor")
+            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
     }
     else
     {
-        enum hasElaborateDestructor = is(typeof({S s; return &s.__dtor;}))
-            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
+        enum bool hasElaborateDestructor = false;
     }
 }
 
@@ -1698,9 +1702,17 @@ unittest
     static struct S1 { }
     static struct S2 { ~this() {} }
     static struct S3 { S2 field; }
+    static struct S4 { S3[1] field; }
+    static struct S5 { S3[] field; }
+    static struct S6 { S3[0] field; }
     static assert(!hasElaborateDestructor!S1);
     static assert( hasElaborateDestructor!S2);
     static assert( hasElaborateDestructor!S3);
+    static assert( hasElaborateDestructor!(S3[1]));
+    static assert(!hasElaborateDestructor!(S3[0]));
+    static assert( hasElaborateDestructor!S4);
+    static assert(!hasElaborateDestructor!S5);
+    static assert(!hasElaborateDestructor!S6);
 }
 
 /**
