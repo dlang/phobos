@@ -3103,32 +3103,9 @@ private struct Scoped(T)
 
     ~this()
     {
-        destroy(Scoped_payload);
-        if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
-        {
-            _d_monitordelete(Scoped_payload, true);
-        }
-    }
-}
-
-// Used by scoped() above
-private extern (C) static void _d_monitordelete(Object h, bool det);
-
-/*
-  Used by scoped() above.  Calls the destructors of an object
-  transitively up the inheritance path, but work properly only if the
-  static type of the object (T) is known.
- */
-private void destroy(T)(T obj) if (is(T == class))
-{
-    static if (is(typeof(obj.__dtor())))
-    {
-        obj.__dtor();
-    }
-    static if (!is(T == Object) && is(T Base == super))
-    {
-        Base[0] b = obj;
-        destroy(b);
+        // `clear` will also write .init but we have no functions in druntime
+        // for deterministic finalization and memory releasing for now.
+        clear(Scoped_payload);
     }
 }
 
@@ -3174,6 +3151,29 @@ unittest
     }
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
+}
+
+unittest // Issue 8039 testcase
+{
+    static int dels;
+    static struct S { ~this(){ ++dels; } }
+
+    static class A { S s; }
+    dels = 0; { scoped!A(); }
+    assert(dels == 1);
+
+    static class B { S[2] s; }
+    dels = 0; { scoped!B(); }
+    assert(dels == 2);
+
+    static struct S2 { S[3] s; }
+    static class C { S2[2] s; }
+    dels = 0; { scoped!C(); }
+    assert(dels == 6);
+
+    static class D: A { S2[2] s; }
+    dels = 0; { scoped!D(); }
+    assert(dels == 1+6);
 }
 
 unittest
