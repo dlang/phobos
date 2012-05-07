@@ -2006,6 +2006,8 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeString!T)
 {
+    StringTypeOf!T str = val;   // bug 8015
+
     if (f.spec == 's')
     {
         try
@@ -2013,9 +2015,9 @@ if (isSomeString!T)
             // ignore other specifications and quote
             auto app = appender!(typeof(T[0])[])();
             put(app, '\"');
-            for (size_t i = 0; i < val.length; )
+            for (size_t i = 0; i < str.length; )
             {
-                auto c = std.utf.decode(val, i);
+                auto c = std.utf.decode(str, i);
                 // \uFFFE and \uFFFF are considered valid by isValidDchar,
                 // so need checking for interchange.
                 if (c == 0xFFFE || c == 0xFFFF)
@@ -2032,25 +2034,41 @@ if (isSomeString!T)
 
         // If val contains invalid UTF sequence, formatted like HexString literal
     LinvalidSeq:
-        static if (is(typeof(val[0]) : const(char)))
+        static if (is(typeof(str[0]) : const(char)))
         {
             enum postfix = 'c';
             alias const(ubyte)[] IntArr;
         }
-        else static if (is(typeof(val[0]) : const(wchar)))
+        else static if (is(typeof(str[0]) : const(wchar)))
         {
             enum postfix = 'w';
             alias const(ushort)[] IntArr;
         }
-        else static if (is(typeof(val[0]) : const(dchar)))
+        else static if (is(typeof(str[0]) : const(dchar)))
         {
             enum postfix = 'd';
             alias const(uint)[] IntArr;
         }
-        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)val, postfix);
+        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)str, postfix);
     }
     else
-        formatValue(w, val, f);
+        formatValue(w, str, f);
+}
+
+unittest
+{
+    // Test for bug 8015
+    import std.typecons;
+
+    struct MyStruct {
+        string str;
+        @property string toStr() {
+            return str;
+        }
+        alias toStr this;
+    }
+
+    Tuple!(MyStruct) t;
 }
 
 // undocumented
