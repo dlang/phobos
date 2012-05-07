@@ -1337,7 +1337,16 @@ void move(T)(ref T source, ref T target)
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            memcpy(&source, &empty, T.sizeof);
+            static if (T.tupleof[$-1].stringof.length >= "this".length &&
+                       T.tupleof[$-1].stringof[$-4 .. $] == "this")
+            {
+                // Keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
         }
     }
     else
@@ -1407,6 +1416,13 @@ unittest
 T move(T)(ref T src)
 {
     T result = T.init;
+    static if (is(T == struct) &&
+               T.tupleof[$-1].stringof.length >= "this".length &&
+               T.tupleof[$-1].stringof[$-4 .. $] == "this")
+    {
+        // copy context pointer
+        result.tupleof[$-1] = src.tupleof[$-1];
+    }
     move(src, result);
     return result;
 }
@@ -1435,6 +1451,29 @@ unittest// Issue 8055
     a.x = 0;
     auto b = foo(a);
     assert(b.x == 0);
+}
+
+unittest// Issue 8057
+{
+    int n = 10;
+    struct S
+    {
+        int x;
+        ~this()
+        {
+            // Access to enclosing scope
+            assert(n == 10);
+        }
+    }
+    S foo(S s)
+    {
+        // Move nested struct
+        return move(s);
+    }
+    S a;
+    a.x = 1;
+    auto b = foo(a);
+    assert(b.x == 1);
 }
 
 // moveAll
