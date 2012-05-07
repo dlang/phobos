@@ -2070,13 +2070,25 @@ Target parse(Target, Source)(ref Source s)
     if (isSomeString!Source &&
         is(Target == enum))
 {
-    // TODO: BUG4744
+    Target result;
+    size_t longest_match = 0;
+
     foreach (i, e; EnumMembers!Target)
     {
         auto ident = __traits(allMembers, Target)[i];
-        if (s.skipOver(ident))
-            return e;
+        if (longest_match < ident.length && s.startsWith(ident))
+        {
+            result = e;
+            longest_match = ident.length ;
+        }
     }
+
+    if( longest_match > 0 )
+    {
+        s = s[longest_match..$];
+        return result ;
+    }
+
     throw new ConvException(
         Target.stringof ~ " does not have a member named '"
         ~ to!string(s) ~ "'");
@@ -2102,8 +2114,7 @@ unittest
     assertThrown!ConvException(to!E("d"));
 }
 
-version (none)  // TODO: BUG4744
-unittest
+unittest // bugzilla 4744
 {
     enum A { member1, member11, member111 }
     assert(to!A("member1"  ) == A.member1  );
