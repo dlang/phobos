@@ -1406,9 +1406,35 @@ unittest
 /// Ditto
 T move(T)(ref T src)
 {
-    T result=void;
+    T result = T.init;
     move(src, result);
     return result;
+}
+
+unittest//Issue 6217
+{
+    auto x = map!"a"([1,2,3]);
+    x = move(x);
+}
+
+unittest// Issue 8055
+{
+    static struct S
+    {
+        int x;
+        ~this()
+        {
+            assert(x == 0);
+        }
+    }
+    S foo(S s)
+    {
+        return move(s);
+    }
+    S a;
+    a.x = 0;
+    auto b = foo(a);
+    assert(b.x == 0);
 }
 
 // moveAll
@@ -8790,10 +8816,4 @@ unittest
 // First member is the item, second is the occurrence count
     //writeln(b[0]);
     assert(b[0] == tuple(4.0, 2u));
-}
-
-unittest//Issue 6217 
-{
-    auto x = map!"a"([1,2,3]);
-    x = move(x);
 }
