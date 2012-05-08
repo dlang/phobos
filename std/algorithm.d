@@ -1337,8 +1337,7 @@ void move(T)(ref T source, ref T target)
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            static if (T.tupleof[$-1].stringof.length >= "this".length &&
-                       T.tupleof[$-1].stringof[$-4 .. $] == "this")
+            static if (T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // Keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1416,9 +1415,7 @@ unittest
 T move(T)(ref T src)
 {
     T result = T.init;
-    static if (is(T == struct) &&
-               T.tupleof[$-1].stringof.length >= "this".length &&
-               T.tupleof[$-1].stringof[$-4 .. $] == "this")
+    static if (is(T == struct) && T.tupleof[$-1].stringof.endsWith("this"))
     {
         // copy context pointer
         result.tupleof[$-1] = src.tupleof[$-1];
