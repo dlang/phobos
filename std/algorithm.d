@@ -1331,7 +1331,9 @@ void move(T)(ref T source, ref T target)
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
+
         memcpy(&target, &source, T.sizeof);
+
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
@@ -1339,7 +1341,7 @@ void move(T)(ref T source, ref T target)
             static T empty;
             static if (T.tupleof[$-1].stringof.endsWith("this"))
             {
-                // Keep original context pointer
+                // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
             }
             else
@@ -1412,16 +1414,87 @@ unittest
 }
 
 /// Ditto
-T move(T)(ref T src)
+T move(T)(ref T source)
 {
-    T result = T.init;
-    static if (is(T == struct) && T.tupleof[$-1].stringof.endsWith("this"))
+    // Can avoid to check aliasing.
+
+    T result = void;
+    static if (is(T == struct))
     {
-        // copy context pointer
-        result.tupleof[$-1] = src.tupleof[$-1];
+        // Can avoid destructing result.
+
+        memcpy(&result, &source, T.sizeof);
+
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static T empty;
+            static if (T.tupleof[$-1].stringof.endsWith("this"))
+            {
+                // If T is nested struct, keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
+        }
     }
-    move(src, result);
+    else
+    {
+        // Primitive data (including pointers and arrays) or class -
+        // assignment works great
+        result = source;
+    }
     return result;
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    Object obj1 = new Object;
+    Object obj2 = obj1;
+    Object obj3 = move(obj2);
+    assert(obj3 is obj1);
+
+    static struct S1 { int a = 1, b = 2; }
+    S1 s11 = { 10, 11 };
+    S1 s12 = move(s11);
+    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    static struct S2 { int a = 1; int * b; }
+    S2 s21 = { 10, null };
+    s21.b = new int;
+    S2 s22 = move(s21);
+    assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    static struct S3
+    {
+        static struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31;
+    s31.x.n = 1;
+    S3 s32 = move(s31);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    static struct S4
+    {
+        static struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41;
+    s41.x.n = 1;
+    S4 s42 = move(s41);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
 }
 
 unittest//Issue 6217
