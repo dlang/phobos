@@ -1491,7 +1491,7 @@ struct RandomSample(R, Random = void)
 {
     private size_t _available, _toSelect;
     private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
-    private bool _algorithmA;
+    private bool _first, _algorithmA;
     private double _Vprime;
     private R _input;
     private size_t _index;
@@ -1520,21 +1520,7 @@ Constructor.
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available);
-
-        // We can save ourselves a random variate by checking right
-        // at the beginning if we should use Algorithm A.
-        if((_alphaInverse * _toSelect) > _available)
-        {
-            _algorithmA = true;
-        }
-        else
-        {
-            _Vprime = newVprime(_toSelect);
-            _algorithmA = false;
-        }
-        // we should skip some elements initially so we don't always
-        // start with the first
-        prime();
+        _first = true;
     }
 
 /**
@@ -1548,6 +1534,26 @@ Constructor.
     @property auto ref front()
     {
         assert(!empty);
+        // The first sample point must be determined here to avoid
+        // having it always correspond to the first element of the
+        // input.  The rest of the sample points are determined each
+        // time we call popFront().
+        if(_first)
+        {
+            // We can save ourselves a random variate by checking right
+            // at the beginning if we should use Algorithm A.
+            if((_alphaInverse * _toSelect) > _available)
+            {
+                _algorithmA = true;
+            }
+            else
+            {
+                _Vprime = newVprime(_toSelect);
+                _algorithmA = false;
+            }
+            prime();
+            _first = false;
+        }
         return _input.front;
     }
 
