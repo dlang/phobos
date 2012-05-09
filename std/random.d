@@ -1498,13 +1498,8 @@ struct RandomSample(R, Random = void)
 /**
 Constructor.
 */
-    static if (hasLength!R)
-        this(R input, size_t howMany)
-        {
-            this(input, howMany, input.length);
-        }
 
-    this(R input, size_t howMany, size_t total)
+    private void initialize(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
@@ -1513,6 +1508,34 @@ Constructor.
         // we should skip some elements initially so we don't always
         // start with the first
         prime();
+    }
+
+    static if(is(Random == void))
+    {
+        static if (hasLength!R)
+            this(R input, size_t howMany)
+            {
+                this(input, howMany, input.length);
+            }
+
+        this(R input, size_t howMany, size_t total)
+        {
+            initialize(input, howMany, total);
+        }
+    }
+    else
+    {
+        static if (hasLength!R)
+            this(R input, size_t howMany, Random gen)
+            {
+                this(input, howMany, input.length, gen);
+            }
+
+        this(R input, size_t howMany, size_t total, Random gen)
+        {
+            this.gen = gen;
+            initialize(input, howMany, total);
+        }
     }
 
 /**
@@ -1608,8 +1631,7 @@ auto randomSample(R)(R r, size_t n) if (hasLength!R)
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
 if(isInputRange!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, total);
-    ret.gen = gen;
+    auto ret = RandomSample!(R, Random)(r, n, total, gen);
     return ret;
 }
 
@@ -1617,8 +1639,7 @@ if(isInputRange!R && isUniformRNG!Random)
 auto randomSample(R, Random)(R r, size_t n, Random gen)
 if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
-    auto ret = RandomSample!(R, Random)(r, n, r.length);
-    ret.gen = gen;
+    auto ret = RandomSample!(R, Random)(r, n, r.length, gen);
     return ret;
 }
 
