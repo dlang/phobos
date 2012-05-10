@@ -153,6 +153,7 @@ import core.thread;
 import etc.c.curl;
 import std.algorithm;
 import std.array;
+import std.benchmark;
 import std.concurrency;
 import std.conv;
 import std.datetime;
