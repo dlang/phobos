@@ -1261,6 +1261,15 @@ i.e. with cumulative distribution function
     F(x) = 1 - exp(-lambda * x)
 and probability density function
     f(x) = lambda * exp(-lambda * x).
+
+Example:
+
+----
+Random gen(unpredictableSeed);
+// Generate a random number from an exponential distribution
+// with exponent 1, i.e. PDF f(x) = exp(-x)
+auto a = exponential(1.0, gen);
+----
 */
 auto exponential(T = double)
 (T lambda)
@@ -1305,6 +1314,16 @@ function
     F(x) = 1 - (min/x)^^alpha
 and probability density function
     f(x) = alpha * (min^^alpha / x^^(alpha+1)).
+
+Example:
+
+----
+Random gen(unpredictableSeed);
+// Generate a random number from a Pareto distribution
+// with exponent alpha = 0.5 and minimum 0.1, i.e. with
+// CDF F(x) = 1 - (0.1/x)^^0.5
+auto a = pareto(0.5, 0.1, gen);
+----
 */
 auto pareto(T1 = double, T2 = double)
 (T1 alpha, T2 min)
