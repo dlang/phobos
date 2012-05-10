@@ -1,3 +1,13 @@
+$(VERSION 060, ddd mm, 2012, =================================================,
+
+    $(WHATSNEW
+        $(LI Added std.file.tempDir which returns the path to a directory
+             where a program can put temporary files.)
+    )
+
+    $(LIBBUGSFIXED
+     )
+ )
 $(VERSION 059, ddd mm, 2012, =================================================,
 
     $(WHATSNEW

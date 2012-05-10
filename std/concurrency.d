@@ -59,17 +59,13 @@ module std.concurrency;
 
 public
 {
-    import core.atomic;
-    import core.sync.barrier;
-    import core.sync.condition;
-    import core.sync.mutex;
-    import core.sync.rwmutex;
-    import core.sync.semaphore;
     import std.variant;
 }
 private
 {
     import core.thread;
+    import core.sync.mutex;
+    import core.sync.condition;
     import std.algorithm;
     import std.exception;
     import std.range;

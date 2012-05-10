@@ -1188,7 +1188,7 @@ struct MyInfiniteRange
 
 template isInfinite(R)
 {
-    static if (isInputRange!R && is(char[1 + R.empty]))
+    static if (isInputRange!R && __traits(compiles, { enum e = R.empty; }))
         enum bool isInfinite = !R.empty;
     else
         enum bool isInfinite = false;
@@ -1196,8 +1196,8 @@ template isInfinite(R)
 
 unittest
 {
-    assert(!isInfinite!(int[]));
-    assert(isInfinite!(Repeat!(int)));
+    static assert(!isInfinite!(int[]));
+    static assert(isInfinite!(Repeat!(int)));
 }
 
 /**
@@ -6241,18 +6241,21 @@ unittest {
   Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
   The following code should compile:
   ---
-  T1 t1; 
-  T2 t2;
-  fn(t1, t2);
-  fn(t2, t1);
+  T1 foo();
+  T2 bar();
+
+  fn(foo(), bar());
+  fn(bar(), foo());
   ---
 */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
     enum isTwoWayCompatible = is(typeof( (){ 
-            T1 e; 
-            T2 v;
-            return fn(v,e) && fn(e,v); 
+            T1 foo();
+            T2 bar();
+
+            fn(foo(), bar());
+            fn(bar(), foo());
         }
     ));
 }
