@@ -1299,6 +1299,53 @@ body
 }
 
 /**
+Generates a Pareto-distributed number with exponent $(D alpha)
+and minimum value $(D min), i.e. with cumulative distribution
+function
+    F(x) = 1 - (min/x)^^alpha
+and probability density function
+    f(x) = alpha * (min^^alpha / x^^(alpha+1)).
+*/
+auto pareto(T1 = double, T2 = double)
+(T1 alpha, T2 min)
+if(!is(CommonType!(T1, T2) == void))
+{
+    return pareto!(T1, T2, Random)(alpha, min, rndGen);
+}
+
+/// Ditto
+auto pareto(T1 = double, T2 = double, UniformRandomNumberGenerator)
+(T1 alpha, T2 min, ref UniformRandomNumberGenerator urng)
+if(isFloatingPoint!(CommonType!(T1, T2)))
+in
+{
+    assert(alpha > 0 && min > 0);
+}
+body
+{
+    alias Unqual!(CommonType!(T1, T2)) NumberType;
+    NumberType _alpha = alpha;
+    NumberType _min = min;
+    NumberType u = uniform!("[)", NumberType, NumberType, UniformRandomNumberGenerator)(0.0, 1.0, urng);
+    return _min/((1-u)^^(1/_alpha));
+}
+
+unittest
+{
+    Random gen;
+    foreach(i; 0..20)
+    {
+        auto x = pareto(0.5, 0.001);
+        assert(0.001 <= x);
+    }
+    foreach(i; 0..20)
+    {
+        auto x = pareto(0.1, 1.0, gen);
+        assert(1.0 <= x);
+    }
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
