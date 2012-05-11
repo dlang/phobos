@@ -1020,6 +1020,16 @@ unittest
     }
     S2 s2;
     assert(to!string(s2) == "S2(42, 43.5)");
+
+    // Test for issue 8080
+    struct S8080
+    {
+        short[4] data;
+        alias data this;
+        string toString() { return "<S>"; }
+    }
+    S8080 s8080;
+    assert(to!string(s8080) == "<S>");
 }
 
 unittest
