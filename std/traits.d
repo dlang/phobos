@@ -920,9 +920,8 @@ unittest
  * }
  * ---
  */
-template SetFunctionAttributes(T, string linkage = "D",
-    uint attrs = FunctionAttribute.none)
-if (isFunctionPointer!T || isDelegate!T)
+template SetFunctionAttributes(T, string linkage, uint attrs)
+    if (isFunctionPointer!T || isDelegate!T)
 {
     mixin({
         static assert(!(attrs & FunctionAttribute.trusted) ||
@@ -980,9 +979,8 @@ if (isFunctionPointer!T || isDelegate!T)
 }
 
 /// Ditto
-template SetFunctionAttributes(T, string linkage = "D",
-    uint attrs = FunctionAttribute.none)
-if (is(T == function))
+template SetFunctionAttributes(T, string linkage, uint attrs)
+    if (is(T == function))
 {
     // To avoid a lot of syntactic headaches, we just use the above version to
     // operate on the corresponding function pointer type and then remove the
