@@ -929,7 +929,7 @@ if (isFunctionPointer!T || isDelegate!T)
             !(attrs & FunctionAttribute.safe),
             "Cannot have a function/delegate that is both trusted and safe.");
 
-        enum linkages = ["D", "C", "Windows", "Pascal", "C++"];
+        enum linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
         static assert(canFind(linkages, linkage), "Invalid linkage '" ~
             linkage ~ "', must be one of " ~ linkages.stringof ~ ".");
 
@@ -995,7 +995,7 @@ version (unittest)
 {
     // Some function types to test.
     int sc(scope int, ref int, out int, lazy int, int);
-    extern(D) int novar();
+    extern(System) int novar();
     extern(C) int cstyle(int, ...);
     extern(D) int dstyle(...);
     extern(D) int typesafe(int[]...);
