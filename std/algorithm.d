@@ -97,7 +97,8 @@ $(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
 returns $(D true).)
 )
 $(TR $(TD $(LREF find)) $(TD $(D find("hello world",
-"or")) returns $(D "orld") using linear search.)
+"or")) returns $(D "orld") using linear search. (For binary search refer
+to $(XREF range,sortedRange).))
 )
 $(TR $(TDNW $(LREF findAdjacent)) $(TD $(D findAdjacent([1, 2,
 3, 3, 4])) returns the subrange starting with two equal adjacent
@@ -8772,7 +8773,7 @@ unittest
     assert(b[0] == tuple(4.0, 2u));
 }
 
-unittest//Issue 6217 
+unittest//Issue 6217
 {
     auto x = map!"a"([1,2,3]);
     x = move(x);
