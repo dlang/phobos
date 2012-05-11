@@ -1078,7 +1078,7 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
-        struct Result
+        struct FilteredRange
         {
             alias Unqual!Range R;
             R _input;
@@ -1120,12 +1120,12 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
             {
                 @property auto save()
                 {
-                    return Result(_input);
+                    return typeof(this)(_input);
                 }
             }
         }
 
-        return Result(rs);
+        return FilteredRange(rs);
     }
 }
 
