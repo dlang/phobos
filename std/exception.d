@@ -897,6 +897,52 @@ class ErrnoException : Exception
     }
 }
 
+/++
+ + The decleration $(D mixin(genExceptionClass!("MyErr"))) creates a class 
+ + $(D MyErr) that extends from $(D Exception) with a constructor that passes
+ + its parameters to super. A second template parameter specifies an alternate
+ + parent.
+ +
+ + Example:
+ + ---
+ + import std.exception;
+ + import std.stdio;
+ +
+ + mixin(genExceptionClass!("SampleException"));
+ +
+ + void main() {
+ +     try {
+ +         throw new SampleException("foobar");
+ +     } catch (SampleException se) {
+ +         writeln(se.msg);
+ +     }
+ + ---
+ +/
+
+template genExceptionClass(string child, string parent="Exception") {
+    enum genExceptionClass
+        = "class "~child~" : "~parent~" {"
+        ~ "    this(string m = \"\", string f = __FILE__, size_t l = __LINE__, "
+        ~ "         Throwable t = null) {"
+        ~ "        super(m, f, l, t);"
+        ~ "    }"
+        ~ "    this(string m, Throwable n, string f = __FILE__, "
+        ~ "         size_t l = __LINE__) {"
+        ~ "        super(m, n, f, l);"
+        ~ "    }"
+        ~ "}"
+        ;
+}
+
+unittest {
+    mixin(genExceptionClass!("TestException"));
+    try {
+        throw new TestException();
+    } catch (TestException te) {
+        assert(te.line == __LINE__ - 2);
+    }
+}
+
 // structuralCast
 // class-to-class structural cast
 Target structuralCast(Target, Source)(Source obj)
