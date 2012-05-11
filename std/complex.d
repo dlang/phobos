@@ -640,31 +640,24 @@ unittest{
 
 /** Calculates cos(y) + i sin(y).
 
-    On many CPUs (such as x86), this is a very efficient operation;
-    almost twice as fast as calculating sin(y) and cos(y) separately,
-    and is the preferred method when both are required.
+    Note:
+    $(D expi) is included here for convenience and for easy migration of code
+    that uses $(XREF math,_expi).  Unlike $(XREF math,_expi), which uses the
+    x87 $(I fsincos) instruction when possible, this function is no faster
+    than calculating cos(y) and sin(y) separately.
 */
 Complex!real expi(real y)  @trusted pure nothrow
 {
-    version(InlineAsm_X86_Any)
-    {
-        asm
-        {
-            fld y;
-            fsincos;
-            fxch ST(1), ST(0);
-        }
-    }
-    else
-    {
-        return Complex!real(std.math.cos(y), std.math.sin(y));
-    }
+    return Complex!real(std.math.cos(y), std.math.sin(y));
 }
 
 unittest
 {
     assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
     assert(expi(0.0L) == 1.0L);
+    auto z1 = expi(1.234);
+    auto z2 = std.math.expi(1.234);
+    assert(z1.re == z2.re && z1.im == z2.im);
 }
 
 
