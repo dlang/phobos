@@ -388,8 +388,8 @@ void main() {
  [7 8 9]]
 </pre>
 
-   Inside compound format specifier, strings and characters are escaped
-   automatically. If you want to stop it, add $(B '-') flag to
+   Inside a compound format specifier, strings and characters are escaped
+   automatically. To avoid this behavior, add $(B '-') flag to
    $(D "%$(LPAREN)").
 -------------------------
 import std.stdio;
