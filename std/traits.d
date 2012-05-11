@@ -900,7 +900,7 @@ unittest
  * Params:
  *    T = The base type.
  *    linkage = The desired linkage of the result type.
- *    attrs = The desired function attributes of the result type.
+ *    attrs = The desired $(LREF FunctionAttribute)s of the result type.
  *
  * Examples:
  * ---
