@@ -284,6 +284,13 @@ unittest
     assert(sarr.length == darr.length);
 }
 
+// Tests for issue 7348
+unittest
+{
+    assert(to!string(null) == "");
+    assert(text(null) == "");
+}
+
 /**
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.

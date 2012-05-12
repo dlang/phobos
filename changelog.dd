@@ -7,6 +7,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
 
     $(LIBBUGSFIXED
         $(LI $(BUGZILLA 6157): to!string should work for various pointer types)
+        $(LI $(BUGZILLA 7348): to!string(null) matches more than one template declaration)
         $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
      )
  )
