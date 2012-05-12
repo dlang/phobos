@@ -136,18 +136,22 @@ any checking because any int fits in a double.
 
 Converting a value to its own type (useful mostly for generic code)
 simply returns its argument.
+
 Example:
 -------------------------
 int a = 42;
 auto b = to!int(a); // b is int with value 42
 auto c = to!double(3.14); // c is double with value 3.14
 -------------------------
+
 Converting among numeric types is a safe way to cast them around.
+
 Conversions from floating-point types to integral types allow loss of
 precision (the fractional part of a floating-point number). The
 conversion is truncating towards zero, the same way a cast would
 truncate. (To round a floating point value when casting to an
 integral, use $(D_PARAM roundTo).)
+
 Examples:
 -------------------------
 int a = 420;
@@ -193,6 +197,7 @@ $(I Sign):
     $(B +)
     $(B -)
 </pre>
+
 For conversion to unsigned types, the grammar recognized is:
 <pre>
 $(I UnsignedInteger):
@@ -449,14 +454,14 @@ unittest
 
 /**
 When target type supports 'converting construction', it is used.
-$(UL $(LI If target type is struct, $(D T(src)) is used.)
-     $(LI If target type is class, $(D new T(src)) is used.))
+$(UL $(LI If target type is struct, $(D T(value)) is used.)
+     $(LI If target type is class, $(D new T(value)) is used.))
 */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(T == struct) && is(typeof(T(src))))
+        is(T == struct) && is(typeof(T(value))))
 {
-    return T(src);
+    return T(value);
 }
 
 // Bugzilla 3961
@@ -502,11 +507,11 @@ unittest
 }
 
 /// ditto
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        is(T : Object) && is(typeof(new T(src))))
+        is(T == class) && is(typeof(new T(value))))
 {
-    return new T(src);
+    return new T(value);
 }
 
 unittest
@@ -712,20 +717,17 @@ $(UL
   $(LI String _to string conversion works for any two string types having
        ($(D char), $(D wchar), $(D dchar)) character widths and any
        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
-  $(LI Converts array (other than strings) to string. The left bracket,
-       separator, and right bracket are configurable. Each element is
-       converted by calling $(D to!T).)
-  $(LI Associative array to string conversion. The left bracket, key-value
-       separator, element separator, and right bracket are configurable.
+  $(LI Converts array (other than strings) to string.
+       Each element is converted by calling $(D to!T).)
+  $(LI Associative array to string conversion.
        Each element is printed by calling $(D to!T).)
   $(LI Object to string conversion calls $(D toString) against the object or
-       returns $(D nullstr) if the object is null.)
+       returns $(D "null") if the object is null.)
   $(LI Struct to string conversion calls $(D toString) against the struct if
        it is defined.)
   $(LI For structs that do not define $(D toString), the conversion to string
        produces the list of fields.)
   $(LI Enumerated types are converted to strings as their symbolic names.)
-  $(LI A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").)
   $(LI Boolean values are printed as $(D "true") or $(D "false").)
   $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
   $(LI Unsigned or signed integers to strings.
@@ -738,50 +740,50 @@ $(UL
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
        If pointer is $(D char*), treat it as C-style strings.))
 */
-T toImpl(T, S)(S s)
+T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T)) &&
         isSomeString!T)
 {
-    static if (isSomeString!S && s[0].sizeof == T.init[0].sizeof)
+    static if (isSomeString!S && value[0].sizeof == T.init[0].sizeof)
     {
         // string-to-string with incompatible qualifier conversion
         static if (is(typeof(T.init[0]) == immutable))
         {
             // conversion (mutable|const) -> immutable
-            return s.idup;
+            return value.idup;
         }
         else
         {
             // conversion (immutable|const) -> mutable
-            return s.dup;
+            return value.dup;
         }
     }
     else static if (isSomeString!S)
     {
         // other string-to-string conversions always run decode/encode
-        return toStr!T(s);
+        return toStr!T(value);
     }
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
         // Converting void array to string
         alias Unqual!(typeof(T.init[0])) Char;
-        auto raw = cast(const(ubyte)[]) s;
+        auto raw = cast(const(ubyte)[]) value;
         enforce(raw.length % Char.sizeof == 0,
                 new ConvException("Alignment mismatch in converting a "
                         ~ S.stringof ~ " to a "
                         ~ T.stringof));
         auto result = new Char[raw.length / Char.sizeof];
-        memcpy(result.ptr, s.ptr, s.length);
+        memcpy(result.ptr, value.ptr, value.length);
         return cast(T) result;
     }
     else static if (isPointer!S && is(S : const(char)*))
     {
-        return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
+        return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
     else
     {
         // other non-string values runs formatting
-        return toStr!T(s);
+        return toStr!T(value);
     }
 }
 
@@ -1070,6 +1072,10 @@ unittest
     }
 }
 
+/**
+ Representing conversions to string with optional configures has been scheduled
+ for deprecation.
+*/
 T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
@@ -1106,6 +1112,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
     }
 }
 
+/// ditto
 T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
@@ -1116,6 +1123,7 @@ T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracke
     return toImpl(s);
 }
 
+/// ditto
 T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
     if (isAssociativeArray!S &&
         isSomeString!T)
@@ -1141,6 +1149,7 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
     return cast(T) result.data;
 }
 
+/// ditto
 T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
         isSomeString!T)
@@ -1153,6 +1162,7 @@ T toImpl(T, S)(S s, in T nullstr)
     return to!T(s.toString());
 }
 
+/// ditto
 T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
@@ -1184,7 +1194,9 @@ T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     }
 }
 
-/// ditto
+/*
+  $(LI A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").)
+*/
 deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")")
     if (is(S == typedef) &&
         isSomeString!T)
@@ -1259,14 +1271,14 @@ unittest
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
         !isSomeString!S && isDynamicArray!S &&
         !isSomeString!T && isArray!T)
 {
     alias typeof(T.init[0]) E;
-    auto result = new E[src.length];
-    foreach (i, e; src)
+    auto result = new E[value.length];
+    foreach (i, e; value)
     {
         /* Temporarily cast to mutable type, so we can get it initialized,
          * this is ok because there are no other references to result[]
@@ -1301,14 +1313,14 @@ unittest
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-T toImpl(T, S)(S src)
+T toImpl(T, S)(S value)
     if (isAssociativeArray!S &&
         isAssociativeArray!T)
 {
     alias typeof(T.keys[0]) K2;
     alias typeof(T.values[0]) V2;
     T result;
-    foreach (k1, v1; src)
+    foreach (k1, v1; value)
     {
         result[to!K2(k1)] = to!V2(v1);
     }
