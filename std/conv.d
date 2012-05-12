@@ -107,6 +107,17 @@ private
         enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
                               is(S == enum) && isSomeString!T;
     }
+
+    template isRawStaticArray(T, A...)
+    {
+        enum isRawStaticArray =
+            A.length == 0 &&
+            isStaticArray!T &&
+            !is(T == class) &&
+            !is(T == interface) &&
+            !is(T == struct) &&
+            !is(T == union);
+    }
 }
 
 /**
@@ -251,9 +262,26 @@ Macros: WIKI=Phobos/StdConv
 template to(T)
 {
     T to(A...)(A args)
+        if (!isRawStaticArray!A)
     {
         return toImpl!T(args);
     }
+
+    // Fix issue 6175
+    T to(S)(ref S arg)
+        if (isRawStaticArray!S)
+    {
+        return toImpl!T(arg);
+    }
+}
+
+// Tests for issue 6175
+unittest
+{
+    char[9] sarr = "blablabla";
+    auto darr = to!(char[])(sarr);
+    assert(sarr.ptr == darr.ptr);
+    assert(sarr.length == darr.length);
 }
 
 /**
@@ -366,7 +394,7 @@ unittest
   Converting static arrays forwards to their dynamic counterparts.
  */
 T toImpl(T, S)(ref S s)
-    if (isStaticArray!S)
+    if (isRawStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
