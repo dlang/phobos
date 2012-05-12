@@ -102,7 +102,7 @@ private
         return w.data;
     }
 
-    template isEnumStrToStr(S, T)   // @@@Workaround@@@
+    template isEnumStrToStr(S, T)
     {
         enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
                               is(S == enum) && isSomeString!T;
