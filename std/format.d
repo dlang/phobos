@@ -69,7 +69,7 @@ class FormatException : Exception
 }
 
 /**
-$(RED Scheduled for deprecation. Please use $(D FormatException)) instead.
+$(RED Scheduled for deprecation. Please use $(D FormatException) instead.)
  */
 /*deprecated*/ alias FormatException FormatError;
 
@@ -567,8 +567,29 @@ template FormatSpec(Char)
 }
 
 /**
- A compiled version of an individual format specifier, backwards
- compatible with $(D printf) specifiers.
+   A General handler for $(D printf) style format specifiers. Used for building more
+   specific formatting functions.
+
+   Example:
+----
+auto a = appender!(string)();
+auto fmt = "Number: %2.4e\nString: %s";
+auto f = FormatSpec!char(fmt);
+
+f.writeUpToNextSpec(a);
+
+assert(a.data == "Number: ");
+assert(f.trailing == "\nString: %s");
+assert(f.spec == 'e');
+assert(f.width == 2);
+assert(f.precision == 4);
+
+f.writeUpToNextSpec(a);
+
+assert(a.data == "Number: \nString: ");
+assert(f.trailing == "");
+assert(f.spec == 's');
+----
  */
 struct FormatSpec(Char)
     if (is(Unqual!Char == Char))
@@ -695,10 +716,8 @@ struct FormatSpec(Char)
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Given a string format specification fmt, parses a format
-       specifier. The string is assumed to start with the character
-       immediately following the $(D '%'). The string is advanced to
-       right after the end of the format specifier.
+       Construct a new $(D FormatSpec) using the format string $(D fmt), no
+       processing is done until needed.
      */
     this(in Char[] fmt)
     {
@@ -1092,6 +1111,67 @@ struct FormatSpec(Char)
                 "\nnested = ", nested,
                 "\ntrailing = ", trailing, "\n");
     }
+}
+unittest
+{
+    //Test the example
+    auto a = appender!(string)();
+    auto fmt = "Number: %2.4e\nString: %s";
+    auto f = FormatSpec!char(fmt);
+
+    f.writeUpToNextSpec(a);
+
+    assert(a.data == "Number: ");
+    assert(f.trailing == "\nString: %s");
+    assert(f.spec == 'e');
+    assert(f.width == 2);
+    assert(f.precision == 4);
+
+    f.writeUpToNextSpec(a);
+
+    assert(a.data == "Number: \nString: ");
+    assert(f.trailing == "");
+    assert(f.spec == 's');
+}
+
+/**
+   Helper function that returns a $(D FormatSpec) for a single specifier given
+   in $(D fmt)
+
+   Returns a $(D FormatSpec) with the specifier parsed.
+
+   Enforces giving only one specifier to the function.
+  */
+FormatSpec!Char singleSpec(Char)(Char[] fmt)
+{
+    enforce(fmt.length >= 2, new Exception("fmt must be at least 2 characters long"));
+    enforce(fmt.front == '%', new Exception("fmt must start with a '%' character"));
+
+    static struct DummyOutputRange {
+        void put(C)(C[] buf) {} // eat elements
+    }
+    auto a = DummyOutputRange();
+    auto spec = FormatSpec!Char(fmt);
+    //dummy write
+    spec.writeUpToNextSpec(a);
+
+    enforce(spec.trailing.empty,
+            new Exception(text("Trailing characters in fmt string: '", spec.trailing)));
+
+    return spec;
+}
+unittest
+{
+    auto spec = singleSpec("%2.3e");
+
+    assert(spec.trailing == "");
+    assert(spec.spec == 'e');
+    assert(spec.width == 2);
+    assert(spec.precision == 3);
+
+    assertThrown(singleSpec(""));
+    assertThrown(singleSpec("2.3e"));
+    assertThrown(singleSpec("%2.3eTest"));
 }
 
 /**
