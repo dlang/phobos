@@ -856,7 +856,7 @@ deprecated template defineEnum(string name, T...)
         alias defineEnum!(name, int, T) defineEnum;
 }
 
-unittest
+deprecated unittest
 {
     mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe",
                       "A1", 1, "B1", "C1"));
@@ -3086,8 +3086,43 @@ unittest
 }
 ----
  */
-@system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
+@system auto scoped(T, Args...)(Args args) if (is(T == class))
 {
+    static struct Scoped(T)
+    {
+        private
+        {
+            // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
+            // small objects). We will just use the maximum of filed alignments.
+            alias maxAlignment!(void*, typeof(T.tupleof)) alignment;
+
+            static size_t aligned(size_t n)
+            {
+                enum badEnd = alignment - 1; // 0b11, 0b111, ...
+                return (n + badEnd) & ~badEnd;
+            }
+
+            void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
+        }
+        @property inout(T) Scoped_payload() inout
+        {
+            return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
+        }
+        alias Scoped_payload this;
+
+        @disable this(this)
+        {
+            assert(false, "Illegal call to Scoped this(this)");
+        }
+
+        ~this()
+        {
+            // `clear` will also write .init but we have no functions in druntime
+            // for deterministic finalization and memory releasing for now.
+            clear(Scoped_payload);
+        }
+    }
+
     Scoped!T result;
     emplace!(Unqual!T)(cast(void[])result.Scoped_store, args);
     return result;
@@ -3101,41 +3136,6 @@ private template maxAlignment(U...) if(isTypeTuple!U)
         enum maxAlignment = max(U[0].alignof, .maxAlignment!(U[1 .. $]));
 }
 
-private struct Scoped(T)
-{
-    private
-    {
-        // _d_newclass now use default GC alignment (looks like (void*).sizeof * 2 for
-        // small objects). We will just use the maximum of filed alignments.
-        alias maxAlignment!(void*, typeof(T.tupleof)) alignment;
-
-        static size_t aligned(size_t n)
-        {
-            enum badEnd = alignment - 1; // 0b11, 0b111, ...
-            return (n + badEnd) & ~badEnd;
-        }
-
-        void[aligned(__traits(classInstanceSize, T)) + alignment] Scoped_store = void;
-    }
-    @property inout(T) Scoped_payload() inout
-    {
-        return cast(inout(T)) cast(void*) aligned(cast(size_t) Scoped_store.ptr);
-    }
-    alias Scoped_payload this;
-
-    @disable this(this)
-    {
-        assert(false, "Illegal call to Scoped this(this)");
-    }
-
-    ~this()
-    {
-        // `clear` will also write .init but we have no functions in druntime
-        // for deterministic finalization and memory releasing for now.
-        clear(Scoped_payload);
-    }
-}
-
 unittest // Issue 6580 testcase
 {
     enum alignment = (void*).alignof;
@@ -3145,17 +3145,17 @@ unittest // Issue 6580 testcase
     static class C2 { byte[2] b; }
     static class C3 { byte[3] b; }
     static class C7 { byte[7] b; }
-    static assert(Scoped!C0.sizeof % alignment == 0);
-    static assert(Scoped!C1.sizeof % alignment == 0);
-    static assert(Scoped!C2.sizeof % alignment == 0);
-    static assert(Scoped!C3.sizeof % alignment == 0);
-    static assert(Scoped!C7.sizeof % alignment == 0);
+    static assert(scoped!C0().sizeof % alignment == 0);
+    static assert(scoped!C1().sizeof % alignment == 0);
+    static assert(scoped!C2().sizeof % alignment == 0);
+    static assert(scoped!C3().sizeof % alignment == 0);
+    static assert(scoped!C7().sizeof % alignment == 0);
 
     enum longAlignment = long.alignof;
     static class C1long { long l; byte b; }
     static class C2long { byte[2] b; long l; }
-    static assert(Scoped!C1long.sizeof % longAlignment == 0);
-    static assert(Scoped!C2long.sizeof % longAlignment == 0);
+    static assert(scoped!C1long().sizeof % longAlignment == 0);
+    static assert(scoped!C2long().sizeof % longAlignment == 0);
 
     void alignmentTest()
     {
@@ -3179,7 +3179,7 @@ unittest // Issue 6580 testcase
         foreach(i; 0 .. 10)
             test(i);
     }
-    else 
+    else
     {
         void test(size_t size)()
         {
