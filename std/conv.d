@@ -739,8 +739,7 @@ $(UL
        If pointer is $(D char*), treat it as C-style strings.))
 */
 T toImpl(T, S)(S s)
-    if (!isImplicitlyConvertible!(S, T) &&
-        isInputRange!(Unqual!S) && isSomeChar!(ElementType!S) &&
+    if (!(isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T)) &&
         isSomeString!T)
 {
     static if (isSomeString!S && s[0].sizeof == T.init[0].sizeof)
@@ -757,9 +756,31 @@ T toImpl(T, S)(S s)
             return s.dup;
         }
     }
+    else static if (isSomeString!S)
+    {
+        // other string-to-string conversions always run decode/encode
+        return toStr!T(s);
+    }
+    else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
+    {
+        // Converting void array to string
+        alias Unqual!(typeof(T.init[0])) Char;
+        auto raw = cast(const(ubyte)[]) s;
+        enforce(raw.length % Char.sizeof == 0,
+                new ConvException("Alignment mismatch in converting a "
+                        ~ S.stringof ~ " to a "
+                        ~ T.stringof));
+        auto result = new Char[raw.length / Char.sizeof];
+        memcpy(result.ptr, s.ptr, s.length);
+        return cast(T) result;
+    }
+    else static if (isPointer!S && is(S : const(char)*))
+    {
+        return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
+    }
     else
     {
-        // other conversions always run decode/encode
+        // other non-string values runs formatting
         return toStr!T(s);
     }
 }
@@ -807,14 +828,6 @@ unittest
             assert(s1 == to!(T[])(s4));
         }
     }
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
 }
 
 T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
@@ -865,22 +878,6 @@ unittest
     assert(to!string(a) == "[1.5, 2.5]");
 }
 
-// Converting arrays of void
-T toImpl(T, S)(ref S s)
-    if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
-        isSomeString!T)
-{
-    alias Unqual!(typeof(T.init[0])) Char;
-    auto raw = cast(const(ubyte)[]) s;
-    enforce(raw.length % Char.sizeof == 0,
-            new ConvException("Alignment mismatch in converting a "
-                    ~ S.stringof ~ " to a "
-                    ~ T.stringof));
-    auto result = new Char[raw.length / Char.sizeof];
-    memcpy(result.ptr, s.ptr, s.length);
-    return cast(T) result;
-}
-
 T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
@@ -899,14 +896,6 @@ unittest
     assert(b.length == 8);
     auto c = to!(wchar[])(b);
     assert(c == "abcx");
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (isAssociativeArray!S &&
-        isSomeString!T)
-{
-    return toStr!T(s);
 }
 
 T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
@@ -932,14 +921,6 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
     }
     result.put(rightBracket);
     return cast(T) result.data;
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == class) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
 }
 
 T toImpl(T, S)(S s, in T nullstr)
@@ -973,14 +954,6 @@ unittest
     assert(to!string(s) == "C");
 }
 
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == struct) && is(typeof(&S.init.toString)) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -989,14 +962,6 @@ unittest
         string toString() { return "wyda"; }
     }
     assert(to!string(S()) == "wyda");
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
-        isSomeString!T)
-{
-    return toStr!T(s);
 }
 
 T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
@@ -1042,14 +1007,6 @@ unittest
     assert(to!string(s) == "S(42, 43.5)");
 }
 
-/// ditto
-T toImpl(T, S)(S s)
-    if (is(S == enum) &&
-        isSomeString!T)
-{
-    return toStr!T(s);
-}
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1087,14 +1044,6 @@ deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")
     }
 }
 
-/// ditto
-T toImpl(T, S)(S b)
-    if (isBoolean!S &&
-        isSomeString!T)
-{
-    return toStr!T(b);
-}
-
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1102,14 +1051,6 @@ unittest
     assert(to!string(b) == "false");
     b = true;
     assert(to!string(b) == "true");
-}
-
-/// ditto
-T toImpl(T, S)(S c)
-    if (isSomeChar!S &&
-        isSomeString!T)
-{
-    return toStr!T(c);
 }
 
 unittest
@@ -1144,14 +1085,6 @@ unittest
     }
     //printf("%.*s", s2);
     assert(s2 == "foo");
-}
-
-/// ditto
-T toImpl(T, S)(S input)
-    if (isIntegral!S &&
-        isSomeString!T)
-{
-    return toStr!T(input);
 }
 
 unittest
@@ -1246,30 +1179,6 @@ unittest
 
         assert(to!string(to!Int(-10), 10u) == "-10");
     }
-}
-
-/// ditto
-T toImpl(T, S)(S value)
-    if ((isFloatingPoint!S || isImaginary!S || isComplex!S) &&
-        isSomeString!T)
-{
-    return toStr!T(value);
-}
-
-/// ditto
-T toImpl(T, S)(S value)
-    if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init))) &&
-        isSomeString!T)
-{
-    return toStr!T(cast(size_t) value);
-}
-
-/// ditto
-T toImpl(T, S)(S s)
-    if (isPointer!S && is(S : const(char)*) &&
-        isSomeString!T)
-{
-    return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
 }
 
 unittest
