@@ -80,17 +80,17 @@ private template createAccessors(
             static assert(len == 1);
             enum result =
             // getter
-                "@property bool " ~ name ~ "() const { return "
+                "@property @safe bool " ~ name ~ "() pure nothrow const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property void " ~ name ~ "(bool v){"
+                ~"@property @safe void " ~ name ~ "(bool v) pure nothrow {"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
-            enum result = "@property "~T.stringof~" "~name~"() const { auto result = "
+            enum result = "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
                 "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -100,7 +100,7 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"@property void "~name~"("~T.stringof~" v){ "
+                ~"@property @safe void "~name~"("~T.stringof~" v) pure nothrow { "
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
@@ -201,6 +201,31 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+}
+
+unittest
+{
+    struct Test
+    {
+        mixin(bitfields!(bool, "a", 1,
+                         uint, "b", 3,
+                         short, "c", 4));
+    }
+
+    @safe void test() pure nothrow
+    {
+        Test t;
+
+        t.a = true;
+        t.b = 5;
+        t.c = 2;
+
+        assert(t.a);
+        assert(t.b == 5);
+        assert(t.c == 2);
+    }
+
+    test();
 }
 
 unittest
