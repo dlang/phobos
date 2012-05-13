@@ -14,7 +14,6 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 public import std.base64;
-public import std.bind;
 public import std.compiler;
 public import std.concurrency;
 public import std.contracts;
