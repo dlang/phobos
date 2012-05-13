@@ -129,7 +129,6 @@ SRCS_3 = std\variant.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
 	std\regex.d \
-	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
@@ -267,7 +266,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
+	std\socket.d std\socketstream.d std\loader.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \

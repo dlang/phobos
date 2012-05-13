@@ -176,7 +176,7 @@ endif
 
 # Other D modules that aren't under std/
 EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
-std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
+std/c/, fenv locale math process stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
@@ -190,7 +190,7 @@ D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
 $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/stdarg.d std/bind.d std/internal/windows/advapi32.d \
+	std/bind.d std/internal/windows/advapi32.d \
 	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
 	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
 
