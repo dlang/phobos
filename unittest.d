@@ -14,7 +14,6 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 public import std.base64;
-public import std.bind;
 public import std.compiler;
 public import std.concurrency;
 public import std.contracts;
@@ -27,7 +26,6 @@ public import std.demangle;
 public import std.file;
 public import std.format;
 public import std.getopt;
-public import std.loader;
 public import std.math;
 public import std.mathspecial;
 public import std.md5;

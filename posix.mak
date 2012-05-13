@@ -154,7 +154,7 @@ MAIN = $(ROOT)/emptymain.d
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container contracts conv	\
         cpuid cstream ctype csv datetime demangle encoding exception	\
-        file format functional getopt json loader math mathspecial md5	\
+        file format functional getopt json math mathspecial md5	\
         metastrings mmfile numeric outbuffer parallelism path perf		\
         process random range regex regexp signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
@@ -190,7 +190,7 @@ D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
 $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/stdarg.d std/bind.d std/internal/windows/advapi32.d \
+	std/internal/windows/advapi32.d \
 	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
 	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
 
