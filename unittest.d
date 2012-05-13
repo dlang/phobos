@@ -26,7 +26,6 @@ public import std.demangle;
 public import std.file;
 public import std.format;
 public import std.getopt;
-public import std.loader;
 public import std.math;
 public import std.mathspecial;
 public import std.md5;

@@ -154,7 +154,7 @@ MAIN = $(ROOT)/emptymain.d
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container contracts conv	\
         cpuid cstream ctype csv datetime demangle encoding exception	\
-        file format functional getopt json loader math mathspecial md5	\
+        file format functional getopt json math mathspecial md5	\
         metastrings mmfile numeric outbuffer parallelism path perf		\
         process random range regex regexp signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\

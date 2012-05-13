@@ -127,7 +127,7 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d std\loader.d \
+	std\zip.d std\cstream.d \
 	std\regex.d \
 	std\stdint.d \
 	std\json.d \
@@ -265,7 +265,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\loader.d std\format.d \
+	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
@@ -449,9 +449,6 @@ getopt.obj : std\getopt.d
 
 json.obj : std\json.d
 	$(DMD) -c $(DFLAGS) std\json.d
-
-loader.obj : std\loader.d
-	$(DMD) -c $(DFLAGS) std\loader.d
 
 math.obj : std\math.d
 	$(DMD) -c $(DFLAGS) std\math.d
