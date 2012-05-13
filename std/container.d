@@ -4195,19 +4195,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         Node result;
         static if(!allowDuplicates)
-        {
             bool added = true;
-            scope(success)
-            {
-                if(added)
-                    ++_length;
-            }
-        }
-        else
-        {
-            scope(success)
-                ++_length;
-        }
 
         if(!_end.left)
         {
@@ -4261,12 +4249,16 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             result.setColor(_end);
             version(RBDoChecks)
                 check();
+            ++_length;
             return result;
         }
         else
         {
             if(added)
+            {
+                ++_length;
                 result.setColor(_end);
+            }
             version(RBDoChecks)
                 check();
             return Tuple!(bool, "added", Node, "n")(added, result);
