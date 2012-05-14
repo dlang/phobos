@@ -62,10 +62,6 @@ version(unittest) {
     import std.typetuple;
 }
 
-version(LDC) {
-    import ldc.intrinsics;
-}
-
 version(DigitalMars){
     version = INLINE_YL2X;        // x87 has opcodes for these
 }
