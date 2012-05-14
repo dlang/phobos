@@ -62,10 +62,6 @@ version(unittest) {
     import std.typetuple;
 }
 
-version(LDC) {
-    import ldc.intrinsics;
-}
-
 version(DigitalMars){
     version = INLINE_YL2X;        // x87 has opcodes for these
 }
@@ -91,8 +87,6 @@ else version(D_InlineAsm_X86_64){
 private:
 /*
  * The following IEEE 'real' formats are currently supported:
- * 64 bit Big-endian  'double' (eg PowerPC)
- * 128 bit Big-endian 'quadruple' (eg SPARC)
  * 64 bit Little-endian 'double' (eg x86-SSE2)
  * 80 bit Little-endian, with implied bit 'real80' (eg x87, Itanium).
  * 128 bit Little-endian 'quadruple' (not implemented on any known processor!)
@@ -2079,24 +2073,6 @@ private:
         }
         // Don't bother about subnormals, they are not supported on most CPUs.
         //  SUBNORMAL_MASK = 0x02;
-    } else version (PPC) {
-        // PowerPC FPSCR is a 32-bit register.
-        enum : int {
-            INEXACT_MASK   = 0x600,
-            UNDERFLOW_MASK = 0x010,
-            OVERFLOW_MASK  = 0x008,
-            DIVBYZERO_MASK = 0x020,
-            INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
-        }
-    } else version(SPARC) { // SPARC FSR is a 32bit register
-             //(64 bits for Sparc 7 & 8, but high 32 bits are uninteresting).
-        enum : int {
-            INEXACT_MASK   = 0x020,
-            UNDERFLOW_MASK = 0x080,
-            OVERFLOW_MASK  = 0x100,
-            DIVBYZERO_MASK = 0x040,
-            INVALID_MASK   = 0x200
-        }
     } else
         static assert(0, "Not implemented");
 private:
@@ -2118,13 +2094,6 @@ private:
                  // Clear all irrelevant bits
                  and RAX, 0x03D;
             }
-        } else version (SPARC) {
-           /*
-               int retval;
-               asm { st %fsr, retval; }
-               return retval;
-            */
-           assert(0, "Not yet supported");
         } else
             assert(0, "Not yet supported");
     }
@@ -2134,15 +2103,8 @@ private:
             asm {
                 fnclex;
             }
-        } else {
-            /* SPARC:
-              int tmpval;
-              asm { st %fsr, tmpval; }
-              tmpval &=0xFFFF_FC00;
-              asm { ld tmpval, %fsr; }
-            */
+        } else
            assert(0, "Not yet supported");
-        }
     }
 public:
      /// The result cannot be represented exactly, so rounding occured.
