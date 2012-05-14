@@ -128,9 +128,6 @@ D language compiler. Also, check out the
 	<dd>Arbitrary-precision ('bignum') arithmetic
 
 $(V1
-	<dt><a href="std_bind.html"><b>std.bind</b></a>
-	<dd>Bind function arguments.
-
 	<dt><a href="std_bitarray.html"><b>std.bitarray</b></a>
 	<dd>Arrays of bits.
 

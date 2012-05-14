@@ -115,7 +115,7 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
-    std\signals.d std\typetuple.d std\traits.d std\bind.d \
+    std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
     std\contracts.d std\exception.d \
@@ -128,9 +128,8 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d std\loader.d \
+	std\zip.d std\cstream.d \
 	std\regex.d \
-	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
@@ -184,7 +183,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
-	$(DOC)\std_bind.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
@@ -268,10 +266,10 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
+	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
+	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
@@ -400,9 +398,6 @@ ascii.obj : std\ascii.d
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
 
-bind.obj : std\bind.d
-	$(DMD) -c $(DFLAGS) -inline std\bind.d
-
 bitmanip.obj : std\bitmanip.d
 	$(DMD) -c $(DFLAGS) std\bitmanip.d
 
@@ -459,9 +454,6 @@ getopt.obj : std\getopt.d
 
 json.obj : std\json.d
 	$(DMD) -c $(DFLAGS) std\json.d
-
-loader.obj : std\loader.d
-	$(DMD) -c $(DFLAGS) std\loader.d
 
 math.obj : std\math.d
 	$(DMD) -c $(DFLAGS) std\math.d
@@ -714,9 +706,6 @@ $(DOC)\std_base64.html : $(STDDOC) std\base64.d
 
 $(DOC)\std_bigint.html : $(STDDOC) std\bigint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_bigint.html $(STDDOC) std\bigint.d
-
-$(DOC)\std_bind.html : $(STDDOC) std\bind.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_bind.html $(STDDOC) std\bind.d
 
 $(DOC)\std_bitmanip.html : $(STDDOC) std\bitmanip.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_bitmanip.html $(STDDOC) std\bitmanip.d
