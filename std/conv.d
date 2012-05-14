@@ -1054,11 +1054,11 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    enum EB { a = true }
-    enum EU { a = 0, b = 1, c = 2 }     // base type is unsigned
-    enum EI { a = -1, b = 0, c = 1 }    // base type is signed (bug 7909)
+    enum EB : bool { a = true }
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
-    enum EC { a = 'a', b = 'b' }
+    enum EC : char { a = 'a', b = 'b' }
     enum ES : string { a = "aaa", b = "bbb" }
 
     foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
