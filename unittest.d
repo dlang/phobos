@@ -16,7 +16,6 @@
 public import std.base64;
 public import std.compiler;
 public import std.concurrency;
-public import std.contracts;
 public import std.conv;
 public import std.cpuid;
 public import std.cstream;
