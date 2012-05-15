@@ -118,7 +118,7 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\signals.d std\typetuple.d std\traits.d \
     std\encoding.d std\xml.d \
     std\random.d std\regexp.d \
-    std\contracts.d std\exception.d \
+    std\exception.d \
     std\compiler.d std\cpuid.d \
     std\process.d std\internal\processinit.d \
     std\internal\uni.d std\internal\uni_tab.d \
@@ -186,7 +186,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
-	$(DOC)\std_contracts.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
@@ -269,7 +268,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
-	std\metastrings.d std\contracts.d std\getopt.d \
+	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
@@ -404,9 +403,6 @@ compiler.obj : std\compiler.d
 
 complex.obj : std\complex.d
 	$(DMD) -c $(DFLAGS) std\complex.d
-
-contracts.obj : std\contracts.d
-	$(DMD) -c $(DFLAGS) std\contracts.d
 
 container.obj : std\container.d
 	$(DMD) -c $(DFLAGS) std\container.d
@@ -705,9 +701,6 @@ $(DOC)\std_compiler.html : $(STDDOC) std\compiler.d
 
 $(DOC)\std_complex.html : $(STDDOC) std\complex.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_complex.html $(STDDOC) std\complex.d
-
-$(DOC)\std_contracts.html : $(STDDOC) std\contracts.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_contracts.html $(STDDOC) std\contracts.d
 
 $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_conv.html $(STDDOC) std\conv.d
