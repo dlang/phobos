@@ -80,17 +80,17 @@ private template createAccessors(
             static assert(len == 1);
             enum result =
             // getter
-                "@property bool " ~ name ~ "() const { return "
+                "@property bool " ~ name ~ "() const nothrow { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property void " ~ name ~ "(bool v){"
+                ~"@property void " ~ name ~ "(bool v) nothrow {"
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
-            enum result = "@property "~T.stringof~" "~name~"() const { auto result = "
+            enum result = "@property "~T.stringof~" "~name~"() const nothrow { auto result = "
                 "("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -100,7 +100,7 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"@property void "~name~"("~T.stringof~" v){ "
+                ~"@property void "~name~"("~T.stringof~" v) nothrow { "
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
