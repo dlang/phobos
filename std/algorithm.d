@@ -847,7 +847,7 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(range.front = filler)))
+if (isInputRange!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
     static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
@@ -894,6 +894,17 @@ unittest
     void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
     //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
+    // fill should accept InputRange
+    class IterableInputRange {
+        size_t index;
+        uint value;
+        void popFront(){++index;}
+        @property bool empty() const {return index>1;}
+        @property ref uint front() {return value;}
+    }
+    IterableInputRange range = new IterableInputRange;
+    fill(range,uint.max);
+    assert(range.value == uint.max);
 }
 
 /**
@@ -910,7 +921,7 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-if (isForwardRange!Range1 && isForwardRange!Range2
+if (isInputRange!Range1 && isForwardRange!Range2
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
     enforce(!filler.empty);
@@ -930,6 +941,17 @@ unittest
     int[] b = [1, 2];
     fill(a, b);
     assert(a == [ 1, 2, 1, 2, 1 ]);
+    // fill should accept InputRange
+    class IterableInputRange {
+        size_t index;
+        uint value;
+        void popFront(){++index;}
+        @property bool empty() const {return index>1;}
+        @property ref uint front() {return value;}
+    }
+    IterableInputRange range = new IterableInputRange;
+    fill(range,[1,2,3]);
+    assert(range.value == 2);
 }
 
 /**
