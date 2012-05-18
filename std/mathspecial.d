@@ -242,9 +242,9 @@ body {
 
 /** Inverse of complemented incomplete gamma integral
  *
- * Given a and y, the function finds x such that
+ * Given a and x, the function finds y such that
  *
- *  gammaIncompleteCompl( a, x ) = p.
+ *  gammaIncompleteCompl( a, y ) = x.
  */
 real gammaIncompleteComplInverse(real a, real x)
 in {
