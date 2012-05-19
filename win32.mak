@@ -82,16 +82,14 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 .asm.obj:
 	$(CC) -c $*
 
-LIB=phobos.lib
-
-targets : $(LIB)
+targets : phobos.lib
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj $(LIB)
+test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
 OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
@@ -111,7 +109,7 @@ SRCS_12 = std\array.d std\functional.d std\range.d \
 	std\path.d std\outbuffer.d std\utf.d
 
 SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\datetime.d \
+    std\dateparse.d std\date.d std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
@@ -127,11 +125,13 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d \
+	std\zip.d std\cstream.d
+	std\datebase.d \
 	std\regex.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
+	std\gregorian.d \
     std\mathspecial.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
@@ -139,7 +139,6 @@ SRCS_3 = std\variant.d \
 	std\internal\windows\advapi32.d \
 	crc32.d \
 	std\c\process.d \
-	std\c\stdarg.d \
 	std\c\stddef.d \
 	std\c\stdlib.d \
 	std\c\string.d \
@@ -182,16 +181,19 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
+	$(DOC)\std_bind.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
+	$(DOC)\std_contracts.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
+	$(DOC)\std_date.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
@@ -201,6 +203,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
+	$(DOC)\std_gregorian.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -258,10 +261,10 @@ DOCS=	$(DOC)\object.html \
 SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\datetime.d \
+	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
 	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
-	std\mmfile.d \
+	std\dateparse.d std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
@@ -273,8 +276,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
-	std\exception.d std\ascii.d
+	std\regex.d std\datebase.d \
+	std\gregorian.d std\exception.d std\ascii.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -345,12 +348,12 @@ SRC_ZLIB= \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
-$(LIB) : $(OBJS) $(SRCS) \
+phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) $(LIB)
+unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
@@ -361,12 +364,12 @@ unittest : $(SRCS) $(LIB)
 #unittest : unittest.exe
 #	unittest
 #
-#unittest.exe : unittest.d $(LIB)
+#unittest.exe : unittest.d phobos.lib
 #	$(DMD) unittest -g
 #	dmc unittest.obj -g
 
-cov : $(SRCS) $(LIB)
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) $(LIB)
+cov : $(SRCS) phobos.lib
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
 	cov
 
 html : $(DOCS)
@@ -421,6 +424,12 @@ ctype.obj : std\ctype.d
 
 csv.obj : std\csv.d
 	$(DMD) -c $(DFLAGS) std\csv.d
+
+date.obj : std\dateparse.d std\date.d
+	$(DMD) -c $(DFLAGS) std\date.d
+
+dateparse.obj : std\dateparse.d std\date.d
+	$(DMD) -c $(DFLAGS) std\dateparse.d
 
 datetime.obj : std\datetime.d
 	$(DMD) -c $(DFLAGS) std\datetime.d
@@ -720,6 +729,9 @@ $(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
+$(DOC)\std_date.html : $(STDDOC) std\date.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
+
 $(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
 
@@ -743,6 +755,9 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
+
+$(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
 
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
@@ -935,14 +950,14 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del unittest1.obj unittest.obj unittest.map unittest.exe
-	del $(LIB)
+	del phobos.lib
 	del phobos.json
 
 cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) $(LIB) $(DIR)\windows\lib\ 
+	$(CP) phobos.lib $(DIR)\windows\lib\ 
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
