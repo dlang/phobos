@@ -37,7 +37,7 @@ multiple times.
 ))
 
 $(TR $(TD $(D $(LREF isBidirectionalRange)))
-$(TD Tests if something is a $(I bidirectional _range), that is, an input
+$(TD Tests if something is a $(I bidirectional _range), that is, a forward
 _range that allows reverse traversal using the primitives $(D back) and $(D
 popBack).
 ))
