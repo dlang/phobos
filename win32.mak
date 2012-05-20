@@ -109,7 +109,7 @@ SRCS_12 = std\array.d std\functional.d std\range.d \
 	std\path.d std\outbuffer.d std\utf.d
 
 SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\dateparse.d std\date.d std\datetime.d \
+    std\datetime.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
@@ -193,7 +193,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
-	$(DOC)\std_date.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
@@ -261,10 +260,10 @@ DOCS=	$(DOC)\object.html \
 SRC=	unittest.d crc32.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
+	std\math.d std\string.d std\path.d std\datetime.d \
 	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
-	std\dateparse.d std\mmfile.d \
+	std\mmfile.d \
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
@@ -424,12 +423,6 @@ ctype.obj : std\ctype.d
 
 csv.obj : std\csv.d
 	$(DMD) -c $(DFLAGS) std\csv.d
-
-date.obj : std\dateparse.d std\date.d
-	$(DMD) -c $(DFLAGS) std\date.d
-
-dateparse.obj : std\dateparse.d std\date.d
-	$(DMD) -c $(DFLAGS) std\dateparse.d
 
 datetime.obj : std\datetime.d
 	$(DMD) -c $(DFLAGS) std\datetime.d
@@ -728,9 +721,6 @@ $(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
 
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
-
-$(DOC)\std_date.html : $(STDDOC) std\date.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
 
 $(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
