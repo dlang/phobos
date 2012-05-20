@@ -3249,6 +3249,38 @@ template isNumeric(T)
 }
 
 /**
+Detect whether T is a scalar type.
+ */
+template isScalarType(T)
+{
+    enum bool isScalarType = isNumeric!T || isSomeChar!T || isBoolean!T;
+}
+
+unittest {
+	static assert(!isScalarType!void);
+	static assert(isScalarType!(immutable(int)));
+	static assert(isScalarType!(shared(float)));
+	static assert(isScalarType!(shared(const bool)));
+	static assert(isScalarType!(const(dchar)));
+}
+
+/**
+Detect whether T is a basic type.
+ */
+template isBasicType(T)
+{
+    enum bool isBasicType = isScalarType!T || is(T == void);
+}
+
+unittest {
+	static assert(isBasicType!void);
+	static assert(isBasicType!(immutable(int)));
+	static assert(isBasicType!(shared(float)));
+	static assert(isBasicType!(shared(const bool)));
+	static assert(isBasicType!(const(dchar)));
+}
+
+/**
 Detect whether $(D T) is a built-in unsigned numeric type.
  */
 template isUnsigned(T)
