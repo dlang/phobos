@@ -82,14 +82,16 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 .asm.obj:
 	$(CC) -c $*
 
-targets : phobos.lib
+LIB=phobos.lib
+
+targets : $(LIB)
 
 test : test.exe
 
 test.obj : test.d
 	$(DMD) -c test -g -unittest
 
-test.exe : test.obj phobos.lib
+test.exe : test.obj $(LIB)
 	$(DMD) test.obj -g -L/map
 
 OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
@@ -125,13 +127,11 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 SRCS_3 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
-	std\zip.d std\cstream.d
-	std\datebase.d \
+	std\zip.d std\cstream.d \
 	std\regex.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
-	std\gregorian.d \
     std\mathspecial.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
@@ -139,6 +139,7 @@ SRCS_3 = std\variant.d \
 	std\internal\windows\advapi32.d \
 	crc32.d \
 	std\c\process.d \
+	std\c\stdarg.d \
 	std\c\stddef.d \
 	std\c\stdlib.d \
 	std\c\string.d \
@@ -181,12 +182,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
-	$(DOC)\std_bind.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
-	$(DOC)\std_contracts.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
@@ -202,7 +201,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
-	$(DOC)\std_gregorian.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
@@ -275,8 +273,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d std\datebase.d \
-	std\gregorian.d std\exception.d std\ascii.d
+	std\regex.d \
+	std\exception.d std\ascii.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -347,12 +345,12 @@ SRC_ZLIB= \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
 
-phobos.lib : $(OBJS) $(SRCS) \
+$(LIB) : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-unittest : $(SRCS) phobos.lib
+unittest : $(SRCS) $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest11.obj $(SRCS_11)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest12.obj $(SRCS_12)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRCS_2)
@@ -363,12 +361,12 @@ unittest : $(SRCS) phobos.lib
 #unittest : unittest.exe
 #	unittest
 #
-#unittest.exe : unittest.d phobos.lib
+#unittest.exe : unittest.d $(LIB)
 #	$(DMD) unittest -g
 #	dmc unittest.obj -g
 
-cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+cov : $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) $(LIB)
 	cov
 
 html : $(DOCS)
@@ -746,9 +744,6 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
 
-$(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
-
 $(DOC)\std_json.html : $(STDDOC) std\json.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
 
@@ -940,14 +935,14 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del unittest1.obj unittest.obj unittest.map unittest.exe
-	del phobos.lib
+	del $(LIB)
 	del phobos.json
 
 cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\windows\lib\ 
+	$(CP) $(LIB) $(DIR)\windows\lib\ 
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib\ 
 	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
@@ -984,5 +979,6 @@ svn:
 	#$(CP) $(SRC_ETC) $(SVN)\etc\ 
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\ 
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib\ 
+
 
 
