@@ -3093,7 +3093,7 @@ real fma(real x, real y, real z) @safe pure nothrow { return (x * y) + z; }
 Unqual!F pow(F, G)(F x, G n) @trusted pure nothrow
     if (isFloatingPoint!(F) && isIntegral!(G))
 {
-    real p = 1.0, v = void;
+    Unqual!F p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
     if (n < 0)
     {
@@ -3162,16 +3162,8 @@ unittest
     assert(pow(x,eight) == (x * x) * (x * x) * (x * x) * (x * x));
 
     assert(pow(x, neg1) == 1 / x);
-
-    version(X86_64)
-    {
-        pragma(msg, "test disabled on x86_64, see bug 5628");
-    }
-    else
-    {
-        assert(pow(xd, neg2) == 1 / (x * x));
-        assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
-    }
+    assert(pow(xd, neg2) == 1 / (xd * xd));
+    assert(pow(xf, neg8) == 1 / ((xf * xf) * (xf * xf) * (xf * xf) * (xf * xf)));
 
     assert(pow(x, neg3) == 1 / (x * x * x));
 }
@@ -3571,14 +3563,7 @@ unittest
    assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
 
-   version(X86_64)
-   {
-       pragma(msg, "test disabled, see bug 5628");
-   }
-   else
-   {
-       assert(feqrel(real.min_normal/8,real.min_normal/17)==3);
-   }
+   assert(feqrel(real.min_normal/8,real.min_normal/17)==3);
 
    // Numbers that are close
    assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
