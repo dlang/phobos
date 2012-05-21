@@ -382,8 +382,8 @@ and throws if that fails.
     void detach()
     {
         if (!p) return;
-        // @@@BUG
-        //if (p.refs == 1) close();
+        if (p.refs == 1) close();
+        else if(p.refs != 0) p.refs--;
         p = null;
     }
 
