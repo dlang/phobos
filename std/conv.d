@@ -101,6 +101,12 @@ private
         formatValue(w, src, f);
         return w.data;
     }
+
+    template isEnumStrToStr(S, T)
+    {
+        enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
+                              is(S == enum) && isSomeString!T;
+    }
 }
 
 /**
@@ -250,7 +256,7 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T))
+    if (isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T))
 {
     alias isUnsigned isUnsignedInt;
 
@@ -1038,8 +1044,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S s)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(S == enum) &&
+    if (is(S == enum) &&
         isSomeString!T)
 {
     return toStr!T(s);
@@ -1048,21 +1053,26 @@ T toImpl(T, S)(S s)
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to! string(E.a) == "a"c);
-    assert(to!wstring(E.b) == "b"w);
-    assert(to!dstring(E.c) == "c"d);
 
-    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-    assert(to! string(F.x) == "x"c);
-    assert(to!wstring(F.y) == "y"w);
-    assert(to!dstring(F.z) == "z"d);
+    enum EB : bool { a = true }
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC : char { a = 'a', b = 'b' }
+    enum ES : string { a = "aaa", b = "bbb" }
+
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    {
+        assert(to! string(E.a) == "a"c);
+        assert(to!wstring(E.a) == "a"w);
+        assert(to!dstring(E.a) == "a"d);
+    }
 
     // Test an value not corresponding to an enum member.
-    auto o = cast(E)5;
-    assert(to! string(o) == "cast(E)5"c);
-    assert(to!wstring(o) == "cast(E)5"w);
-    assert(to!dstring(o) == "cast(E)5"d);
+    auto o = cast(EU)5;
+    assert(to! string(o) == "cast(EU)5"c);
+    assert(to!wstring(o) == "cast(EU)5"w);
+    assert(to!dstring(o) == "cast(EU)5"d);
 }
 
 /// ditto
@@ -1079,7 +1089,7 @@ deprecated T toImpl(T, S)(S s, in T left = to!T(S.stringof~"("), in T right = ")
 
 /// ditto
 T toImpl(T, S)(S b)
-    if (is(Unqual!S == bool) &&
+    if (isBoolean!S &&
         isSomeString!T)
 {
     return toStr!T(b);
@@ -1096,7 +1106,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S c)
-    if (isSomeChar!(Unqual!S) &&
+    if (isSomeChar!S &&
         isSomeString!T)
 {
     return toStr!T(c);
@@ -1138,7 +1148,7 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S input)
-    if (isIntegral!S && isUnsigned!S &&
+    if (isIntegral!S &&
         isSomeString!T)
 {
     return toStr!T(input);
@@ -1155,26 +1165,7 @@ unittest
         assert(to!string(to!Int(9)) == "9");
         assert(to!string(to!Int(123)) == "123");
     }
-}
 
-/// ditto
-T toImpl(T, S)(S value)
-    if (isIntegral!S && isSigned!S &&
-        isSomeString!T)
-{
-    return toStr!T(value);
-}
-
-unittest
-{
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    assert(wtext(int.max) == "2147483647"w);
-    assert(wtext(int.min) == "-2147483648"w);
-    assert(to!string(0L) == "0");
-}
-
-unittest
-{
     foreach (Int; TypeTuple!(byte, short, int, long))
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -1190,9 +1181,17 @@ unittest
     }
 }
 
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    assert(wtext(int.max) == "2147483647"w);
+    assert(wtext(int.min) == "-2147483648"w);
+    assert(to!string(0L) == "0");
+}
+
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!(Unqual!S) &&
+    if (isIntegral!S &&
         isSomeString!T)
 in
 {
@@ -1200,7 +1199,7 @@ in
 }
 body
 {
-    static if (!is(Unqual!S == ulong))
+    static if (!is(IntegralTypeOf!S == ulong))
     {
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
@@ -2094,24 +2093,25 @@ Target parse(Target, Source)(ref Source s)
         ~ to!string(s) ~ "'");
 }
 
-//@@@BUG4737@@@: typeid doesn't work for scoped enum with initializer
-version(unittest)
-{
-    private enum F : real { x = 1.414, y = 1.732, z = 2.236 }
-}
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    enum E { a, b, c }
-    assert(to!E("a"c) == E.a);
-    assert(to!E("b"w) == E.b);
-    assert(to!E("c"d) == E.c);
 
-    assert(to!F("x"c) == F.x);
-    assert(to!F("y"w) == F.y);
-    assert(to!F("z"d) == F.z);
+    enum EB : bool { a = true, b = false, c = a }
+    enum EU { a, b, c }
+    enum EI { a = -1, b = 0, c = 1 }
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+    enum EC : char { a = 'a', b = 'b', c = 'c' }
+    enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    assertThrown!ConvException(to!E("d"));
+    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    {
+        assert(to!E("a"c) == E.a);
+        assert(to!E("b"w) == E.b);
+        assert(to!E("c"d) == E.c);
+
+        assertThrown!ConvException(to!E("d"));
+    }
 }
 
 unittest // bugzilla 4744
