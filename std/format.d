@@ -1179,7 +1179,7 @@ unittest
    "0" with integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isBoolean!T && !is(T == enum))
+if (!hasToString!(T, Char) && isBoolean!T)
 {
     BooleanTypeOf!T val = obj;
 
@@ -1214,7 +1214,7 @@ unittest
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isIntegral!T && !is(T == enum))
+if (!hasToString!(T, Char) && isIntegral!T)
 {
     IntegralTypeOf!T val = obj;
 
@@ -1392,7 +1392,7 @@ unittest
  * Floating-point values are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isFloatingPoint!T && !is(T == enum))
+if (!hasToString!(T, Char) && isFloatingPoint!T)
 {
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
@@ -1557,7 +1557,7 @@ unittest
    integral-specific format specs.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isSomeChar!T && !is(T == enum))
+if (!hasToString!(T, Char) && isSomeChar!T)
 {
     CharTypeOf!T val = obj;
 
@@ -1591,7 +1591,7 @@ unittest
    Strings are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isSomeString!T && !isStaticArray!T && !is(T == enum))
+if (!hasToString!(T, Char) && isSomeString!T && !isStaticArray!T)
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
     formatRange(w, val, f);
@@ -1631,7 +1631,7 @@ unittest
    Static-size arrays are formatted as dynamic arrays.
  */
 void formatValue(Writer, T, Char)(Writer w, ref T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isStaticArray!T && !is(T == enum))
+if (!hasToString!(T, Char) && isStaticArray!T)
 {
     formatValue(w, obj[], f);
 }
@@ -1644,7 +1644,7 @@ if (!hasToString!(T, Char) && isStaticArray!T && !is(T == enum))
           $(LI Const array is converted to input range by removing its qualifier.))
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && !isSomeString!T && isDynamicArray!T && !is(T == enum))
+if (!hasToString!(T, Char) && !isSomeString!T && isDynamicArray!T)
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {
@@ -2081,7 +2081,7 @@ if (!isSomeString!T && !isSomeChar!T)
    separators, and enclosed by $(D '[') and $(D ']').
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
-if (!hasToString!(T, Char) && isAssociativeArray!T && !is(T == enum))
+if (!hasToString!(T, Char) && isAssociativeArray!T)
 {
     AssocArrayTypeOf!T val = obj;
 
