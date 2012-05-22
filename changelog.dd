@@ -6,6 +6,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
     )
 
     $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
      )
  )
 $(VERSION 059, ddd mm, 2012, =================================================,

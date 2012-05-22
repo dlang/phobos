@@ -665,19 +665,19 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A && !is(A == enum))
+            static if (isSomeString!A)
             {
                 put(w, arg);
             }
-            else static if (isIntegral!A && !is(A == enum))
+            else static if (isIntegral!A)
             {
                 toTextRange(arg, w);
             }
-            else static if (isBoolean!A && !is(A == enum))
+            else static if (isBoolean!A)
             {
                 put(w, arg ? "true" : "false");
             }
-            else static if (isSomeChar!A && !is(A == enum))
+            else static if (isSomeChar!A)
             {
                 put(w, arg);
             }
