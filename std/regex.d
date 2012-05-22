@@ -6545,8 +6545,8 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     Construct a new string from $(D input) by replacing each match with
     a string generated from match according to $(D format) specifier.
 
-    To replace all occurances use regex with "g" flag, otherwise
-    only first occurrence gets replaced.
+    To replace all occurences use regex with "g" flag, otherwise
+    only the first occurrence gets replaced.
 
     Params:
     input = string to search
