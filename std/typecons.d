@@ -88,7 +88,7 @@ public:
     */
     this(RefT p)
     {
-        writeln("Unique constructor with rvalue");
+        version(unittest) writeln("Unique constructor with rvalue");
         _p = p;
     }
     /**
@@ -99,7 +99,7 @@ public:
     this(ref RefT p)
     {
         _p = p;
-        writeln("Unique constructor nulling source");
+        version(unittest) writeln("Unique constructor nulling source");
         p = null;
         assert(p is null);
     }
@@ -131,7 +131,7 @@ public:
 
     ~this()
     {
-        writeln("Unique destructor of ", (_p is null)? null: _p);
+        version(unittest) writeln("Unique destructor of ", (_p is null)? null: _p);
         delete _p;
         _p = null;
     }
@@ -142,10 +142,10 @@ public:
     /** Returns a unique rvalue. Nullifies the current contents */
     Unique release()
     {
-        writeln("Release");
+        version(unittest) writeln("Release");
         auto u = Unique(_p);
         assert(_p is null);
-        writeln("return from Release");
+        version(unittest) writeln("return from Release");
         return u;
     }
     /** Forwards member access to contents */
