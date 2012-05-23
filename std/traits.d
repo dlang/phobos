@@ -3256,12 +3256,13 @@ template isScalarType(T)
     enum bool isScalarType = isNumeric!T || isSomeChar!T || isBoolean!T;
 }
 
-unittest {
-	static assert(!isScalarType!void);
-	static assert(isScalarType!(immutable(int)));
-	static assert(isScalarType!(shared(float)));
-	static assert(isScalarType!(shared(const bool)));
-	static assert(isScalarType!(const(dchar)));
+unittest
+{
+    static assert(!isScalarType!void);
+    static assert( isScalarType!(immutable(int)));
+    static assert( isScalarType!(shared(float)));
+    static assert( isScalarType!(shared(const bool)));
+    static assert( isScalarType!(const(dchar)));
 }
 
 /**
@@ -3272,12 +3273,13 @@ template isBasicType(T)
     enum bool isBasicType = isScalarType!T || is(T == void);
 }
 
-unittest {
-	static assert(isBasicType!void);
-	static assert(isBasicType!(immutable(int)));
-	static assert(isBasicType!(shared(float)));
-	static assert(isBasicType!(shared(const bool)));
-	static assert(isBasicType!(const(dchar)));
+unittest
+{
+    static assert(isBasicType!void);
+    static assert(isBasicType!(immutable(int)));
+    static assert(isBasicType!(shared(float)));
+    static assert(isBasicType!(shared(const bool)));
+    static assert(isBasicType!(const(dchar)));
 }
 
 /**
@@ -3325,7 +3327,16 @@ Detect whether we can treat T as one of the built-in string types.
 template isSomeString(T)
 {
     static if (is(T == enum))
+    {
         enum isSomeString = false;
+    }
+    else static if (is(T == typeof(null)))
+    {
+        // It is impossible to determine exact string type from typeof(null) -
+        // it means that StringTypeOf!(typeof(null)) is undefined.
+        // Then this behavior is convenient for template constraint.
+        enum isSomeString = false;
+    }
     else
         enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
 }
@@ -3342,6 +3353,7 @@ unittest
     static assert(!isSomeString!(int));
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
+    static assert(!isSomeString!(typeof(null)));
 }
 
 template isNarrowString(T)
@@ -3413,6 +3425,7 @@ unittest
 {
     static assert( isDynamicArray!(int[]));
     static assert(!isDynamicArray!(int[5]));
+    static assert(!isDynamicArray!(typeof(null)));
 }
 
 /**
@@ -3431,6 +3444,7 @@ unittest
 
     static assert(!isArray!(uint));
     static assert(!isArray!(uint[uint]));
+    static assert(!isArray!(typeof(null)));
 }
 
 /**
@@ -3456,6 +3470,7 @@ unittest
     static assert(!isAssociativeArray!(Foo));
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
+    static assert(!isAssociativeArray!(typeof(null)));
 }
 
 template isBuiltinType(T)
@@ -3486,6 +3501,7 @@ unittest
     static assert(!isPointer!(uint));
     static assert(!isPointer!(uint[uint]));
     static assert(!isPointer!(char[]));
+    static assert(!isPointer!(typeof(null)));
 }
 
 /**
@@ -3505,6 +3521,15 @@ unittest
     static assert( is(PointerTarget!(long*) == long));
 
     static assert(!is(PointerTarget!int));
+}
+
+/**
+ * Detect whether type $(D T) is an aggregate type.
+ */
+template isAggregateType(T)
+{
+    enum isAggregateType = is(T == struct) || is(T == union) ||
+                           is(T == class) || is(T == interface);
 }
 
 /**
