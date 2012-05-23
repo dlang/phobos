@@ -1211,6 +1211,22 @@ unittest
 }
 
 /**
+   $(D null) literal is formatted as $(D "null").
+ */
+void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+if (!hasToString!(T, Char) && is(T == typeof(null)))
+{
+    enforceEx!FormatException(f.spec == 's', "null");
+
+    put(w, "null");
+}
+
+unittest
+{
+    formatTest( null, "null" );
+}
+
+/**
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
@@ -3511,6 +3527,18 @@ unittest
     line = "-0";
     formattedRead(line, "%d", &f1);
     assert(!f1);
+}
+
+/**
+ * Reads null literal and returns it.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+    if (isInputRange!Range && is(T == typeof(null)))
+{
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
 }
 
 /**
