@@ -2715,9 +2715,7 @@ unittest
     }
     auto a = A(4);
     auto b = a.copy();
-    if (a.x.RefCounted._store._count != 2) {
-        stderr.writeln("*** BUG 4356 still unfixed");
-    }
+    assert(a.x.RefCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
 unittest
