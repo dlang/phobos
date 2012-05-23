@@ -913,23 +913,6 @@ unittest // bugzilla 6874
     assert(GC.addrOf(&b[0]) == GC.addrOf(&b[$-1]));
 }
 
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(LREF insertInPlace) instead.)
-
-    Same as $(XREF array, insertInPlace).
-  +/
-deprecated void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
-if (isInputRange!Range && is(ElementEncodingType!Range : T))
-{
-    insertInPlace(array, pos, stuff);
-}
-
-/// Ditto
-void insert(T)(ref T[] array, size_t pos, T stuff)
-{
-    insertInPlace(array, pos, stuff);
-}
 
 /++
     Returns whether the $(D front)s of $(D lhs) and $(D rhs) both refer to the
@@ -1730,18 +1713,6 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
-}
-
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(LREF replaceInPlace) instead.)
-
-    Same as $(XREF array, replaceInPlace).
-  +/
-deprecated void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-if (isDynamicArray!Range && is(ElementType!Range : T))
-{
-    replaceInPlace(array, from, to, stuff);
 }
 
 /++
