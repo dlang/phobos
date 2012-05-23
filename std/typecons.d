@@ -46,7 +46,7 @@ import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.metastrings, std.traits, std.typetuple, std.range;
 
-version(unittest) import core.vararg, std.stdio;
+debug(Unique) import std.stdio;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -57,7 +57,6 @@ class object, in which case Unique behaves polymorphically too.
 
 Example:
 */
-
 struct Unique(T)
 {
 static if (is(T:Object))
@@ -88,7 +87,7 @@ public:
     */
     this(RefT p)
     {
-        version(unittest) writeln("Unique constructor with rvalue");
+        debug(Unique) writeln("Unique constructor with rvalue");
         _p = p;
     }
     /**
@@ -99,7 +98,7 @@ public:
     this(ref RefT p)
     {
         _p = p;
-        version(unittest) writeln("Unique constructor nulling source");
+        debug(Unique) writeln("Unique constructor nulling source");
         p = null;
         assert(p is null);
     }
@@ -131,7 +130,7 @@ public:
 
     ~this()
     {
-        version(unittest) writeln("Unique destructor of ", (_p is null)? null: _p);
+        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
         delete _p;
         _p = null;
     }
@@ -142,10 +141,10 @@ public:
     /** Returns a unique rvalue. Nullifies the current contents */
     Unique release()
     {
-        version(unittest) writeln("Release");
+        debug(Unique) writeln("Release");
         auto u = Unique(_p);
         assert(_p is null);
-        version(unittest) writeln("return from Release");
+        debug(Unique) writeln("return from Release");
         return u;
     }
     /** Forwards member access to contents */
@@ -2034,6 +2033,7 @@ private static:
 }
 
 //debug = SHOW_GENERATED_CODE;
+version(unittest) import core.vararg;
 unittest
 {
     // no function to implement
