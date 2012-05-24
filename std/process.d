@@ -75,21 +75,6 @@ version(Posix)
         private extern(C) extern __gshared const char** environ;
     }
 }
-version(Windows)
-{
-    // TODO: This should be in core.sys.windows.windows.
-    alias WCHAR* LPWCH;
-    extern(Windows)
-    {
-        LPWCH GetEnvironmentStringsW();
-        BOOL FreeEnvironmentStringsW(LPWCH lpszEnvironmentBlock);
-        DWORD GetEnvironmentVariableW(LPCWSTR lpName, LPWSTR lpBuffer,
-            DWORD nSize);
-        BOOL SetEnvironmentVariableW(LPCWSTR lpName, LPCWSTR lpValue);
-    }
-}
-
-
 
 
 /**
