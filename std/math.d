@@ -1892,18 +1892,6 @@ unittest
         }
 }
 
-deprecated
-{
-// Deprecated: use std.mathspecial.erf instead
-real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
-// Deprecated: use std.mathspecial.erfc instead
-real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
-// Deprecated: use std.mathspecial.logGamma instead
-real lgamma(real x) @trusted nothrow { return core.stdc.math.lgammal(x); }
-// Deprecated: use std.mathspecial.gamma instead
-real tgamma(real x) @trusted nothrow { return core.stdc.math.tgammal(x); }
-}
-
 /**************************************
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
