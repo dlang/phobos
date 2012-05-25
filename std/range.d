@@ -1680,9 +1680,12 @@ if (isInputRange!(Unqual!Range))
                 typeof(this) opSlice(size_t lower, size_t upper)
                 {
                     assert(upper >= lower && upper <= length);
-                    immutable translatedLower = lower * _n;
                     immutable translatedUpper = (upper == 0) ? 0 :
                         (upper * _n - (_n - 1));
+                    immutable translatedLower = min(lower * _n, translatedUpper);
+                    
+                    assert(translatedLower <= translatedUpper);
+                    
                     return typeof(this)(source[translatedLower..translatedUpper], _n);
                 }
 
@@ -1722,6 +1725,9 @@ unittest
     assert(equal(s1[1..5], [2, 3, 4, 5]));
     assert(s1[1..5].length == 4);
     assert(s1[0..0].empty);
+    assert(s1[3..3].empty);
+    // assert(s1[$ .. $].empty);
+    assert(s1[s1.opDollar() .. s1.opDollar()].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
@@ -1729,6 +1735,9 @@ unittest
     assert(equal(s2[1..5], [3, 5, 7, 9]));
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
+    assert(s2[3..3].empty);
+    // assert(s2[$ .. $].empty);
+    assert(s2[s2.opDollar() .. s2.opDollar()].empty);
 
     // Test fix for Bug 5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
