@@ -4199,7 +4199,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         if(!_end.left)
         {
-            _end.left = result = allocate(n);
+            _end.left = _begin = result = allocate(n);
         }
         else
         {
@@ -4242,6 +4242,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                 }
                 newParent = nxt;
             }
+            if(_begin.left)
+                _begin = _begin.left;
         }
 
         static if(allowDuplicates)
@@ -4298,12 +4300,13 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     private alias RBNode!Elem.Node Node;
 
     private Node   _end;
+    private Node   _begin;
     private size_t _length;
 
     private void _setup()
     {
         assert(!_end); //Make sure that _setup isn't run more than once.
-        _end = allocate();
+        _begin = _end = allocate();
     }
 
     static private Node allocate()
@@ -4496,7 +4499,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      */
     Range opSlice()
     {
-        return Range(_end.leftmost, _end);
+        return Range(_begin, _end);
     }
 
     /**
@@ -4506,7 +4509,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      */
     Elem front()
     {
-        return _end.leftmost.value;
+        return _begin.value;
     }
 
     /**
@@ -4545,6 +4548,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     void clear()
     {
         _end.left = null;
+        _begin = _end;
         _length = 0;
     }
 
@@ -4646,9 +4650,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         scope(success)
             --_length;
-        auto n = _end.leftmost;
+        auto n = _begin;
         auto result = n.value;
-        n.remove(_end);
+        _begin = n.remove(_end);
         version(RBDoChecks)
             check();
         return result;
@@ -4675,7 +4679,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         scope(success)
             --_length;
-        _end.leftmost.remove(_end);
+        _begin = _begin.remove(_end);
         version(RBDoChecks)
             check();
     }
@@ -4689,7 +4693,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         scope(success)
             --_length;
-        _end.prev.remove(_end);
+        auto lastnode = _end.prev;
+        if(lastnode is _begin)
+            _begin = _begin.remove(_end);
+        else
+            lastnode.remove(_end);
         version(RBDoChecks)
             check();
     }
@@ -4723,6 +4731,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         auto b = r._begin;
         auto e = r._end;
+        if(_begin is b)
+            _begin = e;
         while(b !is e)
         {
             b = b.remove(_end);
@@ -4762,20 +4772,20 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      +/
     Range remove(Take!Range r)
     {
+        immutable isBegin = (r.source._begin is _begin);
         auto b = r.source._begin;
 
         while(!r.empty)
-            r.popFront(); // move take range to its last element
-
-        auto e = r.source._begin;
-
-        while(b != e)
         {
+            r.popFront();
             b = b.remove(_end);
             --_length;
         }
 
-        return Range(e, _end);
+        if(isBegin)
+            _begin = b;
+
+        return Range(b, _end);
     }
 
     static if(doUnittest) unittest
@@ -4844,7 +4854,10 @@ assert(std.algorithm.equal(rbt[], [5]));
             if(beg is _end || _less(e, beg.value))
                 // no values are equal
                 continue;
-            beg.remove(_end);
+            immutable isBegin = (beg is _begin);
+            beg = beg.remove(_end);
+            if(isBegin)
+                _begin = beg;
             --_length;
         }
 
@@ -4969,7 +4982,7 @@ assert(std.algorithm.equal(rbt[], [5]));
      */
     Range lowerBound(Elem e)
     {
-        return Range(_end.leftmost, _firstGreaterEqual(e));
+        return Range(_begin, _firstGreaterEqual(e));
     }
 
     /**
@@ -5144,6 +5157,7 @@ assert(std.algorithm.equal(rbt[], [5]));
     private this(Node end, size_t length)
     {
         _end = end;
+        _begin = end.leftmost;
         _length = length;
     }
 }
