@@ -5579,9 +5579,11 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
         return target;
     }
+    if (__ctfe)
+        return genericImpl(source, target);
 
-    static if(isArray!Range1 && isArray!Range2 &&
-    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
+    static if (isArray!Range1 && isArray!Range2 &&
+               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
         immutable overlaps =
             (source.ptr >= target.ptr &&
@@ -5589,7 +5591,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             (target.ptr >= source.ptr &&
              target.ptr < source.ptr + source.length);
 
-        if(overlaps)
+        if (overlaps)
         {
             return genericImpl(source, target);
         }
@@ -5609,7 +5611,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     {
         return genericImpl(source, target);
     }
-
 }
 
 unittest
@@ -5635,6 +5636,17 @@ unittest
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         copy(a[5..10], a[4..9]);
         assert(a[4..9] == [6, 7, 8, 9, 10]);
+    }
+
+    {   // Test for bug 7898
+        enum v =
+        {
+            import std.algorithm;
+            int[] arr1 = [10, 20, 30, 40, 50];
+            int[] arr2 = arr1.dup;
+            copy(arr1, arr2);
+            return 35;
+        }();
     }
 }
 
