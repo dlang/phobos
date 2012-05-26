@@ -757,56 +757,6 @@ version(Windows) unittest
     }
 }
 
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use the $(D getTimes) with two arguments instead.)
-
-    $(BLUE This function is Posix-Only.)
-
-    Get file status change time, acces time, and modification times
-    of file $(D name).
-
-    $(D getTimes) is the same on both Windows and Posix, but it is not
-    possible to get the file creation time on Posix systems, so
-    $(D getTimes) cannot give you the file creation time. $(D getTimesWin)
-    does the same thing on Windows as $(D getTimes) except that it also gives
-    you the file creation time. This function was created to do the same
-    thing that the old, 3 argument $(D getTimes) was doing on Posix - giving
-    you the time that the file status last changed - but ultimately, that's
-    not really very useful, and we don't like having functions which are
-    OS-specific when we can reasonably avoid it. So, this function is being
-    deprecated. You can use $(D DirEntry)'s  $(D statBuf) property if you
-    really want to get at that information (along with all of the other
-    OS-specific stuff that $(D stat) gives you).
-
-    Params:
-        name                 = File name to get times for.
-        fileStatusChangeTime = Time the file's status was last changed.
-        fileAccessTime       = Time the file was last accessed.
-        fileModificationTime = Time the file was last modified.
-
-    Throws:
-        $(D FileException) on error.
- +/
-version(StdDdoc) deprecated void getTimesPosix(in char[] name,
-                                               out SysTime fileStatusChangeTime,
-                                               out SysTime fileAccessTime,
-                                               out SysTime fileModificationTime);
-else version(Posix) deprecated void getTimesPosix(C)(in C[] name,
-                                                     out SysTime fileStatusChangeTime,
-                                                     out SysTime fileAccessTime,
-                                                     out SysTime fileModificationTime)
-    if(is(Unqual!C == char))
-{
-    struct_stat64 statbuf = void;
-
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-
-    fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
-    fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
-    fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
-}
-
 
 /++
     Returns the time that the given file was last modified.
@@ -1077,28 +1027,6 @@ unittest
 
 
 /++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(D attrIsDir) instead.)
-
-    Returns whether the given file attributes are for a directory.
-
-    Params:
-        attributes = The file attributes.
-  +/
-deprecated @property bool isDir(uint attributes) nothrow
-{
-    version(Windows)
-    {
-        return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-    }
-    else version(Posix)
-    {
-        return (attributes & S_IFMT) == S_IFDIR;
-    }
-}
-
-
-/++
     Returns whether the given file attributes are for a directory.
 
     Params:
@@ -1207,38 +1135,6 @@ unittest
 
         if("/usr/include/assert.h".exists)
             assert("/usr/include/assert.h".isFile);
-    }
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(D attrIsFile) instead.)
-
-    Returns whether the given file attributes are for a file.
-
-    On Windows, if a file is not a directory, it's a file. So,
-    either $(D isFile) or $(D isDir) will return $(D true) for any given file.
-
-    On Posix systems, if $(D isFile) is $(D true), that indicates that the file
-    is a regular file (e.g. not a block not device). So, on Posix systems,
-    it's possible for both $(D isFile) and $(D isDir) to be $(D false) for a
-    particular file (in which case, it's a special file). If a file is a special
-    file, you can use the attributes to check what type of special
-    file it is (see the man page for $(D stat) for more information).
-
-    Params:
-        attributes = The file attributes.
-  +/
-deprecated @property bool isFile(uint attributes) nothrow
-{
-    version(Windows)
-    {
-        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
-    }
-    else version(Posix)
-    {
-        return (attributes & S_IFMT) == S_IFREG;
     }
 }
 
@@ -1400,27 +1296,6 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
     }
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(D attrIsSymlink) instead.)
-
-    Returns whether the given file attributes are for a symbolic link.
-
-    On Windows, return $(D true) when the file is either a symbolic link or a
-    junction point.
-
-    Params:
-        attributes = The file attributes.
-  +/
-deprecated @property bool isSymLink(uint attributes) nothrow
-{
-    version(Windows)
-        return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-    else version(Posix)
-        return (attributes & S_IFMT) == S_IFLNK;
 }
 
 
@@ -1822,19 +1697,6 @@ assert(!de2.isFile);
             $(D DirEntry).
           +/
         @property SysTime timeCreated() const;
-
-
-        /++
-            $(RED Deprecated. It will be removed in May 2012. It will not be
-                  replaced. You can use $(D attributes) to get at this
-                  information if you need it.)
-
-            $(BLUE This function is Posix-Only.)
-
-            Returns the last time that the status of file represented by this
-            $(D DirEntry) was changed (i.e. owner, group, link count, mode, etc.).
-          +/
-        deprecated @property SysTime timeStatusChanged();
 
         /++
             Returns the time that the file represented by this $(D DirEntry) was
