@@ -1118,14 +1118,16 @@ unittest
 }
 
 /**
- Representing conversions to string with optional configures has been scheduled
- for deprecation.
+    $(RED Deprecated. It will be removed in December 2012.
+          Please use $(XREF format, formattedWrite) instead.)
+
+    Conversions to string with optional configures.
 */
-T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
+deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket = "]")
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
 {
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     static if (!isInputRange!S)
@@ -1158,22 +1160,22 @@ T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rightBracket =
 }
 
 /// ditto
-T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
+deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T rightBracket = "]")
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
 {
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     return toImpl(s);
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
+deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", in T rightBracket = "]")
     if (isAssociativeArray!S &&
         isSomeString!T)
 {
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     alias Unqual!(typeof(T.init[0])) Char;
@@ -1195,11 +1197,11 @@ T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separator = ", ", 
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T nullstr)
+deprecated T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
         isSomeString!T)
 {
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     if (!s)
@@ -1208,11 +1210,11 @@ T toImpl(T, S)(S s, in T nullstr)
 }
 
 /// ditto
-T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
+deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
-    pragma(msg, softDeprec!("2.056", "May 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     Tuple!(FieldTypeTuple!S) * t = void;
@@ -3566,9 +3568,9 @@ void toTextRange(T, W)(T value, W writer)
 }
 
 
-template softDeprec(string vers, string date, string oldFunc, string newFunc)
+template hardDeprec(string vers, string date, string oldFunc, string newFunc)
 {
-    enum softDeprec = Format!("Notice: As of Phobos %s, %s has been scheduled " ~
-                              "for deprecation in %s. Please use %s instead.",
+    enum hardDeprec = Format!("Notice: As of Phobos %s, %s has been deprecated. " ~
+                              "It will be removed in %s. Please use %s instead.",
                               vers, oldFunc, date, newFunc);
 }
