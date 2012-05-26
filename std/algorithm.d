@@ -895,16 +895,12 @@ unittest
     //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
     // fill should accept InputRange
-    class IterableInputRange {
-        size_t index;
-        uint value;
-        void popFront(){++index;}
-        @property bool empty() const {return index>1;}
-        @property ref uint front() {return value;}
-    }
-    IterableInputRange range = new IterableInputRange;
-    fill(range,uint.max);
-    assert(range.value == uint.max);
+    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    enum filler = uint.max;
+    InputRange range;
+    fill(range,filler);
+    foreach(value;range.arr)
+    	assert(value == filler);
 }
 
 /**
@@ -942,16 +938,11 @@ unittest
     fill(a, b);
     assert(a == [ 1, 2, 1, 2, 1 ]);
     // fill should accept InputRange
-    class IterableInputRange {
-        size_t index;
-        uint value;
-        void popFront(){++index;}
-        @property bool empty() const {return index>1;}
-        @property ref uint front() {return value;}
-    }
-    IterableInputRange range = new IterableInputRange;
-    fill(range,[1,2,3]);
-    assert(range.value == 2);
+    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    InputRange range;
+    fill(range,[1,2]);
+    foreach(i,value;range.arr)
+    	assert(value == (i%2==0?1:2));
 }
 
 /**
