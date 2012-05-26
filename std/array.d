@@ -1896,7 +1896,7 @@ Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
 appending will reallocate, $(D capacity) returns $(D 0).
  */
-    @property size_t capacity()
+    @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
     }
@@ -1904,7 +1904,7 @@ appending will reallocate, $(D capacity) returns $(D 0).
 /**
 Returns the managed array.
  */
-    @property T[] data()
+    @property inout(T)[] data() inout
     {
         return cast(typeof(return))(_data ? _data.arr : null);
     }
@@ -2117,7 +2117,7 @@ Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
 appending will reallocate, $(D capacity) returns $(D 0).
  */
-    @property size_t capacity()
+    @property size_t capacity() const
     {
         return impl.capacity;
     }
@@ -2125,7 +2125,7 @@ appending will reallocate, $(D capacity) returns $(D 0).
 /**
 Returns the managed array.
  */
-    @property T[] data()
+    @property inout(T)[] data() inout
     {
         return impl.data;
     }
@@ -2163,8 +2163,12 @@ unittest
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
-    auto app3 = appender([]);
-    app3.shrinkTo(0);
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3.data == [1, 2, 3]);
+
+    auto app4 = appender([]);
+    app4.shrinkTo(0);
 
     // Issue 5663 tests
     {
@@ -2216,6 +2220,10 @@ unittest
     app2.shrinkTo(3);
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
+
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3.data == [1, 2, 3]);
 }
 
 /*
