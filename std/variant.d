@@ -71,6 +71,8 @@ import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
     import std.exception, std.stdio;
 //}
 
+@trusted:
+
 private template maxSize(T...)
 {
     static if (T.length == 1)
@@ -560,7 +562,7 @@ public:
      * ----
      */
 
-    @property bool hasValue() const
+    @property bool hasValue() const pure nothrow
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
@@ -608,7 +610,7 @@ public:
      * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
      */
 
-    @property bool convertsTo(T)()
+    @property bool convertsTo(T)() const
     {
         TypeInfo info = typeid(T);
         return fptr(OpID.testConversion, null, &info) == 0;
