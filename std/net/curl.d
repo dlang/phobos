@@ -184,7 +184,7 @@ pragma(lib, "curl");
 extern (C) void exit(int);
 
 // Default data timeout for Protcools
-private enum _defaultDataTimeout = dur!"minutes"(2);
+private enum _defaultDataTimeout = minutes(2);
 
 /** Connection type used when the URL should be used to auto detect the protocol.
   *
@@ -1061,7 +1061,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
         if (state == State.gotUnits)
             return true;
 
-        enum noDur = dur!"hnsecs"(0);
+        enum noDur = hnsecs(0);
         StopWatch sw;
         sw.start();
         while (state != State.gotUnits && d > noDur)
@@ -1207,7 +1207,7 @@ static struct AsyncLineInputRange(Char)
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byLineAsync("dlang.com");
- * if (range.wait(dur!"seconds"(2)))
+ * if (range.wait(seconds(2)))
  *     writeln(range.front);
  * else
  *     writeln("No line received after 2 seconds!");
@@ -1362,7 +1362,7 @@ static struct AsyncChunkInputRange
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byChunkAsync("dlang.com", 10);
- * if (range.wait(dur!"seconds"(2)))
+ * if (range.wait(seconds(2)))
  *     writeln(range.front);
  * else
  *     writeln("No chunk received after 2 seconds!");
