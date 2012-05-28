@@ -6644,7 +6644,7 @@ if (isRandomAccessRange!Range)
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        return this[getTransitionIndex!(sp, gt)(value) .. length];
+        return this[getTransitionIndex!(sp, gt)(value) .. this.length];
     }
 
 // equalRange
@@ -6757,11 +6757,11 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
                     - this[it + 1 .. first]
                     .upperBound!(SearchPolicy.gallop)(value).length;
                 return tuple(this[0 .. left], this[left .. right],
-                        this[right .. length]);
+                        this[right .. this.length]);
             }
         }
         // No equal element was found
-        return tuple(this[0 .. first], this.init, this[first .. length]);
+        return tuple(this[0 .. first], this.init, this[first .. this.length]);
     }
 
 // contains

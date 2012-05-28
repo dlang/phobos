@@ -2231,9 +2231,9 @@ $(D r)
         immutable offset2 = r._b;
         immutable tailLength = length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
+        copy(this[offset2 .. this.length], this[offset1 .. offset1 + tailLength]);
         length = offset1 + tailLength;
-        return this[length - tailLength .. length];
+        return this[this.length - tailLength .. this.length];
     }
 
     /// ditto
