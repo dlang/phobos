@@ -387,6 +387,19 @@ and throws if that fails.
         p = null;
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "w");
+        {
+            auto f2 = f;
+            f2.detach();
+        }
+        assert(f.p.refs == 1);
+        f.close();
+    }
+
 /**
 If the file was unopened, succeeds vacuously. Otherwise closes the
 file (by calling $(WEB
