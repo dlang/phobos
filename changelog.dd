@@ -3,6 +3,26 @@ $(VERSION 060, ddd mm, 2012, =================================================,
     $(WHATSNEW
         $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
+        $(LI The overloads of std.conv.to which were scheduled for deprecation
+             because formattedWrite replaced them have now been deprecated.
+             Please use std.format.formattedWrite instead.)
+        $(LI The deprecated overloads of std.array.insert and std.array.replace
+             have been removed. Please use insertInPlace and replaceInPlace instead.)
+        $(LI The deprecated toISOExtendedString and fromISOExtendedString
+             functions in std.datetime have been removed. Please use
+             toISOExtString and fromISOExtString instead.)
+        $(LI The deprecated std.file.getTimesPosix has been removed.
+             Please use std.file.getTimes instead.)
+        $(LI The deprecated overloads of isFile, isDir, and isSymLink in
+             std.file which took uint have been removed. Please use
+             attrIsFile, attrIsDir, and attrIsSymlink instead.)
+        $(LI The deprecated std.file.DirEntry.timeStatusChanged has been removed.
+             Please use std.file.DirEntry.attributes to get at that information
+             if you need it.)
+        $(LI The deprecated std.contracts module has been removed. Please use
+             std.exception instead.)
+        $(LI The deprecated std.arg, std.bind, and std.loader modules have been
+             removed.)
     )
 
     $(LIBBUGSFIXED

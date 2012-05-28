@@ -436,7 +436,7 @@ enum dummyRanges = q{
             @property size_t length() {
                 return arr.length;
             }
-            
+
             alias length opDollar;
         }
     }
@@ -517,6 +517,7 @@ calling $(D r.empty) has, or would have, returned $(D false).))
 template isInputRange(R)
 {
     enum bool isInputRange = is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;       // can define a range object
         if (r.empty) {}   // can test for empty
@@ -528,17 +529,18 @@ template isInputRange(R)
 unittest
 {
     struct A {}
-    static assert(!isInputRange!(A));
     struct B
     {
         void popFront();
         @property bool empty();
         @property int front();
     }
-    static assert(isInputRange!(B));
-    static assert(isInputRange!(int[]));
-    static assert(isInputRange!(char[]));
+    static assert(!isInputRange!(A));
+    static assert( isInputRange!(B));
+    static assert( isInputRange!(int[]));
+    static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
+    static assert( isInputRange!(inout(int)[])); // bug 7824
 }
 
 /**
@@ -723,6 +725,7 @@ supports the operation $(D put(r, e)) as defined above.
 template isOutputRange(R, E)
 {
     enum bool isOutputRange = is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         E e;
@@ -745,6 +748,9 @@ unittest
     static assert( isOutputRange!(dchar[], char));
     static assert( isOutputRange!(dchar[], wchar));
     static assert( isOutputRange!(dchar[], dchar));
+
+    static assert(!isOutputRange!(const(int)[], int));
+    static assert(!isOutputRange!(inout(int)[], int));
 }
 
 /**
@@ -777,6 +783,7 @@ object with $(D save) and using it later.
 template isForwardRange(R)
 {
     enum bool isForwardRange = isInputRange!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r1 = void;
         R r2 = r1.save; // can call "save" against a range object
@@ -786,7 +793,8 @@ template isForwardRange(R)
 unittest
 {
     static assert(!isForwardRange!(int));
-    static assert(isForwardRange!(int[]));
+    static assert( isForwardRange!(int[]));
+    static assert( isForwardRange!(inout(int)[]));
 }
 
 /**
@@ -815,6 +823,7 @@ $(D r.empty) has, or would have, returned $(D false).))
 template isBidirectionalRange(R)
 {
     enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         r.popBack();
@@ -827,14 +836,12 @@ template isBidirectionalRange(R)
 unittest
 {
     struct A {}
-    static assert(!isBidirectionalRange!(A));
     struct B
     {
         void popFront();
         @property bool empty();
         @property int front();
     }
-    static assert(!isBidirectionalRange!(B));
     struct C
     {
         @property bool empty();
@@ -844,9 +851,12 @@ unittest
         void popBack();
         @property int back();
     }
-    static assert(isBidirectionalRange!(C));
-    static assert(isBidirectionalRange!(int[]));
-    static assert(isBidirectionalRange!(char[]));
+    static assert(!isBidirectionalRange!(A));
+    static assert(!isBidirectionalRange!(B));
+    static assert( isBidirectionalRange!(C));
+    static assert( isBidirectionalRange!(int[]));
+    static assert( isBidirectionalRange!(char[]));
+    static assert( isBidirectionalRange!(inout(int)[]));
 }
 
 /**
@@ -879,6 +889,7 @@ are bidirectional ranges only.
 template isRandomAccessRange(R)
 {
     enum bool isRandomAccessRange = is(typeof(
+    (inout int _dummy=0)
     {
         static assert(isBidirectionalRange!R ||
                       isForwardRange!R && isInfinite!R);
@@ -892,14 +903,12 @@ template isRandomAccessRange(R)
 unittest
 {
     struct A {}
-    static assert(!isRandomAccessRange!(A));
     struct B
     {
         void popFront();
         @property bool empty();
         @property int front();
     }
-    static assert(!isRandomAccessRange!(B));
     struct C
     {
         void popFront();
@@ -908,7 +917,6 @@ unittest
         void popBack();
         @property int back();
     }
-    static assert(!isRandomAccessRange!(C));
     struct D
     {
         @property bool empty();
@@ -922,8 +930,12 @@ unittest
         alias length opDollar;
         //int opSlice(uint, uint);
     }
-    static assert(isRandomAccessRange!(D));
-    static assert(isRandomAccessRange!(int[]));
+    static assert(!isRandomAccessRange!(A));
+    static assert(!isRandomAccessRange!(B));
+    static assert(!isRandomAccessRange!(C));
+    static assert( isRandomAccessRange!(D));
+    static assert( isRandomAccessRange!(int[]));
+    static assert( isRandomAccessRange!(inout(int)[]));
 }
 
 unittest
@@ -992,8 +1004,8 @@ unittest
 
     auto nonMobile = map!"a"(repeat(HasPostblit.init));
     static assert(!hasMobileElements!(typeof(nonMobile)));
-    static assert(hasMobileElements!(int[]));
-    static assert(hasMobileElements!(typeof(iota(1000))));
+    static assert( hasMobileElements!(int[]));
+    static assert( hasMobileElements!(typeof(iota(1000))));
 }
 
 /**
@@ -1004,7 +1016,7 @@ $(D T). If $(D R) is not a range, $(D ElementType!R) is $(D void).
  */
 template ElementType(R)
 {
-    static if (is(typeof({ R r = void; return r.front; }()) T))
+    static if (is(typeof((inout int _dummy=0){ R r = void; return r.front; }()) T))
         alias T ElementType;
     else
         alias void ElementType;
@@ -1014,13 +1026,14 @@ unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = front(XYZ.a);
-    static assert(is(ElementType!(XYZ) : dchar));
     immutable char[3] a = "abc";
-    static assert(is(ElementType!(typeof(a)) : dchar));
     int[] i;
-    static assert(is(ElementType!(typeof(i)) : int));
     void[] buf;
+    static assert(is(ElementType!(XYZ) : dchar));
+    static assert(is(ElementType!(typeof(a)) : dchar));
+    static assert(is(ElementType!(typeof(i)) : int));
     static assert(is(ElementType!(typeof(buf)) : void));
+    static assert(is(ElementType!(inout(int)[]) : inout(int)));
 }
 
 /**
@@ -1033,7 +1046,7 @@ $(D ElementType).
 template ElementEncodingType(R)
 {
     static if (isNarrowString!R)
-        alias typeof({ R r = void; return r[0]; }()) ElementEncodingType;
+        alias typeof((inout int _dummy=0){ R r = void; return r[0]; }()) ElementEncodingType;
     else
         alias ElementType!R ElementEncodingType;
 }
@@ -1042,16 +1055,18 @@ unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = front(XYZ.a);
+    immutable char[3] a = "abc";
+    int[] i;
+    void[] buf;
     static assert(is(ElementType!(XYZ) : dchar));
     static assert(is(ElementEncodingType!(char[]) == char));
     static assert(is(ElementEncodingType!(string) == immutable char));
-    immutable char[3] a = "abc";
     static assert(is(ElementType!(typeof(a)) : dchar));
-    int[] i;
     static assert(is(ElementType!(typeof(i)) == int));
     static assert(is(ElementEncodingType!(typeof(i)) == int));
-    void[] buf;
     static assert(is(ElementType!(typeof(buf)) : void));
+
+    static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
 }
 
 /**
@@ -1068,6 +1083,7 @@ swap(r.front, r.front);              // can swap elements of the range
 template hasSwappableElements(R)
 {
     enum bool hasSwappableElements = isForwardRange!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         swap(r.front, r.front);             // can swap elements of the range
@@ -1078,8 +1094,9 @@ unittest
 {
     static assert(!hasSwappableElements!(const int[]));
     static assert(!hasSwappableElements!(const(int)[]));
-    static assert(hasSwappableElements!(int[]));
-    //static assert(hasSwappableElements!(char[]));
+    static assert(!hasSwappableElements!(inout(int)[]));
+    static assert( hasSwappableElements!(int[]));
+  //static assert( hasSwappableElements!(char[]));
 }
 
 /**
@@ -1097,6 +1114,7 @@ r.front = e;                      // can assign elements of the range
 template hasAssignableElements(R)
 {
     enum bool hasAssignableElements = isForwardRange!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         static assert(isForwardRange!(R)); // range is forward
@@ -1109,7 +1127,8 @@ unittest
 {
     static assert(!hasAssignableElements!(const int[]));
     static assert(!hasAssignableElements!(const(int)[]));
-    static assert(hasAssignableElements!(int[]));
+    static assert( hasAssignableElements!(int[]));
+    static assert(!hasAssignableElements!(inout(int)[]));
 }
 
 /**
@@ -1119,6 +1138,7 @@ can be passed by reference and have their address taken.
 template hasLvalueElements(R)
 {
     enum bool hasLvalueElements = is(typeof(
+    (inout int _dummy=0)
     {
         void checkRef(ref ElementType!R stuff) {}
         R r = void;
@@ -1128,11 +1148,18 @@ template hasLvalueElements(R)
 
 unittest
 {
-    static assert(hasLvalueElements!(int[]));
+    static assert( hasLvalueElements!(int[]));
+    static assert( hasLvalueElements!(const(int)[]));
+    static assert( hasLvalueElements!(inout(int)[]));
+    static assert( hasLvalueElements!(immutable(int)[]));
     static assert(!hasLvalueElements!(typeof(iota(3))));
-    
+
     auto c = chain([1, 2, 3], [4, 5, 6]);
-    static assert(hasLvalueElements!(typeof(c)));
+    static assert( hasLvalueElements!(typeof(c)));
+
+    // Disabled test by bug 6336
+    // struct S { immutable int value; }
+    // static assert( hasLvalueElements!(S[]));
 }
 
 /**
@@ -1153,6 +1180,7 @@ range-oriented algorithms.
 template hasLength(R)
 {
     enum bool hasLength = !isNarrowString!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         static assert(is(typeof(r.length) : ulong));
@@ -1162,13 +1190,15 @@ template hasLength(R)
 unittest
 {
     static assert(!hasLength!(char[]));
-    static assert(hasLength!(int[]));
+    static assert( hasLength!(int[]));
+    static assert( hasLength!(inout(int)[]));
+
     struct A { ulong length; }
-    static assert(hasLength!(A));
     struct B { size_t length() { return 0; } }
-    static assert(!hasLength!(B));
     struct C { @property size_t length() { return 0; } }
-    static assert(hasLength!(C));
+    static assert( hasLength!(A));
+    static assert(!hasLength!(B));
+    static assert( hasLength!(C));
 }
 
 /**
@@ -1197,7 +1227,7 @@ template isInfinite(R)
 unittest
 {
     static assert(!isInfinite!(int[]));
-    static assert(isInfinite!(Repeat!(int)));
+    static assert( isInfinite!(Repeat!(int)));
 }
 
 /**
@@ -1214,6 +1244,7 @@ static assert(isInputRange!(typeof(s)));
 template hasSlicing(R)
 {
     enum bool hasSlicing = !isNarrowString!R && is(typeof(
+    (inout int _dummy=0)
     {
         R r = void;
         auto s = r[1 .. 2];
@@ -1223,15 +1254,16 @@ template hasSlicing(R)
 
 unittest
 {
-    static assert(hasSlicing!(int[]));
-    struct A { int opSlice(uint, uint); }
-    static assert(!hasSlicing!(A));
-    struct B { int[] opSlice(uint, uint); }
-    static assert(hasSlicing!(B));
+    static assert( hasSlicing!(int[]));
+    static assert( hasSlicing!(inout(int)[]));
     static assert(!hasSlicing!string);
 
+    struct A { int opSlice(uint, uint); }
+    struct B { int[] opSlice(uint, uint); }
     struct C { @disable this(); int[] opSlice(size_t, size_t); }
-    static assert(hasSlicing!(C));
+    static assert(!hasSlicing!(A));
+    static assert( hasSlicing!(B));
+    static assert( hasSlicing!(C));
 }
 
 /**
@@ -1391,7 +1423,7 @@ if (isBidirectionalRange!(Unqual!Range))
                 {
                     return source.length;
                 }
-                
+
                 alias length opDollar;
             }
         }
@@ -1683,9 +1715,9 @@ if (isInputRange!(Unqual!Range))
                     immutable translatedUpper = (upper == 0) ? 0 :
                         (upper * _n - (_n - 1));
                     immutable translatedLower = min(lower * _n, translatedUpper);
-                    
+
                     assert(translatedLower <= translatedUpper);
-                    
+
                     return typeof(this)(source[translatedLower..translatedUpper], _n);
                 }
 
@@ -1695,7 +1727,7 @@ if (isInputRange!(Unqual!Range))
                 {
                     return (source.length + _n - 1) / _n;
                 }
-                
+
                 alias length opDollar;
             }
         }
@@ -2056,7 +2088,7 @@ if (Ranges.length > 0 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                     }
                     return result;
                 }
-                
+
                 alias length opDollar;
             }
 
@@ -2368,7 +2400,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 }
                 return result;
             }
-            
+
             alias length opDollar;
         }
     }
@@ -2531,7 +2563,7 @@ if (isInputRange!(Unqual!Range)
         {
             return _maxAvailable;
         }
-        
+
         alias length opDollar;
     }
     else static if (hasLength!R)
@@ -2540,7 +2572,7 @@ if (isInputRange!(Unqual!Range)
         {
             return min(_maxAvailable, source.length);
         }
-        
+
         alias length opDollar;
     }
 
@@ -3629,7 +3661,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             }
             return result;
         }
-        
+
         alias length opDollar;
     }
 
@@ -3860,7 +3892,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
         {
             ret ~= "ref ";
         }
-        
+
         ret ~= "ElementType!(Ranges[" ~ to!string(ti) ~ "]), ";
     }
 
@@ -3879,7 +3911,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
 
     // Check for emptiness.
     ret ~= "\twhile(";                 //someEmpty) {\n";
-    foreach(ti, Unused; Ranges) 
+    foreach(ti, Unused; Ranges)
     {
         ret ~= "!ranges[" ~ to!string(ti) ~ "].empty && ";
     }
@@ -4034,7 +4066,7 @@ unittest {
     auto l = lockstep(foo, bar);
 
     // Should work twice.  These are forward ranges with implicit save.
-    foreach(i; 0..2) 
+    foreach(i; 0..2)
     {
         uint[] res1;
         float[] res2;
@@ -4346,12 +4378,13 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 if (step > 0)
                 {
                     this.pastLast = pastLast - 1;
+                    this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
                     this.pastLast = pastLast + 1;
+                    this.pastLast += (current - this.pastLast) % -step;
                 }
-                this.pastLast -= (this.pastLast - current) % step;
                 this.pastLast += step;
             }
             else
@@ -4389,9 +4422,16 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property IndexType length() const
         {
-            return unsigned((pastLast - current) / step);
+            if (step > 0)
+            {
+                return unsigned((pastLast - current) / step);
+            }
+            else
+            {
+                return unsigned((current - pastLast) / -step);
+            }
         }
-        
+
         alias length opDollar;
     }
 
@@ -4459,7 +4499,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             return unsigned(pastLast - current);
         }
-        
+
         alias length opDollar;
     }
 
@@ -4544,7 +4584,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         {
             return count - index;
         }
-        
+
         alias length opDollar;
     }
 
@@ -4654,6 +4694,14 @@ unittest
     // properties are all correct)
     auto iota_zero_unsigned = iota(0, 0u, 3);
     assert(count(iota_zero_unsigned) == 0);
+
+    // unsigned reverse iota can be buggy if .length doesn't take them into
+    // account (issue 7982).
+    assert(iota(10u, 0u, -1).length() == 10);
+    assert(iota(10u, 0u, -2).length() == 5);
+    assert(iota(uint.max, uint.max-10, -1).length() == 10);
+    assert(iota(uint.max, uint.max-10, -2).length() == 5);
+    assert(iota(uint.max, 0u, -1).length() == uint.max);
 }
 
 unittest
@@ -5156,7 +5204,7 @@ struct Transversal(Ror,
             {
                 return _input.length;
             }
-            
+
             alias length opDollar;
         }
 
@@ -5448,7 +5496,7 @@ if(isRandomAccessRange!Source && isInputRange!Indices &&
         {
             return _indices.length;
         }
-        
+
         alias length opDollar;
     }
 
@@ -5644,7 +5692,7 @@ struct Chunks(Source) if(hasSlicing!Source && hasLength!Source)
         return (_source.length / _chunkSize) +
             (_source.length % _chunkSize > 0);
     }
-    
+
     alias length opDollar;
 
     /// Ditto
@@ -5933,7 +5981,7 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
 
     ///
     @property size_t length();
-    
+
     ///
     alias length opDollar;
 
@@ -6131,7 +6179,7 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     @property size_t length() {
                         return _range.length;
                     }
-                    
+
                     alias length opDollar;
 
                     // Can't support slicing until all the issues with
@@ -6259,7 +6307,7 @@ unittest {
 */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
-    enum isTwoWayCompatible = is(typeof( (){ 
+    enum isTwoWayCompatible = is(typeof( (){
             T1 foo();
             T2 bar();
 
@@ -6456,7 +6504,7 @@ if (isRandomAccessRange!Range)
     {
         return _input.length;
     }
-    
+
     alias length opDollar;
 
 /**
