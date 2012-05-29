@@ -695,7 +695,7 @@ clean:
 	make -f win32.mak clean
 	cd ..\..\..
 	del $(DOCS)
-	del unittest1.obj unittest.obj unittest.map unittest.exe
+	del unittest11.obj unittest12.obj unittest2.obj unittest.obj unittest.exe
 	del $(LIB)
 	del phobos.json
 
