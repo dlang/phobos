@@ -107,6 +107,11 @@ private
         enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
                               is(S == enum) && isSomeString!T;
     }
+    template isNullToStr(S, T)
+    {
+        enum isNullToStr = isImplicitlyConvertible!(S, T) &&
+                           is(S == typeof(null)) && isSomeString!T;
+    }
 
     template isRawStaticArray(T, A...)
     {
@@ -287,8 +292,8 @@ unittest
 // Tests for issue 7348
 unittest
 {
-    assert(to!string(null) == "");
-    assert(text(null) == "");
+    assert(to!string(null) == "null");
+    assert(text(null) == "null");
 }
 
 /**
@@ -296,7 +301,8 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T))
+    if (isImplicitlyConvertible!(S, T) &&
+        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
     alias isUnsigned isUnsignedInt;
 
@@ -776,7 +782,8 @@ $(UL
        If pointer is $(D char*), treat it as C-style strings.))
 */
 T toImpl(T, S)(S value)
-    if (!(isImplicitlyConvertible!(S, T) && !isEnumStrToStr!(S, T)) &&
+    if (!(isImplicitlyConvertible!(S, T) &&
+          !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
         isSomeString!T)
 {
     static if (isSomeString!S && value[0].sizeof == T.init[0].sizeof)
@@ -2671,6 +2678,39 @@ unittest
     auto s = "true";
     auto b = parse!(const(bool))(s);
     assert(b == true);
+}
+
+// string to null literal conversions
+Target parse(Target, Source)(ref Source s)
+    if (isSomeString!Source &&
+        is(Unqual!Target == typeof(null)))
+{
+    if (s.length >= 4 && icmp(s[0 .. 4], "null")==0)
+    {
+        s = s[4 .. $];
+        return null;
+    }
+    parseError("null should be case-insensive 'null'");
+    assert(0);
+}
+
+unittest
+{
+    alias typeof(null) NullType;
+    auto s1 = "null";
+    assert(parse!NullType(s1) is null);
+    assert(s1 == "");
+
+    auto s2 = "NUll"d;
+    assert(parse!NullType(s2) is null);
+    assert(s2 == "");
+
+    auto m = "maybe";
+    assertThrown!ConvException(parse!NullType(m));
+    assert(m == "maybe");  // m shouldn't change on failure
+
+    auto s = "NULL";
+    assert(parse!(const(NullType))(s) is null);
 }
 
 // Parsing typedefs forwards to their host types

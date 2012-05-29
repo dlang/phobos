@@ -387,6 +387,19 @@ and throws if that fails.
         p = null;
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "w");
+        {
+            auto f2 = f;
+            f2.detach();
+        }
+        assert(f.p.refs == 1);
+        f.close();
+    }
+
 /**
 If the file was unopened, succeeds vacuously. Otherwise closes the
 file (by calling $(WEB
@@ -665,7 +678,11 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A)
+            static if (isAggregateType!A)
+            {
+                std.format.formattedWrite(w, "%s", arg);
+            }
+            else static if (isSomeString!A)
             {
                 put(w, arg);
             }
@@ -1543,35 +1560,37 @@ unittest
  * arguments is valid and just prints a newline to the standard
  * output.
  */
-void writeln(T...)(T args) if (T.length == 0)
+void writeln(T...)(T args)
 {
-    enforce(fputc('\n', .stdout.p.handle) == '\n');
+    static if (T.length == 0)
+    {
+        enforce(fputc('\n', .stdout.p.handle) == '\n');
+    }
+    else static if (T.length == 1 &&
+                    isSomeString!(typeof(args[0])) &&
+                    !isAggregateType!(typeof(args[0])))
+    {
+        // Specialization for strings - a very frequent case
+        enforce(fprintf(.stdout.p.handle, "%.*s\n",
+                        cast(int) args[0].length, args[0].ptr) >= 0);
+    }
+    else
+    {
+        // Most general instance
+        stdout.write(args, '\n');
+    }
 }
 
 unittest
 {
     // Just make sure the call compiles
     if (false) writeln();
-}
 
-// Specialization for strings - a very frequent case
-void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum))
-{
-    enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    cast(int) args[0].length, args[0].ptr) >= 0);
-}
-
-unittest
-{
     if (false) writeln("wyda");
-}
 
-// Most general instance
-void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !(is(typeof(args[0]) : const(char)[]) && !is(typeof(args[0]) == enum)))
-{
-    stdout.write(args, '\n');
+    // bug 8040
+    if (false) writeln(null);
+    if (false) writeln(">", null, "<");
 }
 
 unittest
