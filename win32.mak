@@ -94,10 +94,6 @@ test.obj : test.d
 test.exe : test.obj $(LIB)
 	$(DMD) test.obj -g -L/map
 
-OBJS= Czlib.obj Dzlib.obj Ccurl.obj \
-	oldsyserror.obj \
-	c_stdio.obj
-
 #	ti_bit.obj ti_Abit.obj
 
 # The separation is a workaround for bug 4904 (optlink bug 3372).
@@ -123,6 +119,8 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\system.d std\concurrency.d
 
 SRCS_3 = std\variant.d \
+	std\syserror.d std\zlib.d \
+	std\c\stdio.d etc\c\zlib.d etc\c\curl.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d \
@@ -345,9 +343,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_zlib.html \
 	$(DOC)\phobos.html
 
-$(LIB) : $(OBJS) $(SRCS) \
+$(LIB) : $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRCS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) $(LIB)
@@ -377,29 +375,6 @@ etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
 	make -f win32.mak zlib.lib
 	cd ..\..\..
-
-### std
-
-oldsyserror.obj : std\syserror.d
-	$(DMD) -c $(DFLAGS) std\syserror.d -ofoldsyserror.obj
-
-Dzlib.obj : std\zlib.d
-	$(DMD) -c $(DFLAGS) std\zlib.d -ofDzlib.obj
-
-### std\c
-
-c_stdio.obj : std\c\stdio.d
-	$(DMD) -c $(DFLAGS) std\c\stdio.d -ofc_stdio.obj
-
-### etc
-
-### etc\c
-
-Czlib.obj : etc\c\zlib.d
-	$(DMD) -c $(DFLAGS) etc\c\zlib.d -ofCzlib.obj
-
-Ccurl.obj : etc\c\curl.d
-	$(DMD) -c $(DFLAGS) etc\c\curl.d -ofCcurl.obj
 
 ################## DOCS ####################################
 
@@ -719,7 +694,6 @@ clean:
 	cd etc\c\zlib
 	make -f win32.mak clean
 	cd ..\..\..
-	del $(OBJS)
 	del $(DOCS)
 	del unittest1.obj unittest.obj unittest.map unittest.exe
 	del $(LIB)
