@@ -2161,8 +2161,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         // TODO: optimize
-        enforce(_data);
-        immutable offset = r.ptr + r.length - _data._payload.ptr;
+        immutable offset = r._b;
         enforce(offset <= length);
         auto result = insertBack(stuff);
         bringToFront(this[offset .. length - result],
