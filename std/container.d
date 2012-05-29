@@ -2160,6 +2160,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
+        enforce(r._outer._data is _data);
         // TODO: optimize
         immutable offset = r._b;
         enforce(offset <= length);
@@ -2173,6 +2174,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
+        enforce(r._outer._data is _data);
         size_t result;
         for (; !stuff.empty; stuff.popFront())
         {
@@ -2194,6 +2196,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     size_t replace(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
+        enforce(r._outer._data is _data);
         if (r.empty)
         {
             insertBefore(r, stuff);
@@ -2221,6 +2224,7 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
+        enforce(r._outer._data is _data);
         enforce(_data.RefCounted.isInitialized);
         enforce(r._a <= r._b && r._b <= length);
         immutable offset1 = r._a;
@@ -2430,6 +2434,18 @@ unittest {
     auto a = Array!int();
     a.replace(a[], 1);
     assert(equal(a[], [1]));
+}
+
+// make sure that Array instances refuse ranges that don't belong to them
+unittest {
+	Array!int a = [1, 2, 3];
+	auto r = a.dup[];
+	assertThrown(a.insertBefore(r, 42));
+	assertThrown(a.insertBefore(r, [42]));
+	assertThrown(a.insertAfter(r, 42));
+	assertThrown(a.replace(r, 42));
+	assertThrown(a.replace(r, [42]));
+	assertThrown(a.linearRemove(r));
 }
 
 // BinaryHeap
