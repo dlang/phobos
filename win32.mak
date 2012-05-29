@@ -120,8 +120,6 @@ SRCS_2 = std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\random.d std\regexp.d \
     std\exception.d \
     std\compiler.d std\cpuid.d \
-    std\process.d std\internal\processinit.d \
-    std\internal\uni.d std\internal\uni_tab.d \
     std\system.d std\concurrency.d
 
 SRCS_3 = std\variant.d \
@@ -138,6 +136,8 @@ SRCS_3 = std\variant.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
 	std\internal\windows\advapi32.d \
 	crc32.d \
+	std\process.d std\internal\processinit.d \
+	std\internal\uni.d std\internal\uni_tab.d \
 	std\c\process.d \
 	std\c\stdarg.d \
 	std\c\stddef.d \
@@ -326,6 +326,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_xml.html \
 	$(DOC)\std_zip.html \
 	$(DOC)\std_zlib.html \
+	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -339,7 +340,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
-	$(DOC)\std_net_isemail.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
@@ -852,6 +852,9 @@ $(DOC)\std_zip.html : $(STDDOC) std\zip.d
 $(DOC)\std_zlib.html : $(STDDOC) std\zlib.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_zlib.html $(STDDOC) std\zlib.d
 
+$(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
+
 $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
 
@@ -890,9 +893,6 @@ $(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
 
 $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
-
-$(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
 
 $(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
