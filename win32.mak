@@ -340,7 +340,7 @@ $(LIB) : $(SRC_TO_COMPILE) \
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj
 
-unittest : $(SRC_TO_COMPILE) $(LIB)
+unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
@@ -363,7 +363,7 @@ html : $(DOCS)
 
 ######################################################
 
-etc\c\zlib\zlib.lib:
+etc\c\zlib\zlib.lib: $(SRC_ZLIB)
 	cd etc\c\zlib
 	make -f win32.mak zlib.lib
 	cd ..\..\..
