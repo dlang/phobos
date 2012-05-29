@@ -158,6 +158,96 @@ SRCS_3 = std\variant.d \
 # See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
 SRCS = $(SRCS_11) $(SRCS_12) $(SRCS_2) $(SRCS_3)
 
+SRC=	unittest.d crc32.d index.d
+
+SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
+	std\math.d std\string.d std\path.d std\datetime.d \
+	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
+	std\outbuffer.d std\md5.d std\base64.d \
+	std\mmfile.d \
+	std\syserror.d \
+	std\regexp.d std\random.d std\stream.d std\process.d \
+	std\socket.d std\socketstream.d std\format.d \
+	std\stdio.d std\perf.d std\uni.d \
+	std\cstream.d std\demangle.d \
+	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
+	std\metastrings.d std\getopt.d \
+	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
+	std\functional.d std\algorithm.d std\array.d std\typecons.d \
+	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
+	std\range.d std\stdiobase.d std\parallelism.d \
+	std\regex.d \
+	std\exception.d std\ascii.d
+
+SRC_STD_NET= std\net\isemail.d std\net\curl.d
+
+SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
+	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
+	std\c\locale.d std\c\wcharh.d
+
+SRC_STD_WIN= std\windows\registry.d \
+	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
+
+SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
+	std\c\windows\winsock.d std\c\windows\stat.d
+
+SRC_STD_C_LINUX= std\c\linux\linux.d \
+	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
+	std\c\linux\tipc.d
+
+SRC_STD_C_OSX= std\c\osx\socket.d
+
+SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
+
+SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
+
+SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
+    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+
+SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
+
+SRC_ETC=
+
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
+
+SRC_ZLIB= \
+	etc\c\zlib\crc32.h \
+	etc\c\zlib\deflate.h \
+	etc\c\zlib\gzguts.h \
+	etc\c\zlib\inffixed.h \
+	etc\c\zlib\inffast.h \
+	etc\c\zlib\inftrees.h \
+	etc\c\zlib\inflate.h \
+	etc\c\zlib\trees.h \
+	etc\c\zlib\zconf.h \
+	etc\c\zlib\zlib.h \
+	etc\c\zlib\zutil.h \
+	etc\c\zlib\adler32.c \
+	etc\c\zlib\compress.c \
+	etc\c\zlib\crc32.c \
+	etc\c\zlib\deflate.c \
+	etc\c\zlib\example.c \
+	etc\c\zlib\gzclose.c \
+	etc\c\zlib\gzlib.c \
+	etc\c\zlib\gzread.c \
+	etc\c\zlib\gzwrite.c \
+	etc\c\zlib\infback.c \
+	etc\c\zlib\inffast.c \
+	etc\c\zlib\inflate.c \
+	etc\c\zlib\inftrees.c \
+	etc\c\zlib\minigzip.c \
+	etc\c\zlib\trees.c \
+	etc\c\zlib\uncompr.c \
+	etc\c\zlib\zutil.c \
+	etc\c\zlib\algorithm.txt \
+	etc\c\zlib\zlib.3 \
+	etc\c\zlib\ChangeLog \
+	etc\c\zlib\README \
+	etc\c\zlib\win32.mak \
+	etc\c\zlib\linux.mak \
+	etc\c\zlib\osx.mak
+
 
 DOCS=	$(DOC)\object.html \
 	$(DOC)\core_atomic.html \
@@ -254,96 +344,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
 	$(DOC)\phobos.html
-
-SRC=	unittest.d crc32.d index.d
-
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\datetime.d \
-	std\ctype.d std\csv.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\md5.d std\base64.d \
-	std\mmfile.d \
-	std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\perf.d std\uni.d \
-	std\cstream.d std\demangle.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
-	std\metastrings.d std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d \
-	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
-	std\exception.d std\ascii.d
-
-SRC_STD_NET= std\net\isemail.d std\net\curl.d
-
-SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
-	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
-	std\c\locale.d std\c\wcharh.d
-
-SRC_STD_WIN= std\windows\registry.d \
-	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
-
-SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
-	std\c\windows\winsock.d std\c\windows\stat.d
-
-SRC_STD_C_LINUX= std\c\linux\linux.d \
-	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
-	std\c\linux\tipc.d
-
-SRC_STD_C_OSX= std\c\osx\socket.d
-
-SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
-
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
-
-SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
-	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
-
-SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
-
-SRC_ETC=
-
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
-
-SRC_ZLIB= \
-	etc\c\zlib\crc32.h \
-	etc\c\zlib\deflate.h \
-	etc\c\zlib\gzguts.h \
-	etc\c\zlib\inffixed.h \
-	etc\c\zlib\inffast.h \
-	etc\c\zlib\inftrees.h \
-	etc\c\zlib\inflate.h \
-	etc\c\zlib\trees.h \
-	etc\c\zlib\zconf.h \
-	etc\c\zlib\zlib.h \
-	etc\c\zlib\zutil.h \
-	etc\c\zlib\adler32.c \
-	etc\c\zlib\compress.c \
-	etc\c\zlib\crc32.c \
-	etc\c\zlib\deflate.c \
-	etc\c\zlib\example.c \
-	etc\c\zlib\gzclose.c \
-	etc\c\zlib\gzlib.c \
-	etc\c\zlib\gzread.c \
-	etc\c\zlib\gzwrite.c \
-	etc\c\zlib\infback.c \
-	etc\c\zlib\inffast.c \
-	etc\c\zlib\inflate.c \
-	etc\c\zlib\inftrees.c \
-	etc\c\zlib\minigzip.c \
-	etc\c\zlib\trees.c \
-	etc\c\zlib\uncompr.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\algorithm.txt \
-	etc\c\zlib\zlib.3 \
-	etc\c\zlib\ChangeLog \
-	etc\c\zlib\README \
-	etc\c\zlib\win32.mak \
-	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak
 
 $(LIB) : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
