@@ -315,6 +315,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zip.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
+	$(DOC)\std_net_curl.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -608,6 +609,9 @@ $(DOC)\std_zlib.html : $(STDDOC) std\zlib.d
 
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
+
+$(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
 $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
