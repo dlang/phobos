@@ -4262,7 +4262,7 @@ auto unsigned(T)(T x) if (isIntegral!T)
     else static if (is(Unqual!T == long )) return cast(ulong ) x;
     else
     {
-        static assert(T.min == T.init, "Bug in either unsigned or isIntegral");
+        static assert(T.min == 0, "Bug in either unsigned or isIntegral");
         return x;
     }
 }
@@ -4275,7 +4275,7 @@ unittest
 auto unsigned(T)(T x) if (isSomeChar!T)
 {
     // All characters are unsigned
-    static assert(T.min == T.init);
+    static assert(T.min == 0);
     return x;
 }
 
@@ -4286,8 +4286,8 @@ template mostNegative(T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
-    else static if (T.min == T.init)
-        enum byte mostNegative = T.init;
+    else static if (T.min == 0)
+        enum byte mostNegative = 0;
     else
         enum mostNegative = T.min;
 }
@@ -4295,7 +4295,7 @@ template mostNegative(T)
 unittest
 {
     static assert(mostNegative!(float) == -float.max);
-    static assert(mostNegative!(uint) == uint.init);
+    static assert(mostNegative!(uint) == 0);
     static assert(mostNegative!(long) == long.min);
 }
 
