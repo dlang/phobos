@@ -4,7 +4,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
         $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
-             escapeWindowsArgument. Documented browse funciton.)
+             escapeWindowsArgument. Documented browse function.)
         $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
              scheduled for deprecation.)
