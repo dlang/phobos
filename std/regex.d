@@ -695,8 +695,7 @@ Trie[const(CodepointSet)] trieCache;
             return *p;
         if(trieCache.length == maxCachedTries)
         {
-            trieCache.clear();
-            trieCache = null;
+            .destroy(trieCache);
         }
         return (trieCache[set] = Trie(set));
     }
