@@ -39,7 +39,8 @@ License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
-           Shin Fujishiro
+           Shin Fujishiro,
+           Kenji Hara
  */
 module std.typecons;
 import core.memory, core.stdc.stdlib;
