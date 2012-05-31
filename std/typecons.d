@@ -1187,7 +1187,7 @@ Forces $(D this) to the null state.
  */
     void nullify()()
     {
-        clear(_value);
+        .destroy(_value);
         _isNull = true;
     }
 
@@ -2589,7 +2589,7 @@ Constructor that tracks the reference count appropriately. If $(D
 /**
 Destructor that tracks the reference count appropriately. If $(D
 !refCountedIsInitialized), does nothing. When the reference count goes
-down to zero, calls $(D clear) agaist the payload and calls $(D free)
+down to zero, calls $(D destroy) agaist the payload and calls $(D free)
 to deallocate the corresponding resource.
  */
     ~this()
@@ -2612,7 +2612,7 @@ to deallocate the corresponding resource.
         }
         // Done, deallocate
         assert(RefCounted._store);
-        clear(RefCounted._store._payload);
+        .destroy(RefCounted._store._payload);
         if (hasIndirections!T && RefCounted._store)
             GC.removeRange(RefCounted._store);
         free(RefCounted._store);
@@ -3116,9 +3116,9 @@ unittest
 
         ~this()
         {
-            // `clear` will also write .init but we have no functions in druntime
+            // `destroy` will also write .init but we have no functions in druntime
             // for deterministic finalization and memory releasing for now.
-            clear(Scoped_payload);
+            .destroy(Scoped_payload);
         }
     }
 

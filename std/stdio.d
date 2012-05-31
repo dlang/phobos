@@ -1392,7 +1392,7 @@ struct LockingTextReader
             _crt = FGETC(cast(_iobuf*) _f.p.handle);
             if (_crt == -1)
             {
-                clear(_f);
+                .destroy(_f);
                 return true;
             }
             else
