@@ -1352,7 +1352,8 @@ void move(T)(ref T source, ref T target)
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            static if (T.tupleof[$-1].stringof.endsWith("this"))
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1443,7 +1444,8 @@ T move(T)(ref T source)
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            static if (T.tupleof[$-1].stringof.endsWith("this"))
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
                 memcpy(&source, &empty, T.sizeof - (void*).sizeof);
@@ -1557,6 +1559,19 @@ unittest// Issue 8057
     a.x = 1;
     auto b = foo(a);
     assert(b.x == 1);
+
+    // Regression 8171
+    static struct Array(T)
+    {
+        // nested struct has no member
+        struct Payload
+        {
+            ~this() {}
+        }
+    }
+    Array!int.Payload x = void;
+    static assert(__traits(compiles, move(x)    ));
+    static assert(__traits(compiles, move(x, x) ));
 }
 
 // moveAll
