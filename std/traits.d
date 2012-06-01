@@ -14,7 +14,8 @@
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
  *            $(WEB octarineparrot.com, Robert Clipsham),
- *            $(WEB klickverbot.at, David Nadlinger)
+ *            $(WEB klickverbot.at, David Nadlinger),
+ *            Kenji Hara
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.

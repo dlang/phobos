@@ -1483,7 +1483,7 @@ struct Array(T) if (!is(T : const(bool)))
         // Destructor releases array memory
         ~this()
         {
-            foreach (ref e; _payload) .clear(e);
+            foreach (ref e; _payload) .destroy(e);
             static if (hasIndirections!T)
                 GC.removeRange(_payload.ptr);
             free(_payload.ptr);
@@ -1525,7 +1525,7 @@ struct Array(T) if (!is(T : const(bool)))
                 {
                     foreach (ref e; _payload.ptr[newLength .. _payload.length])
                     {
-                        .clear(e);
+                        .destroy(e);
                     }
                 }
                 _payload = _payload.ptr[0 .. newLength];
@@ -1979,7 +1979,7 @@ Complexity: $(BIGOH n)
      */
     void clear()
     {
-        .clear(_data);
+        .destroy(_data);
     }
 
 /**
@@ -2056,7 +2056,7 @@ Complexity: $(BIGOH log(n)).
         static if (is(T == struct))
         {
             // Destroy this guy
-            .clear(_data._payload[$ - 1]);
+            .destroy(_data._payload[$ - 1]);
         }
         _data._payload = _data._payload[0 .. $ - 1];
     }
@@ -2084,7 +2084,7 @@ Complexity: $(BIGOH howMany).
             // Destroy this guy
             foreach (ref e; _data._payload[$ - howMany .. $])
             {
-                .clear(e);
+                .destroy(e);
             }
         }
         _data._payload = _data._payload[0 .. $ - howMany];
