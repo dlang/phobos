@@ -2193,7 +2193,12 @@ unittest
 
 template hasToString(T, Char)
 {
-    static if (is(typeof({ T val; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
+    static if(isPointer!T && !isAggregateType!T)
+    {
+        // X* does not have toString, even if X is aggregate type has toString.
+        enum hasToString = 0;
+    }
+    else static if (is(typeof({ T val; FormatSpec!Char f; val.toString((const(char)[] s){}, f); })))
     {
         enum hasToString = 4;
     }
@@ -2588,7 +2593,7 @@ unittest
    Pointers are formatted as hex integers.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (/*!hasToString!(T, Char) && */isPointer!T)
+if (!hasToString!(T, Char) && isPointer!T)
 {
     if (val is null)
         put(w, "null");
@@ -2633,6 +2638,7 @@ unittest
 
 unittest
 {
+    // Test for issue 7869
     struct S
     {
         string toString(){ return ""; }
@@ -2643,6 +2649,19 @@ unittest
     S* q = cast(S*)0xFFEECCAA;
     formatTest( q, "FFEECCAA" );
 }
+
+unittest
+{
+    // Test for issue 8186
+    class B
+    {
+        int*a;
+        this(){ a = new int; }
+        alias a this;
+    }
+    formatTest( B.init, "null" );
+}
+
 
 /**
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
