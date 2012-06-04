@@ -1472,10 +1472,7 @@ unittest
 {
     debug(std_array) printf("array.replace.unittest\n");
 
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-
-    foreach (S; TestTypes)
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         auto s = to!S("This is a foo foo list");
         auto from = to!S("foo");
