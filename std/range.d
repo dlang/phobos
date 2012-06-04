@@ -4469,30 +4469,28 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
         @property bool empty() const { return current == pastLast; }
-        @property Value front() { assert(!empty); return current; }
+        @property inout(Value) front() inout { assert(!empty); return current; }
         alias front moveFront;
         void popFront() { assert(!empty); ++current; }
-        @property Value back() { assert(!empty); return pastLast - 1; }
+        @property inout(Value) back() inout { assert(!empty); return pastLast - 1; }
         alias back moveBack;
         void popBack() { assert(!empty); --pastLast; }
         @property auto save() { return this; }
-        Value opIndex(ulong n)
+        inout(Value) opIndex(ulong n) inout
         {
             assert(n < this.length);
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
-            return cast(Value) (current + n);
+            return cast(inout Value) (current + n);
         }
-        auto opSlice() { return this; }
-        auto opSlice(ulong lower, ulong upper)
+        inout(Result) opSlice() inout { return this; }
+        inout(Result) opSlice(ulong lower, ulong upper) inout
         {
             assert(upper >= lower && upper <= this.length);
 
-            auto ret = this;
-            ret.current += lower;
-            ret.pastLast -= this.length - upper;
-            return ret;
+            return cast(inout Result)Result(cast(Value)(current + lower),
+                                            cast(Value)(pastLast - (length - upper)));
         }
         @property IndexType length() const
         {
@@ -4542,14 +4540,14 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             }
         }
         @property bool empty() const { return index == count; }
-        @property Value front() { assert(!empty); return start + step * index; }
+        @property Value front() const { assert(!empty); return start + step * index; }
         alias front moveFront;
         void popFront()
         {
             assert(!empty);
             ++index;
         }
-        @property Value back()
+        @property Value back() const
         {
             assert(!empty);
             return start + step * (count - 1);
@@ -4561,23 +4559,23 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             --count;
         }
         @property auto save() { return this; }
-        Value opIndex(size_t n)
+        Value opIndex(size_t n) const
         {
             assert(n < count);
             return start + step * (n + index);
         }
-        auto opSlice()
+        inout(Result) opSlice() inout
         {
             return this;
         }
-        auto opSlice(size_t lower, size_t upper)
+        inout(Result) opSlice(size_t lower, size_t upper) inout
         {
             assert(upper >= lower && upper <= count);
 
-            auto ret = this;
+            Result ret = this;
             ret.index += lower;
             ret.count = upper - lower + ret.index;
-            return ret;
+            return cast(inout Result)ret;
         }
         @property size_t length() const
         {
