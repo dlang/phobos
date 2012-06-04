@@ -67,8 +67,9 @@ $(VERSION 060, ddd mm, 2012, =================================================,
  )
 
 $(VERSION 059, ddd mm, 2012, =================================================,
-
     $(WHATSNEW
+        $(LI std.array: replaceInto, an alternative for replace that outputs result directly 
+        to an output range, avoiding extra allocation.)
         $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
              have been removed. Please use std.datetime instead.)
         $(LI Several deprecated functions in std.file have been removed.)
