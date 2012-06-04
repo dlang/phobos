@@ -55,6 +55,8 @@ public import std.utf;
 public import std.variant;
 public import std.zip;
 public import std.zlib;
+public import std.net.isemail;
+public import std.net.curl;
 
 int main(char[][] args)
 {
@@ -119,7 +121,10 @@ version (all)
     std.signals.linkin();
 
     writefln(std.cpuid.toString());
+
+    bool isEmail = std.net.isemail.isEmail("abc");
+    auto http = std.net.curl.HTTP("dlang.org");
 }
-    printf("Success!\n");
+    puts("Success!");
     return 0;
 }
