@@ -1497,16 +1497,13 @@ unittest
 
 unittest
 {
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-
     struct CheckOutput(C)
     {
         C[] desired;
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; TestTypes)
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         alias typeof(S.init[0]) Char;
         S s = to!S("yet another dummy text, yet another ...");
