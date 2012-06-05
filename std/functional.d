@@ -40,57 +40,21 @@ template unaryFun(alias fun, bool byRef = false, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        template Body(ElementType)
-        {
-            // enum testAsExpression = "{"~ElementType.stringof
-            //     ~" "~parmName~"; return ("~fun~");}()";
-            enum testAsExpression = "{ ElementType "~parmName
-                ~"; return ("~fun~");}()";
-            enum testAsStmts = "{"~ElementType.stringof
-                ~" "~parmName~"; "~fun~"}()";
-            // pragma(msg, "Expr: "~testAsExpression);
-            // pragma(msg, "Stmts: "~testAsStmts);
-            static if (__traits(compiles, mixin(testAsExpression)))
-            {
-                enum string code = "return (" ~ fun ~ ");";
-                alias typeof(mixin(testAsExpression)) ReturnType;
-            }
-            // else static if (__traits(compiles, mixin(testAsStmts)))
-            // {
-            //     enum string code = fun;
-            //     alias typeof(mixin(testAsStmts)) ReturnType;
-            // }
-            else
-            {
-                // Credit for this idea goes to Don Clugston
-                // static assert is a bit broken,
-                // better to do it this way to provide a backtrace.
-                // pragma(msg, "Bad unary function: " ~ fun ~ " for type "
-                //         ~ ElementType.stringof);
-                static assert(false, "Bad unary function: " ~ fun ~
-                        " for type " ~ ElementType.stringof);
-            }
-        }
-
         static if (byRef)
         {
-            Body!(ElementType).ReturnType unaryFun(ElementType)(ref ElementType __a)
+            auto unaryFun(ElementType)(ref ElementType __a)
             {
                 mixin("alias __a "~parmName~";");
-                mixin(Body!(ElementType).code);
+                mixin("return (" ~ fun ~ ");");
             }
         }
         else
         {
-            Body!(ElementType).ReturnType unaryFun(ElementType)(ElementType __a)
+            auto unaryFun(ElementType)(ElementType __a)
             {
                 mixin("alias __a "~parmName~";");
-                mixin(Body!(ElementType).code);
+                mixin("return (" ~ fun ~ ");");
             }
-            // string mixme = "Body!(ElementType).ReturnType"
-            //     " unaryFun(ElementType)(ElementType a)
-            // { " ~ Body!(ElementType).code ~ " }";
-            // mixin(mixme);
         }
     }
     else
@@ -134,76 +98,18 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
-        template Body(ElementType1, ElementType2)
-        {
-            enum testAsExpression = "{ ElementType1 "
-                ~parm1Name~"; ElementType2 "
-                ~parm2Name~"; return ("~fun~");}()";
-            // enum testAsExpression = "{"~ElementType1.stringof
-            //     ~" "~parm1Name~"; "~ElementType2.stringof
-            //     ~" "~parm2Name~"; return ("~fun~");}()";
-            // enum testAsStmts = "{"~ElementType1.stringof
-            //     ~" "~parm1Name~"; "~ElementType2.stringof
-            //     ~" "~parm2Name~"; "~fun~"}()";
-            static if (__traits(compiles, mixin(testAsExpression)))
-            {
-                enum string code = "return (" ~ fun ~ ");";
-                alias typeof(mixin(testAsExpression)) ReturnType;
-            }
-            // else static if (__traits(compiles, mixin(testAsStmts)))
-            // {
-            //     enum string code = fun;
-            //     alias typeof(mixin(testAsStmts)) ReturnType;
-            // }
-            else
-            {
-                // Credit for this idea goes to Don Clugston
-                enum string msg =
-                    "Bad binary function q{" ~ fun ~ "}."
-                    ~" You need to use a valid D expression using symbols "
-                    ~parm1Name~" of type "~ElementType1.stringof~" and "
-                    ~parm2Name~" of type "~ElementType2.stringof~"."
-                    ~(fun.length && fun[$ - 1] == ';'
-                            ? " The trailing semicolon is _not_ needed."
-                            : "")
-                    ~(fun.length && fun[$ - 1] == '}'
-                            ? " The trailing bracket is mistaken."
-                            : "");
-                static assert(false, msg);
-            }
-        }
-
-        Body!(ElementType1, ElementType2).ReturnType
-            binaryFun(ElementType1, ElementType2)
+        auto binaryFun(ElementType1, ElementType2)
             (ElementType1 __a, ElementType2 __b)
         {
             mixin("alias __a "~parm1Name~";");
             mixin("alias __b "~parm2Name~";");
-            mixin(Body!(ElementType1, ElementType2).code);
+            mixin("return (" ~ fun ~ ");");
         }
     }
     else
     {
         alias fun binaryFun;
     }
-    // static if (is(typeof(comp) : string))
-    // {
-    //     // @@@BUG1816@@@: typeof(mixin(comp)) should work
-    //     typeof({
-    //                 static ElementType1 a;
-    //                 static ElementType2 b;
-    //                 return mixin(comp);
-    //             }())
-    //         binaryFun(ElementType1, ElementType2)
-    //         (ElementType1 a, ElementType2 b)
-    //     {
-    //         return mixin(comp);
-    //     }
-    // }
-    // else
-    // {
-    //     alias comp binaryFun;
-    // }
 }
 
 unittest
@@ -239,15 +145,14 @@ unittest
 */
 //alias binaryFun!(q{a == b}) equalTo;
 
-/*
+/**
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
 */
 template binaryReverseArgs(alias pred)
 {
-    typeof({ ElementType1 a; ElementType2 b; return pred(b, a);}())
-    binaryReverseArgs(ElementType1, ElementType2)(ElementType1 a,
-            ElementType2 b)
+    auto binaryReverseArgs(ElementType1, ElementType2)
+            (ElementType1 a, ElementType2 b)
     {
         return pred(b, a);
     }

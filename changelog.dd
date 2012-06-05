@@ -45,6 +45,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7660): toImpl conflict in std.conv)
         $(LI $(BUGZILLA 7796): std.typecons.Unique is using writeln without importing std.stdio.)
         $(LI $(BUGZILLA 7824): isInputRange fails to recognize inout(T)[])
+        $(LI $(BUGZILLA 7878): A problem with purity and general templated algorithms)
         $(LI $(BUGZILLA 7898): [CTFE] std.algorithm:copy fails when used with two arrays)
         $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
         $(LI $(BUGZILLA 7919): Sample code works on GDC but fails with DMD)
@@ -67,8 +68,9 @@ $(VERSION 060, ddd mm, 2012, =================================================,
  )
 
 $(VERSION 059, ddd mm, 2012, =================================================,
-
     $(WHATSNEW
+        $(LI std.array: replaceInto, an alternative for replace that outputs result directly 
+        to an output range, avoiding extra allocation.)
         $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
              have been removed. Please use std.datetime instead.)
         $(LI Several deprecated functions in std.file have been removed.)
