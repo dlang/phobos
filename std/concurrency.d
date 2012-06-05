@@ -38,7 +38,7 @@
  *     send(tid, 42);
  *
  *     // Receive the result code.
- *     auto wasSuccessful = receiveNext!(bool);
+ *     auto wasSuccessful = receiveOnly!(bool);
  *     assert(wasSuccessful);
  *     writeln("Successfully printed number.");
  * }
@@ -625,19 +625,6 @@ receiveOnlyRet!(T) receiveOnly(T...)()
         return ret;
 }
 
-receiveOnlyRet!(T) receiveNext(T...)()
-{
-    Tuple!(T) ret;
-
-    receive(
-        (Tuple!(T) msg) { ret = msg; }
-    );
-
-    static if ( T.length == 1 )
-        return ret[0];
-    else
-        return ret;
-}
 
 /**
  * $(RED Deprecated. It will be removed in August 2012. Please use the version
