@@ -432,18 +432,10 @@ public:
     {
         version(Windows)
         {
-            //FILETIME represents hnsecs from midnight, January 1st, 1601.
-            enum hnsecsFrom1601 = 504_911_232_000_000_000L;
-
             FILETIME fileTime;
-
             GetSystemTimeAsFileTime(&fileTime);
 
-            ulong tempHNSecs = fileTime.dwHighDateTime;
-            tempHNSecs <<= 32;
-            tempHNSecs |= fileTime.dwLowDateTime;
-
-            return cast(long)tempHNSecs + hnsecsFrom1601;
+            return FILETIMEToStdTime(&fileTime);
         }
         else version(Posix)
         {
@@ -7963,15 +7955,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
             assert(0, "format() threw.");
     }
 
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use toISOExtString instead.)
-      +/
-    deprecated string toISOExtendedString() const nothrow
-    {
-        return toISOExtString();
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -8519,16 +8502,6 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         }
         catch(DateTimeException dte)
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
-    }
-
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use fromISOExtString instead.)
-      +/
-    deprecated static SysTime fromISOExtendedString(S)(in S isoExtString, immutable TimeZone tz = null)
-        if(isSomeString!(S))
-    {
-        return fromISOExtString!string(isoExtString, tz);
     }
 
     unittest
@@ -12690,15 +12663,6 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
             assert(0, "format() threw.");
     }
 
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use toISOExtString instead.)
-      +/
-    deprecated string toISOExtendedString() const nothrow
-    {
-        return toISOExtString();
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -13008,16 +12972,6 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
                     new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
-    }
-
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use fromISOExtString instead.)
-      +/
-    deprecated static Date fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!(S))
-    {
-        return fromISOExtString!string(isoExtString);
     }
 
     unittest
@@ -14413,15 +14367,6 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
             assert(0, "format() threw.");
     }
 
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use toISOExtString instead.)
-      +/
-    deprecated string toISOExtendedString() const nothrow
-    {
-        return toISOExtString();
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -14628,16 +14573,6 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
                 new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
-    }
-
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use fromISOExtString instead.)
-      +/
-    deprecated static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!(S))
-    {
-        return fromISOExtString!string(isoExtString);
     }
 
     unittest
@@ -17600,15 +17535,6 @@ assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtString() ==
             assert(0, "format() threw.");
     }
 
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use toISOExtString instead.)
-      +/
-    deprecated string toISOExtendedString() const nothrow
-    {
-        return toISOExtString();
-    }
-
     unittest
     {
         version(testStdDateTime)
@@ -17873,16 +17799,6 @@ assert(DateTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
         immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
-    }
-
-    /++
-        $(RED Deprecated. It will be removed in May 2012.
-              Please use fromISOExtString instead.)
-      +/
-    deprecated static DateTime fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!(S))
-    {
-        return fromISOExtString!string(isoExtString);
     }
 
     unittest
@@ -29286,7 +29202,7 @@ assert(tz.dstName == "PDT");
         version(Posix)
             auto file = tzDatabaseDir ~ name;
         else version(Windows)
-            auto file = tzDatabaseDir ~ replace(strip(name), "/", sep);
+            auto file = tzDatabaseDir ~ replace(strip(name), "/", dirSeparator);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29595,10 +29511,10 @@ assert(tz.dstName == "PDT");
         version(Posix)
             subName = strip(subName);
         else version(Windows)
-            subName = replace(strip(subName), "/", sep);
+            subName = replace(strip(subName), "/", dirSeparator);
 
-        if(!tzDatabaseDir.endsWith(sep))
-            tzDatabaseDir ~= sep;
+        if(!tzDatabaseDir.endsWith(dirSeparator))
+            tzDatabaseDir ~= dirSeparator;
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
@@ -31163,61 +31079,6 @@ version(testStdDateTime) unittest
 // Section with public helper functions and templates.
 //==============================================================================
 
-/++
-    $(RED Deprecated. It will be removed in March 2012. This is only here to
-          help transition code which uses std.date to using std.datetime.)
-
-    Returns a $(D d_time) for the given $(D SysTime).
- +/
-deprecated long sysTimeToDTime(in SysTime sysTime)
-{
-    return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
-}
-
-version(testStdDateTime) unittest
-{
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), UTC())),
-                    0);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC())),
-                    1);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC())),
-                    -1);
-
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 2), UTC())),
-                    86_400_000);
-    _assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31), UTC())),
-                    -86_400_000);
-}
-
-
-/++
-    $(RED Deprecated. It will be removed in March 2012. This is only here to
-          help transition code which uses std.date to using std.datetime.)
-
-    Returns a $(D SysTime) for the given $(D d_time).
- +/
-deprecated SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
-{
-    immutable hnsecs = convert!("msecs", "hnsecs")(dTime) + 621355968000000000L;
-
-    return SysTime(hnsecs, tz);
-}
-
-version(testStdDateTime) unittest
-{
-    _assertPred!"=="(dTimeToSysTime(0),
-                    SysTime(DateTime(1970, 1, 1), UTC()));
-    _assertPred!"=="(dTimeToSysTime(1),
-                    SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC()));
-    _assertPred!"=="(dTimeToSysTime(-1),
-                    SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()));
-
-    _assertPred!"=="(dTimeToSysTime(86_400_000),
-                    SysTime(DateTime(1970, 1, 2), UTC()));
-    _assertPred!"=="(dTimeToSysTime(-86_400_000),
-                    SysTime(DateTime(1969, 12, 31), UTC()));
-}
-
 
 /++
     Whether the given type defines all of the necessary functions for it to
@@ -31421,6 +31282,22 @@ version(StdDdoc)
     /++
         $(BLUE This function is Windows-Only.)
 
+        Converts a $(D FILETIME) struct to the number of hnsecs since midnight,
+        January 1st, 1 A.D.
+
+        Params:
+            ft = The $(D FILETIME) struct to convert.
+
+        Throws:
+            $(D DateTimeException) if the given $(D FILETIME) cannot be
+            represented as the return value.
+      +/
+    long FILETIMEToStdTime(const FILETIME* ft);
+
+
+    /++
+        $(BLUE This function is Windows-Only.)
+
         Converts a $(D FILETIME) struct to a $(D SysTime).
 
         Params:
@@ -31430,10 +31307,25 @@ version(StdDdoc)
 
         Throws:
             $(D DateTimeException) if the given $(D FILETIME) will not fit in a
-            $(D SysTime) or if the $(D FILETIME) cannot be converted to a
-            $(D SYSTEMTIME).
+            $(D SysTime).
       +/
     SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime());
+
+
+    /++
+        $(BLUE This function is Windows-Only.)
+
+        Converts a number of hnsecs since midnight, January 1st, 1 A.D. to a
+        $(D FILETIME) struct.
+
+        Params:
+            sysTime = The $(D SysTime) to convert.
+
+        Throws:
+            $(D DateTimeException) if the given value will not fit in a
+            $(D FILETIME).
+      +/
+    FILETIME stdTimeToFILETIME(long stdTime);
 
 
     /++
@@ -31559,15 +31451,24 @@ else version(Windows)
         }
     }
 
+    private enum hnsecsFrom1601 = 504_911_232_000_000_000L;
+
+    long FILETIMEToStdTime(const FILETIME* ft)
+    {
+        ULARGE_INTEGER ul;
+        ul.HighPart = ft.dwHighDateTime;
+        ul.LowPart = ft.dwLowDateTime;
+        ulong tempHNSecs = ul.QuadPart;
+
+        if(tempHNSecs > long.max - hnsecsFrom1601)
+            throw new DateTimeException("The given FILETIME cannot be represented as a stdTime value.");
+
+        return cast(long)tempHNSecs + hnsecsFrom1601;
+    }
 
     SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
     {
-        SYSTEMTIME st = void;
-
-        if(!FileTimeToSystemTime(ft, &st))
-            throw new DateTimeException("FileTimeToSystemTime() failed.");
-
-        auto sysTime = SYSTEMTIMEToSysTime(&st, UTC());
+        auto sysTime = SysTime(FILETIMEToStdTime(ft), UTC());
         sysTime.timezone = tz;
 
         return sysTime;
@@ -31592,14 +31493,24 @@ else version(Windows)
     }
 
 
-    FILETIME SysTimeToFILETIME(SysTime sysTime)
+    FILETIME stdTimeToFILETIME(long stdTime)
     {
-        SYSTEMTIME st = SysTimeToSYSTEMTIME(sysTime.toUTC());
+        if(stdTime < hnsecsFrom1601)
+            throw new DateTimeException("The given stdTime value cannot be represented as a FILETIME.");
 
-        FILETIME ft = void;
-        SystemTimeToFileTime(&st, &ft);
+        ULARGE_INTEGER ul;
+        ul.QuadPart = cast(ulong)stdTime - hnsecsFrom1601;
+
+        FILETIME ft;
+        ft.dwHighDateTime = ul.HighPart;
+        ft.dwLowDateTime = ul.LowPart;
 
         return ft;
+    }
+
+    FILETIME SysTimeToFILETIME(SysTime sysTime)
+    {
+        return stdTimeToFILETIME(sysTime.stdTime);
     }
 
     unittest

@@ -60,9 +60,6 @@ BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
-CC =
-DMD =
-DDOC =
 CFLAGS =
 DFLAGS =
 
@@ -83,14 +80,14 @@ endif
 # Set CC and DMD
 ifeq ($(OS),win32wine)
 	CC = wine dmc.exe
-	DMD = wine dmd.exe
+	DMD ?= wine dmd.exe
 	RUN = wine
 else
 	ifeq ($(OS),win32remote)
-		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
+		DMD ?= ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
 		CC = ssh 206.125.170.138 "cd code/dmd/phobos && dmc"
 	else
-		DMD = dmd
+		DMD ?= dmd
 		ifeq ($(OS),win32)
 			CC = dmc
 		else
@@ -155,14 +152,13 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
-        bitmanip compiler complex concurrency container contracts conv	\
-        cpuid cstream ctype csv date datetime datebase dateparse demangle	\
-        encoding exception file format functional getopt gregorian		\
-        json loader math mathspecial md5 metastrings mmfile numeric		\
-        outbuffer parallelism path perf process random range regex		\
-        regexp signals socket socketstream stdint stdio stdiobase		\
-        stream string syserror system traits typecons typetuple uni		\
-        uri utf variant xml zip zlib)
+        bitmanip compiler complex concurrency container conv		\
+        cpuid cstream ctype csv datetime demangle encoding exception	\
+        file format functional getopt json math mathspecial md5	\
+        metastrings mmfile numeric outbuffer parallelism path perf		\
+        process random range regex regexp signals socket socketstream	\
+        stdint stdio stdiobase stream string syserror system traits		\
+        typecons typetuple uni uri utf variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
@@ -194,7 +190,7 @@ D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
 $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/stdarg.d std/bind.d std/internal/windows/advapi32.d \
+	std/internal/windows/advapi32.d \
 	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
 	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
 

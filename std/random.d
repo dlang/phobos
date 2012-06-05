@@ -113,21 +113,144 @@ version(unittest) import std.typetuple;
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-version (Windows)
+
+/**
+ * Test if Rng is a random-number generator. The overload
+ * taking a ElementType also makes sure that the Rng generates
+ * values of that type.
+ *
+ * A random-number generator has at least the following features:
+ * $(UL
+ *   $(LI it's an InputRange)
+ *   $(LI it has a 'bool isUniformRandom' field readable in CTFE)
+ * )
+ */
+template isUniformRNG(Rng, ElementType)
 {
-    extern(Windows) int QueryPerformanceCounter(ulong *count);
+    enum bool isUniformRNG = isInputRange!Rng &&
+        is(typeof(Rng.front) == ElementType) &&
+        is(typeof(
+        {
+            static assert(Rng.isUniformRandom); //tag
+        }));
 }
 
-version (Posix)
+/**
+ * ditto
+ */
+template isUniformRNG(Rng)
 {
-    private import core.sys.posix.sys.time;
+    enum bool isUniformRNG = isInputRange!Rng &&
+        is(typeof(
+        {
+            static assert(Rng.isUniformRandom); //tag
+        }));
+}
+
+/**
+ * Test if Rng is seedable. The overload
+ * taking a ElementType also makes sure that the Rng generates
+ * values of that type.
+ *
+ * A seedable random-number generator has the following additional features:
+ * $(UL
+ *   $(LI it has a 'seed(ElementType)' function)
+ * )
+ */
+template isSeedable(Rng, ElementType)
+{
+    enum bool isSeedable = isUniformRNG!(Rng, ElementType) &&
+        is(typeof(
+        {
+            Rng r = void;                 // can define a Rng object
+            r.seed(ElementType.init);     // can seed a Rng
+        }));
+}
+
+///ditto
+template isSeedable(Rng)
+{
+    enum bool isSeedable = isUniformRNG!Rng &&
+        is(typeof(
+        {
+            Rng r = void;                       // can define a Rng object
+            r.seed(typeof(r.front).init);     // can seed a Rng
+        }));
+}
+
+unittest
+{
+    struct NoRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+    }
+    assert(!isUniformRNG!(NoRng, uint));
+    assert(!isUniformRNG!(NoRng));
+    assert(!isSeedable!(NoRng, uint));
+    assert(!isSeedable!(NoRng));
+
+    struct NoRng2
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+
+        enum isUniformRandom = false;
+    }
+    assert(!isUniformRNG!(NoRng2, uint));
+    assert(!isUniformRNG!(NoRng2));
+    assert(!isSeedable!(NoRng2, uint));
+    assert(!isSeedable!(NoRng2));
+
+    struct NoRng3
+    {
+        @property bool empty() {return false;}
+        void popFront() {}
+
+        enum isUniformRandom = true;
+    }
+    assert(!isUniformRNG!(NoRng3, uint));
+    assert(!isUniformRNG!(NoRng3));
+    assert(!isSeedable!(NoRng3, uint));
+    assert(!isSeedable!(NoRng3));
+
+    struct validRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+
+        enum isUniformRandom = true;
+    }
+    assert(isUniformRNG!(validRng, uint));
+    assert(isUniformRNG!(validRng));
+    assert(!isSeedable!(validRng, uint));
+    assert(!isSeedable!(validRng));
+
+    struct seedRng
+    {
+        @property uint front() {return 0;}
+        @property bool empty() {return false;}
+        void popFront() {}
+        void seed(uint val){}
+        enum isUniformRandom = true;
+    }
+    assert(isUniformRNG!(seedRng, uint));
+    assert(isUniformRNG!(seedRng));
+    assert(isSeedable!(seedRng, uint));
+    assert(isSeedable!(seedRng));
 }
 
 /**
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
+    if(isUnsigned!UIntType)
 {
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
     /// Does this generator have a fixed range? ($(D_PARAM true)).
     enum bool hasFixedRange = true;
     /// Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
@@ -151,8 +274,10 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
-    private static ulong gcd(ulong a, ulong b) {
-        while (b) {
+    private static ulong gcd(ulong a, ulong b)
+    {
+        while (b)
+        {
             auto t = b;
             b = a % b;
             a = t;
@@ -160,20 +285,24 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
-    private static ulong primeFactorsOnly(ulong n) {
+    private static ulong primeFactorsOnly(ulong n)
+    {
         ulong result = 1;
         ulong iter = 2;
-        for (; n >= iter * iter; iter += 2 - (iter == 2)) {
+        for (; n >= iter * iter; iter += 2 - (iter == 2))
+        {
             if (n % iter) continue;
             result *= iter;
-            do {
+            do
+            {
                 n /= iter;
             } while (n % iter == 0);
         }
         return result * n;
     }
 
-    unittest {
+    unittest
+    {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
         static assert(primeFactorsOnly(11) == 11);
@@ -184,7 +313,8 @@ The parameters of this distribution. The random number is $(D_PARAM x
     }
 
     private static bool properLinearCongruentialParameters(ulong m,
-            ulong a, ulong c) {
+            ulong a, ulong c)
+    {
         if (m == 0)
         {
             static if (is(UIntType == uint))
@@ -328,7 +458,15 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 
 unittest
 {
-    static assert(isForwardRange!MinstdRand);
+    assert(isForwardRange!MinstdRand);
+    assert(isUniformRNG!MinstdRand);
+    assert(isUniformRNG!MinstdRand0);
+    assert(isUniformRNG!(MinstdRand, uint));
+    assert(isUniformRNG!(MinstdRand0, uint));
+    assert(isSeedable!MinstdRand);
+    assert(isSeedable!MinstdRand0);
+    assert(isSeedable!(MinstdRand, uint));
+    assert(isSeedable!(MinstdRand0, uint));
 
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
@@ -374,13 +512,14 @@ unittest
 /**
 The $(LUCKY Mersenne Twister) generator.
  */
-struct MersenneTwisterEngine(
-    UIntType, size_t w, size_t n, size_t m, size_t r,
-    UIntType a, size_t u, size_t s,
-    UIntType b, size_t t,
-    UIntType c, size_t l)
+struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
+                             UIntType a, size_t u, size_t s,
+                             UIntType b, size_t t,
+                             UIntType c, size_t l)
+    if(isUnsigned!UIntType)
 {
-    static assert(UIntType.min == 0);
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
 /**
 Parameter for the generator.
 */
@@ -432,7 +571,8 @@ Parameter for the generator.
             static assert(max + 1 > 0);
             mt[0] = value % (max + 1);
         }
-        for (mti = 1; mti < n; ++mti) {
+        for (mti = 1; mti < n; ++mti)
+        {
             mt[mti] =
                 cast(UIntType)
                 (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti);
@@ -547,6 +687,10 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 
 unittest
 {
+    assert(isUniformRNG!Mt19937);
+    assert(isUniformRNG!(Mt19937, uint));
+    assert(isSeedable!Mt19937);
+    assert(isSeedable!(Mt19937, uint));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
@@ -585,12 +729,15 @@ unittest
  * )
  */
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
+    if(isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
 
 
   public:
+    ///Mark this as a Rng
+    enum bool isUniformRandom = true;
     /// Always $(D false) (random generators are infinite ranges).
     enum empty = false;
     /// Smallest generated value.
@@ -600,20 +747,21 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
 
   private:
-    enum Size = bits / 32;
+    enum size = bits / 32;
 
-    static if (bits == 32) {
-        UIntType[Size] seeds_ = [2463534242];
-    } else static if (bits == 64) {
-        UIntType[Size] seeds_ = [123456789, 362436069];
-    } else static if (bits == 96) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629];
-    } else static if (bits == 128) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123];
-    } else static if (bits == 160) {
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
-    } else { // 192bits
-        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
+    static if (bits == 32)
+        UIntType[size] seeds_ = [2463534242];
+    else static if (bits == 64)
+        UIntType[size] seeds_ = [123456789, 362436069];
+    else static if (bits == 96)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629];
+    else static if (bits == 128)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
+    else static if (bits == 160)
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
+    else
+    { // 192bits
+        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
         UIntType       value_;
     }
 
@@ -652,11 +800,10 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     @property @safe
     nothrow UIntType front()
     {
-        static if (bits == 192) {
+        static if (bits == 192)
             return value_;
-        } else {
-            return seeds_[Size - 1];
-        }
+        else
+            return seeds_[size - 1];
     }
 
 
@@ -668,33 +815,44 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     {
         UIntType temp;
 
-        static if (bits == 32) {
+        static if (bits == 32)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             temp      = temp >> b;
             seeds_[0] = temp ^ (temp << c);
-        } else static if (bits == 64) {
+        }
+        else static if (bits == 64)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[1] ^ (seeds_[1] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 96) {
+        }
+        else static if (bits == 96)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[2] ^ (seeds_[2] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 128){
+        }
+        else static if (bits == 128)
+        {
             temp      = seeds_[0] ^ (seeds_[0] << a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[3] ^ (seeds_[3] >> c) ^ temp ^ (temp >> b);
-        } else static if (bits == 160){
+        }
+        else static if (bits == 160)
+        {
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
-        } else { // 192bits
+        }
+        else
+        { // 192bits
             temp      = seeds_[0] ^ (seeds_[0] >> a);
             seeds_[0] = seeds_[1];
             seeds_[1] = seeds_[2];
@@ -728,9 +886,10 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
   private:
     @safe
-    static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
+    static nothrow void sanitizeSeeds(ref UIntType[size] seeds)
     {
-        for (uint i; i < seeds.length; i++) {
+        for (uint i; i < seeds.length; i++)
+        {
             if (seeds[i] == 0)
                 seeds[i] = i + 1;
         }
@@ -739,9 +898,9 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
     unittest
     {
-        static if (Size  ==  4)  // Other bits too
+        static if (size  ==  4)  // Other bits too
         {
-            UIntType[Size] seeds = [1, 0, 0, 4];
+            UIntType[size] seeds = [1, 0, 0, 4];
 
             sanitizeSeeds(seeds);
 
@@ -777,7 +936,11 @@ alias Xorshift128 Xorshift;                                /// ditto
 
 unittest
 {
-    static assert(isForwardRange!Xorshift);
+    assert(isForwardRange!Xorshift);
+    assert(isUniformRNG!Xorshift);
+    assert(isUniformRNG!(Xorshift, uint));
+    assert(isSeedable!Xorshift);
+    assert(isSeedable!(Xorshift, uint));
 
     // Result from reference implementation.
     auto checking = [
@@ -789,10 +952,12 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192)) {
+    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192))
+    {
         Type rnd;
 
-        foreach (e; checking[I]) {
+        foreach (e; checking[I])
+        {
             assert(rnd.front == e);
             rnd.popFront();
         }
@@ -818,7 +983,8 @@ auto n = rnd.front;
 {
     static bool seeded;
     static MinstdRand0 rand;
-    if (!seeded) {
+    if (!seeded)
+    {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
         rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick().length);
         seeded = true;
@@ -843,6 +1009,14 @@ method being used.
  */
 
 alias Mt19937 Random;
+
+unittest
+{
+    assert(isUniformRNG!Random);
+    assert(isUniformRNG!(Random, uint));
+    assert(isSeedable!Random);
+    assert(isSeedable!(Random, uint));
+}
 
 /**
 Global random number generator used by various functions in this
@@ -899,18 +1073,19 @@ unittest
         assert('a' <= x && x <= 'z');
     }
 
-        foreach (i; 0 .. 20)
+    foreach (i; 0 .. 20)
     {
         auto x = uniform('a', 'z', gen);
         assert('a' <= x && x < 'z');
     }
 
-        foreach(i; 0 .. 20) {
-            immutable ubyte a = 0;
-                immutable ubyte b = 15;
-            auto x = uniform(a, b, gen);
-                assert(a <= x && x < b);
-        }
+    foreach(i; 0 .. 20)
+    {
+        immutable ubyte a = 0;
+            immutable ubyte b = 15;
+        auto x = uniform(a, b, gen);
+            assert(a <= x && x < b);
+    }
 }
 
 // Implementation of uniform for floating-point types
@@ -1073,6 +1248,7 @@ array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
+    if(isFloatingPoint!F)
 {
     useThis.length = n;
     foreach (ref e; useThis)
@@ -1095,12 +1271,13 @@ unittest
 }
 
 /**
-Shuffles elements of $(D r) using $(D r) as a shuffler. $(D r) must be
+Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.
  */
 
 void randomShuffle(Range, RandomGen = Random)(Range r,
-        ref RandomGen gen = rndGen)
+                                              ref RandomGen gen = rndGen)
+    if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     foreach (i; 0 .. r.length)
     {
@@ -1169,7 +1346,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     auto mass = 0.0;
 
     size_t i = 0;
-    foreach (e; proportions) {
+    foreach (e; proportions)
+    {
         mass += e;
         if (point < mass) return i;
         i++;
@@ -1178,7 +1356,8 @@ if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
     assert(false);
 }
 
-unittest {
+unittest
+{
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
@@ -1205,6 +1384,7 @@ foreach (e; randomCover(a, rnd))
 ----
  */
 struct RandomCover(Range, Random)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     private Range _input;
     private Random _rnd;
@@ -1273,6 +1453,7 @@ struct RandomCover(Range, Random)
 
 /// Ditto
 RandomCover!(Range, Random) randomCover(Range, Random)(Range r, Random rnd)
+    if(isRandomAccessRange!Range && isUniformRNG!Random)
 {
     return typeof(return)(r, rnd);
 }
@@ -1319,6 +1500,7 @@ foreach (e; randomSample(a, 5))
 ----
  */
 struct RandomSample(R, Random = void)
+    if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1437,14 +1619,15 @@ if(isInputRange!R)
 }
 
 /// Ditto
-auto randomSample(R)(R r, size_t n) if (hasLength!R)
+auto randomSample(R)(R r, size_t n)
+    if(isInputRange!R && hasLength!R)
 {
     return RandomSample!(R, void)(r, n, r.length);
 }
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, size_t total, Random gen)
-if(isInputRange!R && isInputRange!Random)
+if(isInputRange!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, total);
     ret.gen = gen;
@@ -1453,7 +1636,7 @@ if(isInputRange!R && isInputRange!Random)
 
 /// Ditto
 auto randomSample(R, Random)(R r, size_t n, Random gen)
-if (isInputRange!R && hasLength!R && isInputRange!Random)
+if (isInputRange!R && hasLength!R && isUniformRNG!Random)
 {
     auto ret = RandomSample!(R, Random)(r, n, r.length);
     ret.gen = gen;
@@ -1479,4 +1662,3 @@ unittest
     }
     assert(i == 5);
 }
-

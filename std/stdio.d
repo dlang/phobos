@@ -382,9 +382,22 @@ and throws if that fails.
     void detach()
     {
         if (!p) return;
-        // @@@BUG
-        //if (p.refs == 1) close();
+        if (p.refs == 1) close();
+        else if(p.refs != 0) p.refs--;
         p = null;
+    }
+
+    unittest
+    {
+        auto deleteme = testFilename();
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "w");
+        {
+            auto f2 = f;
+            f2.detach();
+        }
+        assert(f.p.refs == 1);
+        f.close();
     }
 
 /**
@@ -665,7 +678,11 @@ arguments in text format to the file. */
         foreach (arg; args)
         {
             alias typeof(arg) A;
-            static if (isSomeString!A)
+            static if (isAggregateType!A)
+            {
+                std.format.formattedWrite(w, "%s", arg);
+            }
+            else static if (isSomeString!A)
             {
                 put(w, arg);
             }
@@ -673,13 +690,9 @@ arguments in text format to the file. */
             {
                 toTextRange(arg, w);
             }
-            else static if (is(Unqual!A == bool))
+            else static if (isBoolean!A)
             {
                 put(w, arg ? "true" : "false");
-            }
-            else static if (is(A : char))
-            {
-                put(w, arg);
             }
             else static if (isSomeChar!A)
             {
@@ -1379,7 +1392,7 @@ struct LockingTextReader
             _crt = FGETC(cast(_iobuf*) _f.p.handle);
             if (_crt == -1)
             {
-                clear(_f);
+                .destroy(_f);
                 return true;
             }
             else
@@ -1547,35 +1560,37 @@ unittest
  * arguments is valid and just prints a newline to the standard
  * output.
  */
-void writeln(T...)(T args) if (T.length == 0)
+void writeln(T...)(T args)
 {
-    enforce(fputc('\n', .stdout.p.handle) == '\n');
+    static if (T.length == 0)
+    {
+        enforce(fputc('\n', .stdout.p.handle) == '\n');
+    }
+    else static if (T.length == 1 &&
+                    isSomeString!(typeof(args[0])) &&
+                    !isAggregateType!(typeof(args[0])))
+    {
+        // Specialization for strings - a very frequent case
+        enforce(fprintf(.stdout.p.handle, "%.*s\n",
+                        cast(int) args[0].length, args[0].ptr) >= 0);
+    }
+    else
+    {
+        // Most general instance
+        stdout.write(args, '\n');
+    }
 }
 
 unittest
 {
     // Just make sure the call compiles
     if (false) writeln();
-}
 
-// Specialization for strings - a very frequent case
-void writeln(T...)(T args)
-if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
-{
-    enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    cast(int) args[0].length, args[0].ptr) >= 0);
-}
-
-unittest
-{
     if (false) writeln("wyda");
-}
 
-// Most general instance
-void writeln(T...)(T args)
-if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
-{
-    stdout.write(args, '\n');
+    // bug 8040
+    if (false) writeln(null);
+    if (false) writeln(">", null, "<");
 }
 
 unittest
@@ -1606,6 +1621,38 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+}
+
+unittest
+{
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
+
+    enum EI : int    { A, B }
+    enum ED : double { A, B }
+    enum EC : char   { A, B }
+    enum ES : string { A = "aaa", B = "bbb" }
+
+    f.writeln(EI.A);  // false, but A on 2.058
+    f.writeln(EI.B);  // true, but B on 2.058
+
+    f.writeln(ED.A);  // A
+    f.writeln(ED.B);  // B
+
+    f.writeln(EC.A);  // A
+    f.writeln(EC.B);  // B
+
+    f.writeln(ES.A);  // A
+    f.writeln(ES.B);  // B
+
+    f.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\r\nB\r\nA\r\nB\r\nA\r\nB\r\nA\r\nB\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
 
 /***********************************

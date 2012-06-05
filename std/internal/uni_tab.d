@@ -6769,7 +6769,7 @@ immutable(CodepointSet) unicodeBalinese = CodepointSet([
     0x01b50, 0x01b7d,
 ]);
 
-immutable(UnicodeProperty)[] unicodeProperties = [
+immutable UnicodeProperty[] unicodeProperties = [
 UnicodeProperty("Alphabetic", unicodeAlphabetic),
 UnicodeProperty("Arabic", unicodeArabic),
 UnicodeProperty("Armenian", unicodeArmenian),
