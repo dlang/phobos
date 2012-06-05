@@ -38,7 +38,7 @@
  *     send(tid, 42);
  *
  *     // Receive the result code.
- *     auto wasSuccessful = receiveOnly!(bool);
+ *     auto wasSuccessful = receiveNext!(bool);
  *     assert(wasSuccessful);
  *     writeln("Successfully printed number.");
  * }
@@ -329,9 +329,8 @@ private:
     }
 
 
-    MessageBox  mbox;
+    __gshared MessageBox  mbox;
 }
-
 
 /**
  * Returns the caller's Tid.
@@ -630,6 +629,19 @@ receiveOnlyRet!(T) receiveOnly(T...)()
         return ret;
 }
 
+receiveOnlyRet!(T) receiveNext(T...)()
+{
+    Tuple!(T) ret;
+
+    receive(
+        (Tuple!(T) msg) { ret = msg; }
+    );
+
+    static if ( T.length == 1 )
+        return ret[0];
+    else
+        return ret;
+}
 
 /**
  * $(RED Deprecated. It will be removed in August 2012. Please use the version
@@ -1513,7 +1525,6 @@ version( unittest )
         receive( (string val) { assert(val == "done"); } );
     }
 
-
     unittest
     {
         auto tid = spawn( &testfn, thisTid );
@@ -1525,3 +1536,4 @@ version( unittest )
         runTest( tid );
     }
 }
+
