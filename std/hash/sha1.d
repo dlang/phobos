@@ -28,7 +28,7 @@
  Example:
 
 --------------------
-import std.crypt.sha1;
+import std.hash.sha1;
 
 private import std.exception;
 private import std.stdio;
@@ -57,7 +57,7 @@ void SHA1File(string filename)
 --------------------
  +/
 
-module std.crypt.sha1;
+module std.hash.sha1;
 
 //debug=sha1;            // uncomment to turn on debugging printf's
 
@@ -81,7 +81,7 @@ import std.c.string : memcpy, memset;
 import std.exception : assumeUnique;
 import core.bitop : bswap;
 version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
-version(USE_SSSE3) import std.internal.crypt.sha1_SSSE3 : transformSSSE3;
+version(USE_SSSE3) import std.internal.hash.sha1_SSSE3 : transformSSSE3;
 import std.stdio;
 
 /***************************************

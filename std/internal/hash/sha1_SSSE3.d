@@ -46,7 +46,7 @@
  *      $(LINK2 http://arctic.org/~dean/crypto/sha1.html)
  *      $(LINK2 http://software.intel.com/en-us/articles/improving-the-performance-of-the-secure-hash-algorithm-1/, Fast implementation of SHA1)
  */
-module std.internal.crypt.sha1_SSSE3;
+module std.internal.hash.sha1_SSSE3;
 
 import std.conv;
 

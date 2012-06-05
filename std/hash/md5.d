@@ -20,7 +20,7 @@
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Md5, Wikipedia on MD5)
  *
- * Source: $(PHOBOSSRC std/crypt/_md5.d)
+ * Source: $(PHOBOSSRC std/hash/_md5.d)
  *
  * Macros:
  *      WIKI = Phobos/StdMd5
@@ -33,7 +33,7 @@
 // This code is derived from the
 // RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
-import std.crypt.md5;
+import std.hash.md5;
 import std.stdio;
 
 void main(string[] args)
@@ -78,7 +78,7 @@ These notices must be retained in any copies of any part of this
 documentation and/or software.
  */
 
-module std.crypt.md5;
+module std.hash.md5;
 
 //debug=md5;            // uncomment to turn on debugging printf's
 

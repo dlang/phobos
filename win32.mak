@@ -173,7 +173,7 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_CRYPT= std\crypt\md5.d std\crypt\sha1.d
+SRC_STD_HASH= std\hash\md5.d std\hash\sha1.d
 
 SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
 
@@ -181,7 +181,7 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
-SRC_STD_INTERNAL_CRYPT= std\internal\crypt\sha1_SSSE3.d
+SRC_STD_INTERNAL_HASH= std\internal\hash\sha1_SSSE3.d
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
@@ -194,11 +194,11 @@ SRC_TO_COMPILE_NOT_STD= crc32.d \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
-	$(SRC_STD_CRYPT) \
+	$(SRC_STD_HASH) \
 	$(SRC_STD_INTERNAL) \
+	$(SRC_STD_INTERNAL_HASH) \
 	$(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
-	$(SRC_STD_INTERNAL_CRYPT) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -335,8 +335,8 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
 	$(DOC)\std_c_wcharh.html \
-	$(DOC)\std_crypt_md5.html \
-	$(DOC)\std_crypt_sha1.html \
+	$(DOC)\std_hash_md5.html \
+	$(DOC)\std_hash_sha1.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
@@ -660,11 +660,11 @@ $(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
 $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
 
-$(DOC)\std_crypt_md5.html : $(STDDOC) std\crypt\md5.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_crypt_md5.html $(STDDOC) std\crypt\md5.d
+$(DOC)\std_hash_md5.html : $(STDDOC) std\hash\md5.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_md5.html $(STDDOC) std\hash\md5.d
 
-$(DOC)\std_crypt_sha1.html : $(STDDOC) std\crypt\sha1.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_crypt_sha1.html $(STDDOC) std\crypt\sha1.d
+$(DOC)\std_hash_sha1.html : $(STDDOC) std\hash\sha1.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_sha1.html $(STDDOC) std\hash\sha1.d
 
 $(DOC)\etc_c_curl.html : $(STDDOC) etc\c\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_curl.html $(STDDOC) etc\c\curl.d
@@ -681,8 +681,8 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_CRYPT) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_INTERNAL_CRYPT)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_HASH) \
+	$(SRC_STD_INTERNAL)  $(SRC_STD_INTERNAL_HASH) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -693,9 +693,9 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
-	zip32 -u phobos $(SRC_STD_CRYPT)
+	zip32 -u phobos $(SRC_STD_HASH)
 	zip32 -u phobos $(SRC_STD_INTERNAL)
-	zip32 -u phobos $(SRC_STD_INTERNAL_CRYPT)
+	zip32 -u phobos $(SRC_STD_INTERNAL_HASH)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
 	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
@@ -727,9 +727,9 @@ install:
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux\
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\
-	$(CP) $(SRC_STD_CRYPT) $(DIR)\src\phobos\std\crypt\
+	$(CP) $(SRC_STD_HASH) $(DIR)\src\phobos\std\hash\
 	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\
-	$(CP) $(SRC_STD_INTERNAL_CRYPT) $(DIR)\src\phobos\std\internal\crypt\
+	$(CP) $(SRC_STD_INTERNAL_HASH) $(DIR)\src\phobos\std\internal\hash\
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\
@@ -748,9 +748,9 @@ svn:
 	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux\
 	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\
 	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\
-	$(CP) $(SRC_STD_CRYPT) $(SVN)\std\crypt\
+	$(CP) $(SRC_STD_HASH) $(SVN)\std\hash\
 	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\
-	$(CP) $(SRC_STD_INTERNAL_CRYPT) $(SVN)\std\internal\crypt\
+	$(CP) $(SRC_STD_INTERNAL_HASH) $(SVN)\std\internal\hash\
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\
 	#$(CP) $(SRC_ETC) $(SVN)\etc\
