@@ -4707,6 +4707,50 @@ unittest
     copy(iota(0, idx.length), idx);
 }
 
+unittest
+{
+    foreach(range; TypeTuple!(iota(2, 27, 4),
+                              iota(3, 9),
+                              iota(2.7, 12.3, .1),
+                              iota(3.2, 9.7)))
+    {
+        const cRange = range;
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
+
+    //The ptr stuff can't be done at compile time, so we unfortunately end
+    //up with some code duplication here.
+    auto arr = [0, 5, 3, 5, 5, 7, 9, 2, 0, 42, 7, 6];
+
+    {
+        const cRange = iota(arr.ptr, arr.ptr + arr.length, 3);
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
+
+    {
+        const cRange = iota(arr.ptr, arr.ptr + arr.length);
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
+}
+
 /**
    Options for the $(LREF FrontTransversal) and $(LREF Transversal) ranges
    (below).
