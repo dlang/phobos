@@ -325,9 +325,8 @@ private:
     }
 
 
-    MessageBox  mbox;
+    __gshared MessageBox  mbox;
 }
-
 
 /**
  * Returns the caller's Tid.
@@ -1509,7 +1508,6 @@ version( unittest )
         receive( (string val) { assert(val == "done"); } );
     }
 
-
     unittest
     {
         auto tid = spawn( &testfn, thisTid );
@@ -1521,3 +1519,4 @@ version( unittest )
         runTest( tid );
     }
 }
+
