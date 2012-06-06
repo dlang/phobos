@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Warning: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will remain until we have a suitable replacement,
+ *       but be aware that it will not remain long term.)
+ *
  * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.
  *
