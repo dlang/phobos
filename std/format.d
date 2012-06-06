@@ -332,8 +332,8 @@ void main()
 -------------------------
    The output is:
 <pre class=console>
-My array is 1 2 3.
-My array is 1, 2, 3.
+My items are 1 2 3.
+My items are 1, 2, 3.
 </pre>
 
    The trailing end of the sub-format string following the specifier for each
@@ -351,10 +351,10 @@ void main()
 -------------------------
    which gives the output:
 <pre class=console>
-My array is -1-, -2-, -3-.
+My items are -1-, -2-, -3-.
 </pre>
 
-   These grouping format specifiers may be nested in the case of a nested
+   These compound format specifiers may be nested in the case of a nested
    array argument:
 -------------------------
 import std.stdio;
@@ -386,6 +386,26 @@ void main() {
 [[1 2 3]
  [4 5 6]
  [7 8 9]]
+</pre>
+
+   Inside a compound format specifier, strings and characters are escaped
+   automatically. To avoid this behavior, add $(B '-') flag to
+   $(D "%$(LPAREN)").
+-------------------------
+import std.stdio;
+
+void main()
+{
+    writefln("My friends are %s.", ["John", "Nancy"]);
+    writefln("My friends are %(%s, %).", ["John", "Nancy"]);
+    writefln("My friends are %-(%s, %).", ["John", "Nancy"]);
+}
+-------------------------
+   which gives the output:
+<pre class=console>
+My friends are ["John", "Nancy"].
+My friends are "John", "Nancy".
+My friends are John, Nancy.
 </pre>
  */
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
@@ -820,6 +840,8 @@ struct FormatSpec(Char)
                         // skip, we're waiting for %( and %)
                         continue;
                     }
+                    if (trailing[j] == '-') // for %-(
+                        ++j;    // skip
                     if (trailing[j] == ')')
                     {
                         if (innerParens-- == 0) break;
@@ -1838,6 +1860,23 @@ unittest
                 `{74 65 73 74} {6d 73 67}` );
 }
 
+unittest
+{
+    // stop auto escaping inside range formatting
+    auto arr = ["hello", "world"];
+    formatTest( "%(%s, %)",  arr, `"hello", "world"` );
+    formatTest( "%-(%s, %)", arr, `hello, world` );
+
+    auto aa1 = [1:"hello", 2:"world"];
+    formatTest( "%(%s:%s, %)",  aa1, `1:"hello", 2:"world"` );
+    formatTest( "%-(%s:%s, %)", aa1, `1:hello, 2:world` );
+
+    auto aa2 = [1:["ab", "cd"], 2:["ef", "gh"]];
+    formatTest( "%-(%s:%s, %)",        aa2, `1:["ab", "cd"], 2:["ef", "gh"]` );
+    formatTest( "%-(%s:%(%s%), %)",    aa2, `1:"ab""cd", 2:"ef""gh"` );
+    formatTest( "%-(%s:%-(%s%)%|, %)", aa2, `1:abcd, 2:efgh` );
+}
+
 // input range formatting
 private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
 if (isInputRange!T)
@@ -1963,7 +2002,10 @@ if (isInputRange!T)
         {
             auto fmt = FormatSpec!Char(f.nested);
             fmt.writeUpToNextSpec(w);
-            formatElement(w, val.front, fmt);
+            if (f.flDash)
+                formatValue(w, val.front, fmt);
+            else
+                formatElement(w, val.front, fmt);
             if (f.sep)
             {
                 put(w, fmt.trailing);
@@ -2134,9 +2176,18 @@ if (!hasToString!(T, Char) && isAssociativeArray!T)
     {
         auto fmt = FormatSpec!Char(fmtSpec);
         fmt.writeUpToNextSpec(w);
-        formatElement(w, k, fmt);
-        fmt.writeUpToNextSpec(w);
-        formatElement(w, v, fmt);
+        if (f.flDash)
+        {
+            formatValue(w, k, fmt);
+            fmt.writeUpToNextSpec(w);
+            formatValue(w, v, fmt);
+        }
+        else
+        {
+            formatElement(w, k, fmt);
+            fmt.writeUpToNextSpec(w);
+            formatElement(w, v, fmt);
+        }
         if (f.sep)
         {
             fmt.writeUpToNextSpec(w);
