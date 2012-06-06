@@ -18,6 +18,7 @@ public import std.compiler;
 public import std.concurrency;
 public import std.conv;
 public import std.cpuid;
+public import std.hash.crc32;
 public import std.cstream;
 public import std.ctype;
 public import std.datetime;
