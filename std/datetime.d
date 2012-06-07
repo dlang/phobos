@@ -30896,7 +30896,7 @@ int a;
 void f0() {}
 void f1() {auto b = a;}
 void f2() {auto b = to!(string)(a);}
-auto r = benchmark!(f0, f1, f2)(10_000_000);
+auto r = benchmark!(f0, f1, f2)(10_000);
 writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
 --------------------
   +/
@@ -30947,7 +30947,7 @@ version(testStdDateTime) unittest
     void f0() {}
     void f1() {auto b = a;}
     void f2() {auto b = to!(string)(a);}
-    auto r = benchmark!(f0, f1, f2)(10_000_000);
+    auto r = benchmark!(f0, f1, f2)(10_000);
     writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int)());
 }
 
