@@ -1941,6 +1941,8 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
        hasSlicing!R &&
        is(ElementType!R : const ubyte))
 {
+    assert(index);
+
     immutable begin = *index;
     immutable end = begin + T.sizeof;
     const ubyte[T.sizeof] bytes = range[begin .. end];
@@ -2143,6 +2145,8 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
        hasSlicing!R &&
        is(ElementType!R : ubyte))
 {
+    assert(index);
+
     static if(endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
     else
