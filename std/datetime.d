@@ -875,55 +875,42 @@ public:
         _assertPred!("opCmp", "==")(SysTime(Date.init, UTC()), SysTime(0));
         _assertPred!("opCmp", "==")(SysTime(0), SysTime(0));
 
-        static void testEqual(DateTime dt,
+        static void testEqual(SysTime st,
                               immutable TimeZone tz1,
                               immutable TimeZone tz2)
         {
-            auto st1 = SysTime(dt);
+            auto st1 = st;
             st1.timezone = tz1;
 
-            auto st2 = SysTime(dt);
+            auto st2 = st;
             st2.timezone = tz2;
 
             _assertPred!("opCmp", "==")(st1, st2);
         }
 
-        foreach(dt; chain(testDateTimesBC, testDateTimesAD))
-        {
-            foreach(tz1; testTZs)
-            {
-                foreach(tz2; testTZs)
-                    testEqual(dt, tz1, tz2);
-            }
-        }
+        auto sts = array(map!SysTime(chain(testDateTimesBC, testDateTimesAD)));
 
-        static void testCmp(DateTime dt1,
+        foreach(st; sts)
+            foreach(tz1; testTZs)
+                foreach(tz2; testTZs)
+                    testEqual(st, tz1, tz2);
+
+        static void testCmp(SysTime st1,
                             immutable TimeZone tz1,
-                            DateTime dt2,
+                            SysTime st2,
                             immutable TimeZone tz2)
         {
-            auto st1 = SysTime(dt1);
             st1.timezone = tz1;
-
-            auto st2 = SysTime(dt2);
             st2.timezone = tz2;
-
             _assertPred!("opCmp", "<")(st1, st2);
             _assertPred!("opCmp", ">")(st2, st1);
         }
 
-        auto dts = testDateTimesBC ~ testDateTimesAD;
-        foreach(tz1; testTZs)
-        {
-            foreach(tz2; testTZs)
-            {
-                for(size_t i = 0; i < dts.length; ++i)
-                {
-                    for(size_t j = i + 1; j < dts.length; ++j)
-                        testCmp(dts[i], tz1, dts[j], tz2);
-                }
-            }
-        }
+        foreach(si, st1; sts)
+            foreach(st2; sts[si+1 .. $])
+                foreach(tz1; testTZs)
+                    foreach(tz2; testTZs)
+                        testCmp(st1, tz1, st2, tz2);
 
         auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
@@ -30896,7 +30883,7 @@ int a;
 void f0() {}
 void f1() {auto b = a;}
 void f2() {auto b = to!(string)(a);}
-auto r = benchmark!(f0, f1, f2)(10_000_000);
+auto r = benchmark!(f0, f1, f2)(10_000);
 writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
 --------------------
   +/
@@ -30947,7 +30934,7 @@ version(testStdDateTime) unittest
     void f0() {}
     void f1() {auto b = a;}
     void f2() {auto b = to!(string)(a);}
-    auto r = benchmark!(f0, f1, f2)(10_000_000);
+    auto r = benchmark!(f0, f1, f2)(10_000);
     writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int)());
 }
 
