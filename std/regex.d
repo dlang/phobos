@@ -7579,6 +7579,19 @@ else
             assert(split(str, re) == [to!S("a"), to!S("b")]);
         }
     }
+    unittest
+    {//bugzilla 8203
+        string data = "
+        NAME   = XPAW01_STA:STATION
+        NAME   = XPAW01_STA
+        ";
+            auto uniFileOld = data;
+            auto r = regex(
+               r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+            auto uniCapturesNew = match(uniFileOld, r);
+            for(int i=0; i<20; i++)
+                foreach (matchNew; uniCapturesNew) {}
+    }
 }
 
 }//version(unittest)
