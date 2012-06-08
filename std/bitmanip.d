@@ -10,11 +10,12 @@ WIKI = StdBitarray
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
+           $(WEB erdani.org, Andrei Alexandrescu),
+           Jonathan M Davis
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
-         Copyright Digital Mars 2007 - 2011.
+         Copyright Digital Mars 2007 - 2012.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
          http://www.boost.org/LICENSE_1_0.txt)
@@ -24,7 +25,15 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
+import std.range;
+import std.system;
 import std.traits;
+
+version(unittest)
+{
+    import std.stdio;
+    import std.typetuple;
+}
 
 
 private string myToStringx(ulong n)
@@ -1376,9 +1385,6 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow
 
 unittest
 {
-    import std.stdio;
-    import std.typetuple;
-
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
@@ -1515,10 +1521,6 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
-    import std.range;
-    import std.stdio;
-    import std.typetuple;
-
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -1724,9 +1726,6 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
-    import std.stdio;
-    import std.typetuple;
-
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
                           float, double*/))
@@ -1862,4 +1861,435 @@ private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothr
         es.intValue = swapEndian(es.intValue);
 
     return es.value;
+}
+
+
+/++
+    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
+    $(D T). The value returned is converted from the given endianness to the
+    native endianness. The range is not consumed.
+
+    Parems:
+        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        endianness = The endianness that the bytes are assumed to be in.
+        range = The range to read from.
+        index = The index to start reading from (instead of starting at the
+                front). If index is a pointer, then it is updated to the index
+                after the bytes read. The overloads with index are only
+                available if $(D hasSlicing!R) is $(D true).
+
+        Examples:
+--------------------
+ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+assert(buffer.peek!uint() == 17110537);
+assert(buffer.peek!ushort() == 261);
+assert(buffer.peek!ubyte() == 1);
+
+assert(buffer.peek!uint(2) == 369700095);
+assert(buffer.peek!ushort(2) == 5641);
+assert(buffer.peek!ubyte(2) == 22);
+
+size_t index = 0;
+assert(buffer.peek!ushort(&index) == 261);
+assert(index == 2);
+
+assert(buffer.peek!uint(&index) == 369700095);
+assert(index == 6);
+
+assert(buffer.peek!ubyte(&index) == 8);
+assert(index == 7);
+--------------------
+  +/
+T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
+    if(isIntegral!T && isForwardRange!R && is(ElementType!R : const ubyte))
+{
+    static if(hasSlicing!R)
+        const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
+    else
+    {
+        ubyte[T.sizeof] bytes;
+        //Make sure that range is not consumed, even if it's a class.
+        range = range.save;
+
+        foreach(ref e; bytes)
+        {
+            e = range.front;
+            range.popFront();
+        }
+    }
+
+    static if(endianness == Endian.bigEndian)
+        return bigEndianToNative!T(bytes);
+    else
+        return littleEndianToNative!T(bytes);
+}
+
+/++ Ditto +/
+T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
+    if(isIntegral!T &&
+       isForwardRange!R &&
+       hasSlicing!R &&
+       is(ElementType!R : const ubyte))
+{
+    return peek!(T, endianness)(range, &index);
+}
+
+/++ Ditto +/
+T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
+    if(isIntegral!T &&
+       isForwardRange!R &&
+       hasSlicing!R &&
+       is(ElementType!R : const ubyte))
+{
+    assert(index);
+
+    immutable begin = *index;
+    immutable end = begin + T.sizeof;
+    const ubyte[T.sizeof] bytes = range[begin .. end];
+    *index = end;
+
+    static if(endianness == Endian.bigEndian)
+        return bigEndianToNative!T(bytes);
+    else
+        return littleEndianToNative!T(bytes);
+}
+
+//Verify Example.
+unittest
+{
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+    assert(buffer.peek!uint() == 17110537);
+    assert(buffer.peek!ushort() == 261);
+    assert(buffer.peek!ubyte() == 1);
+
+    assert(buffer.peek!uint(2) == 369700095);
+    assert(buffer.peek!ushort(2) == 5641);
+    assert(buffer.peek!ubyte(2) == 22);
+
+    size_t index = 0;
+    assert(buffer.peek!ushort(&index) == 261);
+    assert(index == 2);
+
+    assert(buffer.peek!uint(&index) == 369700095);
+    assert(index == 6);
+
+    assert(buffer.peek!ubyte(&index) == 8);
+    assert(index == 7);
+}
+
+unittest
+{
+    import std.algorithm;
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 7];
+    auto range = filter!"true"(buffer);
+    assert(range.peek!uint() == 17110537);
+    assert(range.peek!ushort() == 261);
+    assert(range.peek!ubyte() == 1);
+}
+
+
+/++
+    Takes a range of $(D ubyte)s and converts the first $(D T.sizeof) bytes to
+    $(D T). The value returned is converted from the given endianness to the
+    native endianness. The $(D T.sizeof) bytes which are read are consumed from
+    the range.
+
+    Parems:
+        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        endianness = The endianness that the bytes are assumed to be in.
+        range = The range to read from.
+
+        Examples:
+--------------------
+ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+assert(buffer.length == 7);
+
+assert(buffer.read!ushort() == 261);
+assert(buffer.length == 5);
+
+assert(buffer.read!uint() == 369700095);
+assert(buffer.length == 1);
+
+assert(buffer.read!ubyte() == 8);
+assert(buffer.empty);
+--------------------
+  +/
+T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
+    if(isIntegral!T && isInputRange!R && is(ElementType!R : const ubyte))
+{
+    static if(hasSlicing!R)
+    {
+        const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
+        range.popFrontN(T.sizeof);
+    }
+    else
+    {
+        ubyte[T.sizeof] bytes;
+
+        foreach(ref e; bytes)
+        {
+            e = range.front;
+            range.popFront();
+        }
+    }
+
+    static if(endianness == Endian.bigEndian)
+        return bigEndianToNative!T(bytes);
+    else
+        return littleEndianToNative!T(bytes);
+}
+
+//Verify Example.
+unittest
+{
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+    assert(buffer.length == 7);
+
+    assert(buffer.read!ushort() == 261);
+    assert(buffer.length == 5);
+
+    assert(buffer.read!uint() == 369700095);
+    assert(buffer.length == 1);
+
+    assert(buffer.read!ubyte() == 8);
+    assert(buffer.empty);
+}
+
+unittest
+{
+    import std.algorithm;
+    ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
+    auto range = filter!"true"(buffer);
+    assert(walkLength(range) == 7);
+
+    assert(range.read!ushort() == 261);
+    assert(walkLength(range) == 5);
+
+    assert(range.read!uint() == 369700095);
+    assert(walkLength(range) == 1);
+
+    assert(range.read!ubyte() == 8);
+    assert(range.empty);
+}
+
+
+/++
+    Takes an integral value, converts it to the given endianness, and writes it
+    to the given range of $(D ubyte)s as a sequence of $(D T.sizeof) $(D ubyte)s
+    starting at index. $(D hasSlicing!R) must be $(D true).
+
+    Parems:
+        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        endianness = The endianness to write the bytes in.
+        range = The range to write to.
+        index = The index to start writing to. If index is a pointer, then it
+                is updated to the index after the bytes read.
+
+        Examples:
+--------------------
+//Bug# 8129 forces the casts. They shouldn't be necessary.
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    buffer.write!uint(29110231u, 0);
+    assert(buffer == [1, 188, 47, 215, 0, 0, 0]);
+
+    buffer.write!ushort(cast(ushort)927, 0);
+    assert(buffer == [3, 159, 47, 215, 0, 0, 0]);
+
+    buffer.write!ubyte(cast(ubyte)42, 0);
+    assert(buffer == [42, 159, 47, 215, 0, 0, 0]);
+}
+
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    buffer.write!uint(142700095u, 2);
+    assert(buffer == [0, 0, 8, 129, 110, 63, 0]);
+
+    buffer.write!ushort(cast(ushort)19839, 2);
+    assert(buffer == [0, 0, 77, 127, 110, 63, 0]);
+
+    buffer.write!ubyte(cast(ubyte)132, 2);
+    assert(buffer == [0, 0, 132, 127, 110, 63, 0]);
+}
+
+{
+    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+    size_t index = 0;
+    buffer.write!ushort(cast(ushort)261, &index);
+    assert(buffer == [1, 5, 0, 0, 0, 0, 0]);
+    assert(index == 2);
+
+    buffer.write!uint(369700095u, &index);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 0]);
+    assert(index == 6);
+
+    buffer.write!ubyte(cast(ubyte)8, &index);
+    assert(buffer == [1, 5, 22, 9, 44, 255, 8]);
+    assert(index == 7);
+}
+--------------------
+  +/
+void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
+    if(isIntegral!T &&
+       isForwardRange!R &&
+       hasSlicing!R &&
+       is(ElementType!R : ubyte))
+{
+    write!(T, endianness)(range, value, &index);
+}
+
+/++ Ditto +/
+void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
+    if(isIntegral!T &&
+       isForwardRange!R &&
+       hasSlicing!R &&
+       is(ElementType!R : ubyte))
+{
+    assert(index);
+
+    static if(endianness == Endian.bigEndian)
+        immutable bytes = nativeToBigEndian!T(value);
+    else
+        immutable bytes = nativeToLittleEndian!T(value);
+
+    immutable begin = *index;
+    immutable end = begin + T.sizeof;
+    *index = end;
+    range[begin .. end] = bytes[0 .. T.sizeof];
+}
+
+//Verify Example.
+unittest
+{
+    //Bug# 8129 forces the casts. They shouldn't be necessary.
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        buffer.write!uint(29110231u, 0);
+        assert(buffer == [1, 188, 47, 215, 0, 0, 0]);
+
+        buffer.write!ushort(cast(ushort)927, 0);
+        assert(buffer == [3, 159, 47, 215, 0, 0, 0]);
+
+        buffer.write!ubyte(cast(ubyte)42, 0);
+        assert(buffer == [42, 159, 47, 215, 0, 0, 0]);
+    }
+
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        buffer.write!uint(142700095u, 2);
+        assert(buffer == [0, 0, 8, 129, 110, 63, 0]);
+
+        buffer.write!ushort(cast(ushort)19839, 2);
+        assert(buffer == [0, 0, 77, 127, 110, 63, 0]);
+
+        buffer.write!ubyte(cast(ubyte)132, 2);
+        assert(buffer == [0, 0, 132, 127, 110, 63, 0]);
+    }
+
+    {
+        ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0];
+        size_t index = 0;
+        buffer.write!ushort(cast(ushort)261, &index);
+        assert(buffer == [1, 5, 0, 0, 0, 0, 0]);
+        assert(index == 2);
+
+        buffer.write!uint(369700095u, &index);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 0]);
+        assert(index == 6);
+
+        buffer.write!ubyte(cast(ubyte)8, &index);
+        assert(buffer == [1, 5, 22, 9, 44, 255, 8]);
+        assert(index == 7);
+    }
+}
+
+
+/++
+    Takes an integral value, converts it to the given endianness, and appends
+    it to the given range of $(D ubyte)s (using $(D put)) as a sequence of
+    $(D T.sizeof) $(D ubyte)s starting at index. $(D hasSlicing!R) must be
+    $(D true).
+
+    Parems:
+        T     = The integral type to convert the first $(D T.sizeof) bytes to.
+        endianness = The endianness to write the bytes in.
+        range = The range to append to.
+
+        Examples:
+--------------------
+//Bug# 8129 forces the casts. They shouldn't be necessary.
+auto buffer = appender!(const ubyte[])();
+buffer.append!ushort(cast(ushort)261);
+assert(buffer.data == [1, 5]);
+
+buffer.append!uint(369700095u);
+assert(buffer.data == [1, 5, 22, 9, 44, 255]);
+
+buffer.append!ubyte(cast(ubyte)8);
+assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
+--------------------
+  +/
+void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
+    if(isIntegral!T && isOutputRange!(R, ubyte))
+{
+    static if(endianness == Endian.bigEndian)
+        immutable bytes = nativeToBigEndian!T(value);
+    else
+        immutable bytes = nativeToLittleEndian!T(value);
+
+    put(range, bytes[]);
+}
+
+//Verify Example.
+unittest
+{
+    //Bug# 8129 forces the casts. They shouldn't be necessary.
+    auto buffer = appender!(const ubyte[])();
+    buffer.append!ushort(cast(ushort)261);
+    assert(buffer.data == [1, 5]);
+
+    buffer.append!uint(369700095u);
+    assert(buffer.data == [1, 5, 22, 9, 44, 255]);
+
+    buffer.append!ubyte(cast(ubyte)8);
+    assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
+}
+
+unittest
+{
+    import std.string;
+
+    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
+    {
+        auto toWrite = appender!(ubyte[])();
+        alias TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint) Types;
+        ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
+        assert(Types.length == values.length);
+
+        size_t index = 0;
+        size_t length = 0;
+        foreach(T; Types)
+        {
+            toWrite.append!T(cast(T)values[index++]);
+            length += T.sizeof;
+        }
+
+        auto toRead = toWrite.data;
+        assert(toRead.length == length);
+
+        index = 0;
+        foreach(T; Types)
+        {
+            assert(toRead.peek!T() == values[index], format("Failed Index: %s", index));
+            assert(toRead.peek!T(0) == values[index], format("Failed Index: %s", index));
+            assert(toRead.length == length,
+                   format("Failed Index [%s], Actual Length: %s", index, toRead.length));
+            assert(toRead.read!T() == values[index], format("Failed Index: %s", index));
+            length -= T.sizeof;
+            assert(toRead.length == length,
+                   format("Failed Index [%s], Actual Length: %s", index, toRead.length));
+            ++index;
+        }
+        assert(toRead.empty);
+    }
 }
