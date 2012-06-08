@@ -64,12 +64,13 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8080): 'alias this' causes toString to be shadowed by aliased object)
         $(LI $(BUGZILLA 8112): std.algorithm.fill must accept InputRange)
         $(LI $(BUGZILLA 8171): Broken std.algorithm.move for nested struct has no member)
+        $(LI $(BUGZILLA 8203): Use of std.regex.match() generates "not enough preallocated memory" error)
      )
  )
 
 $(VERSION 059, ddd mm, 2012, =================================================,
     $(WHATSNEW
-        $(LI std.array: replaceInto, an alternative for replace that outputs result directly 
+        $(LI std.array: replaceInto, an alternative for replace that outputs result directly
         to an output range, avoiding extra allocation.)
         $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
              have been removed. Please use std.datetime instead.)
