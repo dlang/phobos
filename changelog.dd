@@ -10,6 +10,8 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              scheduled for deprecation.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
+        $(LI std.bitmanip: Added peek, read, write, and append for converting
+             ranges of bytes to and from integral types.)
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
