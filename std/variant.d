@@ -765,7 +765,7 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         return fptr(OpID.compare, &store, &temp) == 0;
     }
 
@@ -780,7 +780,7 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         auto result = fptr(OpID.compare, &store, &temp);
         if (result == sizediff_t.min)
         {
@@ -1071,6 +1071,26 @@ public:
         }
         return 0;
     }
+}
+
+//Issue# 8195
+unittest
+{
+    struct S
+    {
+        int a;
+        long b;
+        string c;
+        real d;
+        bool e;
+    }
+
+    static assert(S.sizeof >= Variant.sizeof);
+    alias TypeTuple!(string, int, S) Types;
+    alias VariantN!(maxSize!Types, Types) MyVariant;
+
+    auto v = MyVariant(S.init);
+    assert(v == S.init);
 }
 
 /**
