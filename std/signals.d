@@ -127,7 +127,7 @@ void main()
     a.value = 5;                // so should not call o.watch()
     a.connect(&o.watch);        // connect again
     a.value = 6;                // should call o.watch()
-    delete o;                   // destroying o should automatically disconnect it
+    destroy(o);                 // destroying o should automatically disconnect it
     a.value = 7;                // should not call o.watch()
 }
 ---
@@ -339,9 +339,9 @@ unittest
     assert(o.captured_value == 6);
     assert(o.captured_msg == "setting new value");
 
-    // delete the underlying object and make sure it doesn't cause
+    // destroy the underlying object and make sure it doesn't cause
     // a crash or other problems
-    delete o;
+    destroy(o);
     a.value = 7;
 }
 
@@ -432,10 +432,10 @@ unittest {
         assert(o2.i == 32 && !o1.l && o2.str == "str2");
         assert(!o3.i && o3.l == 33 && o3.str == "str3");
 
-        // delete observers
-        delete o1;
-        delete o2;
-        delete o3;
+        // destroy observers
+        destroy(o1);
+        destroy(o2);
+        destroy(o3);
         a.value1 = 41;
         a.value2 = 42;
         a.value3 = 43;
@@ -514,10 +514,10 @@ unittest {
     assert(o5.i == 65 && !o4.l && o5.str == "str5");
     assert(!o6.i && o6.l == 66 && o6.str == "str6");
 
-    // delete observers
-    delete o4;
-    delete o5;
-    delete o6;
+    // destroy observers
+    destroy(o4);
+    destroy(o5);
+    destroy(o6);
     a.value4 = 44;
     a.value5 = 45;
     a.value6 = 46;
