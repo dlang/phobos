@@ -1512,11 +1512,25 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
     }
 }
 
-template isStreamingDevice(T)
+/**
+ * Indicates whether $(D T) is a file handle of some kind.
+ */
+template isFileHandle(T)
 {
-    enum isStreamingDevice = is(T : FILE*) ||
+    enum isFileHandle = is(T : FILE*) ||
         is(T : File);
 }
+
+unittest
+{
+    static assert(isFileHandle!(FILE*));
+    static assert(isFileHandle!(File));
+}
+
+/**
+ * $(RED Scheduled for deprecation. Please use $(D isFileHandle) instead.)
+ */
+alias isFileHandle isStreamingDevice;
 
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
