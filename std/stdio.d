@@ -2304,9 +2304,9 @@ extern(C) void std_stdio_static_this()
 //---------
 __gshared
 {
-    File stdin;
-    File stdout;
-    File stderr;
+    File stdin; /// The standard input stream.
+    File stdout; /// The standard output stream.
+    File stderr; /// The standard error stream.
 }
 
 unittest
