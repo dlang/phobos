@@ -52,6 +52,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7898): [CTFE] std.algorithm:copy fails when used with two arrays)
         $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
         $(LI $(BUGZILLA 7919): Sample code works on GDC but fails with DMD)
+        $(LI $(BUGZILLA 7937): Range iota.Result should be const where possible)
         $(LI $(BUGZILLA 7944): std.range.iota.popFront() cycles when the range is empty)
         $(LI $(BUGZILLA 7962): std.regex: Captures.length() returns incorrect value)
         $(LI $(BUGZILLA 7975): Incorrect quotes escaping in std.format)
