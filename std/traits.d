@@ -4264,26 +4264,63 @@ auto unsigned(T)(T x) if (isIntegral!T)
     else
     {
         static assert(T.min == 0, "Bug in either unsigned or isIntegral");
-        return x;
+        return cast(Unqual!T) x;
     }
 }
 
 unittest
 {
-    static assert(is(typeof(unsigned(1 + 1)) == uint));
+    foreach(T; TypeTuple!(byte, ubyte))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
+    }
+
+    foreach(T; TypeTuple!(short, ushort))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ushort));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
+    }
+
+    foreach(T; TypeTuple!(int, uint))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == uint));
+        static assert(is(typeof(unsigned(cast(const T)1)) == uint));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
+    }
+
+    foreach(T; TypeTuple!(long, ulong))
+    {
+        static assert(is(typeof(unsigned(cast(T)1)) == ulong));
+        static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
+        static assert(is(typeof(unsigned(cast(immutable T)1)) == ulong));
+    }
 }
 
 auto unsigned(T)(T x) if (isSomeChar!T)
 {
     // All characters are unsigned
     static assert(T.min == 0);
-    return x;
+    return cast(Unqual!T) x;
+}
+
+unittest
+{
+    foreach(T; TypeTuple!(char, wchar, dchar))
+    {
+        static assert(is(typeof(unsigned(cast(T)'A')) == T));
+        static assert(is(typeof(unsigned(cast(const T)'A')) == T));
+        static assert(is(typeof(unsigned(cast(immutable T)'A')) == T));
+    }
 }
 
 /**
 Returns the most negative value of the numeric type T.
 */
 template mostNegative(T)
+    if(isNumeric!T || isSomeChar!T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
@@ -4295,9 +4332,15 @@ template mostNegative(T)
 
 unittest
 {
-    static assert(mostNegative!(float) == -float.max);
-    static assert(mostNegative!(uint) == 0);
-    static assert(mostNegative!(long) == long.min);
+    static assert(mostNegative!float == -float.max);
+    static assert(mostNegative!double == -double.max);
+    static assert(mostNegative!real == -real.max);
+
+    foreach(T; TypeTuple!(byte, short, int, long))
+        static assert(mostNegative!T == T.min);
+
+    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
+        static assert(mostNegative!T == 0);
 }
 
 
