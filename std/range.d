@@ -3416,7 +3416,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                 {
                     if (ranges[i].empty) return true;
                 }
-                break;
+                return false;
             case StoppingPolicy.longest:
                 foreach (i, Unused; R)
                 {
@@ -3430,9 +3430,9 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                             ranges.field[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
                 }
-                break;
+                return ranges[0].empty;
             }
-            return false;
+            assert(false);
         }
     }
 
@@ -3776,6 +3776,16 @@ unittest
     sort!("a[0] < b[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
     assert(b == [2., 1, 3]);
+
+    a = [ 1, 2, 3 ];
+    b = [ 1., 2, 3 ];
+    sort!("a[0] > b[0]")(zip(StoppingPolicy.requireSameLength, a, b));
+    assert(a == [3, 2, 1]);
+    assert(b == [3, 2, 1]);
+
+    a = [];
+    b = [];
+    assert(zip(StoppingPolicy.requireSameLength, a, b).empty);
 
     // Test infiniteness propagation.
     static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
