@@ -1759,12 +1759,14 @@ unittest
     array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
+if (isDynamicArray!(E[]) &&
+    isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
+    isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     if (from.empty) return subject;
     auto balance = std.algorithm.find(subject, from.save);
     if (balance.empty) return subject;
-    auto app = appender!R1();
+    auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
     app.put(balance[from.length .. $]);
@@ -1796,6 +1798,14 @@ unittest
 
         assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
     }
+}
+
+//Bug# 8187
+unittest
+{
+    auto res = ["a", "a"];
+    assert(replace(res, "a", "b") == ["b", "b"]);
+    assert(replaceFirst(res, "a", "b") == ["b", "a"]);
 }
 
 /++
