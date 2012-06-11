@@ -44,6 +44,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 6926): std.process.system return wrong exit code)
         $(LI $(BUGZILLA 7022): File.byLine doesn't release file handle)
         $(LI $(BUGZILLA 7348): to!string(null) matches more than one template declaration)
+        $(LI $(BUGZILLA 7515): The new std.string.translate is slow for ASCII text)
         $(LI $(BUGZILLA 7660): toImpl conflict in std.conv)
         $(LI $(BUGZILLA 7796): std.typecons.Unique is using writeln without importing std.stdio.)
         $(LI $(BUGZILLA 7824): isInputRange fails to recognize inout(T)[])
