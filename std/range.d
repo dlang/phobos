@@ -4395,30 +4395,29 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
         @property bool empty() const { return current == pastLast; }
-        @property Value front() { assert(!empty); return current; }
+        @property inout(Value) front() inout { assert(!empty); return current; }
         alias front moveFront;
         void popFront() { assert(!empty); current += step; }
-        @property Value back() { assert(!empty); return pastLast - step; }
+        @property inout(Value) back() inout { assert(!empty); return pastLast - step; }
         alias back moveBack;
         void popBack() { assert(!empty); pastLast -= step; }
         @property auto save() { return this; }
-        Value opIndex(ulong n)
+        inout(Value) opIndex(ulong n) inout
         {
             assert(n < this.length);
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
-            return cast(Value) (current + step * n);
+            return cast(inout Value) (current + step * n);
         }
-        auto opSlice() { return this; }
-        auto opSlice(ulong lower, ulong upper)
+        inout(Result) opSlice() inout { return this; }
+        inout(Result) opSlice(ulong lower, ulong upper) inout
         {
             assert(upper >= lower && upper <= this.length);
 
-            auto ret = this;
-            ret.current += lower * step;
-            ret.pastLast -= (this.length - upper) * step;
-            return ret;
+            return cast(inout Result)Result(cast(Value)(current + lower * step),
+                                            cast(Value)(pastLast - (length - upper) * step),
+                                            step);
         }
         @property IndexType length() const
         {
@@ -4470,30 +4469,28 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             }
         }
         @property bool empty() const { return current == pastLast; }
-        @property Value front() { assert(!empty); return current; }
+        @property inout(Value) front() inout { assert(!empty); return current; }
         alias front moveFront;
         void popFront() { assert(!empty); ++current; }
-        @property Value back() { assert(!empty); return pastLast - 1; }
+        @property inout(Value) back() inout { assert(!empty); return pastLast - 1; }
         alias back moveBack;
         void popBack() { assert(!empty); --pastLast; }
         @property auto save() { return this; }
-        Value opIndex(ulong n)
+        inout(Value) opIndex(ulong n) inout
         {
             assert(n < this.length);
 
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
-            return cast(Value) (current + n);
+            return cast(inout Value) (current + n);
         }
-        auto opSlice() { return this; }
-        auto opSlice(ulong lower, ulong upper)
+        inout(Result) opSlice() inout { return this; }
+        inout(Result) opSlice(ulong lower, ulong upper) inout
         {
             assert(upper >= lower && upper <= this.length);
 
-            auto ret = this;
-            ret.current += lower;
-            ret.pastLast -= this.length - upper;
-            return ret;
+            return cast(inout Result)Result(cast(Value)(current + lower),
+                                            cast(Value)(pastLast - (length - upper)));
         }
         @property IndexType length() const
         {
@@ -4543,14 +4540,14 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             }
         }
         @property bool empty() const { return index == count; }
-        @property Value front() { assert(!empty); return start + step * index; }
+        @property Value front() const { assert(!empty); return start + step * index; }
         alias front moveFront;
         void popFront()
         {
             assert(!empty);
             ++index;
         }
-        @property Value back()
+        @property Value back() const
         {
             assert(!empty);
             return start + step * (count - 1);
@@ -4562,23 +4559,23 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             --count;
         }
         @property auto save() { return this; }
-        Value opIndex(size_t n)
+        Value opIndex(size_t n) const
         {
             assert(n < count);
             return start + step * (n + index);
         }
-        auto opSlice()
+        inout(Result) opSlice() inout
         {
             return this;
         }
-        auto opSlice(size_t lower, size_t upper)
+        inout(Result) opSlice(size_t lower, size_t upper) inout
         {
             assert(upper >= lower && upper <= count);
 
-            auto ret = this;
+            Result ret = this;
             ret.index += lower;
             ret.count = upper - lower + ret.index;
-            return ret;
+            return cast(inout Result)ret;
         }
         @property size_t length() const
         {
@@ -4708,6 +4705,50 @@ unittest
 {
     auto idx = new size_t[100];
     copy(iota(0, idx.length), idx);
+}
+
+unittest
+{
+    foreach(range; TypeTuple!(iota(2, 27, 4),
+                              iota(3, 9),
+                              iota(2.7, 12.3, .1),
+                              iota(3.2, 9.7)))
+    {
+        const cRange = range;
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
+
+    //The ptr stuff can't be done at compile time, so we unfortunately end
+    //up with some code duplication here.
+    auto arr = [0, 5, 3, 5, 5, 7, 9, 2, 0, 42, 7, 6];
+
+    {
+        const cRange = iota(arr.ptr, arr.ptr + arr.length, 3);
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
+
+    {
+        const cRange = iota(arr.ptr, arr.ptr + arr.length);
+        const e = cRange.empty;
+        const f = cRange.front;
+        const b = cRange.back;
+        const i = cRange[2];
+        const s1 = cRange[];
+        const s2 = cRange[0 .. 3];
+        const l = cRange.length;
+    }
 }
 
 /**
