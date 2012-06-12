@@ -1200,8 +1200,8 @@ Inserts $(D stuff) after range $(D r), which must be a range
 previously extracted from this container. Given that all ranges for a
 list end at the end of the list, this function essentially appends to
 the list and uses $(D r) as a potentially fast way to reach the last
-node in the list. (Ideally $(D r) is positioned near or at the last
-element of the list.)
+node in the list. Ideally $(D r) is positioned near or at the last
+element of the list.
 
 $(D stuff) can be a value convertible to $(D T) or a range of objects
 convertible to $(D T). The stable version behaves the same, but
@@ -1212,6 +1212,15 @@ Returns: The number of values inserted.
 
 Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
 $(D r) and $(D m) is the length of $(D stuff).
+
+Examples:
+--------------------
+auto sl = SList!string(["a", "b", "d"]);
+sl.insertAfter(sl[], "e"); // insert at the end (slowest)
+assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
+sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
+assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
+--------------------
      */
 
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
@@ -1409,6 +1418,16 @@ unittest
     auto r = take(s[], 2);
     assert(s.insertAfter(r, 5) == 1);
     assert(s == SList!int(1, 2, 5, 3, 4));
+}
+
+unittest
+{
+    // insertAfter documentation example
+    auto sl = SList!string(["a", "b", "d"]);
+    sl.insertAfter(sl[], "e"); // insert at the end (slowest)
+    assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
+    sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
+    assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
 unittest
