@@ -214,8 +214,8 @@ public:
             y.checkDivByZero();
             if (!isZero())
             {
-                sign ^= y.sign;
                 data = BigUint.div(data, y.data);
+                sign = isZero() ? false : sign ^ y.sign;
             }
         }
         else static if (op == "%")
