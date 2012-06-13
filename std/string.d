@@ -335,10 +335,10 @@ unittest
 
 
 /++
-    Returns a C-style 0-terminated string equivalent to $(D s). $(D s) must not
-    contain embedded $(D 0)'s as any C functions will treat the first $(D 0)
-    that it sees a the end of the string. I $(D s) is $(D null) or empty, then
-    a string containing only $(D '\0') is returned.
+    Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
+    must not contain embedded $(D '\0')'s as any C function will treat the first
+    $(D '\0') that it sees as the end of the string. If $(D s.empty) is
+    $(D true), then a string containing only $(D '\0') is returned.
 
     $(RED Important Note:) When passing a $(D char*) to a C function, and the C
     function keeps it around for any reason, make sure that you keep a reference
