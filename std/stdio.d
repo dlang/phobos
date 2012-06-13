@@ -343,7 +343,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
     }
 
 /** Returns $(D true) if the file is opened. */
-    @property bool isOpen() const
+    @property bool isOpen() const pure nothrow
     {
         return p !is null && p.handle;
     }
@@ -353,14 +353,14 @@ Returns $(D true) if the file is at end (see $(WEB
 cplusplus.com/reference/clibrary/cstdio/feof.html, feof)). The file
 must be opened, otherwise an exception is thrown.
  */
-    @property bool eof() const
+    @property bool eof() const pure
     {
         enforce(p && p.handle, "Calling eof() against an unopened file.");
         return .feof(cast(FILE*) p.handle) != 0;
     }
 
 /** Returns the name of the file, if any. */
-    @property string name() const
+    @property string name() const pure nothrow
     {
         return p.name;
     }
@@ -370,7 +370,7 @@ If the file is not opened, returns $(D false). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
-    @property bool error() const
+    @property bool error() const pure nothrow
     {
         return !p.handle || .ferror(cast(FILE*) p.handle);
     }
@@ -444,7 +444,7 @@ If the file is not opened, succeeds vacuously. Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
 _clearerr) for the file handle.
  */
-    void clearerr()
+    void clearerr() pure nothrow
     {
         p is null || p.handle is null ||
         .clearerr(p.handle);
@@ -919,7 +919,7 @@ File) never takes the initiative in closing the file. */
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
-    FILE* getFP()
+    FILE* getFP() pure
     {
         enforce(p && p.handle,
                 "Attempting to call getFP() on an unopened file");
@@ -1512,11 +1512,25 @@ void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
     }
 }
 
-template isStreamingDevice(T)
+/**
+ * Indicates whether $(D T) is a file handle of some kind.
+ */
+template isFileHandle(T)
 {
-    enum isStreamingDevice = is(T : FILE*) ||
+    enum isFileHandle = is(T : FILE*) ||
         is(T : File);
 }
+
+unittest
+{
+    static assert(isFileHandle!(FILE*));
+    static assert(isFileHandle!(File));
+}
+
+/**
+ * $(RED Scheduled for deprecation. Please use $(D isFileHandle) instead.)
+ */
+alias isFileHandle isStreamingDevice;
 
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
@@ -2304,9 +2318,9 @@ extern(C) void std_stdio_static_this()
 //---------
 __gshared
 {
-    File stdin;
-    File stdout;
-    File stderr;
+    File stdin; /// The standard input stream.
+    File stdout; /// The standard output stream.
+    File stderr; /// The standard error stream.
 }
 
 unittest
