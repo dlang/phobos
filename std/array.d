@@ -39,7 +39,7 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = uninitializedArray!(E[])(r.length);
+        auto result = uninitializedArray!(Unqual!(E)[])(r.length);
 
         size_t i = 0;
         foreach (e; r)
@@ -56,7 +56,7 @@ if (isIterable!Range && !isNarrowString!Range)
             }
             i++;
         }
-        return result;
+        return cast(E[])result;
     }
     else
     {
@@ -136,6 +136,34 @@ unittest
     assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
     assert(array("ABC") == "ABC"d);
     assert(array("ABC".dup) == "ABC"d.dup);
+}
+
+//Bug# 8233
+unittest
+{
+    assert(array("hello world"d) == "hello world"d);
+    immutable a = [1, 2, 3, 4, 5];
+    assert(array(a) == a);
+    const b = a;
+    assert(array(b) == a);
+
+    //To verify that the opAssign branch doesn't get screwed up by using Unqual.
+    struct S
+    {
+        ref S opAssign(S)(const ref S rhs)
+        {
+            i = rhs.i;
+            return this;
+        }
+
+        int i;
+    }
+
+    foreach(T; TypeTuple!(S, const S, immutable S))
+    {
+        auto arr = [T(1), T(2), T(3), T(4)];
+        assert(array(arr) == arr);
+    }
 }
 
 private template blockAttribute(T)
