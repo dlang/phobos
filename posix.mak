@@ -99,7 +99,7 @@ endif
 
 # Set CFLAGS
 ifeq ($(CC),cc)
-	CFLAGS += -m$(MODEL)
+	CFLAGS += -m$(MODEL) -fPIC
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -108,7 +108,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) -fPIC
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
