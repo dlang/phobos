@@ -71,6 +71,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8171): Broken std.algorithm.move for nested struct has no member)
         $(LI $(BUGZILLA 8195): Segfault when comparing a VariantN to a non-variant type which it holds)
         $(LI $(BUGZILLA 8203): Use of std.regex.match() generates "not enough preallocated memory" error)
+        $(LI $(BUGZILLA 8233): std.array.array fails to compile with ranges of immutable elements which have a length property)
      )
  )
 
