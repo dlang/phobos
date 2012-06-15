@@ -2542,6 +2542,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
+        bool _valid_current;
         void prepare()
         {
             for (;; _items.popFront())
@@ -2550,6 +2551,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 if (!_items.front.empty) break;
             }
             _current = _items.front;
+            _valid_current = true;
             _items.popFront();
         }
     public:
@@ -2566,7 +2568,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto empty()
             {
-                return _current.empty;
+                return !_valid_current || _current.empty;
             }
         }
         @property auto ref front()
@@ -2614,6 +2616,9 @@ unittest
     auto j = joiner(a);
     j.front() = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+
+    // bugzilla 8240
+    assert(equal(joiner([inputRangeObject("")]), ""));
 }
 
 // uniq
