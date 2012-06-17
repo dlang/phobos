@@ -4058,13 +4058,18 @@ unittest
         pool1.finish();
         assert(!tSlow.done);
         tSlow.yieldForce();
-        assert(pool1.status == TaskPool.PoolState.stopNow);
+        // Can't assert that pool1.status == PoolState.stopNow because status 
+        // doesn't change until after the "done" flag is set and the waiting
+        // thread is woken up.
 
         auto pool2 = new TaskPool();
         auto tSlow2 = task!slowFun();
         pool2.put(tSlow2);
         pool2.finish(true); // blocking
         assert(tSlow2.done);
+        
+        // This is correct because no thread will terminate unless pool2.status
+        // has already been set to stopNow.
         assert(pool2.status == TaskPool.PoolState.stopNow);
     }
 
