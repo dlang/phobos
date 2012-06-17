@@ -4057,9 +4057,9 @@ unittest
         pool1.put(tSlow);
         pool1.finish();
         assert(!tSlow.done);
-        tSlow.yieldForce();
-        slowFun(); // allow work loop time to notice there are no more tasks
-        assert(pool1.status == TaskPool.PoolState.stopNow);
+        // TODO: come up with a deterministic way for testing terminal state
+        // of TaskPool in this non-blocking case.
+        //assert(pool1.status == TaskPool.PoolState.stopNow);
 
         auto pool2 = new TaskPool();
         auto tSlow2 = task!slowFun();
