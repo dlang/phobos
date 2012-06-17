@@ -46,12 +46,12 @@ version (unittest)
 
     private @property string deleteme()
     {
-        static _deleteme = "deleteme.dmd.unittest";
+        static _deleteme = "deleteme.dmd.unittest.pid";
         static _first = true;
 
         if(_first)
         {
-            _deleteme = buildPath(tempDir(), _deleteme);
+            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(getpid());
             _first = false;
         }
 
