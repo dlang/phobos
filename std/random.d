@@ -61,6 +61,7 @@ module std.random;
 import std.algorithm, std.c.time, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
        core.thread, core.time;
+import std.string : format;
 
 version(unittest) import std.typetuple;
 
@@ -149,21 +150,21 @@ template isUniformRNG(Rng)
 
 /**
  * Test if Rng is seedable. The overload
- * taking a ElementType also makes sure that the Rng generates
+ * taking a SeedType also makes sure that the Rng can be seeded with SeedType.
+ * If SeedType is not an InputRange, additionally checks that the Rng generates
  * values of that type.
- *
  * A seedable random-number generator has the following additional features:
  * $(UL
  *   $(LI it has a 'seed(ElementType)' function)
  * )
  */
-template isSeedable(Rng, ElementType)
+template isSeedable(Rng, SeedType)
 {
-    enum bool isSeedable = isUniformRNG!(Rng, ElementType) &&
+    enum bool isSeedable = isUniformRNG!(Rng) &&
         is(typeof(
         {
-            Rng r = void;                 // can define a Rng object
-            r.seed(ElementType.init);     // can seed a Rng
+            Rng r = void;              // can define a Rng object
+            r.seed(SeedType.init);     // can seed a Rng
         }));
 }
 
@@ -173,7 +174,7 @@ template isSeedable(Rng)
     enum bool isSeedable = isUniformRNG!Rng &&
         is(typeof(
         {
-            Rng r = void;                       // can define a Rng object
+            Rng r = void;                     // can define a Rng object
             r.seed(typeof(r.front).init);     // can seed a Rng
         }));
 }
@@ -559,8 +560,11 @@ Parameter for the generator.
 
 /**
    Seeds a MersenneTwisterEngine object.
+   Note:
+   This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
+   internal states use the seed overload taking an InputRange.
 */
-    void seed(UIntType value = defaultSeed)
+    void seed()(UIntType value = defaultSeed)
     {
         static if (w == UIntType.sizeof * 8)
         {
@@ -583,6 +587,37 @@ Parameter for the generator.
             //mt[mti] &= ResultType.max;
             /* for >32 bit machines */
         }
+        popFront();
+    }
+
+/**
+   Seeds a MersenneTwisterEngine object using an InputRange.
+
+   Throws:
+   $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
+   The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
+   
+   Examples:
+   ----------------
+   Mt19937 gen;
+   gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
+   ----------------
+ */
+    void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    {
+        size_t j;
+        for(j = 0; j < n && !range.empty; ++j, range.popFront())
+        {
+            mt[j] = range.front;
+        }
+
+        mti = n;
+        if(range.empty && j < n)
+        {
+            throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"
+                " elements: Need %s elemnets.", n));
+        }
+
         popFront();
     }
 
@@ -691,9 +726,21 @@ unittest
     assert(isUniformRNG!(Mt19937, uint));
     assert(isSeedable!Mt19937);
     assert(isSeedable!(Mt19937, uint));
+    assert(isSeedable!(Mt19937, typeof(map!((a) => unpredictableSeed)(repeat(0)))));
     Mt19937 gen;
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
+}
+
+unittest
+{
+    Mt19937 gen;
+
+    assertThrown(gen.seed(map!((a) => unpredictableSeed)(repeat(0, 623))));
+
+    gen.seed(map!((a) => unpredictableSeed)(repeat(0, 624)));
+    //infinite Range
+    gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
 }
 
 unittest
@@ -1029,7 +1076,10 @@ and initialized to an unpredictable value for each thread.
     static bool initialized;
     if (!initialized)
     {
-        result = Random(unpredictableSeed);
+        static if(isSeedable!(Random, typeof(map!((a) => unpredictableSeed)(repeat(0)))))
+            result.seed(map!((a) => unpredictableSeed)(repeat(0)));
+        else
+            result = Random(unpredictableSeed);
         initialized = true;
     }
     return result;
