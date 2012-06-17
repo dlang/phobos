@@ -4058,6 +4058,7 @@ unittest
         pool1.finish();
         assert(!tSlow.done);
         tSlow.yieldForce();
+        slowFun(); // allow work loop time to notice there are no more tasks
         assert(pool1.status == TaskPool.PoolState.stopNow);
 
         auto pool2 = new TaskPool();
