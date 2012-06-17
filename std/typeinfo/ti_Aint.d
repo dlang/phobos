@@ -5,9 +5,11 @@ private import std.c.string;
 
 // int[]
 
-class TypeInfo_Ai : TypeInfo
+class TypeInfo_Ai : TypeInfo_Array
 {
     char[] toString() { return "int[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   int[] s = *cast(int[]*)p;
@@ -52,30 +54,9 @@ class TypeInfo_Ai : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (int[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(int);
-    }
-
-    size_t talign()
-    {
-        return (int[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

@@ -27,9 +27,11 @@ private import std.typeinfo.ti_creal;
 
 // creal[]
 
-class TypeInfo_Ac : TypeInfo
+class TypeInfo_Ac : TypeInfo_Array
 {
     char[] toString() { return "creal[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   creal[] s = *cast(creal[]*)p;
@@ -86,30 +88,9 @@ class TypeInfo_Ac : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (creal[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(creal);
-    }
-
-    size_t talign()
-    {
-        return (creal[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

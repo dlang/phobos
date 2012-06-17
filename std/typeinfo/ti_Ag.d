@@ -6,9 +6,11 @@ private import std.c.string;
 
 // byte[]
 
-class TypeInfo_Ag : TypeInfo
+class TypeInfo_Ag : TypeInfo_Array
 {
     char[] toString() { return "byte[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   byte[] s = *cast(byte[]*)p;
@@ -75,30 +77,9 @@ class TypeInfo_Ag : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (byte[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(byte);
-    }
-
-    size_t talign()
-    {
-        return (byte[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

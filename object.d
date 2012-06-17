@@ -116,6 +116,18 @@ class TypeInfo_Pointer : TypeInfo
 
 class TypeInfo_Array : TypeInfo
 {
+    char[] toString();
+    int opEquals(Object o);
+    hash_t getHash(void *p);
+    int equals(void *p1, void *p2);
+    int compare(void *p1, void *p2);
+    size_t tsize();
+    void swap(void *p1, void *p2);
+    TypeInfo next();
+    uint flags();
+    size_t talign();
+    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2);
+
     TypeInfo value;
 }
 

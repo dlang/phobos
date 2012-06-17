@@ -27,9 +27,11 @@ private import std.typeinfo.ti_float;
 
 // float[]
 
-class TypeInfo_Af : TypeInfo
+class TypeInfo_Af : TypeInfo_Array
 {
     char[] toString() { return "float[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   float[] s = *cast(float[]*)p;
@@ -82,30 +84,9 @@ class TypeInfo_Af : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (float[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(float);
-    }
-
-    size_t talign()
-    {
-        return (float[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

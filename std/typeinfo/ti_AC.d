@@ -2,8 +2,12 @@ module std.typeinfo.ti_AC;
 
 // Object[]
 
-class TypeInfo_AC : TypeInfo
+class TypeInfo_AC : TypeInfo_Array
 {
+    char[] toString() { return TypeInfo.toString(); }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
+
     hash_t getHash(void *p)
     {   Object[] s = *cast(Object[]*)p;
         hash_t hash = 0;
@@ -74,30 +78,9 @@ class TypeInfo_AC : TypeInfo
         return c;
     }
 
-    size_t tsize()
-    {
-        return (Object[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(Object);
-    }
-
-    size_t talign()
-    {
-        return (Object[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

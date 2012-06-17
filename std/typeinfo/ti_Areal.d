@@ -27,9 +27,11 @@ private import std.typeinfo.ti_real;
 
 // real[]
 
-class TypeInfo_Ae : TypeInfo
+class TypeInfo_Ae : TypeInfo_Array
 {
     char[] toString() { return "real[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   real[] s = *cast(real[]*)p;
@@ -84,30 +86,9 @@ class TypeInfo_Ae : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (real[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(real);
-    }
-
-    size_t talign()
-    {
-        return (real[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 

@@ -27,9 +27,11 @@ private import std.typeinfo.ti_double;
 
 // double[]
 
-class TypeInfo_Ad : TypeInfo
+class TypeInfo_Ad : TypeInfo_Array
 {
     char[] toString() { return "double[]"; }
+
+    int opEquals(Object o) { return TypeInfo.opEquals(o); }
 
     hash_t getHash(void *p)
     {   double[] s = *cast(double[]*)p;
@@ -83,30 +85,9 @@ class TypeInfo_Ad : TypeInfo
         return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
-    {
-        return (double[]).sizeof;
-    }
-
-    uint flags()
-    {
-        return 1;
-    }
-
     TypeInfo next()
     {
         return typeid(double);
-    }
-
-    size_t talign()
-    {
-        return (double[]).alignof;
-    }
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(size_t);
-        //arg2 = typeid(void*);
-        return 0;
     }
 }
 
