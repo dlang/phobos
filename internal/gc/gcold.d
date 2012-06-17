@@ -930,7 +930,7 @@ void* _d_arrayliteral(size_t size, size_t length, ...)
  * Support for array.dup property.
  */
 
-extern (C) void[] _adDup(Array2 a, int szelem)
+extern (C) void[] _adDup(void[] a, int szelem)
     out (result)
     {
         assert(memcmp((*cast(Array2*)&result).ptr, a.ptr, a.length * szelem) == 0);

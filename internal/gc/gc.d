@@ -1425,7 +1425,7 @@ struct Array2
 }
 
 extern (C)
-array_t _adDupT(TypeInfo ti, Array2 a)
+array_t _adDupT(TypeInfo ti, void[] a)
     out (result)
     {
         auto sizeelem = ti.next.tsize();                // array element size

@@ -230,7 +230,7 @@ unittest
  * Support for array.reverse property.
  */
 
-extern (C) void[] _adReverse(Array a, size_t szelem)
+extern (C) void[] _adReverse(void[] a, size_t szelem)
     out (result)
     {
         assert(result is *cast(void[]*)(&a));
@@ -468,7 +468,7 @@ unittest
  *      0       not equal
  */
 
-extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
+extern (C) int _adEq(void[] a1, void[] a2, TypeInfo ti)
 {
     //printf("_adEq(a1.length = %d, a2.length = %d)\n", a1.length, a2.length);
     if (a1.length != a2.length)
@@ -496,7 +496,7 @@ extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
     return 1;                   // equal
 }
 
-extern (C) int _adEq2(Array a1, Array a2, TypeInfo ti)
+extern (C) int _adEq2(void[] a1, void[] a2, TypeInfo ti)
 {
     //printf("_adEq2(a1.length = %d, a2.length = %d)\n", a1.length, a2.length);
     if (a1.length != a2.length)
@@ -525,7 +525,7 @@ unittest
 
 version (none)
 {
-extern (C) int _adEqBit(Array a1, Array a2)
+extern (C) int _adEqBit(void[] a1, void[] a2)
 {   size_t i;
 
     if (a1.length != a2.length)
@@ -568,7 +568,7 @@ unittest
  * Support for array compare test.
  */
 
-extern (C) int _adCmp(Array a1, Array a2, TypeInfo ti)
+extern (C) int _adCmp(void[] a1, void[] a2, TypeInfo ti)
 {
     //printf("adCmp()\n");
     auto len = a1.length;
@@ -598,7 +598,7 @@ extern (C) int _adCmp(Array a1, Array a2, TypeInfo ti)
     return (a1.length > a2.length) ? 1 : -1;
 }
 
-extern (C) int _adCmp2(Array a1, Array a2, TypeInfo ti)
+extern (C) int _adCmp2(void[] a1, void[] a2, TypeInfo ti)
 {
     //printf("_adCmp2(a1.length = %d, a2.length = %d)\n", a1.length, a2.length);
     return ti.compare(&a1, &a2);
@@ -625,7 +625,7 @@ unittest
  * Support for array compare test.
  */
 
-extern (C) int _adCmpChar(Array a1, Array a2)
+extern (C) int _adCmpChar(void[] a1, void[] a2)
 {
 version (D_InlineAsm_X86)
 {
@@ -772,7 +772,7 @@ unittest
 
 version (none)
 {
-extern (C) int _adCmpBit(Array a1, Array a2)
+extern (C) int _adCmpBit(void[] a1, void[] a2)
 {
     int len;
     uint i;
