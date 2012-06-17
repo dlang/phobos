@@ -2498,7 +2498,15 @@ private struct DirIteratorImpl
 
         bool mayStepIn()
         {
-            return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
+            try
+            {
+                return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
+            }
+            catch (Exception)
+            {
+                // Entry may have disappeared
+            }
+            return false;
         }
     }
     else version(Posix)
@@ -2687,7 +2695,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
 unittest
 {
-    string testdir = "deleteme.dmd.unittest.std.file"; // needs to be relative
+    string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(getpid()); // needs to be relative
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);
