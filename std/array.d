@@ -39,7 +39,7 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = uninitializedArray!(E[])(r.length);
+        auto result = uninitializedArray!(Unqual!(E)[])(r.length);
 
         size_t i = 0;
         foreach (e; r)
@@ -56,7 +56,7 @@ if (isIterable!Range && !isNarrowString!Range)
             }
             i++;
         }
-        return result;
+        return cast(E[])result;
     }
     else
     {
@@ -136,6 +136,34 @@ unittest
     assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
     assert(array("ABC") == "ABC"d);
     assert(array("ABC".dup) == "ABC"d.dup);
+}
+
+//Bug# 8233
+unittest
+{
+    assert(array("hello world"d) == "hello world"d);
+    immutable a = [1, 2, 3, 4, 5];
+    assert(array(a) == a);
+    const b = a;
+    assert(array(b) == a);
+
+    //To verify that the opAssign branch doesn't get screwed up by using Unqual.
+    struct S
+    {
+        ref S opAssign(S)(const ref S rhs)
+        {
+            i = rhs.i;
+            return this;
+        }
+
+        int i;
+    }
+
+    foreach(T; TypeTuple!(S, const S, immutable S))
+    {
+        auto arr = [T(1), T(2), T(3), T(4)];
+        assert(array(arr) == arr);
+    }
 }
 
 private template blockAttribute(T)
@@ -913,23 +941,6 @@ unittest // bugzilla 6874
     assert(GC.addrOf(&b[0]) == GC.addrOf(&b[$-1]));
 }
 
-/++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(LREF insertInPlace) instead.)
-
-    Same as $(XREF array, insertInPlace).
-  +/
-deprecated void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
-if (isInputRange!Range && is(ElementEncodingType!Range : T))
-{
-    insertInPlace(array, pos, stuff);
-}
-
-/// Ditto
-void insert(T)(ref T[] array, size_t pos, T stuff)
-{
-    insertInPlace(array, pos, stuff);
-}
 
 /++
     Returns whether the $(D front)s of $(D lhs) and $(D rhs) both refer to the
@@ -1444,33 +1455,52 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
     if (from.empty) return subject;
-    auto app = appender!(E[])();
 
+    auto balance = std.algorithm.find(subject, from.save);
+    if (balance.empty)
+        return subject;
+
+    auto app = appender!(E[])();
+    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(to.save);
+    replaceInto(app, balance[from.length .. $], from, to);
+
+    return app.data;
+}
+
+/++
+    Same as above, but outputs the result via OutputRange $(D sink). 
+    If no match is found the original array is transfered to $(D sink) as is.
++/
+void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
+if (isOutputRange!(Sink, E) && isDynamicArray!(E[]) 
+    && isForwardRange!R1 && isForwardRange!R2
+    && (hasLength!R2 || isSomeString!R2))
+{
+    if (from.empty)
+    {
+        sink.put(subject);
+        return;
+    }
     for (;;)
     {
         auto balance = std.algorithm.find(subject, from.save);
         if (balance.empty)
         {
-            if (app.data.empty) return subject;
-            app.put(subject);
+            sink.put(subject);
             break;
         }
-        app.put(subject[0 .. subject.length - balance.length]);
-        app.put(to.save);
+        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(to.save);
         subject = balance[from.length .. $];
     }
-
-    return app.data;
 }
 
 unittest
 {
     debug(std_array) printf("array.replace.unittest\n");
 
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-
-    foreach (S; TestTypes)
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         auto s = to!S("This is a foo foo list");
         auto from = to!S("foo");
@@ -1491,6 +1521,25 @@ unittest
 
     immutable s = "This is a foo foo list";
     assert(replace(s, "foo", "silly") == "This is a silly silly list");
+}
+
+unittest
+{
+    struct CheckOutput(C)
+    {
+        C[] desired;
+        this(C[] arr){ desired = arr; }
+        void put(C[] part){ assert(skipOver(desired, part)); }
+    }
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {
+        alias typeof(S.init[0]) Char;
+        S s = to!S("yet another dummy text, yet another ...");
+        S from = to!S("yet another");
+        S into = to!S("some");
+        replaceInto(CheckOutput!(Char)(to!S("some dummy text, some ..."))
+                    , s, from, into);
+    }
 }
 
 /+
@@ -1733,29 +1782,19 @@ unittest
 }
 
 /++
-    $(RED Deprecated. It will be removed in May 2012.
-          Please use $(LREF replaceInPlace) instead.)
-
-    Same as $(XREF array, replaceInPlace).
-  +/
-deprecated void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-if (isDynamicArray!Range && is(ElementType!Range : T))
-{
-    replaceInPlace(array, from, to, stuff);
-}
-
-/++
     Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
     new array without changing the contents of $(D subject), or the original
     array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isInputRange!R2)
+if (isDynamicArray!(E[]) &&
+    isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
+    isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     if (from.empty) return subject;
     auto balance = std.algorithm.find(subject, from.save);
     if (balance.empty) return subject;
-    auto app = appender!R1();
+    auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);
     app.put(to.save);
     app.put(balance[from.length .. $]);
@@ -1787,6 +1826,14 @@ unittest
 
         assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
     }
+}
+
+//Bug# 8187
+unittest
+{
+    auto res = ["a", "a"];
+    assert(replace(res, "a", "b") == ["b", "b"]);
+    assert(replaceFirst(res, "a", "b") == ["b", "a"]);
 }
 
 /++
@@ -1925,7 +1972,7 @@ Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
 appending will reallocate, $(D capacity) returns $(D 0).
  */
-    @property size_t capacity()
+    @property size_t capacity() const
     {
         return _data ? _data.capacity : 0;
     }
@@ -1933,7 +1980,7 @@ appending will reallocate, $(D capacity) returns $(D 0).
 /**
 Returns the managed array.
  */
-    @property T[] data()
+    @property inout(T)[] data() inout
     {
         return cast(typeof(return))(_data ? _data.arr : null);
     }
@@ -2146,7 +2193,7 @@ Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).  If any
 appending will reallocate, $(D capacity) returns $(D 0).
  */
-    @property size_t capacity()
+    @property size_t capacity() const
     {
         return impl.capacity;
     }
@@ -2154,7 +2201,7 @@ appending will reallocate, $(D capacity) returns $(D 0).
 /**
 Returns the managed array.
  */
-    @property T[] data()
+    @property inout(T)[] data() inout
     {
         return impl.data;
     }
@@ -2192,8 +2239,12 @@ unittest
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
 
-    auto app3 = appender([]);
-    app3.shrinkTo(0);
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3.data == [1, 2, 3]);
+
+    auto app4 = appender([]);
+    app4.shrinkTo(0);
 
     // Issue 5663 tests
     {
@@ -2245,6 +2296,10 @@ unittest
     app2.shrinkTo(3);
     assert(app2.data == [ 1, 2, 3 ]);
     assertThrown(app2.shrinkTo(5));
+
+    const app3 = app2;
+    assert(app3.capacity >= 3);
+    assert(app3.data == [1, 2, 3]);
 }
 
 /*

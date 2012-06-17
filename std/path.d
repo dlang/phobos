@@ -28,6 +28,10 @@
     $(LREF isValidFilename) and $(LREF isValidPath) functions to check
     this.
 
+    Most functions do not perform any memory allocations, and if a string is
+    returned, it is usually a slice of an input string.  If a function
+    allocates, this is explicitly mentioned in the documentation.
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
@@ -59,6 +63,7 @@ version(Posix)
     import core.stdc.errno;
     import core.sys.posix.pwd;
     import core.sys.posix.stdlib;
+    private import core.exception : onOutOfMemoryError;
 }
 
 
@@ -84,7 +89,7 @@ else static assert (0, "unsupported platform");
 
 
 
-/** Determine whether the given character is a directory separator.
+/** Determines whether the given character is a directory separator.
 
     On Windows, this includes both $(D '\') and $(D '/').
     On POSIX, it's just $(D '/').
@@ -97,7 +102,7 @@ bool isDirSeparator(dchar c)  @safe pure nothrow
 }
 
 
-/*  Determine whether the given character is a drive separator.
+/*  Determines whether the given character is a drive separator.
 
     On Windows, this is true if c is the ':' character that separates
     the drive letter from the rest of the path.  On POSIX, this always
@@ -250,7 +255,8 @@ else static assert (0);
     ---
 
     Note:
-    This function only strips away the specified suffix.  If you want
+    This function $(I only) strips away the specified suffix, which
+    doesn't necessarily have to represent an extension.  If you want
     to remove the extension from a path, regardless of what the extension
     is, use $(LREF stripExtension).
     If you want the filename without leading directories and without
@@ -352,6 +358,11 @@ unittest
 
 /** Returns the directory part of a path.  On Windows, this
     includes the drive letter if present.
+
+    This function performs a memory allocation if and only if $(D path)
+    is mutable and does not have a directory (in which case a new mutable
+    string is needed to hold the returned current-directory symbol,
+    $(D ".")).
 
     Examples:
     ---
@@ -564,7 +575,8 @@ unittest
 
 
 
-/** Strip the drive from a Windows path.  On POSIX, this is a noop.
+/** Strips the drive from a Windows path.  On POSIX, the path is returned
+    unaltered.
 
     Example:
     ---
@@ -621,7 +633,7 @@ private sizediff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
 
 
 
-/** Get the _extension part of a file name, including the dot.
+/** Returns the _extension part of a file name, including the dot.
 
     If there is no _extension, $(D null) is returned.
 
@@ -683,7 +695,7 @@ unittest
 
 
 
-/** Return the path with the extension stripped off.
+/** Returns the path with the extension stripped off.
 
     Examples:
     ---
@@ -741,14 +753,16 @@ unittest
 
 
 
-/** Set the extension of a filename.
+/** Returns a string containing the _path given by $(D path), but where
+    the extension has been set to $(D ext).
 
     If the filename already has an extension, it is replaced.   If not, the
-    extension is simply appended to the filename.  Including the dot in the
-    extension is optional.
+    extension is simply appended to the filename.  Including a leading dot
+    in $(D ext) is optional.
 
     This function normally allocates a new string (the possible exception
-    being case when path is immutable and doesn't already have an extension).
+    being the case when path is immutable and doesn't already have an
+    extension).
 
     Examples:
     ---
@@ -820,8 +834,8 @@ unittest
 
 
 
-/** Set the extension of a filename, but only if it doesn't
-    already have one.
+/** Returns the _path given by $(D path), with the extension given by
+    $(D ext) appended if the path doesn't already have one.
 
     Including the dot in the extension is optional.
 
@@ -874,12 +888,14 @@ unittest
 
 
 
-/** Joins one or more path components.
+/** Combines one or more path components.
 
     The given path components are concatenated with each other,
     and if necessary, directory separators are inserted between
-    them. If any of the path components are rooted (see
+    them. If any of the path components are rooted (as defined by
     $(LREF isRooted)) the preceding path components will be dropped.
+
+    This function always allocates memory to hold the resulting path.
 
     Examples:
     ---
@@ -900,11 +916,11 @@ unittest
     ---
 */
 immutable(C)[] buildPath(C)(const(C[])[] paths...)
-    //TODO: @safe pure nothrow (because of reduce() and to())
+    @safe pure //TODO: nothrow (because of reduce() and to())
     if (isSomeChar!C)
 {
     static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
-        @trusted //TODO: pure nothrow (because of to())
+        @trusted pure //TODO: nothrow (because of to())
     {
         if (rhs.empty) return to!(typeof(return))(lhs);
         if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
@@ -977,6 +993,8 @@ unittest
     On Windows, slashes are replaced with backslashes.
 
     Note that this function does not resolve symbolic links.
+
+    This function always allocates memory to hold the resulting path.
 
     Examples:
     ---
@@ -1381,7 +1399,7 @@ unittest
 
 unittest
 {
-    // 7397
+    // Test for issue 7397
     string[] ary = ["a", "b"];
     version (Posix)
     {
@@ -1602,8 +1620,7 @@ unittest
     }
 
     // CTFE
-    // Fails due to BUG 6416
-    //static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    static assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 }
 
 
@@ -1742,16 +1759,18 @@ unittest
 
 
 
-/** Translate $(D path) into an absolute _path.
+/** Translates $(D path) into an absolute _path.
 
-    This means:
-    $(UL
+    The following algorithm is used:
+    $(OL
         $(LI If $(D path) is empty, return $(D null).)
         $(LI If $(D path) is already absolute, return it.)
         $(LI Otherwise, append $(D path) to $(D base) and return
             the result. If $(D base) is not specified, the current
             working directory is used.)
     )
+    The function allocates memory if and only if it gets to the third stage
+    of this algorithm.
 
     Examples:
     ---
@@ -1773,13 +1792,14 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string absolutePath(string path, string base = getcwd())
-    // TODO: @safe (BUG 6405) pure (because of buildPath())
+string absolutePath(string path, lazy string base = getcwd())
+    @safe pure
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
-    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
-    return buildPath(base, path);
+    immutable baseVar = base;
+    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
+    return buildPath(baseVar, path);
 }
 
 
@@ -1808,7 +1828,7 @@ unittest
 
 
 
-/** Translate $(D path) into a relative _path.
+/** Translates $(D path) into a relative _path.
 
     The returned _path is relative to $(D base), which is by default
     taken to be the current working directory.  If specified,
@@ -1832,6 +1852,8 @@ unittest
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
+    The function allocates memory if and only if it reaches the third stage
+    of the above algorithm.
 
     Examples:
     ---
@@ -1860,17 +1882,18 @@ unittest
     $(D Exception) if the specified _base directory is not absolute.
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
-    (string path, string base = getcwd())
+    (string path, lazy string base = getcwd())
     //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
     if (!isAbsolute(path)) return path;
-    if (!isAbsolute(base)) throw new Exception("Base directory must be absolute");
+    immutable baseVar = base;
+    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
 
     // Find common root with current working directory
     string result;
-    if (!__ctfe) result.reserve(base.length + path.length);
+    if (!__ctfe) result.reserve(baseVar.length + path.length);
 
-    auto basePS = pathSplitter(base);
+    auto basePS = pathSplitter(baseVar);
     auto pathPS = pathSplitter(path);
     if (filenameCmp!cs(basePS.front, pathPS.front) != 0) return path;
 
@@ -1920,8 +1943,8 @@ unittest
         assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
         assertThrown(relativePath("/foo", "bar"));
 
-        // TODO: pathSplitter() is not CTFEable
-        //static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        // CTFE
+        static assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
     }
     else version (Windows)
     {
@@ -1935,8 +1958,8 @@ unittest
         assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
         assertThrown(relativePath(`c:\foo`, "bar"));
 
-        // TODO: pathSplitter() is not CTFEable
-        //static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        // CTFE
+        static assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
     }
     else static assert (0);
 }
@@ -1944,7 +1967,7 @@ unittest
 
 
 
-/** Compare filename characters and return $(D < 0) if $(D a < b), $(D 0) if
+/** Compares filename characters and return $(D < 0) if $(D a < b), $(D 0) if
     $(D a == b) and $(D > 0) if $(D a > b).
 
     This function can perform a case-sensitive or a case-insensitive
@@ -2015,7 +2038,7 @@ unittest
 
 
 
-/** Compare file names and return
+/** Compares file names and returns
     $(D < 0) if $(D filename1 < filename2),
     $(D 0) if $(D filename1 == filename2) and
     $(D > 0) if $(D filename1 > filename2).
@@ -2587,6 +2610,8 @@ unittest
     modified if the user doesn't exist in the database or there is
     not enough memory to perform the query.
 
+    This function performs several memory allocations.
+
     Returns:
     $(D inputPath) with the tilde expanded, or just $(D inputPath)
     if it could not be expanded.
@@ -2795,7 +2820,6 @@ deprecated:
 version(Posix)
 {
     private import core.sys.posix.pwd;
-    private import core.exception : onOutOfMemoryError;
 }
 
 version(Windows)

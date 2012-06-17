@@ -21,6 +21,10 @@
 */
 
 /**************
+ * $(RED Warning: This module is considered out-dated and not up to Phobos'
+ *       current standards. It will remain until we have a suitable replacement,
+ *       but be aware that it will not remain long term.)
+ *
  * $(D SocketStream) is a stream for a blocking,
  * connected $(D Socket).
  *

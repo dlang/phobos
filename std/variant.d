@@ -71,6 +71,8 @@ import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
     import std.exception, std.stdio;
 //}
 
+@trusted:
+
 private template maxSize(T...)
 {
     static if (T.length == 1)
@@ -560,7 +562,7 @@ public:
      * ----
      */
 
-    @property bool hasValue() const
+    @property bool hasValue() const pure nothrow
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
@@ -608,7 +610,7 @@ public:
      * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
      */
 
-    @property bool convertsTo(T)()
+    @property bool convertsTo(T)() const
     {
         TypeInfo info = typeid(T);
         return fptr(OpID.testConversion, null, &info) == 0;
@@ -763,7 +765,7 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         return fptr(OpID.compare, &store, &temp) == 0;
     }
 
@@ -778,7 +780,7 @@ public:
         static if (is(T == VariantN))
             alias rhs temp;
         else
-            auto temp = Variant(rhs);
+            auto temp = VariantN(rhs);
         auto result = fptr(OpID.compare, &store, &temp);
         if (result == sizediff_t.min)
         {
@@ -1069,6 +1071,26 @@ public:
         }
         return 0;
     }
+}
+
+//Issue# 8195
+unittest
+{
+    struct S
+    {
+        int a;
+        long b;
+        string c;
+        real d;
+        bool e;
+    }
+
+    static assert(S.sizeof >= Variant.sizeof);
+    alias TypeTuple!(string, int, S) Types;
+    alias VariantN!(maxSize!Types, Types) MyVariant;
+
+    auto v = MyVariant(S.init);
+    assert(v == S.init);
 }
 
 /**

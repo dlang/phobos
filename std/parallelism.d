@@ -3064,56 +3064,26 @@ public:
         notifyAll();
     }
 
-    /*
-    Waits for all jobs to finish, then terminates all worker threads.  Blocks
-    until all worker threads have terminated.
-
-    Example:
-    ---
-    import std.file;
-
-    auto pool = new TaskPool();
-    auto task1 = task!read("foo.txt");
-    pool.put(task1);
-    auto task2 = task!read("bar.txt");
-    pool.put(task2);
-    auto task3 = task!read("baz.txt");
-    pool.put(task3);
-
-    // Call join() to guarantee that all tasks are done running, the worker
-    // threads have terminated and that the results of all of the tasks can
-    // be accessed without any synchronization primitives.
-    pool.join();
-
-    // Use spinForce() since the results are guaranteed to have been computed
-    // and spinForce() is the cheapest of the force functions.
-    auto result1 = task1.spinForce();
-    auto result2 = task2.spinForce();
-    auto result3 = task3.spinForce();
-    ---
-    */
-    version(none)
-    {
-        void join() @trusted
-        {
-            finish();
-            foreach(t; pool)
-            {
-                t.join();
-            }
-        }
-    }
-
     /**
-    Signals worker threads to terminate when the queue becomes empty.  Does
-    not block.
+    Signals worker threads to terminate when the queue becomes empty.
+
+    If blocking argument is true, wait for all worker threads to terminate
+    before returning.  This option might be used in applications where
+    task results are never consumed-- e.g. when $(D TaskPool) is employed as a
+    rudimentary scheduler for tasks which communicate by means other than
+    return values.
      */
-    void finish() @trusted
+    void finish(bool blocking = false) @trusted
     {
-        queueLock();
-        scope(exit) queueUnlock();
-        atomicCasUbyte(status, PoolState.running, PoolState.finishing);
-        notifyAll();
+        {
+            queueLock();
+            scope(exit) queueUnlock();
+            atomicCasUbyte(status, PoolState.running, PoolState.finishing);
+            notifyAll();
+        }
+        if (blocking) {
+            foreach(t; pool) t.join();
+        }
     }
 
     /// Returns the number of worker threads in the pool.
@@ -4077,6 +4047,31 @@ unittest
     assert(parallelSum == 499500);
     assert(wlRange[0..1][0] == wlRange[0]);
     assert(wlRange[1..2][0] == wlRange[1]);
+
+    // Test finish()
+    {
+        static void slowFun() { Thread.sleep(dur!"msecs"(1)); }
+
+        auto pool1 = new TaskPool();
+        auto tSlow = task!slowFun();
+        pool1.put(tSlow);
+        pool1.finish();
+        assert(!tSlow.done);
+        tSlow.yieldForce();
+        // Can't assert that pool1.status == PoolState.stopNow because status 
+        // doesn't change until after the "done" flag is set and the waiting
+        // thread is woken up.
+
+        auto pool2 = new TaskPool();
+        auto tSlow2 = task!slowFun();
+        pool2.put(tSlow2);
+        pool2.finish(true); // blocking
+        assert(tSlow2.done);
+        
+        // This is correct because no thread will terminate unless pool2.status
+        // has already been set to stopNow.
+        assert(pool2.status == TaskPool.PoolState.stopNow);
+    }
 
     // Test default pool stuff.
     assert(taskPool.size == totalCPUs - 1);

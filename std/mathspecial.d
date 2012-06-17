@@ -242,17 +242,17 @@ body {
 
 /** Inverse of complemented incomplete gamma integral
  *
- * Given a and y, the function finds x such that
+ * Given a and p, the function finds x such that
  *
  *  gammaIncompleteCompl( a, x ) = p.
  */
-real gammaIncompleteComplInverse(real a, real x)
+real gammaIncompleteComplInverse(real a, real p)
 in {
-  assert(x >= 0 && x <= 1);
+  assert(p >= 0 && p <= 1);
   assert(a > 0);
 }
 body {
-    return std.internal.math.gammafunction.gammaIncompleteComplInv(a, x);
+    return std.internal.math.gammafunction.gammaIncompleteComplInv(a, p);
 }
 
 

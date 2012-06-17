@@ -1424,7 +1424,7 @@ dstring toUTF32(in dchar[] s) @safe
 /++
     Returns a C-style zero-terminated string equivalent to $(D str). $(D str)
     must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees a the end of the string. If $(D str.empty) is
+    $(D '\0') that it sees as the end of the string. If $(D str.empty) is
     $(D true), then a string containing only $(D '\0') is returned.
 
     $(D toUTFz) accepts any type of string and is templated on the type of

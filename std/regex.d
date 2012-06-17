@@ -695,7 +695,7 @@ Trie[const(CodepointSet)] trieCache;
             return *p;
         if(trieCache.length == maxCachedTries)
         {
-            trieCache.clear();
+            // flush entries in trieCache
             trieCache = null;
         }
         return (trieCache[set] = Trie(set));
@@ -1139,7 +1139,7 @@ struct Parser(R, bool CTFE=false)
                 if(fixupStack.length == 1)
                 {//only root entry, effectively no fixup
                     len = cast(uint)ir.length + IRL!(IR.GotoEndOr);
-                    orStart = 0;   
+                    orStart = 0;
                 }
                 else
                 {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
@@ -1409,7 +1409,7 @@ struct Parser(R, bool CTFE=false)
             else
                 set.add(ch);
         }
-        
+
         static Operator twinSymbolOperator(dchar symbol)
         {
             switch(symbol)
@@ -1422,7 +1422,7 @@ struct Parser(R, bool CTFE=false)
                 return Operator.SymDifference;
             case '&':
                 return Operator.Intersection;
-            default: 
+            default:
                 assert(false);
             }
         }
@@ -1464,7 +1464,7 @@ struct Parser(R, bool CTFE=false)
                 case '&':
                     // then last is treated as normal char and added as implicit union
                     state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags); 
+                    addWithFlags(set, last, re_flags);
                     last = current;
                     break;
                 case '-': // still need more info
@@ -3268,16 +3268,28 @@ template BacktrackingMatcher(bool CTregex)
             memory = chunk[1..$];
         }
 
+        void initExternalMemory(void[] memBlock)
+        {
+            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
+            memory = cast(size_t[])memBlock;
+            memory[0] = 0; //hidden pointer
+            memory = memory[1..$];
+        }
+
         void initialize(ref RegEx program, Stream stream, void[] memBlock)
         {
             re = program;
             s = stream;
             exhausted = false;
-            trackers = arrayInChunk!(DataIndex)(re.ngroup+1, memBlock);
-            memory = cast(size_t[])memBlock;
-            memory[0] = 0; //hidden pointer
-            memory = memory[1..$];
+            initExternalMemory(memBlock);
             backrefed = null;
+        }
+
+        auto dupTo(void[] memory)
+        {
+            typeof(this) tmp = this;
+            tmp.initExternalMemory(memory);
+            return tmp;
         }
 
         //
@@ -4915,10 +4927,8 @@ enum OneShot { Fwd, Bwd };
         }
     }
 
-    this()(Regex!Char program, Stream stream, void[] memory)
+    void initExternalMemory(void[] memory)
     {
-        re = program;
-        s = stream;
         threadSize = getThreadSize(re);
         prepareFreeList(re.threadCount, memory);
         if(re.hotspotTableSize)
@@ -4926,6 +4936,13 @@ enum OneShot { Fwd, Bwd };
             merge = arrayInChunk!(DataIndex)(re.hotspotTableSize, memory);
             merge[] = 0;
         }
+    }
+
+    this()(Regex!Char program, Stream stream, void[] memory)
+    {
+        re = program;
+        s = stream;
+        initExternalMemory(memory);
         genCounter = 0;
     }
 
@@ -4940,11 +4957,12 @@ enum OneShot { Fwd, Bwd };
         freelist = matcher.freelist;
     }
 
-    this(this)
+    auto dupTo(void[] memory)
     {
-        merge[] = 0;
-        debug(fred_allocation) writeln("ThompsonVM postblit!");
-        //free list is  efectively shared ATM
+        typeof(this) tmp = this;//bitblit
+        tmp.initExternalMemory(memory);
+        tmp.genCounter = 0;
+        return tmp;
     }
 
     enum MatchResult{
@@ -5039,7 +5057,7 @@ enum OneShot { Fwd, Bwd };
             exhausted = atEnd || !(re.flags & RegexOption.global);
             //+ empty match advances the input
             if(!exhausted && matches[0].begin == matches[0].end)
-                next(); 
+                next();
         }
         return matched;
     }
@@ -5609,7 +5627,7 @@ enum OneShot { Fwd, Bwd };
         }
         if(!matched)
             evalFn!false(createStart(index, startPc), matches);
-   
+
         return (matched?MatchResult.Match:MatchResult.NoMatch);
     }
 
@@ -6261,7 +6279,7 @@ public:
     }
 
     ///Number of matches in this object.
-    @property size_t length() const { return b-f;  }
+    @property size_t length() const { return _empty ? 0 : b-f;  }
 
     ///A hook for compatibility with original std.regex.
     @property ref captures(){ return this; }
@@ -6303,7 +6321,7 @@ private:
     EngineType _engine;
     R _input;
     Captures!(R,EngineType.DataIndex) _captures;
-    void[] _memory;
+    void[] _memory;//is ref-counted
 
     this(RegEx)(RegEx prog, R input)
     {
@@ -6315,16 +6333,18 @@ private:
         _engine = EngineType(prog, Input!Char(input), _memory[size_t.sizeof..$]);
         _captures = Captures!(R,EngineType.DataIndex)(this);
         _captures._empty = !_engine.match(_captures.matches);
-        debug(fred_counter) writefln("RefCount (ctor): %d", *cast(size_t*)_memory.ptr);
+        debug(fred_allocation) writefln("RefCount (ctor): %x %d", _memory.ptr, counter);
     }
 
+    @property ref size_t counter(){ return *cast(size_t*)_memory.ptr; }
 public:
     this(this)
     {
         if(_memory.ptr)
         {
-            ++*cast(size_t*)_memory.ptr;
-            debug(fred_counter) writefln("RefCount (postblit): %d", *cast(size_t*)_memory.ptr);
+            ++counter;
+            debug(fred_allocation) writefln("RefCount (postblit): %x %d"
+                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
         }
     }
 
@@ -6332,8 +6352,9 @@ public:
     {
         if(_memory.ptr && --*cast(size_t*)_memory.ptr == 0)
         {
+            debug(fred_allocation) writefln("RefCount (dtor): %x %d"
+                                            , _memory.ptr, *cast(size_t*)_memory.ptr);
             free(cast(void*)_memory.ptr);
-            debug(fred_counter) writefln("RefCount (dtor): %d", *cast(size_t*)_memory.ptr);
         }
     }
 
@@ -6374,7 +6395,17 @@ public:
 
     ///ditto
     void popFront()
-    { //previous one can have escaped references from Capture object
+    {
+
+        if(counter != 1)
+        {//do cow magic first
+            counter--;//we abandon this reference
+            immutable size = EngineType.initialMemory(_engine.re)+size_t.sizeof;
+            _memory = (enforce(malloc(size))[0..size]);
+            _engine = _engine.dupTo(_memory[size_t.sizeof..size]);
+            counter = 1;//points to new chunk
+        }
+        //previous _captures can have escaped references from Capture object
         _captures.newMatches();
         _captures._empty = !_engine.match(_captures.matches);
     }
@@ -6545,8 +6576,8 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     Construct a new string from $(D input) by replacing each match with
     a string generated from match according to $(D format) specifier.
 
-    To replace all occurances use regex with "g" flag, otherwise
-    only first occurrence gets replaced.
+    To replace all occurrences use regex with "g" flag, otherwise
+    only the first occurrence gets replaced.
 
     Params:
     input = string to search
@@ -6557,7 +6588,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
     //Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replace("12000 + 42100 = 56000", com, ",") == "12,000 + 42,100 = 56,100");
+    assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
 
     The format string can reference parts of match using the following notation.
@@ -6723,7 +6754,7 @@ private:
     alias typeof(match(Range.init,RegEx.init)) Rx;
     Rx _match;
 
-    @trusted this(Range input, RegEx separator)  
+    @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
         separator.flags |= RegexOption.global;
@@ -6783,7 +6814,7 @@ public:
 }
 
 /**
-    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat). 
+    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
     Captured subexpressions have no effect on the resulting range.
 */
 public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
@@ -7515,7 +7546,7 @@ else
         assert(equal(split(s1, regex(", *")), w1[]));
     }
 
-    unittest 
+    unittest
     { // bugzilla 7141
         string pattern = `[a\--b]`;
         assert(match("-", pattern));
@@ -7530,7 +7561,7 @@ else
     unittest
     {//bugzilla 7300
         assert(!match("a"d, "aa"d));
-    }    
+    }
 
     unittest
     {//bugzilla 7674
@@ -7547,6 +7578,19 @@ else
             assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
             assert(split(str, re) == [to!S("a"), to!S("b")]);
         }
+    }
+    unittest
+    {//bugzilla 8203
+        string data = "
+        NAME   = XPAW01_STA:STATION
+        NAME   = XPAW01_STA
+        ";
+            auto uniFileOld = data;
+            auto r = regex(
+               r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
+            auto uniCapturesNew = match(uniFileOld, r);
+            for(int i=0; i<20; i++)
+                foreach (matchNew; uniCapturesNew) {}
     }
 }
 

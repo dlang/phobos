@@ -848,7 +848,7 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(range.front = filler)))
+if (isInputRange!Range && is(typeof(range.front = filler)))
 {
     alias ElementType!Range T;
     static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
@@ -895,6 +895,13 @@ unittest
     void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
     //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
+    // fill should accept InputRange
+    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    enum filler = uint.max;
+    InputRange range;
+    fill(range,filler);
+    foreach(value;range.arr)
+    	assert(value == filler);
 }
 
 /**
@@ -911,7 +918,7 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-if (isForwardRange!Range1 && isForwardRange!Range2
+if (isInputRange!Range1 && isForwardRange!Range2
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
     enforce(!filler.empty);
@@ -931,6 +938,12 @@ unittest
     int[] b = [1, 2];
     fill(a, b);
     assert(a == [ 1, 2, 1, 2, 1 ]);
+    // fill should accept InputRange
+    alias DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input) InputRange;
+    InputRange range;
+    fill(range,[1,2]);
+    foreach(i,value;range.arr)
+    	assert(value == (i%2==0?1:2));
 }
 
 /**
@@ -1079,7 +1092,7 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 {
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
-        struct Result
+        struct FilteredRange
         {
             alias Unqual!Range R;
             R _input;
@@ -1121,12 +1134,12 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
             {
                 @property auto save()
                 {
-                    return Result(_input);
+                    return typeof(this)(_input);
                 }
             }
         }
 
-        return Result(rs);
+        return FilteredRange(rs);
     }
 }
 
@@ -1332,13 +1345,24 @@ void move(T)(ref T source, ref T target)
         // Most complicated case. Destroy whatever target had in it
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
+
         memcpy(&target, &source, T.sizeof);
+
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
             static T empty;
-            memcpy(&source, &empty, T.sizeof);
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith("this"))
+            {
+                // If T is nested struct, keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
         }
     }
     else
@@ -1405,11 +1429,150 @@ unittest
 }
 
 /// Ditto
-T move(T)(ref T src)
+T move(T)(ref T source)
 {
-    T result=void;
-    move(src, result);
+    // Can avoid to check aliasing.
+
+    T result = void;
+    static if (is(T == struct))
+    {
+        // Can avoid destructing result.
+
+        memcpy(&result, &source, T.sizeof);
+
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+        {
+            static T empty;
+            static if (T.tupleof.length > 0 &&
+                       T.tupleof[$-1].stringof.endsWith("this"))
+            {
+                // If T is nested struct, keep original context pointer
+                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+            }
+            else
+            {
+                memcpy(&source, &empty, T.sizeof);
+            }
+        }
+    }
+    else
+    {
+        // Primitive data (including pointers and arrays) or class -
+        // assignment works great
+        result = source;
+    }
     return result;
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    Object obj1 = new Object;
+    Object obj2 = obj1;
+    Object obj3 = move(obj2);
+    assert(obj3 is obj1);
+
+    static struct S1 { int a = 1, b = 2; }
+    S1 s11 = { 10, 11 };
+    S1 s12 = move(s11);
+    assert(s11.a == 10 && s11.b == 11 && s12.a == 10 && s12.b == 11);
+
+    static struct S2 { int a = 1; int * b; }
+    S2 s21 = { 10, null };
+    s21.b = new int;
+    S2 s22 = move(s21);
+    assert(s21 == s22);
+
+    // Issue 5661 test(1)
+    static struct S3
+    {
+        static struct X { int n = 0; ~this(){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateDestructor!S3);
+    S3 s31;
+    s31.x.n = 1;
+    S3 s32 = move(s31);
+    assert(s31.x.n == 0);
+    assert(s32.x.n == 1);
+
+    // Issue 5661 test(2)
+    static struct S4
+    {
+        static struct X { int n = 0; this(this){n = 0;} }
+        X x;
+    }
+    static assert(hasElaborateCopyConstructor!S4);
+    S4 s41;
+    s41.x.n = 1;
+    S4 s42 = move(s41);
+    assert(s41.x.n == 0);
+    assert(s42.x.n == 1);
+}
+
+unittest//Issue 6217
+{
+    auto x = map!"a"([1,2,3]);
+    x = move(x);
+}
+
+unittest// Issue 8055
+{
+    static struct S
+    {
+        int x;
+        ~this()
+        {
+            assert(x == 0);
+        }
+    }
+    S foo(S s)
+    {
+        return move(s);
+    }
+    S a;
+    a.x = 0;
+    auto b = foo(a);
+    assert(b.x == 0);
+}
+
+unittest// Issue 8057
+{
+    int n = 10;
+    struct S
+    {
+        int x;
+        ~this()
+        {
+            // Access to enclosing scope
+            assert(n == 10);
+        }
+    }
+    S foo(S s)
+    {
+        // Move nested struct
+        return move(s);
+    }
+    S a;
+    a.x = 1;
+    auto b = foo(a);
+    assert(b.x == 1);
+
+    // Regression 8171
+    static struct Array(T)
+    {
+        // nested struct has no member
+        struct Payload
+        {
+            ~this() {}
+        }
+    }
+    Array!int.Payload x = void;
+    static assert(__traits(compiles, move(x)    ));
+    static assert(__traits(compiles, move(x, x) ));
 }
 
 // moveAll
@@ -2217,7 +2380,8 @@ unittest
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
-is a range.
+is a range. If you do not provide a separator, then the ranges are
+joined directly without anything in between them.
 
 Example:
 ----
@@ -2228,6 +2392,7 @@ assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
 assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
 assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
   "Mary...has...a...little...lamb"));
+assert(equal(joiner(["abc", "def"]), "abcdef"));
 ----
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
@@ -2359,6 +2524,7 @@ unittest
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+    assert(equal(joiner(["abc", "def"]), "abcdef"));
 }
 
 unittest
@@ -2368,6 +2534,7 @@ unittest
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
+/// Ditto
 auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
@@ -2376,6 +2543,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
+        bool _valid_current;
         void prepare()
         {
             for (;; _items.popFront())
@@ -2384,6 +2552,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 if (!_items.front.empty) break;
             }
             _current = _items.front;
+            _valid_current = true;
             _items.popFront();
         }
     public:
@@ -2400,7 +2569,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto empty()
             {
-                return _current.empty;
+                return !_valid_current || _current.empty;
             }
         }
         @property auto ref front()
@@ -2448,6 +2617,9 @@ unittest
     auto j = joiner(a);
     j.front() = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+
+    // bugzilla 8240
+    assert(equal(joiner([inputRangeObject("")]), ""));
 }
 
 // uniq
@@ -4114,6 +4286,13 @@ unittest
     assert(!skipOver(s1, "Ha"));
     assert(s1 == "Hello world");
     assert(skipOver(s1, "Hell") && s1 == "o world");
+
+    string[]  r1 = ["abc", "def", "hij"];
+    dstring[] r2 = ["abc"d];
+    assert(!skipOver!((a, b) => a.equal(b))(r1, ["def"d]));
+    assert(r1 == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r1, r2));
+    assert(r1 == ["def", "hij"]);
 }
 
 /**
@@ -4131,10 +4310,18 @@ if (is(typeof(binaryFun!pred(r.front, e))))
 
 unittest {
     auto s1 = "Hello world";
-    assert(!skipOver(s1, "Ha"));
+    assert(!skipOver(s1, 'a'));
     assert(s1 == "Hello world");
-    assert(skipOver(s1, "Hell") && s1 == "o world");
+    assert(skipOver(s1, 'H') && s1 == "ello world");
+
+    string[] r = ["abc", "def", "hij"];
+    dstring e = "abc"d;
+    assert(!skipOver!((a, b) => a.equal(b))(r, "def"d));
+    assert(r == ["abc", "def", "hij"]);
+    assert(skipOver!((a, b) => a.equal(b))(r, e));
+    assert(r == ["def", "hij"]);
 }
+
 
 /* (Not yet documented.)
 Consume all elements from $(D r) that are equal to one of the elements
@@ -4402,10 +4589,10 @@ auto commonPrefix(alias pred = "a == b", R1, R2)(R1 r1, R2 r2)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
     static if (isSomeString!R1 && isSomeString!R2
-            && (ElementEncodingType!R1).sizeof == (ElementEncodingType!R2).sizeof
+            && ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof
             || isRandomAccessRange!R1 && hasLength!R2)
     {
-        auto limit = min(r1.length, r2.length);
+        immutable limit = min(r1.length, r2.length);
         foreach (i; 0 .. limit)
         {
             if (!binaryFun!pred(r1[i], r2[i]))
@@ -4413,7 +4600,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
                 return r1[0 .. i];
             }
         }
-        return r1[0 .. 0];
+        return r1[0 .. limit];
     }
     else
     {
@@ -4430,6 +4617,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 unittest
 {
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
+    assert(commonPrefix("hello, ", "hello, world") == "hello, ");
     assert(equal(commonPrefix("hello, world", "hello, there"w), "hello, "));
     assert(equal(commonPrefix("hello, world"w, "hello, there"), "hello, "));
     assert(equal(commonPrefix("hello, world", "hello, there"d), "hello, "));
@@ -5425,9 +5613,11 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
         return target;
     }
+    if (__ctfe)
+        return genericImpl(source, target);
 
-    static if(isArray!Range1 && isArray!Range2 &&
-    is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
+    static if (isArray!Range1 && isArray!Range2 &&
+               is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
         immutable overlaps =
             (source.ptr >= target.ptr &&
@@ -5435,7 +5625,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             (target.ptr >= source.ptr &&
              target.ptr < source.ptr + source.length);
 
-        if(overlaps)
+        if (overlaps)
         {
             return genericImpl(source, target);
         }
@@ -5455,7 +5645,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     {
         return genericImpl(source, target);
     }
-
 }
 
 unittest
@@ -5481,6 +5670,17 @@ unittest
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         copy(a[5..10], a[4..9]);
         assert(a[4..9] == [6, 7, 8, 9, 10]);
+    }
+
+    {   // Test for bug 7898
+        enum v =
+        {
+            import std.algorithm;
+            int[] arr1 = [10, 20, 30, 40, 50];
+            int[] arr2 = arr1.dup;
+            copy(arr1, arr2);
+            return 35;
+        }();
     }
 }
 
@@ -6783,7 +6983,8 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
 {
     alias binaryFun!(less) lessFun;
-    static if (is(typeof(lessFun(r.front, r.front)) == bool))
+    alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
+    static if (is(LessRet == bool))
     {
         sortImpl!(lessFun, ss)(r);
         static if(is(typeof(text(r))))
@@ -8771,10 +8972,4 @@ unittest
 // First member is the item, second is the occurrence count
     //writeln(b[0]);
     assert(b[0] == tuple(4.0, 2u));
-}
-
-unittest//Issue 6217
-{
-    auto x = map!"a"([1,2,3]);
-    x = move(x);
 }

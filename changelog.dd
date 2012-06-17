@@ -1,6 +1,85 @@
-$(VERSION 059, ddd mm, 2012, =================================================,
+$(VERSION 060, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
+        $(LI Added std.file.tempDir which returns the path to a directory
+             where a program can put temporary files.)
+        $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
+             escapeWindowsArgument. Documented browse function.)
+        $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
+        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
+             scheduled for deprecation.)
+        $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
+             SetFunctionAttributes templates.)
+        $(LI std.bitmanip: Added peek, read, write, and append for converting
+             ranges of bytes to and from integral types.)
+        $(LI The overloads of std.conv.to which were scheduled for deprecation
+             because formattedWrite replaced them have now been deprecated.
+             Please use std.format.formattedWrite instead.)
+        $(LI The deprecated overloads of std.array.insert and std.array.replace
+             have been removed. Please use insertInPlace and replaceInPlace instead.)
+        $(LI The deprecated toISOExtendedString and fromISOExtendedString
+             functions in std.datetime have been removed. Please use
+             toISOExtString and fromISOExtString instead.)
+        $(LI The deprecated std.file.getTimesPosix has been removed.
+             Please use std.file.getTimes instead.)
+        $(LI The deprecated overloads of isFile, isDir, and isSymLink in
+             std.file which took uint have been removed. Please use
+             attrIsFile, attrIsDir, and attrIsSymlink instead.)
+        $(LI The deprecated std.file.DirEntry.timeStatusChanged has been removed.
+             Please use std.file.DirEntry.attributes to get at that information
+             if you need it.)
+        $(LI The deprecated std.contracts module has been removed. Please use
+             std.exception instead.)
+        $(LI The deprecated std.arg, std.bind, and std.loader modules have been
+             removed.)
+    )
+
+    $(LIBBUGSFIXED
+        $(LI $(BUGZILLA 4744): std.conv: string->enum doesn't look for longer match)
+        $(LI $(BUGZILLA 5650): A RedBlackTree performance problem)
+        $(LI $(BUGZILLA 6175): String corruption when passing static char arrays to std.conv)
+        $(LI $(BUGZILLA 6222): A problem with iota() using size_t)
+        $(LI $(BUGZILLA 6580): scoped classes are aligned incorrectly)
+        $(LI $(BUGZILLA 6595): std.string.format() and sformat() are obsolete)
+        $(LI $(BUGZILLA 6926): std.process.system return wrong exit code)
+        $(LI $(BUGZILLA 7022): File.byLine doesn't release file handle)
+        $(LI $(BUGZILLA 7348): to!string(null) matches more than one template declaration)
+        $(LI $(BUGZILLA 7515): The new std.string.translate is slow for ASCII text)
+        $(LI $(BUGZILLA 7660): toImpl conflict in std.conv)
+        $(LI $(BUGZILLA 7796): std.typecons.Unique is using writeln without importing std.stdio.)
+        $(LI $(BUGZILLA 7824): isInputRange fails to recognize inout(T)[])
+        $(LI $(BUGZILLA 7878): A problem with purity and general templated algorithms)
+        $(LI $(BUGZILLA 7898): [CTFE] std.algorithm:copy fails when used with two arrays)
+        $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
+        $(LI $(BUGZILLA 7919): Sample code works on GDC but fails with DMD)
+        $(LI $(BUGZILLA 7937): Range iota.Result should be const where possible)
+        $(LI $(BUGZILLA 7944): std.range.iota.popFront() cycles when the range is empty)
+        $(LI $(BUGZILLA 7962): std.regex: Captures.length() returns incorrect value)
+        $(LI $(BUGZILLA 7975): Incorrect quotes escaping in std.format)
+        $(LI $(BUGZILLA 7982): unsigned reverse iota broken)
+        $(LI $(BUGZILLA 8011): BigInt ++ and -- do wrong thing on negative numbers)
+        $(LI $(BUGZILLA 8015): std.typecons.Tuple does not support struct with alias method this)
+        $(LI $(BUGZILLA 8026): Fix or disallow randomShuffle() on fixed-sized arrays)
+        $(LI $(BUGZILLA 8037): hasElaborateDestructor is false for non-zero-length static array of structs with elaborate destructor)
+        $(LI $(BUGZILLA 8039): `scoped` doesn't call any elaborate destructors for struct fields)
+        $(LI $(BUGZILLA 8040): writeln(null) too)
+        $(LI $(BUGZILLA 8055): [Regression 2.059] std.algorithm.move corrupts moved object field)
+        $(LI $(BUGZILLA 8057): std.algorithm.move cannot use for nested struct)
+        $(LI $(BUGZILLA 8080): 'alias this' causes toString to be shadowed by aliased object)
+        $(LI $(BUGZILLA 8187): replaceFirst doesn't work for string[] haystack)
+        $(LI $(BUGZILLA 8112): std.algorithm.fill must accept InputRange)
+        $(LI $(BUGZILLA 8171): Broken std.algorithm.move for nested struct has no member)
+        $(LI $(BUGZILLA 8195): Segfault when comparing a VariantN to a non-variant type which it holds)
+        $(LI $(BUGZILLA 8203): Use of std.regex.match() generates "not enough preallocated memory" error)
+        $(LI $(BUGZILLA 8233): std.array.array fails to compile with ranges of immutable elements which have a length property)
+        $(LI $(BUGZILLA 8240): std.algorithm.joiner and empty inputRangeObject)
+     )
+ )
+
+$(VERSION 059, ddd mm, 2012, =================================================,
+    $(WHATSNEW
+        $(LI std.array: replaceInto, an alternative for replace that outputs result directly
+        to an output range, avoiding extra allocation.)
         $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
              have been removed. Please use std.datetime instead.)
         $(LI Several deprecated functions in std.file have been removed.)
@@ -45,6 +124,7 @@ $(VERSION 059, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7674): regex replace requires escaped format)
         $(LI $(BUGZILLA 7679): std.regex.split and splitter don't work w/ ctRegex)
         $(LI $(BUGZILLA 7718): regex and ctRegex produce different results)
+        $(LI $(BUGZILLA 6116): May not join spawn()'ed threads)
      )
  )
 
@@ -177,7 +257,7 @@ $(VERSION 056, ddd mm, 2011, =================================================,
 $(VERSION 055, ddd mm, 2011, =================================================,
 
     $(WHATSNEW
-      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved 
+      $(LI std.algorithm.copy now specializes on arrays for 10-80x improved
            performance.)
       $(LI std.path has been rewritten from scratch and has a completely new API.)
       $(LI std.utf.toUTFz allows you to get a zero-terminated string of any
