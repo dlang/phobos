@@ -151,8 +151,7 @@ template isUniformRNG(Rng)
 /**
  * Test if Rng is seedable. The overload
  * taking a SeedType also makes sure that the Rng can be seeded with SeedType.
- * If SeedType is not an InputRange, additionally checks that the Rng generates
- * values of that type.
+ *
  * A seedable random-number generator has the following additional features:
  * $(UL
  *   $(LI it has a 'seed(ElementType)' function)
