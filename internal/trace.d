@@ -537,6 +537,7 @@ static void trace_sympair_add(SymPair** psp, Symbol* s, uint count)
 
 static void trace_pro(string id)
 {
+    //printf("trace_pro(ptr = %p, length = %lld)\n", id.ptr, id.length);
     Stack* n;
     Symbol* s;
     timer_t starttime;
@@ -836,10 +837,12 @@ void _trace_pro_n()
         inc     RCX                     ;
         add     9*8[RSP],RAX            ;
         dec     RAX                     ;
-        push    RCX                     ;
-        push    RAX                     ;
+//        push    RCX                     ;
+//        push    RAX                     ;
+        mov     RDI,RAX                 ;
+        mov     RSI,RCX                 ;
         call    trace_pro               ;
-        add     RSP,16                  ;
+//        add     RSP,16                  ;
         pop     R11                     ;
         pop     R10                     ;
         pop     R9                      ;
@@ -907,10 +910,12 @@ void _trace_pro_n()
         inc     RCX                     ;
         add     9*8[RSP],RAX            ;
         dec     RAX                     ;
-        push    RCX                     ;
-        push    RAX                     ;
+//        push    RCX                     ;
+//        push    RAX                     ;
+        mov     RDI,RAX                 ;
+        mov     RSI,RCX                 ;
         call    trace_pro               ;
-        add     RSP,16                  ;
+//        add     RSP,16                  ;
         pop     R11                     ;
         pop     R10                     ;
         pop     R9                      ;

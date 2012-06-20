@@ -86,6 +86,16 @@ cdouble *_memset128(cdouble *p, cdouble value, size_t count)
     return pstart;
 }
 
+void[] *_memset128ii(void[] *p, void[] value, size_t count)
+{
+    void[] *pstart = p;
+    void[] *ptop;
+
+    for (ptop = &p[count]; p < ptop; p++)
+        *p = value;
+    return pstart;
+}
+
 real *_memset80(real *p, real value, size_t count)
 {
     real *pstart = p;
@@ -137,5 +147,3 @@ double *_memsetDouble(double *p, double value, size_t count)
         *p = value;
     return pstart;
 }
-
-

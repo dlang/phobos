@@ -85,14 +85,15 @@ void setMerge(bool flag)
     merge = flag;
 }
 
-extern (C) void _d_cover_register(string filename, BitArray valid, uint[] data)
+extern (C) void _d_cover_register(string filename, size_t[] valid, uint[] data)
 {
     //printf("_d_cover_register()\n");
     //printf("\tfilename = '%.*s'\n", filename.length, filename.ptr);
 
     Cover c;
     c.filename = filename;
-    c.valid = valid;
+    c.valid.ptr = valid.ptr;
+    c.valid.length = valid.length;
     c.data = data;
 
     gdata ~= c;
