@@ -1822,9 +1822,8 @@ unittest
 
     struct S4
     {
-        void opAssign(U)(auto ref U u)
-            if (!__traits(isRef, u))
-        {}
+        void opAssign(U)(U u) {}
+        @disable void opAssign(U)(ref U u);
     }
     static assert( hasElaborateAssign!S4);
 }
