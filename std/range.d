@@ -7039,12 +7039,12 @@ unittest
 
 
 /++
-    Wrapper which effectively allows you to pass a range by reference. Both the
-    original range and the RefRange will always have the exact same elements.
-    Any operation done on one will affect the other. So, for instance, if it's
-    passed to a function which would implicitly copy the original range if it
-    were passed to it, the original range is $(I not) copied but is consumed as
-    if it were a reference type.
+    Wrapper which effectively makes it possible to pass a range by reference.
+    Both the original range and the RefRange will always have the exact same
+    elements. Any operation done on one will affect the other. So, for instance,
+    if it's passed to a function which would implicitly copy the original range
+    if it were passed to it, the original range is $(I not) copied but is
+    consumed as if it were a reference type.
 
     Note that $(D save) works as normal and operates on a new range, so if
     $(D save) is ever called on the RefRange, then no operations on the saved

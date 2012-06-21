@@ -1,17 +1,19 @@
 $(VERSION 060, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
+        $(LI std.bitmanip: Added peek, read, write, and append for converting
+             ranges of bytes to and from integral types.)
         $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
         $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
              escapeWindowsArgument. Documented browse function.)
+        $(LI std.range: Added RefRange, which effectively makes it possible to
+             pass a range by reference.)
         $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
-        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
-             scheduled for deprecation.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
-        $(LI std.bitmanip: Added peek, read, write, and append for converting
-             ranges of bytes to and from integral types.)
+        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
+             scheduled for deprecation.)
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
