@@ -160,8 +160,14 @@ public:
         else static if (op=="%")
         {
             assert(y!=0, "Division by zero");
-            static assert(!is(T==long) && !is(T==ulong));
-            data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+            static if (is(const(T) == const(long)) || is( const(T) == const(ulong) ))
+            {
+                this %= BigInt(y);
+            }
+            else
+            {
+                data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+            }
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
         }
@@ -342,7 +348,7 @@ public:
     }
 
     ///
-    bool opEquals(T: int)(T y) const
+    bool opEquals(T: long)(T y) const
     {
         if (sign != (y<0))
             return 0;
@@ -564,6 +570,14 @@ unittest // Recursive division, bug 5568
     // Bug 7993
     BigInt n7793 = 10;
     assert( n7793 / 1 == 10);
+    // Bug 7973
+    auto a7973 = 10_000_000_000_000_000;
+    const c7973 = 10_000_000_000_000_000;
+    BigInt v7973 = 2551700137;
+    v7973 %= a7973;
+    assert(v7973 == 2551700137);
+    v7973 %= c7973;
+    assert(v7973 == 2551700137);
 }
 
 unittest
