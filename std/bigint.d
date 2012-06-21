@@ -532,6 +532,7 @@ unittest {
     assert(BigInt(1) - 1 == 0);
     assert((-4) % BigInt(5) == -4); // bug 5928
     assert(BigInt(-4) % BigInt(5) == -4);
+    assert(BigInt(2)/BigInt(-3) == BigInt(0)); // bug 8022
 }
 
 unittest // Recursive division, bug 5568
