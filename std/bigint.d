@@ -561,6 +561,9 @@ unittest // Recursive division, bug 5568
     BigInt z2 = BigInt(1)<<64;
     BigInt w2 = BigInt(1)<<128;
     assert(z2^^2 == w2);
+    // Bug 7993
+    BigInt n7793 = 10;
+    assert( n7793 / 1 == 10);
 }
 
 unittest

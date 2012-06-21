@@ -547,8 +547,10 @@ public:
     }
 
     // return x / y
-    static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) )
+    static BigUint divInt(T)(BigUint x, T y) if ( is(T == uint) )
     {
+        if (y == 1)
+            return x;
         uint [] result = new BigDigit[x.data.length];
         if ((y&(-y))==y)
         {
