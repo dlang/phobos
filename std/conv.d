@@ -784,7 +784,7 @@ $(UL
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        isSomeString!T)
+        isSomeString!T && !isAggregateType!T)
 {
     static if (isSomeString!S && value[0].sizeof == T.init[0].sizeof)
     {
@@ -1361,6 +1361,14 @@ unittest
     uint[][] e = [ a, a ];
     auto f = to!(float[][])(e);
     assert(f[0] == b && f[1] == b);
+
+    // Test for bug 8264
+    struct Wrap
+    {
+        string wrap;
+        alias wrap this;
+    }
+    Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
 }
 
 /**
