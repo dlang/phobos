@@ -310,9 +310,9 @@ Copyright: Copyright by authors 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha. Credit
-for some of the ideas in building this module goes to $(WEB
-fantascienza.net/leonardo/so/, Leonardo Maffi).
+Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha,
+and Jonathan M Davis. Credit for some of the ideas in building this module goes
+to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
@@ -7035,4 +7035,783 @@ unittest
     {
     }
     assert(ok);
+}
+
+
+/++
+    Wrapper which effectively allows you to pass a range by reference. Both the
+    original range and the RefRange will always have the exact same elements.
+    Any operation done on one will affect the other. So, for instance, if it's
+    passed to a function which would implicitly copy the original range if it
+    were passed to it, the original range is $(I not) copied but is consumed as
+    if it were a reference type.
+
+    Note that $(D save) works as normal and operates on a new range, so if
+    $(D save) is ever called on the RefRange, then no operations on the saved
+    range will affect the original.
+
+    Examples:
+--------------------
+import std.algorithm;
+ubyte[] buffer = [1, 9, 45, 12, 22];
+auto found1 = find(buffer, 45);
+assert(found1 == [45, 12, 22]);
+assert(buffer == [1, 9, 45, 12, 22]);
+
+auto wrapped1 = refRange(&buffer);
+auto found2 = find(wrapped1, 45);
+assert(*found2.ptr == [45, 12, 22]);
+assert(buffer == [45, 12, 22]);
+
+auto found3 = find(wrapped2.save, 22);
+assert(*found3.ptr == [22]);
+assert(buffer == [45, 12, 22]);
+
+string str = "hello world";
+auto wrappedStr = refRange(&str);
+assert(str.front == 'h');
+str.popFrontN(5);
+assert(str == " world");
+assert(wrappedStr.front == ' ');
+assert(*wrappedStr.ptr == " world");
+--------------------
+  +/
+struct RefRange(R)
+    if(isForwardRange!R)
+{
+public:
+
+    /++ +/
+    this(R* range) @safe pure nothrow
+    {
+        _range = range;
+    }
+
+
+    /++
+        This does not assign the pointer of $(D rhs) to this $(D RefRange).
+        Rather it assigns the range pointed to by $(D rhs) to the range pointed
+        to by this $(D RefRange). This is because $(I any) operation on a
+        $(D RefRange) is the same is if it occurred to the original range. The
+        one exception is when a $(D RefRange) is assigned $(D null) either
+        directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
+        no longer refers to the original range but is $(D null).
+
+    Examples:
+--------------------
+ubyte[] buffer1 = [1, 2, 3, 4, 5];
+ubyte[] buffer2 = [6, 7, 8, 9, 10];
+auto wrapped1 = refRange(&buffer1);
+auto wrapped2 = refRange(&buffer2);
+assert(wrapped1.ptr is &buffer1);
+assert(wrapped2.ptr is &buffer2);
+assert(wrapped1.ptr !is wrapped2.ptr);
+assert(buffer1 != buffer2);
+
+wrapped1 = wrapped2;
+
+//Everything points to the same stuff as before.
+assert(wrapped1.ptr is &buffer1);
+assert(wrapped2.ptr is &buffer2);
+assert(wrapped1.ptr !is wrapped2.ptr);
+
+//But buffer1 has changed due to the assignment.
+assert(buffer1 == [6, 7, 8, 9, 10]);
+assert(buffer2 == [6, 7, 8, 9, 10]);
+
+buffer2 = [11, 12, 13, 14, 15];
+
+//Everything points to the same stuff as before.
+assert(wrapped1.ptr is &buffer1);
+assert(wrapped2.ptr is &buffer2);
+assert(wrapped1.ptr !is wrapped2.ptr);
+
+//But buffer2 has changed due to the assignment.
+assert(buffer1 == [6, 7, 8, 9, 10]);
+assert(buffer2 == [11, 12, 13, 14, 15]);
+
+wrapped2 = null;
+
+//The pointer changed for wrapped2 but not wrapped1.
+assert(wrapped1.ptr is &buffer1);
+assert(wrapped2.ptr is null);
+assert(wrapped1.ptr !is wrapped2.ptr);
+
+//buffer2 is not affected by the assignment.
+assert(buffer1 == [6, 7, 8, 9, 10]);
+assert(buffer2 == [11, 12, 13, 14, 15]);
+--------------------
+      +/
+    auto opAssign(RefRange rhs)
+    {
+        if(_range && rhs._range)
+            *_range = *rhs._range;
+        else
+            _range = rhs._range;
+
+        return this;
+    }
+
+    /++ +/
+    auto opAssign(typeof(null) rhs)
+    {
+        _range = null;
+    }
+
+
+    /++
+        A pointer to the wrapped range.
+      +/
+    @property inout(R*) ptr() @safe inout pure nothrow
+    {
+        return _range;
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++ +/
+        @property auto front() {assert(0);}
+        /++ Ditto +/
+        @property auto front() const {assert(0);}
+        /++ Ditto +/
+        @property auto front(ElementType!R value) {assert(0);}
+    }
+    else
+    {
+        @property auto front()
+        {
+            return (*_range).front;
+        }
+
+        static if(is(typeof((*(cast(const R*)_range)).front))) @property ElementType!R front() const
+        {
+            return (*_range).front;
+        }
+
+        static if(is(typeof((*_range).front = (*_range).front))) @property auto front(ElementType!R value)
+        {
+            return (*_range).front = value;
+        }
+    }
+
+
+    version(D_Ddoc)
+    {
+        @property bool empty(); ///
+        @property bool empty() const; ///Ditto
+    }
+    else static if(isInfinite!R)
+        enum empty = false;
+    else
+    {
+        @property bool empty()
+        {
+            return (*_range).empty;
+        }
+
+        static if(is(typeof((*cast(const R*)_range).empty))) @property bool empty() const
+        {
+            return (*_range).empty;
+        }
+    }
+
+
+    /++ +/
+    @property void popFront()
+    {
+        return (*_range).popFront();
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++ +/
+        @property auto save() {assert(0);}
+        /++ Ditto +/
+        @property auto save() const {assert(0);}
+        /++ Ditto +/
+        auto opSlice() {assert(0);}
+        /++ Ditto +/
+        auto opSlice() const {assert(0);}
+    }
+    else
+    {
+        private static void _testSave(R)(R* range)
+        {
+            (*range).save;
+        }
+
+        static if(isSafe!(_testSave!R))
+        {
+            @property auto save() @trusted
+            {
+                mixin(_genSave());
+            }
+
+            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() @trusted const
+            {
+                mixin(_genSave());
+            }
+        }
+        else
+        {
+            @property auto save()
+            {
+                mixin(_genSave());
+            }
+
+            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() const
+            {
+                mixin(_genSave());
+            }
+        }
+
+        auto opSlice()()
+        {
+            return save;
+        }
+
+        auto opSlice()() const
+        {
+            return save;
+        }
+
+        private static string _genSave() @safe pure nothrow
+        {
+            return `import std.conv;` ~
+                   `alias typeof((*_range).save) S;` ~
+                   `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
+                   `auto mem = new void[S.sizeof];` ~
+                   `emplace!S(mem, cast(S)(*_range).save);` ~
+                   `return RefRange!S(cast(S*)mem.ptr);`;
+        }
+
+        static assert(isForwardRange!RefRange);
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++
+            Only defined if $(D isBidirectionalRange!R) is $(D true).
+          +/
+        @property auto back() {assert(0);}
+        /++ Ditto +/
+        @property auto back() const {assert(0);}
+        /++ Ditto +/
+        @property auto back(ElementType!R value) {assert(0);}
+    }
+    else static if(isBidirectionalRange!R)
+    {
+        @property auto back()
+        {
+            return (*_range).back;
+        }
+
+        static if(is(typeof((*(cast(const R*)_range)).back))) @property ElementType!R back() const
+        {
+            return (*_range).back;
+        }
+
+        static if(is(typeof((*_range).back = (*_range).back))) @property auto back(ElementType!R value)
+        {
+            return (*_range).back = value;
+        }
+    }
+
+
+    /++ Ditto +/
+    static if(isBidirectionalRange!R) @property void popBack()
+    {
+        return (*_range).popBack();
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++
+            Only defined if $(D isRandomAccesRange!R) is $(D true).
+          +/
+        @property auto ref opIndex(IndexType)(IndexType index) {assert(0);}
+
+        /++ Ditto +/
+        @property auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
+    }
+    else static if(isRandomAccessRange!R)
+    {
+        @property auto ref opIndex(IndexType)(IndexType index)
+            if(is(typeof((*_range)[index])))
+        {
+            return (*_range)[index];
+        }
+
+        @property auto ref opIndex(IndexType)(IndexType index) const
+            if(is(typeof((*cast(const R*)_range)[index])))
+        {
+            return (*_range)[index];
+        }
+    }
+
+
+    /++
+        Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
+        $(D true).
+      +/
+    static if(hasMobileElements!R && isForwardRange!R) @property auto moveFront()
+    {
+        return (*_range).moveFront();
+    }
+
+
+    /++
+        Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
+        are $(D true).
+      +/
+    static if(hasMobileElements!R && isBidirectionalRange!R) @property auto moveBack()
+    {
+        return (*_range).moveBack();
+    }
+
+
+    /++
+        Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
+        are $(D true).
+      +/
+    static if(hasMobileElements!R && isRandomAccessRange!R) @property auto moveAt(IndexType)(IndexType index)
+        if(is(typeof((*_range).moveAt(index))))
+    {
+        return (*_range).moveAt(index);
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++
+            Only defined if $(D hasLength!R) is $(D true).
+          +/
+        @property auto length() {assert(0);}
+
+        /++ Ditto +/
+        @property auto length() const {assert(0);}
+    }
+    else static if(hasLength!R)
+    {
+        @property auto length()
+        {
+            return (*_range).length;
+        }
+
+        static if(is(typeof((*cast(const R*)_range).length))) @property auto length() const
+        {
+            return (*_range).length;
+        }
+    }
+
+
+    version(D_Ddoc)
+    {
+        /++
+            Only defined if $(D hasSlicing!R) is $(D true).
+          +/
+        @property auto opSlice(IndexType1, IndexType2)
+                              (IndexType1 begin, IndexType2 end) {assert(0);}
+
+        /++ Ditto +/
+        @property auto opSlice(IndexType1, IndexType2)
+                              (IndexType1 begin, IndexType2 end) const {assert(0);}
+    }
+    else static if(hasSlicing!R)
+    {
+        @property auto opSlice(IndexType1, IndexType2)
+                              (IndexType1 begin, IndexType2 end)
+            if(is(typeof((*_range)[begin .. end])))
+        {
+            mixin(_genOpSlice());
+        }
+
+        @property auto opSlice(IndexType1, IndexType2)
+                              (IndexType1 begin, IndexType2 end) const
+            if(is(typeof((*cast(const R*)_range)[begin .. end])))
+        {
+            mixin(_genOpSlice());
+        }
+
+        private static string _genOpSlice() @safe pure nothrow
+        {
+            return `import std.conv;` ~
+                   `alias typeof((*_range)[begin .. end]) S;` ~
+                   `static assert(hasSlicing!S, S.stringof ~ " is not sliceable.");` ~
+                   `auto mem = new void[S.sizeof];` ~
+                   `emplace!S(mem, cast(S)(*_range)[begin .. end]);` ~
+                   `return RefRange!S(cast(S*)mem.ptr);`;
+        }
+    }
+
+
+private:
+
+    R* _range;
+}
+
+//Verify Example.
+unittest
+{
+    import std.algorithm;
+    ubyte[] buffer = [1, 9, 45, 12, 22];
+    auto found1 = find(buffer, 45);
+    assert(found1 == [45, 12, 22]);
+    assert(buffer == [1, 9, 45, 12, 22]);
+
+    auto wrapped1 = refRange(&buffer);
+    auto found2 = find(wrapped1, 45);
+    assert(*found2.ptr == [45, 12, 22]);
+    assert(buffer == [45, 12, 22]);
+
+    auto found3 = find(wrapped1.save, 22);
+    assert(*found3.ptr == [22]);
+    assert(buffer == [45, 12, 22]);
+
+    string str = "hello world";
+    auto wrappedStr = refRange(&str);
+    assert(str.front == 'h');
+    str.popFrontN(5);
+    assert(str == " world");
+    assert(wrappedStr.front == ' ');
+    assert(*wrappedStr.ptr == " world");
+}
+
+//Verify opAssign Example.
+unittest
+{
+    ubyte[] buffer1 = [1, 2, 3, 4, 5];
+    ubyte[] buffer2 = [6, 7, 8, 9, 10];
+    auto wrapped1 = refRange(&buffer1);
+    auto wrapped2 = refRange(&buffer2);
+    assert(wrapped1.ptr is &buffer1);
+    assert(wrapped2.ptr is &buffer2);
+    assert(wrapped1.ptr !is wrapped2.ptr);
+    assert(buffer1 != buffer2);
+
+    wrapped1 = wrapped2;
+
+    //Everything points to the same stuff as before.
+    assert(wrapped1.ptr is &buffer1);
+    assert(wrapped2.ptr is &buffer2);
+    assert(wrapped1.ptr !is wrapped2.ptr);
+
+    //But buffer1 has changed due to the assignment.
+    assert(buffer1 == [6, 7, 8, 9, 10]);
+    assert(buffer2 == [6, 7, 8, 9, 10]);
+
+    buffer2 = [11, 12, 13, 14, 15];
+
+    //Everything points to the same stuff as before.
+    assert(wrapped1.ptr is &buffer1);
+    assert(wrapped2.ptr is &buffer2);
+    assert(wrapped1.ptr !is wrapped2.ptr);
+
+    //But buffer2 has changed due to the assignment.
+    assert(buffer1 == [6, 7, 8, 9, 10]);
+    assert(buffer2 == [11, 12, 13, 14, 15]);
+
+    wrapped2 = null;
+
+    //The pointer changed for wrapped2 but not wrapped1.
+    assert(wrapped1.ptr is &buffer1);
+    assert(wrapped2.ptr is null);
+    assert(wrapped1.ptr !is wrapped2.ptr);
+
+    //buffer2 is not affected by the assignment.
+    assert(buffer1 == [6, 7, 8, 9, 10]);
+    assert(buffer2 == [11, 12, 13, 14, 15]);
+}
+
+unittest
+{
+    import std.algorithm;
+    {
+        ubyte[] buffer = [1, 2, 3, 4, 5];
+        auto wrapper = refRange(&buffer);
+        auto p = wrapper.ptr;
+        auto f = wrapper.front;
+        wrapper.front = f;
+        auto e = wrapper.empty;
+        wrapper.popFront();
+        auto s = wrapper.save;
+        auto b = wrapper.back;
+        wrapper.back = b;
+        wrapper.popBack();
+        auto i = wrapper[0];
+        wrapper.moveFront();
+        wrapper.moveBack();
+        wrapper.moveAt(0);
+        auto l = wrapper.length;
+        auto sl = wrapper[0 .. 1];
+    }
+
+    {
+        ubyte[] buffer = [1, 2, 3, 4, 5];
+        const wrapper = refRange(&buffer);
+        const p = wrapper.ptr;
+        const f = wrapper.front;
+        const e = wrapper.empty;
+        const s = wrapper.save;
+        const b = wrapper.back;
+        const i = wrapper[0];
+        const l = wrapper.length;
+        const sl = wrapper[0 .. 1];
+    }
+
+    {
+        ubyte[] buffer = [1, 2, 3, 4, 5];
+        auto filtered = filter!"true"(buffer);
+        auto wrapper = refRange(&filtered);
+        auto p = wrapper.ptr;
+        auto f = wrapper.front;
+        wrapper.front = f;
+        auto e = wrapper.empty;
+        wrapper.popFront();
+        auto s = wrapper.save;
+        wrapper.moveFront();
+    }
+
+    {
+        ubyte[] buffer = [1, 2, 3, 4, 5];
+        auto filtered = filter!"true"(buffer);
+        const wrapper = refRange(&filtered);
+        const p = wrapper.ptr;
+
+        //Cannot currently be const. filter needs to be updated to handle const.
+        /+
+        const f = wrapper.front;
+        const e = wrapper.empty;
+        const s = wrapper.save;
+        +/
+    }
+
+    {
+        string str = "hello world";
+        auto wrapper = refRange(&str);
+        auto p = wrapper.ptr;
+        auto f = wrapper.front;
+        auto e = wrapper.empty;
+        wrapper.popFront();
+        auto s = wrapper.save;
+        auto b = wrapper.back;
+        wrapper.popBack();
+    }
+}
+
+//Test assignment.
+unittest
+{
+    ubyte[] buffer1 = [1, 2, 3, 4, 5];
+    ubyte[] buffer2 = [6, 7, 8, 9, 10];
+    RefRange!(ubyte[]) wrapper1;
+    RefRange!(ubyte[]) wrapper2 = refRange(&buffer2);
+    assert(wrapper1.ptr is null);
+    assert(wrapper2.ptr is &buffer2);
+
+    wrapper1 = refRange(&buffer1);
+    assert(wrapper1.ptr is &buffer1);
+
+    wrapper1 = wrapper2;
+    assert(wrapper1.ptr is &buffer1);
+    assert(buffer1 == buffer2);
+
+    wrapper1 = RefRange!(ubyte[]).init;
+    assert(wrapper1.ptr is null);
+    assert(wrapper2.ptr is &buffer2);
+    assert(buffer1 == buffer2);
+    assert(buffer1 == [6, 7, 8, 9, 10]);
+
+    wrapper2 = null;
+    assert(wrapper2.ptr is null);
+    assert(buffer2 == [6, 7, 8, 9, 10]);
+}
+
+unittest
+{
+    import std.algorithm;
+
+    //Test that ranges are properly consumed.
+    {
+        int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
+        auto wrapper = refRange(&arr);
+
+        assert(*find(wrapper, 41).ptr == [41, 3, 40, 4, 42, 9]);
+        assert(arr == [41, 3, 40, 4, 42, 9]);
+
+        assert(*drop(wrapper, 2).ptr == [40, 4, 42, 9]);
+        assert(arr == [40, 4, 42, 9]);
+
+        assert(equal(until(wrapper, 42), [40, 4]));
+        assert(arr == [42, 9]);
+
+        assert(find(wrapper, 12).empty);
+        assert(arr.empty);
+    }
+
+    {
+        string str = "Hello, world-like object.";
+        auto wrapper = refRange(&str);
+
+        assert(*find(wrapper, "l").ptr == "llo, world-like object.");
+        assert(str == "llo, world-like object.");
+
+        assert(equal(take(wrapper, 5), "llo, "));
+        assert(str == "world-like object.");
+    }
+
+    //Test that operating on saved ranges does not consume the original.
+    {
+        int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
+        auto wrapper = refRange(&arr);
+        auto saved = wrapper.save;
+        saved.popFrontN(3);
+        assert(*saved.ptr == [41, 3, 40, 4, 42, 9]);
+        assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
+    }
+
+    {
+        string str = "Hello, world-like object.";
+        auto wrapper = refRange(&str);
+        auto saved = wrapper.save;
+        saved.popFrontN(13);
+        assert(*saved.ptr == "like object.");
+        assert(str == "Hello, world-like object.");
+    }
+
+    //Test that functions which use save work properly.
+    {
+        int[] arr = [1, 42];
+        auto wrapper = refRange(&arr);
+        assert(equal(commonPrefix(wrapper, [1, 27]), [1]));
+    }
+
+    {
+        int[] arr = [4, 5, 6, 7, 1, 2, 3];
+        auto wrapper = refRange(&arr);
+        assert(bringToFront(wrapper[0 .. 4], wrapper[4 .. arr.length]) == 3);
+        assert(arr == [1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    //Test bidirectional functions.
+    {
+        int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
+        auto wrapper = refRange(&arr);
+
+        assert(wrapper.back == 9);
+        assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
+
+        wrapper.popBack();
+        assert(arr == [1, 42, 2, 41, 3, 40, 4, 42]);
+    }
+
+    {
+        string str = "Hello, world-like object.";
+        auto wrapper = refRange(&str);
+
+        assert(wrapper.back == '.');
+        assert(str == "Hello, world-like object.");
+
+        wrapper.popBack();
+        assert(str == "Hello, world-like object");
+    }
+
+    //Test random access functions.
+    {
+        int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
+        auto wrapper = refRange(&arr);
+
+        assert(wrapper[2] == 2);
+        assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
+
+        assert(*wrapper[3 .. 6].ptr, [41, 3, 40]);
+        assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
+    }
+
+    //Test move functions.
+    {
+        int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
+        auto wrapper = refRange(&arr);
+
+        auto t1 = wrapper.moveFront();
+        auto t2 = wrapper.moveBack();
+        wrapper.front = t2;
+        wrapper.back = t1;
+        assert(arr == [9, 42, 2, 41, 3, 40, 4, 42, 1]);
+
+        sort(wrapper.save);
+        assert(arr == [1, 2, 3, 4, 9, 40, 41, 42, 42]);
+    }
+}
+
+unittest
+{
+    struct S
+    {
+        @property int front() @safe const pure nothrow { return 0; }
+        enum bool empty = false;
+        void popFront() @safe pure nothrow { }
+        @property auto save() @safe pure nothrow { return this; }
+    }
+
+    S s;
+    auto wrapper = refRange(&s);
+    static assert(isInfinite!(typeof(wrapper)));
+}
+
+unittest
+{
+    class C
+    {
+        @property int front() @safe const pure nothrow { return 0; }
+        @property bool empty() @safe const pure nothrow { return false; }
+        void popFront() @safe pure nothrow { }
+        @property auto save() @safe pure nothrow { return this; }
+    }
+    static assert(isForwardRange!C);
+
+    auto c = new C;
+    auto cWrapper = refRange(&c);
+    static assert(is(typeof(cWrapper) == C));
+    assert(cWrapper is c);
+
+    struct S
+    {
+        @property int front() @safe const pure nothrow { return 0; }
+        @property bool empty() @safe const pure nothrow { return false; }
+        void popFront() @safe pure nothrow { }
+
+        int i = 27;
+    }
+    static assert(isInputRange!S);
+    static assert(!isForwardRange!S);
+
+    auto s = S(42);
+    auto sWrapper = refRange(&s);
+    static assert(is(typeof(sWrapper) == S));
+    assert(sWrapper == s);
+}
+
+/++
+    Helper function for constructing a $(LREF RefRange).
+
+    If the given range is not a forward range or it is a class type (and thus is
+    already a reference type), then the original range is returned rather than
+    a $(LREF RefRange).
+  +/
+auto refRange(R)(R* range)
+    if(isForwardRange!R && !is(R == class))
+{
+    return RefRange!R(range);
+}
+
+auto refRange(R)(R* range)
+    if((!isForwardRange!R && isInputRange!R) ||
+       is(R == class))
+{
+    return *range;
 }
