@@ -79,7 +79,7 @@ public:
     /// It may have a leading + or - sign; followed by "0x" if hexadecimal.
     /// Underscores are permitted.
     /// BUG: Should throw a IllegalArgumentException/ConvError if invalid character found
-    this(T:string)(T s)
+    this(T : const(char)[] )(T s)
     {
         bool neg = false;
         if (s[0] == '-') {
@@ -529,6 +529,11 @@ unittest {
     assert(BigInt(-0x1234_5678_9ABC_5A5AL).toLong() == -0x1234_5678_9ABC_5A5AL);
     assert(BigInt(0xF234_5678_9ABC_5A5AL).toLong() == long.max);
     assert(BigInt(-0x123456789ABCL).toInt() == -int.max);
+    char[] s1 = "123".dup; // bug 8164
+    assert(BigInt(s1) == 123);
+    char[] s2 = "0xABC".dup;
+    assert(BigInt(s2) == 2748);
+
     assert((BigInt(-2) + BigInt(1)) == BigInt(-1));
     BigInt a = ulong.max - 5;
     auto b = -long.max % a;

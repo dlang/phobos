@@ -321,7 +321,7 @@ public:
     }
 
     // return false if invalid character found
-    bool fromHexString(string s)
+    bool fromHexString(const(char)[] s)
     {
         //Strip leading zeros
         int firstNonZero = 0;
@@ -369,7 +369,7 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
-    bool fromDecimalString(string s)
+    bool fromDecimalString(const(char)[] s)
     {
         //Strip leading zeros
         int firstNonZero = 0;
@@ -1415,7 +1415,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data)
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(BigDigit [] data, string s)
+int biguintFromDecimal(BigDigit [] data, const(char)[] s)
 in
 {
     assert((data.length >= 2) || (data.length == 1 && s.length == 1));
