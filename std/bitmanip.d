@@ -765,7 +765,7 @@ struct BitArray
     /***************************************
      * Supports comparison operators for $(D BitArray).
      */
-    int opCmp(ref const(BitArray) a2) const
+    int opCmp(BitArray a2) const
     {
         uint i;
 
