@@ -112,17 +112,19 @@ public:
     }
 
     ///
-    void opAssign(T: long)(T x)
+    BigInt opAssign(T: long)(T x)
     {
         data = cast(ulong)((x < 0) ? -x : x);
         sign = (x < 0);
+        return this;
     }
 
     ///
-    void opAssign(T:BigInt)(T x)
+    BigInt opAssign(T:BigInt)(T x)
     {
         data = x.data;
         sign = x.sign;
+        return this;
     }
 
     // BigInt op= integer
@@ -583,6 +585,9 @@ unittest // Recursive division, bug 5568
     assert(v7973 == 2551700137);
     v7973 %= c7973;
     assert(v7973 == 2551700137);
+    // 8165
+    BigInt[2] a8165;
+    a8165[0] = a8165[1] = 1;
 }
 
 unittest
