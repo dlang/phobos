@@ -1173,8 +1173,7 @@ Variant[] variantArray(T...)(T args)
  *
  */
 
-// @@@ BUG IN COMPILER. THE 'STATIC' BELOW SHOULD NOT COMPILE
-static class VariantException : Exception
+class VariantException : Exception
 {
     /// The source type in the conversion or comparison
     TypeInfo source;
@@ -1510,4 +1509,217 @@ unittest
     // bug 7070
     Variant v;
     v = null;
+}
+
+/**
+ * Thrown when a pattern $(D match) fails.
+ */
+class MatchError : Error
+{
+    this(string s)
+    {
+        super(s);
+    }
+}
+
+/**
+ * Pattern matches on the type stored in a $(D VariantN) value.
+ *
+ * The cases are functions/delegates. At least one is required. Each
+ * of them must have either no parameters (the case handles anything)
+ * or exactly one parameter (the case handles the type specified in
+ * that parameter).
+ *
+ * A case may take $(D typeof(null)), in which case it is invokved
+ * immediately if $(D variant) holds no value. If $(D variant) does
+ * hold a value, execution proceeds as follows.
+ *
+ * The function attempts to match $(D variant)'s runtime type against
+ * the types of the cases' parameters in the exact order the cases are
+ * passed to this function. If $(D variant)'s type matches a case, that
+ * case is called and its result (if any) is returned. If no match was
+ * found and a case that takes no parameters is found, that case
+ * is invoked and its value (if any) is returned.
+ *
+ * Note that regardless of what kind of case is involved, the first
+ * case matching the conditions above will be invoked. So, if multiple
+ * cases match a type, the first one encountered will be invoked, for
+ * example.
+ *
+ * Params:
+ *  V = The type of $(D variant). Should be a $(D VariantN) instantiation.
+ *  F = The types of the functions representing the patterns.
+ *  variant = The variant whose type to pattern match on.
+ *  cases = The pattern matching case functions.
+ *
+ * Returns:
+ *  Whatever value the matching case returned, if any (and if
+ *  non-$(D void)).
+ *
+ * Throws:
+ *  $(D MatchError) if no match was found.
+ */
+public CommonType!(staticMap!(ReturnType, F)) match(V, F ...)(V variant, scope F cases)
+    if (is(V == struct) && __traits(identifier, V) == "VariantN")
+    // Best we can do; ideally we'd make sure it's a VariantN of sorts, but no nice way to do that.
+in
+{
+    static assert(F.length != 0, "At least one function/delegate argument is required.");
+
+    foreach (f; F)
+    {
+        static assert(isFunctionPointer!f || isDelegate!f, "All trailing arguments must be functions or delegates.");
+        static assert((ParameterTypeTuple!f).length <= 1, "All trailing functions/delegates must take zero or one parameter.");
+    }
+}
+body
+{
+    // We can't have a typeof(return) value as a plain variable
+    // because it will fail for types with @disable this().
+    static if (!is(typeof(return) == void))
+        typeof(return)* res;
+
+    alias TypeTuple!F TFuncs;
+
+    // If the variant has no value, attempt to locate a case
+    // that takes typeof(null) and call it.
+    if (!variant.hasValue)
+    {
+        foreach (i, f; TFuncs)
+        {
+            static if (is(U == typeof(null)))
+            {
+                static if (!is(typeof(return) == void))
+                {
+                    // This is a dirty hack so that we can be more
+                    // flexible about the return type. Specifically,
+                    // a match call might have functions returning
+                    // non-void and functions returning void. We want
+                    // to allow this and do the right thing (return
+                    // void).
+                    auto r = cases[i](null);
+                    res = &r;
+                }
+                else
+                    cases[i]();
+
+                static if (!is(typeof(return) == void))
+                    return res ? *res : typeof(return).init;
+                else
+                    return;
+            }
+        }
+    }
+
+    foreach (i, f; TFuncs)
+    {
+        alias ParameterTypeTuple!f FArgs;
+
+        // Perform the actual pattern matching. We use peek
+        // here, since we want to pattern match on the exact
+        // runtime type, and not a coerced one.
+        static if (FArgs.length != 0 && !is(FArgs[0] == typeof(null)))
+        {
+            if (auto ptr = variant.peek!(FArgs[0])())
+            {
+                static if (!is(typeof(return) == void))
+                {
+                    // See comment above.
+                    auto r = cases[i](*ptr);
+                    res = &r;
+                }
+                else
+                    cases[i](*ptr);
+
+                static if (!is(typeof(return) == void))
+                    return res ? *res : typeof(return).init;
+                else
+                    return;
+            }
+        }
+    }
+
+    foreach (i, f; TFuncs)
+    {
+        alias ParameterTypeTuple!f FArgs;
+
+        // If we haven't hit any cases so far and we have cases
+        // that take no parameters, call the first one.
+        static if (FArgs.length == 0)
+        {
+            static if (!is(typeof(return) == void))
+            {
+                // See comment above.
+                auto r = cases[i]();
+                res = &r;
+            }
+            else
+                cases[i]();
+
+            static if (!is(typeof(return) == void))
+                return res ? *res : typeof(return).init;
+            else
+                return;
+        }
+    }
+
+    throw new MatchError("The runtime type of the given variant could not be matched against any patterns.");
+}
+
+unittest
+{
+    Variant v = 1;
+
+    assertThrown!MatchError(match(v, (ubyte b) => {}));
+}
+
+unittest
+{
+    Variant v1 = 1;
+    Variant v2;
+
+    match(v1,
+          (string s) => v2 = "foo",
+          (int i) => v2 = i);
+
+    assert(v2.get!int() == 1);
+}
+
+unittest
+{
+    Variant v1 = "foo";
+    Variant v2;
+
+    match(v1,
+          (string s) => v2 = s,
+          (int i) => v2 = i);
+
+    assert(v2.get!string() == "foo");
+}
+
+unittest
+{
+    Variant v1 = 1;
+
+    match(v1, () => {});
+}
+
+unittest
+{
+    Variant v1 = 123.321f;
+    Variant v2;
+
+    match(v1,
+          (byte x) {},
+          (ubyte x) {},
+          (short x) {},
+          (ushort x) {},
+          (int x) {},
+          (uint x) {},
+          (long x) {},
+          (ulong x) {},
+          (float x) => v2 = 123,
+          (double x) {});
+
+    assert(v2.get!int() == 123);
 }
