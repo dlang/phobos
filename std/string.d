@@ -1551,8 +1551,8 @@ unittest
 
 /++
     Returns $(D s) sans the trailing $(D delimiter), if any. If no $(D delimiter)
-    is given, then any trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
-    $(XREF uni, lineSep), or $(XREF uni, paraSep)s are removed.
+    is given, then one trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
+    $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed.
   +/
 S chomp(S)(S s)
     if(isSomeString!S)
