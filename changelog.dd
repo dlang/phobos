@@ -9,7 +9,8 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              escapeWindowsArgument. Documented browse function.)
         $(LI std.range: Added RefRange, which effectively makes it possible to
              pass a range by reference.)
-        $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
+        $(LI std.string: Added xformat and xsformat, they are compatible with writef.
+             format and sformat functions are now scheduled for deprecation.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
