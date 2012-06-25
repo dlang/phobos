@@ -822,7 +822,7 @@ struct BitArray
     /***************************************
      * Support for hashing for $(D BitArray).
      */
-    hash_t toHash() const nothrow
+    hash_t toHash() const pure nothrow
     {
         hash_t hash = 3557;
         auto n  = len / 8;
