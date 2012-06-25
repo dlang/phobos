@@ -1312,7 +1312,7 @@ Complexity: $(BIGOH n)
         if (orig._head == _root)
         {
             // remove straight from the head of the list
-            for (; !orig.empty; orig.popFront())
+            for (; !r.empty; r.popFront())
             {
                 removeFront();
             }
