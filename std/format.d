@@ -1668,10 +1668,22 @@ unittest
 /**
    Static-size arrays are formatted as dynamic arrays.
  */
-void formatValue(Writer, T, Char)(Writer w, ref T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
 if (!hasToString!(T, Char) && isStaticArray!T)
 {
     formatValue(w, obj[], f);
+}
+
+unittest    // Test for issue 8310
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+
+    char[2] two = ['a', 'b'];
+    formatValue(w, two, f);
+
+    char[2] getTwo(){ return two; }
+    formatValue(w, getTwo(), f);
 }
 
 /**
