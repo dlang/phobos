@@ -2511,6 +2511,9 @@ private char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
 
 
 /*****************************************************
+ *  $(RED Scheduled for deprecation. Please use $(XREF string, xformat)
+ *        instead.)
+ *
  * Format arguments into a string.
  */
 
@@ -2532,6 +2535,9 @@ string format(...)
 
 
 /*****************************************************
+ *  $(RED Scheduled for deprecation. Please use $(XREF string, xsformat)
+ *        instead.)
+ *
  * Format arguments into string <i>s</i> which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: s
