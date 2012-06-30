@@ -1,6 +1,10 @@
 $(VERSION 060, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
+        $(LI std.string: $(RED The current implementations of std.string.format and string.sformat are
+             scheduled to be replaced in November 2012 with improved implementations
+             which conform to writef. In some, rare cases, this will break code.
+             Please see the documentation for std.string.format and std.string.sformat for details.))
         $(LI std.bitmanip: Added peek, read, write, and append for converting
              ranges of bytes to and from integral types.)
         $(LI Added std.file.tempDir which returns the path to a directory
@@ -9,7 +13,6 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              escapeWindowsArgument. Documented browse function.)
         $(LI std.range: Added RefRange, which effectively makes it possible to
              pass a range by reference.)
-        $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is

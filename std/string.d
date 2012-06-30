@@ -2512,6 +2512,23 @@ private char[] bug2479sformat(char[] s, TypeInfo[] arguments, va_list argptr)
 
 /*****************************************************
  * Format arguments into a string.
+ *
+ *  $(RED format's current implementation is scheduled for replacement in
+ *        November 2012. It will then be replaced with $(LREF xformat)'s implementation.
+ *        This will be seamless for most code, but it will make it so that the
+ *        only argument that can be a format string is the first one, so any
+ *        code which uses multiple format strings will break. Please change
+ *        your calls to format accordingly.
+ *
+ *        e.g.:
+----
+format("key = %s", key, ", value = %s", value)
+----
+ *        will need to be rewritten as:
+----
+format("key = %s, value = %s", key, value)
+----
+ *   )
  */
 
 string format(...)
@@ -2535,6 +2552,23 @@ string format(...)
  * Format arguments into string <i>s</i> which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: s
+ *
+ *  $(RED sformat's current implementation is scheduled for replacement in
+ *        November 2012. It will then be replaced with $(LREF xsformat)'s implementation.
+ *        This will be seamless for most code, but it will make it so that the
+ *        only argument that can be a format string is the first one, so any
+ *        code which uses multiple format strings will break. Please change
+ *        your calls to sformat accordingly.
+ *
+ *        e.g.:
+----
+sformat(buf, "key = %s", key, ", value = %s", value)
+----
+ *        will need to be rewritten as:
+----
+sformat(buf, "key = %s, value = %s", key, value)
+----
+ *   )
  */
 char[] sformat(char[] s, ...)
 {
@@ -2610,6 +2644,12 @@ unittest
 
 /*****************************************************
  * Format arguments into a string.
+ *
+ * xformat is a version of $(LREF format) whose behavior matches that of
+ * $(XREF stdio, writef). $(LREF format) will be changed to use this
+ * implementation in November 2012. In the interim, xformat is provided for
+ * those who need the improved implementation. It will be scheduled for
+ * deprecation once format has been updated.
  */
 
 string xformat(Char, Args...)(in Char[] fmt, Args args)
@@ -2647,6 +2687,13 @@ unittest
 /*****************************************************
  * Format arguments into string $(D_PARAM buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
+ *
+ * xsformat is a version of $(LREF sformat) whose behavior matches that of
+ * $(XREF stdio, writef). $(LREF sformat) will be changed to use this
+ * implementation in November 2012. In the interim, xsformat is provided for
+ * those who need the improved implementation. It will be scheduled for
+ * deprecation once sformat has been updated.
+ *
  * Returns: filled slice of $(D_PARAM buf)
  */
 
