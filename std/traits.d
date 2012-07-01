@@ -471,6 +471,167 @@ unittest
 }
 
 
+/*
+Get, as a tuple, the identifiers of the parameters to a function symbol.
+
+Example:
+---
+import std.traits;
+int foo(int num, string name);
+static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+---
+ */
+template ParameterIdentifierTuple(func...)
+    if (func.length == 1 && isCallable!func)
+{
+    static if (is(typeof(func[0]) PT == __parameters))
+    {
+        template Get(size_t i)
+        {
+            enum get = (PT[i..i+1] args) => __traits(identifier, args[0]);
+            enum Get = get(PT[i].init);
+        }
+    }
+    else static if (is(FunctionTypeOf!func PT == __parameters))
+    {
+        template Get(size_t i)
+        {
+            enum Get = "";
+        }
+    }
+    else
+        static assert(0, func[0].stringof ~ "is not a function");
+
+    template Impl(size_t i = 0)
+    {
+        static if (i == PT.length)
+            alias TypeTuple!() Impl;
+        else
+            alias TypeTuple!(Get!(i), Impl!(i+1)) Impl;
+    }
+
+    alias Impl!() ParameterIdentifierTuple;
+}
+
+unittest
+{
+    // Test for ddoc example
+    import std.traits;
+    int foo(int num, string name);
+    static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+}
+unittest
+{
+    alias ParameterIdentifierTuple PIT;
+
+    void bar(int num, string name, int[] array){}
+    static assert([PIT!bar] == ["num", "name", "array"]);
+
+	// might be changed in the future?
+    void function(int num, string name) fp;
+    static assert([PIT!fp] == ["", ""]);
+
+	// might be changed in the future?
+    void delegate(int num, string name, int[long] aa) dg;
+    static assert([PIT!dg] == ["", "", ""]);
+/+
+    // depends on internal
+    void baw(int, string, int[]){}
+    static assert([PIT!baw] == ["_param_0", "_param_1", "_param_2"]);
+
+    // depends on internal
+    void baz(TypeTuple!(int, string, int[]) args){}
+    static assert([PIT!baz] == ["_param_0", "_param_1", "_param_2"]);
++/
+}
+
+
+/*
+Get, as a tuple, the default value of the parameters to a function symbol.
+If a parameter doesn't have the default value, $(D void) is returned instead.
+
+Example:
+---
+import std.traits;
+int foo(int num, string name = "hello", int[] arr = [1,2,3]);
+static assert(is(ParameterDefaultValueTuple!foo[0] == void));
+static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
+static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
+---
+ */
+template ParameterDefaultValueTuple(func...)
+    if (func.length == 1 && isCallable!func)
+{
+    static if (is(typeof(func[0]) PT == __parameters))
+    {
+        template Get(size_t i)
+        {
+            enum get = (PT[i..i+1] args) => args[0];
+            static if (is(typeof(get())))
+                enum Get = get();
+            else
+                alias void Get;
+                // If default arg doesn't exist, returns void instead.
+        }
+    }
+    else static if (is(FunctionTypeOf!func PT == __parameters))
+    {
+        template Get(size_t i)
+        {
+            enum Get = "";
+        }
+    }
+    else
+        static assert(0, func[0].stringof ~ "is not a function");
+
+    template Impl(size_t i = 0)
+    {
+        static if (i == PT.length)
+            alias TypeTuple!() Impl;
+        else
+            alias TypeTuple!(Get!(i), Impl!(i+1)) Impl;
+    }
+
+    alias Impl!() ParameterDefaultValueTuple;
+}
+
+unittest
+{
+    // Test for ddoc example
+    int foo(int num, string name = "hello", int[] arr = [1,2,3]);
+    static assert(is(ParameterDefaultValueTuple!foo[0] == void));
+    static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
+    static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
+}
+unittest
+{
+    alias ParameterDefaultValueTuple PDVT;
+
+    void bar(int n = 1, string s = "hello"){}
+    static assert(PDVT!bar.length == 2);
+    static assert(PDVT!bar[0] == 1);
+    static assert(PDVT!bar[1] == "hello");
+    static assert(is(typeof(PDVT!bar) == typeof(TypeTuple!(1, "hello"))));
+
+    void baz(int x, int n = 1, string s = "hello"){}
+    static assert(PDVT!baz.length == 3);
+    static assert(is(PDVT!baz[0] == void));
+    static assert(   PDVT!baz[1] == 1);
+    static assert(   PDVT!baz[2] == "hello");
+    static assert(is(typeof(PDVT!baz) == typeof(TypeTuple!(void, 1, "hello"))));
+
+    struct Colour
+    {
+        ubyte a,r,g,b;
+
+        immutable Colour white = Colour(255,255,255,255);
+    }
+    void bug8106(Colour c = Colour.white){}
+    //pragma(msg, PDVT!bug8106);
+    static assert(PDVT!bug8106[0] == Colour.white);
+}
+
+
 /**
 Returns the attributes attached to a function $(D func).
 
