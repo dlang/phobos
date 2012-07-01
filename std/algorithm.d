@@ -5053,14 +5053,19 @@ template MinType(T...)
     {
         static if (!is(typeof(T[0].min)))
             alias CommonType!(T[0 .. 2]) MinType;
-        else static if (mostNegative!(T[1]) < mostNegative!(T[0]))
-            alias T[1] MinType;
-        else static if (mostNegative!(T[1]) > mostNegative!(T[0]))
-            alias T[0] MinType;
-        else static if (T[1].max < T[0].max)
-            alias T[1] MinType;
         else
-            alias T[0] MinType;
+        {
+            enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
+                                   is(typeof(mostNegative!(T[1])));
+            static if (hasMostNegative && mostNegative!(T[1]) < mostNegative!(T[0]))
+                alias T[1] MinType;
+            else static if (hasMostNegative && mostNegative!(T[1]) > mostNegative!(T[0]))
+                alias T[0] MinType;
+            else static if (T[1].max < T[0].max)
+                alias T[1] MinType;
+            else
+                alias T[0] MinType;
+        }
     }
     else
     {
@@ -5074,17 +5079,20 @@ Returns the minimum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
 MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
+    if(is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
-        static if (isIntegral!(T1) && isIntegral!(T2)
-                   && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
-            static if (mostNegative!(T1) < 0)
+        static if (isIntegral!T1 && isIntegral!T2 &&
+                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+        {
+            static if (mostNegative!T1 < 0)
                 immutable chooseB = b < a && a > 0;
             else
                 immutable chooseB = b < a || b < 0;
+        }
         else
-                immutable chooseB = b < a;
+            immutable chooseB = b < a;
         return cast(typeof(return)) (chooseB ? b : a);
     }
     else
@@ -5101,16 +5109,27 @@ unittest
     short b = 6;
     double c = 2;
     auto d = min(a, b);
-    assert(is(typeof(d) == int));
+    static assert(is(typeof(d) == int));
     assert(d == 5);
     auto e = min(a, b, c);
-    assert(is(typeof(e) == double));
+    static assert(is(typeof(e) == double));
     assert(e == 2);
     // mixed signedness test
     a = -10;
     uint f = 10;
     static assert(is(typeof(min(a, f)) == int));
     assert(min(a, f) == -10);
+
+    //Test user-defined types
+    import std.datetime;
+    assert(min(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(1982, 1, 4));
+    assert(min(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(1982, 1, 4));
+    assert(min(Date(1982, 1, 4), Date.min) == Date.min);
+    assert(min(Date.min, Date(1982, 1, 4)) == Date.min);
+    assert(min(Date(1982, 1, 4), Date.max) == Date(1982, 1, 4));
+    assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
+    assert(min(Date.min, Date.max) == Date.min);
+    assert(min(Date.max, Date.min) == Date.min);
 }
 
 // MaxType
@@ -5151,15 +5170,18 @@ assert(e == 2);
 ----
 */
 MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
+    if(is(typeof(a < b)))
 {
     static if (T.length == 0)
     {
-        static if (isIntegral!(T1) && isIntegral!(T2)
-                   && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
-            static if (mostNegative!(T1) < 0)
+        static if (isIntegral!T1 && isIntegral!T2 &&
+                   (mostNegative!T1 < 0) != (mostNegative!T2 < 0))
+        {
+            static if (mostNegative!T1 < 0)
                 immutable chooseB = b > a || a < 0;
             else
                 immutable chooseB = b > a && b > 0;
+        }
         else
             immutable chooseB = b > a;
         return cast(typeof(return)) (chooseB ? b : a);
@@ -5178,16 +5200,27 @@ unittest
     short b = 6;
     double c = 2;
     auto d = max(a, b);
-    assert(is(typeof(d) == int));
+    static assert(is(typeof(d) == int));
     assert(d == 6);
     auto e = max(a, b, c);
-    assert(is(typeof(e) == double));
+    static assert(is(typeof(e) == double));
     assert(e == 6);
     // mixed sign
     a = -5;
     uint f = 5;
     static assert(is(typeof(max(a, f)) == uint));
     assert(max(a, f) == 5);
+
+    //Test user-defined types
+    import std.datetime;
+    assert(max(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(2012, 12, 21));
+    assert(max(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(2012, 12, 21));
+    assert(max(Date(1982, 1, 4), Date.min) == Date(1982, 1, 4));
+    assert(max(Date.min, Date(1982, 1, 4)) == Date(1982, 1, 4));
+    assert(max(Date(1982, 1, 4), Date.max) == Date.max);
+    assert(max(Date.max, Date(1982, 1, 4)) == Date.max);
+    assert(max(Date.min, Date.max) == Date.max);
+    assert(max(Date.max, Date.min) == Date.max);
 }
 
 /**
