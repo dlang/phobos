@@ -118,7 +118,9 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\compiler.d std\cpuid.d \
     std\system.d std\concurrency.d
 
-SRC_STD_4= std\uuid.d
+#can't place SRC_STD_HASH in SRC_STD_REST because of out-of-memory issues
+SRC_STD_HASH= std\hash\crc.d std\hash\sha.d std\hash\md.d std\hash\hash.d
+SRC_STD_4= std\uuid.d $(SRC_STD_HASH)
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
@@ -182,7 +184,9 @@ SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+
+SRC_STD_INTERNAL_HASH=
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
@@ -197,6 +201,7 @@ SRC_TO_COMPILE_NOT_STD= crc32.d \
 	$(SRC_STD_C_WIN) \
 	$(SRC_STD_INTERNAL) \
 	$(SRC_STD_INTERNAL_MATH) \
+	$(SRC_STD_INTERNAL_HASH) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
@@ -272,6 +277,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
+	$(DOC)\std_hash_crc.html \
+	$(DOC)\std_hash_sha.html \
+	$(DOC)\std_hash_md.html \
+	$(DOC)\std_hash_hash.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_csv.html \
@@ -623,6 +632,18 @@ $(DOC)\std_zlib.html : $(STDDOC) std\zlib.d
 $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_isemail.html $(STDDOC) std\net\isemail.d
 
+$(DOC)\std_hash_crc.html : $(STDDOC) std\hash\crc.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_crc.html $(STDDOC) std\hash\crc.d
+
+$(DOC)\std_hash_sha.html : $(STDDOC) std\hash\sha.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_sha.html $(STDDOC) std\hash\sha.d
+
+$(DOC)\std_hash_md.html : $(STDDOC) std\hash\md.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_md.html $(STDDOC) std\hash\md.d
+
+$(DOC)\std_hash_crc.html : $(STDDOC) std\hash\hash.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_hash_hash.html $(STDDOC) std\hash\hash.d
+
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
@@ -680,8 +701,9 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) \
-	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_HASH) \
+	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS) \
+	$(SRC_STD_INTERNAL_HASH)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -694,10 +716,12 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
 	zip32 -u phobos $(SRC_STD_INTERNAL)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
+	zip32 -u phobos $(SRC_STD_INTERNAL_HASH)
 	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
+	zip32 -u phobos $(SRC_STD_HASH)
 
 clean:
 	cd etc\c\zlib
@@ -718,6 +742,7 @@ install:
 	$(CP) $(SRC) $(DIR)\src\phobos\ 
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std\ 
 	$(CP) $(SRC_STD_NET) $(DIR)\src\phobos\std\net\ 
+	$(CP) $(SRC_STD_HASH) $(DIR)\src\phobos\std\hash\ 
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c\ 
 	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows\ 
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows\ 
@@ -725,7 +750,8 @@ install:
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx\ 
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd\ 
 	$(CP) $(SRC_STD_INTERNAL) $(DIR)\src\phobos\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\ 
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_HASH) $(DIR)\src\phobos\std\internal\hash\ 
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(DIR)\src\phobos\std\internal\windows\ 
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc\ 
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c\ 
@@ -737,6 +763,7 @@ svn:
 	$(CP) $(SRC) $(SVN)\ 
 	$(CP) $(SRC_STD) $(SVN)\std\ 
 	$(CP) $(SRC_STD_NET) $(SVN)\std\net\ 
+	$(CP) $(SRC_STD_HASH) $(SVN)\std\hash\ 
 	$(CP) $(SRC_STD_C) $(SVN)\std\c\ 
 	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows\ 
 	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows\ 
@@ -744,7 +771,8 @@ svn:
 	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx\ 
 	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd\ 
 	$(CP) $(SRC_STD_INTERNAL) $(SVN)\std\internal\ 
-	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\ 
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math\
+	$(CP) $(SRC_STD_INTERNAL_HASH) $(SVN)\std\internal\hash\ 
 	$(CP) $(SRC_STD_INTERNAL_WINDOWS) $(SVN)\std\internal\windows\ 
 	#$(CP) $(SRC_ETC) $(SVN)\etc\ 
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c\ 
