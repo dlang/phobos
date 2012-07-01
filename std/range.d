@@ -3764,7 +3764,7 @@ enum StoppingPolicy
 unittest
 {
     int[] a = [ 1, 2, 3 ];
-    float[] b = [ 1., 2, 3 ];
+    float[] b = [ 1.0, 2.0, 3.0 ];
     foreach (e; zip(a, b))
     {
         assert(e[0] == e[1]);
@@ -3775,13 +3775,13 @@ unittest
     //swap(z.front(), z.back());
     sort!("a[0] < b[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
-    assert(b == [2., 1, 3]);
+    assert(b == [2.0, 1.0, 3.0]);
 
     a = [ 1, 2, 3 ];
-    b = [ 1., 2, 3 ];
+    b = [ 1.0, 2.0, 3.0 ];
     sort!("a[0] > b[0]")(zip(StoppingPolicy.requireSameLength, a, b));
     assert(a == [3, 2, 1]);
-    assert(b == [3, 2, 1]);
+    assert(b == [3.0, 2.0, 1.0]);
 
     a = [];
     b = [];
