@@ -612,36 +612,73 @@ public:
 }
 
 
-@system unittest//a very sloow test
+unittest
 {
-    import std.conv;
-    uint max_char, max_data;
-    alias CodepointTrie!8 Trie;
-    Trie t;
     auto wordSet =
         CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
         .add(unicodeMe).add(unicodeNd).add(unicodePc);
-    t = Trie(wordSet);
+    auto t = CodepointTrie!8(wordSet);
     assert(t['a']);
     assert(!t[' ']);
+}
+
+unittest
+{
     CodepointSet set;
     set.add(unicodeAlphabetic);
     for(size_t i=1;i<set.ivals.length; i++)
-        assert(set.ivals[i-1] < set.ivals[i],text(set.ivals[i-1], "  ",set.ivals[i]));
-    foreach(up; unicodeProperties)
+        assert(set.ivals[i-1] < set.ivals[i]);
+}
+
+@system unittest
+{
+    import std.conv, std.random, std.range;
+    immutable seed = unpredictableSeed();
+    auto rnd = Random(seed);
+
+    auto testCases = randomSample(unicodeProperties, 10, rnd);
+
+    // test trie using ~2000 codepoints
+    foreach(up; testCases.save)
     {
-        t = Trie(up.set);
-        foreach(uint ch; up.set[])
-            assert(t[ch], text("on ch ==", ch));
-        auto s = up.set.dup.negate().negate();
-        assert(equal(cast(immutable(Interval)[])s.ivals
-                     , cast(immutable(Interval)[])up.set.ivals));
-        foreach(ch; up.set.dup.negate()[])
+        void test(in CodepointSet set, scope void delegate(uint ch) dg)
         {
-            assert(!t[ch], text("negative on ch ==", ch));
+            foreach (_; 0 .. 10)
+            {
+                immutable idx = uniform(0, set.ivals.length / 2, rnd);
+                immutable lo = set.ivals[2*idx], hi = set.ivals[2*idx+1];
+                foreach (_2; 0 .. min(10, hi - lo))
+                    dg(uniform(lo, hi, rnd));
+            }
+        }
+
+        auto neg = up.set.dup.negate();
+        auto trie = CodepointTrie!8(up.set);
+        test(up.set, ch => assert(trie[ch], text("on ch == ", ch, " seed was ", seed)));
+        test(neg, ch => assert(!trie[ch], text("negative on ch == ", ch, " seed was ", seed)));
+    }
+
+    // test that negate is reversible
+    foreach(up; testCases.save)
+    {
+        auto neg = up.set.dup.negate().negate();
+        assert(equal(up.set.ivals, neg.ivals));
+    }
+
+    // test codepoint forward iterator
+    auto set = testCases.front.set;
+    auto rng = set[];
+    foreach (idx; 0 .. set.ivals.length / 2)
+    {
+        immutable lo = set.ivals[2*idx], hi = set.ivals[2*idx+1];
+        foreach (val; lo .. hi)
+        {
+            assert(rng.front == val, text("on val == ", val, " seed was ", seed));
+            rng.popFront();
         }
     }
 }
+
 
 //fussy compare for unicode property names as per UTS-18
 int comparePropertyName(Char)(const(Char)[] a, const(Char)[] b)
