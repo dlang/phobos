@@ -158,7 +158,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         metastrings mmfile numeric outbuffer parallelism path perf		\
         process random range regex regexp signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf variant xml zip zlib)
+        typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 

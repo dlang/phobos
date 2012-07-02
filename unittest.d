@@ -52,6 +52,7 @@ public import std.typetuple;
 public import std.uni;
 public import std.uri;
 public import std.utf;
+public import std.uuid;
 public import std.variant;
 public import std.zip;
 public import std.zlib;
@@ -124,6 +125,7 @@ version (all)
 
     bool isEmail = std.net.isemail.isEmail("abc");
     auto http = std.net.curl.HTTP("dlang.org");
+    auto uuid = randomUUID();
 }
     puts("Success!");
     return 0;
