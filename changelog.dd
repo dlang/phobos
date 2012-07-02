@@ -15,6 +15,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              pass a range by reference.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
+        $(LI std.utf: Added overload of codeLength which operates on a string.)
         $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
              scheduled for deprecation.)
         $(LI The overloads of std.conv.to which were scheduled for deprecation
