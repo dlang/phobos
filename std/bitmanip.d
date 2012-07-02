@@ -411,7 +411,7 @@ struct BitArray
     /**********************************************
      * Sets the amount of bits in the $(D BitArray).
      */
-    @property void length(size_t newlen)
+    @property size_t length(size_t newlen)
     {
         if (newlen != len)
         {
@@ -432,6 +432,7 @@ struct BitArray
 
             len = newlen;
         }
+        return len;
     }
 
     /**********************************************
@@ -481,7 +482,7 @@ struct BitArray
     /**********************************************
      * Duplicates the $(D BitArray) and its contents.
      */
-    @property BitArray dup()
+    @property BitArray dup() const
     {
         BitArray ba;
 
@@ -528,6 +529,21 @@ struct BitArray
     }
 
     /** ditto */
+    int opApply(scope int delegate(bool) dg) const
+    {
+        int result;
+
+        for (size_t i = 0; i < len; i++)
+        {
+            bool b = opIndex(i);
+            result = dg(b);
+            if (result)
+                break;
+        }
+        return result;
+    }
+
+    /** ditto */
     int opApply(scope int delegate(ref size_t, ref bool) dg)
     {
         int result;
@@ -537,6 +553,21 @@ struct BitArray
             bool b = opIndex(i);
             result = dg(i, b);
             this[i] = b;
+            if (result)
+                break;
+        }
+        return result;
+    }
+    
+    /** ditto */
+    int opApply(scope int delegate(size_t, bool) dg) const
+    {
+        int result;
+
+        for (size_t i = 0; i < len; i++)
+        {
+            bool b = opIndex(i);
+            result = dg(i, b);
             if (result)
                 break;
         }
@@ -734,7 +765,7 @@ struct BitArray
     /***************************************
      * Supports comparison operators for $(D BitArray).
      */
-    int opCmp(BitArray a2)
+    int opCmp(BitArray a2) const
     {
         uint i;
 
@@ -786,6 +817,26 @@ struct BitArray
         assert(a == e);
         assert(a <= e);
         assert(a >= e);
+    }
+
+    /***************************************
+     * Support for hashing for $(D BitArray).
+     */
+    hash_t toHash() const pure nothrow
+    {
+        hash_t hash = 3557;
+        auto n  = len / 8;
+        for (int i = 0; i < n; i++)
+        {
+            hash *= 3559;
+            hash += (cast(byte*)this.ptr)[i];
+        }
+        for (size_t i = 8*n; i < len; i++)
+        {
+            hash *= 3571;
+            hash += bt(this.ptr, i);
+        }
+        return hash;
     }
 
     /***************************************
@@ -949,7 +1000,7 @@ struct BitArray
     /***************************************
      * Support for binary operator | for $(D BitArray).
      */
-    BitArray opOr(BitArray e2)
+    BitArray opOr(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -989,7 +1040,7 @@ struct BitArray
     /***************************************
      * Support for binary operator ^ for $(D BitArray).
      */
-    BitArray opXor(BitArray e2)
+    BitArray opXor(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -1031,7 +1082,7 @@ struct BitArray
      *
      * $(D a - b) for $(D BitArray) means the same thing as $(D a &amp; ~b).
      */
-    BitArray opSub(BitArray e2)
+    BitArray opSub(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -1280,7 +1331,7 @@ struct BitArray
     /***************************************
      * Support for binary operator ~ for $(D BitArray).
      */
-    BitArray opCat(bool b)
+    BitArray opCat(bool b) const
     {
         BitArray r;
 
@@ -1291,7 +1342,7 @@ struct BitArray
     }
 
     /** ditto */
-    BitArray opCat_r(bool b)
+    BitArray opCat_r(bool b) const
     {
         BitArray r;
 
@@ -1303,7 +1354,7 @@ struct BitArray
     }
 
     /** ditto */
-    BitArray opCat(BitArray b)
+    BitArray opCat(BitArray b) const
     {
         BitArray r;
 
