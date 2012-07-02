@@ -41,10 +41,11 @@ Macros:
 WIKI = Phobos/StdRandom
 
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift randome generator)
+           $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -1547,11 +1548,20 @@ foreach (e; randomSample(a, 5))
     writeln(e);
 }
 ----
- */
+
+$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
+(see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
+dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
+of size $(D n) in O(n) steps and requiring O(n) random variates,
+regardless of the size of the data being sampled.
+*/
 struct RandomSample(R, Random = void)
     if(isInputRange!R && (isUniformRNG!Random || is(Random == void)))
 {
     private size_t _available, _toSelect;
+    private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
+    private bool _first, _algorithmA;
+    private double _Vprime;
     private R _input;
     private size_t _index;
 
@@ -1579,9 +1589,7 @@ Constructor.
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available);
-        // we should skip some elements initially so we don't always
-        // start with the first
-        prime();
+        _first = true;
     }
 
 /**
@@ -1595,6 +1603,26 @@ Constructor.
     @property auto ref front()
     {
         assert(!empty);
+        // The first sample point must be determined here to avoid
+        // having it always correspond to the first element of the
+        // input.  The rest of the sample points are determined each
+        // time we call popFront().
+        if(_first)
+        {
+            // We can save ourselves a random variate by checking right
+            // at the beginning if we should use Algorithm A.
+            if((_alphaInverse * _toSelect) > _available)
+            {
+                _algorithmA = true;
+            }
+            else
+            {
+                _Vprime = newVprime(_toSelect);
+                _algorithmA = false;
+            }
+            prime();
+            _first = false;
+        }
         return _input.front;
     }
 
@@ -1630,33 +1658,190 @@ Returns the index of the visited record.
         return _index;
     }
 
+/*
+Vitter's Algorithm A, used when the ratio of needed sample values
+to remaining data values is sufficiently large.
+*/
+    private size_t skipA()
+    {
+        size_t s;
+        double v, quot, top;
+
+        if(_toSelect==1)
+        {
+            static if(is(Random==void))
+            {
+                s = uniform(0, _available);
+            }
+            else
+            {
+                s = uniform(0, _available, gen);
+            }
+        }
+        else
+        {
+            v = 0;
+            top = _available - _toSelect;
+            quot = top / _available;
+
+            static if(is(Random==void))
+            {
+                v = uniform!"()"(0.0, 1.0);
+            }
+            else
+            {
+                v = uniform!"()"(0.0, 1.0, gen);
+            }
+
+            while (quot > v)
+            {
+                ++s;
+                quot *= (top - s) / (_available - s);
+            }
+        }
+
+        return s;
+    }
+
+/*
+Randomly reset the value of _Vprime.
+*/
+    private double newVprime(size_t remaining)
+    {
+        static if(is(Random == void))
+        {
+            double r = uniform!"()"(0.0, 1.0);
+        }
+        else
+        {
+            double r = uniform!"()"(0.0, 1.0, gen);
+        }
+
+        return r ^^ (1.0 / remaining);
+    }
+
+/*
+Vitter's Algorithm D.  For an extensive description of the algorithm
+and its rationale, see:
+
+  * Vitter, J.S. (1984), "Faster methods for random sampling",
+    Commun. ACM 27(7): 703--718
+
+  * Vitter, J.S. (1987) "An efficient algorithm for sequential random
+    sampling", ACM Trans. Math. Softw. 13(1): 58-67.
+
+Variable names are chosen to match those in Vitter's paper.
+*/
+    private size_t skip()
+    {
+        // Step D1: if the number of points still to select is greater
+        // than a certain proportion of the remaining data points, i.e.
+        // if n >= alpha * N where alpha = 1/13, we carry out the
+        // sampling with Algorithm A.
+        if(_algorithmA)
+        {
+            return skipA();
+        }
+        else if((_alphaInverse * _toSelect) > _available)
+        {
+            _algorithmA = true;
+            return skipA();
+        }
+        // Otherwise, we use the standard Algorithm D mechanism.
+        else if ( _toSelect > 1 )
+        {
+            size_t s;
+            size_t qu1 = 1 + _available - _toSelect;
+            double x, y1;
+
+            while(true)
+            {
+                // Step D2: set values of x and u.
+                for(x = _available * (1-_Vprime), s = cast(size_t) trunc(x);
+                    s >= qu1;
+                    x = _available * (1-_Vprime), s = cast(size_t) trunc(x))
+                {
+                    _Vprime = newVprime(_toSelect);
+                }
+
+                static if(is(Random == void))
+                {
+                    double u = uniform!"()"(0.0, 1.0);
+                }
+                else
+                {
+                    double u = uniform!"()"(0.0, 1.0, gen);
+                }
+
+                y1 = (u * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+
+                _Vprime = y1 * ((-x/_available)+1.0) * ( qu1/( (cast(double) qu1) - s ) );
+
+                // Step D3: if _Vprime <= 1.0 our work is done and we return S.
+                // Otherwise ...
+                if(_Vprime > 1.0)
+                {
+                    size_t top = _available - 1, limit;
+                    double y2 = 1.0, bottom;
+
+                    if(_toSelect > (s+1) )
+                    {
+                        bottom = _available - _toSelect;
+                        limit = _available - s;
+                    }
+                    else
+                    {
+                        bottom = _available - (s+1);
+                        limit = qu1;
+                    }
+
+                    foreach(size_t t; limit.._available)
+                    {
+                        y2 *= top/bottom;
+                        top--;
+                        bottom--;
+                    }
+
+                    // Step D4: decide whether or not to accept the current value of S.
+                    if( (_available/(_available-x)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    {
+                        // If it's not acceptable, we generate a new value of _Vprime
+                        // and go back to the start of the for(;;) loop.
+                        _Vprime = newVprime(_toSelect);
+                    }
+                    else
+                    {
+                        // If it's acceptable we generate a new value of _Vprime
+                        // based on the remaining number of sample points needed,
+                        // and return S.
+                        _Vprime = newVprime(_toSelect-1);
+                        return s;
+                    }
+                }
+                else
+                {
+                    // Return if condition D3 satisfied.
+                    return s;
+                }
+            }
+        }
+        else
+        {
+            // If only one sample point remains to be taken ...
+            return cast(size_t) trunc(_available * _Vprime);
+        }
+    }
+
     private void prime()
     {
         if (empty) return;
         assert(_available && _available >= _toSelect);
-        for (;;)
-        {
-            static if(is(Random == void))
-            {
-                auto r = uniform(0, _available);
-            }
-            else
-            {
-                auto r = uniform(0, _available, gen);
-            }
-
-            if (r < _toSelect)
-            {
-                // chosen!
-                return;
-            }
-            // not chosen, retry
-            assert(!_input.empty);
-            _input.popFront();
-            ++_index;
-            --_available;
-            assert(_available > 0);
-        }
+        immutable size_t s = skip();
+        _input.popFrontN(s);
+        _index += s;
+        _available -= s;
+        assert(_available > 0);
+        return;
     }
 }
 
