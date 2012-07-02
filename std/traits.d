@@ -1872,6 +1872,8 @@ unittest
     static assert(!hasElaborateDestructor!S6);
 }
 
+template Identity(alias A) { alias A Identity; }
+
 /**
    Yields $(D true) if and only if $(D T) is an aggregate that defines
    a symbol called $(D name).
@@ -1881,7 +1883,8 @@ template hasMember(T, string name)
     static if (is(T == struct) || is(T == class) || is(T == union) || is(T == interface))
     {
         enum bool hasMember =
-            staticIndexOf!(name, __traits(allMembers, T)) != -1;
+            staticIndexOf!(name, __traits(allMembers, T)) != -1 ||
+            __traits(compiles, { mixin("alias Identity!(T."~name~") Sym;"); });
     }
     else
     {
@@ -1907,6 +1910,37 @@ unittest
     static assert(isOutputRange!(OutputRange!int, int));
 }
 
+unittest
+{
+    // 8231
+    struct S {
+        int x;
+        void f(){}
+        void t()(){}
+        template T(){}
+    }
+    struct R1(T) {
+        T t;
+        alias t this;
+    }
+    struct R2(T) {
+        T t;
+        @property ref inout(T) payload() inout { return t; }
+        alias t this;
+    }
+    static assert(hasMember!(S, "x"));
+    static assert(hasMember!(S, "f"));
+    static assert(hasMember!(S, "t"));
+    static assert(hasMember!(S, "T"));
+    static assert(hasMember!(R1!S, "x"));
+    static assert(hasMember!(R1!S, "f"));
+    static assert(hasMember!(R1!S, "t"));
+    static assert(hasMember!(R1!S, "T"));
+    static assert(hasMember!(R2!S, "x"));
+    static assert(hasMember!(R2!S, "f"));
+    static assert(hasMember!(R2!S, "t"));
+    static assert(hasMember!(R2!S, "T"));
+}
 
 /**
 Retrieves the members of an enumerated type $(D enum E).
