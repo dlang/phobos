@@ -132,7 +132,7 @@ the given _range.
 ))
 
 $(TR $(TD $(D $(LREF takeExactly)))
-$(TD Like $(D take), but assumes the given _range actually has $(I n) elements,
+$(TD Like $(D take), but assumes the given _range actually has $(I n) elements
 and therefore also defines the $(D length) property.
 ))
 
@@ -203,6 +203,10 @@ elements were reordered according to a given _range of indices.
 
 $(TR $(TD $(D $(LREF chunks)))
 $(TD Creates a _range that returns fixed-size chunks of the original _range.
+))
+
+$(TR $(TD $(D $(LREF emptyRange)))
+$(TD Creates an empty range from a given _range in $(BIGOH 1).
 ))
 
 )
@@ -5824,6 +5828,214 @@ unittest
 
     static assert(isRandomAccessRange!(typeof(chunks)));
 }
+
+
+/++
+    Creates an empty range from the given range in $(BIGOH 1).
+
+    If $(D R) is an array, then $(D null) is returned.
+
+    Else if $(D R) defines $(D _emptyRange), then the result of its
+    $(D _emptyRange) is returned.
+
+    Else if $(D hasSlicing!R) is $(D true), then $(D range[0 .. 0]) is
+    returned.
+
+    Else if $(D R) is a struct, then $(D R.init) is returned.
+
+    Else if $(D R) is a class, it's default constructor is returned.
+
+    If $(D R) does not fulfill any of those requirements, then it will not
+    compile with emptyRange. So, define $(D _emptyRange) for $(D R) if none
+    of the other options work for it and it needs to work with emptyRange.
+
+    Throws:
+        $(D Exception) if the range to be returned is not empty.
+
+    Examples:
+--------------------
+assert(emptyRange([42, 27, 19]).empty);
+assert(emptyRange("dlang.org").empty);
+assert(emptyRange(filter!"true"([42, 27, 19])).empty);
+--------------------
+  +/
+R emptyRange(R)(R range)
+    if(isInputRange!R && !isInfinite!R &&
+       (isDynamicArray!R ||
+        (is(typeof(R.emptyRange)) && is(typeof(range.emptyRange()) == R)) ||
+        hasSlicing!R ||
+        (is(R == struct) && is(typeof(R.init))) ||
+        (is(R == class) && is(typeof(new R())))))
+{
+    static if(isDynamicArray!R)
+        R retval = null;
+    else static if(is(typeof(R.emptyRange)))
+    {
+        R retval = range.emptyRange();
+        enforce(retval.empty, "range.emptyRange() was not empty.");
+    }
+    else static if(hasSlicing!R)
+    {
+        R retval = range[0 .. 0];
+        enforce(retval.empty, "range[0 .. 0] was not empty.");
+    }
+    else static if(is(R == struct))
+    {
+        R retval = R.init;
+        enforce(retval.empty, R.stringof ~ ".init was not empty.");
+    }
+    else static if(is(R == class))
+    {
+        R retval = new R();
+        enforce(retval.empty, R.stringof ~ "() was not empty.");
+    }
+    else
+        static assert(0, "Bad template constraint.");
+
+    return retval;
+}
+
+//Verify Example.
+unittest
+{
+    assert(emptyRange([42, 27, 19]).empty);
+    assert(emptyRange("dlang.org").empty);
+    assert(emptyRange(filter!"true"([42, 27, 19])).empty);
+}
+
+unittest
+{
+    import std.exception;
+    import std.metastrings;
+
+    string genInput()
+    {
+        return "@property bool empty() { return _arr.empty; }" ~
+                "@property auto front() { return _arr.front; }" ~
+                "void popFront() { _arr.popFront(); }" ~
+                "static assert(isInputRange!(typeof(this)));";
+    }
+
+    static struct SliceStruct
+    {
+        @disable this();
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
+        int[] _arr;
+    }
+
+    static struct BadSliceStruct
+    {
+        @disable this();
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[0 .. 1]); }
+        int[] _arr;
+    }
+
+    static struct InitStruct
+    {
+        mixin(genInput());
+        int[] _arr;
+    }
+
+    static struct BadInitStruct
+    {
+       mixin(genInput());
+       int[] _arr = [1];
+    }
+
+    /+ @@@BUG@@@ 7021
+    static struct DisabledStruct
+    {
+        this(int[] arr) { _arr = arr; }
+        @disable this();
+        mixin(genInput());
+        int[] _arr;
+    }
+    +/
+
+    static struct EmptyRangeStruct
+    {
+        this(int[] arr) { _arr = arr; }
+        @disable this();
+        mixin(genInput());
+        auto emptyRange() { return typeof(this)(null); }
+        int[] _arr;
+    }
+
+    static class SliceClass
+    {
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
+        int[] _arr;
+    }
+
+    static class BadSliceClass
+    {
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[0 .. 1]); }
+        int[] _arr;
+    }
+
+    static class DefaultClass
+    {
+        this() {}
+        this(int[] arr) {_arr = arr;}
+        mixin(genInput());
+        int[] _arr;
+    }
+
+    static class BadDefaultClass
+    {
+        this() {}
+        this(int[] arr) {_arr = arr;}
+        mixin(genInput());
+        int[] _arr = [1];
+    }
+
+    static class EmptyRangeClass
+    {
+        this(int[] arr) { _arr = arr; }
+        mixin(genInput());
+        auto emptyRange() { return new typeof(this)(null); }
+        int[] _arr;
+    }
+
+    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
+                              `"hello world"`,
+                              `"hello world"w`,
+                              `"hello world"d`,
+                              `SliceStruct([1, 2, 3])`,
+                              `InitStruct([1, 2, 3])`,
+                              `EmptyRangeStruct([1, 2, 3])`))
+    {
+        mixin(Format!("enum a = emptyRange(%s).empty;", range));
+        assert(a, typeof(range).stringof);
+        mixin(Format!("assert(emptyRange(%s).empty);", range));
+    }
+
+    //Don't work in CTFE.
+    foreach(range; TypeTuple!(`new SliceClass([1, 2, 3])`,
+                              `new DefaultClass([1, 2, 3])`,
+                              `new EmptyRangeClass([1, 2, 3])`))
+    {
+        mixin(Format!("assert(emptyRange(%s).empty);", range));
+    }
+
+    // @@@BUG@@@ 7021
+    //static assert(!is(typeof(emptyRange(DisabledStruct([1, 2, 3])))));
+    assertThrown(emptyRange(BadSliceStruct([1, 2, 3])));
+    assertThrown(emptyRange(BadInitStruct([1, 2, 3])));
+    assertThrown(emptyRange(new BadSliceClass([1, 2, 3])));
+    assertThrown(emptyRange(new BadDefaultClass([1, 2, 3])));
+
+    assert(emptyRange(filter!"true"([1, 2, 3, 4, 5])).empty);
+}
+
 
 /**
    Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
