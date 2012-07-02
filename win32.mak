@@ -118,6 +118,8 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\compiler.d std\cpuid.d \
     std\system.d std\concurrency.d
 
+SRC_STD_4= std\uuid.d
+
 SRC_STD_REST= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
@@ -127,10 +129,10 @@ SRC_STD_REST= std\variant.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
-    std\mathspecial.d \
+	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_3) $(SRC_STD_REST)
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_3) $(SRC_STD_4) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
 
@@ -142,7 +144,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
-	std\stdio.d std\perf.d std\uni.d \
+	std\stdio.d std\perf.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
@@ -310,6 +312,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_uni.html \
 	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
+	$(DOC)\std_uuid.html \
 	$(DOC)\std_variant.html \
 	$(DOC)\std_xml.html \
 	$(DOC)\std_zip.html \
@@ -339,12 +342,13 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj
+UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj unittest4.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRC_STD_REST) $(SRC_TO_COMPILE_NOT_STD) $(UNITTEST_OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
@@ -591,6 +595,9 @@ $(DOC)\std_uri.html : $(STDDOC) std\uri.d
 
 $(DOC)\std_utf.html : $(STDDOC) std\utf.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_utf.html $(STDDOC) std\utf.d
+
+$(DOC)\std_uuid.html : $(STDDOC) std\uuid.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_uuid.html $(STDDOC) std\uuid.d
 
 $(DOC)\std_variant.html : $(STDDOC) std\variant.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_variant.html $(STDDOC) std\variant.d
