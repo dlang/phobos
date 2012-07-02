@@ -72,6 +72,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8055): [Regression 2.059] std.algorithm.move corrupts moved object field)
         $(LI $(BUGZILLA 8057): std.algorithm.move cannot use for nested struct)
         $(LI $(BUGZILLA 8080): 'alias this' causes toString to be shadowed by aliased object)
+        $(LI $(BUGZILLA 8158): std.algorithm.min fails to compile with user-defined types)
         $(LI $(BUGZILLA 8187): replaceFirst doesn't work for string[] haystack)
         $(LI $(BUGZILLA 8112): std.algorithm.fill must accept InputRange)
         $(LI $(BUGZILLA 8171): Broken std.algorithm.move for nested struct has no member)
