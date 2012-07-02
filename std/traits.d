@@ -2071,7 +2071,8 @@ unittest
     static assert(isOutputRange!(OutputRange!int, int));
 }
 
-unittest
+// Temporarily disabled until bug4617 is fixed.
+version(none) unittest
 {
     // 8231
     struct S {
