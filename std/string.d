@@ -1684,6 +1684,8 @@ C[] chomp(C)(C[] str)
         //Pops off the last character if it's lineSep or paraSep.
         static if(is(C : const char))
         {
+            //In UTF-8, lineSep and paraSep are [226, 128, 168], and
+            //[226, 128, 169] respectively, so their first two bytes are the same.
             case 168: //Last byte of lineSep
             case 169: //Last byte of paraSep
             {
@@ -1712,7 +1714,7 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
 
     static if(is(Unqual!C1 == Unqual!C2))
     {
-        if(str.length >= delimiter.length && str[$ - delimiter.length .. $] == delimiter)
+        if(str.endsWith(delimiter))
             return str[0 .. $ - delimiter.length];
     }
 
@@ -1772,7 +1774,7 @@ unittest
         {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
-            assert(chomp("hello\n", cast(T)null) == "hello");
+            assert(chomp(to!S("hello\n"), cast(T)null) == "hello");
             assert(chomp(to!S("hello"), to!T("o")) == "hell");
             assert(chomp(to!S("hello"), to!T("p")) == "hello");
             // @@@ BUG IN COMPILER, MUST INSERT CAST
@@ -1803,7 +1805,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
 {
     static if(is(Unqual!C1 == Unqual!C2))
     {
-        if(str.length >= delimiter.length && str[0 .. delimiter.length] == delimiter)
+        if(str.startsWith(delimiter))
             return str[delimiter.length .. $];
         return str;
     }
