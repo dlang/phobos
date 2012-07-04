@@ -100,10 +100,7 @@ $(MYREF oidNamespace) $(MYREF x500Namespace) )
 module std.uuid;
 
 import std.algorithm, std.array, std.ascii;
-import std.conv, std.random, std.range, std.string, std.traits, std.md5;
-
-//import std.crypto.hash.sha;
-//import std.crypto.hash.md5;
+import std.conv, std.digest.md, std.digest.sha, std.random, std.range, std.string, std.traits;
 
 /**
  *
@@ -856,7 +853,7 @@ unittest
  * UUIDs (MD5) for new applications.
  *
  * CTFE:
- * CTFE is currently not supported as $(D std.md5) doesn't work in CTFE.
+ * CTFE is not supported.
  *
  * Examples:
  * ---------------------------------------
@@ -884,10 +881,8 @@ unittest
  * but that wouldn't be compatible with Boost, which generates different output
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
- *
- * BUGS: Could be pure, but this depends on the MD5 hash code.
  */
-@safe UUID md5UUID(const(char[]) name, const UUID namespace = UUID.init)
+@safe pure UUID md5UUID(const(char[]) name, const UUID namespace = UUID.init)
 {
     return md5UUID(cast(const(ubyte[]))name, namespace);
 }
@@ -895,9 +890,9 @@ unittest
 /**
  * ditto
  */
-@trusted UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
+@trusted pure UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
-    MD5_CTX hash;
+    MD5 hash;
     hash.start();
 
     /*
@@ -905,11 +900,11 @@ unittest
      * We always keep the UUID data in big-endian representation, so
      * that's fine
      */
-    hash.update(namespace.data);
-    hash.update(data);
+    hash.put(namespace.data[]);
+    hash.put(data[]);
 
     UUID u;
-    hash.finish(u.data);
+    u.data = hash.finish();
 
     //set variant
     //must be 0b10xxxxxx
@@ -957,11 +952,8 @@ unittest
     assert(u.variant == UUID.Variant.rfc4122);
     assert(u.uuidVersion == UUID.Version.nameBasedMD5);
 }
-/+
- FIXME: need 3 more unittests: have to check simlpeID.data and id.data (to make sure we have the same
- result on all systems, especially considering endianess). id.data needs to be checked for the ubyte
- case as well
-/**
+
+ /**
  * This function generates a name based (Version 5) UUID from a namespace
  * UUID and a name.
  * If no namespace UUID was passed, the empty UUID $(D UUID.init) is used.
@@ -971,9 +963,7 @@ unittest
  * this module should be used when appropriate.
  *
  * CTFE:
- * As long as Phobos has no standard SHA-1 implementation, CTFE support
- * for this function can't be guaranteed. CTFE support will depend on
- * whether the SHA-1 implementation supports CTFE.
+ * CTFE is not supported.
  *
  * Examples:
  * ---------------------------------------
@@ -1001,10 +991,8 @@ unittest
  * but that wouldn't be compatible with Boost, which generates different output
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
- *
- * BUGS: Could be pure, but this depends on the SHA-1 hash code.
  */
-@trusted UUID sha1UUID(const(char[]) name, const UUID namespace = UUID.init)
+@trusted pure UUID sha1UUID(const(char[]) name, const UUID namespace = UUID.init)
 {
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
@@ -1012,20 +1000,22 @@ unittest
 /**
  * ditto
  */
-@trusted UUID sha1UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
+@trusted pure UUID sha1UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
-    SHA1 sha = new SHA1();
+    SHA1 sha;
+    sha.start();
 
     /*
      * NOTE: RFC 4122 says namespace should be converted to big-endian.
      * We always keep the UUID data in big-endian representation, so
      * that's fine
      */
-    sha.put(namespace.data);
-    sha.put(data);
+    sha.put(namespace.data[]);
+    sha.put(data[]);
 
-    UUID u;
-    sha.finish(u.data[]);
+    auto hash = sha.finish();
+    auto u = UUID();
+    u.data[] = hash[0 .. 16];
 
     //set variant
     //must be 0b10xxxxxx
@@ -1043,8 +1033,12 @@ unittest
 unittest
 {
     auto simpleID = sha1UUID("test.uuid.any.string");
+    assert(simpleID.data == cast(ubyte[16])[16, 209, 239, 61, 99, 12, 94, 70, 159, 79, 255, 250,
+        131, 79, 14, 147]);
     auto namespace = sha1UUID("my.app");
     auto id = sha1UUID("some-description", namespace);
+    assert(id.data == cast(ubyte[16])[225, 94, 195, 219, 126, 75, 83, 71, 157, 52, 247, 43, 238, 248,
+        148, 46]);
 
     auto constTest = sha1UUID(cast(const(char)[])"test");
     constTest = sha1UUID(cast(const(char[]))"test");
@@ -1054,6 +1048,8 @@ unittest
 
     const(ubyte)[] data = cast(ubyte[])[0,1,2,244,165,222];
     id = sha1UUID(data);
+    assert(id.data == cast(ubyte[16])[60, 65, 92, 240, 96, 46, 95, 238, 149, 100, 12, 64, 199, 194,
+        243, 12]);
 
     auto correct = UUID("21f7f8de-8051-5b89-8680-0195ef798b6a");
 
@@ -1062,7 +1058,6 @@ unittest
     assert(u.variant == UUID.Variant.rfc4122);
     assert(u.uuidVersion == UUID.Version.nameBasedSHA1);
 }
-+/
 
 /**
  * This function generates a random number based UUID from a random
