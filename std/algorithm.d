@@ -2539,7 +2539,7 @@ auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
     static struct Result
-    { // test
+    {
     private:
         RoR _items;
         ElementType!RoR _current;
