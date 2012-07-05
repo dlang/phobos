@@ -138,7 +138,7 @@ and returns $(D true).)
 )
 $(TR $(TDNW $(LREF startsWith)) $(TD $(D startsWith("hello,
 world", "hello")) returns $(D true).)
-)
+)j
 $(TR $(TDNW $(LREF until)) $(TD Lazily iterates a range
 until a specific value is found.)
 )
@@ -2539,7 +2539,7 @@ auto joiner(RoR)(RoR r)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
     static struct Result
-    {
+    { // test
     private:
         RoR _items;
         ElementType!RoR _current;
