@@ -3629,7 +3629,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
-                    enforce(!ranges[0].empty, "Invalid Zip object");
+                    enforce(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
                 break;
@@ -3776,6 +3776,11 @@ unittest
     sort!("a[0] < b[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
     assert(b == [2.0, 1.0, 3.0]);
+
+    z = zip(StoppingPolicy.requireSameLength, a, b);
+    assertNotThrown((z.popBack(), z.popBack(), z.popBack()));
+    assert(z.empty);
+    assertThrown(z.popBack());
 
     a = [ 1, 2, 3 ];
     b = [ 1.0, 2.0, 3.0 ];
