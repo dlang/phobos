@@ -4271,37 +4271,26 @@ private:
     alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
     State _state;
     size_t _n;
-    ElementType _cache;
 
 public:
     this(State initial, size_t n = 0)
     {
         this._state = initial;
         this._n = n;
-        this._cache = compute(this._state, this._n);
     }
 
     @property ElementType front()
     {
-        //return ElementType.init;
-        return this._cache;
-    }
-
-    ElementType moveFront()
-    {
-        return move(this._cache);
+        return compute(this._state, this._n);
     }
 
     void popFront()
     {
-        this._cache = compute(this._state, ++this._n);
+        ++this._n;
     }
-
-
 
     ElementType opIndex(size_t n)
     {
-        //return ElementType.init;
         return compute(this._state, n + this._n);
     }
 
