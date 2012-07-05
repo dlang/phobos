@@ -330,9 +330,7 @@ Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
 left to right for all $(D x) in $(D range). The original ranges are
-not changed. Evaluation is done lazily. The range returned by $(D map)
-caches the last value such that evaluating $(D front) multiple times
-does not result in multiple calls to $(D fun).
+not changed. Evaluation is done lazily.
 
 Example:
 ----
