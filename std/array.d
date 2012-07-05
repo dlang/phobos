@@ -367,12 +367,54 @@ unittest
 
 // Specialization for narrow strings. The necessity of
 // !isStaticArray!A suggests a compiler @@@BUG@@@.
-void popFront(A)(ref A a)
-if (isNarrowString!A && isMutable!A && !isStaticArray!A)
+void popFront(S)(ref S str) @trusted pure nothrow
+if (isNarrowString!S && isMutable!S && !isStaticArray!S)
 {
-    assert(a.length, "Attempting to popFront() past the end of an array of "
-            ~ typeof(a[0]).stringof);
-    a = a[std.utf.stride(a, 0) .. $];
+    alias ElementEncodingType!S C;
+    assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
+
+    static if(is(Unqual!C == char))
+    {
+        immutable c = str[0];
+        if(c < 0x80)
+        {
+            if(__ctfe)
+            {
+                //The ptr trick doesn't work in CTFE.
+                str = str[1 .. $];
+            }
+            else
+            {
+                //ptr is used to avoid unnnecessary bounds checking.
+                str = str.ptr[1 .. str.length];
+            }
+        }
+        else
+        {
+             import core.bitop;
+             auto msbs = 7 - bsr(~c);
+             if((msbs < 2) | (msbs > 6))
+             {
+                 //Invalid UTF-8
+                 msbs = 1;
+             }
+             str = str[msbs .. $];
+        }
+    }
+    else static if(is(Unqual!C == wchar))
+    {
+        immutable u = str[0];
+        str = str[1 + (u >= 0xD800 && u <= 0xDBFF) .. $];
+    }
+    else static assert(0, "Bad template constraint.");
+}
+
+version(unittest) C[] _eatString(C)(C[] str)
+{
+    while(!str.empty)
+        str.popFront();
+
+    return str;
 }
 
 unittest
@@ -396,7 +438,13 @@ unittest
         assert(str.empty);
     }
 
-    static assert(!__traits(compiles, popFront!(immutable string)));
+    static assert(!is(typeof(popFront!(immutable string))));
+    static assert(!is(typeof(popFront!(char[4]))));
+
+    enum checkCTFE = _eatString("ウェブサイト@La_Verité.com");
+    static assert(checkCTFE.empty);
+    enum checkCTFEW = _eatString("ウェブサイト@La_Verité.com"w);
+    static assert(checkCTFEW.empty);
 }
 
 /**
