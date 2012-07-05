@@ -15,7 +15,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-public import core.stdc.stdio;
+public import core.stdc.stdio, std.string : KeepTerminator;
 static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
@@ -942,7 +942,6 @@ Returns the file number corresponding to this object.
 
 /**
 Range that reads one line at a time. */
-    alias std.string.KeepTerminator KeepTerminator;
     /// ditto
     struct ByLine(Char, Terminator)
     {
