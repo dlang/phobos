@@ -365,7 +365,8 @@ unittest
 }
 
 /**
-Returns the number of arguments of function $(D func)
+Returns the number of arguments of function $(D func).
+arity is undefined for variadic functions.
 
 Example:
 ---
@@ -376,7 +377,7 @@ static assert(arity!bar==1);
 ---
  */
 template arity(alias func) 
-    if (isCallable!func)
+    if ( isCallable!func && variadicFunctionStyle!func == Variadic.no ) 
 {
 	enum uint arity = (ParameterTypeTuple!func).length;
 }
@@ -386,6 +387,8 @@ unittest {
 	static assert(arity!foo==0);
 	void bar(uint){}
 	static assert(arity!bar==1);
+	void variadicFoo(uint...){}
+	static assert(__traits(compiles,arity!variadicFoo)==false);
 }
 
 /**
