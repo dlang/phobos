@@ -3108,8 +3108,11 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
     return take(repeat(value), n);
 }
 
-/// Equivalent to $(D repeat(value, n)). Scheduled for deprecation.
-Take!(Repeat!T) replicate(T)(T value, size_t n)
+/++
+    $(RED Deprecated. It will be removed in January 2013.
+          Please use $(LREF repeat) instead.)
+  +/
+deprecated Take!(Repeat!T) replicate(T)(T value, size_t n)
 {
     return repeat(value, n);
 }
@@ -6854,10 +6857,11 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return false;
     }
 
-/**
- * Deprecated alias for $(D contains).
- */
-    alias contains canFind;
+/++
+    $(RED Deprecated. It will be removed in January 2013.
+          Please use $(LREF contains) instead.)
+  +/
+    deprecated alias contains canFind;
 }
 
 // Doc examples

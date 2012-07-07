@@ -394,11 +394,6 @@ template EncoderFunctions()
         void write(E c) { array[0] = c; array = array[1..$]; }
     }
 
-    deprecated template WriteToBuffer()
-    {
-        void write(E c) { buffer ~= c; }
-    }
-
     template WriteToDelegate()
     {
         void write(E c) { dg(c); }
@@ -447,12 +442,6 @@ template EncoderFunctions()
     template EncodeToArray()
     {
         mixin WriteToArray;
-        mixin EncodeViaWrite;
-    }
-
-    deprecated template EncodeToBuffer()
-    {
-        mixin WriteToBuffer;
         mixin EncodeViaWrite;
     }
 

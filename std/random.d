@@ -1,10 +1,7 @@
 // Written in the D programming language.
 
 /**
-Facilities for random number generation. The old-style functions
-$(D_PARAM rand_seed) and $(D_PARAM rand) will soon be deprecated as
-they rely on global state and as such are subjected to various
-thread-related issues.
+Facilities for random number generation.
 
 The new-style generator objects hold their own state so they are
 immune of threading issues. The generators feature a number of

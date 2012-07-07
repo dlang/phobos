@@ -40,8 +40,6 @@ class ConvException : Exception
     }
 }
 
-deprecated alias ConvException ConvError;   /// ditto
-
 private string convError_unexpected(S)(S source) {
     return source.empty ? "end of input" : text("'", source.front, "'");
 }
@@ -135,8 +133,6 @@ class ConvOverflowException : ConvException
         super(s, fn, ln);
     }
 }
-
-deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 
 /* **************************************************************
 
@@ -2719,17 +2715,6 @@ unittest
 
     auto s = "NULL";
     assert(parse!(const(NullType))(s) is null);
-}
-
-// Parsing typedefs forwards to their host types
-deprecated Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
-        is(Target == typedef))
-{
-    static if (is(Target T == typedef))
-        return cast(Target) parse!T(s);
-    else
-        static assert(0);
 }
 
 private void skipWS(R)(ref R r)

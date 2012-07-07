@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * $(RED Scheduled for deprecation. Please use core.cpuid instead.)
+ * $(RED Deprecated. It will be removed in January 2013. Please use core.cpuid instead.)
  *
  * Identify the characteristics of the host CPU.
  *
@@ -45,9 +45,14 @@ Source:    $(PHOBOSSRC std/_cpuid.d)
  */
 module std.cpuid;
 
+pragma(msg, "std.cpuid has been deprecated. It will be removed in January 2013. " ~
+            "Please use core.cpuid instead.");
+
 import std.string;
 import std.conv;
 private import core.cpuid;
+
+deprecated:
 
 version(D_InlineAsm_X86)
 {

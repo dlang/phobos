@@ -68,10 +68,11 @@ class FormatException : Exception
     }
 }
 
-/**
-$(RED Scheduled for deprecation. Please use $(D FormatException) instead.)
- */
-/*deprecated*/ alias FormatException FormatError;
+/++
+    $(RED Deprecated. It will be removed In January 2013.
+          Please use $(D FormatException) instead.)
+ +/
+deprecated alias FormatException FormatError;
 
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
