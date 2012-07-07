@@ -7183,7 +7183,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++ +/
         @property auto front() {assert(0);}
@@ -7211,7 +7211,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
@@ -7239,7 +7239,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++ +/
         @property auto save() {assert(0);}
@@ -7306,7 +7306,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D isBidirectionalRange!R) is $(D true).
@@ -7343,7 +7343,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D isRandomAccesRange!R) is $(D true).
@@ -7400,7 +7400,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D hasLength!R) is $(D true).
@@ -7424,7 +7424,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D hasSlicing!R) is $(D true).
