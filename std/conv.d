@@ -1125,7 +1125,7 @@ unittest
 }
 
 /**
-    $(RED Deprecated. It will be removed in December 2012.
+    $(RED Deprecated. It will be removed in January 2013.
           Please use $(XREF format, formattedWrite) instead.)
 
     Conversions to string with optional configures.
@@ -1134,7 +1134,7 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T separator = ", ", in T rig
     if (!isSomeChar!(ElementType!S) && (isInputRange!S || isInputRange!(Unqual!S)) &&
         isSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     static if (!isInputRange!S)
@@ -1171,7 +1171,7 @@ deprecated T toImpl(T, S)(ref S s, in T leftBracket, in T separator = " ", in T 
     if ((is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[])) &&
         isSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     return toImpl(s);
@@ -1182,7 +1182,7 @@ deprecated T toImpl(T, S)(S s, in T leftBracket, in T keyval = ":", in T separat
     if (isAssociativeArray!S &&
         isSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     alias Unqual!(typeof(T.init[0])) Char;
@@ -1208,7 +1208,7 @@ deprecated T toImpl(T, S)(S s, in T nullstr)
     if (is(S : Object) &&
         isSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     if (!s)
@@ -1221,7 +1221,7 @@ deprecated T toImpl(T, S)(S s, in T left, in T separator = ", ", in T right = ")
     if (is(S == struct) && !is(typeof(&S.init.toString)) && !isInputRange!S &&
         isSomeString!T)
 {
-    pragma(msg, hardDeprec!("2.060", "December 2012", "std.conv.toImpl with extra parameters",
+    pragma(msg, hardDeprec!("2.060", "January 2013", "std.conv.toImpl with extra parameters",
                                                  "std.format.formattedWrite"));
 
     Tuple!(FieldTypeTuple!S) * t = void;

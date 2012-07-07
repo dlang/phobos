@@ -95,10 +95,10 @@ class UTFException : Exception
 
 
 /++
-    $(RED Scheduled for deprecation in December 2012.
+    $(RED Deprecated. It will be removed in January 2013.
           Please use $(LREF UTFException) instead.)
   +/
-alias UTFException UtfException;
+deprecated alias UTFException UtfException;
 
 
 /++

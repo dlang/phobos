@@ -21,6 +21,8 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
+        $(LI UtfException - which was scheduled for deprecation - has been deprecated.
+             Please use UTFException instead.)
         $(LI The deprecated overloads of std.array.insert and std.array.replace
              have been removed. Please use insertInPlace and replaceInPlace instead.)
         $(LI The deprecated toISOExtendedString and fromISOExtendedString
