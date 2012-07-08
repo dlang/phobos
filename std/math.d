@@ -923,7 +923,7 @@ creal sqrt(creal z) @safe pure nothrow
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp(real x) @safe pure nothrow
+real exp(real x) @trusted pure nothrow
 {
     version(D_InlineAsm_X86)
     {
