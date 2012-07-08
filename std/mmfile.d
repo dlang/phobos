@@ -319,7 +319,7 @@ class MmFile
                 struct_stat64 statbuf;
                 if (fstat64(fd, &statbuf))
                 {
-                    //printf("\tfstat error, errno = %d\n",getErrno());
+                    //printf("\tfstat error, errno = %d\n", errno);
                     .close(fd);
                     errnoEnforce(false, "Could not stat file "~filename);
                 }
@@ -586,7 +586,7 @@ private:
     //     }
     //     else version (linux)
     //     {
-    //         throw new FileException(filename, getErrno());
+    //         throw new FileException(filename, errno);
     //     }
     //     else
     //     {

@@ -2262,7 +2262,7 @@ class StdioException : Exception
 
 /**
 Initialize with a message and an error code. */
-    this(string message, uint e = .getErrno())
+    this(string message, uint e = .errno)
     {
         errno = e;
         version (Posix)
@@ -2295,7 +2295,7 @@ Initialize with a message and an error code. */
 /// ditto
     static void opCall()
     {
-        throw new StdioException(null, .getErrno());
+        throw new StdioException(null, .errno);
     }
 }
 
