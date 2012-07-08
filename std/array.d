@@ -186,7 +186,7 @@ private template nDimensions(T)
 {
     static if(isArray!T)
     {
-        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
+        enum nDimensions = 1 + nDimensions!(ArrayTarget!T);
     }
     else
     {
@@ -266,7 +266,7 @@ if(allSatisfy!(isIntegral, I))
         to!string(sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias typeof(T.init[0]) E;
+    alias ArrayTarget!T E;
 
     auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];
@@ -1533,7 +1533,7 @@ unittest
     }
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        alias typeof(S.init[0]) Char;
+        alias ElementEncodingType!S Char;
         S s = to!S("yet another dummy text, yet another ...");
         S from = to!S("yet another");
         S into = to!S("some");

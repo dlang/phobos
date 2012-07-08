@@ -1689,7 +1689,7 @@ unittest
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
-        alias Unqual!(typeof(S.init[0])) C;
+        alias Unqual!(ElementEncodingType!S) C;
 
         auto s1 = to!S("hello\U00010143\u0100\U00010143");
         auto temp = new C[](s1.length + 1);
