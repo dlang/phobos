@@ -1527,7 +1527,8 @@ unittest
 }
 
 /**
- * $(RED Scheduled for deprecation. Please use $(D isFileHandle) instead.)
+ * $(RED Scheduled for deprecation in January 2013.
+ *       Please use $(D isFileHandle) instead.)
  */
 alias isFileHandle isStreamingDevice;
 

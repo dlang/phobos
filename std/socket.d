@@ -145,12 +145,12 @@ version(unittest)
 class SocketException: Exception
 {
     /**
-     * $(RED Scheduled for deprecation. Please use $(D SocketOSException)
-     * instead.)
+     * $(RED Deprecated. It will be removed in January 2013.
+     *       Please use $(LREF SocketOSException) instead.)
      *
      * Provided for compatibility with older code using $(D SocketException).
      */
-    @property int errorCode() const
+    deprecated @property int errorCode() const
     {
         auto osException = cast(SocketOSException)this;
         if (osException)
@@ -1904,18 +1904,14 @@ struct TimeVal
         // D interface
         mixin FieldProxy!(`ctimeval.tv_sec`, `seconds`);
         mixin FieldProxy!(`ctimeval.tv_usec`, `microseconds`);
-
-        // C interface
-        deprecated
-        {
-            alias seconds tv_sec;
-            alias microseconds tv_usec;
-        }
     }
 }
 
-/// $(RED Scheduled for deprecation. Please use $(D TimeVal) instead.)
-alias TimeVal timeval;
+/++
+    $(RED Deprecated. It will be removed in January 2013.
+          Please use $(LREF TimeVal) instead.)
+  +/
+deprecated alias TimeVal timeval;
 
 
 /**
@@ -2139,18 +2135,14 @@ struct Linger
         // D interface
         mixin FieldProxy!(`clinger.l_onoff`, `on`);
         mixin FieldProxy!(`clinger.l_linger`, `time`);
-
-        // C interface
-        deprecated
-        {
-            alias on l_onoff;
-            alias time l_linger;
-        }
     }
 }
 
-/// $(RED Scheduled for deprecation. Please use $(D Linger) instead.)
-alias Linger linger;
+/++
+    $(RED Deprecated. It will be removed in January 2013.
+          Please use $(LREF Linger) instead.)
+  +/
+deprecated alias Linger linger;
 
 /// Specifies a socket option:
 enum SocketOption: int

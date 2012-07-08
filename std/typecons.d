@@ -367,8 +367,9 @@ public:
 
     // This mitigates breakage of old code now that std.range.Zip uses
     // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
-    // because it should eventually be deprecated.
-    auto at(size_t index)() {
+    // because it was intended for deprecation.
+    // Now that it has been deprecated, it will be removed in January 2013.
+    deprecated auto at(size_t index)() {
         return field[index];
     }
 
@@ -450,11 +451,6 @@ public:
         {
             field[i] = rhs.field[i];
         }
-    }
-
-    deprecated void assign(R)(R rhs) if (isTuple!R)
-    {
-        this = rhs;
     }
 
     // @@@BUG4424@@@ workaround
@@ -723,149 +719,6 @@ unittest
     static assert(!isTuple!(S));
 }
 
-
-/**
-Defines truly named enumerated values with parsing and stringizing
-primitives.
-
-Example:
-
-----
-mixin(defineEnum!("Abc", "A", "B", 5, "C"));
-----
-
-is equivalent to the following code:
-
-----
-enum Abc { A, B = 5, C }
-string enumToString(Abc v) { ... }
-Abc enumFromString(string s) { ... }
-----
-
-The $(D enumToString) function generates the unqualified names
-of the enumerated values, i.e. "A", "B", and "C". The $(D
-enumFromString) function expects one of "A", "B", and "C", and throws
-an exception in any other case.
-
-A base type can be specified for the enumeration like this:
-
-----
-mixin(defineEnum!("Abc", ubyte, "A", "B", "C", 255));
-----
-
-In this case the generated $(D enum) will have a $(D ubyte)
-representation.  */
-
-deprecated template defineEnum(string name, T...)
-{
-    static if (is(typeof(cast(T[0]) T[0].init)))
-    {
-        template enumValuesImpl(string name, BaseType, long index, T...)
-        {
-            static if (name.length)
-            {
-                enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
-                    ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
-            }
-            else
-            {
-                static if (!T.length)
-                {
-                    enum string enumValuesImpl = "";
-                }
-                else
-                {
-                    static if (T.length == 1
-                               || T.length > 1 && is(typeof(T[1]) : string))
-                    {
-                        enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
-                            ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
-                    }
-                    else
-                    {
-                        enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
-                            ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
-                    }
-                }
-            }
-        }
-
-        template enumParserImpl(string name, bool first, T...)
-        {
-            static if (first)
-            {
-                enum string enumParserImpl = "bool enumFromString(string s, ref "
-                    ~name~" v) {\n"
-                    ~enumParserImpl!(name, false, T)
-                    ~"return false;\n}\n";
-            }
-            else
-            {
-                static if (T.length)
-                    enum string enumParserImpl =
-                        "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
-                        ~enumParserImpl!(name, false, T[1 .. $]);
-                else
-                    enum string enumParserImpl = "";
-            }
-        }
-
-        template enumPrinterImpl(string name, bool first, T...)
-        {
-            static if (first)
-            {
-                enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
-                    ~enumPrinterImpl!(name, false, T)~"\n}\n";
-            }
-            else
-            {
-                static if (T.length)
-                    enum string enumPrinterImpl =
-                        "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
-                        ~enumPrinterImpl!(name, false, T[1 .. $]);
-                else
-                    enum string enumPrinterImpl = "return null;";
-            }
-        }
-
-        template StringsOnly(T...)
-        {
-            template ValueTuple(T...)
-            {
-                alias T ValueTuple;
-            }
-
-            static if (T.length == 1)
-                static if (is(typeof(T[0]) : string))
-                    alias ValueTuple!(T[0]) StringsOnly;
-                else
-                    alias ValueTuple!() StringsOnly;
-            else
-                static if (is(typeof(T[0]) : string))
-                    alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
-                else
-                    alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
-        }
-
-        enum string defineEnum =
-            enumValuesImpl!(name, T[0], 0, T[1 .. $])
-            ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))
-            ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]));
-    }
-    else
-        alias defineEnum!(name, int, T) defineEnum;
-}
-
-deprecated unittest
-{
-    mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe",
-                      "A1", 1, "B1", "C1"));
-    auto a = _24b455e148a38a847d65006bca25f7fe.A1;
-    assert(enumToString(a) == "A1");
-    _24b455e148a38a847d65006bca25f7fe b;
-    assert(enumFromString("B1", b)
-           && b == _24b455e148a38a847d65006bca25f7fe.B1);
-}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
