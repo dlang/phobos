@@ -161,6 +161,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
+STD_CRYPT_MODULES = $(addprefix std/crypt/, md5 sha1)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -178,13 +179,15 @@ endif
 EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
-EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+EXTRA_MODULES_CRYPT += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/crypt/, sha1_SSSE3)
+EXTRA_MODULES += $(EXTRA_MODULES_CRYPT) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
 	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_CRYPT_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
