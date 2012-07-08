@@ -216,12 +216,3 @@ unittest
     assert(parseInteger!("-1234abc").value == "-1234");
     assert(parseInteger!("-1234abc").rest == "abc");
 }
-
-/**
-Deprecated aliases held for backward compatibility.
-*/
-deprecated alias toStringNow ToString;
-/// Ditto
-deprecated alias parseUinteger ParseUinteger;
-/// Ditto
-deprecated alias parseUinteger ParseInteger;
