@@ -1624,7 +1624,7 @@ this() @trusted
             static if(
                 Args.length > 1 &&
                 randAssignable!(Args[$ - 1]) &&
-                is(MapType!(Args[0], functions) : typeof(Args[$ - 1].init[0]))
+                is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
                 alias args[$ - 1] buf;
@@ -3787,7 +3787,7 @@ private struct RoundRobinBuffer(C1, C2)
     // No need for constraints because they're already checked for in asyncBuf.
 
     alias ParameterTypeTuple!(C1.init)[0] Array;
-    alias typeof(Array.init[0]) T;
+    alias ArrayTarget!Array T;
 
     T[][] bufs;
     size_t index;
