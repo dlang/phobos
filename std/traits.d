@@ -379,7 +379,7 @@ static assert(arity!bar==1);
 template arity(alias func) 
     if ( isCallable!func && variadicFunctionStyle!func == Variadic.no ) 
 {
-	enum uint arity = (ParameterTypeTuple!func).length;
+	enum size_t arity = (ParameterTypeTuple!func).length;
 }
 
 unittest {
