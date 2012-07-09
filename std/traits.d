@@ -364,6 +364,32 @@ unittest
     static assert(is(P_dglit[0] == int));
 }
 
+/**
+Returns the number of arguments of function $(D func).
+arity is undefined for variadic functions.
+
+Example:
+---
+void foo(){}
+static assert(arity!foo==0);
+void bar(uint){}
+static assert(arity!bar==1);
+---
+ */
+template arity(alias func) 
+    if ( isCallable!func && variadicFunctionStyle!func == Variadic.no ) 
+{
+	enum size_t arity = (ParameterTypeTuple!func).length;
+}
+
+unittest {
+	void foo(){}
+	static assert(arity!foo==0);
+	void bar(uint){}
+	static assert(arity!bar==1);
+	void variadicFoo(uint...){}
+	static assert(__traits(compiles,arity!variadicFoo)==false);
+}
 
 /**
 Returns a tuple consisting of the storage classes of the parameters of a
