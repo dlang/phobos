@@ -35,6 +35,7 @@ enum JSON_TYPE : byte {
         /// Indicates the type of a $(D JSONValue).
         STRING,
         INTEGER, /// ditto
+        UINTEGER,/// integers > 2^63-1
         FLOAT,   /// ditto
         OBJECT,  /// ditto
         ARRAY,   /// ditto
@@ -52,15 +53,33 @@ struct JSONValue {
                 string                          str;
                 /// Value when $(D type) is $(D JSON_TYPE.INTEGER)
                 long                            integer;
+                /// Value when $(D type) is $(D JSON_TYPE.UINTEGER)
+                ulong                           uinteger;
                 /// Value when $(D type) is $(D JSON_TYPE.FLOAT)
                 real                            floating;
                 /// Value when $(D type) is $(D JSON_TYPE.OBJECT)
-                JSONValue[string]       object;
+                JSONValue[string]               object;
                 /// Value when $(D type) is $(D JSON_TYPE.ARRAY)
                 JSONValue[]                     array;
         }
         /// Specifies the _type of the value stored in this structure.
         JSON_TYPE                               type;
+
+        /// array syntax for json arrays
+        ref JSONValue opIndex(size_t i)
+            in { assert(type == JSON_TYPE.ARRAY, "json type is not array"); }
+        body
+        {
+            return array[i];
+        }
+
+        /// hash syntax for json objects
+        ref JSONValue opIndex(string k)
+            in { assert(type == JSON_TYPE.OBJECT, "json type is not object"); }
+        body
+        {
+            return object[k];
+        }
 }
 
 /**
@@ -233,7 +252,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                 case '0': .. case '9':
                 case '-':
                         auto number = appender!string();
-                        bool isFloat;
+                        bool isFloat, isNegative;
 
                         void readInteger() {
                                 if(!isDigit(c)) error("Digit expected");
@@ -249,6 +268,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                         if(c == '-') {
                                 number.put('-');
                                 c = getChar();
+                                isNegative = true;
                         }
 
                         readInteger();
@@ -274,8 +294,11 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                 value.floating = parse!real(data);
                         }
                         else {
-                                value.type = JSON_TYPE.INTEGER;
-                                value.integer = parse!long(data);
+                                if (isNegative)
+                                    value.integer = parse!long(data);
+                                else
+                                    value.uinteger = parse!ulong(data);
+                                value.type = value.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
                         }
                         break;
 
@@ -374,6 +397,10 @@ string toJSON(in JSONValue* root) {
 
                 case JSON_TYPE.INTEGER:
                         json.put(to!string(value.integer));
+                        break;
+
+                case JSON_TYPE.UINTEGER:
+                        json.put(to!string(value.uinteger));
                         break;
 
                 case JSON_TYPE.FLOAT:
