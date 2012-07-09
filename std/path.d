@@ -2708,7 +2708,7 @@ string expandTilde(string inputPath)
 
                 // Obtain info from database.
                 passwd *verify;
-                setErrno(0);
+                errno = 0;
                 if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
                         &verify) == 0)
                 {
