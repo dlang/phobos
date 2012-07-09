@@ -212,7 +212,7 @@ class FileException : Exception
 
     /++
         Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM getErrno) in Posix).
+        in Windows, $(D_PARAM errno) in Posix).
 
         Params:
             name = Name of file for which the error occurred.
@@ -229,7 +229,7 @@ class FileException : Exception
         this.errno = errno;
     }
     else version(Posix) this(in char[] name,
-                             uint errno = .getErrno(),
+                             uint errno = .errno,
                              string file = __FILE__,
                              size_t line = __LINE__)
     {
@@ -249,7 +249,7 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
       }
       else version (Posix)
       {
-        throw new FileException(name, .getErrno(), file, line);
+        throw new FileException(name, .errno, file, line);
       }
     }
     return condition;
