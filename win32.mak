@@ -101,7 +101,7 @@ test.exe : test.obj $(LIB)
 # Do not add any more modules to SRCS_1.
 SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
-	std\algorithm.d std\file.d
+	std\file.d
 
 SRC_STD_2_HEAVY= std\array.d std\functional.d std\range.d \
 	std\path.d std\outbuffer.d std\utf.d
@@ -120,6 +120,8 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 
 SRC_STD_4= std\uuid.d
 
+SRC_STD_5_HEAVY= std\algorithm.d
+
 SRC_STD_REST= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
@@ -132,7 +134,8 @@ SRC_STD_REST= std\variant.d \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_3) $(SRC_STD_4) $(SRC_STD_REST)
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_3) $(SRC_STD_4) \
+	$(SRC_STD_5_HEAVY) $(SRC_STD_REST)
 
 SRC=	unittest.d crc32.d index.d
 
@@ -349,6 +352,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_5_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_REST)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRC_TO_COMPILE_NOT_STD) $(UNITTEST_OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
