@@ -439,11 +439,19 @@ template map(fun...) if (fun.length >= 1)
                     return _input.length;
                 }
 
-                alias length opDollar;
+                auto opDollar(size_t dim)()
+                {
+                    return _input.length;
+                }
             }
 
             static if (hasSlicing!R)
             {
+                auto opSlice()
+                {
+                    return typeof(this)(_input[]);
+                }
+
                 auto opSlice(size_t lowerBound, size_t upperBound)
                 {
                     return typeof(this)(_input[lowerBound..upperBound]);
