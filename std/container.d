@@ -1989,7 +1989,7 @@ unittest
     alias DList!int IntList;
     IntList list = IntList([0,1,2,3]);
     auto range = list[];
-    for( ; !range.empty; range.popFront)
+    for( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 2)
@@ -2001,7 +2001,7 @@ unittest
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront)
+    for( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 2)
@@ -2013,7 +2013,7 @@ unittest
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront)
+    for( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 0)
@@ -2025,7 +2025,7 @@ unittest
 
     list = IntList([0,1,2,3]);
     range = list[];
-    for( ; !range.empty; range.popFront)
+    for( ; !range.empty; range.popFront())
     {
         int item = range.front;
         if (item == 1)
