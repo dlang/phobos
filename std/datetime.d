@@ -30887,8 +30887,7 @@ auto r = benchmark!(f0, f1, f2)(10_000);
 writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
 --------------------
   +/
-@safe TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
-    if(areAllSafe!fun)
+TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
 {
     TickDuration[lengthof!(fun)()] result;
     StopWatch sw;
@@ -30899,26 +30898,6 @@ writefln("Milliseconds to call fun[0] n times: %s", r[0].to!("msecs", int));
         sw.reset();
         foreach(j; 0 .. n)
             fun[i]();
-        result[i] = sw.peek();
-    }
-
-    return result;
-}
-
-/++ Ditto +/
-TickDuration[lengthof!(fun)()] benchmark(fun...)(uint times)
-    if(!areAllSafe!fun)
-{
-    TickDuration[lengthof!(fun)()] result;
-    StopWatch sw;
-    sw.start();
-
-    foreach(i, unused; fun)
-    {
-        sw.reset();
-        foreach(j; 0 .. times)
-            fun[i]();
-
         result[i] = sw.peek();
     }
 
