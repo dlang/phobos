@@ -4152,12 +4152,15 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
-    // Special  case for two arrays
-    static if (isArray!R1 && isArray!R2 &&
-               ((!isSomeString!R1 && !isSomeString!R2) ||
-                 (isSomeString!R1 && isSomeString!R2 &&
-                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
-                  isDefaultPred)))
+    static if (isDefaultPred && isArray!R1 && isArray!R2 &&
+               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+    {
+        if (haystack.length < needle.length) return false;
+
+        return haystack[0 .. needle.length] == needle;
+    }
+    else static if (isArray!R1 && isArray!R2 &&
+                    !isNarrowString!R1 && !isNarrowString!R2)
     {
         if (haystack.length < needle.length) return false;
 
@@ -4205,8 +4208,7 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-    foreach (S; TypeTuple!(char[], wstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -4214,8 +4216,7 @@ unittest
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        foreach (T; TypeTuple!(dchar[], string))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
@@ -4238,28 +4239,33 @@ unittest
         }
     }
 
-    assert(startsWith([0, 1, 2, 3, 4, 5], cast(int[])null));
-    assert(!startsWith([0, 1, 2, 3, 4, 5], 5));
-    assert(!startsWith([0, 1, 2, 3, 4, 5], 1));
-    assert(startsWith([0, 1, 2, 3, 4, 5], 0));
-    assert(startsWith([0, 1, 2, 3, 4, 5], 5, 0, 1) == 2);
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1], 7) == 1);
-    assert(!startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7]));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], [0, 1, 2]) == 2);
+    foreach(T; TypeTuple!(int, short))
+    {
+        immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
-    assert(!startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), 1));
-    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), 0));
-    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0]));
-    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1]));
-    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1], 7) == 1);
-    assert(!startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7]));
-    assert(startsWith(filter!"true"([0, 1, 2, 3, 4, 5]), [0, 1, 7], [0, 1, 2]) == 2);
-    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1])));
-    assert(startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1]), 7) == 1);
-    assert(!startsWith([0, 1, 2, 3, 4, 5], filter!"true"([0, 1, 7])));
-    assert(startsWith([0, 1, 2, 3, 4, 5], [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
+        assert(startsWith(arr, cast(int[])null));
+        assert(!startsWith(arr, 5));
+        assert(!startsWith(arr, 1));
+        assert(startsWith(arr, 0));
+        assert(startsWith(arr, 5, 0, 1) == 2);
+        assert(startsWith(arr, [0]));
+        assert(startsWith(arr, [0, 1]));
+        assert(startsWith(arr, [0, 1], 7) == 1);
+        assert(!startsWith(arr, [0, 1, 7]));
+        assert(startsWith(arr, [0, 1, 7], [0, 1, 2]) == 2);
+
+        assert(!startsWith(filter!"true"(arr), 1));
+        assert(startsWith(filter!"true"(arr), 0));
+        assert(startsWith(filter!"true"(arr), [0]));
+        assert(startsWith(filter!"true"(arr), [0, 1]));
+        assert(startsWith(filter!"true"(arr), [0, 1], 7) == 1);
+        assert(!startsWith(filter!"true"(arr), [0, 1, 7]));
+        assert(startsWith(filter!"true"(arr), [0, 1, 7], [0, 1, 2]) == 2);
+        assert(startsWith(arr, filter!"true"([0, 1])));
+        assert(startsWith(arr, filter!"true"([0, 1]), 7) == 1);
+        assert(!startsWith(arr, filter!"true"([0, 1, 7])));
+        assert(startsWith(arr, [0, 1, 7], filter!"true"([0, 1, 2])) == 2);
+    }
 }
 
 /**
@@ -4451,18 +4457,21 @@ if (isInputRange!R1 &&
     else
         enum isDefaultPred = false;
 
-    // Special  case for two arrays
-    static if (isArray!R1 && isArray!R2 &&
-               ((!isSomeString!R1 && !isSomeString!R2) ||
-                 (isSomeString!R1 && isSomeString!R2 &&
-                  is(Unqual!(typeof(haystack[0])) == Unqual!(typeof(needle[0]))) &&
-                  isDefaultPred)))
+    static if (isDefaultPred && isArray!R1 && isArray!R2 &&
+               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+    {
+        if (haystack.length < needle.length) return false;
+
+        return haystack[$ - needle.length .. $] == needle;
+    }
+    else static if (isArray!R1 && isArray!R2 &&
+                    !isNarrowString!R1 && !isNarrowString!R2)
     {
         if (haystack.length < needle.length) return false;
         immutable diff = haystack.length - needle.length;
         foreach (j; 0 .. needle.length)
         {
-            if (!binaryFun!(pred)(needle[j], haystack[j + diff]))
+            if (!binaryFun!pred(needle[j], haystack[j + diff]))
                 // not found
                 return false;
         }
@@ -4523,8 +4532,7 @@ unittest
         return Result(r);
     }
 
-    //foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-    foreach (S; TypeTuple!(char[], wstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -4532,8 +4540,7 @@ unittest
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        //foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        foreach (T; TypeTuple!(dchar[], string))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         {
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
@@ -4551,28 +4558,33 @@ unittest
         }
     }
 
-    assert(endsWith([0, 1, 2, 3, 4, 5], cast(int[])null));
-    assert(!endsWith([0, 1, 2, 3, 4, 5], 0));
-    assert(!endsWith([0, 1, 2, 3, 4, 5], 4));
-    assert(endsWith([0, 1, 2, 3, 4, 5], 5));
-    assert(endsWith([0, 1, 2, 3, 4, 5], 0, 4, 5) == 3);
-    assert(endsWith([0, 1, 2, 3, 4, 5], [5]));
-    assert(endsWith([0, 1, 2, 3, 4, 5], [4, 5]));
-    assert(endsWith([0, 1, 2, 3, 4, 5], [4, 5], 7) == 1);
-    assert(!endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5]));
-    assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], [3, 4, 5]) == 2);
+    foreach(T; TypeTuple!(int, short))
+    {
+        immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
-    assert(!endsWith(wrap([0, 1, 2, 3, 4, 5]), 4));
-    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), 5));
-    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [5]));
-    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [4, 5]));
-    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [4, 5], 7) == 1);
-    assert(!endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5]));
-    assert(endsWith(wrap([0, 1, 2, 3, 4, 5]), [2, 4, 5], [3, 4, 5]) == 2);
-    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5])));
-    assert(endsWith([0, 1, 2, 3, 4, 5], wrap([4, 5]), 7) == 1);
-    assert(!endsWith([0, 1, 2, 3, 4, 5], wrap([2, 4, 5])));
-    assert(endsWith([0, 1, 2, 3, 4, 5], [2, 4, 5], wrap([3, 4, 5])) == 2);
+        assert(endsWith(arr, cast(int[])null));
+        assert(!endsWith(arr, 0));
+        assert(!endsWith(arr, 4));
+        assert(endsWith(arr, 5));
+        assert(endsWith(arr, 0, 4, 5) == 3);
+        assert(endsWith(arr, [5]));
+        assert(endsWith(arr, [4, 5]));
+        assert(endsWith(arr, [4, 5], 7) == 1);
+        assert(!endsWith(arr, [2, 4, 5]));
+        assert(endsWith(arr, [2, 4, 5], [3, 4, 5]) == 2);
+
+        assert(!endsWith(wrap(arr), 4));
+        assert(endsWith(wrap(arr), 5));
+        assert(endsWith(wrap(arr), [5]));
+        assert(endsWith(wrap(arr), [4, 5]));
+        assert(endsWith(wrap(arr), [4, 5], 7) == 1);
+        assert(!endsWith(wrap(arr), [2, 4, 5]));
+        assert(endsWith(wrap(arr), [2, 4, 5], [3, 4, 5]) == 2);
+        assert(endsWith(arr, wrap([4, 5])));
+        assert(endsWith(arr, wrap([4, 5]), 7) == 1);
+        assert(!endsWith(arr, wrap([2, 4, 5])));
+        assert(endsWith(arr, [2, 4, 5], wrap([3, 4, 5])) == 2);
+    }
 }
 
 /**

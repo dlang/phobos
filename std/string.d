@@ -1470,27 +1470,48 @@ deprecated String stripl(String)(String s)
 
 /++
     Strips leading whitespace.
+
+    Examples:
+--------------------
+assert(stripLeft("     hello world     ") ==
+       "hello world     ");
+assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
+       "hello world\n\t\v\r");
+assert(stripLeft("hello world") ==
+       "hello world");
+assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
+       "hello world" ~ [lineSep]);
+assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
+       "hello world" ~ [paraSep]);
+--------------------
   +/
-S stripLeft(S)(S s) @safe pure
-    if(isSomeString!S)
+C[] stripLeft(C)(C[] str) @safe pure
+    if(isSomeChar!C)
 {
-    bool foundIt;
-    size_t nonWhite;
-    foreach(i, dchar c; s)
+    foreach(i, dchar c; str)
     {
         if(!std.uni.isWhite(c))
-        {
-            foundIt = true;
-            nonWhite = i;
-            break;
-        }
+            return str[i .. $];
     }
 
-    if(foundIt)
-        return s[nonWhite .. $];
-
-    return s[0 .. 0]; //Empty string with correct type.
+    return str[0 .. 0]; //Empty string with correct type.
 }
+
+//Verify Example.
+unittest
+{
+    assert(stripLeft("     hello world     ") ==
+           "hello world     ");
+    assert(stripLeft("\n\t\v\rhello world\n\t\v\r") ==
+           "hello world\n\t\v\r");
+    assert(stripLeft("hello world") ==
+           "hello world");
+    assert(stripLeft([lineSep] ~ "hello world" ~ lineSep) ==
+           "hello world" ~ [lineSep]);
+    assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
+           "hello world" ~ [paraSep]);
+}
+
 
 /*****************************************
  *  $(RED Deprecated. It will be removed in August 2012.
@@ -1505,101 +1526,226 @@ deprecated String stripr(String)(String s)
 
 /++
     Strips trailing whitespace.
+
+    Examples:
+--------------------
+assert(stripRight("     hello world     ") ==
+       "     hello world");
+assert(stripRight("\n\t\v\rhello world\n\t\v\r") ==
+       "\n\t\v\rhello world");
+assert(stripRight("hello world") ==
+       "hello world");
+assert(stripRight([lineSep] ~ "hello world" ~ lineSep) ==
+       [lineSep] ~ "hello world");
+assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
+       [paraSep] ~ "hello world");
+--------------------
   +/
-S stripRight(S)(S s)
-    if(isSomeString!S)
+C[] stripRight(C)(C[] str)
+    if(isSomeChar!C)
 {
-    alias typeof(s[0]) C;
-    size_t codeLen;
-    foreach(dchar c; retro(s))
+    foreach_reverse(i, dchar c; str)
     {
-        if(std.uni.isWhite(c))
-            codeLen += codeLength!C(c);
-        else
-            break;
+        if(!std.uni.isWhite(c))
+            return str[0 .. i + codeLength!C(c)];
     }
 
-    return s[0 .. $ - codeLen];
+    return str[0 .. 0];
 }
+
+//Verify Example.
+unittest
+{
+    assert(stripRight("     hello world     ") ==
+           "     hello world");
+    assert(stripRight("\n\t\v\rhello world\n\t\v\r") ==
+           "\n\t\v\rhello world");
+    assert(stripRight("hello world") ==
+           "hello world");
+    assert(stripRight([lineSep] ~ "hello world" ~ lineSep) ==
+           [lineSep] ~ "hello world");
+    assert(stripRight([paraSep] ~ "hello world" ~ paraSep) ==
+           [paraSep] ~ "hello world");
+}
+
 
 /++
     Strips both leading and trailing whitespace.
+
+    Examples:
+--------------------
+assert(strip("     hello world     ") ==
+       "hello world");
+assert(strip("\n\t\v\rhello world\n\t\v\r") ==
+       "hello world");
+assert(strip("hello world") ==
+       "hello world");
+assert(strip([lineSep] ~ "hello world" ~ [lineSep]) ==
+       "hello world");
+assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
+       "hello world");
+--------------------
   +/
-S strip(S)(S s)
-    if(isSomeString!S)
+C[] strip(C)(C[] str)
+    if(isSomeChar!C)
 {
-    return stripRight(stripLeft(s));
+    return stripRight(stripLeft(str));
+}
+
+//Verify Example.
+unittest
+{
+    assert(strip("     hello world     ") ==
+           "hello world");
+    assert(strip("\n\t\v\rhello world\n\t\v\r") ==
+           "hello world");
+    assert(strip("hello world") ==
+           "hello world");
+    assert(strip([lineSep] ~ "hello world" ~ [lineSep]) ==
+           "hello world");
+    assert(strip([paraSep] ~ "hello world" ~ [paraSep]) ==
+           "hello world");
 }
 
 unittest
 {
     debug(string) printf("string.strip.unittest\n");
 
-    assert(stripLeft("  foo\t ") == "foo\t ");
-    assert(stripLeft("\u2008  foo\t \u2007") == "foo\t \u2007");
-    assert(stripLeft("1") == "1");
+    foreach(S; TypeTuple!(char[], const char[], string,
+                          wchar[], const wchar[], wstring,
+                          dchar[], const dchar[], dstring))
+    {
+        assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
+        assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
+        assert(equal(stripLeft(to!S("\u0085 μ \u0085 \u00BB \r")), "μ \u0085 \u00BB \r"));
+        assert(equal(stripLeft(to!S("1")), "1"));
+        assert(equal(stripLeft(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(stripLeft(to!S("")), ""));
 
-    assert(stripRight("  foo\t ") == "  foo");
-    assert(stripRight("\u2008  foo\t \u2007") == "\u2008  foo");
-    assert(stripRight("1") == "1");
+        assert(equal(stripRight(to!S("  foo\t ")), "  foo"));
+        assert(equal(stripRight(to!S("\u2008  foo\t \u2007")), "\u2008  foo"));
+        assert(equal(stripRight(to!S("\u0085 μ \u0085 \u00BB \r")), "\u0085 μ \u0085 \u00BB"));
+        assert(equal(stripRight(to!S("1")), "1"));
+        assert(equal(stripRight(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(stripRight(to!S("")), ""));
 
-    assert(strip("  foo\t ") == "foo");
-    assert(strip("\u2008  foo\t \u2007") == "foo");
-    assert(strip("1") == "1");
+        assert(equal(strip(to!S("  foo\t ")), "foo"));
+        assert(equal(strip(to!S("\u2008  foo\t \u2007")), "foo"));
+        assert(equal(strip(to!S("\u0085 μ \u0085 \u00BB \r")), "μ \u0085 \u00BB"));
+        assert(equal(strip(to!S("\U0010FFFE")), "\U0010FFFE"));
+        assert(equal(strip(to!S("")), ""));
+    }
 }
 
 
 /++
-    Returns $(D s) sans the trailing $(D delimiter), if any. If no $(D delimiter)
-    is given, then one trailing  $(D '\r'), $(D '\n'), $(D "\r\n"),
-    $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed.
-  +/
-S chomp(S)(S s)
-    if(isSomeString!S)
-{
-    if(s.empty)
-        return s;
+    If $(D str) ends with $(D delimiter), then $(D str) is returned without
+    $(D delimiter) on its end. If it $(D str) does $(I not) end with
+    $(D delimiter), then it is returned unchanged.
 
-    switch(s.back)
+    If no $(D delimiter) is given, then one trailing  $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
+    the end of $(D str). If $(D str) does not end with any of those characters,
+    then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chomp(" hello world  \n\r") == " hello world  \n");
+assert(chomp(" hello world  \r\n") == " hello world  ");
+assert(chomp(" hello world  \n\n") == " hello world  \n");
+assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
+assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
+assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
+assert(chomp(" hello world") == " hello world");
+assert(chomp("") == "");
+
+assert(chomp(" hello world", "orld") == " hello w");
+assert(chomp(" hello world", " he") == " hello world");
+assert(chomp("", "hello") == "");
+--------------------
+  +/
+C[] chomp(C)(C[] str)
+    if(isSomeChar!C)
+{
+    if(str.empty)
+        return str;
+
+    switch(str[$ - 1])
     {
         case '\n':
         {
-            s.popBack();
-
-            if(!s.empty && s.back == '\r')
-                s.popBack();
-
-            break;
+            if(str.length > 1 && str[$ - 2] == '\r')
+                return str[0 .. $ - 2];
+            goto case;
         }
         case '\r':
-        case lineSep:
-        case paraSep:
+            return str[0 .. $ - 1];
+
+        //Pops off the last character if it's lineSep or paraSep.
+        static if(is(C : const char))
         {
-            s.popBack();
-            break;
+            //In UTF-8, lineSep and paraSep are [226, 128, 168], and
+            //[226, 128, 169] respectively, so their first two bytes are the same.
+            case 168: //Last byte of lineSep
+            case 169: //Last byte of paraSep
+            {
+                if(str.length > 2 && str[$ - 2] == 128 && str[$ - 3] == 226)
+                    return str [0 .. $ - 3];
+                goto default;
+            }
+        }
+        else
+        {
+            case lineSep:
+            case paraSep:
+                return str[0 .. $ - 1];
         }
         default:
-            break;
+            return str;
     }
-
-    return s;
 }
 
 /// Ditto
-S chomp(S, C)(S s, const(C)[] delimiter)
-    if(isSomeString!S && isSomeString!(C[]))
+C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter)
+    if(isSomeChar!C1 && isSomeChar!C2)
 {
     if(delimiter.empty)
-        return chomp(s);
-    else if(endsWith(s, delimiter))
+        return chomp(str);
+
+    static if(is(Unqual!C1 == Unqual!C2))
     {
-        static if(is(Unqual!(typeof(s[0])) == Unqual!C))
-            return s[0 .. $ - delimiter.length];
-        else
-            return s[0 .. $ - to!S(delimiter).length];
+        if(str.endsWith(delimiter))
+            return str[0 .. $ - delimiter.length];
     }
 
-    return s;
+    auto orig = str;
+
+    foreach_reverse(dchar c; delimiter)
+    {
+        if(str.empty || str.back != c)
+            return orig;
+
+        str.popBack();
+    }
+
+    return str;
+}
+
+//Verify Example.
+unittest
+{
+    assert(chomp(" hello world  \n\r") == " hello world  \n");
+    assert(chomp(" hello world  \r\n") == " hello world  ");
+    assert(chomp(" hello world  \n\n") == " hello world  \n");
+    assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
+    assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
+    assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
+    assert(chomp(" hello world") == " hello world");
+    assert(chomp("") == "");
+
+    assert(chomp(" hello world", "orld") == " hello w");
+    assert(chomp(" hello world", " he") == " hello world");
+    assert(chomp("", "hello") == "");
 }
 
 unittest
@@ -1628,7 +1774,7 @@ unittest
         {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
-            assert(chomp("hello\n", cast(T)null) == "hello");
+            assert(chomp(to!S("hello\n"), cast(T)null) == "hello");
             assert(chomp(to!S("hello"), to!T("o")) == "hell");
             assert(chomp(to!S("hello"), to!T("p")) == "hello");
             // @@@ BUG IN COMPILER, MUST INSERT CAST
@@ -1642,47 +1788,123 @@ unittest
 
 
 /++
-    If $(D longer.startsWith(shorter)), returns $(D longer[shorter.length .. $]).
-    Otherwise, returns $(D longer).
+    If $(D str) starts with $(D delimiter), then the part of $(D str) following
+    $(D delimiter) is returned. If it $(D str) does $(I not) start with
+    $(D delimiter), then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chompPrefix("hello world", "he") == "llo world");
+assert(chompPrefix("hello world", "hello w") == "orld");
+assert(chompPrefix("hello world", " world") == "hello world");
+assert(chompPrefix("", "hello") == "");
+--------------------
  +/
-C1[] chompPrefix(C1, C2)(C1[] longer, C2[] shorter)
-    if(isSomeString!(C1[]) && isSomeString!(C2[]))
+C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter)
+    if(isSomeChar!C1 && isSomeChar!C2)
 {
-    return startsWith(longer, shorter) ? longer[shorter.length .. $] : longer;
+    static if(is(Unqual!C1 == Unqual!C2))
+    {
+        if(str.startsWith(delimiter))
+            return str[delimiter.length .. $];
+        return str;
+    }
+    else
+    {
+        auto orig = str;
+        size_t index = 0;
+
+        foreach(dchar c; delimiter)
+        {
+            if(index >= str.length || decode(str, index) != c)
+                return orig;
+        }
+
+        return str[index .. $];
+    }
+}
+
+//Verify Example.
+unittest
+{
+    assert(chompPrefix("hello world", "he") == "llo world");
+    assert(chompPrefix("hello world", "hello w") == "orld");
+    assert(chompPrefix("hello world", " world") == "hello world");
+    assert(chompPrefix("", "hello") == "");
 }
 
 unittest
 {
-    assert(chompPrefix("abcdefgh", "abcde") == "fgh");
-    assert(chompPrefix("abcde", "abcdefgh") == "abcde");
-    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el\uFF4co") == "");
-    assert(chompPrefix("\uFF28el\uFF4co", "\uFF28el") == "\uFF4co");
-    assert(chompPrefix("\uFF28el", "\uFF28el\uFF4co") == "\uFF28el");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        foreach(T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        {
+            assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
+            assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
+            assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el\uFF4co")), ""));
+            assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")), "\uFF4co"));
+            assert(equal(chompPrefix(to!S("\uFF28el"), to!T("\uFF28el\uFF4co")), "\uFF28el"));
+        }
+    }
 }
 
 
 /++
-    Returns $(D s) sans its last character, if there is one.
-    If $(D s) ends in "\r\n", then both are removed.
+    Returns $(D str) without its last character, if there is one. If $(D str)
+    ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
+    then it is returned unchanged.
+
+    Examples:
+--------------------
+assert(chop("hello world") == "hello worl");
+assert(chop("hello world\n") == "hello world");
+assert(chop("hello world\r") == "hello world");
+assert(chop("hello world\n\r") == "hello world\n");
+assert(chop("hello world\r\n") == "hello world");
+assert(chop("Walter Bright") == "Walter Brigh");
+assert(chop("") == "");
+--------------------
  +/
-S chop(S)(S s) if (isSomeString!S)
+S chop(S)(S str)
+    if(isSomeString!S)
 {
-    auto len = s.length;
-    if (!len) return s;
-    if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
-        return s[0 .. len - 2];
-    s.popBack();
-    return s;
+    if(str.empty)
+        return str;
+
+    if(str.length >= 2 && str[$ - 1] == '\n' && str[$ - 2] == '\r')
+        return str[0 .. $ - 2];
+
+    str.popBack();
+
+    return str;
+}
+
+//Verify Example.
+unittest
+{
+    assert(chop("hello world") == "hello worl");
+    assert(chop("hello world\n") == "hello world");
+    assert(chop("hello world\r") == "hello world");
+    assert(chop("hello world\n\r") == "hello world\n");
+    assert(chop("hello world\r\n") == "hello world");
+    assert(chop("Walter Bright") == "Walter Brigh");
+    assert(chop("") == "");
 }
 
 unittest
 {
     debug(string) printf("string.chop.unittest\n");
 
-    assert(chop(cast(string) null) is null);
-    assert(chop("hello") == "hell");
-    assert(chop("hello\r\n") == "hello");
-    assert(chop("hello\n\r") == "hello\n");
+    foreach(S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        assert(chop(cast(S) null) is null);
+        assert(equal(chop(to!S("hello")), "hell"));
+        assert(equal(chop(to!S("hello\r\n")), "hello"));
+        assert(equal(chop(to!S("hello\n\r")), "hello\n"));
+        assert(equal(chop(to!S("Verité")), "Verit"));
+        assert(equal(chop(to!S(`さいごの果実`)), "さいごの果"));
+        assert(equal(chop(to!S(`ミツバチと科学者`)), "ミツバチと科学"));
+    }
 }
 
 
