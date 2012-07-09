@@ -298,7 +298,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                     value.integer = parse!long(data);
                                 else
                                     value.uinteger = parse!ulong(data);
-                                value.type = value.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
+                                value.type = !isNegative && value.uinteger & (1UL << 63) ? JSON_TYPE.UINTEGER : JSON_TYPE.INTEGER;
                         }
                         break;
 
