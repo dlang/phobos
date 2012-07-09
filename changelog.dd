@@ -85,6 +85,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8240): std.algorithm.joiner and empty inputRangeObject)
         $(LI $(BUGZILLA 8264): [std.conv.to] constructing conversion doesn't work with alias this)
         $(LI $(BUGZILLA 8310): writeln of Range of fixed size array)
+        $(LI $(BUGZILLA 8323): std.string.chompPrefix does not handle differing string types properly)
      )
  )
 
