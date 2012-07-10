@@ -380,7 +380,7 @@ template map(fun...) if (fun.length >= 1)
         struct Result
         {
             alias Unqual!Range R;
-            alias typeof(_fun(.ElementType!R.init)) ElementType;
+            alias typeof(_fun(_input.front)) ElementType;
             R _input;
 
             static if (isBidirectionalRange!R)
@@ -552,11 +552,19 @@ unittest
         assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
     }
 }
+
 unittest
 {
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
     assert(equal(m, [1L, 4L, 9L]));
+}
+
+unittest
+{
+    int[] arr = [1,2,3];
+    assert(equal(map!"a += 2"(arr), [3,4,5]));  // evaluate map range
+    assert(arr == [3,4,5]); // predicate affects to original range
 }
 
 // reduce
