@@ -2274,13 +2274,13 @@ Defines the container's primary range, which is a random-access range.
             return this;
         }
 
-        @property T front()
+        @property ref T front()
         {
             enforce(!empty);
             return _outer[_a];
         }
 
-        @property T back()
+        @property ref T back()
         {
             enforce(!empty);
             return _outer[_b - 1];
@@ -2329,7 +2329,7 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[_a + i]);
         }
 
-        T opIndex(size_t i)
+        ref T opIndex(size_t i)
         {
             i += _a;
             enforce(i < _b && _b <= _outer.length);
@@ -2476,7 +2476,7 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property ref T front()
     {
         enforce(!empty);
         return *_data._payload.ptr;
@@ -2490,7 +2490,7 @@ Complexity: $(BIGOH 1)
     }
 
 /// ditto
-    @property T back()
+    @property ref T back()
     {
         enforce(!empty);
         return _data._payload[$ - 1];
@@ -2510,7 +2510,7 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    T opIndex(size_t i)
+    ref T opIndex(size_t i)
     {
         enforce(_data.RefCounted.isInitialized);
         return _data._payload[i];
@@ -3038,14 +3038,25 @@ unittest
 // make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
-	Array!int a = [1, 2, 3];
-	auto r = a.dup[];
-	assertThrown(a.insertBefore(r, 42));
-	assertThrown(a.insertBefore(r, [42]));
-	assertThrown(a.insertAfter(r, 42));
-	assertThrown(a.replace(r, 42));
-	assertThrown(a.replace(r, [42]));
-	assertThrown(a.linearRemove(r));
+    Array!int a = [1, 2, 3];
+    auto r = a.dup[];
+    assertThrown(a.insertBefore(r, 42));
+    assertThrown(a.insertBefore(r, [42]));
+    assertThrown(a.insertAfter(r, 42));
+    assertThrown(a.replace(r, 42));
+    assertThrown(a.replace(r, [42]));
+    assertThrown(a.linearRemove(r));
+}
+
+unittest
+{
+    Array!int arr;
+    arr.length = 3;
+
+    foreach(ref a; arr)
+        a = 2;
+
+    assert(equal(arr[], [2,2,2]));
 }
 
 // BinaryHeap
