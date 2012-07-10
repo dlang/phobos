@@ -991,7 +991,7 @@ unittest
 
     class A
     {
-        override string toString() { return "an A"; }
+        override string toString() const { return "an A"; }
     }
     A a;
     assert(to!string(a) == "null");
@@ -999,7 +999,7 @@ unittest
     assert(to!string(a) == "an A");
 
     // Bug 7660
-    class C { override string toString() { return "C"; } }
+    class C { override string toString() const { return "C"; } }
     struct S { C c; alias c this; }
     S s; s.c = new C();
     assert(to!string(s) == "C");

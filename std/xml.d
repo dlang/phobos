@@ -824,7 +824,7 @@ class Element : Item
      * if (e1 == e2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const element = toType!(const Element)(o);
         auto len = items.length;
@@ -848,7 +848,7 @@ class Element : Item
      * if (e1 < e2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const element = toType!(const Element)(o);
         for (uint i=0; ; ++i)
@@ -867,7 +867,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override hash_t toHash()
+    override const hash_t toHash()
     {
         hash_t hash = tag.toHash();
         foreach(item;items) hash += item.toHash();
@@ -1233,7 +1233,7 @@ class Comment : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1252,7 +1252,7 @@ class Comment : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Comment)item;
@@ -1266,7 +1266,7 @@ class Comment : Item
      * You should rarely need to call this function. It exists so that Comments
      * can be used as associative array keys.
      */
-    override hash_t toHash() { return hash(content); }
+    override const hash_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this comment
@@ -1312,7 +1312,7 @@ class CData : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1331,7 +1331,7 @@ class CData : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(CData)item;
@@ -1345,7 +1345,7 @@ class CData : Item
      * You should rarely need to call this function. It exists so that CDatas
      * can be used as associative array keys.
      */
-    override hash_t toHash() { return hash(content); }
+    override const hash_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this CData section
@@ -1389,7 +1389,7 @@ class Text : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1408,7 +1408,7 @@ class Text : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(Text)item;
@@ -1422,7 +1422,7 @@ class Text : Item
      * You should rarely need to call this function. It exists so that Texts
      * can be used as associative array keys.
      */
-    override hash_t toHash() { return hash(content); }
+    override const hash_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this Text section
@@ -1471,7 +1471,7 @@ class XMLInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1490,7 +1490,7 @@ class XMLInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(XMLInstruction)item;
@@ -1504,7 +1504,7 @@ class XMLInstruction : Item
      * You should rarely need to call this function. It exists so that
      * XmlInstructions can be used as associative array keys.
      */
-    override hash_t toHash() { return hash(content); }
+    override const hash_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this XmlInstruction
@@ -1550,7 +1550,7 @@ class ProcessingInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(const Object o)
+    override const bool opEquals(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1569,7 +1569,7 @@ class ProcessingInstruction : Item
      * if (item1 < item2) { }
      * --------------
      */
-    override int opCmp(const Object o)
+    override const int opCmp(const Object o)
     {
         const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
@@ -1583,7 +1583,7 @@ class ProcessingInstruction : Item
      * You should rarely need to call this function. It exists so that
      * ProcessingInstructions can be used as associative array keys.
      */
-    override hash_t toHash() { return hash(content); }
+    override const hash_t toHash() { return hash(content); }
 
     /**
      * Returns a string representation of this ProcessingInstruction
@@ -1599,13 +1599,13 @@ class ProcessingInstruction : Item
 abstract class Item
 {
     /// Compares with another Item of same type for equality
-    abstract override bool opEquals(const Object o);
+    abstract override const bool opEquals(const Object o);
 
     /// Compares with another Item of same type
-    abstract override int opCmp(const Object o);
+    abstract override const int opCmp(const Object o);
 
     /// Returns the hash of this item
-    abstract override hash_t toHash();
+    abstract override const hash_t toHash();
 
     /// Returns a string representation of this item
     abstract override const string toString();
@@ -2070,7 +2070,7 @@ class ElementParser
     /**
      * Returns that part of the element which has already been parsed
      */
-    const override string toString()
+    override const string toString()
     {
         assert(elementStart.length >= s.length);
         return elementStart[0 .. elementStart.length - s.length];
