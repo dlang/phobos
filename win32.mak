@@ -345,15 +345,16 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj unittest4.obj unittest5.obj
+UNITTEST_OBJS= unittest1.obj unittest2.obj unittest3.obj unittest4.obj \
+		unittest5.obj unittest6.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_5_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_REST)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_REST)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRC_TO_COMPILE_NOT_STD) $(UNITTEST_OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
