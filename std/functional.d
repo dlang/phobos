@@ -36,25 +36,20 @@ assert(isEven(2) && !isEven(1));
 ----
 */
 
-template unaryFun(alias fun, bool byRef = false, string parmName = "a")
+template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        static if (byRef)
+        // overload ref and non-ref
+        auto unaryFun(ElementType)(ref ElementType __a)
         {
-            auto unaryFun(ElementType)(ref ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
+            mixin("alias __a "~parmName~";");
+            mixin("return (" ~ fun ~ ");");
         }
-        else
+        auto unaryFun(ElementType)(ElementType __a)
         {
-            auto unaryFun(ElementType)(ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
+            mixin("alias __a "~parmName~";");
+            mixin("return (" ~ fun ~ ");");
         }
     }
     else
@@ -75,7 +70,10 @@ unittest
     //assert(unaryFun!("return a + 1;")(41) == 42);
 
     int num = 41;
-    assert(unaryFun!("a + 1", true)(num) == 42);
+    assert(unaryFun!"a + 1"(num) == 42);
+    assert(num == 41);
+    assert(unaryFun!"a += 1"(num) == 42);
+    assert(num == 42);
 }
 
 /**
