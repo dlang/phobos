@@ -164,23 +164,11 @@ private uint strideImpl(char c, size_t index) @trusted pure
 in { assert(c & 0x80); }
 body
 {
-    static if (__traits(compiles, {import core.bitop; bsr(1);}))
-    {
-        import core.bitop;
-        immutable msbs = 7 - bsr(~c);
-        if (msbs >= 2 && msbs <= 6) return msbs;
-    }
-    else
-    {
-        if (!(c & 0x40)) goto Lerr;
-        if (!(c & 0x20)) return 2;
-        if (!(c & 0x10)) return 3;
-        if (!(c & 0x08)) return 4;
-        if (!(c & 0x04)) return 5;
-        if (!(c & 0x02)) return 6;
-    }
- Lerr:
-    throw new UTFException("Invalid UTF-8 sequence", index);
+    import core.bitop;
+    immutable msbs = 7 - bsr(~c);
+    enforce((msbs >= 2 && msbs <= 6),
+            new UTFException("Invalid UTF-8 sequence", index));
+    return msbs;
 }
 
 @trusted unittest
