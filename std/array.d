@@ -120,7 +120,7 @@ unittest
     {
         int x;
         this(int y) { x = y; }
-        override string toString() { return .to!string(x); }
+        override string toString() const { return .to!string(x); }
     }
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);

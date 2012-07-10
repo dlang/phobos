@@ -132,7 +132,7 @@ class SocketStream: Stream
          * Does not return the entire stream because that would
          * require the remote connection to be closed.
          */
-        override string toString()
+        override string toString() const
         {
             return sock.toString();
         }
