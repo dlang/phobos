@@ -150,7 +150,7 @@ unittest
         $(D UTFException) if $(D str[index]) is not the start of a valid UTF-8
         sequence.
   +/
-uint stride(S)(auto ref const S str, size_t index) @safe pure
+uint stride(S)(auto ref const S str, size_t index) @trusted pure
     if (is(S : const(char[])))
 {
     immutable c = str[index];
