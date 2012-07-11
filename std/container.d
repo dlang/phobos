@@ -2354,6 +2354,26 @@ Defines the container's primary range, which is a random-access range.
             mixin("_outer._payload.ptr[_a + i] "~op~"= value;");
         }
 
+        int opApply(int delegate(ref T) dg)
+        {
+          foreach(i; _a .. _b)
+          {
+            int result = dg(_outer._data._payload[i]);
+            if(result) return result;
+          }
+          return 0;
+        }
+
+        int opApplyReverse(int delegate(ref T) dg)
+        {
+          foreach_reverse(i; _a .. _b)
+          {
+            int result = dg(_outer._data._payload[i]);
+            if(result) return result;
+          }
+          return 0;
+        }
+
         @property size_t length() const {
             return _b - _a;
         }
@@ -2459,6 +2479,38 @@ Complexity: $(BIGOH 1)
         Array copy;
         copy._data = this._data;
         return Range(copy, a, b);
+    }
+
+/**
+Iterates over over the elements of the container, applying delegate dg
+in forward order
+
+Complexity: $(BIGOH n)
+     */
+    int opApply(int delegate(ref T) dg)
+    {
+      foreach(ref v; _data._payload)
+      {
+        int result = dg(v);
+        if(result) return result;
+      }
+      return 0;
+    }
+
+/**
+Iterates over over the elements of the container, applying delegate dg
+in reverse order
+
+Complexity: $(BIGOH n)
+     */
+    int opApplyReverse(int delegate(ref T) dg)
+    {
+      foreach_reverse(ref v; _data._payload)
+      {
+        int result = dg(v);
+        if(result) return result;
+      }
+      return 0;
     }
 
 /**
@@ -3046,6 +3098,22 @@ unittest
 	assertThrown(a.replace(r, 42));
 	assertThrown(a.replace(r, [42]));
 	assertThrown(a.linearRemove(r));
+}
+// Tests that foreach(_reverse) with(out) ref works as intended
+unittest
+{
+    auto a = Array!int(1, 2, 3, 4);
+    foreach(v; a) ++v;         //Foreach without ref
+    assert(equal(a[], [1, 2, 3, 4]));
+    foreach(ref v; a) ++v;     //Foreach ref on container
+    assert(equal(a[], [2, 3, 4, 5]));
+    foreach(ref v; a[]) v = 0; //Foreach ref on range 
+    assert(equal(a[], [0, 0, 0, 0]));
+    int i = 0;
+    foreach_reverse(ref v; a[]) {v += ++i;} //Foreach_ ref with reverse
+    assert(equal(a[], [4, 3, 2, 1]));
+    foreach_reverse(ref v; a[]) {if(v == 3) break; v = 0;} //foreach with break
+    assert(equal(a[], [4, 3, 0, 0]));
 }
 
 // BinaryHeap
