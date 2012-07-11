@@ -376,19 +376,19 @@ void bar(uint){}
 static assert(arity!bar==1);
 ---
  */
-template arity(alias func) 
-    if ( isCallable!func && variadicFunctionStyle!func == Variadic.no ) 
+template arity(alias func)
+    if ( isCallable!func && variadicFunctionStyle!func == Variadic.no )
 {
-	enum size_t arity = (ParameterTypeTuple!func).length;
+    enum size_t arity = (ParameterTypeTuple!func).length;
 }
 
 unittest {
-	void foo(){}
-	static assert(arity!foo==0);
-	void bar(uint){}
-	static assert(arity!bar==1);
-	void variadicFoo(uint...){}
-	static assert(__traits(compiles,arity!variadicFoo)==false);
+    void foo(){}
+    static assert(arity!foo==0);
+    void bar(uint){}
+    static assert(arity!bar==1);
+    void variadicFoo(uint...){}
+    static assert(__traits(compiles,arity!variadicFoo)==false);
 }
 
 /**
@@ -553,11 +553,11 @@ unittest
     void bar(int num, string name, int[] array){}
     static assert([PIT!bar] == ["num", "name", "array"]);
 
-	// might be changed in the future?
+    // might be changed in the future?
     void function(int num, string name) fp;
     static assert([PIT!fp] == ["", ""]);
 
-	// might be changed in the future?
+    // might be changed in the future?
     void delegate(int num, string name, int[long] aa) dg;
     static assert([PIT!dg] == ["", "", ""]);
 /+
@@ -4346,7 +4346,7 @@ unittest
  * alias int[string] Hash;
  * static assert(is(KeyType!Hash == string));
  * KeyType!Hash str = "string";   // str is declared as string
- * --- 
+ * ---
  */
 template KeyType(V : V[K], K)
 {
@@ -4361,7 +4361,7 @@ template KeyType(V : V[K], K)
  * alias int[string] Hash;
  * static assert(is(ValueType!Hash == int));
  * ValueType!Hash num = 1;   // num is declared as int
- * --- 
+ * ---
  */
 template ValueType(V : V[K], K)
 {
