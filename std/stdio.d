@@ -786,7 +786,7 @@ by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line.  */
     S readln(S = string)(dchar terminator = '\n')
     {
-        Unqual!(ElementEncodingType!S)[] buf;
+        Unqual!(typeof(S.init[0]))[] buf;
         readln(buf, terminator);
         return assumeUnique(buf);
     }
