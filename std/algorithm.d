@@ -1668,12 +1668,16 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
     }
     else
     {
-        // Temporary fix Bug 4789.  Wor around the fact that assigning a static
-        // array to itself doesn't work properly.
-        static if(isStaticArray!T) {
-            if(lhs.ptr is rhs.ptr) {
+        //Avoid assigning overlapping arrays. Dynamic arrays are fine, because
+        //it's their ptr and length properties which get assigned rather
+        //than their elements when assigning them, but static arrays are value
+        //types and therefore all of their elements get copied as part of
+        //assigning them, which would be assigning overlapping arrays if lhs
+        //and rhs were the same array.
+        static if(isStaticArray!T)
+        {
+            if(lhs.ptr == rhs.ptr)
                 return;
-            }
         }
 
         // For non-struct types, suffice to do the classic swap
@@ -1750,6 +1754,13 @@ unittest
 
     const NoCopy const1, const2;
     static assert(!__traits(compiles, swap(const1, const2)));
+}
+
+unittest
+{
+    //Bug# 4789
+    int[1] s = [1];
+    swap(s, s);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
