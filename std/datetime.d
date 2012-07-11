@@ -32068,7 +32068,7 @@ version(StdDdoc)
 
         When the value that is returned by this function is destroyed,
         $(D func) will run. $(D func) is a unary function that takes a
-        $(CXREF TickDuration).
+        $(CXREF time, TickDuration).
 
         Examples:
 --------------------
