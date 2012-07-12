@@ -162,7 +162,7 @@ public:
         else static if (op=="%")
         {
             assert(y!=0, "Division by zero");
-            static if (is(const(T) == const(long)) || is( const(T) == const(ulong) ))
+            static if (is(immutable(T) == immutable(long)) || is( immutable(T) == immutable(ulong) ))
             {
                 this %= BigInt(y);
             }
@@ -581,10 +581,13 @@ unittest // Recursive division, bug 5568
     // Bug 7973
     auto a7973 = 10_000_000_000_000_000;
     const c7973 = 10_000_000_000_000_000;
+    immutable i7973 = 10_000_000_000_000_000;
     BigInt v7973 = 2551700137;
     v7973 %= a7973;
     assert(v7973 == 2551700137);
     v7973 %= c7973;
+    assert(v7973 == 2551700137);
+    v7973 %= i7973;
     assert(v7973 == 2551700137);
     // 8165
     BigInt[2] a8165;
