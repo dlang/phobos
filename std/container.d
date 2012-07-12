@@ -2356,22 +2356,24 @@ Defines the container's primary range, which is a random-access range.
 
         int opApply(int delegate(ref T) dg)
         {
-          foreach(i; _a .. _b)
-          {
-            int result = dg(_outer._data._payload[i]);
-            if(result) return result;
-          }
-          return 0;
+            enforce(_b <= _outer.length);
+            foreach(i; _a .. _b)
+            {
+                int result = dg(_outer._data._payload[i]);
+                if(result) return result;
+            }
+            return 0;
         }
 
         int opApplyReverse(int delegate(ref T) dg)
         {
-          foreach_reverse(i; _a .. _b)
-          {
-            int result = dg(_outer._data._payload[i]);
-            if(result) return result;
-          }
-          return 0;
+            enforce(_b <= _outer.length);
+            foreach_reverse(i; _a .. _b)
+            {
+                int result = dg(_outer._data._payload[i]);
+                if(result) return result;
+            }
+            return 0;
         }
 
         @property size_t length() const {
@@ -2483,23 +2485,23 @@ Complexity: $(BIGOH 1)
 
 /**
 Iterates over over the elements of the container, applying delegate dg
-in forward order
+to each element in forward order.
 
 Complexity: $(BIGOH n)
      */
     int opApply(int delegate(ref T) dg)
     {
-      foreach(ref v; _data._payload)
-      {
-        int result = dg(v);
-        if(result) return result;
-      }
-      return 0;
+        foreach(ref v; _data._payload)
+        {
+            int result = dg(v);
+            if(result) return result;
+        }
+        return 0;
     }
 
 /**
 Iterates over over the elements of the container, applying delegate dg
-in reverse order
+to each element in reverse order.
 
 Complexity: $(BIGOH n)
      */
