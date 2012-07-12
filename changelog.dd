@@ -7,6 +7,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
              Please see the documentation for std.string.format and std.string.sformat for details.))
         $(LI std.bitmanip: Added peek, read, write, and append for converting
              ranges of bytes to and from integral types.)
+        $(LI std.container: Added DList, which is an implementation of a doubly-linked list.)
         $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
         $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
