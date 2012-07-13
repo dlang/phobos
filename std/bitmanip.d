@@ -1552,6 +1552,8 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
     if(isIntegral!T || isSomeChar!T || is(Unqual!T == bool))
 {
     EndianSwapper!T es = void;
+    if(__ctfe)
+        es = (EndianSwapper!T).init;
 
     version(LittleEndian)
         es.value = swapEndian(val);
@@ -1690,6 +1692,8 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
        n == T.sizeof)
 {
     EndianSwapper!T es = void;
+    if(__ctfe)
+        es = (EndianSwapper!T).init;
     es.array = val;
 
     version(LittleEndian)
@@ -1757,6 +1761,8 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
     if(isIntegral!T || isSomeChar!T || is(Unqual!T == bool))
 {
     EndianSwapper!T es = void;
+    if(__ctfe)
+        es = (EndianSwapper!T).init;
 
     version(BigEndian)
         es.value = swapEndian(val);
@@ -1868,6 +1874,8 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
        n == T.sizeof)
 {
     EndianSwapper!T es = void;
+    if(__ctfe)
+        es = (EndianSwapper!T).init;
     es.array = val;
 
     version(BigEndian)
@@ -1892,6 +1900,8 @@ private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow
     if(is(Unqual!T == float) || is(Unqual!T == double))
 {
     EndianSwapper!T es = void;
+    if(__ctfe)
+        es = (EndianSwapper!T).init;
     es.value = val;
 
     static if(swap)
@@ -1903,8 +1913,18 @@ private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow
 private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow
     if(n == 4 || n == 8)
 {
-    static if(n == 4)       EndianSwapper!float es = void;
-    else static if(n == 8)  EndianSwapper!double es = void;
+    static if(n == 4)
+    {
+        EndianSwapper!float es = void;
+        if(__ctfe)
+            es = (EndianSwapper!float).init;
+    }
+    else static if(n == 8)
+    {
+        EndianSwapper!double es = void;
+        if(__ctfe)
+            es = (EndianSwapper!double).init;
+    }
 
     es.array = val;
 
