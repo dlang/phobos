@@ -326,19 +326,22 @@ import std.algorithm, std.conv, std.exception,  std.functional,
 // tested individually, without needing to link to std.range.
 enum dummyRanges = q{
     // Used with the dummy ranges for testing higher order ranges.
-    enum RangeType {
+    enum RangeType
+    {
         Input,
         Forward,
         Bidirectional,
         Random
     }
 
-    enum Length {
+    enum Length
+    {
         Yes,
         No
     }
 
-    enum ReturnBy {
+    enum ReturnBy
+    {
         Reference,
         Value
     }
@@ -346,7 +349,8 @@ enum dummyRanges = q{
     // Range that's useful for testing other higher order ranges,
     // can be parametrized with attributes.  It just dumbs down an array of
     // numbers 1..10.
-    struct DummyRange(ReturnBy _r, Length _l, RangeType _rt) {
+    struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
+    {
         // These enums are so that the template params are visible outside
         // this instantiation.
         enum r = _r;
@@ -355,85 +359,113 @@ enum dummyRanges = q{
 
         uint[] arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
 
-        void reinit() {
+        void reinit()
+        {
             // Workaround for DMD bug 4378
             arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
         }
 
-        void popFront() {
+        void popFront()
+        {
             arr = arr[1..$];
         }
 
-        @property bool empty() {
+        @property bool empty() const
+        {
             return arr.length == 0;
         }
 
-        static if(r == ReturnBy.Reference) {
-            @property ref uint front() {
+        static if(r == ReturnBy.Reference)
+        {
+            @property ref inout(uint) front() inout
+            {
                 return arr[0];
             }
 
-            @property void front(uint val) {
+            @property void front(uint val)
+            {
                 arr[0] = val;
             }
-
-        } else {
-            @property uint front() {
+        }
+        else
+        {
+            @property uint front() const
+            {
                 return arr[0];
             }
         }
 
-        static if(rt >= RangeType.Forward) {
-            @property typeof(this) save() {
+        static if(rt >= RangeType.Forward)
+        {
+            @property typeof(this) save()
+            {
                 return this;
             }
         }
 
-        static if(rt >= RangeType.Bidirectional) {
-            void popBack() {
+        static if(rt >= RangeType.Bidirectional)
+        {
+            void popBack()
+            {
                 arr = arr[0..$ - 1];
             }
 
-            static if(r == ReturnBy.Reference) {
-                @property ref uint back() {
+            static if(r == ReturnBy.Reference)
+            {
+                @property ref inout(uint) back() inout
+                {
                     return arr[$ - 1];
                 }
 
-                @property void back(uint val) {
+                @property void back(uint val)
+                {
                     arr[$ - 1] = val;
                 }
 
-            } else {
-                @property uint back() {
+            }
+            else
+            {
+                @property uint back() const
+                {
                     return arr[$ - 1];
                 }
             }
         }
 
-        static if(rt >= RangeType.Random) {
-            static if(r == ReturnBy.Reference) {
-                ref uint opIndex(size_t index) {
+        static if(rt >= RangeType.Random)
+        {
+            static if(r == ReturnBy.Reference)
+            {
+                ref inout(uint) opIndex(size_t index) inout
+                {
                     return arr[index];
                 }
 
-                void opIndexAssign(uint val, size_t index) {
+                void opIndexAssign(uint val, size_t index)
+                {
                     arr[index] = val;
                 }
-            } else {
-                @property uint opIndex(size_t index) {
+            }
+            else
+            {
+                @property uint opIndex(size_t index) const
+                {
                     return arr[index];
                 }
             }
 
-            typeof(this) opSlice(size_t lower, size_t upper) {
+            typeof(this) opSlice(size_t lower, size_t upper)
+            {
                 auto ret = this;
                 ret.arr = arr[lower..upper];
                 return ret;
             }
         }
 
-        static if(l == Length.Yes) {
-            @property size_t length() {
+        static if(l == Length.Yes)
+        {
+            @property size_t length() const
+            {
                 return arr.length;
             }
 
@@ -3143,17 +3175,27 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
 {
     alias Unqual!Range R;
 
-    static if (isRandomAccessRange!(R) && hasLength!(R))
+    static if (isRandomAccessRange!R && hasLength!R)
     {
         R _original;
         size_t _index;
+
         this(R input, size_t index = 0) { _original = input; _index = index; }
-        /// Range primitive implementations.
+
         @property auto ref front()
         {
             return _original[_index % _original.length];
         }
-        /// Ditto
+
+        static if (is(typeof((cast(const R)_original)[0])) &&
+                   is(typeof((cast(const R)_original).length)))
+        {
+            @property auto const ref front() const
+            {
+                return _original[_index % _original.length];
+            }
+        }
+
         static if (hasAssignableElements!R)
         {
             @property auto front(ElementType!R val)
@@ -3161,15 +3203,25 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
                 _original[_index % _original.length] = val;
             }
         }
-        /// Ditto
+
         enum bool empty = false;
-        /// Ditto
+
         void popFront() { ++_index; }
+
         auto ref opIndex(size_t n)
         {
             return _original[(n + _index) % _original.length];
         }
-        /// Ditto
+
+        static if (is(typeof((cast(const R)_original)[0])) &&
+                   is(typeof((cast(const R)_original).length)))
+        {
+            const ref opIndex(size_t n) const
+            {
+                return _original[(n + _index) % _original.length];
+            }
+        }
+
         static if (hasAssignableElements!R)
         {
             auto opIndexAssign(ElementType!R val, size_t n)
@@ -3177,38 +3229,45 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
                 _original[(n + _index) % _original.length] = val;
             }
         }
-        /// Ditto
-        @property Cycle!(R) save() {
-            return Cycle!(R)(this._original.save, this._index);
+
+        @property Cycle!R save()
+        {
+            return Cycle!R(this._original.save, this._index);
         }
     }
     else
     {
-        R _original, _current;
+        R _original;
+        R _current;
+
         this(R input) { _original = input; _current = input.save; }
-        /// Range primitive implementations.
+
         @property auto ref front() { return _current.front; }
-        /// Ditto
+
+        static if (is(typeof((cast(const R)_current).front)))
+            @property auto const ref front() const
+            {
+                return _current.front;
+            }
+
         static if (hasAssignableElements!R)
         {
             @property auto front(ElementType!R val)
             {
-                _current.front = val;
+                return _current.front = val;
             }
         }
-        /// Ditto
-        static if (isBidirectionalRange!(R))
-            @property auto ref back() { return _current.back; }
-        /// Ditto
+
         enum bool empty = false;
-        /// Ditto
+
         void popFront()
         {
             _current.popFront();
             if (_current.empty) _current = _original;
         }
 
-        @property Cycle!R save() {
+        @property Cycle!R save()
+        {
             Cycle!R ret;
             ret._original = this._original.save;
             ret._current =  this._current.save;
@@ -3217,14 +3276,14 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
     }
 }
 
-/// Ditto
-template Cycle(R) if (isInfinite!R)
+template Cycle(R)
+    if (isInfinite!R)
 {
     alias R Cycle;
 }
 
-/// Ditto
-struct Cycle(R) if (isStaticArray!R)
+struct Cycle(R)
+    if (isStaticArray!R)
 {
     private alias typeof(R[0]) ElementType;
     private ElementType* _ptr;
@@ -3235,49 +3294,51 @@ struct Cycle(R) if (isStaticArray!R)
         _ptr = input.ptr;
         _index = index;
     }
-    /// Range primitive implementations.
-    @property ref ElementType front()
+
+    @property auto ref inout(ElementType) front() inout
     {
         return _ptr[_index % R.length];
     }
-    /// Ditto
+
     enum bool empty = false;
-    /// Ditto
+
     void popFront() { ++_index; }
-    ref ElementType opIndex(size_t n)
+
+    ref inout(ElementType) opIndex(size_t n) inout
     {
         return _ptr[(n + _index) % R.length];
     }
 
-    @property Cycle!(R) save() {
+    @property Cycle!R save()
+    {
         return this;
     }
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
-    return Cycle!(R)(input);
+    return Cycle!R(input);
 }
 
 /// Ditto
-Cycle!R cycle(R)(R input, size_t index)
-if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+Cycle!R cycle(R)(R input, size_t index = 0)
+    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!R(input, index);
 }
 
-/// Ditto
-Cycle!(R) cycle(R)(R input) if (isInfinite!(R))
+Cycle!R cycle(R)(R input)
+    if (isInfinite!R)
 {
     return input;
 }
 
-/// Ditto
-Cycle!(R) cycle(R)(ref R input, size_t index = 0) if (isStaticArray!R)
+Cycle!R cycle(R)(ref R input, size_t index = 0)
+    if (isStaticArray!R)
 {
-    return Cycle!(R)(input, index);
+    return Cycle!R(input, index);
 }
 
 unittest
@@ -3300,13 +3361,18 @@ unittest
 
     static assert(is(Cycle!(immutable int[])));
 
-    foreach(DummyType; AllDummyRanges) {
-        static if (isForwardRange!(DummyType)) {
+    foreach(DummyType; AllDummyRanges)
+    {
+        static if (isForwardRange!DummyType)
+        {
             DummyType dummy;
             auto cy = cycle(dummy);
             static assert(isForwardRange!(typeof(cy)));
             auto t = take(cy, 20);
             assert(equal(t, [1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]));
+
+            const cRange = cy;
+            assert(cRange.front == 1);
 
             static if (hasAssignableElements!DummyType)
             {
@@ -3323,6 +3389,8 @@ unittest
                         scope(exit) cy[10] = 1;
                         assert(dummy.front == 66);
                     }
+
+                    assert(cRange[10] == 1);
                 }
             }
         }
