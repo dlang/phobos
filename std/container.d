@@ -2491,10 +2491,13 @@ Complexity: $(BIGOH n)
      */
     int opApply(int delegate(ref T) dg)
     {
-        foreach(ref v; _data._payload)
+        if(_data.RefCounted.isInitialized())
         {
-            int result = dg(v);
-            if(result) return result;
+            foreach(ref v; _data._payload)
+            {
+                int result = dg(v);
+                if(result) return result;
+            }
         }
         return 0;
     }
@@ -2507,12 +2510,15 @@ Complexity: $(BIGOH n)
      */
     int opApplyReverse(int delegate(ref T) dg)
     {
-      foreach_reverse(ref v; _data._payload)
-      {
-        int result = dg(v);
-        if(result) return result;
-      }
-      return 0;
+        if(_data.RefCounted.isInitialized())
+        {
+            foreach_reverse(ref v; _data._payload)
+            {
+                int result = dg(v);
+                if(result) return result;
+            }
+        }
+        return 0;
     }
 
 /**
