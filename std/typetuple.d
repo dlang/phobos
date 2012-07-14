@@ -764,3 +764,44 @@ unittest
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
 
+
+/++
+    Filters a $(D TypeTuple) using a template predicate. Returns a
+    $(D TypeTuple) of the elements which satisfy the predicate.
+
+    Examples:
+--------------------
+static assert(is(Filter!(isNarrowString, string, wstring,
+                         dchar[], char[], dstring, int) ==
+                 TypeTuple!(string, wstring, char[])));
+static assert(is(Filter!(isUnsigned, int, byte, ubyte,
+                         dstring, dchar, uint, ulong) ==
+                 TypeTuple!(ubyte, uint, ulong)));
+--------------------
+  +/
+template Filter(alias pred, TList...)
+{
+    static if(TList.length == 0)
+        alias TypeTuple!() Filter;
+    else static if(pred!(TList[0]))
+        alias TypeTuple!(TList[0], Filter!(pred, TList[1 .. $])) Filter;
+    else
+        alias Filter!(pred, TList[1 .. $]) Filter;
+}
+
+//Verify Examples
+unittest
+{
+    static assert(is(Filter!(isNarrowString, string, wstring,
+                             dchar[], char[], dstring, int) ==
+                     TypeTuple!(string, wstring, char[])));
+    static assert(is(Filter!(isUnsigned, int, byte, ubyte,
+                             dstring, dchar, uint, ulong) ==
+                     TypeTuple!(ubyte, uint, ulong)));
+}
+
+unittest
+{
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
+    static assert(is(Filter!isPointer == TypeTuple!()));
+}
