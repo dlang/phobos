@@ -764,3 +764,145 @@ unittest
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
 
+
+/++
+    Negates a an eponymous template which resolves to a boolean value.
+
+    Examples:
+--------------------
+alias Not!isForwardRange isNotForwardRange;
+static assert( isForwardRange!(int[]));
+static assert(!isNotForwardRange!(int[]));
+
+static assert( allSatisfy!(Not!isUnsigned, int, string, char, Object));
+static assert(!allSatisfy!(Not!isUnsigned, uint, string, char, Object));
+--------------------
+  +/
+template Not(alias Pred)
+{
+    template Not(T)
+    {
+        enum Not = !Pred!T;
+    }
+}
+
+//Verify Examples
+unittest
+{
+    import std.range;
+    alias Not!isForwardRange isNotForwardRange;
+    static assert( isForwardRange!(int[]));
+    static assert(!isNotForwardRange!(int[]));
+
+    static assert( allSatisfy!(Not!isUnsigned, int, string, char, Object));
+    static assert(!allSatisfy!(Not!isUnsigned, uint, string, char, Object));
+}
+
+unittest
+{
+    alias Not!isPointer isNotPointer;
+    static assert( isNotPointer!int);
+    static assert(!isNotPointer!(int*));
+
+    alias Not!staticIndexOf nsio;
+    static assert(!is(typeof(nsio!(char, int, dchar, char))));
+}
+
+
+/++
+    Creates an eponymous template which is the logical and of two eponymous
+    templates which resolve to boolean values.
+
+    Examples:
+--------------------
+alias And!(isForwardRange, hasLength) isForwardLen;
+static assert( isForwardLen!(int[]));
+static assert(!isForwardLen!string);
+
+alias And!(isNumeric, Not!isUnsigned) isSignedOrFloat;
+static assert( allSatisfy!(isSignedOrFloat, int, real, byte));
+static assert(!allSatisfy!(isSignedOrFloat, int, real, ubyte));
+--------------------
+  +/
+template And(alias Pred1, alias Pred2)
+{
+    template And(T)
+    {
+        enum And = Pred1!T && Pred2!T;
+    }
+}
+
+//Verify Examples
+unittest
+{
+    import std.range;
+    alias And!(isForwardRange, hasLength) isForwardLen;
+    static assert( isForwardLen!(int[]));
+    static assert(!isForwardLen!string);
+
+    alias And!(isNumeric, Not!isUnsigned) isSignedOrFloat;
+    static assert( allSatisfy!(isSignedOrFloat, int, real, byte));
+    static assert(!allSatisfy!(isSignedOrFloat, int, real, ubyte));
+}
+
+unittest
+{
+    alias And!(staticIndexOf, isPointer) test1;
+    static assert(!is(typeof(test1!(dstring, int[]))));
+
+    alias And!(isPointer, staticIndexOf) test2;
+    static assert(!is(typeof(test2!(dstring, int[]))));
+
+    alias And!(staticIndexOf, staticIndexOf) test3;
+    static assert(!is(typeof(test3!(dstring, int[]))));
+}
+
+
+/++
+    Creates an eponymous template which is the logical or of two eponymous
+    templates which resolve to boolean values.
+
+    Examples:
+--------------------
+alias Or!(isArray, isSomeChar) isArrayOrSomeChar;
+static assert( isArrayOrSomeChar!(int[]));
+static assert( isArrayOrSomeChar!dchar);
+static assert(!isArrayOrSomeChar!ushort);
+
+alias Or!(isPointer, isUnsigned) isPtrOrUnsigned;
+static assert( allSatisfy!(isPtrOrUnsigned, uint, ushort*, long*));
+static assert(!allSatisfy!(isPtrOrUnsigned, uint, ushort*, long));
+--------------------
+  +/
+template Or(alias Pred1, alias Pred2)
+{
+    template Or(T)
+    {
+        enum Or = Pred1!T || Pred2!T;
+    }
+}
+
+//Verify Examples
+unittest
+{
+    alias Or!(isArray, isSomeChar) isArrayOrSomeChar;
+    static assert( isArrayOrSomeChar!(int[]));
+    static assert( isArrayOrSomeChar!dchar);
+    static assert(!isArrayOrSomeChar!ushort);
+
+    alias Or!(isPointer, isUnsigned) isPtrOrUnsigned;
+    static assert( allSatisfy!(isPtrOrUnsigned, uint, ushort*, long*));
+    static assert(!allSatisfy!(isPtrOrUnsigned, uint, ushort*, long));
+}
+
+unittest
+{
+    alias Or!(staticIndexOf, isPointer) test1;
+    static assert(!is(typeof(test1!(dstring, int[]))));
+
+    alias Or!(isPointer, staticIndexOf) test2;
+    static assert(!is(typeof(test2!(dstring, int[]))));
+
+    alias Or!(staticIndexOf, staticIndexOf) test3;
+    static assert(!is(typeof(test3!(dstring, int[]))));
+}
