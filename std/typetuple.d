@@ -8,6 +8,10 @@
  * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
  * list that is a slice of the old one.
  *
+ * Several templates in this module use or operate on eponymous templates that
+ * take a single argument and evaluate to a boolean constant. Such templates
+ * are referred to as $(I template predicates).
+ *
  * References:
  *  Based on ideas in Table 3.1 from
  *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
@@ -553,7 +557,8 @@ unittest
 }
 
 /**
-Evaluates to $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+Tests whether all given items satisfy a template predicate, i.e. evaluates to
+$(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
 Example:
 ----
@@ -584,7 +589,8 @@ unittest
 }
 
 /**
-Evaluates to $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+Tests whether all given items satisfy a template predicate, i.e. evaluates to
+$(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
 Example:
 ----
