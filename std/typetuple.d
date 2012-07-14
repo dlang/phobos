@@ -560,6 +560,9 @@ unittest
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
+Evaluation is $(I not) short-circuited if a false result is encountered; the
+template predicate must be instantiable with all the given items.
+
 Example:
 ----
 static assert(!allSatisfy!(isIntegral, int, double));
@@ -591,6 +594,9 @@ unittest
 /**
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+
+Evaluation is $(I not) short-circuited if a true result is encountered; the
+template predicate must be instantiable with all the given items.
 
 Example:
 ----
