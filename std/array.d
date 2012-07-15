@@ -26,10 +26,13 @@ a special case in an overload.
 
 Example:
 
+$(D_RUN_CODE
+$(ARGS
 ----
 auto a = array([1, 2, 3, 4, 5][]);
 assert(a == [ 1, 2, 3, 4, 5 ]);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  */
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range)
@@ -207,6 +210,8 @@ array.  In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
 
 Examples:
+$(D_RUN_CODE
+$(ARGS
 ---
 double[] arr = uninitializedArray!(double[])(100);
 assert(arr.length == 100);
@@ -215,6 +220,7 @@ double[][] matrix = uninitializedArray!(double[][])(42, 31);
 assert(matrix.length == 42);
 assert(matrix[0].length == 31);
 ---
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 auto uninitializedArray(T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
@@ -293,11 +299,14 @@ the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 auto a = [ 1, 2, 3 ];
 assert(!a.empty);
 assert(a[3 .. $].empty);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  */
 
 @property bool empty(T)(in T[] a) @safe pure nothrow
@@ -320,11 +329,14 @@ equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 auto a = [ 1, 2, 3 ];
 auto b = a.save;
 assert(b is a);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  */
 
 @property T[] save(T)(T[] a) @safe pure nothrow
@@ -341,11 +353,14 @@ $(D popFront) automaticaly advances to the next $(GLOSSARY code
 point).
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 int[] a = [ 1, 2, 3 ];
 a.popFront();
 assert(a == [ 2, 3 ]);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
 void popFront(A)(ref A a)
@@ -408,11 +423,14 @@ popFront) automaticaly eliminates the last $(GLOSSARY code point).
 
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 int[] a = [ 1, 2, 3 ];
 a.popBack();
 assert(a == [ 1, 2 ]);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 
 void popBack(A)(ref A a)
@@ -475,10 +493,13 @@ dchar).
 
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 int[] a = [ 1, 2, 3 ];
 assert(a.front == 1);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 @property ref T front(T)(T[] a)
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
@@ -516,10 +537,13 @@ back) automaticaly returns the last $(GLOSSARY code point) as a $(D
 dchar).
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 int[] a = [ 1, 2, 3 ];
 assert(a.back == 3);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 @property ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
@@ -557,6 +581,8 @@ values referred by them. If $(D r1) and $(D r2) have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 int[] a = [ 10, 11, 12, 13, 14 ];
 int[] b = a[1 .. 3];
@@ -565,6 +591,7 @@ b = b.dup;
 // overlap disappears even though the content is the same
 assert(overlap(a, b).empty);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
 */
 inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
@@ -616,12 +643,15 @@ it's commented out.
     must be an input range or a single item) inserted at position $(D pos).
 
     Examples:
+$(D_RUN_CODE
+$(ARGS
 --------------------
 int[] a = [ 1, 2, 3, 4 ];
 auto b = a.insert(2, [ 1, 2 ]);
 assert(a == [ 1, 2, 3, 4 ]);
 assert(b == [ 1, 2, 1, 2, 3, 4 ]);
 --------------------
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 T[] insert(T, Range)(T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
@@ -718,6 +748,8 @@ unittest
     implicitly convertible items) in $(D array) at position $(D pos).
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ---
 int[] a = [ 1, 2, 3, 4 ];
 a.insertInPlace(2, [ 1, 2 ]);
@@ -725,6 +757,7 @@ assert(a == [ 1, 2, 1, 2, 3, 4 ]);
 a.insertInPlace(3, 10u, 11);
 assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 ---
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 void insertInPlace(T, Range)(ref T[] array, size_t pos, Range stuff)
     if(isInputRange!Range &&
@@ -1078,11 +1111,13 @@ unittest
 Splits a string by whitespace.
 
 Example:
-
+$(D_RUN_CODE
+$(ARGS
 ----
 auto a = " a     bcd   ef gh ";
 assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array, std.algorithm: equal;))
  */
 auto splitter(C)(C[] s)
     if(isSomeString!(C[]))
@@ -1176,6 +1211,8 @@ unittest
    $(D sep) as the separator if present.
 
 Examples:
+$(D_RUN_CODE
+$(ARGS
 --------------------
 assert(join(["hello", "silly", "world"], " ") == "hello silly world");
 assert(join(["hello", "silly", "world"]) == "hellosillyworld");
@@ -1183,6 +1220,7 @@ assert(join(["hello", "silly", "world"]) == "hellosillyworld");
 assert(join([[1, 2, 3], [4, 5]], [72, 73]) == [1, 2, 3, 72, 73, 4, 5]);
 assert(join([[1, 2, 3], [4, 5]]) == [1, 2, 3, 4, 5]);
 --------------------
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
@@ -1555,12 +1593,15 @@ until then, it's commented out.
     array without changing the contents of $(D subject).
 
 Examples:
+$(D_RUN_CODE
+$(ARGS
 --------------------
 auto a = [ 1, 2, 3, 4 ];
 auto b = a.replace(1, 3, [ 9, 9, 9 ]);
 assert(a == [ 1, 2, 3, 4 ]);
 assert(b == [ 1, 9, 9, 9, 4 ]);
 --------------------
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     if(isInputRange!Range &&
@@ -1651,11 +1692,14 @@ unittest
     shrinks the array as needed.
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ---
 int[] a = [ 1, 2, 3, 4 ];
 a.replaceInPlace(1, 3, [ 9, 9, 9 ]);
 assert(a == [ 1, 9, 9, 9, 4 ]);
 ---
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
     if(isDynamicArray!Range &&
@@ -1877,6 +1921,8 @@ recommended over $(D a ~= data) when appending many elements because it is more
 efficient.
 
 Example:
+$(D_RUN_CODE
+$(ARGS
 ----
 auto app = appender!string();
 string b = "abcdefg";
@@ -1889,6 +1935,7 @@ app2.put(3);
 app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 ----
+), $(ARGS), $(ARGS), $(ARGS import std.array;))
  */
 struct Appender(A : T[], T)
 {
