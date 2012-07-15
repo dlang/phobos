@@ -2098,8 +2098,8 @@ unittest
 
 
 /******************************************************
- * $(RED Scheduled for deprecation.
- *       Please use $(D dirEntries) instead.)
+ * $(RED Deprecated. It will be removed in November 2012.
+ *       Please use $(LREF dirEntries) instead.)
  *
  * For each file and directory $(D DirEntry) in $(D pathname[])
  * pass it to the callback delegate.
@@ -2131,7 +2131,7 @@ unittest
  * }
  * ----
  */
-alias listDir listdir;
+deprecated alias listDir listdir;
 
 
 /***************************************************
@@ -2349,6 +2349,8 @@ unittest
     assert(!exists("unittest_write2.tmp"));
 }
 
+//Remove this when _listDir is removed. It's not needed to test
+//DirEntry. Plenty of other tests to do that already.
 unittest
 {
     _listDir(".", delegate bool (DirEntry * de)
@@ -2374,6 +2376,7 @@ unittest
     }
     );
 }
+
 
 /**
  * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below).
@@ -3097,8 +3100,8 @@ string tempDir()
 
 
 /++
-    $(RED Scheduled for deprecation.
-          Please use $(D dirEntries) instead.)
+    $(RED Deprecated. It will be removed in November 2012.
+          Please use $(LREF dirEntries) instead.)
 
     Returns the contents of the given directory.
 
@@ -3123,7 +3126,7 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(C)(in C[] pathname)
+deprecated string[] listDir(C)(in C[] pathname)
 {
     auto result = appender!(string[])();
 
@@ -3145,8 +3148,8 @@ unittest
 
 
 /++
-    $(RED Scheduled for deprecation.
-          Please use $(D dirEntries) instead.)
+    $(RED Deprecated. It will be removed in November 2012.
+          Please use $(LREF dirEntries) instead.)
 
     Returns all the files in the directory and its sub-directories
     which match pattern or regular expression r.
@@ -3193,7 +3196,7 @@ void main(string[] args)
 }
 --------------------
  +/
-string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
+deprecated string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
     if(is(C : char) && !is(U: bool delegate(string filename)))
 {
     import std.regexp;
@@ -3229,8 +3232,8 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
 }
 
 /******************************************************
- * $(RED Scheduled for deprecation.
- *       Please use $(D dirEntries) instead.)
+ * $(RED Deprecated. It will be removed in November 2012.
+ *       Please use $(LREF dirEntries) instead.)
  *
  * For each file and directory name in pathname[],
  * pass it to the callback delegate.
@@ -3265,7 +3268,7 @@ string[] listDir(C, U)(in C[] pathname, U filter, bool followSymlink = true)
  * }
  * ----
  */
-void listDir(C, U)(in C[] pathname, U callback)
+deprecated void listDir(C, U)(in C[] pathname, U callback)
     if(is(C : char) && is(U: bool delegate(string filename)))
 {
     _listDir(pathname, callback);
@@ -3278,7 +3281,7 @@ void listDir(C, U)(in C[] pathname, U callback)
 private:
 
 
-void _listDir(in char[] pathname, bool delegate(string filename) callback)
+deprecated void _listDir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -3291,7 +3294,7 @@ void _listDir(in char[] pathname, bool delegate(string filename) callback)
 
 version(Windows)
 {
-    void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
+    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         DirEntry de;
         auto c = buildPath(pathname, "*.*");
@@ -3323,7 +3326,7 @@ version(Windows)
 }
 else version(Posix)
 {
-    void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
+    deprecated void _listDir(in char[] pathname, bool delegate(DirEntry* de) callback)
     {
         auto h = cenforce(opendir(toStringz(pathname)), pathname);
         scope(exit) closedir(h);
