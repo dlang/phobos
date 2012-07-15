@@ -22,7 +22,9 @@
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * Authors:
+ *     $(WEB digitalmars.com, Walter Bright),
+ *     $(WEB klickverbot.at, David Nadlinger)
  * Source:    $(PHOBOSSRC std/_typetuple.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -816,4 +818,215 @@ unittest
 {
     static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
     static assert(is(Filter!isPointer == TypeTuple!()));
+}
+
+
+/*
+ * Instantiates the given template with the given list of parameters.
+ *
+ * Used to work around syntactic limitations of D with regard to instantiating
+ * a template from a type tuple (e.g. T[0]!(...) is not valid) or a template
+ * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
+ */
+// TODO: Consider publicly exposing this, maybe even if only for better
+// understandability of error messages.
+template Instantiate(alias Template, Params...)
+{
+    alias Template!Params Instantiate;
+}
+
+
+// Used in template predicate unit tests below.
+version (unittest)
+{
+    template always(T...)
+    {
+        enum always = true;
+    }
+
+    template never(T...)
+    {
+        enum never = false;
+    }
+
+    template error(T...)
+    {
+        static assert(false, "Should never be instantiated.");
+    }
+}
+
+
+/**
+ * Negates the passed template predicate.
+ *
+ * Examples:
+ * ---
+ * alias templateNot!isPointer isNoPointer;
+ * static assert(!isNoPointer!(int*));
+ * static assert(allSatisfy!(isNoPointer, string, char, float));
+ * ---
+ */
+template templateNot(alias pred)
+{
+    template templateNot(T...)
+    {
+        enum templateNot = !pred!T;
+    }
+}
+
+// Verify examples.
+unittest
+{
+    import std.traits;
+
+    alias templateNot!isPointer isNoPointer;
+    static assert(!isNoPointer!(int*));
+    static assert(allSatisfy!(isNoPointer, string, char, float));
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(!Instantiate!(templateNot!always, T));
+        static assert(Instantiate!(templateNot!never, T));
+    }
+}
+
+
+/**
+ * Combines several template predicates using logical AND, i.e. constructs a new
+ * predicate which evaluates to true for a given input T if and only if all of
+ * the passed predicates are true for T.
+ *
+ * The predicates are evaluated from left to right, aborting evaluation in a
+ * short-cut manner if a false result is encountered, in which case the latter
+ * instantiations do not need to compile.
+ *
+ * Examples:
+ * ---
+ * alias templateAnd!(isNumeric, templateNot!isUnsigned) storesNegativeNumbers;
+ * static assert(storesNegativeNumbers!int);
+ * static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
+ *
+ * // An empty list of predicates always yields true.
+ * alias templateAnd!() alwaysTrue;
+ * static assert(alwaysTrue!int);
+ * ---
+ */
+template templateAnd(Preds...)
+{
+    template templateAnd(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum templateAnd = true;
+        }
+        else
+        {
+            static if (Instantiate!(Preds[0], T))
+                alias Instantiate!(.templateAnd!(Preds[1 .. $]), T) templateAnd;
+            else
+                enum templateAnd = false;
+        }
+    }
+}
+
+// Verify examples.
+unittest
+{
+    alias templateAnd!(isNumeric, templateNot!isUnsigned) storesNegativeNumbers;
+    static assert(storesNegativeNumbers!int);
+    static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
+
+    // An empty list of predicates always yields true.
+    alias templateAnd!() alwaysTrue;
+    static assert(alwaysTrue!int);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(Instantiate!(templateAnd!(), T));
+        static assert(Instantiate!(templateAnd!(always), T));
+        static assert(Instantiate!(templateAnd!(always, always), T));
+        static assert(!Instantiate!(templateAnd!(never), T));
+        static assert(!Instantiate!(templateAnd!(always, never), T));
+        static assert(!Instantiate!(templateAnd!(never, always), T));
+
+        static assert(!Instantiate!(templateAnd!(never, error), T));
+        static assert(!is(typeof(Instantiate!(templateAnd!(always, error), T))));
+    }
+}
+
+
+/**
+ * Combines several template predicates using logical OR, i.e. constructs a new
+ * predicate which evaluates to true for a given input T if and only at least
+ * one of the passed predicates is true for T.
+ *
+ * The predicates are evaluated from left to right, aborting evaluation in a
+ * short-cut manner if a true result is encountered, in which case the latter
+ * instantiations do not need to compile.
+ *
+ * Examples:
+ * ---
+ * alias templateOr!(isPointer, isUnsigned) isPtrOrUnsigned;
+ * static assert(isPtrOrUnsigned!uint && isPtrOrUnsigned!(short*));
+ * static assert(!isPtrOrUnsigned!int && !isPtrOrUnsigned!string);
+ *
+ * // An empty list of predicates never yields true.
+ * alias templateOr!() alwaysFalse;
+ * static assert(!alwaysFalse!int);
+ * ---
+ */
+template templateOr(Preds...)
+{
+    template templateOr(T...)
+    {
+        static if (Preds.length == 0)
+        {
+            enum templateOr = false;
+        }
+        else
+        {
+            static if (Instantiate!(Preds[0], T))
+                enum templateOr = true;
+            else
+                alias Instantiate!(.templateOr!(Preds[1 .. $]), T) templateOr;
+        }
+    }
+}
+
+// Verify examples.
+unittest
+{
+    alias templateOr!(isPointer, isUnsigned) isPtrOrUnsigned;
+    static assert(isPtrOrUnsigned!uint && isPtrOrUnsigned!(short*));
+    static assert(!isPtrOrUnsigned!int && !isPtrOrUnsigned!string);
+
+    // An empty list of predicates never yields true.
+    alias templateOr!() alwaysFalse;
+    static assert(!alwaysFalse!int);
+}
+
+unittest
+{
+    foreach (T; TypeTuple!(int, staticMap, 42))
+    {
+        static assert(Instantiate!(templateOr!(always), T));
+        static assert(Instantiate!(templateOr!(always, always), T));
+        static assert(Instantiate!(templateOr!(always, never), T));
+        static assert(Instantiate!(templateOr!(never, always), T));
+        static assert(!Instantiate!(templateOr!(), T));
+        static assert(!Instantiate!(templateOr!(never), T));
+
+        static assert(Instantiate!(templateOr!(always, error), T));
+        static assert(Instantiate!(templateOr!(never, always, error), T));
+        // DMD @@BUG@@: Assertion fails for int, seems like a error gagging
+        // problem. The bug goes away when removing some of the other template
+        // instantiations in the module.
+        // static assert(!is(typeof(Instantiate!(templateOr!(never, error), T))));
+    }
 }
