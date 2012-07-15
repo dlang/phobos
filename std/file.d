@@ -3097,6 +3097,75 @@ string tempDir()
 
 
 /++
+    Creates a randomly generated file name in the given directory. It does not
+    actually create the file.
+
+    Params:
+        prefix = Optional prefix for the generated file name.
+        dir    = Directory of temporary file.
+
+  +/
+string tempFile(string prefix = "", string dir = tempDir())
+{
+    import std.ascii;
+    import std.random;
+    import std.range;
+    rndGen.popFront();
+    immutable prefixLen = walkLength(prefix);
+    //32 is arbitrary, but it's the number of characters in a UUID, so it should
+    //be long enough to reasonably guarantee uniqueness.
+    immutable size_t len = prefixLen + 32;
+    auto name = new char[](len);
+    name[0 .. prefixLen] = prefix[0 .. prefixLen];
+    auto chars = to!string(chain(letters, digits));
+    enum max = walkLength(chain(letters, digits));
+
+    foreach(ref c; name[prefixLen .. $])
+    {
+        c = chars[rndGen.front % max];
+        rndGen.popFront();
+    }
+
+    return buildPath(dir, name);
+}
+
+unittest
+{
+    auto dir = tempDir();
+    auto otherDir = buildPath(dir, "tempFile");
+    mkdir(otherDir);
+    scope(exit) if(otherDir.exists) rmdirRecurse(otherDir);
+
+    auto t1 = tempFile();
+    assert(dirName(t1) == dir);
+    assert(baseName(t1).length == 32);
+
+    auto t2 = tempFile();
+    assert(dirName(t2) == dir);
+    assert(baseName(t2).length == 32);
+
+    immutable prefix = "tempFile_";
+    auto t3 = tempFile(prefix);
+    assert(dirName(t3) == dir);
+    assert(baseName(t3).startsWith(prefix));
+    assert(baseName(t3).length == prefix.length + 32);
+
+    auto t4 = tempFile(null, otherDir);
+    assert(dirName(t4) == otherDir);
+    assert(baseName(t4).length == 32);
+
+    auto sansPrefix = baseName(t3)[prefix.length .. $];
+    assert(baseName(t1) != baseName(t2));
+    assert(baseName(t1) != sansPrefix);
+    assert(baseName(t1) != baseName(t4));
+    assert(baseName(t2) != sansPrefix);
+    assert(baseName(t2) != sansPrefix);
+    assert(baseName(t2) != baseName(t4));
+    assert(sansPrefix != baseName(t4));
+}
+
+
+/++
     $(RED Scheduled for deprecation.
           Please use $(D dirEntries) instead.)
 
