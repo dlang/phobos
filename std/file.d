@@ -3092,9 +3092,18 @@ string tempDir()
         }
         else static assert (false, "Unsupported platform");
 
-        if (cache is null) cache = ".";
+        if (cache is null)
+            cache = ".";
+        else if (cache.endsWith(dirSeparator))
+            cache.popBackN(walkLength(dirSeparator));
     }
     return cache;
+}
+
+unittest
+{
+    assert(tempDir() !is null);
+    assert(!tempDir().endsWith(dirSeparator));
 }
 
 
