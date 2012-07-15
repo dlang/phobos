@@ -20,39 +20,6 @@ Authors: $(WEB digitalmars.com, Walter Bright),
 
 Source:    $(PHOBOSSRC std/_string.d)
 
-$(B $(RED IMPORTANT NOTE:)) Beginning with version 2.052, the
-following symbols have been generalized beyond strings and moved to
-different modules. This action was prompted by the fact that
-generalized routines belong better in other places, although they
-still work for strings as expected. In order to use moved symbols, you
-will need to import the respective modules as follows:
-
-$(BOOKTABLE ,
-
-$(TR $(TH Symbol) $(TH Comment))
-
-$(TR $(TD $(D cmp)) $(TD Moved to $(XREF algorithm, cmp) and
-generalized to work for all input ranges and accept a custom
-predicate.))
-
-$(TR $(TD $(D count)) $(TD Moved to $(XREF algorithm, count) and
-generalized to accept a custom predicate.))
-
-$(TR $(TD $(D ByCodeUnit)) $(TD Removed.))
-
-$(TR $(TD $(D insert)) $(TD Use $(XREF array, insertInPlace) instead.))
-
-$(TR $(TD $(D join)) $(TD Use $(XREF array, join) instead.))
-
-$(TR $(TD $(D repeat)) $(TD Use $(XREF array, replicate) instead.))
-
-$(TR $(TD $(D replace)) $(TD Use $(XREF array, replace) instead.))
-
-$(TR $(TD $(D replaceSlice)) $(TD Use $(XREF array, replace) instead.))
-
-$(TR $(TD $(D split)) $(TD Use $(XREF array, split) instead.))
-)
-
 */
 module std.string;
 
