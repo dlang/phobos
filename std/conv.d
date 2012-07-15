@@ -1444,8 +1444,6 @@ private void testFloatingToIntegral(Floating, Integral)()
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     a = 0.0 + Integral.max;
-//   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
-//             Integral.stringof, to!Integral(a));
     assert(to!Integral(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
     ++a; // no more representable as an Integral
     assert(convFails!(Floating, Integral, ConvOverflowException)(a)
