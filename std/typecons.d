@@ -1439,6 +1439,135 @@ unittest
 }
 
 /**
+	NotNull ensures a null value can never be stored.
+
+	* You must initialize it when declared
+
+	* You must never assign the null literal to it (this is a compile time error)
+
+	* If you assign a null value at runtime to it, it will immediately throw an Error
+	  at the point of assignment.
+
+        NotNull!T can be substituted for T at any time, but T cannot become
+	NotNull without some attention: either declaring NotNull!T, or using
+	the convenience function, notNull.
+
+	Examples:
+	---
+		int myInt;
+		NotNull!(int *) not_null = &myInt;
+		// you can now use variable not_null anywhere you would
+		// have used a regular int*, but with the assurance that
+		// it never stored null.
+	---
+*/
+struct NotNull(T) if(__traits(compiles, { T t; assert(t is null); }))
+{
+    private T _notNullData;
+    @property inout(T) _notNullDataHelper() inout
+    {
+        assert(_notNullData !is null); // sanity check of invariant
+        return _notNullData;
+    }
+    // Apparently a compiler bug - the invariant being uncommented breaks all kinds of stuff.
+    // invariant() { assert(_notNullData !is null); }
+
+    alias _notNullDataHelper this; /// this is substitutable for the regular (nullable) type
+    @disable this();
+
+    // this could arguably break the static type check because
+    // you can assign it from a variable that is null.. but I
+    // think it is important that NotNull!Object = new Object();
+    // works, without having to say assumeNotNull(new Object())
+    // for convenience of using with local variables.
+
+    /// constructs with a runtime not null check (via assert())
+    this(T value)
+    {
+        assert(value !is null);
+        _notNullData = value;
+    }
+
+    @disable this(typeof(null)); /// the null literal can be caught at compile time
+    @disable typeof(this) opAssign(typeof(null)); /// ditto
+
+    /// .
+    NotNull!T opAssign(NotNull!T rhs)
+    {
+        this._notNullData = rhs._notNullData;
+        return this;
+    }
+}
+
+/// A convenience function to construct a NotNull value from something you know isn't null.
+NotNull!T assumeNotNull(T)(T t)
+{
+    return NotNull!T(t); // note the constructor asserts it is not null
+}
+
+/// A convenience function to check for null. If you pass null, it will throw an exception. Otherwise, return NotNull!T.
+NotNull!T enforceNotNull(T)(T t)
+{
+    enforce(t !is null);
+    return NotNull!T(t);
+}
+
+unittest
+{
+    import core.exception;
+    import std.exception;
+
+    void NotNullCompiliationTest1()() // I'm making these templates to defer compiling them
+    {
+        NotNull!(int*) defaultInitiliation; // should fail because this would be null otherwise
+    }
+    assert(!__traits(compiles, NotNullCompiliationTest1!()()));
+
+    void NotNullCompiliationTest2()()
+    {
+        NotNull!(int*) defaultInitiliation = null; // should fail here too at compile time
+    }
+    assert(!__traits(compiles, NotNullCompiliationTest2!()()));
+
+    int dummy;
+    NotNull!(int*) foo = &dummy;
+
+    assert(!__traits(compiles, foo = null)); // again, literal null is caught at compile time
+
+    int* test;
+
+    test = &dummy;
+
+    foo = assumeNotNull(test); // should be fine
+
+    void bar(int* a) {}
+
+    // these should both compile, since NotNull!T is a subtype of T
+    bar(test);
+    bar(foo);
+
+    void takesNotNull(NotNull!(int*) a) { }
+
+    assert(!__traits(compiles, takesNotNull(test))); // should not work; plain int might be null
+    takesNotNull(foo); // should be fine
+
+    takesNotNull(assumeNotNull(test)); // this should work too
+    assert(!__traits(compiles, takesNotNull(assumeNotNull(null)))); // notNull(null) shouldn't compile
+    test = null; // reset our pointer
+
+    assertThrown!AssertError(takesNotNull(assumeNotNull(test))); // test is null now, so this should throw an assert failure
+
+    void takesConstNotNull(in NotNull!(int *) a) {}
+
+    test = &dummy; // make it valid again
+    takesConstNotNull(assumeNotNull(test)); // should Just Work
+
+    NotNull!(int*) foo2 = foo; // we should be able to assign NotNull to other NotNulls too
+    foo2 = foo; // including init and assignment
+}
+
+
+/**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
 all abstract member functions in $(D Base) as do-nothing functions.  Each
 auto-implemented function just returns the default value of the return type
