@@ -11,7 +11,8 @@ Copyright: Copyright Digital Mars 2007 - 2011.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
-           Jonathan M Davis
+           Jonathan M Davis,
+           Alex Rønne Petersen
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
