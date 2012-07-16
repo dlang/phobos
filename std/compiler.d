@@ -8,7 +8,7 @@
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * Authors:   $(WEB digitalmars.com, Walter Bright), Alex Rønne Petersen
  * Source:    $(PHOBOSSRC std/_compiler.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.
