@@ -1582,7 +1582,7 @@ void writeln(T...)(T args)
         enforce(fputc('\n', .stdout.p.handle) == '\n');
     }
     else static if (T.length == 1 &&
-                    isSomeString!(typeof(args[0])) &&
+                    isSomeString!(typeof(args[0])) && is(typeof(args[0]) : const(char)[]) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
@@ -1610,8 +1610,9 @@ unittest
 
 unittest
 {
-        //printf("Entering test at line %d\n", __LINE__);
+    //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
+
     // test writeln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
@@ -1624,6 +1625,7 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
@@ -1636,6 +1638,18 @@ unittest
     else
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
+
+    stdout.open(deleteme, "w");
+    writeln("Hello!"c);
+    writeln("Hello!"w);    // bug 8386
+    writeln("Hello!"d);    // bug 8386
+    stdout.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+            "Hello!\r\nHello!\r\nHello!\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+            "Hello!\nHello!\nHello!\n");
 }
 
 unittest
