@@ -3102,8 +3102,7 @@ unittest
 // non-bidirectional forward range
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
-    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool) &&
-    (isInfinite!R1 || (hasLength!R1 && is(typeof(emptyRange(haystack))))))
+    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     static if (!is(ElementType!R1 == ElementType!R2))
     {
@@ -3117,7 +3116,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
         haystack = .find!pred(haystack, needle.front);
 
-        static if (hasLength!R1 && hasLength!R2)
+        static if (hasLength!R1 && hasLength!R2 && is(typeof(emptyRange(haystack))))
         {
             if (needle.length > haystack.length)
                 return emptyRange(haystack);

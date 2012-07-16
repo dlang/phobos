@@ -5833,24 +5833,14 @@ unittest
 /++
     Creates an empty range from the given range in $(BIGOH 1).
 
-    If $(D R) is an array, then $(D null) is returned.
+    For this to work with a user-defined range, either its $(D init) property
+    must be empty (which should be true for most struct-type ranges), its
+    default constructor must construct an empty range (for classes),
+    $(D hasSlicing!R) must be $(D true), or it must define its own
+    $(D emptyRange) member function which returns an empty range.
+    $(D emptyRange) asserts that its return value is empty.
 
-    Else if $(D R) defines $(D _emptyRange), then the result of its
-    $(D _emptyRange) is returned.
-
-    Else if $(D hasSlicing!R) is $(D true), then $(D range[0 .. 0]) is
-    returned.
-
-    Else if $(D R) is a struct, then $(D R.init) is returned.
-
-    Else if $(D R) is a class, it's default constructor is returned.
-
-    If $(D R) does not fulfill any of those requirements, then it will not
-    compile with emptyRange. So, define $(D _emptyRange) for $(D R) if none
-    of the other options work for it and it needs to work with emptyRange.
-
-    Throws:
-        $(D Exception) if the range to be returned is not empty.
+    Infinite ranges do not work with $(D emptyRange) as they cannot be empty.
 
     Examples:
 --------------------
@@ -5872,22 +5862,22 @@ R emptyRange(R)(R range)
     else static if(is(typeof(R.emptyRange)))
     {
         R retval = range.emptyRange();
-        enforce(retval.empty, "range.emptyRange() was not empty.");
+        assert(retval.empty, "range.emptyRange() was not empty.");
     }
     else static if(hasSlicing!R)
     {
         R retval = range[0 .. 0];
-        enforce(retval.empty, "range[0 .. 0] was not empty.");
+        assert(retval.empty, "range[0 .. 0] was not empty.");
     }
     else static if(is(R == struct))
     {
         R retval = R.init;
-        enforce(retval.empty, R.stringof ~ ".init was not empty.");
+        assert(retval.empty, R.stringof ~ ".init was not empty.");
     }
     else static if(is(R == class))
     {
         R retval = new R();
-        enforce(retval.empty, R.stringof ~ "() was not empty.");
+        assert(retval.empty, R.stringof ~ "() was not empty.");
     }
     else
         static assert(0, "Bad template constraint.");
@@ -5925,36 +5915,11 @@ unittest
         int[] _arr;
     }
 
-    static struct BadSliceStruct
-    {
-        @disable this();
-        this(int[] arr) { _arr = arr; }
-        mixin(genInput());
-        auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[0 .. 1]); }
-        int[] _arr;
-    }
-
     static struct InitStruct
     {
         mixin(genInput());
         int[] _arr;
     }
-
-    static struct BadInitStruct
-    {
-       mixin(genInput());
-       int[] _arr = [1];
-    }
-
-    /+ @@@BUG@@@ 7021
-    static struct DisabledStruct
-    {
-        this(int[] arr) { _arr = arr; }
-        @disable this();
-        mixin(genInput());
-        int[] _arr;
-    }
-    +/
 
     static struct EmptyRangeStruct
     {
@@ -5973,28 +5938,12 @@ unittest
         int[] _arr;
     }
 
-    static class BadSliceClass
-    {
-        this(int[] arr) { _arr = arr; }
-        mixin(genInput());
-        auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[0 .. 1]); }
-        int[] _arr;
-    }
-
     static class DefaultClass
     {
         this() {}
         this(int[] arr) {_arr = arr;}
         mixin(genInput());
         int[] _arr;
-    }
-
-    static class BadDefaultClass
-    {
-        this() {}
-        this(int[] arr) {_arr = arr;}
-        mixin(genInput());
-        int[] _arr = [1];
     }
 
     static class EmptyRangeClass
@@ -6025,13 +5974,6 @@ unittest
     {
         mixin(Format!("assert(emptyRange(%s).empty);", range));
     }
-
-    // @@@BUG@@@ 7021
-    //static assert(!is(typeof(emptyRange(DisabledStruct([1, 2, 3])))));
-    assertThrown(emptyRange(BadSliceStruct([1, 2, 3])));
-    assertThrown(emptyRange(BadInitStruct([1, 2, 3])));
-    assertThrown(emptyRange(new BadSliceClass([1, 2, 3])));
-    assertThrown(emptyRange(new BadDefaultClass([1, 2, 3])));
 
     assert(emptyRange(filter!"true"([1, 2, 3, 4, 5])).empty);
 }
