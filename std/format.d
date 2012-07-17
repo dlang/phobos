@@ -4873,9 +4873,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
             case Mangle.Tsarray:
                 version (X86)
-                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 else
-                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, cast()(cast(TypeInfo_StaticArray)ti).next);
+                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
             case Mangle.Tarray:
@@ -4883,7 +4883,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
                 { // array of non-primitive types
-                  TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                  TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                   tn = skipCI(tn);
                   switch (cast(Mangle)tn.classinfo.name[9])
                   {
@@ -4902,7 +4902,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 { // associative array
                   ubyte[long] vaa = va_arg!(ubyte[long])(argptr);
                   putAArray(vaa,
-                        cast()(cast(TypeInfo_AssociativeArray)ti).next,
+                        (cast(TypeInfo_AssociativeArray)ti).next,
                         (cast(TypeInfo_AssociativeArray)ti).key);
                   return;
                 }
@@ -5155,7 +5155,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             if (ti.classinfo.name.length == 14 &&
                     ti.classinfo.name[9..14] == "Array")
             {
-                TypeInfo tn = cast()(cast(TypeInfo_Array)ti).next;
+                TypeInfo tn = (cast(TypeInfo_Array)ti).next;
                 tn = skipCI(tn);
                 switch (cast(Mangle)tn.classinfo.name[9])
                 {
