@@ -4978,7 +4978,7 @@ assert(equal!(approxEqual)(b, c));
 ----
 */
 bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2)
+if (isInputRange!(Range1) && isInputRange!(Range2)
         && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
     static if (hasLength!Range1 && hasLength!Range2
