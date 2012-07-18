@@ -5658,8 +5658,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
         return target;
     }
-    if (__ctfe)
-        return genericImpl(source, target);
 
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
