@@ -918,15 +918,67 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
-if (isInputRange!Range1 && isForwardRange!Range2
+    if (isForwardRange!Range1 && isForwardRange!Range2
         && is(typeof(Range1.init.front = Range2.init.front)))
 {
-    enforce(!filler.empty);
-    auto t = filler.save;
-    for (; !range.empty; range.popFront(), t.popFront())
+    static if(isInfinite!Range2)
     {
-        if (t.empty) t = filler;
-        range.front = t.front;
+        //Range2 is infinite, no need for bounds checking
+        static if(hasSlicing!Range2 && hasLength!Range1)
+        {
+            //Quick copy
+            auto len = range.length;
+            copy(filler[0..len], range);
+        }
+        else
+        {
+            //manual feed
+            for ( ; !range.empty; range.popFront(), filler.popFront())
+            {
+                range.front = filler.front;
+            }
+        }
+    }
+    else if(hasLength!Range1 && hasSlicing!Range1 && hasLength!Range2)
+    {
+        //Case we have access to length
+        enforce(!filler.empty);
+        auto len = filler.length;
+        //Start by bulk copies
+        for( ; range.length > len ; )
+        {
+            copy(filler.save, range.save); //range.save is necessary, or we can't know if copy "consumes" the range.
+            range = range[len .. $];       //Advance the range manually by filler's length
+        }
+        
+        //and finally fill the partial range. No need to save here.
+        static if (hasSlicing!Range2 )
+        {
+            //use a quick copy
+            auto len2 = range.length;
+            //for consistency, at the end of the algorithm, range needs to be "consumed"
+            copy(filler[0 .. len2], range.save);
+            range = range[len2 .. len2];
+        }
+        else
+        {
+            //iterate
+            for (; !range.empty; range.popFront(), filler.popFront())
+            {
+                range.front = filler.front;
+            }
+        }
+    }
+    else
+    {
+        //Most basic case.
+        enforce(!filler.empty);
+        auto bck = filler.save; //make backup
+        for (; !range.empty; range.popFront(), filler.popFront())
+        {
+            if (filler.empty) filler = bck.save;
+            range.front = filler.front;
+        }
     }
 }
 
@@ -4652,17 +4704,29 @@ assert(p == [ 7, 8, 9 ]);
 ----
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
-    if (isForwardRange!(Range))
+    if (isForwardRange!Range)
 {
-    auto ahead = r;
-    if (!ahead.empty)
+    static if(isRandomAccessRange!Range && hasSlicing!Range)
     {
+        auto len = r.length;
+        if(r.empty) return r;
+        foreach(i ; 0 .. len - 1)
+        {
+            if (binaryFun!pred(r[i], r[i+1])) return r[i .. len];
+        }
+        return r[len .. len]; //not found, return an empty view of r;
+    }
+    else
+    {
+        if (r.empty) return r;
+        auto ahead = r.save; 
         for (ahead.popFront(); !ahead.empty; r.popFront(), ahead.popFront())
         {
             if (binaryFun!(pred)(r.front, ahead.front)) return r;
         }
+        r.popFront();
+        return r;
     }
-    return ahead;
 }
 
 unittest
@@ -5303,15 +5367,16 @@ assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 ----
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
+    if(isForwardRange!Range)
 {
     if (range.empty) return range;
-    auto result = range;
+    auto result = range.save;
     for (range.popFront(); !range.empty; range.popFront())
     {
         if (binaryFun!(pred)(result.front, range.front)
                 || !binaryFun!(pred)(range.front, result.front)) continue;
         // change the min
-        result = range;
+        result = range.save;
     }
     return result;
 }
