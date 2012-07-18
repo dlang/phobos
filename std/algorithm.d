@@ -947,7 +947,7 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
 if (isInputRange!Range1 && isForwardRange!Range2
-    && is(typeof(Range1.init.front = Range2.init.front)))
+        && is(typeof(Range1.init.front = Range2.init.front)))
 {
     static if(isInfinite!Range2)
     {
